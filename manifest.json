@@ -1,0 +1,10 @@
+{
+  "id": "orca",
+  "name": "Orca",
+  "version": "0.0.1",
+  "minAppVersion": "1.5.0",
+  "description": "A book designer in your vault: chapters stay notes, a typeset page sits beside them.",
+  "author": "Zach Hannum",
+  "authorUrl": "https://github.com/zachhannum",
+  "isDesktopOnly": true
+}
