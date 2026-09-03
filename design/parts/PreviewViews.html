@@ -1,0 +1,99 @@
+<div style="height: 100%; background: var(--background-secondary); padding: 20px; display: flex; flex-direction: column; gap: 14px">
+
+  <div class="title-block">
+    <h2>The preview is a page-through, not a scroller</h2>
+    <div class="sub">Three views, all page-throughs: single turns one page, spread turns two, grid turns a screenful. Each asks for exactly the pages it paints, plus the neighbours, so a page turn repaints without a round trip.</div>
+  </div>
+
+  <!-- spread view, full chrome -->
+  <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); display: flex; flex-direction: column; overflow: hidden">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--divider-color)">
+      <div class="seg">
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1"/></svg>Single</div>
+        <div class="is-on"><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/></svg>Spread</div>
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="3" y="13" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/></svg>Grid</div>
+      </div>
+      <div style="flex: 1"></div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m15 18-6-6 6-6"/></svg>
+        <div class="field" style="width: 58px; height: 26px; justify-content: center">146</div>
+        <span style="color: var(--text-faint)">of 337</span>
+        <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 2px; background: rgba(var(--mono-100), 0.03)">
+      <!-- verso: the end of Chapter Eleven, wide outer margin on the left -->
+      <div class="paper" style="width: 232px; height: 358px; padding: 42px 26px 40px 40px">
+        <div class="runhead">Jane Austen</div>
+        <div class="body">
+          <p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin by the alteration; for the chief of the time between breakfast and dinner was now passed by him either at work in the garden, or in reading and writing.</p>
+          <p>Between him and Darcy there was a very steady friendship, in spite of a great opposition of character. Bingley was endeared to Darcy by the easiness, openness, and ductility of his temper.</p>
+          <p>On the strength of that regard, and of a judgement never appealed to in vain, she was persuaded to stay.</p>
+        </div>
+        <div class="folio">146</div>
+      </div>
+      <!-- recto: Chapter Twelve opens, wide outer margin on the right, no running head -->
+      <div class="paper" style="width: 232px; height: 358px; padding: 42px 40px 40px 26px">
+        <div class="chaphead" style="margin-top: 40px">
+          <div class="chapnum">Chapter Twelve</div>
+        </div>
+        <div class="body" style="margin-top: 30px">
+          <p class="first"><span class="dropcap">I</span>n consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them in the course of the day.</p>
+          <p>But Mrs. Bennet, who had calculated on her daughters remaining at Netherfield till the following Tuesday, which would exactly finish Jane's week, could not bring herself to receive them with pleasure before.</p>
+        </div>
+        <div class="folio">147</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px; padding: 7px 14px; border-top: 1px solid var(--divider-color); font-size: var(--font-ui-smaller); color: var(--text-muted)">
+      <span>pages 146–147 of 337</span>
+      <span style="flex: 1"></span>
+      <span style="color: var(--text-faint)">mirrored margins — the only view that can judge them</span>
+    </div>
+  </div>
+
+  <!-- the other two views -->
+  <div style="height: 300px; display: grid; grid-template-columns: 300px 1fr; gap: 16px">
+
+    <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); padding: 12px; display: flex; flex-direction: column; gap: 9px">
+      <div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">SINGLE</span><span style="font-size: 11px; color: var(--text-faint)">turns one page</span></div>
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(var(--mono-100), 0.03); border-radius: var(--radius-s)">
+        <div class="paper" style="width: 148px; height: 229px; padding: 26px 20px 24px">
+          <div class="runhead" style="top: 13px; font-size: 6px">Pride and Prejudice</div>
+          <div class="body" style="font-size: 6.4px; line-height: 1.6">
+            <p class="first">Her answer, therefore, was not propitious, at least not to Elizabeth's wishes, for she was impatient to get home. Mrs. Bennet sent them word that they could not possibly have the carriage before Tuesday.</p>
+            <p>Her postscript was that if Mr. Bingley and his sister pressed them to stay longer, she could spare them very well.</p>
+            <p>Against staying longer, however, Elizabeth was positively resolved — nor did she much expect it would be asked.</p>
+          </div>
+          <div class="folio" style="bottom: 13px; font-size: 6px">149</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); padding: 12px; display: flex; flex-direction: column; gap: 9px">
+      <div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">GRID</span><span style="font-size: 11px; color: var(--text-faint)">turns a screenful — a zoomed-out check on chapter openings and stray blank leaves</span></div>
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(var(--mono-100), 0.03); border-radius: var(--radius-s)">
+        <div class="paper" style="width: 96px; height: 148px; padding: 16px 12px"><div class="body" style="font-size: 4.2px; line-height: 1.6"><p class="first">and she was at leisure to feel a great deal of curiosity as to the truth of it. Elizabeth said as little to either as civility would allow, and sat down again to her work.</p><p>The evening passed quietly, unmarked by anything extraordinary.</p></div><div class="folio" style="bottom: 8px; font-size: 4.5px">157</div></div>
+        <div class="paper" style="width: 96px; height: 148px; padding: 16px 12px"><div class="body" style="font-size: 4.2px; line-height: 1.6"><p class="first">The rest of the party had now entered, and Elizabeth found herself observed with an attention she could not account for, and was glad when the carriage was called.</p><p>She had not been long at home before she heard the whole of it.</p></div><div class="folio" style="bottom: 8px; font-size: 4.5px">158</div></div>
+        <div class="paper" style="width: 96px; height: 148px; padding: 16px 12px"><div class="body" style="font-size: 4.2px; line-height: 1.6"><p class="first">and she could think of nothing else through the greater part of the following morning, though the household went on much as it always had.</p></div><div class="folio" style="bottom: 8px; font-size: 4.5px">159</div></div>
+        <div class="paper" style="width: 96px; height: 148px; padding: 16px 12px"></div>
+        <div class="paper" style="width: 96px; height: 148px; padding: 30px 12px 16px">
+          <div style="text-align: center"><div style="font-size: 4.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6355">Chapter Thirteen</div></div>
+          <div class="body" style="font-size: 4.2px; line-height: 1.6; margin-top: 14px"><p class="first">Elizabeth was sitting with her mother and sisters, reflecting on what she had heard, and doubting whether she was authorised to mention it.</p></div>
+          <div class="folio" style="bottom: 8px; font-size: 4.5px">161</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 14px; font-size: 11px; color: var(--text-faint)">
+        <span>pages 157–161 of 337</span>
+        <span style="color: var(--color-orange)">160 is a blank verso, because Chapter Thirteen opens recto — deliberate</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+    <div class="callout"><div><span class="k">Why a page-through.</span> Drawing one page costs about 18 KiB; drawing the whole book to show one page costs 5.94 MiB, on every keystroke. The saving is not DOM nodes, it is that.</div></div>
+    <div class="callout"><div><span class="k">Never a stale page.</span> An edit throws away the pages held from before it, so nothing on screen is ever from the book as it used to be. A book that gets shorter takes you to its last page rather than showing nothing.</div></div>
+    <div class="callout"><div><span class="k">Selectable text</span> is invisible spans over the drawn glyphs, so copy comes back in reading order and a screen reader reads a page. It arrives with the painter's overlay upstream.</div></div>
+  </div>
+</div>

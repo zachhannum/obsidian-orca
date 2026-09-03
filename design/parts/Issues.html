@@ -1,0 +1,57 @@
+<div style="height: 100%; background: var(--background-secondary); display: flex; flex-direction: column">
+  <div class="side-tabs">
+    <div class="side-tab"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+    <div class="side-tab is-active" style="position: relative">
+      <svg class="icon-s icon" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div class="ribbon-badge" style="top: -1px; right: -2px">3</div>
+    </div>
+    <div style="flex: 1"></div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 14px">
+    <div>
+      <div style="display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">ISSUES</span>
+        <span style="font-size: 11.5px; color: var(--text-faint)">— what the frontend could not hold</span>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-faint); line-height: 1.45">Nothing was dropped. The page changed shape, and this is where that stops being silent.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+
+      <div>
+        <div style="display: flex; align-items: center; gap: 6px; padding: 0 2px 6px; font-size: 12px; font-weight: 500; color: var(--text-muted)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          <span>Chapter Eleven</span>
+          <span style="margin-left: auto; color: var(--text-faint); font-size: 11px">2</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="border-left: 2px solid var(--color-orange); background: rgba(233, 151, 63, 0.08); border-radius: 0 var(--radius-s) var(--radius-s) 0; padding: 8px 10px">
+            <div style="font-size: 12px; color: var(--text-normal); line-height: 1.45">A table became one paragraph per cell.</div>
+            <div style="font-size: 11px; color: var(--text-faint); margin-top: 3px">line 84 · 7 cells · <span style="color: var(--text-accent)">open the note here</span></div>
+          </div>
+          <div style="border-left: 2px solid var(--color-orange); background: rgba(233, 151, 63, 0.08); border-radius: 0 var(--radius-s) var(--radius-s) 0; padding: 8px 10px">
+            <div style="font-size: 12px; color: var(--text-normal); line-height: 1.45">A hard line break became a space.</div>
+            <div style="font-size: 11px; color: var(--text-faint); margin-top: 3px">line 121 · <span style="color: var(--text-accent)">open the note here</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display: flex; align-items: center; gap: 6px; padding: 0 2px 6px; font-size: 12px; font-weight: 500; color: var(--text-muted)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          <span>A note on the text</span>
+          <span style="margin-left: auto; color: var(--text-faint); font-size: 11px">1</span>
+        </div>
+        <div style="border-left: 2px solid var(--color-orange); background: rgba(233, 151, 63, 0.08); border-radius: 0 var(--radius-s) var(--radius-s) 0; padding: 8px 10px">
+          <div style="font-size: 12px; color: var(--text-normal); line-height: 1.45">A bulleted list became six paragraphs.</div>
+          <div style="font-size: 11px; color: var(--text-faint); margin-top: 3px">line 12 · <span style="color: var(--text-accent)">open the note here</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex: 1"></div>
+
+    <div class="callout"><div><span class="k">Only content warnings live here.</span> Warnings against a synthesized section or the generated stylesheet are orca's own defects and go to the console — an author has nothing to do about either.</div></div>
+  </div>
+</div>

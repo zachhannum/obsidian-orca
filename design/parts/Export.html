@@ -1,0 +1,70 @@
+<div style="height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(var(--mono-100), 0.04); padding: 20px">
+  <div style="width: 100%; max-width: 620px; background: var(--background-primary); border: 1px solid var(--color-base-40); border-radius: var(--radius-l); overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,0.35)">
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--divider-color)">
+      <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+      <span style="font-size: var(--font-ui-medium); font-weight: 600">Export a PDF</span>
+      <span style="flex: 1"></span>
+      <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-faint)"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </div>
+
+    <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 18px">
+
+      <div class="grp">
+        <div class="row"><span class="lab" style="width: 88px">Save to</span>
+          <div class="field" style="flex: 1"><span style="color: var(--text-muted)" class="mono">Books/Pride and Prejudice.pdf</span></div>
+          <div class="btn">Choose…</div>
+        </div>
+        <div class="row"><span class="lab" style="width: 88px"></span><span style="font-size: 11.5px; color: var(--text-faint)">a vault path, or anywhere on disk through the desktop adapter — the name comes from the metadata</span></div>
+      </div>
+
+      <div style="height: 1px; background: var(--divider-color)"></div>
+
+      <div class="grp">
+        <div class="grp-h">PREFLIGHT</div>
+
+        <div style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 10px; border-radius: var(--radius-s); background: rgba(251, 70, 76, 0.09); border-left: 2px solid var(--color-red)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--color-red); flex: none; margin-top: 2px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          <div>
+            <div style="font-size: 12.5px; color: var(--text-normal)">Charter Italic has no file the PDF could embed.</div>
+            <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px">chosen for chapter titles · <span style="color: var(--text-accent)">pick another face</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; gap: 9px; padding: 8px 10px; border-radius: var(--radius-s); background: rgba(251, 70, 76, 0.09); border-left: 2px solid var(--color-red)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--color-red); flex: none; margin-top: 2px"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          <div>
+            <div style="font-size: 12.5px; color: var(--text-normal)">The vault has no <span class="mono">assets/hunsford.png</span>.</div>
+            <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px">embedded in Chapter Twenty-Two, line 3 · <span style="color: var(--text-accent)">locate it</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 9px; padding: 4px 10px; color: var(--text-muted); font-size: 12.5px">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--color-green); flex: none"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>Every other face embeds. The other six images resolve.</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: var(--divider-color)"></div>
+
+      <div class="grp">
+        <div class="grp-h">LENGTH <span class="hint">a printer wants an even page count; many want a multiple of four</span></div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <div class="seg" style="flex: 1">
+            <div style="flex: 1; justify-content: center">Leave at 337</div>
+            <div style="flex: 1; justify-content: center">Pad to 338</div>
+            <div class="is-on" style="flex: 1; justify-content: center">Pad to 340</div>
+          </div>
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-faint); line-height: 1.45">Three blank pages are synthesized at the end, carrying no folio and no running head. The book will be <b style="color: var(--text-muted); font-weight: 600">340 pages</b>.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--divider-color); background: var(--background-secondary)">
+      <div style="font-size: 11.5px; color: var(--color-red)">Two errors stand. Export will not write while they do.</div>
+      <span style="flex: 1"></span>
+      <div class="btn">Cancel</div>
+      <div class="btn mod-cta is-disabled">Export</div>
+    </div>
+  </div>
+</div>

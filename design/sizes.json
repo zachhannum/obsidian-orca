@@ -1,0 +1,50 @@
+{
+  "Main": {
+    "w": 1440,
+    "h": 900
+  },
+  "Navigator": {
+    "w": 760,
+    "h": 860
+  },
+  "BookPage": {
+    "w": 900,
+    "h": 960
+  },
+  "PreviewViews": {
+    "w": 1180,
+    "h": 1000
+  },
+  "DesignPanel": {
+    "w": 380,
+    "h": 1460
+  },
+  "Advanced": {
+    "w": 1440,
+    "h": 900
+  },
+  "Issues": {
+    "w": 380,
+    "h": 620
+  },
+  "Export": {
+    "w": 720,
+    "h": 620
+  },
+  "States": {
+    "w": 1160,
+    "h": 470
+  },
+  "FlowMakeABook": {
+    "w": 1900,
+    "h": 560
+  },
+  "FlowDraftLoop": {
+    "w": 1900,
+    "h": 580
+  },
+  "FlowDesignExport": {
+    "w": 1900,
+    "h": 580
+  }
+}

@@ -1,0 +1,83 @@
+<div style="height: 100%; background: var(--background-secondary); padding: 22px; display: flex; flex-direction: column; gap: 16px">
+  <div class="title-block">
+    <h2>Flow 2 — you type, and the page keeps up</h2>
+    <div class="sub">Solid frames are what the writer sees. Dashed ones are what happens behind the pane, and never appear in it.</div>
+  </div>
+
+  <div class="strip" style="flex: 1; min-height: 0">
+
+    <div class="step" style="width: 420px">
+      <div class="step-n"><b>1</b> You change a sentence</div>
+      <div class="step-frame" style="flex: 1; padding: 16px 18px">
+        <div style="font-size: 16px; font-weight: 700; margin-bottom: 12px">Chapter Twelve</div>
+        <div style="font-size: 13px; line-height: 1.55; color: var(--text-muted)">
+          In consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them <span style="background: hsla(258, 88%, 66%, 0.22); border-radius: 2px">in the course of the day</span><span style="display: inline-block; width: 1.5px; height: 14px; background: var(--color-accent); vertical-align: -2px"></span>
+        </div>
+      </div>
+      <div class="step-note">One chapter's words changed. Nothing about the design did.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 420px">
+      <div class="step-n"><b>2</b> Only this chapter is set again</div>
+      <div class="behind" style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 10px; justify-content: center">
+        <div class="behind-tag">Behind the pane</div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: var(--radius-s); background: hsla(258, 88%, 66%, 0.12)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-accent); flex: none"><path d="M20 6 9 17l-5-5"/></svg>
+          <div><div style="font-size: 13px; color: var(--text-normal)">Chapter Twelve's lines are broken again</div><div style="font-size: 11.5px; color: var(--text-faint)">about 3,000 words, not 92,000</div></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: var(--radius-s); opacity: 0.55">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint); flex: none"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <div><div style="font-size: 13px; color: var(--text-muted)">The stylesheet is untouched</div><div style="font-size: 11.5px; color: var(--text-faint)">no design control moved</div></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: var(--radius-s); opacity: 0.55">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint); flex: none"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <div><div style="font-size: 13px; color: var(--text-muted)">The book is not paginated again</div><div style="font-size: 11.5px; color: var(--text-faint)">the chapter still ends on the same page</div></div>
+        </div>
+      </div>
+      <div class="step-note">What the edit could possibly have changed decides how much work is done. A metadata edit, a design change and a typed sentence are three different asks.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 420px">
+      <div class="step-n"><b>3</b> The pages either side come too</div>
+      <div class="behind" style="flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; justify-content: center; align-items: center">
+        <div class="behind-tag" style="align-self: flex-start">Behind the pane</div>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div style="width: 62px; height: 96px; border-radius: 2px; border: 1px dashed var(--background-modifier-border); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 10px; color: var(--text-faint)">146</div>
+          <div class="paper" style="width: 74px; height: 114px; padding: 12px 9px"><div class="body" style="font-size: 3.4px; line-height: 1.6"><p class="first">In consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them in the course of the day.</p></div><div class="folio" style="bottom: 6px; font-size: 4px">147</div></div>
+          <div style="width: 62px; height: 96px; border-radius: 2px; border: 1px dashed var(--background-modifier-border); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 10px; color: var(--text-faint)">148</div>
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-faint); text-align: center; line-height: 1.5; max-width: 300px">One page is what the pane asks for, and its neighbours ride along so the next turn paints instantly.</div>
+      </div>
+      <div class="step-note">Asking for the whole book's worth of drawing to show one page is the cost that pushed layout off the main thread in the first place.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 420px">
+      <div class="step-n"><b>4</b> The page redraws where you were</div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; overflow: hidden">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(var(--mono-100), 0.03)">
+          <div class="paper" style="width: 150px; height: 232px; padding: 36px 20px 26px">
+            <div style="text-align: center"><div style="font-size: 6px; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6355">Chapter Twelve</div></div>
+            <div class="body" style="font-size: 6px; line-height: 1.62; margin-top: 17px">
+              <p class="first"><span style="float: left; font-size: 22px; line-height: 0.82; padding: 1px 3px 0 0">I</span>n consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them in the course of the day.</p>
+              <p>But Mrs. Bennet, who had calculated on her daughters remaining at Netherfield till the following Tuesday, could not bring herself to receive them with pleasure before.</p>
+            </div>
+            <div class="folio" style="bottom: 13px; font-size: 6px">147</div>
+          </div>
+        </div>
+        <div class="status" style="border-top: 1px solid var(--divider-color)">
+          <span>Chapter Twelve — 3,124 words</span>
+          <span>page 147 of 337</span>
+        </div>
+      </div>
+      <div class="step-note">You do not lose your place, the book is still 337 pages, and nothing half-drawn is ever on screen.</div>
+    </div>
+  </div>
+
+  <div class="callout"><div><span class="k">For us, not for the writer.</span> Each stage keeps a count of how many times it ran, and the pane carries them as attributes nobody sees. That is what the end-to-end tests wait on — a clock cannot tell a served cache from a fast machine.</div></div>
+</div>

@@ -1,0 +1,46 @@
+<div style="height: 100%; background: var(--background-secondary); padding: 20px; display: flex; flex-direction: column; gap: 14px">
+  <div class="title-block">
+    <h2>Three states worth designing rather than discovering</h2>
+    <div class="sub">The frames are what the writer sees. The note under each is for us.</div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+
+    <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
+      <div class="step-n"><b>1</b> Opening a long book for the first time</div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
+        <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--text-faint); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <div style="font-size: 13.5px; color: var(--text-normal)">Setting <i>Pride and Prejudice</i></div>
+        <div style="width: 190px; height: 4px; border-radius: 2px; background: var(--background-modifier-border); overflow: hidden">
+          <div style="width: 62%; height: 100%; background: var(--color-accent)"></div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">18 chapters of 24<br>it will open at Chapter Twelve</div>
+      </div>
+      <div class="step-note">A whole book has to be laid out before any page of it is right, and the first one has nothing cached. It happens once a session, and it needs a state rather than an empty pane.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
+      <div class="step-n"><b>2</b> The layout falls over</div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
+        <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--color-orange); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/><path d="M21 3v6h-6"/></svg>
+        <div style="font-size: 13.5px; color: var(--text-normal)">Setting the book again</div>
+        <div style="width: 190px; height: 4px; border-radius: 2px; background: var(--background-modifier-border); overflow: hidden">
+          <div style="width: 80%; height: 100%; background: var(--color-orange)"></div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">nothing you wrote was lost<br>you will come back to page 147</div>
+      </div>
+      <div class="step-note">Orca still holds everything it sent, so recovery is deterministic and needs no decision from the author. The words never lived here in the first place — they are notes in the vault.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
+      <div class="step-n"><b>3</b> A book from a newer orca</div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
+        <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--text-faint); fill: none; stroke-width: 1.75; stroke-linecap: round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div style="font-size: 13.5px; color: var(--text-normal); line-height: 1.5">This book was made by a newer<br>version of orca than this one.</div>
+        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">Update the plugin to open it</div>
+        <div class="btn" style="margin-top: 2px">Open as markdown</div>
+      </div>
+      <div class="step-note">The key that makes a note a book also says which format it is in, so an older orca can refuse cleanly instead of writing a shape it does not understand.</div>
+    </div>
+  </div>
+</div>
