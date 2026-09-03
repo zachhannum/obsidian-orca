@@ -1,0 +1,100 @@
+<div style="height: 100%; background: var(--background-secondary); display: flex; flex-direction: column">
+  <div class="side-tabs">
+    <div class="side-tab"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M4 6h10"/><path d="M4 18h7"/></svg></div>
+    <div class="side-tab is-active"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg></div>
+    <div style="flex: 1"></div>
+    <div class="side-tab"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; overflow: hidden; padding: 0 14px 14px; display: flex; flex-direction: column; gap: 18px">
+
+    <div style="display: flex; align-items: center; gap: 7px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">DESIGN</span>
+      <span style="font-size: 11.5px; color: var(--text-faint)">— Pride and Prejudice</span>
+      <div style="flex: 1"></div>
+      <div style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--radius-s); color: var(--text-muted)">
+        <svg class="icon-s icon" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">PRESET <span class="hint">a design opens on one, not on defaults</span></div>
+      <div class="field is-select"><span>Quarto — a plain trade novel</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">PAGE</div>
+      <div class="row"><span class="lab">Trim</span><div class="field is-select" style="flex: 1"><span>5.5 × 8.5 in</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab dim">Margins</span>
+        <div class="dim" style="flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px">
+          <div class="field" style="justify-content: center; padding: 0">0.95</div>
+          <div class="field" style="justify-content: center; padding: 0">0.7</div>
+          <div class="field" style="justify-content: center; padding: 0">0.8</div>
+          <div class="field" style="justify-content: center; padding: 0">1.0</div>
+        </div>
+        <span class="lock"><svg class="icon-xs icon" viewBox="0 0 24 24" style="width: 11px; height: 11px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><b>line 3</b></span></div>
+      <div class="row" style="min-height: 14px"><span class="lab"></span>
+        <div style="flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; font-size: 10.5px; color: var(--text-faint); text-align: center">
+          <div>inner</div><div>outer</div><div>top</div><div>bottom</div>
+        </div>
+      </div>
+      <div class="row"><span class="lab">Mirrored</span><div class="toggle is-on"><div class="knob"></div></div><span style="color: var(--text-faint); font-size: 11.5px">inner margin follows the gutter</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">TEXT</div>
+      <div class="row"><span class="lab">Face</span><div class="field is-select" style="flex: 1"><span>EB Garamond</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab">Size</span><div class="field num">10.5 pt</div><span style="color: var(--text-muted); font-size: 12.5px">Leading</span><div class="field num">14 pt</div></div>
+      <div class="row"><span class="lab">Setting</span>
+        <div class="seg"><div class="is-on">Justified</div><div>Ragged right</div></div>
+      </div>
+      <div class="row"><span class="lab">Hyphenate</span><div class="toggle is-on"><div class="knob"></div></div><span style="color: var(--text-faint); font-size: 11.5px">using English (en-GB)</span></div>
+      <div class="row"><span class="lab dim">Indent</span><div class="field num dim">1.2 em</div><span class="dim" style="color: var(--text-faint); font-size: 11.5px">first line</span><div style="flex: 1"></div><span class="lock"><svg class="icon-xs icon" viewBox="0 0 24 24" style="width: 11px; height: 11px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><b>line 7</b></span></div>
+      <div class="row"><span class="lab"></span><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Indent again after a scene break</span></div>
+      <div class="row"><span class="lab"></span><div class="toggle" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Hanging punctuation</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">CHAPTER OPENINGS</div>
+      <div class="row"><span class="lab">Opens</span><div class="seg"><div class="is-on">Right-hand page</div><div>Next page</div><div>Same page</div></div></div>
+      <div class="row" style="min-height: 16px"><span class="lab"></span><span style="color: var(--text-faint); font-size: 11.5px">a right-hand start leaves the odd blank page behind it</span></div>
+      <div class="row"><span class="lab">Sink</span><div class="field num">7 lines</div><span style="color: var(--text-faint); font-size: 11.5px">keeps the baselines below it</span></div>
+      <div class="row"><span class="lab">Title</span><div class="field is-select" style="flex: 1"><span>EB Garamond · 17 pt · regular</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab">Drop cap</span><div class="field num">3 lines</div><span style="color: var(--text-faint); font-size: 11.5px">over</span></div>
+      <div class="row"><span class="lab">Letter-spacing</span><div class="field num dim">0.18 em</div><span class="pending">waits on the engine</span></div>
+      <div class="row"><span class="lab">Small caps</span><div class="toggle dim"><div class="knob"></div></div><span class="pending">waits on the engine</span></div>
+      <div class="row"><span class="lab">Rule below</span><div class="toggle dim"><div class="knob"></div></div><span class="pending">waits on the engine</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">SCENE BREAKS</div>
+      <div class="row"><span class="lab">Mark</span><div class="seg"><div>Space</div><div class="is-on">Ornament</div><div>Word</div><div>Image</div></div></div>
+      <div class="row"><span class="lab">Glyph</span>
+        <div style="display: flex; gap: 5px">
+          <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif">❧</div>
+          <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif; box-shadow: 0 0 0 1.5px var(--color-accent)">⁂</div>
+          <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif">§</div>
+          <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif">✦</div>
+          <div class="field" style="flex: 1; justify-content: center; color: var(--text-muted); font-size: 11.5px; gap: 5px"><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L7 21"/></svg>From the vault…</div>
+        </div>
+      </div>
+      <div class="row"><span class="lab">Space</span><div class="field num">1 line</div><span style="color: var(--text-muted); font-size: 12.5px">above</span><div class="field num">1 line</div><span style="color: var(--text-muted); font-size: 12.5px">below</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">HEADS &amp; FOLIOS</div>
+      <div class="row"><span class="lab">Verso head</span><div class="field is-select" style="flex: 1"><span>Author</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab">Recto head</span><div class="field is-select" style="flex: 1"><span>Book title</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab">Folio</span><div class="seg"><div>Top</div><div class="is-on">Foot</div><div>Outer</div></div></div>
+      <div class="row"><span class="lab">Numerals</span><div class="field is-select" style="flex: 1"><span>Arabic — roman in front matter</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab"></span><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Suppress the running head on openings</span></div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-h">DISCIPLINE</div>
+      <div class="row"><span class="lab">Orphans</span><div class="field num">2 lines</div><span style="color: var(--text-muted); font-size: 12.5px">Widows</span><div class="field num">2 lines</div></div>
+      <div class="row"><span class="lab"></span><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Keep a heading with what follows it</span></div>
+    </div>
+
+  </div>
+</div>

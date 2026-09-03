@@ -1,0 +1,121 @@
+<div style="height: 100%; background: var(--background-secondary); padding: 22px; display: flex; flex-direction: column; gap: 16px">
+  <div class="title-block">
+    <h2>Flow 1 — a folder of chapters becomes a book</h2>
+    <div class="sub">The chapters stay notes in the vault. The book is a note beside them, and it borrows its chapters rather than owning them: adding never moves or copies, removing never deletes.</div>
+  </div>
+
+  <div class="strip" style="flex: 1; min-height: 0">
+
+    <div class="step" style="width: 320px">
+      <div class="step-n"><b>1</b> Right-click the folder</div>
+      <div class="step-frame" style="flex: 1; position: relative; padding: 10px 6px">
+        <div class="nav-item"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg><span class="label">Manuscript</span></div>
+        <div class="nav-children">
+          <div class="nav-item is-selected"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg><span class="label">Chapters</span></div>
+          <div class="nav-children">
+            <div class="nav-item is-muted"><span class="label">Chapter One</span></div>
+            <div class="nav-item is-muted"><span class="label">Chapter Two</span></div>
+            <div class="nav-item is-muted"><span class="label">Chapter Three</span></div>
+          </div>
+        </div>
+        <div class="menu" style="position: absolute; left: 40px; top: 112px; right: 14px">
+          <div class="menu-item is-active"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Create book from these notes</div>
+          <div class="menu-sep"></div>
+          <div class="menu-item">New note</div>
+          <div class="menu-item">Rename…</div>
+        </div>
+      </div>
+      <div class="step-note">Imported in sorted order — the only time alphabetical order is trusted. <span style="color: var(--text-muted)">New book</span> in the palette is the empty way in.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 320px">
+      <div class="step-n"><b>2</b> A book is a note</div>
+      <div class="step-frame" style="flex: 1; padding: 12px 14px; font-family: var(--font-monospace); font-size: 11.5px; line-height: 1.85; color: var(--text-muted); overflow: hidden">
+        <div style="color: var(--text-faint)">---</div>
+        <div><span style="color: var(--color-cyan)">orca-book</span>: 1</div>
+        <div><span style="color: var(--color-cyan)">title</span>: Pride and Prejudice</div>
+        <div><span style="color: var(--color-cyan)">author</span>: Jane Austen</div>
+        <div><span style="color: var(--color-cyan)">language</span>: <span style="color: var(--color-green)">"en-GB"</span></div>
+        <div style="color: var(--text-faint)">---</div>
+        <div style="height: 6px"></div>
+        <div style="color: var(--text-normal)"># Front matter</div>
+        <div>- [[Copyright]]</div>
+        <div>- [[Dedication]]</div>
+        <div style="height: 4px"></div>
+        <div style="color: var(--text-normal)"># Body</div>
+        <div>- [[Chapter One]]</div>
+        <div>- [[Chapter Two]]</div>
+        <div>- [[Chapter Three]]</div>
+      </div>
+      <div class="step-note">Wikilinks, so a renamed or moved chapter keeps its entry with no rename watching. Every enum quoted on write — unquoted <span class="mono">no</span> is boolean false in YAML.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 320px">
+      <div class="step-n"><b>3</b> The navigator reveals itself</div>
+      <div class="step-frame" style="flex: 1; padding: 10px 6px; background: var(--background-secondary)">
+        <div class="nav-item is-active" style="font-weight: 500"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg><span class="label">Pride and Prejudice</span></div>
+        <div class="nav-children">
+          <div class="nav-heading">Front matter</div>
+          <div class="nav-item"><span class="label">Copyright</span></div>
+          <div class="nav-item"><span class="label">Dedication</span></div>
+          <div class="nav-heading">Body</div>
+          <div class="nav-item"><span class="label">Chapter One</span></div>
+          <div class="nav-item"><span class="label">Chapter Two</span></div>
+          <div class="nav-item"><span class="label">Chapter Three</span></div>
+          <div style="margin: 8px 8px 0; padding: 8px 9px; border-radius: var(--radius-s); background: rgba(var(--mono-100), 0.05); font-size: 11.5px; color: var(--text-faint)">
+            <div style="display: flex; align-items: center; gap: 6px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New chapter at the end of Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-note">Opening a book note reveals the navigator — a collapsed sidebar would mean a book nobody can reorder.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 320px">
+      <div class="step-n"><b>4</b> Drag to reorder, or to re-role</div>
+      <div class="step-frame" style="flex: 1; padding: 10px 6px; background: var(--background-secondary); position: relative">
+        <div class="nav-children" style="margin-left: 6px">
+          <div class="nav-heading">Front matter</div>
+          <div class="nav-item"><span class="label">Copyright</span></div>
+          <div class="nav-item is-muted" style="opacity: 0.4"><span class="label">Dedication</span></div>
+          <div class="nav-heading" style="color: var(--text-accent)">Body</div>
+          <div style="height: 2px; background: var(--color-accent); border-radius: 2px; margin: 2px 8px 4px"></div>
+          <div class="nav-item"><span class="label">Chapter One</span></div>
+          <div class="nav-item"><span class="label">Chapter Two</span></div>
+          <div class="nav-item"><span class="label">Chapter Three</span></div>
+        </div>
+        <div style="position: absolute; top: 62px; left: 26px; right: 18px; display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius-s); background: var(--background-primary); box-shadow: 0 6px 18px rgba(0,0,0,0.35), 0 0 0 1px var(--color-accent); font-size: var(--font-ui-small)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint)"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01" stroke-width="2.6"/></svg>
+          <span>Dedication</span><span class="chip" style="margin-left: auto">→ chapter</span>
+        </div>
+      </div>
+      <div class="step-note">The markdown list is rewritten on settle. The heading an entry lands under is its role; a per-entry override sits in the context menu.</div>
+    </div>
+
+    <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
+
+    <div class="step" style="width: 320px">
+      <div class="step-n"><b>5</b> Toggle the leaf to the book</div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--divider-color)">
+          <div style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text-muted)">
+            <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(var(--mono-100), 0.03)">
+          <div class="paper" style="width: 138px; height: 213px; padding: 34px 18px 24px">
+            <div style="text-align: center"><div style="font-size: 5.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6355">Chapter Three</div></div>
+            <div class="body" style="font-size: 5.6px; line-height: 1.62; margin-top: 16px"><p class="first"><span style="float: left; font-size: 20px; line-height: 0.82; padding: 1px 3px 0 0">M</span>r. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last always assuring his wife that he should not go.</p><p>Not all that Mrs. Bennet, with the assistance of her five daughters, could ask on the subject was sufficient to draw from her husband any satisfactory description of Mr. Bingley.</p></div>
+            <div class="folio" style="bottom: 12px; font-size: 5.5px">9</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-note">The same pane, swapped — one icon, where Obsidian already keeps its reading toggle, and only on notes that belong to a book. It opens at <em>this chapter's</em> first page — a chapter laid out by itself is a different chapter.</div>
+    </div>
+  </div>
+</div>

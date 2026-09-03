@@ -1,0 +1,160 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Screens"
+    },
+    {
+      "id": "page-2",
+      "name": "Flows"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "The whole workspace",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Navigator.dc.html",
+      "title": "Navigator",
+      "page": "page-1",
+      "x": 1560,
+      "y": 0,
+      "w": 760,
+      "h": 860
+    },
+    {
+      "file": "DesignPanel.dc.html",
+      "title": "Design panel",
+      "page": "page-1",
+      "x": 2440,
+      "y": 0,
+      "w": 380,
+      "h": 1460
+    },
+    {
+      "file": "BookPage.dc.html",
+      "title": "The book note's page",
+      "page": "page-1",
+      "x": 0,
+      "y": 1580,
+      "w": 900,
+      "h": 960
+    },
+    {
+      "file": "PreviewViews.dc.html",
+      "title": "Preview \u2014 single, spread, grid",
+      "page": "page-1",
+      "x": 1020,
+      "y": 1580,
+      "w": 1180,
+      "h": 1000
+    },
+    {
+      "file": "Issues.dc.html",
+      "title": "Issues pane",
+      "page": "page-1",
+      "x": 2320,
+      "y": 1580,
+      "w": 380,
+      "h": 620
+    },
+    {
+      "file": "Export.dc.html",
+      "title": "Export preflight",
+      "page": "page-1",
+      "x": 2820,
+      "y": 1580,
+      "w": 720,
+      "h": 620
+    },
+    {
+      "file": "Advanced.dc.html",
+      "title": "Design panel \u2014 the CSS view",
+      "page": "page-1",
+      "x": 0,
+      "y": 2700,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "States.dc.html",
+      "title": "Honest states",
+      "page": "page-1",
+      "x": 1560,
+      "y": 2700,
+      "w": 1160,
+      "h": 470
+    },
+    {
+      "file": "FlowMakeABook.dc.html",
+      "title": "Flow 1 \u2014 make a book",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 1900,
+      "h": 560
+    },
+    {
+      "file": "FlowDraftLoop.dc.html",
+      "title": "Flow 2 \u2014 the drafting loop",
+      "page": "page-2",
+      "x": 0,
+      "y": 700,
+      "w": 1900,
+      "h": 580
+    },
+    {
+      "file": "FlowDesignExport.dc.html",
+      "title": "Flow 3 \u2014 design and export",
+      "page": "page-2",
+      "x": 0,
+      "y": 1460,
+      "w": 1900,
+      "h": 580
+    }
+  ],
+  "annotations": [
+    {
+      "id": "invariants",
+      "page": "page-1",
+      "x": 0,
+      "y": -390,
+      "w": 700,
+      "text": "The three invariants every screen here has to keep:\n\n1. The panel never writes the author's CSS. Settings are data; the CSS they imply is generated at render time and never lands in the vault.\n\n2. The engine is the only linter. Every squiggle comes from a fleuron warning.\n\n3. Preview and export come from one session. The PDF is drawn from the pages already on screen."
+    },
+    {
+      "id": "blocked",
+      "page": "page-1",
+      "x": 760,
+      "y": -390,
+      "w": 700,
+      "text": "Drawn as planned, waiting on the engine:\n\n- a page saying which section it came from \u2014 the toggle, the page ranges on the book page, the contents pass\n- letter-spacing, small caps, all caps, colour, a rule under a chapter title \u2014 greyed out in the design panel here\n- hyphenation reading the book's language\n- the painter's selection overlay \u2014 selectable text on a page made of paths"
+    },
+    {
+      "id": "how-to-read",
+      "page": "page-2",
+      "x": 0,
+      "y": -230,
+      "w": 900,
+      "text": "Three flows, left to right. Every frame is the real surface at the moment that step happens, not a diagram of it \u2014 so the step notes carry the reasoning and the frames carry the design."
+    },
+    {
+      "id": "open-questions",
+      "page": "page-1",
+      "x": 1551,
+      "y": -713,
+      "w": 700,
+      "text": "Settled in this round:\n\n- Manuscript and book are one pane, swapped by a single icon action in the note's header \u2014 which is what the plugin API gives free. MarkdownView inherits addAction from ItemView, and the swap is leaf.setViewState. A segmented control would mean hand-built DOM in a view we do not own.\n\n- Your CSS is the design panel's other view, reached by an icon action in the panel header, to match. The editor gets the whole column, and the book stays in the pane either way.\n\n- A control your CSS has taken over goes grey where it sits, in the controls view, carrying the line that took it \u2014 which is also the way to that line. The CSS view itself is just the editor.\n\n- Export sits in the book preview's toolbar and on the book note's page.\n\nStill open:\n\n- Chapter openings default to the right-hand page, which is what leaves the odd blank verso. Next page and Same page are both there if that is the wrong default.\n\n- The status line no longer shows the per-stage counts; they stay as attributes for the tests, so the epic's issue wants amending.\n\nWorth knowing for the build: the header icon has to be applied on active-leaf-change rather than once at startup, because a background leaf holds a DeferredView; and returning to the manuscript where the writer left it means capturing the leaf's ephemeral state before the swap and putting it back after \u2014 nothing does that for us."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

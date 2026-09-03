@@ -1,0 +1,105 @@
+<div style="height: 100%; background: var(--background-secondary); padding: 20px; display: flex; flex-direction: column; gap: 16px">
+
+  <div class="title-block">
+    <h2>The navigator owns the structure</h2>
+    <div class="sub">Membership, reading order and roles are edited here and nowhere else. The heading an entry sits under <em>is</em> its role, so dragging across a heading re-roles it.</div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+
+    <!-- A: at rest -->
+    <div style="display: flex; flex-direction: column; gap: 8px; min-height: 0">
+      <div class="step-n"><b>A</b> At rest</div>
+      <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); padding: 8px 4px; overflow: hidden">
+        <div class="nav-header" style="padding-left: 8px"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">BOOKS</span><span class="grow"></span>
+          <svg class="icon-s icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </div>
+
+        <div class="nav-item is-active" style="font-weight: 500">
+          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          <span class="label">Pride and Prejudice</span>
+          <span style="margin-left: auto; color: var(--text-faint); font-size: 11px">337 pp</span>
+        </div>
+        <div class="nav-children">
+          <div class="nav-heading">Front matter</div>
+          <div class="nav-item is-muted"><span class="label">Title page</span><span class="chip mod-generated" style="margin-left: auto">generated</span></div>
+          <div class="nav-item"><span class="label">Copyright</span></div>
+          <div class="nav-item"><span class="label">Dedication</span></div>
+          <div class="nav-item"><span class="label">A note on the text</span><span class="chip" style="margin-left: auto">epigraph</span></div>
+          <div class="nav-item is-muted"><span class="label">Contents</span><span class="chip mod-generated" style="margin-left: auto">generated</span></div>
+          <div class="nav-heading">Body</div>
+          <div class="nav-item"><span class="label">Volume the First</span><span class="chip" style="margin-left: auto">part</span></div>
+          <div class="nav-item"><span class="label">Chapter One</span></div>
+          <div class="nav-item"><span class="label">Chapter Two</span></div>
+          <div class="nav-item"><span class="label">Chapter Three</span></div>
+          <div class="nav-item is-muted" style="opacity: 0.85">
+            <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--color-orange)"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <span class="label" style="text-decoration: line-through">Chapter Four</span>
+            <span style="margin-left: auto; display: flex; gap: 6px; font-size: 11px; color: var(--text-accent)"><span>Locate</span><span>Remove</span></span>
+          </div>
+          <div class="nav-heading">Back matter</div>
+          <div class="nav-item"><span class="label">Acknowledgements</span></div>
+
+          <div style="margin: 8px 8px 0; padding: 8px 9px; border-radius: var(--radius-s); background: rgba(var(--mono-100), 0.04)">
+            <div style="display: flex; align-items: center; gap: 6px; color: var(--text-faint); font-size: 11.5px; margin-bottom: 6px">
+              <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+              <span style="flex: 1">3 notes in this book’s folder aren’t in the reading order</span><svg class="icon-xs icon" viewBox="0 0 24 24" style="flex: none"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)"><span style="flex: 1; overflow: hidden; text-overflow: ellipsis">Chapter Four (rewrite)</span><span style="color: var(--text-accent)">Add</span></div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)"><span style="flex: 1; overflow: hidden; text-overflow: ellipsis">Chapter Twenty-One</span><span style="color: var(--text-accent)">Add</span></div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)"><span style="flex: 1; overflow: hidden; text-overflow: ellipsis">Scraps — the Hunsford letter</span><span style="color: var(--text-accent)">Add</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: mid-drag, with the context menu -->
+    <div style="display: flex; flex-direction: column; gap: 8px; min-height: 0">
+      <div class="step-n"><b>B</b> Dragging across a heading</div>
+      <div style="flex: 1; min-height: 0; position: relative; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); padding: 8px 4px; overflow: hidden">
+        <div class="nav-item is-active" style="font-weight: 500">
+          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          <span class="label">Pride and Prejudice</span>
+        </div>
+        <div class="nav-children">
+          <div class="nav-heading">Front matter</div>
+          <div class="nav-item"><span class="label">Copyright</span></div>
+          <div class="nav-item"><span class="label">Dedication</span></div>
+          <div class="nav-item is-muted" style="opacity: 0.4"><span class="label">A note on the text</span></div>
+          <div class="nav-heading" style="color: var(--text-accent)">Body</div>
+          <div style="height: 2px; background: var(--color-accent); border-radius: 2px; margin: 2px 8px 4px"></div>
+          <div class="nav-item"><span class="label">Volume the First</span><span class="chip" style="margin-left: auto">part</span></div>
+          <div class="nav-item"><span class="label">Chapter One</span></div>
+          <div class="nav-item"><span class="label">Chapter Two</span></div>
+          <div class="nav-heading">Back matter</div>
+          <div class="nav-item"><span class="label">Acknowledgements</span></div>
+        </div>
+
+        <!-- the dragged entry -->
+        <div style="position: absolute; top: 168px; left: 34px; right: 26px; display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius-s); background: var(--background-primary); box-shadow: 0 6px 18px rgba(0,0,0,0.35), 0 0 0 1px var(--color-accent); font-size: var(--font-ui-small); color: var(--text-normal)">
+          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint)"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01" stroke-width="2.6"/></svg>
+          <span>A note on the text</span>
+          <span class="chip" style="margin-left: auto">epigraph → chapter</span>
+        </div>
+
+        <!-- context menu -->
+        <div class="menu" style="position: absolute; left: 40px; bottom: 12px; right: 12px">
+          <div class="menu-item is-active"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New chapter here</div>
+          <div class="menu-item">Role for this entry<span style="margin-left: auto; color: var(--text-faint)">›</span></div>
+          <div class="menu-item">Reveal the note</div>
+          <div class="menu-sep"></div>
+          <div class="menu-item">Remove from book</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+    <div class="callout"><div><span class="k">Three routes in.</span> A fuzzy quick pick, <em>Add to book</em> on a note's context menu, and a wikilink pasted into the list — all write the same line.</div></div>
+    <div class="callout"><div><span class="k">No delete.</span> <em>Remove from book</em> takes the entry out and nothing else; there is no delete in this view at all.</div></div>
+    <div class="callout"><div><span class="k">A missing note</span> keeps its entry, renders in place with Locate and Remove, and the book still lays out with a warning.</div></div>
+  </div>
+</div>
