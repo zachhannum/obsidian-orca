@@ -31,7 +31,7 @@ export const browserHost: WorkerHost = {
   release: (url) => {
     URL.revokeObjectURL(url);
   },
-  start: (url) => new Worker(url),
+  start: (url) => new Worker(url, { name: "orca" }),
 };
 
 /**
