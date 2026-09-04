@@ -31,12 +31,11 @@ export interface FaceSet {
   ): Promise<void>;
 }
 
-/** A document's own. */
 export function documentFaces(document: Document): FaceSet {
   return {
     add: async (family, bytes, attributes) => {
       // Registered at the slope and weight the face already has, so
-      // the browser synthesises neither over it.
+      // the browser synthesises neither.
       const face = new FontFace(family, new Uint8Array(bytes), {
         style: attributes.italic ? "italic" : "normal",
         weight: String(attributes.weight),
@@ -116,8 +115,8 @@ export class Session {
   }
 
   /**
-   * One face, from the file the engine shaped with. The bundled face
-   * lives inside the module and has no url to fetch it from.
+   * The bundled face lives inside the module, so its bytes come from
+   * the engine rather than a url.
    */
   private async face(id: number, layout: LayoutOutput): Promise<void> {
     const entry = layout.fonts[id];

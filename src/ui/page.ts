@@ -6,7 +6,6 @@ export interface Surface {
   readonly dataset: DOMStringMap;
 }
 
-/** A painted page, and the render behind it. */
 export interface Painted {
   markup: string;
   generation: number;
@@ -14,9 +13,8 @@ export interface Painted {
 }
 
 /**
- * Writes a page into the surface in one go. The generation and stage
- * runs ride along as attributes, which a test waits on rather than a
- * clock.
+ * Writes a page into the surface in one go, with the generation and
+ * stage runs as attributes, which a test waits on rather than a clock.
  */
 export function showPage(surface: Surface, painted: Painted): void {
   surface.innerHTML = painted.markup;

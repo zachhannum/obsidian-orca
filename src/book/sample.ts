@@ -1,9 +1,8 @@
 import type { Op, Source } from "fleuron";
 
 /**
- * One note, standing in for a book in the vault. Its frontmatter names
- * the book, which is where a book of one file takes its title and
- * author from.
+ * One note, standing in for a book in the vault. A book of one file
+ * takes its title and author from the note's frontmatter.
  */
 export const SAMPLE: Source = {
   name: "Chapter Twelve.md",
@@ -36,7 +35,6 @@ should be mentioned, and the request made.
 `,
 };
 
-/** The inputs that put one note on the engine as the whole book. */
 export function openBook(source: Source): Op[] {
   return [
     { op: "dialect", dialect: "obsidian" },

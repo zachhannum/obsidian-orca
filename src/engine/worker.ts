@@ -1,7 +1,6 @@
 /**
- * fleuron's own worker lets the module fetch its bytes. A plugin has no
- * origin to fetch from, so the module arrives in the first message and
- * the engine opens over it.
+ * A plugin has no origin to fetch the module from. The module arrives
+ * in the first message, and the worker opens the engine from its bytes.
  */
 
 import { createEngine, type Engine, type Request } from "fleuron";

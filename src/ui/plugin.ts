@@ -6,8 +6,8 @@ import { Session, documentFaces } from "@/engine/session";
 import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 
 /**
- * Orca, as Obsidian loads it. The plugin holds the engine, and the
- * views borrow the session over it.
+ * Orca, as Obsidian loads it. The plugin holds the engine, and every
+ * view borrows the same session.
  */
 export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
