@@ -29,4 +29,4 @@ test("the `checks` job runs the type check, the lint pass and the Node tier on e
 });
 
 // What this tier does not cover: whether the runner has what a job
-// needs, which only a run on GitHub answers.
+// needs, which only a run on GitHub shows.

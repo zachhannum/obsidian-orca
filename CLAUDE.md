@@ -77,8 +77,8 @@ one, and UI work starts by opening the one it belongs to.
 - Generated CSS and the generated matter get snapshots. Snapshot files
   are reviewed like code, never blind-accepted.
 - What the suite does not cover is written down beside it and read like
-  a backlog: a test file ends on a comment saying what it leaves, and
-  the lint pass holds it to that.
+  a backlog: a test file ends on that note, and the lint pass holds
+  every test file to one.
 
 ## E2E testing
 

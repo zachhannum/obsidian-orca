@@ -314,6 +314,6 @@ async function moduleBytes(): Promise<ArrayBuffer> {
   ) as ArrayBuffer;
 }
 
-// What this tier does not reach: the plugin's own load and unload, which
+// What this tier does not cover: the plugin's own load and unload, which
 // needs Obsidian around it, and a render crossing the wire, which waits
 // on a page.

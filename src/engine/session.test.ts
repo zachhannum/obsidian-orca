@@ -251,7 +251,7 @@ function engineDirectory(): string {
   return path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-// What this tier does not reach: registering the view, and the page
-// inside a leaf. Both wait on the e2e harness. The PDF is read for its
-// own header and trailer here; `qpdf --check` and a `pdftotext` round
-// trip wait on the export flow.
+// What this tier does not cover: registering the view, and the page
+// inside a leaf. Both wait on the e2e harness. It reads the PDF's header
+// and trailer only; `qpdf --check` and a `pdftotext` round trip wait on
+// the export flow.

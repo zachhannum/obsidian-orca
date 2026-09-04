@@ -29,7 +29,7 @@ export async function readText(
   return await read(() => vault.read(path), path);
 }
 
-/** A file's bytes, under the same error. */
+/** A file's bytes, with the same error on a read that fails. */
 export async function readBytes(
   vault: VaultAdapter,
   path: string,

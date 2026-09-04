@@ -45,7 +45,7 @@ export function directoryVault(root: string): VaultAdapter {
 
 /**
  * A vault path is relative to the vault, separated by `/`, and
- * sometimes has a leading `/`. A path that climbs out of the directory
+ * sometimes has a leading `/`. A path that leads outside the directory
  * is refused.
  */
 function resolve(root: string, at: string): string {

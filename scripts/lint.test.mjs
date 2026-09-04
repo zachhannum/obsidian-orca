@@ -38,7 +38,7 @@ test("an import inside a comment or a url is not an import", () => {
   );
 });
 
-test("a test file that does not say what it leaves uncovered is a violation", () => {
+test("a test file missing the note on what it does not cover is a violation", () => {
   assert.deepEqual(said("src/book/note.test.ts", 'import "@/book/note";\n'), [
     "a test file ends on what it does not cover",
   ]);

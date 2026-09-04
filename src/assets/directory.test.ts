@@ -34,7 +34,7 @@ test("a missing file is an asset error naming the path", async () => {
   );
 });
 
-test("a path that climbs out of the directory is refused", async () => {
+test("a path that leads outside the directory is refused", async () => {
   await assert.rejects(
     readText(vault, "../package.json"),
     (error: unknown) =>

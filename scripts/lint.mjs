@@ -16,8 +16,8 @@ const APPLICATION = ["obsidian", "electron"];
 
 const RULES = [
   /**
-   * The pipeline runs one way and `ui` sits at its end: `ui` imports
-   * the rest, and nothing imports `ui`.
+   * The pipeline runs one way and `ui` is at its end: `ui` imports the
+   * rest, and nothing imports `ui`.
    */
   ({ module, imported }) =>
     imported === "ui" && module !== "ui" && module !== undefined
@@ -38,8 +38,8 @@ const RULES = [
 ];
 
 /**
- * Every rule, over one file's imports and, for a test, the note it
- * ends on.
+ * Every rule, run over one file's imports and, for a test file, the
+ * note it ends on.
  */
 export function check(file, text) {
   const found = [];
@@ -61,7 +61,7 @@ export function check(file, text) {
   return found;
 }
 
-/** Every file under `src`, in path order. */
+/** Every file under `src`, checked in path order. */
 export async function lint(from = root) {
   const files = [];
   for await (const file of glob("src/**/*.ts", { cwd: from })) files.push(file);

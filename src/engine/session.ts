@@ -94,7 +94,7 @@ export class Session {
   async pdf(): Promise<Uint8Array> {
     const bytes = await routed(() => this.client.exportPdf());
     if (bytes === null) {
-      throw new EngineError("a later render overtook the export");
+      throw new EngineError("a later render started before the export finished");
     }
     return bytes;
   }
@@ -137,7 +137,7 @@ export class Session {
   }
 }
 
-/** The engine's own line: routed, never re-worded. */
+/** The engine's own message: routed, never re-worded. */
 async function routed<T>(ask: () => Promise<T>): Promise<T> {
   try {
     return await ask();
