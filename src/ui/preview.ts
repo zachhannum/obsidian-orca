@@ -62,11 +62,11 @@ export class PreviewView extends ItemView {
     return Promise.resolve();
   }
 
-  /** Paints the first page, if the leaf is still open on one. */
   private paint(session: Session): boolean {
     const surface = this.surface;
     const output = session.output;
     const page = output?.pages[0];
+    // The leaf can close while the first layout is still out.
     if (surface === undefined || output === undefined || page === undefined) {
       return false;
     }

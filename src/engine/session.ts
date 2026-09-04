@@ -60,7 +60,7 @@ export class Session {
     private readonly faces: FaceSet,
   ) {}
 
-  /** Everything the last render produced, or nothing before the first. */
+  /** Nothing until the first render lands. */
   get output(): LayoutOutput | undefined {
     return this.layout;
   }
@@ -70,7 +70,7 @@ export class Session {
     return this.client.current;
   }
 
-  /** What that render cost. */
+  /** What it cost. */
   get stages(): Stages {
     return this.client.stages;
   }
