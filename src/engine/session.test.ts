@@ -10,6 +10,7 @@ import {
   type WorkerHost,
   type WorkerPort,
 } from "@/engine/bootstrap";
+import { EngineError } from "@/engine/errors";
 import {
   Session,
   type EngineClient,
@@ -118,6 +119,22 @@ test("the faces a run drew with come from the module, under the painter's names"
 
   assert.deepEqual(client.asked, [0]);
   assert.deepEqual(set.added, ["fleuron-face-0"]);
+});
+
+test("a book the engine refuses comes back as an engine error, in its own words", async () => {
+  const refusing: EngineClient = {
+    preview: () => Promise.reject(new Error("unknown property `leadin`")),
+    fontBytes: () => Promise.reject(new Error("no faces")),
+    current: 1,
+    stages: { style: 0, lines: 0, flow: 0, paint: 0 },
+  };
+
+  await assert.rejects(
+    new Session(refusing, faces()).open(openBook(SAMPLE)),
+    (error: unknown) =>
+      error instanceof EngineError &&
+      error.message === "unknown property `leadin`",
+  );
 });
 
 test("the sample note sets to a page the painter can draw", async () => {

@@ -4,8 +4,9 @@ import {
   type LayoutOutput,
   type Op,
 } from "fleuron";
+import { EngineError } from "@/engine/errors";
 
-/** What a render cost, counted in stage runs rather than milliseconds. */
+/** What a render cost, in stage runs. */
 export interface Stages {
   style: number;
   lines: number;
@@ -70,7 +71,6 @@ export class Session {
     return this.client.current;
   }
 
-  /** What it cost. */
   get stages(): Stages {
     return this.client.stages;
   }
@@ -88,7 +88,16 @@ export class Session {
   }
 
   private async lay(ops: Op[]): Promise<void> {
-    const layout = await this.client.preview(ops);
+    let layout: LayoutOutput | null;
+    try {
+      layout = await this.client.preview(ops);
+    } catch (cause) {
+      // The engine's own line: routed, never re-worded.
+      throw new EngineError(
+        cause instanceof Error ? cause.message : String(cause),
+        { cause },
+      );
+    }
     if (layout === null) return;
     this.layout = layout;
     await this.load(layout);

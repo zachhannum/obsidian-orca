@@ -5,7 +5,10 @@ import { readModule, type VaultFiles } from "@/engine/module";
 import { Session, documentFaces } from "@/engine/session";
 import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 
-/** Orca, as Obsidian loads it. */
+/**
+ * Orca, as Obsidian loads it. The plugin holds the engine, and the
+ * views borrow the session over it.
+ */
 export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
   private unloaded = false;
@@ -56,7 +59,6 @@ export default class OrcaPlugin extends Plugin {
     }
   }
 
-  /** Brings the preview up, reusing the leaf already on it. */
   private async reveal(): Promise<void> {
     const { workspace } = this.app;
     const open: WorkspaceLeaf | undefined =

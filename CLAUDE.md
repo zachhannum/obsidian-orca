@@ -196,5 +196,8 @@ PR bodies are written in.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.
-- Public API docs (`/** */`) on every exported item; the op and session
-  types are a cross-module contract and get treated like documentation.
+- Public API docs (`/** */`) on exported items. A doc states an
+  invariant, a constraint, or a consequence a reader would otherwise
+  derive from the implementation; where there is none, the signature
+  stands on its own. The op and session types are a cross-module
+  contract and get treated like documentation.

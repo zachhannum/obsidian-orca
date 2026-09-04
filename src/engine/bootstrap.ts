@@ -17,7 +17,10 @@ export interface WorkerHost {
   start(url: string): WorkerPort;
 }
 
-/** A running engine. */
+/**
+ * An engine that started. `startEngine` tears down a worker that could
+ * not open one.
+ */
 export interface EngineHandle {
   readonly client: Client;
   /** Terminates the worker and revokes its Blob URL. */
