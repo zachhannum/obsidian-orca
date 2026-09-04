@@ -52,7 +52,7 @@ jobs:
 
       - run: npm ci --prefer-offline --no-audit --no-fund
 
-      # The app and its installer are a download apiece. The version is
+      # The app and its installer are each a download. The version is
       # pinned in the harness, so the key moves when the pin does.
       - uses: actions/cache@v4
         with:

@@ -1,4 +1,7 @@
-/** Engine trouble. Only `ui` turns one into something an author sees. */
+/**
+ * An error from the engine. Only `ui` turns one into something an author
+ * sees.
+ */
 export class EngineError extends Error {
   override readonly name = "EngineError";
 

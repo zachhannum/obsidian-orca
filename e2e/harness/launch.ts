@@ -20,7 +20,10 @@ const MODULE = "fleuron_bg.wasm";
 
 const root = path.resolve(fileURLToPath(import.meta.url), "../../..");
 
-/** The vault as it is checked in, which a changed one is put back from. */
+/**
+ * The vault as it is checked in. A spec that changes the copy puts it
+ * back from here.
+ */
 export const FIXTURE = path.join(root, "e2e/fixture");
 
 /** The environment a spec reads the debugging port from. */
@@ -74,8 +77,8 @@ export default async function launch(): Promise<() => Promise<void>> {
 }
 
 /**
- * The port Obsidian opened, read off the line Chromium writes when it
- * takes one. The harness asks for port 0, so two runs on one machine
+ * The port Obsidian opened, read from the line Chromium writes when it
+ * opens one. The harness asks for port 0, so two runs on one machine
  * cannot pick the same number.
  */
 function port(proc: ChildProcess): Promise<number> {
@@ -97,7 +100,11 @@ function port(proc: ChildProcess): Promise<number> {
     });
     proc.on("close", (code) => {
       clearTimeout(timer);
-      reject(new Error(`Obsidian exited with ${code} before opening one\n${said}`));
+      reject(
+        new Error(
+          `Obsidian exited with ${code} before opening a debugging port\n${said}`,
+        ),
+      );
     });
   });
 }

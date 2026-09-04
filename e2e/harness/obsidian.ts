@@ -1,7 +1,7 @@
 /**
- * Obsidian's own class names and its app object, in one file, so a new
- * Obsidian breaks one file. Orca's markup carries test ids and is
- * reached by those instead.
+ * Obsidian's own class names and its app object, in one file, so an
+ * Obsidian release breaks one file. Orca's markup carries test ids and
+ * is reached by those instead.
  */
 
 import type { Browser, Locator, Page } from "@playwright/test";
@@ -14,7 +14,6 @@ declare global {
   }
 }
 
-/** Obsidian's own class names and attributes, nowhere else. */
 const CHROME = {
   ribbon: (label: string) => `.side-dock-ribbon-action[aria-label="${label}"]`,
   leaf: (type: string) => `.workspace-leaf-content[data-type="${type}"]`,
@@ -67,9 +66,9 @@ export class Obsidian {
 }
 
 /**
- * The renderer holding the vault. Obsidian opens its window on its own
- * schedule, so the harness reads the target list until a page has an
- * app on it.
+ * The renderer holding the vault. The window appears some time after
+ * the process starts, so the harness reads the target list until a page
+ * has an app on it.
  */
 async function renderer(browser: Browser): Promise<Page> {
   const deadline = Date.now() + APPEARING;

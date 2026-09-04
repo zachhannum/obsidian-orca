@@ -1,16 +1,16 @@
 /**
  * Orca's preview, reached by the test ids its own markup carries.
  *
- * The surface holds the generation it last painted and what that
- * render cost in stage runs, so every wait here is on the page rather
- * than on a clock.
+ * The surface carries the generation last painted into it and what
+ * that render cost in stage runs, so every wait here is on the page
+ * rather than on a clock.
  */
 
 import { expect, type Locator } from "@playwright/test";
 import type { Stages } from "@/engine/session";
 import type { Obsidian } from "./obsidian";
 
-/** The view type the preview is registered under. */
+/** The type the preview is registered under. */
 export const PREVIEW = "orca-book-preview";
 
 export class Book {
@@ -24,7 +24,7 @@ export class Book {
     this.page = this.surface.locator("svg");
   }
 
-  /** Opens the book the way a reader does, from the ribbon. */
+  /** Opens the book from the ribbon. */
   async open(): Promise<void> {
     await this.obsidian.ribbon("Open the book").click();
   }

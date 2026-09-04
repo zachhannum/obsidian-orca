@@ -1,7 +1,7 @@
 /**
  * The vault a spec is allowed to change. Every write goes through here
  * and is put back from the checked-in fixture when the spec ends, so
- * the next spec opens on the vault it expects.
+ * the next spec opens on the vault as it is checked in.
  */
 
 import { readFile } from "node:fs/promises";

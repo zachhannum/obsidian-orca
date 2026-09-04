@@ -9,6 +9,6 @@ test("the sample note crosses as the whole book, in Obsidian's markdown", () => 
   ]);
 });
 
-test("the note names the book, since a book of one file has no other way", () => {
+test("the note's frontmatter names the book's title and author", () => {
   assert.match(SAMPLE.text, /^---\ntitle: Pride and Prejudice\nauthor: Jane Austen\n---\n/);
 });

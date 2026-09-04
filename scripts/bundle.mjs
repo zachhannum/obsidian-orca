@@ -1,4 +1,4 @@
-/** The build, as a module, so its test runs the same one. */
+/** The build, as a module, so its test runs the same build. */
 
 import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";

@@ -1,5 +1,5 @@
 /**
- * The fixtures a spec asks for. One Obsidian is shared by the whole
+ * The fixtures a spec declares. One Obsidian is shared by the whole
  * run, so a spec is handed page objects over the app the harness
  * launched rather than a browser of its own.
  */
@@ -12,7 +12,7 @@ import { Vault } from "./vault";
 
 interface Fixtures {
   book: Book;
-  /** The vault, for a spec that changes it and wants it put back. */
+  /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;
   record: void;
 }
@@ -45,8 +45,7 @@ export const test = base.extend<Fixtures, Shared>({
 
   /**
    * What a failure leaves behind: a picture of the window, and the
-   * trace a retry recorded. Playwright records video for a context it
-   * opened, and this one was already open when the harness attached.
+   * trace a retry recorded.
    */
   record: [
     async ({ obsidian }, use, spec) => {

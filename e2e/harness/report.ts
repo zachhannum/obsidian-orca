@@ -15,7 +15,7 @@ import type {
 } from "@playwright/test/reporter";
 import { OBSIDIAN } from "./launch";
 
-/** How much of a failure's own words a summary carries. */
+/** How much of a failure's message a summary carries. */
 const QUOTED = 2000;
 
 const MARK: Record<string, string> = {
@@ -77,7 +77,7 @@ function seconds(ms: number): string {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-/** The error's own words, without the colours it was printed in. */
+/** The error's message, without the colours it was printed in. */
 function quote(message: string): string {
   const said = message.replace(/\u001b\[\d+m/g, "").replaceAll("```", "'''");
   return said.length > QUOTED ? `${said.slice(0, QUOTED)}\n...` : said;

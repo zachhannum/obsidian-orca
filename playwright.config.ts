@@ -4,7 +4,7 @@ const ci = process.env["CI"] !== undefined;
 
 /**
  * One Obsidian for the whole run, so the specs are serial on a single
- * worker. Timeouts here bound a hang; no assertion waits on a clock.
+ * worker. The timeouts here bound a hang rather than pace an assertion.
  */
 export default defineConfig({
   testDir: "./e2e",
