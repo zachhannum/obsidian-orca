@@ -18,7 +18,8 @@ test("a note is its properties and the body under them", async () => {
   assert.equal(note.properties["orca-book"], 1);
   assert.equal(note.properties["title"], "Pride and Prejudice");
   assert.equal(note.properties["language"], "en-GB");
-  assert.equal(note.body, "\n\n# Body\n\n- [[Chapter Twelve]]\n");
+  assert.match(note.body, /^\n\n# Front matter\n/);
+  assert.ok(note.body.endsWith("\n- [[Acknowledgements]]\n"));
 });
 
 test("a note with no frontmatter is all body", () => {

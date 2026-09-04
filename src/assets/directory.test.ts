@@ -11,7 +11,14 @@ const vault = directoryVault(path.join(root, "fixture"));
 
 test("the fixture directory is a vault every read goes through", async () => {
   assert.deepEqual(await vault.list("/"), {
-    files: ["Chapter Twelve.md", "Pride and Prejudice.md"],
+    files: [
+      "A note on the text.md",
+      "Acknowledgements.md",
+      "Chapter Twelve.md",
+      "Copyright.md",
+      "Pride and Prejudice.md",
+      "Volume the First.md",
+    ],
     folders: [],
   });
   assert.equal(await vault.exists("Chapter Twelve.md"), true);
