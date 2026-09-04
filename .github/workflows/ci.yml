@@ -10,7 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  modules:
+  checks:
+    name: type check, tests, bundle
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
