@@ -26,6 +26,10 @@ test("a note with the key opens in orca's view, and `Open as markdown` returns i
   await expect(note.page).toHaveCount(0);
   // Opening a book writes nothing: the note is as it was checked in.
   expect(await vault.read(BOOK)).toEqual(before);
+
+  await note.asBook();
+
+  await expect(note.page).toContainText("Pride and Prejudice");
 });
 
 test("a book from a newer orca does not open, names both formats, and offers `Open as markdown`", async ({

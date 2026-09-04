@@ -28,6 +28,11 @@ export default class OrcaPlugin extends Plugin {
   private unloaded = false;
   /** The leaves an author has asked to keep in markdown, and for which note. */
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
+  /** The icon back to the book that each of those notes carries. */
+  private readonly back = new WeakMap<
+    MarkdownView,
+    { at: string; icon: HTMLElement }
+  >();
 
   override async onload(): Promise<void> {
     // The session is opened before anything is registered, so the views
@@ -68,7 +73,7 @@ export default class OrcaPlugin extends Plugin {
     );
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file, _source, leaf) => {
-        this.offerMarkdown(menu, file, leaf);
+        this.offer(menu, file, leaf);
       }),
     );
 
@@ -77,6 +82,9 @@ export default class OrcaPlugin extends Plugin {
 
   override onunload(): void {
     this.unloaded = true;
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
+      if (leaf.view instanceof MarkdownView) this.release(leaf.view);
+    }
     this.engine?.stop();
     this.engine = undefined;
   }
@@ -92,8 +100,8 @@ export default class OrcaPlugin extends Plugin {
 
   /**
    * Every leaf showing a book note as markdown, swapped to orca's view.
-   * A leaf the author has asked for markdown is left alone until it
-   * shows another note.
+   * A leaf the author has asked for markdown keeps the manuscript and
+   * gets the icon back to the book, until it shows another note.
    */
   private swap(): void {
     const index = this.notes();
@@ -101,27 +109,59 @@ export default class OrcaPlugin extends Plugin {
       const view = leaf.view;
       if (!(view instanceof MarkdownView)) continue;
       const file = view.file;
-      if (file === null || this.asMarkdown.get(leaf) === file.path) continue;
-      if (!isBook(index, file)) continue;
+      if (file === null || !isBook(index, file)) {
+        this.release(view);
+        continue;
+      }
+      if (this.asMarkdown.get(leaf) === file.path) {
+        this.hold(view, file);
+        continue;
+      }
       void leaf.setViewState({ type: BOOK_VIEW, state: { file: file.path } });
     }
   }
 
-  private offerMarkdown(
+  /**
+   * The way back, as an icon in the note's own header. Obsidian's own
+   * reading toggle sits in that corner, and `addAction` is how a view
+   * orca does not own takes one.
+   */
+  private hold(view: MarkdownView, file: TFile): void {
+    const held = this.back.get(view);
+    if (held?.at === file.path) return;
+    held?.icon.remove();
+    const icon = view.addAction("book", "Open as book", () => {
+      void this.openAsBook(view.leaf, file);
+    });
+    this.back.set(view, { at: file.path, icon });
+  }
+
+  private release(view: MarkdownView): void {
+    const held = this.back.get(view);
+    if (held === undefined) return;
+    held.icon.remove();
+    this.back.delete(view);
+  }
+
+  private offer(
     menu: Menu,
     file: TAbstractFile,
     leaf: WorkspaceLeaf | undefined,
   ): void {
     if (!(file instanceof TFile) || !isBook(this.notes(), file)) return;
+    const shown = leaf ?? this.app.workspace.getLeaf(false);
+    // The way back is offered by the leaf already holding this note as
+    // markdown; every other leaf is offered the way out.
+    const asBook =
+      shown.view instanceof MarkdownView && shown.view.file?.path === file.path;
     menu.addItem((item) =>
       item
-        .setTitle("Open as markdown")
-        .setIcon("file-text")
+        .setTitle(asBook ? "Open as book" : "Open as markdown")
+        .setIcon(asBook ? "book" : "file-text")
         .onClick(() => {
-          void this.openAsMarkdown(
-            leaf ?? this.app.workspace.getLeaf(false),
-            file,
-          );
+          void (asBook
+            ? this.openAsBook(shown, file)
+            : this.openAsMarkdown(shown, file));
         }),
     );
   }
@@ -135,6 +175,16 @@ export default class OrcaPlugin extends Plugin {
     await leaf.setViewState({
       type: MARKDOWN_VIEW,
       state: { file: file.path, mode: "source" },
+      active: true,
+    });
+    this.swap();
+  }
+
+  private async openAsBook(leaf: WorkspaceLeaf, file: TFile): Promise<void> {
+    this.asMarkdown.delete(leaf);
+    await leaf.setViewState({
+      type: BOOK_VIEW,
+      state: { file: file.path },
       active: true,
     });
   }

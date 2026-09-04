@@ -13,8 +13,9 @@ export const BOOK = "orca-book";
 /** The type a book note is handed back to. */
 export const MARKDOWN = "markdown";
 
-/** The way back to the manuscript, in the view's header and the file menu. */
+/** The way to the manuscript and back, in each view's header and the file menu. */
 export const AS_MARKDOWN = "Open as markdown";
+export const AS_BOOK = "Open as book";
 
 export class Note {
   /** The page orca draws for the book note. */
@@ -40,9 +41,14 @@ export class Note {
     return this.page.getByTestId(`orca-metadata-${key}`);
   }
 
-  /** The action in the view's header, which hands the leaf back. */
+  /** The action in the book page's header, which hands the leaf to the editor. */
   async asMarkdown(): Promise<void> {
     await this.obsidian.action(AS_MARKDOWN).click();
+  }
+
+  /** The action in the note's own header, which hands it back to the book. */
+  async asBook(): Promise<void> {
+    await this.obsidian.action(AS_BOOK).click();
   }
 
   async close(): Promise<void> {
