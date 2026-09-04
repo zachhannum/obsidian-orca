@@ -1,10 +1,10 @@
 <div style="height: 100%; background: var(--background-secondary); padding: 20px; display: flex; flex-direction: column; gap: 14px">
   <div class="title-block">
-    <h2>Three states worth designing rather than discovering</h2>
+    <h2>Four states worth designing rather than discovering</h2>
     <div class="sub">The frames are what the writer sees. The note under each is for us.</div>
   </div>
 
-  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
 
     <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
       <div class="step-n"><b>1</b> Opening a long book for the first time</div>
@@ -42,6 +42,20 @@
         <div class="btn" style="margin-top: 2px">Open as markdown</div>
       </div>
       <div class="step-note">The key that makes a note a book also says which format it is in, so an older orca can refuse cleanly instead of writing a shape it does not understand.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
+      <div class="step-n"><b>4</b> The note changed under an edit</div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
+        <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--text-faint); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2v6h6"/><path d="M12 11v4"/><path d="M12 18h.01" stroke-width="2.2"/></svg>
+        <div style="font-size: 13.5px; color: var(--text-normal)">The book changed on disk</div>
+        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">This note was written outside orca,<br>and orca is holding an edit that is not in it.</div>
+        <div style="display: flex; gap: 8px; margin-top: 2px">
+          <div class="btn">Take what is on disk</div>
+          <div class="btn mod-cta">Keep my edit</div>
+        </div>
+      </div>
+      <div class="step-note">The view is the only writer while it is open. A change from outside reloads a view holding nothing, and is two versions of one note for a view holding an edit.</div>
     </div>
   </div>
 </div>

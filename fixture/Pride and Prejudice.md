@@ -7,6 +7,9 @@ date: 1813-01-28
 publisher: Whitehall Press
 series: The Bennet Novels
 isbn: 978-0-000-00000-0
+tags:
+  - novel
+status: drafting
 ---
 
 # Front matter
@@ -25,3 +28,11 @@ isbn: 978-0-000-00000-0
 # Back matter
 
 - [[Acknowledgements]]
+
+# The book's css
+
+```css
+.chapter-opening h1 {
+  letter-spacing: 0.02em;
+}
+```

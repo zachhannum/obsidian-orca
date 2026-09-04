@@ -7,6 +7,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { Page } from "@playwright/test";
+import type { EventRef } from "obsidian";
+
+declare global {
+  interface Window {
+    /** What a spec counts a note's writes with. */
+    orcaWrites?: { at: string; count: number; ref: EventRef | undefined };
+  }
+}
 
 export class Vault {
   private readonly touched = new Set<string>();
@@ -37,6 +45,53 @@ export class Vault {
       async ({ at, text: body }) => window.app.vault.adapter.write(at, body),
       { at: file, text },
     );
+  }
+
+  /**
+   * A write on a note the vault already holds, through the vault
+   * rather than the adapter, which is how an editor or a sync client
+   * writes one.
+   */
+  async modify(file: string, text: string): Promise<void> {
+    this.touched.add(file);
+    await this.page.evaluate(
+      async ({ at, text: body }) => {
+        const note = window.app.vault.getFileByPath(at);
+        if (note === null) throw new Error(`no note at ${at}`);
+        await window.app.vault.modify(note, body);
+      },
+      { at: file, text },
+    );
+  }
+
+  /** Marks a note the app itself writes, so the spec puts it back. */
+  touch(file: string): void {
+    this.touched.add(file);
+  }
+
+  /**
+   * How many times a note was written while `during` ran, counted by
+   * the vault's own events rather than by watching the file.
+   */
+  async writes(file: string, during: () => Promise<void>): Promise<number> {
+    this.touched.add(file);
+    await this.page.evaluate((at) => {
+      const held = { at, count: 0, ref: undefined as EventRef | undefined };
+      held.ref = window.app.vault.on("modify", (touched) => {
+        if (touched.path === at) held.count += 1;
+      });
+      window.orcaWrites = held;
+    }, file);
+
+    await during();
+
+    return this.page.evaluate(() => {
+      const held = window.orcaWrites;
+      if (held === undefined) return 0;
+      if (held.ref !== undefined) window.app.vault.offref(held.ref);
+      window.orcaWrites = undefined;
+      return held.count;
+    });
   }
 
   async remove(file: string): Promise<void> {
