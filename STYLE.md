@@ -42,6 +42,31 @@ After:
 An author, a host or a reader is a party to the contract rather than a
 tool, and may still want things.
 
+### No stand-ins
+
+A description standing in for a name, or a figure of speech standing in
+for the plain verb or preposition, leaves the reader to work out what
+was meant. Use "is" and "has" where they fit.
+
+Before:
+
+> the module the build left beside `main.js`
+>
+> Its value names the format.
+>
+> The engine opens over the module.
+
+After:
+
+> `fleuron_bg.wasm`, in the plugin's install directory
+>
+> Its value is the format.
+>
+> The engine opens from the module.
+
+"names" belongs where something carries a name, as the warning above
+does.
+
 ### No riddles
 
 State the thing, then show it. Do not describe a shape and leave the
