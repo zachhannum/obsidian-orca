@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   checks:
-    name: type check, tests, bundle
+    name: type check, lint, tests, bundle
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,6 +29,8 @@ jobs:
       - run: npm ci --prefer-offline --no-audit --no-fund
 
       - run: npm run typecheck
+
+      - run: npm run lint
 
       - run: npm test
 

@@ -33,10 +33,16 @@ await esbuild.build({
   external,
 });
 
-const built = entryPoints.map((entry) => {
+const specs = entryPoints.map((entry) => {
   const under = path.relative(path.join(root, "src"), entry);
   return path.join(outdir, under.replace(/\.ts$/, ".js"));
 });
+
+// The build's own scripts are ESM already, so they run as they are
+// written rather than through a bundle.
+for await (const file of glob("scripts/**/*.test.mjs", { cwd: root })) {
+  specs.push(path.join(root, file));
+}
 
 // The spec reporter writes the console. The summary reporter writes
 // the job's summary page and yields nothing, so the two do not
@@ -51,7 +57,7 @@ if (process.env.GITHUB_STEP_SUMMARY !== undefined) {
 
 const node = spawn(
   process.execPath,
-  ["--test", "--enable-source-maps", ...reporters, ...built],
+  ["--test", "--enable-source-maps", ...reporters, ...specs],
   { cwd: root, stdio: "inherit", env: { ...process.env, ORCA_ROOT: root } },
 );
 node.on("exit", (code) => process.exit(code ?? 1));
