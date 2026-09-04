@@ -23,6 +23,14 @@ export class Vault {
     );
   }
 
+  /** A note's text, as the vault holds it. */
+  async read(file: string): Promise<string> {
+    return this.page.evaluate(
+      async (at) => window.app.vault.adapter.read(at),
+      file,
+    );
+  }
+
   async write(file: string, text: string): Promise<void> {
     this.touched.add(file);
     await this.page.evaluate(
