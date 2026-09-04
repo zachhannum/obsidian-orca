@@ -1,12 +1,20 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import {
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { Worker } from "node:worker_threads";
+import { VERSION, WIRE_VERSION } from "fleuron";
 import workerSource from "virtual:worker";
 import {
   browserHost,
@@ -17,6 +25,7 @@ import {
 import { EngineError } from "@/engine/errors";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
+const ready = { orca: "ready", wire: WIRE_VERSION };
 
 class FakeWorker implements WorkerPort {
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
@@ -76,7 +85,7 @@ test("the worker starts from a Blob URL built out of the bundle", async () => {
   assert.doesNotThrow(() => new Function(workerSource));
   assert.ok(workerSource.length > 0);
 
-  const host = fakeHost({ orca: "ready" });
+  const host = fakeHost(ready);
   const handle = await startEngine(new ArrayBuffer(8), host);
 
   assert.deepEqual(host.wrapped, [workerSource]);
@@ -91,11 +100,8 @@ test("the worker starts from a Blob URL built out of the bundle", async () => {
 test("the release is one JavaScript file, with the module beside it", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-release-"));
   try {
-    await run(process.execPath, [
-      path.join(root, "esbuild.config.mjs"),
-      "production",
-      `--out=${outdir}`,
-    ]);
+    const { code } = await build([`--out=${outdir}`]);
+    assert.equal(code, 0);
 
     const written = (await readdir(outdir)).sort();
     assert.deepEqual(written, ["fleuron_bg.wasm", "main.js"]);
@@ -110,7 +116,7 @@ test("the release is one JavaScript file, with the module beside it", async () =
 });
 
 test("the module crosses as a transferable rather than a copy", async () => {
-  const host = fakeHost({ orca: "ready" });
+  const host = fakeHost(ready);
   const module = new ArrayBuffer(1024);
   const handle = await startEngine(module, host);
 
@@ -122,7 +128,7 @@ test("the module crosses as a transferable rather than a copy", async () => {
 });
 
 test("stopping terminates the worker and revokes the Blob URL", async () => {
-  const host = fakeHost({ orca: "ready" });
+  const host = fakeHost(ready);
   const handle = await startEngine(new ArrayBuffer(8), host);
 
   assert.equal(host.worker().terminated, false);
@@ -145,6 +151,21 @@ test("a worker that cannot open the engine is torn down", async () => {
 
   assert.equal(host.worker().terminated, true);
   assert.deepEqual(host.released, ["blob:orca/0"]);
+});
+
+test("a wire mismatch refuses the book, naming both versions", async () => {
+  const host = fakeHost({ orca: "ready", wire: WIRE_VERSION + 1 });
+
+  await assert.rejects(
+    startEngine(new ArrayBuffer(8), host),
+    (error: unknown) =>
+      error instanceof EngineError &&
+      error.message.includes(`wire ${WIRE_VERSION};`) &&
+      error.message.includes(`wire ${WIRE_VERSION + 1}`) &&
+      error.message.includes(VERSION),
+  );
+
+  assert.equal(host.worker().terminated, true);
 });
 
 test("the bundled worker opens the engine from the bytes it is posted", async () => {
@@ -172,27 +193,111 @@ test("the bundled worker opens the engine from the bytes it is posted", async ()
     });
     const module = await moduleBytes();
     worker.postMessage({ orca: "start", module }, [module]);
-    assert.deepEqual(await started, { orca: "ready" });
+    // The module the bundle carries writes the wire the bundle reads.
+    assert.deepEqual(await started, ready);
   } finally {
     await worker.terminate();
   }
 });
 
 test("the manifest keeps the plugin off mobile", async () => {
-  const manifest: unknown = JSON.parse(
-    await readFile(path.join(root, "manifest.json"), "utf8"),
-  );
-  assert.equal((manifest as { isDesktopOnly?: unknown }).isDesktopOnly, true);
+  assert.equal((await manifest()).isDesktopOnly, true);
 });
 
-function run(command: string, args: string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: root, stdio: "inherit" });
-    child.on("error", reject);
-    child.on("exit", (code) =>
-      code === 0 ? resolve() : reject(new Error(`${command} exited ${code}`)),
+test("the manifest names the plugin's version and the engine's", async () => {
+  const { version, engineVersion } = await manifest();
+  const npm = await packaged();
+
+  assert.equal(version, npm.version);
+  assert.equal(engineVersion, VERSION);
+  // A range lets a release be built against an engine the manifest does
+  // not name.
+  assert.equal(npm.dependencies.fleuron, VERSION);
+});
+
+test("a release whose module is versioned apart fails to build", async () => {
+  const outdir = await mkdtemp(path.join(tmpdir(), "orca-apart-"));
+  try {
+    const apart = path.join(outdir, "manifest.json");
+    await writeFile(
+      apart,
+      JSON.stringify({ ...(await manifest()), engineVersion: "0.0.0" }),
     );
+
+    const { code, stderr } = await build([
+      `--out=${outdir}`,
+      `--manifest=${apart}`,
+    ]);
+
+    assert.notEqual(code, 0);
+    assert.match(stderr, /0\.0\.0/);
+    assert.match(stderr, new RegExp(VERSION.replaceAll(".", "\\.")));
+    // The build wrote no part of the release.
+    assert.deepEqual(await readdir(outdir), ["manifest.json"]);
+  } finally {
+    await rm(outdir, { recursive: true, force: true });
+  }
+});
+
+test("the app floor is the API the plugin is built against", async () => {
+  const { version, minAppVersion } = await manifest();
+  const npm = await packaged();
+  const require = createRequire(import.meta.url);
+  const api = await json<{ version: string }>(
+    require.resolve("obsidian/package.json"),
+  );
+  const versions = await json<Record<string, string>>("versions.json");
+
+  // The type check runs against the pinned typings, so the floor moves
+  // when the pin does.
+  assert.equal(npm.devDependencies.obsidian, minAppVersion);
+  assert.equal(api.version, minAppVersion);
+  assert.equal(versions[version], minAppVersion);
+});
+
+/** The production build, run the way the release is. */
+function build(args: string[]): Promise<{ code: number; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      [path.join(root, "esbuild.config.mjs"), "production", ...args],
+      { cwd: root, stdio: ["ignore", "ignore", "pipe"] },
+    );
+    let stderr = "";
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      resolve({ code: code ?? 1, stderr });
+    });
   });
+}
+
+interface Manifest {
+  version: string;
+  engineVersion: string;
+  minAppVersion: string;
+  isDesktopOnly: boolean;
+}
+
+interface Packaged {
+  version: string;
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+}
+
+function manifest(): Promise<Manifest> {
+  return json<Manifest>("manifest.json");
+}
+
+function packaged(): Promise<Packaged> {
+  return json<Packaged>("package.json");
+}
+
+async function json<T>(file: string): Promise<T> {
+  return JSON.parse(await readFile(path.resolve(root, file), "utf8")) as T;
 }
 
 async function moduleBytes(): Promise<ArrayBuffer> {
