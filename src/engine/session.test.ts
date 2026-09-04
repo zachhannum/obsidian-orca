@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import path from "node:path";
+import process from "node:process";
 import { test } from "node:test";
 import { Worker, type TransferListItem } from "node:worker_threads";
 import { paintPage, type LayoutOutput, type Op } from "fleuron";
+import { directoryVault } from "@/assets/directory";
+import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
 import {
   startEngine,
@@ -11,12 +15,15 @@ import {
   type WorkerPort,
 } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
+import { readModule } from "@/engine/module";
 import {
   Session,
   type EngineClient,
   type FaceSet,
   type Stages,
 } from "@/engine/session";
+
+const root = process.env["ORCA_ROOT"] ?? process.cwd();
 
 class FakeClient implements EngineClient {
   readonly rendered: Op[][] = [];
@@ -31,6 +38,10 @@ class FakeClient implements EngineClient {
     this.current += 1;
     this.stages = { style: 1, lines: 1, flow: 1, paint: this.current };
     return Promise.resolve(this.layout);
+  }
+
+  exportPdf(): Promise<Uint8Array | null> {
+    return Promise.resolve(new Uint8Array());
   }
 
   fontBytes(font: number): Promise<Uint8Array> {
@@ -124,6 +135,7 @@ test("the faces a run drew with come from the module, under the painter's names"
 test("a book the engine refuses comes back as an engine error, not re-worded", async () => {
   const refusing: EngineClient = {
     preview: () => Promise.reject(new Error("unknown property `leadin`")),
+    exportPdf: () => Promise.reject(new Error("unknown property `leadin`")),
     fontBytes: () => Promise.reject(new Error("no faces")),
     current: 1,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
@@ -165,6 +177,29 @@ test("the sample note sets to a page the painter can draw", async () => {
   }
 });
 
+test("a note in the fixture vault sets to PDF bytes, with no application around it", async () => {
+  const vault = directoryVault(path.join(root, "fixture"));
+  const engine = await startEngine(
+    await readModule(directoryVault(engineDirectory()), "."),
+    nodeHost(),
+  );
+  try {
+    const name = "Chapter Twelve.md";
+    const session = new Session(engine.client, faces());
+
+    await session.open(openBook({ name, text: await readText(vault, name) }));
+    const pdf = await session.pdf();
+
+    // The pages the export was drawn from are the ones the session
+    // already holds.
+    assert.ok((session.output?.pages.length ?? 0) > 0);
+    assert.equal(new TextDecoder().decode(pdf.subarray(0, 5)), "%PDF-");
+    assert.ok(new TextDecoder().decode(pdf.subarray(-32)).includes("%%EOF"));
+  } finally {
+    engine.stop();
+  }
+});
+
 /** The bundled worker, in a Node thread with `self` shimmed. */
 function nodeHost(): WorkerHost {
   const shim = `
@@ -201,13 +236,22 @@ function nodeHost(): WorkerHost {
 }
 
 async function moduleBytes(): Promise<ArrayBuffer> {
-  const require = createRequire(import.meta.url);
-  const bytes = await readFile(require.resolve("fleuron/fleuron_bg.wasm"));
+  const bytes = await readFile(
+    path.join(engineDirectory(), "fleuron_bg.wasm"),
+  );
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
   ) as ArrayBuffer;
 }
 
+/** Where the pinned engine's module is installed. */
+function engineDirectory(): string {
+  const require = createRequire(import.meta.url);
+  return path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
+}
+
 // What this tier does not reach: registering the view, and the page
-// inside a leaf. Both wait on the e2e harness.
+// inside a leaf. Both wait on the e2e harness. The PDF is read for its
+// own header and trailer here; `qpdf --check` and a `pdftotext` round
+// trip wait on the export flow.

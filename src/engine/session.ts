@@ -17,6 +17,7 @@ export interface Stages {
 /** The half of fleuron's client a session uses. */
 export interface EngineClient {
   preview(ops?: Op[]): Promise<LayoutOutput | null>;
+  exportPdf(ops?: Op[]): Promise<Uint8Array | null>;
   fontBytes(font: number): Promise<Uint8Array>;
   readonly current: number;
   readonly stages: Stages;
@@ -86,17 +87,20 @@ export class Session {
     await this.opening;
   }
 
-  private async lay(ops: Op[]): Promise<void> {
-    let layout: LayoutOutput | null;
-    try {
-      layout = await this.client.preview(ops);
-    } catch (cause) {
-      // The engine's own line: routed, never re-worded.
-      throw new EngineError(
-        cause instanceof Error ? cause.message : String(cause),
-        { cause },
-      );
+  /**
+   * The book as PDF bytes, from the session the pages were laid out
+   * in.
+   */
+  async pdf(): Promise<Uint8Array> {
+    const bytes = await routed(() => this.client.exportPdf());
+    if (bytes === null) {
+      throw new EngineError("a later render overtook the export");
     }
+    return bytes;
+  }
+
+  private async lay(ops: Op[]): Promise<void> {
+    const layout = await routed(() => this.client.preview(ops));
     if (layout === null) return;
     this.layout = layout;
     await this.load(layout);
@@ -130,5 +134,17 @@ export class Session {
       // the page is set in the wrong one rather than left blank.
       this.loaded.delete(id);
     }
+  }
+}
+
+/** The engine's own line: routed, never re-worded. */
+async function routed<T>(ask: () => Promise<T>): Promise<T> {
+  try {
+    return await ask();
+  } catch (cause) {
+    throw new EngineError(
+      cause instanceof Error ? cause.message : String(cause),
+      { cause },
+    );
   }
 }
