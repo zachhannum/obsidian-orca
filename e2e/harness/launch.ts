@@ -11,8 +11,8 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import ObsidianLauncher from "obsidian-launcher";
 
-/** The Obsidian the suite runs against: the app, and the installer it runs on. */
-const APP = "1.13.7";
+/** The Obsidian the suite runs against, and the installer it runs on. */
+export const OBSIDIAN = "1.13.7";
 const INSTALLER = "1.13.7";
 
 const PLUGIN = "orca";
@@ -52,7 +52,7 @@ export default async function launch(): Promise<() => Promise<void>> {
   );
 
   const { proc, configDir } = await launcher.launch({
-    appVersion: APP,
+    appVersion: OBSIDIAN,
     installerVersion: INSTALLER,
     vault,
     copy: false,

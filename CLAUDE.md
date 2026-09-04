@@ -155,6 +155,9 @@ lint pass; until it lands, the mirror above is what lint is held to.
    a `pdftotext` round trip for the words, against the exported book
 5. advisories check — no merged dependency with an open advisory
 
+Both test jobs write their run to the job's summary page, and the e2e
+job keeps its HTML report as an artifact.
+
 ## Documentation rules
 
 Applies to code comments and all documentation — internal (CLAUDE.md,

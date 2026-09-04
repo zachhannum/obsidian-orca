@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, type ReporterDescription } from "@playwright/test";
 
 const ci = process.env["CI"] !== undefined;
 
@@ -18,7 +18,9 @@ export default defineConfig({
     timeout: 30_000,
     toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.01 },
   },
-  reporter: ci
-    ? [["github"], ["html", { open: "never" }]]
-    : [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ci ? ["github"] : ["list"],
+    ["html", { open: "never" }],
+    ["./e2e/harness/report.ts"],
+  ] satisfies ReporterDescription[],
 });
