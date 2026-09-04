@@ -23,7 +23,9 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      # The audit and the metadata refresh are registry round trips this
+      # job has no use for, and they cost minutes over a warm cache.
+      - run: npm ci --prefer-offline --no-audit --no-fund
 
       - run: npm run typecheck
 
