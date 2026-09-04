@@ -11,5 +11,8 @@ test("a write through the vault fixture lands in the vault", async ({
 test("and the next spec opens on the vault as it is checked in", async ({
   vault,
 }) => {
-  expect(await vault.notes()).toEqual(["Chapter Twelve.md"]);
+  expect((await vault.notes()).sort()).toEqual([
+    "Chapter Twelve.md",
+    "Pride and Prejudice.md",
+  ]);
 });

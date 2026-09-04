@@ -1,9 +1,23 @@
-import { Notice, Plugin, normalizePath, type WorkspaceLeaf } from "obsidian";
+import {
+  MarkdownView,
+  Notice,
+  Plugin,
+  TFile,
+  normalizePath,
+  type Menu,
+  type TAbstractFile,
+  type WorkspaceLeaf,
+} from "obsidian";
 import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule, type VaultFiles } from "@/engine/module";
 import { Session, documentFaces } from "@/engine/session";
+import { BOOK_VIEW, BookView } from "@/ui/book";
+import { isBook, type NoteIndex } from "@/ui/books";
 import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
+
+/** The view a book note is handed back to. */
+const MARKDOWN_VIEW = "markdown";
 
 /**
  * Orca, as Obsidian loads it. The plugin holds the engine, and every
@@ -12,6 +26,8 @@ import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
   private unloaded = false;
+  /** The leaves an author has asked to keep in markdown, and for which note. */
+  private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
 
   override async onload(): Promise<void> {
     // The session is opened before anything is registered, so the views
@@ -19,6 +35,13 @@ export default class OrcaPlugin extends Plugin {
     const opening = this.open();
 
     this.registerView(PREVIEW_VIEW, (leaf) => new PreviewView(leaf, opening));
+    this.registerView(
+      BOOK_VIEW,
+      (leaf) =>
+        new BookView(leaf, (view) => {
+          void this.openAsMarkdown(view.leaf, view.file);
+        }),
+    );
     this.addRibbonIcon("book", "Open the book", () => {
       void this.reveal();
     });
@@ -30,6 +53,25 @@ export default class OrcaPlugin extends Plugin {
       },
     });
 
+    this.app.workspace.onLayoutReady(() => {
+      this.swap();
+    });
+    this.registerEvent(
+      this.app.workspace.on("layout-change", () => {
+        this.swap();
+      }),
+    );
+    this.registerEvent(
+      this.app.workspace.on("file-open", () => {
+        this.swap();
+      }),
+    );
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file, _source, leaf) => {
+        this.offerMarkdown(menu, file, leaf);
+      }),
+    );
+
     await opening;
   }
 
@@ -37,6 +79,64 @@ export default class OrcaPlugin extends Plugin {
     this.unloaded = true;
     this.engine?.stop();
     this.engine = undefined;
+  }
+
+  /** Every markdown note, and its properties as the metadata cache holds them. */
+  private notes(): NoteIndex<TFile> {
+    const { vault, metadataCache } = this.app;
+    return {
+      notes: () => vault.getMarkdownFiles(),
+      properties: (note) => metadataCache.getFileCache(note)?.frontmatter,
+    };
+  }
+
+  /**
+   * Every leaf showing a book note as markdown, swapped to orca's view.
+   * A leaf the author has asked for markdown is left alone until it
+   * shows another note.
+   */
+  private swap(): void {
+    const index = this.notes();
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
+      const view = leaf.view;
+      if (!(view instanceof MarkdownView)) continue;
+      const file = view.file;
+      if (file === null || this.asMarkdown.get(leaf) === file.path) continue;
+      if (!isBook(index, file)) continue;
+      void leaf.setViewState({ type: BOOK_VIEW, state: { file: file.path } });
+    }
+  }
+
+  private offerMarkdown(
+    menu: Menu,
+    file: TAbstractFile,
+    leaf: WorkspaceLeaf | undefined,
+  ): void {
+    if (!(file instanceof TFile) || !isBook(this.notes(), file)) return;
+    menu.addItem((item) =>
+      item
+        .setTitle("Open as markdown")
+        .setIcon("file-text")
+        .onClick(() => {
+          void this.openAsMarkdown(
+            leaf ?? this.app.workspace.getLeaf(false),
+            file,
+          );
+        }),
+    );
+  }
+
+  private async openAsMarkdown(
+    leaf: WorkspaceLeaf,
+    file: TFile | null,
+  ): Promise<void> {
+    if (file === null) return;
+    this.asMarkdown.set(leaf, file.path);
+    await leaf.setViewState({
+      type: MARKDOWN_VIEW,
+      state: { file: file.path, mode: "source" },
+      active: true,
+    });
   }
 
   private async open(): Promise<Session> {

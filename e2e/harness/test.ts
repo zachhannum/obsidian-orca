@@ -7,11 +7,14 @@
 import { chromium, test as base } from "@playwright/test";
 import { Book } from "./book";
 import { CDP, FIXTURE } from "./launch";
+import { Note } from "./note";
 import { Obsidian } from "./obsidian";
 import { Vault } from "./vault";
 
 interface Fixtures {
   book: Book;
+  /** The book note's own view. */
+  note: Note;
   /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;
   record: void;
@@ -35,6 +38,12 @@ export const test = base.extend<Fixtures, Shared>({
     const book = new Book(obsidian);
     await use(book);
     await book.close();
+  },
+
+  note: async ({ obsidian }, use) => {
+    const note = new Note(obsidian);
+    await use(note);
+    await note.close();
   },
 
   vault: async ({ obsidian }, use) => {

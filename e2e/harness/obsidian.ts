@@ -17,6 +17,7 @@ declare global {
 const CHROME = {
   ribbon: (label: string) => `.side-dock-ribbon-action[aria-label="${label}"]`,
   leaf: (type: string) => `.workspace-leaf-content[data-type="${type}"]`,
+  action: (label: string) => `.view-action[aria-label="${label}"]`,
 };
 
 /**
@@ -53,6 +54,28 @@ export class Obsidian {
   /** The pane a view of this type is drawn in. */
   view(type: string): Locator {
     return this.page.locator(CHROME.leaf(type));
+  }
+
+  /** A view's own action, by the label the view gave it. */
+  action(label: string): Locator {
+    return this.page.locator(CHROME.action(label));
+  }
+
+  /**
+   * A note, opened in the active pane. Obsidian parses a note into the
+   * metadata cache as it is written, so the wait here is on the cache
+   * holding the note rather than on a clock.
+   */
+  async open(path: string): Promise<void> {
+    await this.page.waitForFunction(
+      (at) => window.app.metadataCache.getCache(at) !== null,
+      path,
+    );
+    await this.page.evaluate(async (at) => {
+      const file = window.app.vault.getFileByPath(at);
+      if (file === null) throw new Error(`no note at ${at}`);
+      await window.app.workspace.getLeaf(false).openFile(file);
+    }, path);
   }
 
   /** Closes every leaf holding a view of this type. */
