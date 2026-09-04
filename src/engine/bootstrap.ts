@@ -17,14 +17,12 @@ export interface WorkerHost {
   start(url: string): WorkerPort;
 }
 
-/** A running engine. */
 export interface EngineHandle {
   readonly client: Client;
   /** Terminates the worker and revokes its Blob URL. */
   stop(): void;
 }
 
-/** A browser's own. */
 export const browserHost: WorkerHost = {
   url: (source) =>
     URL.createObjectURL(new Blob([source], { type: "text/javascript" })),
@@ -35,9 +33,9 @@ export const browserHost: WorkerHost = {
 };
 
 /**
- * Starts a worker on the source the build inlined, and opens the engine
- * over `module`, whose bytes are moved rather than copied. A worker that
- * cannot open one is torn down before the error comes back.
+ * Starts the bundled worker and opens the engine from `module`, whose
+ * bytes are moved rather than copied. A worker that cannot open one is
+ * torn down before the error comes back.
  */
 export async function startEngine(
   module: ArrayBuffer,

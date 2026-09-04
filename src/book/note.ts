@@ -1,2 +1,2 @@
-/** Frontmatter key that makes a note a book, and says which format it is written in. */
+/** Frontmatter key that makes a note a book. Its value is the format. */
 export const BOOK_KEY = "orca-book";

@@ -12,12 +12,10 @@ export interface Start {
 /** A worker's first reply. */
 export type Started = { orca: "ready" } | { orca: "failed"; message: string };
 
-/** Whether a message is the module rather than a request. */
 export function isStart(message: unknown): message is Start {
   return keyed(message) === "start";
 }
 
-/** Whether a message is the worker's own rather than the engine's. */
 export function isStarted(message: unknown): message is Started {
   const key = keyed(message);
   return key === "ready" || key === "failed";

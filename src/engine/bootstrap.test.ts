@@ -147,9 +147,9 @@ test("a worker that cannot open the engine is torn down", async () => {
   assert.deepEqual(host.released, ["blob:orca/0"]);
 });
 
-test("the bundled worker opens the engine over the bytes it is posted", async () => {
+test("the bundled worker opens the engine from the bytes it is posted", async () => {
   // A Node thread with `self` shimmed runs the same source a Blob URL
-  // would, over the same module.
+  // would, with the same module.
   const shim = `
     import { parentPort, workerData } from "node:worker_threads";
     globalThis.self = {

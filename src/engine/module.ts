@@ -7,7 +7,6 @@ export interface VaultFiles {
   readBinary(path: string): Promise<ArrayBuffer>;
 }
 
-/** Reads the module the build left in `directory`, beside `main.js`. */
 export async function readModule(
   files: VaultFiles,
   directory: string,

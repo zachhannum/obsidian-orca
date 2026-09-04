@@ -24,4 +24,4 @@ npm test
 
 ## Status
 
-The engine starts. Nothing is on screen yet. The build order is milestones M0 through M4, and the tracking issue is #1.
+One page is on screen, set from a note the plugin carries rather than one in the vault. The build order is milestones M0 through M4, and the tracking issue is #1.

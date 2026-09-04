@@ -135,11 +135,12 @@ underneath them.
 
 ## CI scaffolding
 
-`.github/workflows/ci.yml` runs on every PR and push to main. #6 brings
-the `modules` job and #5 the e2e job; until both land, the mirror above
-is what a branch is held to.
+`.github/workflows/ci.yml` runs on every PR and push to main. The
+`checks` job runs the type check, the Node tier and the production
+bundle. #6 adds the lint pass to it and #5 brings the e2e job; until
+those land, the mirror above is what the rest is held to.
 
-1. `modules` job: `tsc --noEmit`, lint including the dependency rule,
+1. `checks` job: `tsc --noEmit`, lint including the dependency rule,
    and the Node tier
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
@@ -195,5 +196,8 @@ PR bodies are written in.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.
-- Public API docs (`/** */`) on every exported item; the op and session
-  types are a cross-module contract and get treated like documentation.
+- Public API docs (`/** */`) on exported items. A doc states an
+  invariant, a constraint, or a consequence a reader would otherwise
+  derive from the implementation; where there is none, the signature
+  stands on its own. The op and session types are a cross-module
+  contract and get treated like documentation.
