@@ -1,37 +1,15 @@
 import esbuild from "esbuild";
-import builtins from "builtin-modules";
 import process from "node:process";
+import { copyModule, options, root } from "./scripts/bundle.mjs";
 
-const production = process.argv[2] === "production";
+const args = process.argv.slice(2);
+const production = args.includes("production");
+const out = "--out=";
+const outdir = args.find((a) => a.startsWith(out))?.slice(out.length) ?? root;
 
-const context = await esbuild.context({
-  entryPoints: ["src/main.ts"],
-  outfile: "main.js",
-  bundle: true,
-  format: "cjs",
-  target: "es2022",
-  platform: "browser",
-  logLevel: "info",
-  sourcemap: production ? false : "inline",
-  treeShaking: true,
-  minify: production,
-  external: [
-    "obsidian",
-    "electron",
-    "@codemirror/autocomplete",
-    "@codemirror/collab",
-    "@codemirror/commands",
-    "@codemirror/language",
-    "@codemirror/lint",
-    "@codemirror/search",
-    "@codemirror/state",
-    "@codemirror/view",
-    "@lezer/common",
-    "@lezer/highlight",
-    "@lezer/lr",
-    ...builtins,
-  ],
-});
+await copyModule(outdir);
+
+const context = await esbuild.context(options({ production, outdir }));
 
 if (production) {
   await context.rebuild();
