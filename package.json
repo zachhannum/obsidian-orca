@@ -7,15 +7,18 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit && node esbuild.config.mjs production",
-    "typecheck": "tsc --noEmit",
-    "test": "node scripts/test.mjs"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",
+    "test": "node scripts/test.mjs",
+    "e2e": "playwright test"
   },
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.0",
     "builtin-modules": "^4.0.0",
     "esbuild": "^0.24.0",
     "obsidian": "1.7.2",
+    "obsidian-launcher": "^3.2.0",
     "typescript": "^5.7.2"
   },
   "dependencies": {

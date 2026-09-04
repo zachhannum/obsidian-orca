@@ -33,3 +33,54 @@ jobs:
       - run: npm test
 
       - run: npm run build
+
+  e2e:
+    name: e2e on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --prefer-offline --no-audit --no-fund
+
+      # The app and its installer are a download apiece. The version is
+      # pinned in the harness, so the key moves when the pin does.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.obsidian-cache
+          key: obsidian-${{ runner.os }}-${{ hashFiles('e2e/harness/launch.ts') }}
+
+      # Electron needs the libraries Chromium needs, and Playwright
+      # keeps that list.
+      - name: system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          npx playwright install-deps chromium
+          sudo apt-get install -y xvfb
+
+      - name: e2e
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run e2e
+
+      - name: e2e
+        if: runner.os == 'macOS'
+        run: npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-${{ matrix.os }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

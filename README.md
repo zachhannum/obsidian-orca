@@ -18,6 +18,7 @@ Desktop only.
 npm install
 npm run dev
 npm test
+npm run e2e
 ```
 
 `main.js` and the engine's `.wasm` are written beside `manifest.json`. Symlink the repo into a vault's `.obsidian/plugins/orca/` to run it.
