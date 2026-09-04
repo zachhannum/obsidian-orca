@@ -3,7 +3,7 @@
  * in the first message, and the worker opens the engine from its bytes.
  */
 
-import { createEngine, type Engine, type Request } from "fleuron";
+import { createEngine, wireVersion, type Engine, type Request } from "fleuron";
 import { isStart, type Started } from "@/engine/protocol";
 
 /** The worker global, which this project's DOM lib does not describe. */
@@ -18,7 +18,7 @@ self.onmessage = ({ data }) => {
   if (isStart(data)) {
     engine = createEngine({ wasm: data.module });
     void engine.then(
-      () => report({ orca: "ready" }),
+      () => report({ orca: "ready", wire: wireVersion() }),
       (cause: unknown) => report({ orca: "failed", message: String(cause) }),
     );
     return;

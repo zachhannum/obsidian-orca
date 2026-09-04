@@ -1,4 +1,4 @@
-import { Client, type Response } from "fleuron";
+import { Client, VERSION, WIRE_VERSION, type Response } from "fleuron";
 import workerSource from "virtual:worker";
 import { EngineError } from "@/engine/errors";
 import { isStarted, type Start } from "@/engine/protocol";
@@ -57,8 +57,9 @@ export async function startEngine(
   const running = new Promise<void>((resolve, reject) => {
     worker.onmessage = ({ data }) => {
       if (isStarted(data)) {
-        if (data.orca === "ready") resolve();
-        else reject(new EngineError(data.message));
+        if (data.orca === "failed") reject(new EngineError(data.message));
+        else if (data.wire === WIRE_VERSION) resolve();
+        else reject(new EngineError(mismatch(data.wire)));
         return;
       }
       client.receive(data as Response);
@@ -76,4 +77,16 @@ export async function startEngine(
   }
 
   return { client, stop };
+}
+
+/**
+ * The display structure is positional, so a bundle and a module that
+ * disagree about it fail at the first byte. The failure this catches is
+ * a plugin updated without its module beside it.
+ */
+function mismatch(wire: number): string {
+  return (
+    `orca is built against fleuron ${VERSION}, which reads wire ` +
+    `${WIRE_VERSION}; the module beside it is wire ${wire}`
+  );
 }

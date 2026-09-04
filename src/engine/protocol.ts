@@ -9,8 +9,10 @@ export interface Start {
   module: ArrayBuffer;
 }
 
-/** A worker's first reply. */
-export type Started = { orca: "ready" } | { orca: "failed"; message: string };
+/** A worker's first reply. `wire` is the version the module writes. */
+export type Started =
+  | { orca: "ready"; wire: number }
+  | { orca: "failed"; message: string };
 
 export function isStart(message: unknown): message is Start {
   return keyed(message) === "start";

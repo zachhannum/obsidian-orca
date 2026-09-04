@@ -1,11 +1,12 @@
 /** The build, as a module, so its test runs the same one. */
 
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 import builtins from "builtin-modules";
+import { VERSION, WIRE_VERSION, initSync, wireVersion } from "fleuron";
 
 const require = createRequire(import.meta.url);
 
@@ -13,6 +14,8 @@ const require = createRequire(import.meta.url);
 export const root = path.resolve(fileURLToPath(import.meta.url), "../..");
 
 export const engineModule = require.resolve("fleuron/fleuron_bg.wasm");
+
+export const manifestFile = path.join(root, "manifest.json");
 
 export const external = [
   "obsidian",
@@ -94,7 +97,32 @@ export function options({ production, outdir }) {
   };
 }
 
-export async function copyModule(outdir) {
+export async function copyModule(outdir, manifest = manifestFile) {
+  await checkEngine(engineModule, manifest);
   await mkdir(outdir, { recursive: true });
   await copyFile(engineModule, path.join(outdir, path.basename(engineModule)));
+}
+
+/**
+ * `main.js` and the module beside it are one release: the manifest
+ * records the fleuron the bundle was built against, and the module
+ * writes the wire version the bundle reads.
+ */
+export async function checkEngine(module, manifest = manifestFile) {
+  const { engineVersion } = JSON.parse(await readFile(manifest, "utf8"));
+  if (engineVersion !== VERSION) {
+    throw new Error(
+      `${path.basename(manifest)} is engine ${engineVersion}; ` +
+        `the bundle is built against fleuron ${VERSION}`,
+    );
+  }
+
+  initSync({ module: await readFile(module) });
+  const wire = wireVersion();
+  if (wire !== WIRE_VERSION) {
+    throw new Error(
+      `${path.basename(module)} is wire ${wire}; fleuron ${VERSION} ` +
+        `reads wire ${WIRE_VERSION}`,
+    );
+  }
 }
