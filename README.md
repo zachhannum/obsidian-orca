@@ -17,10 +17,11 @@ Desktop only.
 ```
 npm install
 npm run dev
+npm test
 ```
 
-`main.js` is written beside `manifest.json`. Symlink the repo into a vault's `.obsidian/plugins/orca/` to run it.
+`main.js` and the engine's `.wasm` are written beside `manifest.json`. Symlink the repo into a vault's `.obsidian/plugins/orca/` to run it.
 
 ## Status
 
-Nothing works yet. The architecture is written down, the build order is milestones M0 through M4, and the tracking issue is #1.
+The engine starts. Nothing is on screen yet. The build order is milestones M0 through M4, and the tracking issue is #1.
