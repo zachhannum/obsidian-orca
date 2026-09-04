@@ -25,5 +25,5 @@ test("the note the plugin carries is the note in the fixture vault", async () =>
   assert.equal(await readText(vault, SAMPLE.name), SAMPLE.text);
 });
 
-// What this tier does not cover: the book note's own format, and the
-// reading order of a book of several notes. Both wait on M1.
+// What this tier does not cover: a book of several notes crossing as
+// one op, which waits on the theme it is set in.
