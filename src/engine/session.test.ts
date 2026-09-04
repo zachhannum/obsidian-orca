@@ -121,7 +121,7 @@ test("the faces a run drew with come from the module, under the painter's names"
   assert.deepEqual(set.added, ["fleuron-face-0"]);
 });
 
-test("a book the engine refuses comes back as an engine error, in its own words", async () => {
+test("a book the engine refuses comes back as an engine error, not re-worded", async () => {
   const refusing: EngineClient = {
     preview: () => Promise.reject(new Error("unknown property `leadin`")),
     fontBytes: () => Promise.reject(new Error("no faces")),

@@ -107,6 +107,9 @@ underneath them.
 - A native save dialog cannot be answered or stubbed over CDP. The
   OS-path export branch stops at the dialog, and that is written down
   rather than worked around.
+- Playwright records video for a context it created, and a CDP
+  attachment is handed one that already exists. A failed spec keeps a
+  trace and a picture of the window instead.
 
 ## PR creation and CI
 
@@ -137,8 +140,8 @@ underneath them.
 
 `.github/workflows/ci.yml` runs on every PR and push to main. The
 `checks` job runs the type check, the Node tier and the production
-bundle. #6 adds the lint pass to it and #5 brings the e2e job; until
-those land, the mirror above is what the rest is held to.
+bundle, and the `e2e` job runs the suite on both platforms. #6 adds the
+lint pass; until it lands, the mirror above is what lint is held to.
 
 1. `checks` job: `tsc --noEmit`, lint including the dependency rule,
    and the Node tier
@@ -146,11 +149,14 @@ those land, the mirror above is what the rest is held to.
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned
    Obsidian version, run the suite on Linux under a virtual display and
-   on macOS, two retries, a trace on the first and video throughout,
-   both kept on failure
+   on macOS, two retries, a trace on the first and a picture of the
+   window, both kept on failure
 4. PDF validation inside the e2e job: `qpdf --check` for structure and
    a `pdftotext` round trip for the words, against the exported book
 5. advisories check — no merged dependency with an open advisory
+
+Both test jobs write their run to the job's summary page, and the e2e
+job keeps its HTML report as an artifact.
 
 ## Documentation rules
 

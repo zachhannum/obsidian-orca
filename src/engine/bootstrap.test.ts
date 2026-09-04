@@ -97,14 +97,19 @@ test("the worker starts from a Blob URL built out of the bundle", async () => {
   browserHost.release(url);
 });
 
-test("the release is one JavaScript file, with the module beside it", async () => {
+test("the release is the plugin folder, with one JavaScript file in it", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-release-"));
   try {
     const { code } = await build([`--out=${outdir}`]);
     assert.equal(code, 0);
 
     const written = (await readdir(outdir)).sort();
-    assert.deepEqual(written, ["fleuron_bg.wasm", "main.js"]);
+    assert.deepEqual(written, [
+      "fleuron_bg.wasm",
+      "main.js",
+      "manifest.json",
+      "styles.css",
+    ]);
     assert.ok((await stat(path.join(outdir, "fleuron_bg.wasm"))).size > 0);
 
     // The worker travels inside the bundle rather than beside it.
@@ -210,12 +215,12 @@ test("the manifest names the plugin's version and the engine's", async () => {
 
   assert.equal(version, npm.version);
   assert.equal(engineVersion, VERSION);
-  // A range lets a release be built against an engine the manifest does
-  // not name.
+  // The dependency is pinned, so the manifest and the bundle name one
+  // engine.
   assert.equal(npm.dependencies.fleuron, VERSION);
 });
 
-test("a release whose module is versioned apart fails to build", async () => {
+test("a manifest naming another engine version fails the build", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-apart-"));
   try {
     const apart = path.join(outdir, "manifest.json");

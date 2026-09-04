@@ -1,6 +1,6 @@
 # Orca
 
-A book designer that lives inside Obsidian. The chapters stay notes in the vault, the book is a note beside them, and a preview pane shows the set page while you write.
+A book designer that runs inside Obsidian. The chapters stay notes in the vault, the book is a note beside them, and a preview pane shows the set page while you write.
 
 The setting is done by [fleuron](https://github.com/zachhannum/fleuron), running as WebAssembly in a worker: markdown in, laid-out pages out, styling as CSS, no DOM anywhere. Orca is the half fleuron does not have — a project, a design UI, and a place to put the result.
 
@@ -18,6 +18,7 @@ Desktop only.
 npm install
 npm run dev
 npm test
+npm run e2e
 ```
 
 `main.js` and the engine's `.wasm` are written beside `manifest.json`. Symlink the repo into a vault's `.obsidian/plugins/orca/` to run it.

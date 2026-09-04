@@ -1,4 +1,4 @@
-/** The build, as a module, so its test runs the same one. */
+/** The build, as a module, so its test runs the same build. */
 
 import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -95,6 +95,17 @@ export function options({ production, outdir }) {
     tsconfig,
     external,
   };
+}
+
+/**
+ * The manifest and the stylesheet, for a build written somewhere other
+ * than the repository root. A build into the root has them already.
+ */
+export async function copyPlugin(outdir, manifest = manifestFile) {
+  if (path.resolve(outdir) === root) return;
+  await mkdir(outdir, { recursive: true });
+  await copyFile(manifest, path.join(outdir, "manifest.json"));
+  await copyFile(path.join(root, "styles.css"), path.join(outdir, "styles.css"));
 }
 
 export async function copyModule(outdir, manifest = manifestFile) {
