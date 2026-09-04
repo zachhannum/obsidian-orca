@@ -30,3 +30,6 @@ test("a missing module is an engine error naming the path it read", async () => 
       error instanceof EngineError && error.message.includes(MODULE),
   );
 });
+
+// What this tier does not cover: the install directory Obsidian hands
+// the plugin, which the e2e job reaches.

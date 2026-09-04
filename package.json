@@ -8,6 +8,7 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit && node esbuild.config.mjs production",
     "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",
+    "lint": "node scripts/lint.mjs",
     "test": "node scripts/test.mjs",
     "e2e": "playwright test"
   },

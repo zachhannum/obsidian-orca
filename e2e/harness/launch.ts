@@ -24,7 +24,7 @@ const root = path.resolve(fileURLToPath(import.meta.url), "../../..");
  * The vault as it is checked in. A spec that changes the copy puts it
  * back from here.
  */
-export const FIXTURE = path.join(root, "e2e/fixture");
+export const FIXTURE = path.join(root, "fixture");
 
 /** The environment a spec reads the debugging port from. */
 export const CDP = "ORCA_E2E_CDP";

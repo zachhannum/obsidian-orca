@@ -67,6 +67,9 @@ one, and UI work starts by opening the one it belongs to.
   in Node against a fake adapter backed by a directory of fixture
   files. The Node tier runs book note to PDF bytes with no application
   around it, in seconds rather than minutes.
+- `fixture/` is the one fixture vault. The Node tier reads it through
+  `directoryVault`, and the e2e suite opens a copy of it in Obsidian,
+  so the two tiers set the same book.
 - Round trips get **property tests**, not golden files: a book note
   parsed and written back is byte-identical; a model that survives a
   navigator edit still agrees with the note on disk; op planning is
@@ -74,7 +77,8 @@ one, and UI work starts by opening the one it belongs to.
 - Generated CSS and the generated matter get snapshots. Snapshot files
   are reviewed like code, never blind-accepted.
 - What the suite does not cover is written down beside it and read like
-  a backlog.
+  a backlog: a test file ends on that note, and the lint pass holds
+  every test file to one.
 
 ## E2E testing
 
@@ -122,8 +126,8 @@ underneath them.
   as a line break, so prose wrapped to the width used for code comes
   out as a ragged column.
 - Before pushing, run the CI mirror locally and make it green:
-  `npm run build` (type check, then bundle), the lint pass, the Node
-  tier, and the e2e suite when the change touches a surface. Pushing
+  `npm run build` (type check, then bundle), `npm run lint`, `npm test`,
+  and `npm run e2e` when the change touches a surface. Pushing
   red and letting CI find it wastes a cycle; CI is verification, not
   development.
 - After opening the PR, watch it to green (`gh run watch`) before
@@ -139,12 +143,14 @@ underneath them.
 ## CI scaffolding
 
 `.github/workflows/ci.yml` runs on every PR and push to main. The
-`checks` job runs the type check, the Node tier and the production
-bundle, and the `e2e` job runs the suite on both platforms. #6 adds the
-lint pass; until it lands, the mirror above is what lint is held to.
+`checks` job runs the type check, the lint pass, the Node tier and the
+production bundle, and the `e2e` job runs the suite on both platforms.
 
-1. `checks` job: `tsc --noEmit`, lint including the dependency rule,
-   and the Node tier
+1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier. The
+   lint pass is `scripts/lint.mjs`, and it holds four rules: nothing
+   outside `ui` imports `ui`, only `ui` imports Obsidian, an import
+   inside `src` uses the `@/` alias, and a test file ends on what it
+   does not cover
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned

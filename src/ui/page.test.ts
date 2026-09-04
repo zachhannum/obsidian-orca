@@ -44,3 +44,6 @@ test("the surface carries the generation painted into it, and what that cost", (
   assert.equal(node.dataset["stageFlow"], "3");
   assert.equal(node.dataset["stagePaint"], "2");
 });
+
+// What this tier does not cover: the surface inside a leaf, which the
+// e2e job paints and photographs.

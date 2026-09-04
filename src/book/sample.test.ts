@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import path from "node:path";
+import process from "node:process";
 import { test } from "node:test";
+import { directoryVault } from "@/assets/directory";
+import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
+
+const root = process.env["ORCA_ROOT"] ?? process.cwd();
 
 test("the sample note crosses as the whole book, in Obsidian's markdown", () => {
   assert.deepEqual(openBook(SAMPLE), [
@@ -12,3 +18,12 @@ test("the sample note crosses as the whole book, in Obsidian's markdown", () => 
 test("the note's frontmatter names the book's title and author", () => {
   assert.match(SAMPLE.text, /^---\ntitle: Pride and Prejudice\nauthor: Jane Austen\n---\n/);
 });
+
+test("the note the plugin carries is the note in the fixture vault", async () => {
+  const vault = directoryVault(path.join(root, "fixture"));
+
+  assert.equal(await readText(vault, SAMPLE.name), SAMPLE.text);
+});
+
+// What this tier does not cover: the book note's own format, and the
+// reading order of a book of several notes. Both wait on M1.
