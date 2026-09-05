@@ -156,6 +156,19 @@ const detect: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
+/**
+ * The groups with every row's place counted again. A row names its
+ * entry by that place and every edit names it the same way, so the
+ * groups a drag leaves up have to count the way the note will.
+ */
+function renumber(groups: Grouped[]): Grouped[] {
+  let at = 0;
+  return groups.map((group) => ({
+    ...group,
+    rows: group.rows.map((row) => ({ ...row, at: at++ })),
+  }));
+}
+
 /** An Obsidian icon, which is drawn into the node after the commit. */
 function Icon({ name, className }: { name: string; className?: string }): JSX.Element {
   const held = useRef<HTMLSpanElement>(null);
@@ -274,14 +287,19 @@ function Book({
   );
   const groups = moving ?? book.groups;
 
+  /** The groups the drag was picked up from, whatever had painted. */
+  const picked = useRef<Grouped[]>(book.groups);
+
   const rowAt = (id: UniqueIdentifier): number => Number(String(id).slice(ENTRY.length));
   const headingOf = (id: UniqueIdentifier): string => String(id).slice(GROUP.length);
   const groupOf = (found: Grouped[], at: number): Grouped | undefined =>
     found.find((group) => group.rows.some((row) => row.at === at));
 
   function started({ active }: DragStartEvent): void {
+    const from = moving ?? book.groups;
+    picked.current = from;
     setDragged(active.id);
-    setMoving(book.groups);
+    setMoving(from);
   }
 
   /** An entry crossing into another section, while the drag is still up. */
@@ -328,34 +346,34 @@ function Book({
   }
 
   function edited({ active, over: under }: DragEndEvent): boolean {
-    const held = moving;
-    if (held === undefined || under === null) return false;
+    const rest = moving;
+    if (rest === undefined || under === null) return false;
     const id = String(active.id);
 
     if (id.startsWith(GROUP)) {
       const heading = headingOf(id);
-      const from = held.findIndex((group) => group.heading === heading);
-      const onto = held.findIndex(
+      const from = rest.findIndex((group) => group.heading === heading);
+      const onto = rest.findIndex(
         (group) => group.heading === headingOf(String(under.id)),
       );
-      const section = held[from];
+      const section = rest[from];
       if (section === undefined || onto < 0 || onto === from) return false;
       // Nothing moves above a group with no heading, because a heading
       // written above those entries would take them.
-      const first = held[0]?.heading === "" ? 1 : 0;
-      const to = Math.min(Math.max(onto, first), held.length - 1);
+      const first = rest[0]?.heading === "" ? 1 : 0;
+      const to = Math.min(Math.max(onto, first), rest.length - 1);
       if (to === from) return false;
 
-      const next = held.filter((_, index) => index !== from);
+      const next = rest.filter((_, index) => index !== from);
       next.splice(to, 0, section);
-      setMoving(next);
+      setMoving(renumber(next));
       acting.moveGroup(book, heading, to);
       return true;
     }
 
     const at = rowAt(active.id);
-    const origin = groupOf(book.groups, at);
-    const target = groupOf(held, at);
+    const origin = groupOf(picked.current, at);
+    const target = groupOf(rest, at);
     if (origin === undefined || target === undefined) return false;
     const was = origin.rows.findIndex((row) => row.at === at);
     const now = target.rows.findIndex((row) => row.at === at);
@@ -363,6 +381,7 @@ function Book({
     // A place names the index the group has now, so a move down inside
     // one group counts the row it is leaving.
     const to = origin.heading === target.heading && now > was ? now + 1 : now;
+    setMoving(renumber(rest));
     acting.moveEntry(book, at, { heading: target.heading, at: to });
     return true;
   }

@@ -25,6 +25,8 @@ export type Change = (model: Model) => Model;
 
 export class Edits {
   private readonly watchers = new Set<() => void>();
+  /** The write running on each book, which the next one waits behind. */
+  private readonly writing = new Map<string, Promise<void>>();
 
   constructor(
     private readonly app: App,
@@ -32,7 +34,12 @@ export class Edits {
     private readonly opened: (path: string) => Open | undefined,
   ) {}
 
-  /** One edit to the book at this path. */
+  /**
+   * One edit to the book at this path. A book with no view open is
+   * read, changed and written in one go, and the next edit waits for
+   * that write: each one reads the note the one before it left, so two
+   * edits in a row cannot lose the first.
+   */
   async edit(path: string, change: Change): Promise<void> {
     const open = this.opened(path);
     if (open !== undefined) {
@@ -40,6 +47,18 @@ export class Edits {
       this.changed();
       return;
     }
+    const behind = this.writing.get(path);
+    const queued = (behind ?? Promise.resolve()).then(
+      () => this.write(path, change),
+      () => this.write(path, change),
+    );
+    this.writing.set(path, queued);
+    await queued;
+    if (this.writing.get(path) === queued) this.writing.delete(path);
+  }
+
+  /** The note read, changed and written, which is one revision. */
+  private async write(path: string, change: Change): Promise<void> {
     const file = this.app.vault.getFileByPath(path);
     if (file === null) return;
     try {

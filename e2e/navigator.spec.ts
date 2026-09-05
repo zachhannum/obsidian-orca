@@ -137,7 +137,13 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     "back-matter",
   );
 
-  // A per-entry override sits in the context menu.
+  // A per-entry override sits in the context menu. An edit names an
+  // entry by its place in the reading order, so the wait is on the
+  // place the row now carries.
+  await expect(navigator.entry(BOOK, "Chapter Twelve")).toHaveAttribute(
+    "data-at",
+    "7",
+  );
   await navigator.entry(BOOK, "Chapter Twelve").click({ button: "right" });
   await obsidian.item("Role for this entry").click();
   await navigator.pick("Epigraph");
@@ -200,12 +206,19 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   );
 
   // A whole section drags, and everything under it goes along.
+  const drawn = await navigator.painted();
   await navigator.drag(
     navigator.group(BOOK, "Back matter"),
     navigator.group(BOOK, "Prelims"),
     "above",
   );
 
+  // The list shows the drag before the note has it, so the wait is on
+  // the note and then on the paint that read it back.
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toMatch(/# Back matter\n\n- \[\[Acknowledgements\]\] `back-matter`\n\n# Prelims\n/);
+  await navigator.repainted(drawn);
   await expect(navigator.groups(BOOK)).toContainText([
     "Back matter",
     "Prelims",

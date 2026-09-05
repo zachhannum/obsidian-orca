@@ -86,6 +86,15 @@ export class Navigator {
     return Number(await this.pane.getAttribute("data-generation"));
   }
 
+  /**
+   * Waits for a paint later than the one given. An edit is one write
+   * and one paint, so a spec that has to act on a settled list waits
+   * for the paint that read the write back.
+   */
+  async repainted(after: number): Promise<void> {
+    await expect.poll(async () => this.painted()).toBeGreaterThan(after);
+  }
+
   /** A fuzzy pick, answered with the first match for what is typed. */
   async pick(named: string): Promise<void> {
     const modal = this.obsidian.page.getByTestId("orca-pick");

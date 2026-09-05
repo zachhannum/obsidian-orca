@@ -63,6 +63,12 @@ one, and UI work starts by opening the one it belongs to.
   says which one it followed and the issue is settled before the code
   lands.
 
+## Implementing Changes
+
+- Commit as you go. Do not wait until the feature is done to commit everything
+  - Commits should be small testable chunks
+- After committing, run roborev wait in the background to block on the review the post-commit hook enqueued. On findings, `roborev show`, fix, commit, repeat. Surface only what you can't resolve. After major changes, also run `roborev review --branch --wait` in the background for branch-level findings.
+
 ## Unit testing
 
 - Tests are colocated: `<name>.test.ts` beside the file under test.
