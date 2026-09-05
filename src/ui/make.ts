@@ -21,7 +21,7 @@ export const UNTITLED = "Untitled book";
 export async function emptyBook(app: App): Promise<TFile> {
   const active = app.workspace.getActiveFile();
   const parent = app.fileManager.getNewFileParent(active?.path ?? "");
-  return createBook(app, pathOf(parent), UNTITLED, [], {});
+  return createBook(app, pathOf(parent), UNTITLED, () => [], {});
 }
 
 /**
@@ -34,7 +34,12 @@ export async function bookFromFolder(app: App, folder: TFolder): Promise<TFile> 
     app,
     beside,
     folder.name,
-    sorted(folder).map((note) => app.metadataCache.fileToLinktext(note, beside, true)),
+    // A link is written from the note that carries it, so the book's own
+    // path is what it is resolved against.
+    (path) =>
+      sorted(folder).map((note) =>
+        app.metadataCache.fileToLinktext(note, path, true),
+      ),
     { title: folder.name },
   );
 }
@@ -44,13 +49,11 @@ async function createBook(
   app: App,
   folder: string,
   name: string,
-  links: Iterable<string>,
+  links: (path: string) => Iterable<string>,
   metadata: BookMetadata,
 ): Promise<TFile> {
-  return app.vault.create(
-    free(app, folder, name),
-    writeModel(newBook(metadata, links)),
-  );
+  const path = free(app, folder, name);
+  return app.vault.create(path, writeModel(newBook(metadata, links(path))));
 }
 
 /** A chapter note, made in the book's own folder. */

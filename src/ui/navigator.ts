@@ -1,4 +1,4 @@
-import { ItemView, Menu, Notice, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Menu, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
 import {
@@ -77,7 +77,14 @@ export class NavigatorView extends ItemView {
     this.registerEvent(vault.on("create", again));
     this.registerEvent(vault.on("delete", again));
     this.registerEvent(vault.on("rename", again));
-    this.registerEvent(vault.on("modify", again));
+    // Every note in the vault raises this, and a read costs every book
+    // on the shelf. A note that gains the key reaches the shelf through
+    // the metadata cache instead.
+    this.registerEvent(
+      vault.on("modify", (file) => {
+        if (file instanceof TFile && this.reads(file)) again();
+      }),
+    );
     this.registerEvent(metadataCache.on("resolved", again));
     // The highlight follows the active note. Nothing else here does:
     // the navigator never folds, unfolds or scrolls itself.
@@ -192,12 +199,18 @@ export class NavigatorView extends ItemView {
       // list while orca itself is writing it. What the note reads as
       // settles it.
       if (!isBook(index, note) && !this.shelved.has(note.path)) continue;
-      const model = await this.edits.model(note.path);
+      // One note orca cannot read leaves the rest of the shelf standing.
+      const model = await this.edits.model(note.path).catch(() => undefined);
       if (model === undefined) continue;
       shelf.push(shelve({ path: note.path, name: note.basename, model }, vault));
     }
     this.shelved = new Set(shelf.map((book) => book.path));
     return shelf;
+  }
+
+  /** Whether a note is one the shelf reads. */
+  private reads(note: TFile): boolean {
+    return this.shelved.has(note.path) || isBook(noteIndex(this.app), note);
   }
 
   private bookMenu(event: MouseEvent, book: Shelved): void {
@@ -433,6 +446,12 @@ export class NavigatorView extends ItemView {
 
   /** A wikilink pasted into a book's list, which is the third route in. */
   private pasted(event: ClipboardEvent): void {
+    // A rename is an input inside this view, and what is pasted into
+    // one is the section's name.
+    const into = event.target;
+    if (into instanceof HTMLInputElement || into instanceof HTMLTextAreaElement) {
+      return;
+    }
     const path = this.focused;
     if (path === undefined) return;
     const links = linksIn(event.clipboardData?.getData("text/plain") ?? "");

@@ -144,6 +144,23 @@ export class Navigator {
     await expect(modal).toHaveCount(0);
   }
 
+  /** A wikilink pasted into whatever has focus, which a rename box may be. */
+  async pasteFocused(text: string): Promise<void> {
+    await this.obsidian.page.evaluate((pasted) => {
+      const into = document.activeElement;
+      if (into === null) throw new Error("nothing has focus");
+      const data = new DataTransfer();
+      data.setData("text/plain", pasted);
+      into.dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }, text);
+  }
+
   /** A wikilink pasted into a book's list, with the list focused. */
   async paste(book: string, text: string): Promise<void> {
     await this.obsidian.page.evaluate(

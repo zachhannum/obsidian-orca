@@ -289,9 +289,13 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   await navigator.menuOn(navigator.group(BOOK, "Front matter"));
   await obsidian.choose("Rename section");
   await navigator.renaming(BOOK).fill("Prelims");
+  // The list answers a wikilink pasted into it. The rename box inside
+  // it does not: what is pasted there is the section's name.
+  await navigator.pasteFocused("and [[Chapter Ten]]");
   await navigator.renaming(BOOK).press("Enter");
 
   await expect.poll(async () => vault.read(BOOK)).toContain("# Prelims\n");
+  expect(await vault.read(BOOK)).not.toContain("- [[Chapter Ten]]");
   await expect(navigator.entry(BOOK, "Copyright")).toHaveAttribute(
     "data-role",
     "copyright",
