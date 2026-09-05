@@ -61,7 +61,6 @@
         <div class="nav-children">
           <div class="nav-heading">Front matter</div>
           <div class="nav-item"><span class="label">Copyright</span></div>
-          <div class="nav-item"><span class="label">Dedication</span></div>
           <div class="nav-heading">Body</div>
           <div class="nav-item"><span class="label">Chapter One</span></div>
           <div class="nav-item"><span class="label">Chapter Two</span></div>
@@ -77,24 +76,19 @@
     <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>
 
     <div class="step" style="width: 320px">
-      <div class="step-n"><b>4</b> Drag to reorder, or to re-role</div>
+      <div class="step-n"><b>4</b> Drag to reorder</div>
       <div class="step-frame" style="flex: 1; padding: 10px 6px; background: var(--background-secondary); position: relative">
         <div class="nav-children" style="margin-left: 6px">
           <div class="nav-heading">Front matter</div>
           <div class="nav-item"><span class="label">Copyright</span></div>
-          <div class="nav-item is-muted" style="opacity: 0.4"><span class="label">Dedication</span></div>
-          <div class="nav-heading" style="color: var(--text-accent)">Body</div>
-          <div style="height: 2px; background: var(--color-accent); border-radius: 2px; margin: 2px 8px 4px"></div>
+          <div class="nav-heading">Body</div>
+          <div class="nav-item" style="border-radius: var(--radius-s); background: var(--background-primary); box-shadow: 0 6px 18px rgba(0,0,0,0.35), 0 0 0 1px var(--color-accent); color: var(--text-normal)"><span class="label">Dedication</span><span class="chip" style="margin-left: auto">dedication</span></div>
           <div class="nav-item"><span class="label">Chapter One</span></div>
           <div class="nav-item"><span class="label">Chapter Two</span></div>
           <div class="nav-item"><span class="label">Chapter Three</span></div>
         </div>
-        <div style="position: absolute; top: 62px; left: 26px; right: 18px; display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius-s); background: var(--background-primary); box-shadow: 0 6px 18px rgba(0,0,0,0.35), 0 0 0 1px var(--color-accent); font-size: var(--font-ui-small)">
-          <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint)"><path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01" stroke-width="2.6"/></svg>
-          <span>Dedication</span><span class="chip" style="margin-left: auto">→ chapter</span>
-        </div>
       </div>
-      <div class="step-note">The markdown list is rewritten on settle. The heading an entry lands under is its role; a per-entry override sits in the context menu.</div>
+      <div class="step-note">The markdown list is rewritten on settle. The row under the pointer is the row that lands, and it carries its own role across a section; the role sits in the context menu.</div>
     </div>
 
     <div class="arrow"><svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></div>

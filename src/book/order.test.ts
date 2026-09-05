@@ -401,6 +401,14 @@ test("a book with no chapters yet appends to its body", async () => {
   // The group most of the book's chapters are in wins once there are
   // any, wherever in the note it sits.
   assert.equal(defaultHeading(added), "Body");
+
+  const parts = readOrder(
+    "# Body\n\n- [[A]]\n\n# Part One\n\n- [[B]]\n- [[C]]\n",
+  );
+  assert.equal(defaultHeading(parts), "Part One");
+  // Two groups of a size are settled by the one the note has first.
+  const tied = readOrder("# Body\n\n- [[A]]\n\n# Part One\n\n- [[B]]\n");
+  assert.equal(defaultHeading(tied), "Body");
 });
 
 test("a section taken out takes one blank line with it, wherever it sits", () => {

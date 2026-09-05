@@ -464,16 +464,11 @@ export class NavigatorView extends ItemView {
   private pasted(event: ClipboardEvent): void {
     // A rename is an input inside this view, and what is pasted into
     // one is the section's name.
-    // A leaf can be in a popout window, whose elements belong to that
-    // window rather than this one. `instanceOf` is Obsidian's own way
-    // to ask across the two.
-    const into = event.target;
-    if (
-      into instanceof Node &&
-      (into.instanceOf(HTMLInputElement) || into.instanceOf(HTMLTextAreaElement))
-    ) {
-      return;
-    }
+    // A leaf can be in a popout window, whose elements are that window's
+    // and no instance of this one's. The tag is what both windows spell
+    // the same.
+    const tag = (event.target as Partial<HTMLElement> | null)?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
     const path = this.focused;
     if (path === undefined) return;
     const links = linksIn(event.clipboardData?.getData("text/plain") ?? "");
