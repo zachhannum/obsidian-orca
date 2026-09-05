@@ -4,7 +4,8 @@
  * through the page object that holds those class names.
  */
 
-import type { Locator } from "@playwright/test";
+import { expect, type Locator } from "@playwright/test";
+import type { Model } from "@/book/model";
 import type { Obsidian } from "./obsidian";
 
 /** The type the book note is registered under. */
@@ -17,18 +18,62 @@ export const MARKDOWN = "markdown";
 export const AS_MARKDOWN = "Open as markdown";
 export const AS_BOOK = "Open as book";
 
+/** The view method every edit to the book goes through. */
+interface Editing {
+  edit(change: (model: Model) => Model): void;
+}
+
 export class Note {
-  /** The page orca draws for the book note. */
+  /** The page orca draws for the book note, carrying the model it was painted from. */
   readonly page: Locator;
   /** The state a book from a newer orca stops at. */
   readonly refused: Locator;
+  /** What the author answers when the note changed under an edit. */
+  readonly changed: Locator;
   /** The note as the editor shows it. */
   readonly markdown: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.page = obsidian.view(BOOK).getByTestId("orca-book");
     this.refused = this.page.getByTestId("orca-book-refused");
+    this.changed = obsidian.page.getByTestId("orca-book-changed");
     this.markdown = obsidian.view(MARKDOWN);
+  }
+
+  /** How many times the model the page shows has changed. */
+  async painted(): Promise<number> {
+    await expect(this.page).toHaveAttribute("data-generation", /\d+/);
+    return Number(await this.page.getAttribute("data-generation"));
+  }
+
+  /** One edit, through the view the book is open in. */
+  async edit(title: string): Promise<void> {
+    await this.drag(title, 1);
+  }
+
+  /**
+   * A dragged control: one edit a frame, in one turn of the renderer,
+   * so the frames land inside the settle rather than around it.
+   */
+  async drag(title: string, frames: number): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ({ name, count, type }) => {
+        const leaf = window.app.workspace.getLeavesOfType(type)[0];
+        const view = leaf?.view as unknown as Editing | undefined;
+        if (view === undefined) throw new Error("no book view is open");
+        for (let frame = 0; frame < count; frame += 1) {
+          const held = count === 1 ? name : `${name} ${frame}`;
+          view.edit((model) => ({
+            ...model,
+            book: {
+              ...model.book,
+              metadata: { ...model.book.metadata, title: held },
+            },
+          }));
+        }
+      },
+      { name: title, count: frames, type: BOOK },
+    );
   }
 
   /** Opens a note in the active pane. */

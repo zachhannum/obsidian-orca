@@ -8,7 +8,9 @@ import { readFrontmatter, type Properties } from "@/book/frontmatter";
 import {
   BOOK_KEY,
   BookError,
+  FIELD_KEYS,
   FORMAT,
+  applyBook,
   bookFormat,
   readBook,
   readValue,
@@ -60,6 +62,32 @@ test("an enum is quoted on write and coerced on read, and a length keeps its uni
 
   assert.match(written, /^---\norca-book: 1\nlanguage: "no"\n---\n$/);
   assert.equal(readBook(readFrontmatter(written).properties).metadata.language, "no");
+});
+
+test("orca's own properties are set on the note, and the author's are left as they are", async () => {
+  const { properties } = await note();
+  // The object Obsidian's frontmatter API hands over is the note's own
+  // properties, orca's among them.
+  const held = structuredClone(properties);
+  const book = readBook(properties);
+  book.metadata.title = "First Impressions";
+  delete book.metadata.series;
+
+  applyBook(held, book);
+
+  assert.equal(held[BOOK_KEY], FORMAT);
+  assert.equal(held["title"], "First Impressions");
+  assert.equal(Object.hasOwn(held, "series"), false);
+  // A property orca does not own survives the round trip whole, in the
+  // place the author put it.
+  assert.deepEqual(held["tags"], ["novel"]);
+  assert.equal(held["status"], "drafting");
+  assert.deepEqual(
+    Object.keys(held).filter(
+      (key) => key !== BOOK_KEY && !(FIELD_KEYS as readonly string[]).includes(key),
+    ),
+    ["tags", "status"],
+  );
 });
 
 test("a book note parsed and written back is byte-identical", async () => {

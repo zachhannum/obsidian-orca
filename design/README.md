@@ -45,6 +45,8 @@ its editor around these files and returns a URL. The artboard list and
   line that took it, which is also the way to that line.
 - Export sits in the book preview's toolbar and on the book note's
   page.
+- A change on disk reloads a book view with no unwritten edit. A view
+  with one asks the author which version to keep.
 - Chapter openings default to the right-hand page, which is what
   leaves the odd blank verso. Next page and same page are both there.
 - No implementation vocabulary reaches a surface. The per-stage counts

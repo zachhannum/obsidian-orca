@@ -1,21 +1,38 @@
-import { FileView, setIcon, type TFile, type WorkspaceLeaf } from "obsidian";
-import { readFrontmatter } from "@/book/frontmatter";
+import {
+  FileView,
+  Notice,
+  TFile,
+  setIcon,
+  type WorkspaceLeaf,
+} from "obsidian";
+import { readFrontmatter, type Properties } from "@/book/frontmatter";
+import { readModel, withOrder, type Model } from "@/book/model";
 import {
   BOOK_KEY,
   BookError,
   FIELD_KEYS,
-  readBook,
+  applyBook,
   type Book,
 } from "@/book/note";
+import { writeOrder } from "@/book/order";
+import { Changed } from "@/ui/changed";
+import { Writer } from "@/ui/writer";
 
 /** The type the book note is registered under. */
 export const BOOK_VIEW = "orca-book";
 
 /**
- * The book note's own page. The view reads the note and writes nothing,
- * and `Open as markdown` hands the leaf back to the editor.
+ * The book note's own page, and the one writer on the note while it is
+ * open. Every other surface edits the book through `edit`, and
+ * `Open as markdown` hands the leaf back to the editor.
  */
 export class BookView extends FileView {
+  private writer: Writer | undefined;
+  /** The note as orca last read it from disk. */
+  private disk = "";
+  /** How many saves of orca's own are running. */
+  private saving = 0;
+
   constructor(
     leaf: WorkspaceLeaf,
     private readonly asMarkdown: (view: BookView) => void,
@@ -35,34 +52,166 @@ export class BookView extends FileView {
     this.addAction("file-text", "Open as markdown", () => {
       this.asMarkdown(this);
     });
+    this.registerEvent(
+      this.app.vault.on("modify", (file) => {
+        if (file instanceof TFile && file.path === this.file?.path) {
+          void this.arrived(file);
+        }
+      }),
+    );
     return Promise.resolve();
   }
 
   override async onLoadFile(file: TFile): Promise<void> {
-    this.show(await this.app.vault.cachedRead(file));
+    this.hold(file, await this.app.vault.cachedRead(file));
   }
 
-  override onUnloadFile(): Promise<void> {
+  override async onUnloadFile(): Promise<void> {
+    // The leaf is closing or opening another note, so the model is
+    // written first.
+    await this.settle();
+    this.writer = undefined;
     this.contentEl.empty();
-    return Promise.resolve();
   }
 
-  private show(text: string): void {
+  override async onClose(): Promise<void> {
+    await this.settle();
+    this.writer = undefined;
+  }
+
+  /**
+   * One edit to the book. The view is the only writer while it is
+   * open, so every surface that changes the book comes through here.
+   */
+  edit(change: (model: Model) => Model): void {
+    this.writer?.edit(change);
+  }
+
+  /** The note opened: the model read, the writer made, the book painted. */
+  private hold(file: TFile, text: string): void {
+    this.disk = text;
+    this.writer = undefined;
+    const model = this.opened(text);
+    if (model === undefined) return;
+    this.writer = new Writer(model, {
+      paint: (held, generation) => {
+        this.show(held.book, generation);
+      },
+      save: (held) => this.write(file, held),
+    });
+    this.show(model.book, 0);
+  }
+
+  /** The book in the note, or nothing when orca refused it. */
+  private opened(text: string): Model | undefined {
+    try {
+      return readModel(text);
+    } catch (cause) {
+      if (!(cause instanceof BookError)) throw cause;
+      this.refuse(this.pane(), cause.message);
+      return undefined;
+    }
+  }
+
+  /**
+   * A write on the note that orca did not make: the note edited in
+   * another leaf, or a sync writing over it.
+   */
+  private async arrived(file: TFile): Promise<void> {
+    if (this.saving > 0) return;
+    const text = await this.app.vault.read(file);
+    if (text === this.disk) return;
+
+    // A refused book has no writer, and a change that fixes its
+    // format opens it.
+    const writer = this.writer;
+    if (writer === undefined) {
+      this.hold(file, text);
+      return;
+    }
+    this.disk = text;
+
+    if (writer.arrived() === "reload") {
+      this.reload(text);
+      return;
+    }
+    // The settle would otherwise write the unwritten edit over the note
+    // while the author is still reading the question.
+    writer.stop();
+    new Changed(this.app, {
+      keep: () => {
+        void this.settle();
+      },
+      reload: () => {
+        this.reload(text);
+      },
+    }).open();
+  }
+
+  private reload(text: string): void {
+    const model = this.opened(text);
+    if (model !== undefined) this.writer?.take(model);
+  }
+
+  /** Writes the model, and reports a write that failed. */
+  private async settle(): Promise<void> {
+    try {
+      await this.writer?.flush();
+    } catch (cause) {
+      new Notice(
+        `Orca: the book note was not written. ${
+          cause instanceof Error ? cause.message : String(cause)
+        }`,
+      );
+    }
+  }
+
+  /**
+   * The note, written in two halves. The properties go through
+   * Obsidian's frontmatter API, which leaves the author's own alone,
+   * and the body is replaced under them. The half an edit did not
+   * touch is not written, so a settled edit is one revision.
+   */
+  private async write(file: TFile, model: Model): Promise<void> {
+    this.saving += 1;
+    try {
+      const held = readFrontmatter(this.disk);
+      const after = structuredClone(held.properties);
+      applyBook(after, model.book);
+      if (JSON.stringify(after) !== JSON.stringify(held.properties)) {
+        await this.app.fileManager.processFrontMatter(
+          file,
+          (properties: Properties) => {
+            applyBook(properties, model.book);
+          },
+        );
+      }
+      if (writeOrder(model.order) !== held.body) {
+        await this.app.vault.process(file, (text) =>
+          withOrder(text, model.order),
+        );
+      }
+      this.disk = await this.app.vault.read(file);
+    } finally {
+      this.saving -= 1;
+    }
+  }
+
+  private pane(): HTMLElement {
     const pane = this.contentEl;
     pane.empty();
     pane.addClass("orca-book");
     pane.dataset["testid"] = "orca-book";
-    const { properties } = readFrontmatter(text);
-    try {
-      this.page(pane, readBook(properties));
-    } catch (cause) {
-      if (!(cause instanceof BookError)) throw cause;
-      this.refuse(pane, cause.message);
-    }
+    return pane;
   }
 
-  /** What the book note reports about the book. */
-  private page(pane: HTMLElement, book: Book): void {
+  /**
+   * What the book note reports about the book, with how many times the
+   * model has changed, which a test waits on rather than a clock.
+   */
+  private show(book: Book, generation: number): void {
+    const pane = this.pane();
+    pane.dataset["generation"] = String(generation);
     const page = pane.createDiv({ cls: "orca-book-page" });
     const head = page.createDiv({ cls: "orca-book-head" });
     head.createDiv({

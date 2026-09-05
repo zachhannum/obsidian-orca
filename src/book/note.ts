@@ -130,6 +130,20 @@ export function writeBook(book: Book): Properties {
   return { ...properties, ...book.own };
 }
 
+/**
+ * The book, written into properties a note already has. Orca's own
+ * keys are set at `FORMAT` and the ones the book no longer has are
+ * removed; every other property is the author's and is left as it is. `ui` hands this the object Obsidian's frontmatter API parsed.
+ */
+export function applyBook(properties: Properties, book: Book): void {
+  properties[BOOK_KEY] = FORMAT;
+  for (const { key } of FIELDS) {
+    const held = book.metadata[key];
+    if (held === undefined) delete properties[key];
+    else properties[key] = held;
+  }
+}
+
 /** A book note as text, which is how a new one is created. */
 export function writeNote(book: Book, body: string): string {
   return writeFrontmatter({ properties: writeBook(book), body }, QUOTED);
