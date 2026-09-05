@@ -1,5 +1,5 @@
 /**
- * The shelf, drawn: every book in the vault and the reading order of
+ * Draws the shelf: every book in the vault and the reading order of
  * each, group by group.
  *
  * A section is organisational. It can be made, renamed, moved and
@@ -55,7 +55,7 @@ import {
 } from "@/ui/list";
 import type { Row, Shelved } from "@/ui/shelf";
 
-/** What a row of the shelf asks the view to do. */
+/** The actions a shelf row can ask the view to perform. */
 export interface Acting {
   open(path: string): void;
   bookMenu(event: Pointed, book: Shelved): void;
@@ -98,9 +98,9 @@ export interface Mounted {
 }
 
 /**
- * The shelf, mounted under a view's own element. The view owns the
- * root: it makes one here and unmounts it when the leaf closes, and
- * nothing else empties the element underneath.
+ * Mounts the shelf under a view's element. The view owns the root: it
+ * makes one here and unmounts it when the leaf closes, and nothing
+ * else empties the element underneath.
  */
 export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
   const host = el.createDiv();
@@ -143,12 +143,13 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
 }
 
 /**
- * A row goes to its new place at once, where the drag already drew it.
+ * Disables the drop animation. A row goes to its new place at once,
+ * where the drag already drew it.
  */
 const animates = (): boolean => false;
 
 /**
- * What the pointer is over, by where it is down the list. It is the
+ * Detects the row under the pointer by its vertical position: the
  * rectangle holding the pointer, or the nearest one when none holds it,
  * so a drop past the last row lands on the last row.
  */
@@ -167,7 +168,10 @@ const detect: CollisionDetection = ({
     const away = Math.max(rect.top - y, y - rect.bottom, 0);
     if (away >= gap) continue;
     gap = away;
-    found = { id: container.id, data: { droppableContainer: container, value: away } };
+    found = {
+      id: container.id,
+      data: { droppableContainer: container, value: away },
+    };
   }
   return found === undefined ? [] : [found];
 };
@@ -189,16 +193,30 @@ const inside =
     if (draggingNodeRect === null || bounds === undefined) return transform;
     return {
       ...transform,
-      x: clamp(transform.x, bounds.left - draggingNodeRect.left, bounds.right - draggingNodeRect.right),
-      y: clamp(transform.y, bounds.top - draggingNodeRect.top, bounds.bottom - draggingNodeRect.bottom),
+      x: clamp(
+        transform.x,
+        bounds.left - draggingNodeRect.left,
+        bounds.right - draggingNodeRect.right,
+      ),
+      y: clamp(
+        transform.y,
+        bounds.top - draggingNodeRect.top,
+        bounds.bottom - draggingNodeRect.bottom,
+      ),
     };
   };
 
 const clamp = (value: number, low: number, high: number): number =>
   Math.min(Math.max(value, low), high);
 
-/** An Obsidian icon, which is drawn into the node after the commit. */
-function Icon({ name, className }: { name: string; className?: string }): JSX.Element {
+/** Draws an Obsidian icon into the node after the commit. */
+function Icon({
+  name,
+  className,
+}: {
+  name: string;
+  className?: string;
+}): JSX.Element {
   const held = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (held.current !== null) setIcon(held.current, name);
@@ -206,7 +224,7 @@ function Icon({ name, className }: { name: string; className?: string }): JSX.El
   return <span ref={held} className={className} />;
 }
 
-/** An icon that does something, which never starts a drag. */
+/** An icon button. Pressing it never starts a drag. */
 function Action({
   icon,
   label,
@@ -250,7 +268,8 @@ export function Shelf({
   // The suite waits on the generation the pane has painted, so it is
   // written after the commit and never during one.
   useEffect(() => {
-    if (pane.current !== null) pane.current.dataset["generation"] = String(generation);
+    if (pane.current !== null)
+      pane.current.dataset["generation"] = String(generation);
   }, [generation, shelf]);
 
   return (
@@ -313,7 +332,9 @@ function Book({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
   const list = useRef<HTMLDivElement>(null);
   const modifiers = useMemo(() => [inside(list)], []);
@@ -422,10 +443,15 @@ function Book({
                     carrying={dragged === item.id ? item.rows : undefined}
                     acting={acting}
                     renaming={
-                      renaming?.book === book.path && renaming.heading === item.heading
+                      renaming?.book === book.path &&
+                      renaming.heading === item.heading
                     }
                     rename={(open) => {
-                      renamed(open ? { book: book.path, heading: item.heading } : undefined);
+                      renamed(
+                        open
+                          ? { book: book.path, heading: item.heading }
+                          : undefined,
+                      );
                     }}
                   />
                 ) : (
@@ -448,7 +474,9 @@ function Book({
 
 /** The place just after a row, which is where a new chapter goes. */
 function next(place: Place | undefined, heading: string): Place {
-  return place === undefined ? { heading, at: 0 } : { ...place, at: place.at + 1 };
+  return place === undefined
+    ? { heading, at: 0 }
+    : { ...place, at: place.at + 1 };
 }
 
 function Heading({
@@ -461,7 +489,10 @@ function Heading({
 }: {
   book: Shelved;
   heading: string;
-  /** How many entries move with it, while it is the one being dragged. */
+  /**
+   * The number of entries moving with this row, set while it is the one
+   * being dragged.
+   */
   carrying: number | undefined;
   acting: Acting;
   renaming: boolean;
@@ -506,7 +537,9 @@ function Heading({
         <span className="orca-heading-name">{heading}</span>
       )}
       {carrying === undefined ? null : (
-        <span className="orca-chip">{carrying === 0 ? "empty" : `${carrying}`}</span>
+        <span className="orca-chip">
+          {carrying === 0 ? "empty" : `${carrying}`}
+        </span>
       )}
     </div>
   );

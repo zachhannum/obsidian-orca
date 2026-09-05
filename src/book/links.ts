@@ -6,7 +6,7 @@
  * read. Orca keeps no path of its own.
  */
 
-/** How a link finds its note. `ui` resolves one through the metadata cache. */
+/** Resolves a wikilink to a note. `ui` implements this over the metadata cache. */
 export interface Links {
   /**
    * The vault path a link names, seen from the note it is in, or

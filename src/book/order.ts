@@ -39,7 +39,7 @@ export interface Order {
   blocks: Block[];
 }
 
-/** Where an entry sits: the group it is under, and its place in it. */
+/** An entry's position: the group it is under and its index in that group. */
 export interface Place {
   heading: string;
   /** The index among that group's entries, as the order has them now. */
@@ -76,7 +76,7 @@ export interface Resolution {
 /** The heading an add writes when the note has no group to put one in. */
 const BODY = "Body";
 
-/** What a new group is called before the author names it. */
+/** The default section name. */
 export const NEW_GROUP = "New section";
 
 const HEADING = /^#{1,6}\s+(.*?)\s*$/;
@@ -105,7 +105,9 @@ export function readOrder(body: string): Order {
 /** A reading order written back as a body. */
 export function writeOrder(order: Order): string {
   return order.blocks
-    .map((block) => (block.kind === "entry" ? writeEntry(block.entry) : block.line))
+    .map((block) =>
+      block.kind === "entry" ? writeEntry(block.entry) : block.line,
+    )
     .join("\n");
 }
 
@@ -127,7 +129,7 @@ export function entries(order: Order): Entry[] {
   );
 }
 
-/** What a surface calls an entry: its alias, the note it links, or its role. */
+/** The name shown for an entry: its alias, its note's name, or its role. */
 export function entryName(entry: Entry): string {
   if (entry.alias !== undefined) return entry.alias;
   return entry.link === undefined ? ROLES[entry.role].name : target(entry.link);
@@ -198,7 +200,11 @@ export function add(order: Order, link: string, heading?: string): Order {
  * group. A generated section has no note: its role is what the engine
  * is asked to set in its place.
  */
-export function addGenerated(order: Order, role: Role, heading?: string): Order {
+export function addGenerated(
+  order: Order,
+  role: Role,
+  heading?: string,
+): Order {
   return insertGenerated(order, role, endOf(order, heading));
 }
 
@@ -302,8 +308,8 @@ export function resolve(order: Order, links: Links, from: string): Resolution {
 }
 
 /**
- * Where one group's lines are: its heading and everything under it up
- * to the next heading. The entries above the first heading are a group
+ * The lines of one group: its heading and everything under it up to
+ * the next heading. The entries above the first heading are a group
  * with no heading of its own, which cannot be renamed or moved.
  */
 interface Span {
@@ -336,11 +342,19 @@ export function addGroup(order: Order, heading: string): Order {
  * written at. The entries under it are untouched: a heading names the
  * group and nothing else.
  */
-export function renameGroup(order: Order, heading: string, named: string): Order {
+export function renameGroup(
+  order: Order,
+  heading: string,
+  named: string,
+): Order {
   const blocks = order.blocks.map((block) => {
     if (block.kind !== "heading" || block.heading !== heading) return block;
     const level = /^(#{1,6})\s/.exec(block.line)?.[1] ?? "#";
-    return { kind: "heading" as const, line: `${level} ${named}`, heading: named };
+    return {
+      kind: "heading" as const,
+      line: `${level} ${named}`,
+      heading: named,
+    };
   });
   return settle({ blocks });
 }
@@ -484,21 +498,27 @@ function into(order: Order, entry: Entry, to: Place): Order {
 }
 
 /** The order with one entry made again, by its place in the reading order. */
-function rewrite(order: Order, at: number, made: (entry: Entry) => Entry): Order {
+function rewrite(
+  order: Order,
+  at: number,
+  made: (entry: Entry) => Entry,
+): Order {
   let seen = 0;
   const blocks = order.blocks.map((block) => {
     if (block.kind !== "entry") return block;
     const held = seen;
     seen += 1;
-    return held === at ? { kind: "entry" as const, entry: made(block.entry) } : block;
+    return held === at
+      ? { kind: "entry" as const, entry: made(block.entry) }
+      : block;
   });
   return { blocks };
 }
 
 /**
- * Which block a place is, or nothing if the body has no such heading.
- * A place past the group's last entry is the end of the group, and the
- * group with no heading is what the body opens with.
+ * Finds the block a place refers to, or nothing if the body has no
+ * such heading. A place past the group's last entry is the end of the
+ * group, and the group with no heading is the one the body opens with.
  */
 function placeOf(blocks: Block[], to: Place): number | undefined {
   const head =
@@ -529,5 +549,7 @@ function placeOf(blocks: Block[], to: Place): number | undefined {
 }
 
 function blank(block: Block | undefined): boolean {
-  return block !== undefined && block.kind === "other" && block.line.trim() === "";
+  return (
+    block !== undefined && block.kind === "other" && block.line.trim() === ""
+  );
 }

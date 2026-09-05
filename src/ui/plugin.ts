@@ -26,7 +26,7 @@ import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 /** The view a book note is handed back to. */
 const MARKDOWN_VIEW = "markdown";
 
-/** How a leaf is put on a view, which is the call orca answers first. */
+/** The signature of `setViewState`, which orca wraps to answer first. */
 type SetViewState = (
   this: WorkspaceLeaf,
   state: ViewState,
@@ -34,8 +34,8 @@ type SetViewState = (
 ) => Promise<void>;
 
 /**
- * Orca, as Obsidian loads it. The plugin owns the engine, and every
- * view borrows the same session.
+ * The plugin entry point. It owns the engine, and every view borrows
+ * the same session.
  */
 export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
@@ -116,10 +116,11 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /**
-   * A book note goes straight to the book view, before the editor is
-   * ever mounted. The explorer, the switcher, a link and the navigator
-   * all reach a leaf through `setViewState`, and a swap made after the
-   * fact is a frame of raw markdown the author sees.
+   * Wraps `setViewState` so a book note goes straight to the book view,
+   * before the editor is ever mounted. The explorer, the switcher, a
+   * link and the navigator all reach a leaf through `setViewState`, and
+   * a swap made after the fact is a frame of raw markdown the author
+   * sees.
    */
   private catchOpening(): void {
     const held = WorkspaceLeaf.prototype.setViewState as SetViewState;
@@ -174,7 +175,7 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /**
-   * Every leaf showing a book note as markdown, swapped to orca's view.
+   * Swaps every leaf showing a book note as markdown to orca's view.
    * A leaf the author has asked for markdown keeps the manuscript and
    * gets the icon back to the book, until it shows another note.
    */
@@ -197,9 +198,9 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /**
-   * The way back, as an icon in the note's own header. Obsidian's own
-   * reading toggle sits in that corner, and `addAction` is how a view
-   * orca does not own takes one.
+   * Adds the "open as book" icon to the markdown view's header, beside
+   * Obsidian's own reading toggle. `addAction` is the API for adding an
+   * icon to a view orca does not own.
    */
   private attach(view: MarkdownView, file: TFile): void {
     const existing = this.back.get(view);
@@ -219,8 +220,9 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /**
-   * What a file's own context menu offers: a folder becomes a book, a
-   * note joins one, and a book note opens as markdown and back.
+   * Adds orca's items to a file's context menu: a folder becomes a
+   * book, a note joins one, and a book note opens as markdown or back
+   * as a book.
    */
   private offer(
     menu: Menu,
@@ -286,12 +288,12 @@ export default class OrcaPlugin extends Plugin {
     );
   }
 
-  /** An empty book, made and opened. */
+  /** Creates an empty book and opens it. */
   private async newBook(): Promise<void> {
     await this.opening(await emptyBook(this.app));
   }
 
-  /** The book a folder of notes becomes, made and opened. */
+  /** Creates a book from a folder of notes and opens it. */
   private async bookFrom(folder: TFolder): Promise<void> {
     await this.opening(await bookFromFolder(this.app, folder));
   }
@@ -300,7 +302,7 @@ export default class OrcaPlugin extends Plugin {
     await this.app.workspace.getLeaf(false).openFile(book);
   }
 
-  /** The navigator, revealed in the sidebar it lives in. */
+  /** Reveals the navigator in its sidebar. */
   private async show(): Promise<void> {
     await this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
       reveal: true,

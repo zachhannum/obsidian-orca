@@ -6,7 +6,7 @@ import {
 } from "fleuron";
 import { EngineError } from "@/engine/errors";
 
-/** What a render cost, in stage runs. */
+/** The cost of a render, in stage runs. */
 export interface Stages {
   style: number;
   lines: number;
@@ -94,7 +94,9 @@ export class Session {
   async pdf(): Promise<Uint8Array> {
     const bytes = await routed(() => this.client.exportPdf());
     if (bytes === null) {
-      throw new EngineError("a later render started before the export finished");
+      throw new EngineError(
+        "a later render started before the export finished",
+      );
     }
     return bytes;
   }

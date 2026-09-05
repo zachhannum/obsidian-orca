@@ -28,7 +28,7 @@ function shelf(): Grouped[] {
   ];
 }
 
-/** What the list reads as, top to bottom. */
+/** Renders the list as one string per row, top to bottom. */
 function shown(items: Item[]): string[] {
   return items.map((item) =>
     item.kind === "group" ? `# ${item.heading}` : item.row.name,
@@ -37,7 +37,9 @@ function shown(items: Item[]): string[] {
 
 /** The entry a row is dragged by. */
 function id(items: Item[], name: string): string {
-  const found = items.find((item) => item.kind === "row" && item.row.name === name);
+  const found = items.find(
+    (item) => item.kind === "row" && item.row.name === name,
+  );
   if (found === undefined) throw new Error(`no row called ${name}`);
   return found.id;
 }
@@ -116,13 +118,20 @@ test("a row dropped in another section takes that section's place", () => {
     "# Back matter",
   ]);
   // The list a drop leaves up counts the way the note will.
-  assert.deepEqual(places(moved?.items ?? [])[1], { heading: "Front matter", at: 0 });
+  assert.deepEqual(places(moved?.items ?? [])[1], {
+    heading: "Front matter",
+    at: 0,
+  });
 });
 
 test("a section drops at the end of the list, and never splits another", () => {
   const items = collapse(flatten(shelf()), "Front matter");
 
-  const last = moveSection(flatten(shelf()), "Front matter", id(items, "Thanks"));
+  const last = moveSection(
+    flatten(shelf()),
+    "Front matter",
+    id(items, "Thanks"),
+  );
   assert.equal(last?.at, 2);
   assert.deepEqual(shown(last?.items ?? []), [
     "# Body",
@@ -138,7 +147,11 @@ test("a section drops at the end of the list, and never splits another", () => {
 
   // A drop in the middle of another section's entries lands on the
   // nearest heading, so a section is never written into one.
-  const between = moveSection(flatten(shelf()), "Back matter", id(items, "Two"));
+  const between = moveSection(
+    flatten(shelf()),
+    "Back matter",
+    id(items, "Two"),
+  );
   assert.equal(between?.at, 1);
   assert.deepEqual(shown(between?.items ?? []).slice(0, 5), [
     "# Front matter",

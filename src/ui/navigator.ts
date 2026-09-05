@@ -168,7 +168,7 @@ export class NavigatorView extends ItemView {
     return Promise.resolve();
   }
 
-  /** Draws the shelf again, once, however many events arrived. */
+  /** Repaints the shelf once, however many events arrived. */
   private refresh(): void {
     if (this.queued !== undefined) return;
     this.queued = window.setTimeout(() => {
@@ -213,12 +213,16 @@ export class NavigatorView extends ItemView {
       // A book note orca refuses reads as undefined; anything else here
       // is a read that failed for a reason orca does not have a name
       // for, and it leaves a trace rather than only a gap in the list.
-      const model = await this.edits.model(note.path).catch((cause: unknown) => {
-        console.error(`Orca: ${note.path} was not read.`, cause);
-        return undefined;
-      });
+      const model = await this.edits
+        .model(note.path)
+        .catch((cause: unknown) => {
+          console.error(`Orca: ${note.path} was not read.`, cause);
+          return undefined;
+        });
       if (model === undefined) continue;
-      shelf.push(shelve({ path: note.path, name: note.basename, model }, vault));
+      shelf.push(
+        shelve({ path: note.path, name: note.basename, model }, vault),
+      );
     }
     this.shelved = new Set(shelf.map((book) => book.path));
     return shelf;
@@ -254,7 +258,10 @@ export class NavigatorView extends ItemView {
     menu.showAtMouseEvent(event);
   }
 
-  /** What the `+` on a book row offers, and every menu here repeats. */
+  /**
+   * Opens the add menu. The `+` on a book row shows it, and every other
+   * menu here repeats its items.
+   */
   private addMenu(
     event: MouseEvent,
     book: Shelved,
@@ -396,7 +403,7 @@ export class NavigatorView extends ItemView {
     menu.showAtMouseEvent(event);
   }
 
-  /** A note picked out of the vault, added to the book. */
+  /** Picks a note from the vault and adds it to the book. */
   private pickNote(book: Shelved, heading: string | undefined): void {
     const held = new Set(
       book.groups.flatMap((group) =>
@@ -417,7 +424,7 @@ export class NavigatorView extends ItemView {
   }
 
   /**
-   * A section orca sets in place of a note, picked by its role. The
+   * Picks a generated section by its role and adds it to the book. The
    * reading order is where the author says one belongs.
    */
   private pickGenerated(book: Shelved, heading: string | undefined): void {
@@ -438,8 +445,8 @@ export class NavigatorView extends ItemView {
   }
 
   /**
-   * The book note, in the trash. The notes it lists are borrowed and
-   * stay in the vault.
+   * Trashes the book note. The notes it lists are borrowed and stay in
+   * the vault.
    */
   private deleteBook(book: Shelved): void {
     confirm(this.app, {
@@ -460,7 +467,7 @@ export class NavigatorView extends ItemView {
     });
   }
 
-  /** A wikilink pasted into a book's list, which is the third route in. */
+  /** Handles a wikilink pasted into a book's list, the third way to add a note. */
   private pasted(event: ClipboardEvent): void {
     // A rename is an input inside this view, and what is pasted into
     // one is the section's name.
@@ -480,7 +487,7 @@ export class NavigatorView extends ItemView {
     }));
   }
 
-  /** A new chapter note, made in the book's folder and appended in one step. */
+  /** Creates a chapter note in the book's folder and appends it, in one step. */
   private async newChapter(
     book: Shelved,
     to: Place | string | undefined,
@@ -515,7 +522,7 @@ export class NavigatorView extends ItemView {
     });
   }
 
-  /** The note a missing entry means, picked out of the vault. */
+  /** Picks the note a missing entry should point at. */
   private locate(book: Shelved, row: Row): void {
     pick(this.app, {
       items: this.app.vault.getMarkdownFiles(),
@@ -539,7 +546,7 @@ export class NavigatorView extends ItemView {
   }
 
   /**
-   * A note, opened in the pane the author is reading in. `open` is
+   * Opens a note in the pane the author is reading in. `open` is
    * Obsidian's own, and it is what puts this view in its leaf.
    */
   private async openNote(path: string): Promise<void> {

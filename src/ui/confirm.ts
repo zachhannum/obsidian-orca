@@ -1,13 +1,13 @@
 /**
- * The question asked before something orca cannot take back.
+ * A confirm dialog, shown before an action orca cannot undo.
  */
 
 import { ButtonComponent, Modal, type App } from "obsidian";
 
-/** What is being asked, and what to do when the author says yes. */
+/** The question a confirm dialog asks, and what to do when the author says yes. */
 export interface Asking {
   title: string;
-  /** What happens, in the author's own terms. */
+  /** The body text, which says what will happen in the author's own terms. */
   said: string;
   /** The verb on the button that goes ahead. */
   verb: string;
@@ -44,7 +44,7 @@ class Confirm extends Modal {
   }
 }
 
-/** Asks, and goes ahead only if the author says so. */
+/** Shows the dialog and runs the action only if the author confirms. */
 export function confirm(app: App, asking: Asking): void {
   new Confirm(app, asking).open();
 }

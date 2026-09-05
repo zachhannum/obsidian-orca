@@ -29,7 +29,7 @@ export const FIXTURE = path.join(root, "fixture");
 /** The environment a spec reads the debugging port from. */
 export const CDP = "ORCA_E2E_CDP";
 
-/** How long Obsidian is given to open the port, in milliseconds. */
+/** Timeout for Obsidian to open its debugging port, in milliseconds. */
 const OPENING = 60_000;
 
 export default async function launch(): Promise<() => Promise<void>> {
@@ -111,9 +111,11 @@ function port(proc: ChildProcess): Promise<number> {
 
 async function stop(proc: ChildProcess): Promise<void> {
   if (proc.exitCode !== null || proc.signalCode !== null) return;
-  const closed = new Promise<void>((resolve) => proc.once("close", () => {
-    resolve();
-  }));
+  const closed = new Promise<void>((resolve) =>
+    proc.once("close", () => {
+      resolve();
+    }),
+  );
   proc.kill("SIGTERM");
   await Promise.race([
     closed,

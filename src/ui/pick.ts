@@ -5,7 +5,7 @@
 
 import { FuzzySuggestModal, type App } from "obsidian";
 
-/** What is picked from, and what is done with the pick. */
+/** The items to pick from, and what to do with the pick. */
 export interface Picking<T> {
   items: T[];
   label(item: T): string;

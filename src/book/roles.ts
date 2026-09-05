@@ -3,13 +3,13 @@
  * comes from a note.
  */
 
-/** Where a section's text comes from. */
+/** The source of a section's text. */
 export type Origin = "note" | "generated";
 
 /** One role: whether a section in it comes from a note, and what it is called. */
 export interface Matter {
   origin: Origin;
-  /** What a section in this role is called when it has no note. */
+  /** The default name for a section in this role that has no note. */
   name: string;
 }
 

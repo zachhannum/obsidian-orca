@@ -4,7 +4,12 @@
  * is reached by those instead.
  */
 
-import { expect, type Browser, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  type Browser,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import type { App } from "obsidian";
 
 /** The two pieces of the app the API does not declare. */
@@ -20,7 +25,7 @@ declare global {
   interface Window {
     /** Undefined until Obsidian has opened the vault. */
     app: App & { commands: Commands };
-    /** What a spec records Obsidian's notices in. */
+    /** The recorder a spec installs while `notices` runs. */
     orcaNotices?: { said: string[]; watch: MutationObserver } | undefined;
   }
 }
@@ -50,15 +55,20 @@ const CHROME = {
  * its window at the size of the display it is on, so the renderer is
  * given these metrics instead and every run lays the page out the same.
  */
-const WINDOW = { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false };
+const WINDOW = {
+  width: 1280,
+  height: 800,
+  deviceScaleFactor: 1,
+  mobile: false,
+};
 
-/** How long the window is given to appear, in milliseconds. */
+/** Timeout for the window to appear, in milliseconds. */
 const APPEARING = 60_000;
 
 export class Obsidian {
   private constructor(readonly page: Page) {}
 
-  /** The window, sized, with its workspace restored. */
+  /** Attaches to the window, sizes it and restores its workspace. */
   static async attach(browser: Browser): Promise<Obsidian> {
     const page = await renderer(browser);
     const session = await page.context().newCDPSession(page);
@@ -97,7 +107,7 @@ export class Obsidian {
   }
 
   /**
-   * A note, opened in the active pane. Obsidian parses a note into the
+   * Opens a note in the active pane. Obsidian parses a note into the
    * metadata cache as it is written, so the wait here is on the note
    * reaching the cache rather than on a clock.
    */
@@ -123,7 +133,7 @@ export class Obsidian {
   }
 
   /**
-   * One item on the open menu, chosen. Obsidian runs the item and takes
+   * Clicks an item on the open menu. Obsidian runs the item and takes
    * the menu off the page in the same task, so a menu still standing is
    * a click nothing answered, and the item is clicked again. A menu
    * already gone is a click that landed, and is never clicked twice.
@@ -164,15 +174,15 @@ export class Obsidian {
     return this.page.locator(CHROME.suggestion);
   }
 
-  /** What orca has told the author, while one is still on screen. */
+  /** The notice orca is showing. */
   notice(): Locator {
     return this.page.locator(CHROME.notice);
   }
 
   /**
-   * Everything said while `during` ran. Obsidian takes a notice off the
-   * screen after a few seconds, so they are recorded as they appear
-   * rather than counted afterwards.
+   * Records every notice shown while `during` runs. Obsidian takes a
+   * notice off the screen after a few seconds, so they are recorded as
+   * they appear rather than counted afterwards.
    */
   async notices(during: () => Promise<void>): Promise<string[]> {
     await this.page.evaluate((selector) => {
@@ -221,9 +231,9 @@ export class Obsidian {
   }
 
   /**
-   * The items a file's or a folder's own context menu offers, and the
-   * one `title` names, clicked. Obsidian fills that menu by asking
-   * every plugin for its items, which is what this asks in its place.
+   * Builds a file's or folder's context menu and clicks the item
+   * `title` names. Obsidian fills that menu by asking every plugin for
+   * its items, and this asks the same question in its place.
    *
    * A plugin reading the metadata cache has nothing to offer for a note
    * the cache has not taken yet, so the menu is asked again until the
@@ -299,9 +309,9 @@ export class Obsidian {
 }
 
 /**
- * The renderer the vault is open in. The window appears some time after
- * the process starts, so the harness reads the target list until a page
- * has an app on it.
+ * Finds the renderer page the vault is open in. The window appears some
+ * time after the process starts, so the harness reads the target list
+ * until a page has an app on it.
  */
 async function renderer(browser: Browser): Promise<Page> {
   const deadline = Date.now() + APPEARING;

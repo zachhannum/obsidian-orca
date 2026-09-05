@@ -99,6 +99,50 @@ After:
 
 "can be used to" is fine. Compression is not the goal.
 
+## Code comments
+
+CLAUDE.md says when a comment exists. This says how one reads. The
+rules above hold here too.
+
+A doc comment is a label or a sentence with a verb. A label names the
+thing. A sentence says what the function does, in the present tense.
+Anything else is a puzzle the reader solves to get the label back.
+
+Before:
+
+> What a new chapter is called before the author names it.
+>
+> The note opened: the model read, the writer made, the book painted.
+>
+> A note, opened in the active pane.
+
+After:
+
+> The default chapter name.
+>
+> Reads the model, makes the writer and paints the book.
+>
+> Opens a note in the active pane.
+
+The shapes that make a puzzle:
+
+- An opener of "What", "How", "Which", "Where", "Who" or "The way".
+  The lint pass rejects these.
+- A noun and a participle standing in for a verb. "The shelf, drawn"
+  is "Draws the shelf".
+- A definition by story. "The book a folder of notes becomes" is "The
+  book note for a folder".
+- A colon and a list of parts. Say the whole. If the parts matter they
+  are the fields, and each field carries its own comment.
+- Three things in a row for rhythm.
+
+A plain restatement beats a puzzle. When the only true thing to say is
+what the signature already says, write nothing.
+
+A commit subject is imperative and says what changed: "Rename the
+default section heading". No wordplay, no clause that holds the
+subject back.
+
 ## Words
 
 Use the ordinary word. A trade word belongs where it is the API's own

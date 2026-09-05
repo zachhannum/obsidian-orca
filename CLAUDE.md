@@ -163,10 +163,11 @@ underneath them.
 production bundle, and the `e2e` job runs the suite on both platforms.
 
 1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier. The
-   lint pass is `scripts/lint.mjs`, and it holds four rules: nothing
+   lint pass is `scripts/lint.mjs`, and it holds five rules: nothing
    outside `ui` imports `ui`, only `ui` imports Obsidian, an import
-   inside `src` uses the `@/` alias, and a test file ends on what it
-   does not cover
+   inside `src` uses the `@/` alias, a doc comment opens with a name
+   rather than a question word, and a test file ends on what it does
+   not cover
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned
@@ -206,7 +207,8 @@ sample to match, so nothing overrides them, the em dash rule
 included.
 
 `STYLE.md` is the voice the README, `design/README.md` and the issue and
-PR bodies are written in.
+PR bodies are written in. Its "Code comments" section holds comments
+and commit subjects.
 
 ## Conventions
 
@@ -231,8 +233,10 @@ PR bodies are written in.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.
-- Public API docs (`/** */`) on exported items. A doc states an
-  invariant, a constraint, or a consequence a reader would otherwise
-  derive from the implementation; where there is none, the signature
-  stands on its own. The op and session types are a cross-module
-  contract and get treated like documentation.
+- A doc comment (`/** */`) on an exported item states an invariant, a
+  constraint, or a consequence a reader would otherwise derive from
+  the implementation. An export with none of those gets no comment;
+  the signature stands on its own. Where a comment exists it names
+  the thing plainly. The choice is between plain and nothing, never
+  between plain and oblique. The op and session types are a
+  cross-module contract and get treated like documentation.

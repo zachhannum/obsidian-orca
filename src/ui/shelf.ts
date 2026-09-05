@@ -1,5 +1,6 @@
 /**
- * What the navigator draws: a book's reading order, group by group.
+ * The shelf as the navigator draws it: a book's reading order, group
+ * by group.
  *
  * Every row names its entry by the place it has in the reading order,
  * which is what an edit to the book is given.
@@ -35,7 +36,7 @@ export interface Grouped {
 /** One book, as the navigator lists it. */
 export interface Shelved {
   path: string;
-  /** What the book is called: its title, or the note's name. */
+  /** The book's title, or the note's name when it has none. */
   name: string;
   groups: Grouped[];
   /** The folder a new chapter is made in. */

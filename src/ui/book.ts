@@ -1,10 +1,4 @@
-import {
-  FileView,
-  Notice,
-  TFile,
-  setIcon,
-  type WorkspaceLeaf,
-} from "obsidian";
+import { FileView, Notice, TFile, setIcon, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
 import { BOOK_KEY, BookError, FIELD_KEYS, type Book } from "@/book/note";
 import { Changed } from "@/ui/changed";
@@ -15,15 +9,15 @@ import { Writer } from "@/ui/writer";
 export const BOOK_VIEW = "orca-book";
 
 /**
- * The book note's own page, and the one writer on the note while it is
- * open. Every other surface edits the book through `edit`, and
+ * The view for a book note, and the only writer on the note while it
+ * is open. Every other surface edits the book through `edit`, and
  * `Open as markdown` hands the leaf back to the editor.
  */
 export class BookView extends FileView {
   private writer: Writer | undefined;
   /** The note as orca last read it from disk. */
   private disk = "";
-  /** How many saves of orca's own are running. */
+  /** Number of orca's own saves in flight. */
   private saving = 0;
 
   constructor(
@@ -87,14 +81,14 @@ export class BookView extends FileView {
   }
 
   /**
-   * One edit to the book. The view is the only writer while it is
-   * open, so every surface that changes the book comes through here.
+   * Applies one edit to the book. The view is the only writer while it
+   * is open, so every surface that changes the book comes through here.
    */
   edit(change: (model: Model) => Model): void {
     this.writer?.edit(change);
   }
 
-  /** The note opened: the model read, the writer made, the book painted. */
+  /** Reads the model from the note, makes the writer and paints the book. */
   private hold(file: TFile, text: string): void {
     this.disk = text;
     this.writer = undefined;
@@ -122,8 +116,8 @@ export class BookView extends FileView {
   }
 
   /**
-   * A write on the note that orca did not make: the note edited in
-   * another leaf, or a sync writing over it.
+   * Handles a write on the note that orca did not make: the note edited
+   * in another leaf, or a sync writing over it.
    */
   private async arrived(file: TFile): Promise<void> {
     if (this.saving > 0) return;
@@ -195,8 +189,8 @@ export class BookView extends FileView {
   }
 
   /**
-   * What the book note reports about the book, with how many times the
-   * model has changed, which a test waits on rather than a clock.
+   * Paints the book page, with the model's generation as a data
+   * attribute so a test can wait on it rather than on a clock.
    */
   private show(book: Book, generation: number): void {
     const pane = this.pane();
@@ -223,7 +217,7 @@ export class BookView extends FileView {
     }
   }
 
-  /** A book this orca cannot read, and the way back to the editor. */
+  /** Paints the refusal message, with a way back to the editor. */
   private refuse(pane: HTMLElement, said: string): void {
     const state = pane.createDiv({ cls: "orca-book-refused" });
     state.dataset["testid"] = "orca-book-refused";

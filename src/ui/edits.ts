@@ -1,5 +1,5 @@
 /**
- * One edit to a book, wherever the book is.
+ * Routes edits to books, whether or not a view has the book open.
  *
  * A book open in a view is edited through it, because the view is the
  * note's only writer while it is open. A book with no view open is
@@ -20,7 +20,7 @@ export interface Open {
   edit(change: (model: Model) => Model): void;
 }
 
-/** What an edit changes a book into. */
+/** A change applied to a book's model. */
 export type Change = (model: Model) => Model;
 
 export class Edits {
@@ -35,8 +35,8 @@ export class Edits {
   ) {}
 
   /**
-   * One edit to the book at this path. A book with no view open is
-   * read, changed and written in one go, and the next edit waits for
+   * Applies one edit to the book at this path. A book with no view open
+   * is read, changed and written in one go, and the next edit waits for
    * that write: each one reads the note the one before it left, so two
    * edits in a row cannot lose the first.
    */
@@ -77,9 +77,9 @@ export class Edits {
   }
 
   /**
-   * One note added to a book's reading order. The quick pick, the
-   * note's own context menu and a wikilink pasted into the navigator
-   * all come through here, so the three write the same line.
+   * Adds a note to a book's reading order. The quick pick, the note's
+   * own context menu and a wikilink pasted into the navigator all come
+   * through here, so the three write the same line.
    */
   async addNote(book: string, note: TFile, heading?: string): Promise<void> {
     const link = this.app.metadataCache.fileToLinktext(note, book, true);
@@ -90,8 +90,8 @@ export class Edits {
   }
 
   /**
-   * The book at this path: the model a view is painting from, or the
-   * note as it is on disk. A note orca refuses has none.
+   * Reads the book at this path: the model a view is painting from, or
+   * the note as it is on disk. A note orca refuses has none.
    */
   async model(path: string): Promise<Model | undefined> {
     const open = this.opened(path)?.model;
@@ -129,7 +129,7 @@ export class Edits {
 }
 
 /**
- * The note, written in two halves. The properties go through
+ * Writes the note in two halves. The properties go through
  * Obsidian's frontmatter API, which leaves the author's own alone, and
  * the body is replaced under them. The half an edit did not touch is
  * not written, so a settled edit is one revision. What comes back is

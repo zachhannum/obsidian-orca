@@ -1,5 +1,5 @@
 /**
- * Which notes in the vault are books.
+ * Finds the notes in the vault that are books.
  *
  * Obsidian parses every note's frontmatter into the metadata cache as
  * the vault loads, so the question is a lookup per note. A vault-wide

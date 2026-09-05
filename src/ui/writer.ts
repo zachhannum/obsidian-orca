@@ -10,10 +10,10 @@
 
 import type { Model } from "@/book/model";
 
-/** How long the edits stop for before the note is written, in milliseconds. */
+/** Idle time after the last edit before the note is written, in milliseconds. */
 export const SETTLE = 1000;
 
-/** What an edit is painted onto now, and written to on settle. */
+/** Receives edits: `paint` on every change, `save` once they settle. */
 export interface Writing {
   /** The model, every time it changes, with how many times it has changed. */
   paint(model: Model, generation: number): void;
@@ -21,13 +21,13 @@ export interface Writing {
   save(model: Model): Promise<void>;
 }
 
-/** What runs the settle. A test hands in one it steps itself. */
+/** The timer the settle runs on. A test hands in one it steps itself. */
 export interface Clock {
   /** Runs `fire` after `ms`, and gives back the way to cancel it. */
   after(ms: number, fire: () => void): () => void;
 }
 
-/** What a change on disk means for the view the note is open in. */
+/** The view's response to a change on disk: reload, or ask the author. */
 export type Arrival = "reload" | "ask";
 
 /** The clock a view runs on. */
@@ -61,7 +61,7 @@ export class Writer {
     return this.held;
   }
 
-  /** How many times the model has changed since the note was opened. */
+  /** The number of times the model has changed since the note was opened. */
   get generation(): number {
     return this.painted;
   }

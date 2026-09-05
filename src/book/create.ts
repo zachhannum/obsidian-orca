@@ -8,14 +8,18 @@ import { FORMAT, type BookMetadata } from "@/book/note";
 import { readOrder } from "@/book/order";
 
 /** The groups a new book is written with, in reading order. */
-export const MATTER: readonly string[] = ["Front matter", "Body", "Back matter"];
+export const MATTER: readonly string[] = [
+  "Front matter",
+  "Body",
+  "Back matter",
+];
 
 /** The group an import lands in. */
 const IMPORTED = "Body";
 
 /**
- * How an import orders the notes it found. Nothing else in orca
- * orders by name.
+ * Orders an import's notes by name. This is the only place alphabetical
+ * order decides what the author sees; elsewhere it only breaks ties.
  */
 export function byName(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true });
@@ -26,12 +30,16 @@ export function byName(a: string, b: string): number {
  * given. The groups are written empty, so the author can drag into
  * each of them.
  */
-export function newBook(metadata: BookMetadata, links: Iterable<string>): Model {
+export function newBook(
+  metadata: BookMetadata,
+  links: Iterable<string>,
+): Model {
   const lines = ["", ""];
   for (const heading of MATTER) {
     lines.push(`# ${heading}`);
     const under = heading === IMPORTED ? [...links] : [];
-    if (under.length > 0) lines.push("", ...under.map((link) => `- [[${link}]]`));
+    if (under.length > 0)
+      lines.push("", ...under.map((link) => `- [[${link}]]`));
     lines.push("");
   }
   return {

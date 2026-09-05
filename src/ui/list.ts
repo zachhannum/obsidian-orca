@@ -15,7 +15,7 @@ export type Item =
   | { id: string; kind: "group"; heading: string; rows: number }
   | { id: string; kind: "row"; heading: string; row: Row };
 
-/** Where a dragged entry landed: the list it left, and the place the note is given. */
+/** The result of dropping an entry: the reordered list and the entry's new place. */
 export interface Moved {
   items: Item[];
   /** The entry's place in the reading order, which the edit names it by. */
@@ -23,7 +23,7 @@ export interface Moved {
   to: Place;
 }
 
-/** Where a dragged section landed: the list it left, and its place among the groups. */
+/** The result of dropping a section: the reordered list and the section's new index. */
 export interface Sectioned {
   items: Item[];
   at: number;
@@ -86,7 +86,7 @@ export function collapse(items: Item[], heading: string): Item[] {
   );
 }
 
-/** Where each item sits: the section above it, and its index in that section. */
+/** Computes each item's place: the section above it and its index in that section. */
 export function places(items: Item[]): Place[] {
   const found: Place[] = [];
   let heading = "";
@@ -128,8 +128,13 @@ export function moveRow(
 
   // A place is an index into the group as the note has it now, so a
   // move down inside one group counts the row it is leaving.
-  const at = was.heading === now.heading && now.at > was.at ? now.at + 1 : now.at;
-  return { items: settle(next), from: held.row.at, to: { heading: now.heading, at } };
+  const at =
+    was.heading === now.heading && now.at > was.at ? now.at + 1 : now.at;
+  return {
+    items: settle(next),
+    from: held.row.at,
+    to: { heading: now.heading, at },
+  };
 }
 
 /** One section dropped on another item, or nothing when it did not move. */
@@ -190,9 +195,11 @@ export function settle(items: Item[]): Item[] {
   return next;
 }
 
-/** Where a section may start: on another section, or at the end. */
+/** The indexes a section may start at: another section's heading, or the end. */
 function stops(items: Item[]): number[] {
-  const found = items.flatMap((item, at) => (item.kind === "group" ? [at] : []));
+  const found = items.flatMap((item, at) =>
+    item.kind === "group" ? [at] : [],
+  );
   found.push(items.length);
   return found;
 }

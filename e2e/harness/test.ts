@@ -60,8 +60,8 @@ export const test = base.extend<Fixtures, Shared>({
   },
 
   /**
-   * What a failure leaves behind: a picture of the window, and the
-   * trace a retry recorded.
+   * Keeps a screenshot of the window and the trace a retry recorded
+   * when a spec fails.
    */
   record: [
     async ({ obsidian }, use, spec) => {

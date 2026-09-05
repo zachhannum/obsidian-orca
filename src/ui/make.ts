@@ -1,5 +1,5 @@
 /**
- * The notes orca creates: a book, and a chapter in a book's folder.
+ * Creates book notes and chapter notes.
  *
  * A book borrows the notes it lists, so making one writes the book note
  * and nothing else.
@@ -11,13 +11,13 @@ import { under } from "@/book/folder";
 import { writeModel } from "@/book/model";
 import type { BookMetadata } from "@/book/note";
 
-/** What a new chapter is called before the author names it. */
+/** The default chapter name. */
 export const CHAPTER = "New chapter";
 
-/** What a book is called before the author names it. */
+/** The default book name. */
 export const UNTITLED = "Untitled book";
 
-/** An empty book, made where a new note would be made. */
+/** Creates an empty book where Obsidian would create a new note. */
 export async function emptyBook(app: App): Promise<TFile> {
   const active = app.workspace.getActiveFile();
   const parent = app.fileManager.getNewFileParent(active?.path ?? "");
@@ -25,10 +25,13 @@ export async function emptyBook(app: App): Promise<TFile> {
 }
 
 /**
- * The book a folder of notes becomes: the note beside the folder, named
- * after it, listing what is in it in sorted order.
+ * Creates a book note beside a folder, named after it, listing the
+ * folder's notes in sorted order.
  */
-export async function bookFromFolder(app: App, folder: TFolder): Promise<TFile> {
+export async function bookFromFolder(
+  app: App,
+  folder: TFolder,
+): Promise<TFile> {
   const beside = folder.parent === null ? "" : pathOf(folder.parent);
   return createBook(
     app,
@@ -44,7 +47,7 @@ export async function bookFromFolder(app: App, folder: TFolder): Promise<TFile> 
   );
 }
 
-/** The book note for these links, made in a folder. */
+/** Creates a book note in a folder from a list of links. */
 async function createBook(
   app: App,
   folder: string,
@@ -56,7 +59,7 @@ async function createBook(
   return app.vault.create(path, writeModel(newBook(metadata, links(path))));
 }
 
-/** A chapter note, made in the book's own folder. */
+/** Creates a chapter note in the book's folder. */
 export async function createChapter(
   app: App,
   folder: string,
@@ -72,7 +75,10 @@ export async function createChapter(
  */
 function sorted(folder: TFolder): TFile[] {
   return folder.children
-    .filter((child): child is TFile => child instanceof TFile && child.extension === "md")
+    .filter(
+      (child): child is TFile =>
+        child instanceof TFile && child.extension === "md",
+    )
     .sort((a, b) => byName(a.basename, b.basename));
 }
 

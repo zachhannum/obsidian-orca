@@ -236,16 +236,14 @@ function nodeHost(): WorkerHost {
 }
 
 async function moduleBytes(): Promise<ArrayBuffer> {
-  const bytes = await readFile(
-    path.join(engineDirectory(), "fleuron_bg.wasm"),
-  );
+  const bytes = await readFile(path.join(engineDirectory(), "fleuron_bg.wasm"));
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
   ) as ArrayBuffer;
 }
 
-/** Where the pinned engine's module is installed. */
+/** The directory the pinned engine module is installed in. */
 function engineDirectory(): string {
   const require = createRequire(import.meta.url);
   return path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));

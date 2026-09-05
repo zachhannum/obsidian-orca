@@ -11,7 +11,7 @@ import type { Obsidian } from "./obsidian";
 /** The type the navigator is registered under. */
 export const NAVIGATOR = "orca-navigator";
 
-/** Where a dragged entry is let go: over a row, or under it. */
+/** The side of the target row a dragged entry is dropped on. */
 export type Onto = "above" | "below";
 
 export class Navigator {
@@ -74,7 +74,7 @@ export class Navigator {
   }
 
   /**
-   * The `+` on a book's own row, opened. Every way of adding to a book
+   * Opens the `+` menu on a book's row. Every way of adding to a book
    * is behind it, so a spec that adds something starts here.
    */
   async adding(book: string): Promise<void> {
@@ -85,18 +85,18 @@ export class Navigator {
   }
 
   /**
-   * One row's own menu, opened. The menu is on screen before a spec
-   * reads it: Obsidian builds one on the event, and an item clicked
-   * before it is up is an item nothing answers.
+   * Opens a row's context menu and waits for it to be on screen.
+   * Obsidian builds the menu on the event, and an item clicked before
+   * it is up is an item nothing answers.
    */
   async menuOn(row: Locator): Promise<void> {
     await this.opening(row, { button: "right" });
   }
 
   /**
-   * A menu, opened from a row. The shelf is drawn again on every edit,
-   * and a click that lands across one of those redraws opens nothing.
-   * Opening a menu changes nothing, so it is asked for again.
+   * Opens a menu from a row, retrying the click. The shelf repaints on
+   * every edit, and a click that lands during a repaint opens nothing.
+   * Opening a menu changes nothing, so retrying is safe.
    */
   private async opening(
     row: Locator,
@@ -108,7 +108,7 @@ export class Navigator {
     }).toPass({ timeout: 30_000 });
   }
 
-  /** How many times the shelf has been drawn. */
+  /** Returns the number of times the shelf has been painted. */
   async painted(): Promise<number> {
     await expect(this.pane).toHaveAttribute("data-generation", /\d+/);
     return Number(await this.pane.getAttribute("data-generation"));
@@ -131,7 +131,7 @@ export class Navigator {
   }
 
   /**
-   * One row dragged onto another. dnd-kit starts a drag once the
+   * Drags one row onto another. dnd-kit starts a drag once the
    * pointer has travelled its activation distance, so the pointer moves
    * away before it travels to where it lands.
    */
@@ -142,7 +142,9 @@ export class Navigator {
     const land = onto === "above" ? end.y + 2 : end.y + end.height - 2;
     await mouse.move(start.x + 20, start.y + start.height / 2);
     await mouse.down();
-    await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
+    await mouse.move(start.x + 20, start.y + start.height / 2 + 10, {
+      steps: 5,
+    });
     await mouse.move(end.x + 20, land, { steps: 15 });
     // dnd-kit settles the drop on the frame after the last move.
     await mouse.move(end.x + 20, land);
@@ -150,14 +152,16 @@ export class Navigator {
   }
 
   /**
-   * One row dragged past the bottom of the pane and held there, with
-   * `held` run before it is let go. A drop past the last row lands on
-   * the last row.
+   * Drags a row past the bottom of the pane, holds it there while
+   * `held` runs, then drops it. A drop past the last row lands on the
+   * last row.
    */
   async dragOffTheEnd(from: Locator, held: () => Promise<void>): Promise<void> {
     const { mouse } = this.obsidian.page;
     const start = await box(from);
-    const floor = await this.obsidian.page.evaluate(() => window.innerHeight - 2);
+    const floor = await this.obsidian.page.evaluate(
+      () => window.innerHeight - 2,
+    );
     await mouse.move(start.x + 20, start.y + start.height / 2);
     await mouse.down();
     // One app runs the whole suite, so the button is released and the
@@ -165,7 +169,9 @@ export class Navigator {
     // down, or a drop whose write outruns the fixture going back, fails
     // every spec after this one.
     try {
-      await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
+      await mouse.move(start.x + 20, start.y + start.height / 2 + 10, {
+        steps: 5,
+      });
       await mouse.move(start.x + 20, floor, { steps: 15 });
       await mouse.move(start.x + 20, floor);
       // dnd-kit presses the row it is carrying, so the wait is on that.
@@ -181,13 +187,13 @@ export class Navigator {
   }
 
   /**
-   * How tall the shelf is, and how far the view it sits in has been
-   * scrolled. Two elements on purpose: the shelf is what a drag must
-   * not grow, and the view is what it must not scroll past the end of.
+   * Measures the shelf's height and the scroll position of the
+   * container it sits in. The two are separate elements: a drag must
+   * not grow the shelf, and must not scroll the container past its end.
    *
-   * The view is found by the test dnd-kit scrolls on, which is an
-   * overflow that allows it, and with something to scroll, since the
-   * shelf itself allows one and never has any.
+   * The container is found the way dnd-kit finds it: the nearest
+   * ancestor whose overflow allows scrolling and that has something to
+   * scroll. The shelf allows scrolling but never overflows.
    */
   async reach(): Promise<{ height: number; top: number; most: number }> {
     return this.pane.evaluate((pane) => {
@@ -204,7 +210,7 @@ export class Navigator {
     });
   }
 
-  /** The question a delete asks, answered by the button named. */
+  /** Answers the delete confirmation by clicking the button named. */
   async answer(verb: string): Promise<void> {
     const modal = this.obsidian.page.getByTestId("orca-confirm");
     await expect(modal).toBeVisible();
@@ -252,9 +258,9 @@ export class Navigator {
 }
 
 /**
- * Where a row is on screen. The shelf is drawn again after every edit,
- * and a row measured across one of those redraws has no box, so the
- * measure waits for one rather than asking a fixed number of times.
+ * Measures a row's box on screen. The shelf repaints after every edit,
+ * and a row measured during a repaint has no box, so this waits for one
+ * rather than trying a fixed number of times.
  */
 async function box(
   locator: Locator,

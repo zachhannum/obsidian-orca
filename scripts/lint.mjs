@@ -17,6 +17,12 @@ const APPLICATION = ["obsidian", "electron"];
 /** The packages only `ui` may reach, by the prefix their subpaths share. */
 const APPLICATION_SCOPES = ["react", "react-dom", "@dnd-kit"];
 
+/**
+ * The openers that describe a thing by its role instead of naming it.
+ * STYLE.md's "Code comments" section holds the rule.
+ */
+const PUZZLE = /^(What|How|Which|Where|Who|The way)\b/;
+
 const RULES = [
   /**
    * The pipeline runs one way and `ui` is at its end: `ui` imports the
@@ -41,17 +47,28 @@ const RULES = [
 ];
 
 /**
- * Every rule, run over one file's imports and, for a test file, the
- * note it ends on.
+ * Every rule, run over one file's imports, its doc comments and, for a
+ * test file, the note it ends on.
  */
 export function check(file, text) {
   const found = [];
   const module = moduleOf(file);
   for (const { specifier, line } of imports(text)) {
-    const imported = moduleOf(specifier.startsWith("@/") ? specifier.slice(2) : "");
+    const imported = moduleOf(
+      specifier.startsWith("@/") ? specifier.slice(2) : "",
+    );
     for (const rule of RULES) {
       const said = rule({ module, imported, specifier });
       if (said !== undefined) found.push({ file, line, said });
+    }
+  }
+  for (const { first, line } of docs(text)) {
+    if (PUZZLE.test(first)) {
+      found.push({
+        file,
+        line,
+        said: "a doc comment opens with a question word; name the thing",
+      });
     }
   }
   if (/\.test\.tsx?$/.test(file) && backlog(text) === undefined) {
@@ -120,12 +137,30 @@ function imports(text) {
   return found.sort((a, b) => a.line - b.line);
 }
 
+/** Every doc comment's first line, with the line the comment starts on. */
+function docs(text) {
+  const found = [];
+  for (const match of text.matchAll(/\/\*\*([\s\S]*?)\*\//g)) {
+    const first = match[1]
+      .split("\n")
+      .map((line) => line.replace(/^\s*\*?\s?/, ""))
+      .find((line) => line.trim() !== "");
+    if (first === undefined) continue;
+    found.push({
+      first: first.trim(),
+      line: text.slice(0, match.index).split("\n").length,
+    });
+  }
+  return found;
+}
+
 /** The note a test file ends on: what the suite does not cover. */
 function backlog(text) {
   const lines = text.split("\n");
   while (lines.length > 0 && lines.at(-1).trim() === "") lines.pop();
   const note = [];
-  while (lines.length > 0 && lines.at(-1).startsWith("//")) note.unshift(lines.pop());
+  while (lines.length > 0 && lines.at(-1).startsWith("//"))
+    note.unshift(lines.pop());
   const said = note.join("\n");
   return /does not/i.test(said) ? said : undefined;
 }
