@@ -2,14 +2,14 @@
  * The note a wikilink names.
  *
  * Obsidian rewrites the links inside a note through a rename and a
- * move, so an entry holds a link and the note is resolved at every
+ * move, so an entry has a link and the note is resolved at every
  * read. Orca keeps no path of its own.
  */
 
 /** How a link finds its note. `ui` resolves one through the metadata cache. */
 export interface Links {
   /**
-   * The vault path a link names, seen from the note holding it, or
+   * The vault path a link names, seen from the note it is in, or
    * nothing if the vault has no such note.
    */
   find(link: string, from: string): string | undefined;
@@ -17,8 +17,8 @@ export interface Links {
 
 /**
  * Links resolved against a list of vault paths, the way Obsidian
- * resolves them: the note of that name nearest the note holding the
- * link, and the shortest path when two are equally near.
+ * resolves them: the note of that name nearest the note the link is
+ * in, and the shortest path when two are equally near.
  */
 export function pathLinks(paths: Iterable<string>): Links {
   const all = [...paths];
@@ -41,8 +41,8 @@ export function pathLinks(paths: Iterable<string>): Links {
 
 /** The note a link names, without its alias, its heading or its block. */
 export function target(link: string): string {
-  const held = link.split("|")[0] ?? "";
-  return (held.split(/[#^]/)[0] ?? "").trim();
+  const name = link.split("|")[0] ?? "";
+  return (name.split(/[#^]/)[0] ?? "").trim();
 }
 
 function nearest(found: string[], from: string): string | undefined {

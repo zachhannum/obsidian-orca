@@ -198,7 +198,7 @@ test("the bundled worker opens the engine from the bytes it is posted", async ()
     });
     const module = await moduleBytes();
     worker.postMessage({ orca: "start", module }, [module]);
-    // The module the bundle carries writes the wire the bundle reads.
+    // The module inside the bundle writes the wire the bundle reads.
     assert.deepEqual(await started, ready);
   } finally {
     await worker.terminate();

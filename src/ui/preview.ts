@@ -9,7 +9,7 @@ import { showPage } from "@/ui/page";
 export const PREVIEW_VIEW = "orca-book-preview";
 
 /**
- * One page of the book. The painter settles what a page holds, so its
+ * One page of the book. The painter settles what is on a page, so its
  * markup goes into the surface in one write.
  */
 export class PreviewView extends ItemView {

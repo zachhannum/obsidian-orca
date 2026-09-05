@@ -34,12 +34,12 @@ export function documentMetadata(book: Book): Metadata {
   return metadata;
 }
 
-/** What the engine carries none of, and orca sets itself. */
+/** What the engine has none of, and orca sets itself. */
 export function imprint(book: Book): Imprint {
   const { publisher, series, isbn } = book.metadata;
-  const held: Imprint = {};
-  if (publisher !== undefined) held.publisher = publisher;
-  if (series !== undefined) held.series = series;
-  if (isbn !== undefined) held.isbn = isbn;
-  return held;
+  const fields: Imprint = {};
+  if (publisher !== undefined) fields.publisher = publisher;
+  if (series !== undefined) fields.series = series;
+  if (isbn !== undefined) fields.isbn = isbn;
+  return fields;
 }

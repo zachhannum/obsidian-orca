@@ -6,7 +6,7 @@ edited and rebuilt instead of redrawn.
 
 Obsidian's own tokens are lifted from `app.css` in the installed
 build: its colour ramp, the 40px header, the 44px ribbon, 13px
-navigation type, its radii. `chrome.css` holds them. New surfaces
+navigation type, its radii. They are in `chrome.css`. New surfaces
 extend that vocabulary rather than inventing one.
 
 ## What is here
@@ -38,10 +38,10 @@ its editor around these files and returns a URL. The artboard list and
   note's header. `MarkdownView` inherits `addAction` from `ItemView`,
   and the swap is `leaf.setViewState`, so the affordance costs no
   hand-built DOM in a view orca does not own.
-- One ribbon icon, carrying the issues badge.
+- One ribbon icon, with the issues badge on it.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
-- A control the CSS has taken over dims where it sits and carries the
+- A control the CSS has taken over dims where it sits and shows the
   line that took it, which is also the way to that line.
 - Export sits in the book preview's toolbar and on the book note's
   page.

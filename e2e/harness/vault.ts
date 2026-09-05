@@ -31,7 +31,7 @@ export class Vault {
     );
   }
 
-  /** A note's text, as the vault holds it. */
+  /** A note's text, as it is in the vault. */
   async read(file: string): Promise<string> {
     return this.page.evaluate(
       async (at) => window.app.vault.adapter.read(at),
@@ -105,7 +105,7 @@ export class Vault {
   /** Puts back every file the spec touched. */
   async restore(): Promise<void> {
     for (const file of this.touched) {
-      const held = await readFile(path.join(this.fixture, file), "utf8").catch(
+      const text = await readFile(path.join(this.fixture, file), "utf8").catch(
         () => undefined,
       );
       await this.page.evaluate(
@@ -117,7 +117,7 @@ export class Vault {
             await adapter.write(at, text);
           }
         },
-        { at: file, text: held },
+        { at: file, text },
       );
     }
     this.touched.clear();

@@ -14,7 +14,7 @@ test("a note with the key opens in orca's view, and `Open as markdown` returns i
 
   await expect(note.page).toContainText("Pride and Prejudice");
   await expect(note.page).toContainText("orca-book: 1");
-  // What the engine does not carry is on the page orca draws.
+  // What the engine does not have is on the page orca draws.
   await expect(note.metadata("publisher")).toContainText("Whitehall Press");
   await expect(note.metadata("series")).toContainText("The Bennet Novels");
   await expect(note.metadata("isbn")).toContainText("978-0-000-00000-0");

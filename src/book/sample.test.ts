@@ -19,7 +19,7 @@ test("the note's frontmatter names the book's title and author", () => {
   assert.match(SAMPLE.text, /^---\ntitle: Pride and Prejudice\nauthor: Jane Austen\n---\n/);
 });
 
-test("the note the plugin carries is the note in the fixture vault", async () => {
+test("the note that ships with the plugin is the note in the fixture vault", async () => {
   const vault = directoryVault(path.join(root, "fixture"));
 
   assert.equal(await readText(vault, SAMPLE.name), SAMPLE.text);

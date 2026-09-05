@@ -42,7 +42,7 @@ export interface Book {
 /**
  * How one property orca owns is read and written. A `tag` comes from a
  * closed set and is quoted, because unquoted `no` is boolean false. A
- * `length` carries its unit, so it stays a string rather than becoming
+ * `length` includes its unit, so it stays a string rather than becoming
  * a bare number.
  */
 export type Kind = "text" | "tag" | "length";
@@ -68,12 +68,12 @@ export const FIELD_KEYS: readonly (keyof BookMetadata)[] = FIELDS.map(
   (field) => field.key,
 );
 
-/** The keys written quoted whatever they hold. */
+/** The keys written quoted whatever their value is. */
 export const QUOTED: ReadonlySet<string> = new Set(
   FIELDS.filter((field) => field.kind === "tag").map((field) => field.key),
 );
 
-/** The unit a length is written in when the note holds a bare number. */
+/** The unit a length is written in when the note has a bare number. */
 const UNIT = "pt";
 
 /** What a note at one format needs to become the next one. */
@@ -81,14 +81,14 @@ const STEPS: Readonly<Record<number, (properties: Properties) => Properties>> = 
 
 /** The format a book note is written in, or nothing when the note is not a book. */
 export function bookFormat(properties: Properties): number | undefined {
-  const held = properties[BOOK_KEY];
-  if (held === undefined || held === null) return undefined;
-  const format = Number(held);
+  const value = properties[BOOK_KEY];
+  if (value === undefined || value === null) return undefined;
+  const format = Number(value);
   return Number.isFinite(format) ? format : undefined;
 }
 
 /**
- * The book a note holds. A note below `FORMAT` is migrated on the way
+ * The book in a note. A note below `FORMAT` is migrated on the way
  * in and keeps the format it was written in, so nothing is written
  * back until the author causes a save. A note above `FORMAT` is a book
  * this orca cannot read, and the error names both formats.
@@ -107,11 +107,11 @@ export function readBook(properties: Properties): Book {
   const migrated = migrate(properties, format);
   const metadata: BookMetadata = {};
   const own: Properties = {};
-  for (const [key, held] of Object.entries(migrated)) {
+  for (const [key, value] of Object.entries(migrated)) {
     if (key === BOOK_KEY) continue;
     const field = FIELDS.find((named) => named.key === key);
-    if (field === undefined) own[key] = held;
-    else if (held !== null) metadata[field.key] = readValue(held, field.kind);
+    if (field === undefined) own[key] = value;
+    else if (value !== null) metadata[field.key] = readValue(value, field.kind);
   }
   return { format, metadata, own };
 }
@@ -124,8 +124,8 @@ export function readBook(properties: Properties): Book {
 export function writeBook(book: Book): Properties {
   const properties: Properties = { [BOOK_KEY]: FORMAT };
   for (const { key } of FIELDS) {
-    const held = book.metadata[key];
-    if (held !== undefined) properties[key] = held;
+    const value = book.metadata[key];
+    if (value !== undefined) properties[key] = value;
   }
   return { ...properties, ...book.own };
 }
@@ -150,30 +150,30 @@ export function writeNote(book: Book, body: string): string {
 }
 
 /**
- * The properties as this format holds them, one step per format
+ * The properties in this format, one step per format
  * between the note's and this one. Migration happens in memory, and the
  * note on disk is left as it is.
  */
 function migrate(properties: Properties, from: number): Properties {
-  let held = properties;
+  let current = properties;
   for (let format = from; format < FORMAT; format += 1) {
     const step = STEPS[format];
     if (step === undefined) {
       throw new BookError(`orca reads format ${format} but cannot migrate it`);
     }
-    held = step(held);
+    current = step(current);
   }
-  return held;
+  return current;
 }
 
 /**
- * One property, as the format holds it. A parser gives back `false`
+ * One property, as the format has it. A parser gives back `false`
  * for `no` and a number for `1813`, and both are strings here; a
  * length that arrived bare is given the unit back.
  */
-export function readValue(held: Value, kind: Kind): string {
-  if (kind === "length" && typeof held === "number") return `${held}${UNIT}`;
-  if (typeof held === "boolean") return held ? "yes" : "no";
-  if (Array.isArray(held) || typeof held === "object") return "";
-  return String(held);
+export function readValue(value: Value, kind: Kind): string {
+  if (kind === "length" && typeof value === "number") return `${value}${UNIT}`;
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (Array.isArray(value) || typeof value === "object") return "";
+  return String(value);
 }

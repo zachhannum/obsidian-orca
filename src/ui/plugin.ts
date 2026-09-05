@@ -20,7 +20,7 @@ import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 const MARKDOWN_VIEW = "markdown";
 
 /**
- * Orca, as Obsidian loads it. The plugin holds the engine, and every
+ * Orca, as Obsidian loads it. The plugin owns the engine, and every
  * view borrows the same session.
  */
 export default class OrcaPlugin extends Plugin {
@@ -28,7 +28,7 @@ export default class OrcaPlugin extends Plugin {
   private unloaded = false;
   /** The leaves an author has asked to keep in markdown, and for which note. */
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
-  /** The icon back to the book that each of those notes carries. */
+  /** The icon back to the book on each of those notes. */
   private readonly back = new WeakMap<
     MarkdownView,
     { at: string; icon: HTMLElement }
@@ -89,7 +89,7 @@ export default class OrcaPlugin extends Plugin {
     this.engine = undefined;
   }
 
-  /** Every markdown note, and its properties as the metadata cache holds them. */
+  /** Every markdown note, and its properties as the metadata cache has them. */
   private notes(): NoteIndex<TFile> {
     const { vault, metadataCache } = this.app;
     return {
@@ -114,7 +114,7 @@ export default class OrcaPlugin extends Plugin {
         continue;
       }
       if (this.asMarkdown.get(leaf) === file.path) {
-        this.hold(view, file);
+        this.attach(view, file);
         continue;
       }
       void leaf.setViewState({ type: BOOK_VIEW, state: { file: file.path } });
@@ -126,10 +126,10 @@ export default class OrcaPlugin extends Plugin {
    * reading toggle sits in that corner, and `addAction` is how a view
    * orca does not own takes one.
    */
-  private hold(view: MarkdownView, file: TFile): void {
-    const held = this.back.get(view);
-    if (held?.at === file.path) return;
-    held?.icon.remove();
+  private attach(view: MarkdownView, file: TFile): void {
+    const existing = this.back.get(view);
+    if (existing?.at === file.path) return;
+    existing?.icon.remove();
     const icon = view.addAction("book", "Open as book", () => {
       void this.openAsBook(view.leaf, file);
     });
@@ -137,9 +137,9 @@ export default class OrcaPlugin extends Plugin {
   }
 
   private release(view: MarkdownView): void {
-    const held = this.back.get(view);
-    if (held === undefined) return;
-    held.icon.remove();
+    const existing = this.back.get(view);
+    if (existing === undefined) return;
+    existing.icon.remove();
     this.back.delete(view);
   }
 
@@ -150,8 +150,8 @@ export default class OrcaPlugin extends Plugin {
   ): void {
     if (!(file instanceof TFile) || !isBook(this.notes(), file)) return;
     const shown = leaf ?? this.app.workspace.getLeaf(false);
-    // The way back is offered by the leaf already holding this note as
-    // markdown; every other leaf is offered the way out.
+    // The way back is offered by the leaf this note is already open in
+    // as markdown; every other leaf is offered the way out.
     const asBook =
       shown.view instanceof MarkdownView && shown.view.file?.path === file.path;
     menu.addItem((item) =>

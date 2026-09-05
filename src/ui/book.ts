@@ -225,12 +225,12 @@ export class BookView extends FileView {
 
     const rows = page.createDiv({ cls: "orca-book-metadata" });
     for (const key of FIELD_KEYS) {
-      const held = book.metadata[key];
-      if (held === undefined) continue;
+      const value = book.metadata[key];
+      if (value === undefined) continue;
       const row = rows.createDiv({ cls: "orca-book-row" });
       row.dataset["testid"] = `orca-metadata-${key}`;
       row.createDiv({ cls: "orca-book-label", text: key });
-      row.createDiv({ cls: "orca-book-value", text: held });
+      row.createDiv({ cls: "orca-book-value", text: value });
     }
   }
 

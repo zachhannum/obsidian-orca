@@ -9,7 +9,7 @@ const PATHS = [
   "Volume Two/Chapter Four.md",
 ];
 
-test("a link finds the note of that name nearest the note holding it", () => {
+test("a link finds the note of that name nearest the note it is in", () => {
   const links = pathLinks(PATHS);
 
   assert.equal(links.find("Chapter Twelve", "Pride and Prejudice.md"), "Chapter Twelve.md");

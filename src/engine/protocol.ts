@@ -1,5 +1,5 @@
 /**
- * Orca's own frames on the worker wire. They carry an `orca` key;
+ * Orca's own frames on the worker wire. They have an `orca` key;
  * fleuron's requests and responses do not, and pass through untouched.
  */
 

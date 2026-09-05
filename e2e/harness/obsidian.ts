@@ -1,6 +1,6 @@
 /**
  * Obsidian's own class names and its app object, in one file, so an
- * Obsidian release breaks one file. Orca's markup carries test ids and
+ * Obsidian release breaks one file. Orca's markup has test ids and
  * is reached by those instead.
  */
 
@@ -63,8 +63,8 @@ export class Obsidian {
 
   /**
    * A note, opened in the active pane. Obsidian parses a note into the
-   * metadata cache as it is written, so the wait here is on the cache
-   * holding the note rather than on a clock.
+   * metadata cache as it is written, so the wait here is on the note
+   * reaching the cache rather than on a clock.
    */
   async open(path: string): Promise<void> {
     await this.page.waitForFunction(
@@ -78,7 +78,7 @@ export class Obsidian {
     }, path);
   }
 
-  /** Closes every leaf holding a view of this type. */
+  /** Closes every leaf with a view of this type. */
   async detach(type: string): Promise<void> {
     await this.page.evaluate((of) => {
       for (const leaf of window.app?.workspace.getLeavesOfType(of) ?? []) {
@@ -89,7 +89,7 @@ export class Obsidian {
 }
 
 /**
- * The renderer holding the vault. The window appears some time after
+ * The renderer the vault is open in. The window appears some time after
  * the process starts, so the harness reads the target list until a page
  * has an app on it.
  */

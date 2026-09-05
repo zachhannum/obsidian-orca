@@ -18,15 +18,15 @@ import {
 
 /** One entry in the reading order. */
 export interface Entry {
-  /** The link as the note holds it, or nothing for a generated section. */
+  /** The link as written in the note, or nothing for a generated section. */
   link?: string;
-  /** The alias the link carries, in place of the note's name. */
+  /** The alias on the link, in place of the note's name. */
   alias?: string;
   /** The tag that overrides the heading's role. */
   tag?: Role;
   /** The role this section has: the entry's own tag, or its heading's. */
   role: Role;
-  /** The heading it sits under, as the note holds it. */
+  /** The heading it sits under, as written in the note. */
   heading: string;
 }
 
@@ -65,7 +65,7 @@ export interface Resolution {
 const HEADING = /^#{1,6}\s+(.*?)\s*$/;
 const ITEM = /^\s*[-*+]\s+(?:\[\[([^\]]+)\]\])?\s*(?:`([^`]*)`)?\s*$/;
 
-/** The reading order a note's body holds. */
+/** The reading order in a note's body. */
 export function readOrder(body: string): Order {
   const blocks: Block[] = [];
   let heading = "";
@@ -96,13 +96,13 @@ export function writeOrder(order: Order): string {
 
 /** One entry as a line: the link, then the tag. */
 export function writeEntry(entry: Entry): string {
-  const held: string[] = [];
+  const parts: string[] = [];
   if (entry.link !== undefined) {
     const alias = entry.alias === undefined ? "" : `|${entry.alias}`;
-    held.push(`[[${entry.link}${alias}]]`);
+    parts.push(`[[${entry.link}${alias}]]`);
   }
-  if (entry.tag !== undefined) held.push(`\`${entry.tag}\``);
-  return `- ${held.join(" ")}`;
+  if (entry.tag !== undefined) parts.push(`\`${entry.tag}\``);
+  return `- ${parts.join(" ")}`;
 }
 
 /** Every entry, in the order the note lists them. */
@@ -193,16 +193,16 @@ export function resolve(order: Order, links: Links, from: string): Resolution {
 function readEntry(line: string, heading: string, role: Role): Entry | undefined {
   const item = ITEM.exec(line);
   if (item === null) return undefined;
-  const [, held, code] = item;
+  const [, link, code] = item;
   const tag = code === undefined ? undefined : roleOf(code);
   if (code !== undefined && tag === undefined) return undefined;
-  if (held === undefined && tag === undefined) return undefined;
+  if (link === undefined && tag === undefined) return undefined;
 
   const entry: Entry = { role: tag ?? role, heading };
-  if (held !== undefined) {
-    const bar = held.indexOf("|");
-    entry.link = (bar < 0 ? held : held.slice(0, bar)).trim();
-    if (bar >= 0) entry.alias = held.slice(bar + 1).trim();
+  if (link !== undefined) {
+    const bar = link.indexOf("|");
+    entry.link = (bar < 0 ? link : link.slice(0, bar)).trim();
+    if (bar >= 0) entry.alias = link.slice(bar + 1).trim();
   }
   if (tag !== undefined) entry.tag = tag;
   return entry;
@@ -220,13 +220,13 @@ function endOf(blocks: Block[], heading: string): number | undefined {
 
   let at = head + 1;
   let seen = false;
-  for (let held = head + 1; held < blocks.length; held += 1) {
-    const block = blocks[held];
+  for (let next = head + 1; next < blocks.length; next += 1) {
+    const block = blocks[next];
     if (block === undefined || block.kind === "heading") break;
     if (block.kind === "entry") {
       seen = true;
-      at = held + 1;
-    } else if (!seen && blank(block)) at = held + 1;
+      at = next + 1;
+    } else if (!seen && blank(block)) at = next + 1;
   }
   return at;
 }
