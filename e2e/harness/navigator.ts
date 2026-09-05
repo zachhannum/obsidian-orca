@@ -259,8 +259,15 @@ export class Navigator {
 async function box(
   locator: Locator,
 ): Promise<{ x: number; y: number; width: number; height: number }> {
-  await expect.poll(async () => locator.boundingBox()).not.toBeNull();
-  const found = await locator.boundingBox();
+  // The box handed back is the one the poll accepted. Measuring again
+  // afterwards is a second reading nothing waits on.
+  let found: Awaited<ReturnType<Locator["boundingBox"]>> = null;
+  await expect
+    .poll(async () => {
+      found = await locator.boundingBox();
+      return found;
+    })
+    .not.toBeNull();
   if (found === null) throw new Error("nothing to drag");
   return found;
 }

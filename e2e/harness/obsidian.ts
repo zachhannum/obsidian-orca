@@ -199,13 +199,19 @@ export class Obsidian {
     try {
       await during();
     } finally {
-      said = await this.page.evaluate(() => {
-        const held = window.orcaNotices;
-        if (held === undefined) return [];
-        held.watch.disconnect();
-        window.orcaNotices = undefined;
-        return held.said;
-      });
+      // A page that is gone cannot be read, and the reason it is gone
+      // is what the spec should report.
+      try {
+        said = await this.page.evaluate(() => {
+          const held = window.orcaNotices;
+          if (held === undefined) return [];
+          held.watch.disconnect();
+          window.orcaNotices = undefined;
+          return held.said;
+        });
+      } catch {
+        said = [];
+      }
     }
     return said;
   }
