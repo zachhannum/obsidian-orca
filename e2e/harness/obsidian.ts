@@ -196,11 +196,11 @@ export class Obsidian {
     // `during` throws: a spec that fails inside one would otherwise
     // leave an observer on the body for every spec after it.
     let said: string[] = [];
+    let ran = false;
     try {
       await during();
+      ran = true;
     } finally {
-      // A page that is gone cannot be read, and the reason it is gone
-      // is what the spec should report.
       try {
         said = await this.page.evaluate(() => {
           const held = window.orcaNotices;
@@ -209,8 +209,12 @@ export class Obsidian {
           window.orcaNotices = undefined;
           return held.said;
         });
-      } catch {
-        said = [];
+      } catch (cause) {
+        // A page that is gone cannot be read, and the reason it is
+        // gone is what the spec should report. On the way out of a
+        // block that finished, nothing was recorded and no list of
+        // what was said can be answered for.
+        if (ran) throw cause;
       }
     }
     return said;
