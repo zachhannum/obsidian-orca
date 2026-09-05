@@ -1,40 +1,28 @@
-import {
-  FileView,
-  Notice,
-  TFile,
-  setIcon,
-  type WorkspaceLeaf,
-} from "obsidian";
-import { readFrontmatter, type Properties } from "@/book/frontmatter";
-import { readModel, withOrder, type Model } from "@/book/model";
-import {
-  BOOK_KEY,
-  BookError,
-  FIELD_KEYS,
-  applyBook,
-  type Book,
-} from "@/book/note";
-import { writeOrder } from "@/book/order";
+import { FileView, Notice, TFile, setIcon, type WorkspaceLeaf } from "obsidian";
+import { readModel, type Model } from "@/book/model";
+import { BOOK_KEY, BookError, FIELD_KEYS, type Book } from "@/book/note";
 import { Changed } from "@/ui/changed";
+import { save, type Edits } from "@/ui/edits";
 import { Writer } from "@/ui/writer";
 
 /** The type the book note is registered under. */
 export const BOOK_VIEW = "orca-book";
 
 /**
- * The book note's own page, and the one writer on the note while it is
- * open. Every other surface edits the book through `edit`, and
+ * The view for a book note, and the only writer on the note while it
+ * is open. Every other surface edits the book through `edit`, and
  * `Open as markdown` hands the leaf back to the editor.
  */
 export class BookView extends FileView {
   private writer: Writer | undefined;
   /** The note as orca last read it from disk. */
   private disk = "";
-  /** How many saves of orca's own are running. */
+  /** Number of orca's own saves in flight. */
   private saving = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
+    private readonly edits: Edits,
     private readonly asMarkdown: (view: BookView) => void,
   ) {
     super(leaf);
@@ -59,6 +47,14 @@ export class BookView extends FileView {
         }
       }),
     );
+    // The note is gone, so an unwritten edit has nowhere to settle.
+    this.registerEvent(
+      this.app.vault.on("delete", (file) => {
+        if (file.path !== this.file?.path) return;
+        this.writer?.stop();
+        this.writer = undefined;
+      }),
+    );
     return Promise.resolve();
   }
 
@@ -79,15 +75,20 @@ export class BookView extends FileView {
     this.writer = undefined;
   }
 
+  /** The book as the view paints it, the unwritten edits included. */
+  get model(): Model | undefined {
+    return this.writer?.model;
+  }
+
   /**
-   * One edit to the book. The view is the only writer while it is
-   * open, so every surface that changes the book comes through here.
+   * Applies one edit to the book. The view is the only writer while it
+   * is open, so every surface that changes the book comes through here.
    */
   edit(change: (model: Model) => Model): void {
     this.writer?.edit(change);
   }
 
-  /** The note opened: the model read, the writer made, the book painted. */
+  /** Reads the model from the note, makes the writer and paints the book. */
   private hold(file: TFile, text: string): void {
     this.disk = text;
     this.writer = undefined;
@@ -96,6 +97,7 @@ export class BookView extends FileView {
     this.writer = new Writer(model, {
       paint: (held, generation) => {
         this.show(held.book, generation);
+        this.edits.changed();
       },
       save: (held) => this.write(file, held),
     });
@@ -114,8 +116,8 @@ export class BookView extends FileView {
   }
 
   /**
-   * A write on the note that orca did not make: the note edited in
-   * another leaf, or a sync writing over it.
+   * Handles a write on the note that orca did not make: the note edited
+   * in another leaf, or a sync writing over it.
    */
   private async arrived(file: TFile): Promise<void> {
     if (this.saving > 0) return;
@@ -166,32 +168,13 @@ export class BookView extends FileView {
     }
   }
 
-  /**
-   * The note, written in two halves. The properties go through
-   * Obsidian's frontmatter API, which leaves the author's own alone,
-   * and the body is replaced under them. The half an edit did not
-   * touch is not written, so a settled edit is one revision.
-   */
   private async write(file: TFile, model: Model): Promise<void> {
+    // A settle still running when the note was deleted writes nothing: the
+    // vault no longer holds the file the writer was made for.
+    if (this.app.vault.getFileByPath(file.path) !== file) return;
     this.saving += 1;
     try {
-      const held = readFrontmatter(this.disk);
-      const after = structuredClone(held.properties);
-      applyBook(after, model.book);
-      if (JSON.stringify(after) !== JSON.stringify(held.properties)) {
-        await this.app.fileManager.processFrontMatter(
-          file,
-          (properties: Properties) => {
-            applyBook(properties, model.book);
-          },
-        );
-      }
-      if (writeOrder(model.order) !== held.body) {
-        await this.app.vault.process(file, (text) =>
-          withOrder(text, model.order),
-        );
-      }
-      this.disk = await this.app.vault.read(file);
+      this.disk = await save(this.app, file, this.disk, model);
     } finally {
       this.saving -= 1;
     }
@@ -206,8 +189,8 @@ export class BookView extends FileView {
   }
 
   /**
-   * What the book note reports about the book, with how many times the
-   * model has changed, which a test waits on rather than a clock.
+   * Paints the book page, with the model's generation as a data
+   * attribute so a test can wait on it rather than on a clock.
    */
   private show(book: Book, generation: number): void {
     const pane = this.pane();
@@ -234,7 +217,7 @@ export class BookView extends FileView {
     }
   }
 
-  /** A book this orca cannot read, and the way back to the editor. */
+  /** Paints the refusal message, with a way back to the editor. */
   private refuse(pane: HTMLElement, said: string): void {
     const state = pane.createDiv({ cls: "orca-book-refused" });
     state.dataset["testid"] = "orca-book-refused";

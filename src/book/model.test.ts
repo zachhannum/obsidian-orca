@@ -38,7 +38,7 @@ test("with the plugin disabled the note is an index of the book, with working li
     "- [[Volume the First]] `part`",
     "- [[Chapter Twelve]]",
     "- [[Chapter Four]]",
-    "- [[Acknowledgements]]",
+    "- [[Acknowledgements]] `back-matter`",
   ]);
 
   // The links Obsidian resolves are the links orca resolves. Chapter

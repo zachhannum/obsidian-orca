@@ -11,13 +11,14 @@ import type { EventRef } from "obsidian";
 
 declare global {
   interface Window {
-    /** What a spec counts a note's writes with. */
+    /** The write counter a spec installs while `writes` runs. */
     orcaWrites?: { at: string; count: number; ref: EventRef | undefined };
   }
 }
 
 export class Vault {
   private readonly touched = new Set<string>();
+  private readonly folders = new Set<string>();
 
   constructor(
     private readonly page: Page,
@@ -48,7 +49,7 @@ export class Vault {
   }
 
   /**
-   * A write on a note that is already in the vault, through the vault
+   * Writes a note that is already in the vault, through the vault
    * rather than the adapter, which is how an editor or a sync client
    * writes one.
    */
@@ -70,8 +71,8 @@ export class Vault {
   }
 
   /**
-   * How many times a note was written while `during` ran, counted by
-   * the vault's own events rather than by watching the file.
+   * Counts the writes to a note while `during` runs, from the vault's
+   * own events rather than by watching the file.
    */
   async writes(file: string, during: () => Promise<void>): Promise<number> {
     this.touched.add(file);
@@ -92,6 +93,16 @@ export class Vault {
       window.orcaWrites = undefined;
       return held.count;
     });
+  }
+
+  /** Creates a folder for the spec. It is removed with its contents when the spec ends. */
+  async folder(path: string): Promise<void> {
+    this.folders.add(path);
+    await this.page.evaluate(async (at) => {
+      if (!(await window.app.vault.adapter.exists(at))) {
+        await window.app.vault.createFolder(at);
+      }
+    }, path);
   }
 
   async remove(file: string): Promise<void> {
@@ -120,6 +131,13 @@ export class Vault {
         { at: file, text },
       );
     }
+    for (const folder of this.folders) {
+      await this.page.evaluate(async (at) => {
+        const found = window.app.vault.getFolderByPath(at);
+        if (found !== null) await window.app.vault.delete(found, true);
+      }, folder);
+    }
     this.touched.clear();
+    this.folders.clear();
   }
 }

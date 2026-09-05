@@ -1,5 +1,6 @@
 /**
- * What names the book, split between the engine and orca.
+ * The book's metadata, split between what the engine writes and what
+ * orca sets.
  *
  * The engine's PDF writer is the one thing that reads metadata, and it
  * writes title, author, language and date into the document's own
@@ -17,8 +18,8 @@ export interface Imprint {
 }
 
 /**
- * What crosses to the engine. It travels after the sources, which leave
- * a book of several notes unnamed.
+ * The metadata sent to the engine. It travels after the sources, which
+ * leave a book of several notes unnamed.
  */
 export function documentMetadata(book: Book): Metadata {
   const { title, author, language, date } = book.metadata;
@@ -34,7 +35,7 @@ export function documentMetadata(book: Book): Metadata {
   return metadata;
 }
 
-/** What the engine has none of, and orca sets itself. */
+/** The metadata the engine does not read, which orca sets itself. */
 export function imprint(book: Book): Imprint {
   const { publisher, series, isbn } = book.metadata;
   const fields: Imprint = {};

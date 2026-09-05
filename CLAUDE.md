@@ -17,6 +17,11 @@ wins and the quick fix waits for its own PR.
 - Only `ui/` knows about Obsidian, and `assets/` reaches the vault
   through an adapter interface. The dependency rule runs one way: `ui`
   may import `book`, `book` may not import `ui`. Lint enforces it.
+- `ui/` draws in React, and it is the only module that may. React,
+  `react-dom` and dnd-kit sit under the same lint rule as Obsidian
+  itself, so a component cannot leak below `ui`. A view that owns
+  foreign DOM stays outside it: CodeMirror is the case the design
+  already names.
 - The pipeline is one-way: notes → book model → op → engine session →
   pages → preview / PDF. Downstream never reaches back upstream.
 - fleuron is the engine and is pinned. The wire format is checked
@@ -57,6 +62,17 @@ one, and UI work starts by opening the one it belongs to.
 - Where an artboard contradicts an issue's acceptance wording, the PR
   says which one it followed and the issue is settled before the code
   lands.
+
+## Implementing changes
+
+- Commit as you go, in small testable chunks, rather than once at the
+  end of a feature.
+- After committing, run `roborev wait` in the background to block on
+  the review the post-commit hook enqueued. On findings, run
+  `roborev show`, fix, commit, repeat. Surface only what you cannot
+  resolve.
+- After a major change, run `roborev review --branch --wait` in the
+  background for branch-level findings.
 
 ## Unit testing
 
@@ -147,10 +163,11 @@ underneath them.
 production bundle, and the `e2e` job runs the suite on both platforms.
 
 1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier. The
-   lint pass is `scripts/lint.mjs`, and it holds four rules: nothing
+   lint pass is `scripts/lint.mjs`, and it holds five rules: nothing
    outside `ui` imports `ui`, only `ui` imports Obsidian, an import
-   inside `src` uses the `@/` alias, and a test file ends on what it
-   does not cover
+   inside `src` uses the `@/` alias, a doc comment opens with a name
+   rather than a question word, and a test file ends on what it does
+   not cover
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned
@@ -190,7 +207,8 @@ sample to match, so nothing overrides them, the em dash rule
 included.
 
 `STYLE.md` is the voice the README, `design/README.md` and the issue and
-PR bodies are written in.
+PR bodies are written in. Its "Code comments" section holds comments
+and commit subjects.
 
 ## Conventions
 
@@ -198,6 +216,13 @@ PR bodies are written in.
   floor. `noUncheckedIndexedAccess` and `verbatimModuleSyntax` stay on;
   no `any`, no `@ts-expect-error` without the line that explains it.
 - Imports inside `src/` use the `@/` alias.
+- A React surface is `.tsx`, and the Obsidian view around it is `.ts`.
+  The view owns the root: `onOpen` creates it, `onClose` unmounts it,
+  and nothing else empties the element under it.
+- A data attribute the e2e suite waits on is written from a commit
+  effect, never during a render. React commits when it chooses, so an
+  attribute written during a render can be read before the paint it
+  reports.
 - Errors: a module throws a typed error; `ui/` is the only layer that
   turns one into something an author sees. A warning from the engine is
   routed, never re-worded.
@@ -208,8 +233,10 @@ PR bodies are written in.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.
-- Public API docs (`/** */`) on exported items. A doc states an
-  invariant, a constraint, or a consequence a reader would otherwise
-  derive from the implementation; where there is none, the signature
-  stands on its own. The op and session types are a cross-module
-  contract and get treated like documentation.
+- A doc comment (`/** */`) on an exported item states an invariant, a
+  constraint, or a consequence a reader would otherwise derive from
+  the implementation. An export with none of those gets no comment;
+  the signature stands on its own. Where a comment exists it names
+  the thing plainly. The choice is between plain and nothing, never
+  between plain and oblique. The op and session types are a
+  cross-module contract and get treated like documentation.

@@ -41,5 +41,5 @@ test("a vault-wide scan for books is a metadata-cache lookup, not a directory wa
   assert.equal(isBook(vault, { path: "Nowhere.md" }), false);
 });
 
-// What this tier does not cover: the cache Obsidian keeps, and the
-// navigator that lists what this finds, which waits on its own issue.
+// What this tier does not cover: the cache Obsidian keeps, and a note
+// being written, which is uncached for as long as the write takes.

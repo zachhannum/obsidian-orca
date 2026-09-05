@@ -19,7 +19,7 @@ test("a note is its properties and the body under them", async () => {
   assert.equal(note.properties["title"], "Pride and Prejudice");
   assert.equal(note.properties["language"], "en-GB");
   assert.match(note.body, /^\n\n# Front matter\n/);
-  assert.ok(note.body.includes("\n- [[Acknowledgements]]\n"));
+  assert.ok(note.body.includes("\n- [[Acknowledgements]] `back-matter`\n"));
   assert.ok(note.body.endsWith("```css\n.chapter-opening h1 {\n  letter-spacing: 0.02em;\n}\n```\n"));
 });
 

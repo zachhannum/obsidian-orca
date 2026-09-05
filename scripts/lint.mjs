@@ -1,6 +1,7 @@
 /**
  * The dependency rule and the conventions around it, checked over
- * `src`. A violation names the file, the line and the rule.
+ * `src`. The doc comment rule also runs over `e2e` and `scripts`. A
+ * violation names the file, the line and the rule.
  */
 
 import { glob, readFile } from "node:fs/promises";
@@ -14,6 +15,15 @@ export const MODULES = ["engine", "book", "style", "assets", "ui"];
 /** The packages only `ui` may reach. */
 const APPLICATION = ["obsidian", "electron"];
 
+/** The packages only `ui` may reach, by the prefix their subpaths share. */
+const APPLICATION_SCOPES = ["react", "react-dom", "@dnd-kit"];
+
+/**
+ * The openers that describe a thing by its role instead of naming it.
+ * STYLE.md's "Code comments" section holds the rule.
+ */
+const PUZZLE = /^(What|How|Which|Where|Who|The way)\b/;
+
 const RULES = [
   /**
    * The pipeline runs one way and `ui` is at its end: `ui` imports the
@@ -24,9 +34,9 @@ const RULES = [
       ? `\`${module}\` may not import \`ui\``
       : undefined,
 
-  /** Only `ui` knows about Obsidian. */
+  /** Only `ui` knows about Obsidian, and only `ui` draws. */
   ({ module, specifier }) =>
-    APPLICATION.includes(specifier) && module !== "ui"
+    application(specifier) && module !== "ui"
       ? `\`${module ?? "src"}\` may not import \`${specifier}\``
       : undefined,
 
@@ -38,20 +48,23 @@ const RULES = [
 ];
 
 /**
- * Every rule, run over one file's imports and, for a test file, the
- * note it ends on.
+ * Every rule, run over one file's imports, its doc comments and, for a
+ * test file, the note it ends on.
  */
 export function check(file, text) {
   const found = [];
   const module = moduleOf(file);
   for (const { specifier, line } of imports(text)) {
-    const imported = moduleOf(specifier.startsWith("@/") ? specifier.slice(2) : "");
+    const imported = moduleOf(
+      specifier.startsWith("@/") ? specifier.slice(2) : "",
+    );
     for (const rule of RULES) {
       const said = rule({ module, imported, specifier });
       if (said !== undefined) found.push({ file, line, said });
     }
   }
-  if (file.endsWith(".test.ts") && backlog(text) === undefined) {
+  found.push(...checkDocs(file, text));
+  if (/\.test\.tsx?$/.test(file) && backlog(text) === undefined) {
     found.push({
       file,
       line: text.split("\n").length,
@@ -61,17 +74,49 @@ export function check(file, text) {
   return found;
 }
 
-/** Every file under `src`, checked in path order. */
-export async function lint(from = root) {
-  const files = [];
-  for await (const file of glob("src/**/*.ts", { cwd: from })) files.push(file);
-  files.sort();
-
+/** The doc comment rule, run over one file. */
+export function checkDocs(file, text) {
   const found = [];
-  for (const file of files) {
-    found.push(...check(file, await readFile(path.join(from, file), "utf8")));
+  for (const { first, line } of docs(text)) {
+    if (PUZZLE.test(first)) {
+      found.push({
+        file,
+        line,
+        said: "a doc comment opens with a question word; name the thing",
+      });
+    }
   }
   return found;
+}
+
+/**
+ * Every file under `src` checked in path order, then every file under
+ * `e2e` and `scripts` held to the doc comment rule.
+ */
+export async function lint(from = root) {
+  const found = [];
+  for (const [pattern, rule] of [
+    ["src/**/*.{ts,tsx}", check],
+    ["{e2e,scripts}/**/*.{ts,tsx,mjs}", checkDocs],
+  ]) {
+    const files = [];
+    for await (const file of glob(pattern, { cwd: from })) files.push(file);
+    files.sort();
+    for (const file of files) {
+      found.push(...rule(file, await readFile(path.join(from, file), "utf8")));
+    }
+  }
+  return found;
+}
+
+/** Whether a specifier is one of the packages only `ui` may reach. */
+function application(specifier) {
+  return (
+    APPLICATION.includes(specifier) ||
+    APPLICATION_SCOPES.some(
+      (scope) => specifier === scope || specifier.startsWith(`${scope}/`),
+    )
+  );
 }
 
 /** The first path segment, where it is one of the five modules. */
@@ -105,12 +150,34 @@ function imports(text) {
   return found.sort((a, b) => a.line - b.line);
 }
 
+/**
+ * Every doc comment's first line, with the line the comment starts on.
+ * A comment opens at the start of a line, so a `/**` inside a string
+ * or a glob is not one.
+ */
+function docs(text) {
+  const found = [];
+  for (const match of text.matchAll(/^[ \t]*\/\*\*([\s\S]*?)\*\//gm)) {
+    const first = match[1]
+      .split("\n")
+      .map((line) => line.replace(/^\s*\*?\s?/, ""))
+      .find((line) => line.trim() !== "");
+    if (first === undefined) continue;
+    found.push({
+      first: first.trim(),
+      line: text.slice(0, match.index).split("\n").length,
+    });
+  }
+  return found;
+}
+
 /** The note a test file ends on: what the suite does not cover. */
 function backlog(text) {
   const lines = text.split("\n");
   while (lines.length > 0 && lines.at(-1).trim() === "") lines.pop();
   const note = [];
-  while (lines.length > 0 && lines.at(-1).startsWith("//")) note.unshift(lines.pop());
+  while (lines.length > 0 && lines.at(-1).startsWith("//"))
+    note.unshift(lines.pop());
   const said = note.join("\n");
   return /does not/i.test(said) ? said : undefined;
 }

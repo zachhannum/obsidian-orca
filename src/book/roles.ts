@@ -3,13 +3,13 @@
  * comes from a note.
  */
 
-/** Where a section's text comes from. */
+/** The source of a section's text. */
 export type Origin = "note" | "generated";
 
 /** One role: whether a section in it comes from a note, and what it is called. */
 export interface Matter {
   origin: Origin;
-  /** What a section in this role is called when it has no note. */
+  /** The default name for a section in this role that has no note. */
   name: string;
 }
 
@@ -30,20 +30,11 @@ export type Role = keyof typeof MATTER;
 /** Every role, in the order the format lists them. */
 export const ROLES: Readonly<Record<Role, Matter>> = MATTER;
 
-/** The role an entry takes when neither its tag nor its heading names one. */
+/** The role an entry takes when it names none of its own. */
 export const DEFAULT_ROLE: Role = "chapter";
 
 /** The role a tag names, or nothing if it names none. */
 export function roleOf(tag: string): Role | undefined {
   const name = tag.trim();
   return Object.hasOwn(MATTER, name) ? (name as Role) : undefined;
-}
-
-/**
- * The role an entry under this heading has, when the entry itself
- * has no tag. A heading whose words name a role is that role,
- * and every other heading is `chapter`.
- */
-export function headingRole(heading: string): Role {
-  return roleOf(heading.trim().toLowerCase().replace(/\s+/g, "-")) ?? DEFAULT_ROLE;
 }

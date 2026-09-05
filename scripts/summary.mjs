@@ -9,7 +9,7 @@ import path from "node:path";
 import process from "node:process";
 import { root } from "./bundle.mjs";
 
-/** How much of a failure's message a summary carries. */
+/** Maximum length of a failure message quoted in the summary. */
 const QUOTED = 2000;
 
 export default async function* summary(events) {

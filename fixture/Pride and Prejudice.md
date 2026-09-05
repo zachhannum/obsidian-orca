@@ -27,7 +27,7 @@ status: drafting
 
 # Back matter
 
-- [[Acknowledgements]]
+- [[Acknowledgements]] `back-matter`
 
 # The book's css
 

@@ -101,3 +101,228 @@
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
+
+.orca-navigator {
+  padding: var(--size-4-2) var(--size-4-1);
+  overflow: auto;
+}
+
+.orca-nav-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-4-1) var(--size-4-2) var(--size-4-2);
+}
+
+.orca-nav-title {
+  flex: 1;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.orca-nav-quiet {
+  padding: var(--size-4-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+/* One book stands apart from the next. */
+.orca-shelves {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-4);
+}
+
+.orca-shelf:focus-visible {
+  outline: none;
+}
+
+/* Every row is one height, whatever it carries. */
+.orca-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  height: 26px;
+  padding: 0 var(--size-4-2);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.orca-nav-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.orca-nav-item.is-active {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* The row under the pointer is the row that lands, so it is lifted
+   where it sits. */
+.orca-nav-item.is-dragged,
+.orca-nav-heading.is-dragged {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    0 0 0 1px var(--color-accent);
+  color: var(--text-normal);
+  cursor: grabbing;
+}
+
+.orca-nav-heading.is-dragged::after {
+  display: none;
+}
+
+.orca-shelf-name {
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+}
+
+.orca-fold {
+  display: flex;
+  flex: none;
+  color: var(--text-faint);
+  --icon-size: var(--icon-xs);
+}
+
+.orca-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orca-nav-children {
+  margin-left: var(--size-4-3);
+  padding-left: var(--size-4-1);
+  border-left: 1px solid var(--divider-color);
+}
+
+/* A section reads as a divider, so it is never mistaken for a row. */
+.orca-nav-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  height: 24px;
+  margin-top: var(--size-4-2);
+  padding: 0 var(--size-4-2);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: grab;
+}
+
+.orca-nav-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+.orca-heading-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orca-rename {
+  height: 20px;
+  padding: 0 var(--size-4-1);
+  font-size: var(--font-ui-smaller);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* A fixed slot, so every label starts at the same edge. */
+.orca-entry-mark {
+  display: flex;
+  flex: none;
+  width: 14px;
+  --icon-size: var(--icon-xs);
+}
+
+.orca-entry[data-kind="generated"] {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.orca-entry[data-kind="generated"] .orca-entry-mark {
+  color: var(--text-faint);
+}
+
+.orca-entry[data-kind="missing"] .orca-entry-mark {
+  color: var(--color-orange);
+}
+
+.orca-entry[data-kind="missing"] .orca-label {
+  text-decoration: line-through;
+}
+
+.orca-chip {
+  flex: none;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--background-modifier-hover);
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  font-style: normal;
+}
+
+.orca-entry[data-kind="generated"] .orca-chip {
+  background: none;
+  color: var(--text-faint);
+}
+
+.orca-nav-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+/*
+ * An icon with no fill of its own until the pointer is on it. Obsidian
+ * fills every button that is not one of its own clickable icons, and
+ * that rule is as specific as a class, so this one is written to match
+ * it rather than to be outweighed by it.
+ */
+button.orca-nav-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-s);
+  box-shadow: none;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  --icon-size: var(--icon-xs);
+}
+
+button.orca-nav-action:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* The book's own `+` is quiet until the row is under the pointer. */
+.orca-shelf-name .orca-nav-actions {
+  opacity: 0;
+}
+
+.orca-shelf-name:hover .orca-nav-actions,
+.orca-shelf-name:focus-within .orca-nav-actions {
+  opacity: 1;
+}

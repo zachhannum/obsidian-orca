@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { pathLinks, target } from "@/book/links";
+import { linksIn, pathLinks, target } from "@/book/links";
 
 const PATHS = [
   "Pride and Prejudice.md",
@@ -35,6 +35,15 @@ test("a link's alias, heading and block are not part of the name", () => {
     links.find("Chapter Twelve#Netherfield|the carriage", "Pride and Prejudice.md"),
     "Chapter Twelve.md",
   );
+});
+
+test("a paste is read for the links in it, as they were written", () => {
+  assert.deepEqual(
+    linksIn("- [[Chapter Twelve]]\n- [[Volume the First|Volume I]]\n"),
+    ["Chapter Twelve", "Volume the First|Volume I"],
+  );
+  assert.deepEqual(linksIn("Chapter Twelve"), []);
+  assert.deepEqual(linksIn("[[]]"), []);
 });
 
 // What this tier does not cover: Obsidian's own resolution through

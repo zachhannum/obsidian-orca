@@ -7,6 +7,7 @@
 import { chromium, test as base } from "@playwright/test";
 import { Book } from "./book";
 import { CDP, FIXTURE } from "./launch";
+import { Navigator } from "./navigator";
 import { Note } from "./note";
 import { Obsidian } from "./obsidian";
 import { Vault } from "./vault";
@@ -15,6 +16,8 @@ interface Fixtures {
   book: Book;
   /** The book note's own view. */
   note: Note;
+  /** The navigator, which owns the structure of every book. */
+  navigator: Navigator;
   /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;
   record: void;
@@ -46,6 +49,10 @@ export const test = base.extend<Fixtures, Shared>({
     await note.close();
   },
 
+  navigator: async ({ obsidian }, use) => {
+    await use(new Navigator(obsidian));
+  },
+
   vault: async ({ obsidian }, use) => {
     const vault = new Vault(obsidian.page, FIXTURE);
     await use(vault);
@@ -53,8 +60,8 @@ export const test = base.extend<Fixtures, Shared>({
   },
 
   /**
-   * What a failure leaves behind: a picture of the window, and the
-   * trace a retry recorded.
+   * Keeps a screenshot of the window and the trace a retry recorded
+   * when a spec fails.
    */
   record: [
     async ({ obsidian }, use, spec) => {

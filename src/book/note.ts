@@ -3,7 +3,11 @@
  * properties orca owns, and how a note at an older format is read.
  */
 
-import { writeFrontmatter, type Properties, type Value } from "@/book/frontmatter";
+import {
+  writeFrontmatter,
+  type Properties,
+  type Value,
+} from "@/book/frontmatter";
 
 /** Frontmatter key that makes a note a book. Its value is the format. */
 export const BOOK_KEY = "orca-book";
@@ -20,7 +24,7 @@ export class BookError extends Error {
   }
 }
 
-/** What names the book, as the author writes it in the properties. */
+/** The book's metadata, as the author writes it in the properties. */
 export interface BookMetadata {
   title?: string;
   author?: string;
@@ -40,10 +44,10 @@ export interface Book {
 }
 
 /**
- * How one property orca owns is read and written. A `tag` comes from a
- * closed set and is quoted, because unquoted `no` is boolean false. A
- * `length` includes its unit, so it stays a string rather than becoming
- * a bare number.
+ * The kind of a property orca owns, which sets how it is read and
+ * written. A `tag` comes from a closed set and is quoted, because
+ * unquoted `no` is boolean false. A `length` includes its unit, so it
+ * stays a string rather than becoming a bare number.
  */
 export type Kind = "text" | "tag" | "length";
 
@@ -76,8 +80,9 @@ export const QUOTED: ReadonlySet<string> = new Set(
 /** The unit a length is written in when the note has a bare number. */
 const UNIT = "pt";
 
-/** What a note at one format needs to become the next one. */
-const STEPS: Readonly<Record<number, (properties: Properties) => Properties>> = {};
+/** The migration from each format to the next, keyed by the format it starts from. */
+const STEPS: Readonly<Record<number, (properties: Properties) => Properties>> =
+  {};
 
 /** The format a book note is written in, or nothing when the note is not a book. */
 export function bookFormat(properties: Properties): number | undefined {

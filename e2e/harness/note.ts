@@ -1,10 +1,11 @@
 /**
  * The book note's own view, reached by the test ids in its markup.
- * The way back to the manuscript is Obsidian's own chrome, so it goes
- * through the page object that has those class names.
+ * Obsidian's own chrome is the way back to the manuscript, so that
+ * goes through the page object that has those class names.
  */
 
 import { expect, type Locator } from "@playwright/test";
+import type { TFile } from "obsidian";
 import type { Model } from "@/book/model";
 import type { Obsidian } from "./obsidian";
 
@@ -14,7 +15,7 @@ export const BOOK = "orca-book";
 /** The type a book note is handed back to. */
 export const MARKDOWN = "markdown";
 
-/** The way to the manuscript and back, in each view's header and the file menu. */
+/** Labels of the actions that switch a note between the editor and the book view. */
 export const AS_MARKDOWN = "Open as markdown";
 export const AS_BOOK = "Open as book";
 
@@ -28,7 +29,7 @@ export class Note {
   readonly page: Locator;
   /** The state a book from a newer orca stops at. */
   readonly refused: Locator;
-  /** What the author answers when the note changed under an edit. */
+  /** The dialog shown when the note changed on disk under an unwritten edit. */
   readonly changed: Locator;
   /** The note as the editor shows it. */
   readonly markdown: Locator;
@@ -40,7 +41,7 @@ export class Note {
     this.markdown = obsidian.view(MARKDOWN);
   }
 
-  /** How many times the model the page shows has changed. */
+  /** Returns the generation of the model the page shows. */
   async painted(): Promise<number> {
     await expect(this.page).toHaveAttribute("data-generation", /\d+/);
     return Number(await this.page.getAttribute("data-generation"));
@@ -52,14 +53,34 @@ export class Note {
   }
 
   /**
-   * A dragged control: one edit a frame, in one turn of the renderer,
-   * so the frames land inside the settle rather than around it.
+   * Drags a control: one edit per frame, all in one turn of the
+   * renderer, so the frames land inside the settle rather than around
+   * it.
    */
   async drag(title: string, frames: number): Promise<void> {
+    await this.edited(title, frames, false);
+  }
+
+  /**
+   * Makes one edit and trashes the note in the same turn of the
+   * renderer, so the settle the edit armed is still waiting when the
+   * note goes.
+   */
+  async editAndDelete(title: string): Promise<void> {
+    await this.edited(title, 1, true);
+  }
+
+  /** Makes edits through the view, one per frame, then optionally trashes the note. */
+  private async edited(
+    title: string,
+    frames: number,
+    trash: boolean,
+  ): Promise<void> {
     await this.obsidian.page.evaluate(
-      ({ name, count, type }) => {
+      async ({ name, count, gone, type }) => {
         const leaf = window.app.workspace.getLeavesOfType(type)[0];
-        const view = leaf?.view as unknown as Editing | undefined;
+        const view = leaf?.view as unknown as
+          (Editing & { file: TFile | null }) | undefined;
         if (view === undefined) throw new Error("no book view is open");
         for (let frame = 0; frame < count; frame += 1) {
           const held = count === 1 ? name : `${name} ${frame}`;
@@ -71,8 +92,12 @@ export class Note {
             },
           }));
         }
+        if (!gone) return;
+        const note = view.file;
+        if (note === null) throw new Error("the view has no note");
+        await window.app.fileManager.trashFile(note);
       },
-      { name: title, count: frames, type: BOOK },
+      { name: title, count: frames, gone: trash, type: BOOK },
     );
   }
 

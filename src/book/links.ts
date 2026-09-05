@@ -6,7 +6,7 @@
  * read. Orca keeps no path of its own.
  */
 
-/** How a link finds its note. `ui` resolves one through the metadata cache. */
+/** Resolves a wikilink to a note. `ui` implements this over the metadata cache. */
 export interface Links {
   /**
    * The vault path a link names, seen from the note it is in, or
@@ -37,6 +37,18 @@ export function pathLinks(paths: Iterable<string>): Links {
       return nearest(found, from);
     },
   };
+}
+
+/**
+ * Every wikilink in a stretch of text, as written. A paste into the
+ * navigator is read with this, so a pasted link and a picked note write
+ * the same line.
+ */
+export function linksIn(text: string): string[] {
+  return [...text.matchAll(/\[\[([^\]]+)\]\]/g)].flatMap((found) => {
+    const link = (found[1] ?? "").trim();
+    return link === "" ? [] : [link];
+  });
 }
 
 /** The note a link names, without its alias, its heading or its block. */

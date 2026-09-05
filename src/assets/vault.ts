@@ -1,6 +1,6 @@
 import { AssetError } from "@/assets/errors";
 
-/** What is in a folder, as vault paths. */
+/** The contents of a folder, as vault paths. */
 export interface Listing {
   files: string[];
   folders: string[];
@@ -17,7 +17,7 @@ export interface VaultAdapter {
   read(path: string): Promise<string>;
   /** A file's bytes. */
   readBinary(path: string): Promise<ArrayBuffer>;
-  /** What is directly under a folder. */
+  /** Lists the files and folders directly under a folder. */
   list(folder: string): Promise<Listing>;
 }
 
