@@ -53,7 +53,7 @@ test("the quick pick, `Add to book` and a pasted wikilink write the same line", 
   await expect(navigator.book(BOOK)).toBeVisible();
 
   await navigator.adding(BOOK);
-  await obsidian.item("Add an existing note").click();
+  await obsidian.choose("Add an existing note");
   await navigator.pick("Route One");
   await expect(navigator.entry(BOOK, "Route One")).toBeVisible();
 
@@ -81,7 +81,7 @@ test("`New chapter` makes a note in the book's folder and appends it in one step
   await navigator.reveal();
 
   await navigator.adding(BOOK);
-  await obsidian.item("New chapter").click();
+  await obsidian.choose("New chapter");
 
   await expect(navigator.entry(BOOK, "New chapter")).toBeVisible();
   expect(await vault.read("New chapter.md")).toContain("# New chapter");
@@ -145,8 +145,8 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     "data-at",
     "7",
   );
-  await navigator.entry(BOOK, "Chapter Twelve").click({ button: "right" });
-  await obsidian.item("Role for this entry").click();
+  await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
+  await obsidian.choose("Role for this entry");
   await navigator.pick("Epigraph");
 
   await expect
@@ -162,11 +162,11 @@ test("`Remove from book` takes the entry out and nothing else, and an entry neve
   vault.touch(BOOK);
   await navigator.reveal();
 
-  await navigator.entry(BOOK, "Chapter Twelve").click({ button: "right" });
+  await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
 
   await expect(obsidian.menu()).toBeVisible();
   await expect(obsidian.item("Delete")).toHaveCount(0);
-  await obsidian.item("Remove from book").click();
+  await obsidian.choose("Remove from book");
 
   await expect(navigator.entry(BOOK, "Chapter Twelve")).toHaveCount(0);
   await expect.poll(async () => vault.read(BOOK)).not.toContain("Chapter Twelve");
@@ -185,13 +185,13 @@ test("a book is deleted only after the author says so, and its notes stay", asyn
 
   // The book note is orca's own, so it is the one thing here that
   // deletes. Nothing goes until the question is answered.
-  await navigator.name(SECOND).click({ button: "right" });
-  await obsidian.item("Delete book").click();
+  await navigator.menuOn(navigator.name(SECOND));
+  await obsidian.choose("Delete book");
   await navigator.answer("Cancel");
   await expect(navigator.book(SECOND)).toBeVisible();
 
-  await navigator.name(SECOND).click({ button: "right" });
-  await obsidian.item("Delete book").click();
+  await navigator.menuOn(navigator.name(SECOND));
+  await obsidian.choose("Delete book");
   await navigator.answer("Delete");
 
   await expect(navigator.book(SECOND)).toHaveCount(0);
@@ -209,7 +209,7 @@ test("a generated section is added by its role, and reads as one", async ({
   await navigator.reveal();
 
   await navigator.adding(BOOK);
-  await obsidian.item("New generated section").click();
+  await obsidian.choose("New generated section");
   await navigator.pick("Title page");
 
   // It goes where a chapter would, and carries no link at all.
@@ -236,14 +236,14 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   ]);
 
   await navigator.adding(BOOK);
-  await obsidian.item("New section").click();
+  await obsidian.choose("New section");
 
   await expect.poll(async () => vault.read(BOOK)).toContain("# New section\n");
 
   // A rename is the heading's own line. The entries under it keep the
   // roles they carry, because the heading never gave them one.
-  await navigator.group(BOOK, "Front matter").click({ button: "right" });
-  await obsidian.item("Rename section").click();
+  await navigator.menuOn(navigator.group(BOOK, "Front matter"));
+  await obsidian.choose("Rename section");
   await navigator.renaming(BOOK).fill("Prelims");
   await navigator.renaming(BOOK).press("Enter");
 
@@ -297,8 +297,8 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   ]);
 
   // Taking a section out takes its heading and nothing else.
-  await navigator.group(BOOK, "New section").click({ button: "right" });
-  await obsidian.item("Remove section").click();
+  await navigator.menuOn(navigator.group(BOOK, "New section"));
+  await obsidian.choose("Remove section");
   await expect.poll(async () => vault.read(BOOK)).not.toContain("# New section");
   await expect(navigator.entry(BOOK, "Acknowledgements")).toBeVisible();
 });

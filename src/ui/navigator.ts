@@ -47,6 +47,8 @@ export class NavigatorView extends ItemView {
   private queued: number | undefined;
   private generation = 0;
   private painting = 0;
+  /** The shelf as it was last painted, which an identical read skips. */
+  private shown = "";
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -164,6 +166,12 @@ export class NavigatorView extends ItemView {
     // The notes are read one at a time, so a later refresh can finish
     // first; the last one asked for is the one painted.
     if (run !== this.painting) return;
+    // One write raises several vault events, and each of them asks for
+    // the shelf again. A shelf that reads the same is not painted
+    // again, so the list does not move under the author's pointer.
+    const read = JSON.stringify(shelf);
+    if (read === this.shown) return;
+    this.shown = read;
     this.generation += 1;
     this.mounted?.paint(shelf, this.generation);
   }

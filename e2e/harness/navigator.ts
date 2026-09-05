@@ -85,6 +85,16 @@ export class Navigator {
     await expect(this.obsidian.menu()).toBeVisible();
   }
 
+  /**
+   * One row's own menu, opened. The menu is on screen before a spec
+   * reads it: Obsidian builds one on the event, and an item clicked
+   * before it is up is an item nothing answers.
+   */
+  async menuOn(row: Locator): Promise<void> {
+    await row.click({ button: "right" });
+    await expect(this.obsidian.menu()).toBeVisible();
+  }
+
   /** How many times the shelf has been drawn. */
   async painted(): Promise<number> {
     await expect(this.pane).toHaveAttribute("data-generation", /\d+/);

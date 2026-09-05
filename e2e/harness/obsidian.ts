@@ -4,7 +4,7 @@
  * is reached by those instead.
  */
 
-import type { Browser, Locator, Page } from "@playwright/test";
+import { expect, type Browser, type Locator, type Page } from "@playwright/test";
 import type { App } from "obsidian";
 
 /** The two pieces of the app the API does not declare. */
@@ -120,6 +120,19 @@ export class Obsidian {
     return this.menu().locator(CHROME.item).filter({ hasText: title });
   }
 
+  /**
+   * One item on the open menu, chosen. Obsidian runs the item and takes
+   * the menu off the page in the same task, so a menu still standing is
+   * a click nothing answered, and the item is clicked again.
+   */
+  async choose(title: string): Promise<void> {
+    const item = this.item(title);
+    await expect(async () => {
+      await item.click();
+      await expect(this.menu()).toHaveCount(0, { timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  }
+
   /** One command, run the way the palette runs it. */
   async command(id: string): Promise<void> {
     await this.page.evaluate((named) => {
@@ -150,8 +163,21 @@ export class Obsidian {
    * The items a file's or a folder's own context menu offers, and the
    * one `title` names, clicked. Obsidian fills that menu by asking
    * every plugin for its items, which is what this asks in its place.
+   *
+   * A plugin reading the metadata cache has nothing to offer for a note
+   * the cache has not taken yet, so the menu is asked again until the
+   * item named is on it.
    */
   async fileMenu(path: string, title?: string): Promise<string[]> {
+    if (title === undefined) return this.offered(path);
+    let found: string[] = [];
+    await expect(async () => {
+      found = await this.offered(path, title);
+    }).toPass({ timeout: 30_000 });
+    return found;
+  }
+
+  private async offered(path: string, title?: string): Promise<string[]> {
     return this.page.evaluate(
       ({ at, clicked }) => {
         const found: { title: string; click: (() => void) | undefined }[] = [];
