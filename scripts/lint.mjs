@@ -1,6 +1,7 @@
 /**
  * The dependency rule and the conventions around it, checked over
- * `src`. A violation names the file, the line and the rule.
+ * `src`. The doc comment rule also runs over `e2e` and `scripts`. A
+ * violation names the file, the line and the rule.
  */
 
 import { glob, readFile } from "node:fs/promises";
@@ -62,15 +63,7 @@ export function check(file, text) {
       if (said !== undefined) found.push({ file, line, said });
     }
   }
-  for (const { first, line } of docs(text)) {
-    if (PUZZLE.test(first)) {
-      found.push({
-        file,
-        line,
-        said: "a doc comment opens with a question word; name the thing",
-      });
-    }
-  }
+  found.push(...checkDocs(file, text));
   if (/\.test\.tsx?$/.test(file) && backlog(text) === undefined) {
     found.push({
       file,
@@ -81,17 +74,37 @@ export function check(file, text) {
   return found;
 }
 
-/** Every file under `src`, checked in path order. */
-export async function lint(from = root) {
-  const files = [];
-  for await (const file of glob("src/**/*.{ts,tsx}", { cwd: from })) {
-    files.push(file);
-  }
-  files.sort();
-
+/** The doc comment rule, run over one file. */
+export function checkDocs(file, text) {
   const found = [];
-  for (const file of files) {
-    found.push(...check(file, await readFile(path.join(from, file), "utf8")));
+  for (const { first, line } of docs(text)) {
+    if (PUZZLE.test(first)) {
+      found.push({
+        file,
+        line,
+        said: "a doc comment opens with a question word; name the thing",
+      });
+    }
+  }
+  return found;
+}
+
+/**
+ * Every file under `src` checked in path order, then every file under
+ * `e2e` and `scripts` held to the doc comment rule.
+ */
+export async function lint(from = root) {
+  const found = [];
+  for (const [pattern, rule] of [
+    ["src/**/*.{ts,tsx}", check],
+    ["{e2e,scripts}/**/*.{ts,tsx,mjs}", checkDocs],
+  ]) {
+    const files = [];
+    for await (const file of glob(pattern, { cwd: from })) files.push(file);
+    files.sort();
+    for (const file of files) {
+      found.push(...rule(file, await readFile(path.join(from, file), "utf8")));
+    }
   }
   return found;
 }
@@ -137,10 +150,14 @@ function imports(text) {
   return found.sort((a, b) => a.line - b.line);
 }
 
-/** Every doc comment's first line, with the line the comment starts on. */
+/**
+ * Every doc comment's first line, with the line the comment starts on.
+ * A comment opens at the start of a line, so a `/**` inside a string
+ * or a glob is not one.
+ */
 function docs(text) {
   const found = [];
-  for (const match of text.matchAll(/\/\*\*([\s\S]*?)\*\//g)) {
+  for (const match of text.matchAll(/^[ \t]*\/\*\*([\s\S]*?)\*\//gm)) {
     const first = match[1]
       .split("\n")
       .map((line) => line.replace(/^\s*\*?\s?/, ""))

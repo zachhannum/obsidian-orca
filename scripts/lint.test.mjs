@@ -90,6 +90,13 @@ test("a doc comment opens with a name, not a question word", () => {
     ),
     [],
   );
+  assert.deepEqual(
+    said(
+      "src/book/note.ts",
+      'const text = "/** What a glob opens. */";\n/** The glob. */\nconst at = "src/**/*.ts";\n',
+    ),
+    [],
+  );
 });
 
 test("a test file missing the note on what it does not cover is a violation", () => {
