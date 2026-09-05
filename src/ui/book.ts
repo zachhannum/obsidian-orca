@@ -53,6 +53,12 @@ export class BookView extends FileView {
         }
       }),
     );
+    // The note is gone, so an unwritten edit has nowhere to settle.
+    this.registerEvent(
+      this.app.vault.on("delete", (file) => {
+        if (file.path === this.file?.path) this.writer = undefined;
+      }),
+    );
     return Promise.resolve();
   }
 

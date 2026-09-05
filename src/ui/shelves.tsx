@@ -5,7 +5,7 @@
  * A section is organisational. It can be made, renamed, moved and
  * taken out, and none of that touches the roles of the entries under
  * it. A book's reading order is one flat sortable list, and there is
- * no overlay over it: the row under the pointer is the row that lands.
+ * no overlay: the row under the pointer is the row that lands.
  */
 
 import {
@@ -42,9 +42,9 @@ import { ROLES } from "@/book/roles";
 import {
   collapse,
   flatten,
+  groupId,
   headingOf,
   isGroup,
-  groupId,
   moveRow,
   moveSection,
   places,
@@ -141,17 +141,15 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
 }
 
 /**
- * A row goes to its new place at once. The drag has already shown the
- * author where it lands, so animating the list into the order the note
- * came back with would only replay it, from wherever the drag left the
- * row.
+ * A row goes to its new place at once: the drag has already shown the
+ * author where it lands.
  */
-const settled = (): boolean => false;
+const animates = (): boolean => false;
 
 /**
  * What the pointer is over, by where it is down the list. A rectangle
  * holding the pointer wins, and otherwise the nearest one does, so a
- * drop past the last row still lands on the list rather than nowhere.
+ * drop past the last row lands on the last row.
  */
 const detect: CollisionDetection = ({
   droppableContainers,
@@ -442,7 +440,7 @@ function Heading({
 }): JSX.Element {
   const sortable = useSortable({
     id: groupId(heading),
-    animateLayoutChanges: settled,
+    animateLayoutChanges: animates,
   });
   const style = {
     transform: CSS.Translate.toString(sortable.transform),
@@ -493,6 +491,14 @@ function Rename({
   done: (named: string) => void;
 }): JSX.Element {
   const held = useRef<HTMLInputElement>(null);
+  // Taking the input off the page blurs it, so Escape would be answered
+  // twice: once cancelled, and once with the name it was cancelling.
+  const answered = useRef(false);
+  const once = (named: string): void => {
+    if (answered.current) return;
+    answered.current = true;
+    done(named);
+  };
   useLayoutEffect(() => {
     held.current?.focus();
     held.current?.select();
@@ -507,13 +513,13 @@ function Rename({
         event.stopPropagation();
       }}
       onBlur={(event) => {
-        done(event.currentTarget.value.trim());
+        once(event.currentTarget.value.trim());
       }}
       onKeyDown={(event) => {
         // The sortable is up the tree and answers these keys too.
         event.stopPropagation();
         if (event.key === "Enter") event.currentTarget.blur();
-        if (event.key === "Escape") done("");
+        if (event.key === "Escape") once("");
       }}
     />
   );
@@ -532,7 +538,7 @@ function Entry({
 }): JSX.Element {
   const sortable = useSortable({
     id: rowId(row.at),
-    animateLayoutChanges: settled,
+    animateLayoutChanges: animates,
   });
   const style = {
     transform: CSS.Translate.toString(sortable.transform),

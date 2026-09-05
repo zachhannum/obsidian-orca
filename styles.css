@@ -163,11 +163,8 @@
   color: var(--text-normal);
 }
 
-/*
- * The row under the pointer is the row that lands, so it is lifted
- * where it sits rather than copied to something that follows the
- * pointer.
- */
+/* The row under the pointer is the row that lands, so it is lifted
+   where it sits. */
 .orca-nav-item.is-dragged,
 .orca-nav-heading.is-dragged {
   position: relative;

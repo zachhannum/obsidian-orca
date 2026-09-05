@@ -2,10 +2,9 @@
  * A book's reading order as one flat list: a section's heading, then
  * the entries under it.
  *
- * The navigator drags rows in that list rather than in a section and
- * the sections around it, so a row and a whole section are one kind of
- * thing to drag and a drop lands where the gap opened. A section drags
- * with its entries hidden, because they travel with it.
+ * A row and a whole section are one kind of thing to drag, and a drop
+ * lands where the gap opened. A section drags with its entries hidden,
+ * because they travel with it.
  */
 
 import type { Place } from "@/book/order";

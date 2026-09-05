@@ -121,10 +121,6 @@ export class Navigator {
    * One row dragged onto another. dnd-kit starts a drag once the
    * pointer has travelled its activation distance, so the pointer moves
    * away before it travels to where it lands.
-   *
-   * The list is measured when the drag starts, and a dragged section
-   * hides its entries at that moment, so where a row ends up is read
-   * from the row rather than from the pointer.
    */
   async drag(from: Locator, to: Locator, onto: Onto): Promise<void> {
     const { mouse } = this.obsidian.page;

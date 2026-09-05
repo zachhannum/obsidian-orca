@@ -164,7 +164,6 @@ test("`Remove from book` takes the entry out and nothing else, and an entry neve
 
   await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
 
-  await expect(obsidian.menu()).toBeVisible();
   await expect(obsidian.item("Delete")).toHaveCount(0);
   await obsidian.choose("Remove from book");
 

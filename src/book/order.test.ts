@@ -5,8 +5,8 @@ import { test } from "node:test";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { readFrontmatter } from "@/book/frontmatter";
-import { pathLinks } from "@/book/links";
-import { linksIn } from "@/book/links";
+import { linksIn, pathLinks } from "@/book/links";
+import { newBook } from "@/book/create";
 import {
   add,
   addGenerated,
@@ -23,6 +23,7 @@ import {
   renameGroup,
   resolve,
   retag,
+  defaultHeading,
   writeOrder,
   type Order,
   type Section,
@@ -311,6 +312,14 @@ test("a section is made, renamed, moved and taken out, and its entries stay", as
   assert.deepEqual(entries(gone).map(entryName), entries(book).map(entryName));
   assert.equal(entries(gone).at(-1)?.heading, "Body");
   assert.equal(entries(gone).at(-1)?.role, "back-matter");
+  // The heading takes one of its blank lines with it, so where it was
+  // reads as one break rather than two.
+  assert.equal(
+    writeOrder(gone).includes(
+      "- [[Chapter Four]]\n\n- [[Acknowledgements]] `back-matter`\n\n# The book's css",
+    ),
+    true,
+  );
 });
 
 test("removing an entry takes out its line and nothing else", async () => {
@@ -369,6 +378,18 @@ test("a generated section is added by its role, and has no note to find", async 
     warnings.some((warning) => warning.entry.role === "contents"),
     false,
   );
+});
+
+test("a book with no chapters yet appends to its body", async () => {
+  const made = newBook({}, []);
+
+  const added = add(made.order, "Chapter One");
+
+  assert.equal(defaultHeading(made.order), "Body");
+  assert.equal(entries(added).at(-1)?.heading, "Body");
+  // The group most of the book's chapters are in wins once there are
+  // any, wherever in the note it sits.
+  assert.equal(defaultHeading(added), "Body");
 });
 
 // What this tier does not cover: the navigator, which renders a

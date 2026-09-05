@@ -71,9 +71,8 @@ export class Obsidian {
     await page.evaluate(() => {
       const vault = window.app.vault as unknown as Config;
       vault.setConfig("nativeMenus", false);
-      // A delete goes where the author sends it. The run sends one
-      // inside the vault it opened, rather than to the machine's own
-      // wastebasket.
+      // A delete goes where the author's setting sends it. The run
+      // keeps one inside the vault it opened.
       vault.setConfig("trashOption", "local");
     });
     return new Obsidian(page);
@@ -123,11 +122,14 @@ export class Obsidian {
   /**
    * One item on the open menu, chosen. Obsidian runs the item and takes
    * the menu off the page in the same task, so a menu still standing is
-   * a click nothing answered, and the item is clicked again.
+   * a click nothing answered, and the item is clicked again. A menu
+   * already gone is a click that landed, and is never clicked twice.
    */
   async choose(title: string): Promise<void> {
     const item = this.item(title);
+    await expect(item).toBeVisible();
     await expect(async () => {
+      if ((await this.menu().count()) === 0) return;
       await item.click();
       await expect(this.menu()).toHaveCount(0, { timeout: 1000 });
     }).toPass({ timeout: 30_000 });
@@ -171,9 +173,13 @@ export class Obsidian {
   async fileMenu(path: string, title?: string): Promise<string[]> {
     if (title === undefined) return this.offered(path);
     let found: string[] = [];
+    // The menu is only read while it is asked again, so an item is run
+    // once however many times the menu was built.
     await expect(async () => {
-      found = await this.offered(path, title);
+      found = await this.offered(path);
+      expect(found).toContain(title);
     }).toPass({ timeout: 30_000 });
+    await this.offered(path, title);
     return found;
   }
 

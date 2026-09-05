@@ -1,4 +1,4 @@
-import { ItemView, Menu, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Menu, Notice, type WorkspaceLeaf } from "obsidian";
 import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
 import {
@@ -389,8 +389,7 @@ export class NavigatorView extends ItemView {
 
   /**
    * A section orca sets in place of a note, picked by its role. The
-   * text it is set from is the synthesis pass's, and the reading order
-   * is where the author says one belongs.
+   * reading order is where the author says one belongs.
    */
   private pickGenerated(book: Shelved, heading: string | undefined): void {
     const made = (Object.keys(ROLES) as Role[]).filter(
@@ -420,7 +419,14 @@ export class NavigatorView extends ItemView {
       verb: "Delete",
       done: () => {
         const note = this.app.vault.getFileByPath(book.path);
-        if (note !== null) void this.app.fileManager.trashFile(note);
+        if (note === null) return;
+        void this.app.fileManager.trashFile(note).catch((cause: unknown) => {
+          new Notice(
+            `Orca: the book was not deleted. ${
+              cause instanceof Error ? cause.message : String(cause)
+            }`,
+          );
+        });
       },
     });
   }

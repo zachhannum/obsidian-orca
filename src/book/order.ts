@@ -155,8 +155,8 @@ export function groups(order: Order): Group[] {
 /**
  * The heading a note added without a place goes under: the group most
  * of the book's chapters are already in, which is derived the way the
- * chapter folder is. A book with no chapters yet appends to its last
- * group, and a book with no groups at all gets one.
+ * chapter folder is. A book with no chapters yet appends to its `Body`,
+ * then to its last group, and a book with no groups at all gets one.
  */
 export function defaultHeading(order: Order): string {
   const found = groups(order);
@@ -177,7 +177,9 @@ export function defaultHeading(order: Order): string {
       most = count;
     }
   }
-  return home ?? found.at(-1)?.heading ?? BODY;
+  if (home !== undefined) return home;
+  const body = found.find((group) => group.heading === BODY);
+  return body?.heading ?? found.at(-1)?.heading ?? BODY;
 }
 
 /**
@@ -349,10 +351,19 @@ export function renameGroup(order: Order, heading: string, named: string): Order
  */
 export function removeGroup(order: Order, heading: string): Order {
   if (heading === "") return order;
-  const blocks = order.blocks.filter(
-    (block) => block.kind !== "heading" || block.heading !== heading,
+  const at = order.blocks.findIndex(
+    (block) => block.kind === "heading" && block.heading === heading,
   );
-  return settle({ blocks });
+  if (at < 0) return order;
+  // A heading is written with a blank line above it and one below. One
+  // of the two goes with it, so the entries that join the section above
+  // are not left with a blank line each side of where it was.
+  const above = blank(order.blocks[at - 1]);
+  const from = above ? at - 1 : at;
+  const to = above || !blank(order.blocks[at + 1]) ? at + 1 : at + 2;
+  return settle({
+    blocks: [...order.blocks.slice(0, from), ...order.blocks.slice(to)],
+  });
 }
 
 /**
