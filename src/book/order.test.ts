@@ -392,6 +392,20 @@ test("a book with no chapters yet appends to its body", async () => {
   assert.equal(defaultHeading(added), "Body");
 });
 
+test("a section taken out takes one blank line with it, wherever it sits", () => {
+  // The note opens on the heading, so there is no blank line above it
+  // and the one below goes instead.
+  const first = readOrder("# One\n\n- [[A]]\n\n# Two\n\n- [[B]]\n");
+  assert.equal(
+    writeOrder(removeGroup(first, "One")),
+    "- [[A]]\n\n# Two\n\n- [[B]]\n",
+  );
+
+  // An empty group above it keeps its own heading and the line under it.
+  const empty = readOrder("# One\n\n# Two\n\n- [[B]]\n");
+  assert.equal(writeOrder(removeGroup(empty, "Two")), "# One\n\n- [[B]]\n");
+});
+
 // What this tier does not cover: the navigator, which renders a
 // missing entry in place and drags a row or a whole section, and the
 // crossing to the engine, which is the op planner's and waits on the

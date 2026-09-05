@@ -40,6 +40,7 @@ const CHROME = {
   menu: ".menu",
   item: ".menu-item",
   suggestion: ".suggestion-item",
+  notice: ".notice",
 };
 
 /**
@@ -159,6 +160,11 @@ export class Obsidian {
   /** One row of a fuzzy pick's suggestions. */
   suggestion(): Locator {
     return this.page.locator(CHROME.suggestion);
+  }
+
+  /** What orca has told the author, which a spec reads to find nothing said. */
+  notice(): Locator {
+    return this.page.locator(CHROME.notice);
   }
 
   /**

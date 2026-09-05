@@ -4,6 +4,13 @@ import { expect, test } from "./harness/test";
 const BOOK = "Pride and Prejudice.md";
 const NEWER = "The Voyage to Lilliput.md";
 
+/** Another, opened in a leaf the first spec has not handed to the editor. */
+const AHEAD = "The Voyage to Brobdingnag.md";
+
+/** A book note from a newer orca than this build. */
+const newer = (title: string): string =>
+  `---\norca-book: 2\ntitle: ${title}\n---\n\n# Body\n\n- [[Chapter Twelve]]\n`;
+
 test("a note with the key opens in orca's view, and `Open as markdown` returns it", async ({
   note,
   vault,
@@ -36,10 +43,7 @@ test("a book from a newer orca does not open, names both formats, and offers `Op
   note,
   vault,
 }) => {
-  await vault.write(
-    NEWER,
-    "---\norca-book: 2\ntitle: The Voyage to Lilliput\n---\n\n# Body\n\n- [[Chapter Twelve]]\n",
-  );
+  await vault.write(NEWER, newer("The Voyage to Lilliput"));
 
   await note.open(NEWER);
 
@@ -52,4 +56,25 @@ test("a book from a newer orca does not open, names both formats, and offers `Op
 
   await expect(note.markdown).toBeVisible();
   await expect(note.markdown).toContainText("Chapter Twelve");
+});
+
+test("an edit aimed at a book its view cannot write is refused out loud", async ({
+  navigator,
+  note,
+  obsidian,
+  vault,
+}) => {
+  await vault.write(AHEAD, newer("The Voyage to Brobdingnag"));
+
+  await note.open(AHEAD);
+  await expect(note.refused).toBeVisible();
+
+  // A view is the note's one writer while it is open, and a refused
+  // book has none at all. The edit goes to the note rather than to a
+  // view that would drop it, and the note refuses it in turn.
+  await obsidian.fileMenu("Acknowledgements.md", "Add to book");
+  await navigator.pick("Brobdingnag");
+
+  await expect(obsidian.notice()).toContainText("the book was not edited");
+  expect(await vault.read(AHEAD)).toEqual(newer("The Voyage to Brobdingnag"));
 });

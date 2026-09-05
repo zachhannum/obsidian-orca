@@ -38,6 +38,16 @@ test("a folder of notes becomes a book in sorted order, and `New book` makes an 
     .poll(async () => vault.read("Untitled book.md"))
     .toContain("orca-book: 1");
   await expect(navigator.book("Untitled book.md")).toContainText("Body");
+
+  // A book with no chapters yet appends to its body, not to whichever
+  // of its groups the note happens to write last.
+  await navigator.adding("Untitled book.md");
+  await obsidian.choose("Add an existing note");
+  await navigator.pick("Chapter Twelve");
+
+  await expect
+    .poll(async () => vault.read("Untitled book.md"))
+    .toContain("# Body\n\n- [[Chapter Twelve]]\n");
 });
 
 test("the quick pick, `Add to book` and a pasted wikilink write the same line", async ({
@@ -175,12 +185,17 @@ test("`Remove from book` takes the entry out and nothing else, and an entry neve
 
 test("a book is deleted only after the author says so, and its notes stay", async ({
   navigator,
+  note,
   obsidian,
   vault,
 }) => {
   await vault.write(SECOND, NOVELS);
   await navigator.reveal();
   await expect(navigator.book(SECOND)).toBeVisible();
+  // The book is open in its own view, which is the note's one writer
+  // while it is: a trashed note leaves it nothing to write back to.
+  await note.open(SECOND);
+  await expect(note.page).toBeVisible();
 
   // The book note is orca's own, so it is the one thing here that
   // deletes. Nothing goes until the question is answered.
@@ -197,6 +212,36 @@ test("a book is deleted only after the author says so, and its notes stay", asyn
   await expect.poll(async () => vault.notes()).not.toContain(SECOND);
   // The notes the book listed are borrowed, and stay in the vault.
   expect(await vault.notes()).toContain("Chapter Twelve.md");
+  // The view the note was open in wrote nothing back to a path the
+  // vault no longer has.
+  await expect(obsidian.notice()).toHaveCount(0);
+  expect(await vault.notes()).not.toContain(SECOND);
+});
+
+test("a book deleted under an unwritten edit has nothing written back to it", async ({
+  navigator,
+  note,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await vault.write(SECOND, NOVELS);
+  await navigator.reveal();
+  await note.open(SECOND);
+  await expect(note.page).toBeVisible();
+
+  await note.editAndDelete("The Bennet Novels");
+
+  // The settle that edit armed comes due a second later. The fixture
+  // book's own settle is the wait for that second having passed, since
+  // it is armed after the delete and lands after its own.
+  await note.open(BOOK);
+  await note.edit("Settled");
+  await expect.poll(async () => vault.read(BOOK)).toContain("title: Settled");
+
+  expect(await vault.notes()).not.toContain(SECOND);
+  await expect(obsidian.notice()).toHaveCount(0);
+  await expect(navigator.book(SECOND)).toHaveCount(0);
 });
 
 test("a generated section is added by its role, and reads as one", async ({

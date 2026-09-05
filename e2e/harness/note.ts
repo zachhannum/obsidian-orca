@@ -5,6 +5,7 @@
  */
 
 import { expect, type Locator } from "@playwright/test";
+import type { TFile } from "obsidian";
 import type { Model } from "@/book/model";
 import type { Obsidian } from "./obsidian";
 
@@ -73,6 +74,31 @@ export class Note {
         }
       },
       { name: title, count: frames, type: BOOK },
+    );
+  }
+
+  /**
+   * One edit, and the note trashed in the same turn of the renderer, so
+   * the settle the edit armed is still waiting when the note goes.
+   */
+  async editAndDelete(title: string): Promise<void> {
+    await this.obsidian.page.evaluate(
+      async ({ name, type }) => {
+        const leaf = window.app.workspace.getLeavesOfType(type)[0];
+        const view = leaf?.view as unknown as (Editing & { file: TFile | null }) | undefined;
+        if (view === undefined) throw new Error("no book view is open");
+        view.edit((model) => ({
+          ...model,
+          book: {
+            ...model.book,
+            metadata: { ...model.book.metadata, title: name },
+          },
+        }));
+        const held = view.file;
+        if (held === null) throw new Error("the view has no note");
+        await window.app.fileManager.trashFile(held);
+      },
+      { name: title, type: BOOK },
     );
   }
 
