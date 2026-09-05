@@ -160,10 +160,10 @@ export class Navigator {
     const floor = await this.obsidian.page.evaluate(() => window.innerHeight - 2);
     await mouse.move(start.x + 20, start.y + start.height / 2);
     await mouse.down();
-    // One app runs the whole suite, so everything the button is down
-    // for lets go and takes the drag back on the way out. A button
-    // left down, or a drop whose write outruns the fixture going back,
-    // is every spec after this one failing on this one's finding.
+    // One app runs the whole suite, so the button is released and the
+    // drag cancelled on every way out of this block. A button left
+    // down, or a drop whose write outruns the fixture going back, fails
+    // every spec after this one.
     try {
       await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
       await mouse.move(start.x + 20, floor, { steps: 15 });

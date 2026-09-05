@@ -68,8 +68,7 @@ export async function createChapter(
 }
 
 /**
- * The markdown notes directly in a folder, sorted. An import is the one
- * time orca trusts alphabetical order.
+ * The markdown notes directly in a folder, sorted.
  */
 function sorted(folder: TFolder): TFile[] {
   return folder.children

@@ -143,15 +143,14 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
 }
 
 /**
- * A row goes to its new place at once: the drag has already shown the
- * author where it lands.
+ * A row goes to its new place at once, where the drag already drew it.
  */
 const animates = (): boolean => false;
 
 /**
- * What the pointer is over, by where it is down the list. A rectangle
- * holding the pointer wins, and otherwise the nearest one does, so a
- * drop past the last row lands on the last row.
+ * What the pointer is over, by where it is down the list. It is the
+ * rectangle holding the pointer, or the nearest one when none holds it,
+ * so a drop past the last row lands on the last row.
  */
 const detect: CollisionDetection = ({
   droppableContainers,
@@ -180,8 +179,8 @@ const detect: CollisionDetection = ({
  *
  * The rect plus the transform is where the row is now: dnd-kit adds
  * back the distance the pane has scrolled since it measured the row,
- * so neither term wants correcting here. What does move is the list,
- * which is why it is measured on every move rather than once.
+ * so neither term needs correcting here. The list does move, so it is
+ * measured on every move.
  */
 const inside =
   (list: RefObject<HTMLDivElement | null>): Modifier =>
@@ -298,7 +297,7 @@ function Book({
 }): JSX.Element {
   const [folded, setFolded] = useState(false);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
-  /** The section a drag is carrying, whose entries travel with it. */
+  /** The section a drag is carrying, whose entries move with it. */
   const [carried, setCarried] = useState<string | undefined>(undefined);
   /** The list the drop left, until the note has been written and read back. */
   const [dropped, setDropped] = useState<Item[] | undefined>(undefined);
@@ -462,7 +461,7 @@ function Heading({
 }: {
   book: Shelved;
   heading: string;
-  /** How many entries travel with it, while it is the one being dragged. */
+  /** How many entries move with it, while it is the one being dragged. */
   carrying: number | undefined;
   acting: Acting;
   renaming: boolean;

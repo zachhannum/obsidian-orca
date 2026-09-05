@@ -33,4 +33,4 @@ test("a book's folder is where most of its chapters are", async () => {
 
 // What this tier does not cover: a book whose chapters are spread
 // evenly over two folders, where the folder the count settles on is
-// arbitrary and the author is the one who should say.
+// arbitrary.

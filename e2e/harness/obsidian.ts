@@ -177,8 +177,8 @@ export class Obsidian {
   async notices(during: () => Promise<void>): Promise<string[]> {
     await this.page.evaluate((selector) => {
       const said: string[] = [];
-      // Obsidian makes the container the first time it says anything,
-      // so the watch is on the body rather than on the container.
+      // Obsidian makes the container on the first notice, so the watch
+      // is on the body rather than on the container.
       const watch = new MutationObserver((records) => {
         for (const record of records) {
           for (const node of record.addedNodes) {

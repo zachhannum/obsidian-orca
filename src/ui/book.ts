@@ -175,7 +175,7 @@ export class BookView extends FileView {
   }
 
   private async write(file: TFile, model: Model): Promise<void> {
-    // A settle already in flight when the note went writes nothing: the
+    // A settle still running when the note was deleted writes nothing: the
     // vault no longer holds the file the writer was made for.
     if (this.app.vault.getFileByPath(file.path) !== file) return;
     this.saving += 1;

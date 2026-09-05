@@ -2,8 +2,8 @@
  * A book's own folder: where its chapters live, and where a new one is
  * written.
  *
- * The folder is derived from the book rather than declared, so moving
- * the chapters moves it and nothing in the note goes stale.
+ * The folder is derived from where the chapters are, so moving them
+ * moves it and nothing in the note goes stale.
  */
 
 import type { Section } from "@/book/order";

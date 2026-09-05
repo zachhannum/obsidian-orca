@@ -4,7 +4,7 @@
  *
  * A row and a whole section are one kind of thing to drag, and a drop
  * lands where the gap opened. A section drags with its entries hidden,
- * because they travel with it.
+ * and they move with it.
  */
 
 import type { Place } from "@/book/order";
@@ -77,7 +77,7 @@ export function flatten(groups: Grouped[]): Item[] {
 }
 
 /**
- * The list with one section's entries hidden. They travel with its
+ * The list with one section's entries hidden. They move with its
  * heading, so a section drags as one row of the list.
  */
 export function collapse(items: Item[], heading: string): Item[] {

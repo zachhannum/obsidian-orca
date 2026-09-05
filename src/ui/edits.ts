@@ -42,7 +42,7 @@ export class Edits {
    */
   async edit(path: string, change: Change): Promise<void> {
     // A view with no model has no writer: the note is still being read,
-    // or orca refused it. The edit goes to the note instead of nowhere.
+    // or orca refused it. The edit goes to the note.
     const open = this.opened(path);
     if (open?.model !== undefined) {
       open.edit(change);

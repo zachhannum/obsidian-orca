@@ -205,9 +205,9 @@ export class NavigatorView extends ItemView {
     const shelf: Shelved[] = [];
     for (const note of notes) {
       // A note is uncached for as long as a write to it takes, and a
-      // book already on the shelf would otherwise blink out of the
-      // list while orca itself is writing it. What the note reads as
-      // settles it.
+      // book already on the shelf would otherwise drop out of the list
+      // while orca itself is writing it. A book stays on the shelf
+      // until the note is read again.
       if (!isBook(index, note) && !this.shelved.has(note.path)) continue;
       // One note orca cannot read leaves the rest of the shelf standing.
       // A book note orca refuses reads as undefined; anything else here
@@ -465,8 +465,8 @@ export class NavigatorView extends ItemView {
     // A rename is an input inside this view, and what is pasted into
     // one is the section's name.
     // A leaf can be in a popout window, whose elements are that window's
-    // and no instance of this one's. The tag is what both windows spell
-    // the same.
+    // and no instance of this one's. Both windows spell the tag name the
+    // same way.
     const tag = (event.target as Partial<HTMLElement> | null)?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA") return;
     const path = this.focused;

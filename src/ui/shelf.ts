@@ -21,7 +21,7 @@ export interface Row {
   /** The note it reads, for a row that has one. */
   path?: string;
   role: Role;
-  /** Whether the role is worth saying, which the default role is not. */
+  /** Whether the role is drawn as a chip, which the default role is not. */
   named: boolean;
 }
 

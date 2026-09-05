@@ -14,8 +14,8 @@ export const MATTER: readonly string[] = ["Front matter", "Body", "Back matter"]
 const IMPORTED = "Body";
 
 /**
- * How an import orders the notes it found. Alphabetical order is
- * trusted here and nowhere else in orca.
+ * How an import orders the notes it found. Nothing else in orca
+ * orders by name.
  */
 export function byName(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true });
@@ -23,8 +23,8 @@ export function byName(a: string, b: string): number {
 
 /**
  * A new book, with these notes as its body in the order they are
- * given. The groups are written empty rather than left out, so every
- * role is one drag away.
+ * given. The groups are written empty, so the author can drag into
+ * each of them.
  */
 export function newBook(metadata: BookMetadata, links: Iterable<string>): Model {
   const lines = ["", ""];
