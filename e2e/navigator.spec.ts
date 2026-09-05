@@ -210,8 +210,13 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
       .toEqual({ grew: false, ended: true });
   });
 
+  // The row moved, and it is the same one row: a drop that lost it or
+  // wrote it twice would leave the count somewhere other than 48.
+  const settled = await navigator.painted();
+  await navigator.repainted(settled - 1);
+  await expect(navigator.entries(BOOK)).toHaveCount(48);
+  expect((await vault.read(BOOK)).match(/\[\[Chapter 0\]\]/g)).toHaveLength(1);
   expect((await navigator.reach()).height).toBe(tall.height);
-  await expect.poll(async () => vault.read(BOOK)).toContain("[[Chapter 0]]");
 });
 
 test("`Remove from book` takes the entry out and nothing else, and an entry never deletes", async ({

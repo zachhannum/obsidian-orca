@@ -169,24 +169,36 @@ export class Navigator {
     // dnd-kit presses the row it is carrying, so the wait is on that.
     await expect(from).toHaveAttribute("aria-pressed", "true");
     await expect(from).toHaveCSS("transform", /matrix\(/);
-    await held();
-    await mouse.up();
+    // One app runs the whole suite, so a hold that throws lets go and
+    // takes the drag back: a button left down, or a drop whose write
+    // outruns the fixture going back, is every spec after this one
+    // failing on this one's finding.
+    try {
+      await held();
+    } catch (cause) {
+      await this.obsidian.page.keyboard.press("Escape");
+      throw cause;
+    } finally {
+      await mouse.up();
+    }
   }
 
   /**
    * How tall the shelf is, and how far the view it sits in has been
-   * scrolled. A drag adds to neither: it may scroll the view it is in,
-   * never past the end of it. The scroller is found by walking up from
-   * the pane, which asks nothing of Obsidian's own class names.
+   * scrolled. Two elements on purpose: the shelf is what a drag must
+   * not grow, and the view is what it must not scroll past the end of.
+   *
+   * The view is found by the test dnd-kit scrolls on, which is an
+   * overflow that allows it, and with something to scroll, since the
+   * shelf itself allows one and never has any.
    */
   async reach(): Promise<{ height: number; top: number; most: number }> {
     return this.pane.evaluate((pane) => {
-      let node = pane.parentElement;
-      while (node !== null && node.scrollHeight <= node.clientHeight) {
-        node = node.parentElement;
-      }
-      // A shelf that fits has nothing above it that scrolls, and so
-      // no scroll to report.
+      const scrolls = (node: Element): boolean =>
+        /(auto|scroll|overlay)/.test(getComputedStyle(node).overflowY) &&
+        node.scrollHeight > node.clientHeight;
+      let node: Element | null = pane;
+      while (node !== null && !scrolls(node)) node = node.parentElement;
       return {
         height: pane.scrollHeight,
         top: node?.scrollTop ?? 0,
