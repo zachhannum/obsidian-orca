@@ -22,7 +22,7 @@ import type { Edits } from "@/ui/edits";
 import { createChapter, emptyBook } from "@/ui/make";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
-import { shelve, type Grouped, type Row, type Shelved } from "@/ui/shelf";
+import { shelve, type Row, type Shelved } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
 /** The type the navigator is registered under. */
@@ -91,11 +91,11 @@ export class NavigatorView extends ItemView {
       bookMenu: (event, book) => {
         this.bookMenu(event.nativeEvent, book);
       },
-      entryMenu: (event, book, group, row) => {
-        this.entryMenu(event.nativeEvent, book, group, row);
+      entryMenu: (event, book, row, after) => {
+        this.entryMenu(event.nativeEvent, book, row, after);
       },
-      groupMenu: (event, book, group) => {
-        this.groupMenu(event.nativeEvent, book, group);
+      groupMenu: (event, book, heading) => {
+        this.groupMenu(event.nativeEvent, book, heading);
       },
       addMenu: (event, book) => {
         this.addMenu(event.nativeEvent, book, undefined);
@@ -251,16 +251,16 @@ export class NavigatorView extends ItemView {
   }
 
   /** A section is organisational, so its menu never mentions a role. */
-  private groupMenu(event: MouseEvent, book: Shelved, group: Grouped): void {
+  private groupMenu(event: MouseEvent, book: Shelved, heading: string): void {
     const menu = new Menu();
-    this.offerAdding(menu, book, group.heading);
+    this.offerAdding(menu, book, heading);
     menu.addSeparator();
     menu.addItem((item) =>
       item
         .setTitle("Rename section")
         .setIcon("pencil")
         .onClick(() => {
-          this.mounted?.rename(book.path, group.heading);
+          this.mounted?.rename(book.path, heading);
         }),
     );
     // The entries under it stay in the book and join the section above.
@@ -271,7 +271,7 @@ export class NavigatorView extends ItemView {
         .onClick(() => {
           this.change(book.path, (model) => ({
             ...model,
-            order: removeGroup(model.order, group.heading),
+            order: removeGroup(model.order, heading),
           }));
         }),
     );
@@ -281,17 +281,16 @@ export class NavigatorView extends ItemView {
   private entryMenu(
     event: MouseEvent,
     book: Shelved,
-    group: Grouped,
     row: Row,
+    after: Place,
   ): void {
     const menu = new Menu();
-    const at = group.rows.indexOf(row);
     menu.addItem((item) =>
       item
         .setTitle("New chapter here")
         .setIcon("file-plus")
         .onClick(() => {
-          void this.newChapter(book, { heading: group.heading, at: at + 1 });
+          void this.newChapter(book, after);
         }),
     );
     menu.addItem((item) =>
