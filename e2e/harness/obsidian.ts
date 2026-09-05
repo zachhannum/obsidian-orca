@@ -7,17 +7,39 @@
 import type { Browser, Locator, Page } from "@playwright/test";
 import type { App } from "obsidian";
 
+/** The two pieces of the app the API does not declare. */
+interface Commands {
+  executeCommandById(id: string): boolean;
+}
+
+interface Config {
+  setConfig(key: string, value: unknown): void;
+}
+
 declare global {
   interface Window {
     /** Undefined until Obsidian has opened the vault. */
-    app: App;
+    app: App & { commands: Commands };
   }
+}
+
+/** One item on a menu, as much of it as a plugin builds. */
+interface Offered {
+  title: string;
+  click: (() => void) | undefined;
+  setTitle(said: string): Offered;
+  setIcon(icon: string): Offered;
+  setSection(section: string): Offered;
+  onClick(heard: () => void): Offered;
 }
 
 const CHROME = {
   ribbon: (label: string) => `.side-dock-ribbon-action[aria-label="${label}"]`,
   leaf: (type: string) => `.workspace-leaf-content[data-type="${type}"]`,
   action: (label: string) => `.view-action[aria-label="${label}"]`,
+  menu: ".menu",
+  item: ".menu-item",
+  suggestion: ".suggestion-item",
 };
 
 /**
@@ -43,6 +65,12 @@ export class Obsidian {
       undefined,
       { timeout: APPEARING },
     );
+    // A native menu is the platform's own window: CDP can neither read
+    // it nor click it, and it holds the renderer until someone answers
+    // it. The run asks Obsidian for its own menus instead.
+    await page.evaluate(() => {
+      (window.app.vault as unknown as Config).setConfig("nativeMenus", false);
+    });
     return new Obsidian(page);
   }
 
@@ -76,6 +104,92 @@ export class Obsidian {
       if (file === null) throw new Error(`no note at ${at}`);
       await window.app.workspace.getLeaf(false).openFile(file);
     }, path);
+  }
+
+  /** The context menu Obsidian has open, and the items in it. */
+  menu(): Locator {
+    return this.page.locator(CHROME.menu);
+  }
+
+  item(title: string): Locator {
+    return this.menu().locator(CHROME.item).filter({ hasText: title });
+  }
+
+  /** One command, run the way the palette runs it. */
+  async command(id: string): Promise<void> {
+    await this.page.evaluate((named) => {
+      if (!window.app.commands.executeCommandById(named)) {
+        throw new Error(`no command called ${named}`);
+      }
+    }, id);
+  }
+
+  /** Collapses the left sidebar, which is where the navigator lives. */
+  async collapse(): Promise<void> {
+    await this.page.evaluate(() => {
+      window.app.workspace.leftSplit.collapse();
+    });
+  }
+
+  /** Whether that sidebar is collapsed. */
+  async collapsed(): Promise<boolean> {
+    return this.page.evaluate(() => window.app.workspace.leftSplit.collapsed);
+  }
+
+  /** One row of a fuzzy pick's suggestions. */
+  suggestion(): Locator {
+    return this.page.locator(CHROME.suggestion);
+  }
+
+  /**
+   * The items a file's or a folder's own context menu offers, and the
+   * one `title` names, clicked. Obsidian fills that menu by asking
+   * every plugin for its items, which is what this asks in its place.
+   */
+  async fileMenu(path: string, title?: string): Promise<string[]> {
+    return this.page.evaluate(
+      ({ at, clicked }) => {
+        const found: { title: string; click: (() => void) | undefined }[] = [];
+        const menu = {
+          addItem(build: (item: Offered) => unknown) {
+            const item: Offered = {
+              title: "",
+              click: undefined,
+              setTitle(said: string) {
+                item.title = said;
+                return item;
+              },
+              setIcon: () => item,
+              setSection: () => item,
+              onClick(heard: () => void) {
+                item.click = heard;
+                return item;
+              },
+            };
+            build(item);
+            found.push(item);
+            return menu;
+          },
+          addSeparator: () => menu,
+          showAtMouseEvent: () => menu,
+        };
+
+        const file = window.app.vault.getAbstractFileByPath(at);
+        if (file === null) throw new Error(`nothing at ${at}`);
+        window.app.workspace.trigger("file-menu", menu, file, "orca-e2e");
+
+        const titles = found.map((item) => item.title);
+        if (clicked !== undefined) {
+          const item = found.find((offered) => offered.title === clicked);
+          if (item?.click === undefined) {
+            throw new Error(`no \`${clicked}\` in ${titles.join(", ")}`);
+          }
+          item.click();
+        }
+        return titles;
+      },
+      { at: path, clicked: title },
+    );
   }
 
   /** Closes every leaf with a view of this type. */

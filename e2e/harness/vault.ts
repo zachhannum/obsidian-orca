@@ -18,6 +18,7 @@ declare global {
 
 export class Vault {
   private readonly touched = new Set<string>();
+  private readonly folders = new Set<string>();
 
   constructor(
     private readonly page: Page,
@@ -94,6 +95,16 @@ export class Vault {
     });
   }
 
+  /** A folder, made for a spec and taken away with what it holds. */
+  async folder(path: string): Promise<void> {
+    this.folders.add(path);
+    await this.page.evaluate(async (at) => {
+      if (!(await window.app.vault.adapter.exists(at))) {
+        await window.app.vault.createFolder(at);
+      }
+    }, path);
+  }
+
   async remove(file: string): Promise<void> {
     this.touched.add(file);
     await this.page.evaluate(
@@ -120,6 +131,13 @@ export class Vault {
         { at: file, text },
       );
     }
+    for (const folder of this.folders) {
+      await this.page.evaluate(async (at) => {
+        const found = window.app.vault.getFolderByPath(at);
+        if (found !== null) await window.app.vault.delete(found, true);
+      }, folder);
+    }
     this.touched.clear();
+    this.folders.clear();
   }
 }

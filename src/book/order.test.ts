@@ -6,13 +6,18 @@ import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { readFrontmatter } from "@/book/frontmatter";
 import { pathLinks } from "@/book/links";
+import { linksIn } from "@/book/links";
 import {
   add,
   entries,
   entryName,
+  groups,
+  insert,
+  move,
   readOrder,
   remove,
   resolve,
+  retag,
   writeOrder,
   type Order,
   type Section,
@@ -167,6 +172,94 @@ test("a note that is gone keeps its entry, and the rest of the book is set witho
   // The entry is still in the note after a write, for the author to
   // locate or remove.
   assert.match(writeOrder(book), /- \[\[Chapter Four\]\]/);
+});
+
+test("every route into the list writes the same line, at the end of the body", async () => {
+  const book = await order();
+
+  // The quick pick and `Add to book` name the note; a paste names it
+  // in the text the author copied. The three are one call.
+  const picked = add(book, "Chapter Thirteen");
+  const pasted = add(book, linksIn("meet me at [[Chapter Thirteen]] tonight")[0] ?? "");
+  assert.equal(writeOrder(picked), writeOrder(pasted));
+  assert.match(writeOrder(picked), /- \[\[Chapter Four\]\]\n- \[\[Chapter Thirteen\]\]\n/);
+
+  // The body is the group the book opens its chapters with, and not
+  // the heading the author's css sits under.
+  assert.deepEqual(
+    entries(picked).map((entry) => entry.heading).slice(-3),
+    ["Body", "Body", "Back matter"],
+  );
+});
+
+test("a new chapter is appended at the end of its group, or dropped at a place in one", async () => {
+  const book = await order();
+
+  const appended = add(book, "Chapter Thirteen", "Front matter");
+  assert.deepEqual(entries(appended).map(entryName).slice(0, 5), [
+    "Title page",
+    "Copyright",
+    "A note on the text",
+    "Contents",
+    "Chapter Thirteen",
+  ]);
+  assert.equal(entries(appended)[4]?.role, "front-matter");
+
+  const between = insert(book, "Chapter Thirteen", { heading: "Body", at: 1 });
+  assert.deepEqual(entries(between).map(entryName).slice(4, 8), [
+    "Volume the First",
+    "Chapter Thirteen",
+    "Chapter Twelve",
+    "Chapter Four",
+  ]);
+});
+
+test("a drag reorders the list, and a drag across a heading re-roles the entry", async () => {
+  const book = await order();
+
+  // Inside a group, the entry lands where it was dropped.
+  const later = move(book, 5, { heading: "Body", at: 3 });
+  assert.deepEqual(entries(later).map(entryName).slice(4, 7), [
+    "Volume the First",
+    "Chapter Four",
+    "Chapter Twelve",
+  ]);
+
+  // Across one, the group it lands in is its role, and the tag that
+  // overrode the old heading goes with it.
+  const rolled = move(book, 2, { heading: "Body", at: 0 });
+  const moved = entries(rolled)[3];
+  assert.equal(moved?.link, "A note on the text");
+  assert.equal(moved?.role, "chapter");
+  assert.equal(moved?.tag, undefined);
+  assert.match(writeOrder(rolled), /# Body\n\n- \[\[A note on the text\]\]\n/);
+
+  // A per-entry override is the tag, and a role the heading already
+  // gives is written as no tag at all.
+  const tagged = retag(book, 6, "epigraph");
+  assert.match(writeOrder(tagged), /- \[\[Chapter Four\]\] `epigraph`\n/);
+  assert.equal(writeOrder(retag(tagged, 6, "chapter")), writeOrder(book));
+
+  // Every group is a place to drop into, the empty ones included.
+  assert.deepEqual(
+    groups(book).map((group) => [group.heading, group.entries.length]),
+    [
+      ["Front matter", 4],
+      ["Body", 3],
+      ["Back matter", 1],
+      ["The book's css", 0],
+    ],
+  );
+});
+
+test("removing an entry takes out its line and nothing else", async () => {
+  const book = await order();
+  const before = writeOrder(book);
+
+  const after = writeOrder(remove(book, 5));
+
+  assert.equal(after, before.replace("- [[Chapter Twelve]]\n", ""));
+  assert.equal(await vault.exists("Chapter Twelve.md"), true);
 });
 
 // What this tier does not cover: the navigator, which renders a

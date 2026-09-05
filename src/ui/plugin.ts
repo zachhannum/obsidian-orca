@@ -3,6 +3,7 @@ import {
   Notice,
   Plugin,
   TFile,
+  TFolder,
   normalizePath,
   type Menu,
   type TAbstractFile,
@@ -13,7 +14,12 @@ import { EngineError } from "@/engine/errors";
 import { readModule, type VaultFiles } from "@/engine/module";
 import { Session, documentFaces } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
-import { isBook, type NoteIndex } from "@/ui/books";
+import { books, isBook, type NoteIndex } from "@/ui/books";
+import { Edits } from "@/ui/edits";
+import { bookFromFolder, emptyBook } from "@/ui/make";
+import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
+import { noteIndex } from "@/ui/notes";
+import { pick } from "@/ui/pick";
 import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 
 /** The view a book note is handed back to. */
@@ -25,6 +31,8 @@ const MARKDOWN_VIEW = "markdown";
  */
 export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
+  /** Every edit to a book, routed to the note's one writer. */
+  private readonly edits = new Edits(this.app, (path) => this.opened(path));
   private unloaded = false;
   /** The leaves an author has asked to keep in markdown, and for which note. */
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
@@ -43,9 +51,13 @@ export default class OrcaPlugin extends Plugin {
     this.registerView(
       BOOK_VIEW,
       (leaf) =>
-        new BookView(leaf, (view) => {
+        new BookView(leaf, this.edits, (view) => {
           void this.openAsMarkdown(view.leaf, view.file);
         }),
+    );
+    this.registerView(
+      NAVIGATOR_VIEW,
+      (leaf) => new NavigatorView(leaf, this.edits),
     );
     this.addRibbonIcon("book", "Open the book", () => {
       void this.reveal();
@@ -57,9 +69,19 @@ export default class OrcaPlugin extends Plugin {
         void this.reveal();
       },
     });
+    this.addCommand({
+      id: "new-book",
+      name: "New book",
+      callback: () => {
+        void this.newBook();
+      },
+    });
 
     this.app.workspace.onLayoutReady(() => {
       this.swap();
+      void this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
+        reveal: false,
+      });
     });
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
@@ -67,8 +89,11 @@ export default class OrcaPlugin extends Plugin {
       }),
     );
     this.registerEvent(
-      this.app.workspace.on("file-open", () => {
+      this.app.workspace.on("file-open", (file) => {
         this.swap();
+        // A book nobody can reorder is what a collapsed sidebar would
+        // otherwise mean.
+        if (file !== null && isBook(this.notes(), file)) void this.show();
       }),
     );
     this.registerEvent(
@@ -91,11 +116,16 @@ export default class OrcaPlugin extends Plugin {
 
   /** Every markdown note, and its properties as the metadata cache has them. */
   private notes(): NoteIndex<TFile> {
-    const { vault, metadataCache } = this.app;
-    return {
-      notes: () => vault.getMarkdownFiles(),
-      properties: (note) => metadataCache.getFileCache(note)?.frontmatter,
-    };
+    return noteIndex(this.app);
+  }
+
+  /** The view a book note is open in, which is its only writer while it is. */
+  private opened(path: string): BookView | undefined {
+    for (const leaf of this.app.workspace.getLeavesOfType(BOOK_VIEW)) {
+      const view = leaf.view;
+      if (view instanceof BookView && view.file?.path === path) return view;
+    }
+    return undefined;
   }
 
   /**
@@ -143,12 +173,31 @@ export default class OrcaPlugin extends Plugin {
     this.back.delete(view);
   }
 
+  /**
+   * What a file's own context menu offers: a folder becomes a book, a
+   * note joins one, and a book note opens as markdown and back.
+   */
   private offer(
     menu: Menu,
     file: TAbstractFile,
     leaf: WorkspaceLeaf | undefined,
   ): void {
-    if (!(file instanceof TFile) || !isBook(this.notes(), file)) return;
+    if (file instanceof TFolder) {
+      menu.addItem((item) =>
+        item
+          .setTitle("Create book from these notes")
+          .setIcon("book")
+          .onClick(() => {
+            void this.bookFrom(file);
+          }),
+      );
+      return;
+    }
+    if (!(file instanceof TFile)) return;
+    if (!isBook(this.notes(), file)) {
+      this.offerAdding(menu, file);
+      return;
+    }
     const shown = leaf ?? this.app.workspace.getLeaf(false);
     // The way back is offered by the leaf this note is already open in
     // as markdown; every other leaf is offered the way out.
@@ -164,6 +213,53 @@ export default class OrcaPlugin extends Plugin {
             : this.openAsMarkdown(shown, file));
         }),
     );
+  }
+
+  /** `Add to book`, which asks which book when the vault has several. */
+  private offerAdding(menu: Menu, note: TFile): void {
+    const shelf = books(this.notes());
+    if (shelf.length === 0 || note.extension !== "md") return;
+    menu.addItem((item) =>
+      item
+        .setTitle("Add to book")
+        .setIcon("book-plus")
+        .onClick(() => {
+          const one = shelf[0];
+          if (shelf.length === 1 && one !== undefined) {
+            void this.edits.addNote(one.path, note);
+            return;
+          }
+          pick(this.app, {
+            items: shelf,
+            label: (book) => book.basename,
+            placeholder: `Add ${note.basename} to which book`,
+            chose: (book) => {
+              void this.edits.addNote(book.path, note);
+            },
+          });
+        }),
+    );
+  }
+
+  /** An empty book, made and opened. */
+  private async newBook(): Promise<void> {
+    await this.opening(await emptyBook(this.app));
+  }
+
+  /** The book a folder of notes becomes, made and opened. */
+  private async bookFrom(folder: TFolder): Promise<void> {
+    await this.opening(await bookFromFolder(this.app, folder));
+  }
+
+  private async opening(book: TFile): Promise<void> {
+    await this.app.workspace.getLeaf(false).openFile(book);
+  }
+
+  /** The navigator, revealed in the sidebar it lives in. */
+  private async show(): Promise<void> {
+    await this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
+      reveal: true,
+    });
   }
 
   private async openAsMarkdown(

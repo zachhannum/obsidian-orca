@@ -101,3 +101,244 @@
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
+
+.orca-navigator {
+  padding: var(--size-4-2) var(--size-4-1);
+  overflow: auto;
+}
+
+.orca-nav-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-4-1) var(--size-4-2) var(--size-4-2);
+  color: var(--text-faint);
+}
+
+.orca-nav-title {
+  flex: 1;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.orca-nav-button {
+  display: flex;
+  padding: var(--size-4-1);
+  border-radius: var(--radius-s);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.orca-nav-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.orca-nav-quiet {
+  padding: var(--size-4-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.orca-shelf:focus-visible {
+  outline: none;
+}
+
+.orca-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  min-height: 24px;
+  padding: 3px var(--size-4-2);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.orca-nav-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.orca-nav-item.is-active {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.orca-nav-item.is-dragged {
+  opacity: 0.4;
+}
+
+.orca-shelf-name {
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+}
+
+.orca-fold {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.orca-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orca-nav-children {
+  margin-left: var(--size-4-3);
+  padding-left: var(--size-4-1);
+  border-left: 1px solid var(--divider-color);
+}
+
+.orca-nav-heading {
+  padding: var(--size-4-2) var(--size-4-2) var(--size-4-1);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+.orca-nav-make {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-4-1) var(--size-4-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.orca-nav-make:hover {
+  color: var(--text-normal);
+}
+
+.orca-nav-make-icon {
+  display: flex;
+  --icon-size: var(--icon-xs);
+}
+
+.orca-entry[data-kind="generated"] {
+  color: var(--text-faint);
+}
+
+.orca-entry[data-kind="missing"] .orca-label {
+  text-decoration: line-through;
+}
+
+.orca-entry-warn {
+  display: flex;
+  color: var(--color-orange);
+  --icon-size: var(--icon-xs);
+}
+
+.orca-entry-fix,
+.orca-loose-note {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  margin-left: auto;
+}
+
+.orca-nav-action {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: none;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.orca-nav-action:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+.orca-chip {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--background-modifier-hover);
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-chip.mod-generated {
+  color: var(--text-faint);
+}
+
+.orca-loose {
+  margin: var(--size-4-2) var(--size-4-2) 0;
+  padding: var(--size-4-2);
+  border-radius: var(--radius-s);
+  background: rgba(var(--mono-rgb-100), 0.04);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-loose-head {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  cursor: pointer;
+}
+
+.orca-loose-said {
+  flex: 1;
+}
+
+.orca-loose-close {
+  display: flex;
+  --icon-size: var(--icon-xs);
+}
+
+.orca-loose-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: var(--size-4-1);
+}
+
+.orca-loose-note {
+  color: var(--text-muted);
+}
+
+.orca-loose-note .orca-label {
+  flex: 1;
+  margin-right: auto;
+}
+
+.orca-drop {
+  height: 2px;
+  margin: 1px var(--size-4-2);
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.orca-ghost {
+  position: fixed;
+  z-index: var(--layer-menu);
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: 3px var(--size-4-2);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    0 0 0 1px var(--color-accent);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  pointer-events: none;
+}
+
+.orca-ghost-grip {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.orca-ghost-role:empty {
+  display: none;
+}

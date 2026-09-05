@@ -5,17 +5,10 @@ import {
   setIcon,
   type WorkspaceLeaf,
 } from "obsidian";
-import { readFrontmatter, type Properties } from "@/book/frontmatter";
-import { readModel, withOrder, type Model } from "@/book/model";
-import {
-  BOOK_KEY,
-  BookError,
-  FIELD_KEYS,
-  applyBook,
-  type Book,
-} from "@/book/note";
-import { writeOrder } from "@/book/order";
+import { readModel, type Model } from "@/book/model";
+import { BOOK_KEY, BookError, FIELD_KEYS, type Book } from "@/book/note";
 import { Changed } from "@/ui/changed";
+import { save, type Edits } from "@/ui/edits";
 import { Writer } from "@/ui/writer";
 
 /** The type the book note is registered under. */
@@ -35,6 +28,7 @@ export class BookView extends FileView {
 
   constructor(
     leaf: WorkspaceLeaf,
+    private readonly edits: Edits,
     private readonly asMarkdown: (view: BookView) => void,
   ) {
     super(leaf);
@@ -79,6 +73,11 @@ export class BookView extends FileView {
     this.writer = undefined;
   }
 
+  /** The book as the view paints it, the unwritten edits included. */
+  get model(): Model | undefined {
+    return this.writer?.model;
+  }
+
   /**
    * One edit to the book. The view is the only writer while it is
    * open, so every surface that changes the book comes through here.
@@ -96,6 +95,7 @@ export class BookView extends FileView {
     this.writer = new Writer(model, {
       paint: (held, generation) => {
         this.show(held.book, generation);
+        this.edits.changed();
       },
       save: (held) => this.write(file, held),
     });
@@ -166,32 +166,10 @@ export class BookView extends FileView {
     }
   }
 
-  /**
-   * The note, written in two halves. The properties go through
-   * Obsidian's frontmatter API, which leaves the author's own alone,
-   * and the body is replaced under them. The half an edit did not
-   * touch is not written, so a settled edit is one revision.
-   */
   private async write(file: TFile, model: Model): Promise<void> {
     this.saving += 1;
     try {
-      const held = readFrontmatter(this.disk);
-      const after = structuredClone(held.properties);
-      applyBook(after, model.book);
-      if (JSON.stringify(after) !== JSON.stringify(held.properties)) {
-        await this.app.fileManager.processFrontMatter(
-          file,
-          (properties: Properties) => {
-            applyBook(properties, model.book);
-          },
-        );
-      }
-      if (writeOrder(model.order) !== held.body) {
-        await this.app.vault.process(file, (text) =>
-          withOrder(text, model.order),
-        );
-      }
-      this.disk = await this.app.vault.read(file);
+      this.disk = await save(this.app, file, this.disk, model);
     } finally {
       this.saving -= 1;
     }
