@@ -164,6 +164,28 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     .toContain("- [[Chapter Twelve]] `epigraph`");
 });
 
+test("a row dragged past the bottom stays inside its list, and lands last", async ({
+  navigator,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.reveal();
+  await expect(navigator.entry(BOOK, "Copyright")).toBeVisible();
+  const reach = await navigator.reach();
+
+  // A row carried below the list would stretch the pane under it, and
+  // the pane would then scroll after the row for as long as it was held.
+  await navigator.dragOffTheEnd(navigator.entry(BOOK, "Copyright"), async () => {
+    expect(await navigator.reach()).toBe(reach);
+  });
+
+  // The last row is the css section's heading, so that is where it lands.
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("# The book's css\n\n- [[Copyright]] `copyright`\n");
+  await expect(navigator.entries(BOOK).last()).toHaveText(/Copyright/);
+});
+
 test("`Remove from book` takes the entry out and nothing else, and an entry never deletes", async ({
   navigator,
   obsidian,

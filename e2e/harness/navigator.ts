@@ -152,6 +152,32 @@ export class Navigator {
     await mouse.up();
   }
 
+  /**
+   * One row dragged past the bottom of the pane and held there, with
+   * `held` run before it is let go. A drop past the last row lands on
+   * the last row.
+   */
+  async dragOffTheEnd(from: Locator, held: () => Promise<void>): Promise<void> {
+    const { mouse } = this.obsidian.page;
+    const start = await box(from);
+    const floor = await this.obsidian.page.evaluate(() => window.innerHeight - 2);
+    await mouse.move(start.x + 20, start.y + start.height / 2);
+    await mouse.down();
+    await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
+    await mouse.move(start.x + 20, floor, { steps: 15 });
+    await mouse.move(start.x + 20, floor);
+    // dnd-kit presses the row it is carrying, so the wait is on that.
+    await expect(from).toHaveAttribute("aria-pressed", "true");
+    await expect(from).toHaveCSS("transform", /matrix\(/);
+    await held();
+    await mouse.up();
+  }
+
+  /** How far the pane could scroll, which a drag must not add to. */
+  async reach(): Promise<number> {
+    return this.pane.evaluate((pane) => pane.scrollHeight);
+  }
+
   /** The question a delete asks, answered by the button named. */
   async answer(verb: string): Promise<void> {
     const modal = this.obsidian.page.getByTestId("orca-confirm");

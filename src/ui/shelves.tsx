@@ -18,6 +18,7 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -36,6 +37,7 @@ import {
   useState,
   type JSX,
   type MouseEvent as Pointed,
+  type RefObject,
 } from "react";
 import type { Place } from "@/book/order";
 import { ROLES } from "@/book/roles";
@@ -171,6 +173,28 @@ const detect: CollisionDetection = ({
   return found === undefined ? [] : [found];
 };
 
+/**
+ * A dragged row stays inside its list. Past the last row it would
+ * stretch the pane's scrollable area, and the auto-scroll following it
+ * would stretch it again. The list is measured on every move: the rect
+ * dnd-kit hands a modifier is the one it took at the start, and as the
+ * pane scrolls it is wrong by the scrolled distance.
+ */
+const inside =
+  (list: RefObject<HTMLDivElement | null>): Modifier =>
+  ({ transform, draggingNodeRect }) => {
+    const bounds = list.current?.getBoundingClientRect();
+    if (draggingNodeRect === null || bounds === undefined) return transform;
+    return {
+      ...transform,
+      x: clamp(transform.x, bounds.left - draggingNodeRect.left, bounds.right - draggingNodeRect.right),
+      y: clamp(transform.y, bounds.top - draggingNodeRect.top, bounds.bottom - draggingNodeRect.bottom),
+    };
+  };
+
+const clamp = (value: number, low: number, high: number): number =>
+  Math.min(Math.max(value, low), high);
+
 /** An Obsidian icon, which is drawn into the node after the commit. */
 function Icon({ name, className }: { name: string; className?: string }): JSX.Element {
   const held = useRef<HTMLSpanElement>(null);
@@ -289,6 +313,8 @@ function Book({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const list = useRef<HTMLDivElement>(null);
+  const modifiers = useMemo(() => [inside(list)], []);
 
   // dnd-kit reads the item list by identity, so a list rebuilt on every
   // render would look to it like an edit on every render.
@@ -375,6 +401,7 @@ function Book({
         <DndContext
           sensors={sensors}
           collisionDetection={detect}
+          modifiers={modifiers}
           onDragStart={started}
           onDragEnd={landed}
           onDragCancel={() => {
@@ -383,7 +410,7 @@ function Book({
           }}
         >
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-            <div className="orca-nav-children">
+            <div className="orca-nav-children" ref={list}>
               {items.map((item, at) =>
                 item.kind === "group" ? (
                   <Heading
