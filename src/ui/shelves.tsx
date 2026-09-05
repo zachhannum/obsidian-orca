@@ -176,9 +176,12 @@ const detect: CollisionDetection = ({
 /**
  * A dragged row stays inside its list. Past the last row it would
  * stretch the pane's scrollable area, and the auto-scroll following it
- * would stretch it again. The list is measured on every move: the rect
- * dnd-kit hands a modifier is the one it took at the start, and as the
- * pane scrolls it is wrong by the scrolled distance.
+ * would stretch it again.
+ *
+ * The rect plus the transform is where the row is now: dnd-kit adds
+ * back the distance the pane has scrolled since it measured the row,
+ * so neither term wants correcting here. What does move is the list,
+ * which is why it is measured on every move rather than once.
  */
 const inside =
   (list: RefObject<HTMLDivElement | null>): Modifier =>

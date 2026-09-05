@@ -171,12 +171,11 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   vault.touch(BOOK);
   await navigator.reveal();
   await expect(navigator.entry(BOOK, "Copyright")).toBeVisible();
-  const reach = await navigator.reach();
+  const short = await navigator.reach();
 
-  // A row carried below the list would stretch the pane under it, and
-  // the pane would then scroll after the row for as long as it was held.
+  // A row carried below the list would stretch the shelf under it.
   await navigator.dragOffTheEnd(navigator.entry(BOOK, "Copyright"), async () => {
-    expect(await navigator.reach()).toBe(reach);
+    expect((await navigator.reach()).height).toBe(short.height);
   });
 
   // The last row is the css section's heading, so that is where it lands.
@@ -184,6 +183,35 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
     .poll(async () => vault.read(BOOK))
     .toContain("# The book's css\n\n- [[Copyright]] `copyright`\n");
   await expect(navigator.entries(BOOK).last()).toHaveText(/Copyright/);
+
+  // A book long enough to scroll the view it is drawn in. The shelf
+  // stretched here too, and the view then scrolled after the row for
+  // as long as it was held. Where the row lands is left to the drag
+  // above: under an auto-scroll it depends on how long the hold ran.
+  const drawn = await navigator.painted();
+  const long = (await vault.read(BOOK)).replace(
+    "# Body\n\n",
+    `# Body\n\n${Array.from({ length: 40 }, (_, at) => `- [[Chapter ${at}]]`).join("\n")}\n`,
+  );
+  await vault.modify(BOOK, long);
+  await navigator.repainted(drawn);
+  await expect(navigator.entries(BOOK)).toHaveCount(48);
+  const tall = await navigator.reach();
+  expect(tall.most).toBeGreaterThan(0);
+
+  // The wait is on the view running out of scroll, not on a duration:
+  // a shelf that grows under the row never reaches its own end.
+  await navigator.dragOffTheEnd(navigator.entry(BOOK, "Chapter 0"), async () => {
+    await expect
+      .poll(async () => {
+        const now = await navigator.reach();
+        return { grew: now.height !== tall.height, ended: now.top >= now.most };
+      })
+      .toEqual({ grew: false, ended: true });
+  });
+
+  expect((await navigator.reach()).height).toBe(tall.height);
+  await expect.poll(async () => vault.read(BOOK)).toContain("[[Chapter 0]]");
 });
 
 test("`Remove from book` takes the entry out and nothing else, and an entry never deletes", async ({

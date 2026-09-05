@@ -173,9 +173,26 @@ export class Navigator {
     await mouse.up();
   }
 
-  /** How far the pane could scroll, which a drag must not add to. */
-  async reach(): Promise<number> {
-    return this.pane.evaluate((pane) => pane.scrollHeight);
+  /**
+   * How tall the shelf is, and how far the view it sits in has been
+   * scrolled. A drag adds to neither: it may scroll the view it is in,
+   * never past the end of it. The scroller is found by walking up from
+   * the pane, which asks nothing of Obsidian's own class names.
+   */
+  async reach(): Promise<{ height: number; top: number; most: number }> {
+    return this.pane.evaluate((pane) => {
+      let node = pane.parentElement;
+      while (node !== null && node.scrollHeight <= node.clientHeight) {
+        node = node.parentElement;
+      }
+      // A shelf that fits has nothing above it that scrolls, and so
+      // no scroll to report.
+      return {
+        height: pane.scrollHeight,
+        top: node?.scrollTop ?? 0,
+        most: node === null ? 0 : node.scrollHeight - node.clientHeight,
+      };
+    });
   }
 
   /** The question a delete asks, answered by the button named. */
