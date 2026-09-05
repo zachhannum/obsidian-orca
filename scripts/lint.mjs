@@ -14,6 +14,9 @@ export const MODULES = ["engine", "book", "style", "assets", "ui"];
 /** The packages only `ui` may reach. */
 const APPLICATION = ["obsidian", "electron"];
 
+/** The packages only `ui` may reach, by the prefix their subpaths share. */
+const APPLICATION_SCOPES = ["react", "react-dom", "@dnd-kit/"];
+
 const RULES = [
   /**
    * The pipeline runs one way and `ui` is at its end: `ui` imports the
@@ -24,9 +27,9 @@ const RULES = [
       ? `\`${module}\` may not import \`ui\``
       : undefined,
 
-  /** Only `ui` knows about Obsidian. */
+  /** Only `ui` knows about Obsidian, and only `ui` draws. */
   ({ module, specifier }) =>
-    APPLICATION.includes(specifier) && module !== "ui"
+    application(specifier) && module !== "ui"
       ? `\`${module ?? "src"}\` may not import \`${specifier}\``
       : undefined,
 
@@ -51,7 +54,7 @@ export function check(file, text) {
       if (said !== undefined) found.push({ file, line, said });
     }
   }
-  if (file.endsWith(".test.ts") && backlog(text) === undefined) {
+  if (/\.test\.tsx?$/.test(file) && backlog(text) === undefined) {
     found.push({
       file,
       line: text.split("\n").length,
@@ -64,7 +67,9 @@ export function check(file, text) {
 /** Every file under `src`, checked in path order. */
 export async function lint(from = root) {
   const files = [];
-  for await (const file of glob("src/**/*.ts", { cwd: from })) files.push(file);
+  for await (const file of glob("src/**/*.{ts,tsx}", { cwd: from })) {
+    files.push(file);
+  }
   files.sort();
 
   const found = [];
@@ -72,6 +77,16 @@ export async function lint(from = root) {
     found.push(...check(file, await readFile(path.join(from, file), "utf8")));
   }
   return found;
+}
+
+/** Whether a specifier is one of the packages only `ui` may reach. */
+function application(specifier) {
+  return (
+    APPLICATION.includes(specifier) ||
+    APPLICATION_SCOPES.some(
+      (scope) => specifier === scope || specifier.startsWith(`${scope}/`),
+    )
+  );
 }
 
 /** The first path segment, where it is one of the five modules. */

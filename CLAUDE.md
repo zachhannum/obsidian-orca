@@ -17,6 +17,11 @@ wins and the quick fix waits for its own PR.
 - Only `ui/` knows about Obsidian, and `assets/` reaches the vault
   through an adapter interface. The dependency rule runs one way: `ui`
   may import `book`, `book` may not import `ui`. Lint enforces it.
+- `ui/` draws in React, and it is the only module that may. React,
+  `react-dom` and dnd-kit sit under the same lint rule as Obsidian
+  itself, so a component cannot leak below `ui`. A view that owns
+  foreign DOM stays outside it: CodeMirror is the case the design
+  already names.
 - The pipeline is one-way: notes → book model → op → engine session →
   pages → preview / PDF. Downstream never reaches back upstream.
 - fleuron is the engine and is pinned. The wire format is checked
@@ -198,6 +203,12 @@ PR bodies are written in.
   floor. `noUncheckedIndexedAccess` and `verbatimModuleSyntax` stay on;
   no `any`, no `@ts-expect-error` without the line that explains it.
 - Imports inside `src/` use the `@/` alias.
+- A React surface is `.tsx`, and the Obsidian view around it is `.ts`.
+  The view owns the root: `onOpen` creates it, `onClose` unmounts it,
+  and nothing else empties the element under it.
+- A data attribute the e2e suite waits on is written from a commit
+  effect, never during a render. React commits when it chooses, and an
+  attribute written mid-render is a promise the paint has not kept.
 - Errors: a module throws a typed error; `ui/` is the only layer that
   turns one into something an author sees. A warning from the engine is
   routed, never re-worded.

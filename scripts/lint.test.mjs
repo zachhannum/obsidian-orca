@@ -22,6 +22,20 @@ test("only `ui` imports Obsidian", () => {
   assert.deepEqual(said("src/ui/plugin.ts", 'import { Plugin } from "obsidian";\n'), []);
 });
 
+test("only `ui` draws", () => {
+  assert.deepEqual(said("src/book/order.ts", 'import { useState } from "react";\n'), [
+    "`book` may not import `react`",
+  ]);
+  assert.deepEqual(
+    said("src/style/css.ts", 'import { useSortable } from "@dnd-kit/sortable";\n'),
+    ["`style` may not import `@dnd-kit/sortable`"],
+  );
+  assert.deepEqual(
+    said("src/ui/navigator.tsx", 'import { useState } from "react";\n'),
+    [],
+  );
+});
+
 test("imports inside `src` use the `@/` alias", () => {
   assert.deepEqual(said("src/book/sample.ts", 'import { note } from "./note";\n'), [
     "`./note` is a relative import; use `@/`",

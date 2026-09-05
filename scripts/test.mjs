@@ -12,7 +12,7 @@ const outdir = path.join(root, "build/test");
 await rm(outdir, { recursive: true, force: true });
 
 const entryPoints = [];
-for await (const file of glob("src/**/*.test.ts", { cwd: root })) {
+for await (const file of glob("src/**/*.test.{ts,tsx}", { cwd: root })) {
   entryPoints.push(path.join(root, file));
 }
 
@@ -35,7 +35,7 @@ await esbuild.build({
 
 const specs = entryPoints.map((entry) => {
   const under = path.relative(path.join(root, "src"), entry);
-  return path.join(outdir, under.replace(/\.ts$/, ".js"));
+  return path.join(outdir, under.replace(/\.tsx?$/, ".js"));
 });
 
 // The build's own scripts are ESM already, so they run as they are
