@@ -207,8 +207,9 @@ PR bodies are written in.
   The view owns the root: `onOpen` creates it, `onClose` unmounts it,
   and nothing else empties the element under it.
 - A data attribute the e2e suite waits on is written from a commit
-  effect, never during a render. React commits when it chooses, and an
-  attribute written mid-render is a promise the paint has not kept.
+  effect, never during a render. React commits when it chooses, so an
+  attribute written during a render can be read before the paint it
+  reports.
 - Errors: a module throws a typed error; `ui/` is the only layer that
   turns one into something an author sees. A warning from the engine is
   routed, never re-worded.

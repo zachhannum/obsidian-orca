@@ -9,13 +9,17 @@ import { pathLinks } from "@/book/links";
 import { linksIn } from "@/book/links";
 import {
   add,
+  addGroup,
   entries,
   entryName,
   groups,
   insert,
   move,
+  moveGroup,
   readOrder,
   remove,
+  removeGroup,
+  renameGroup,
   resolve,
   retag,
   writeOrder,
@@ -48,7 +52,7 @@ function found(sections: Section[]): string[] {
   );
 }
 
-test("an entry's role comes from its heading, and an inline code tag overrides it", async () => {
+test("an entry's role is its own tag, and a heading names none", async () => {
   const all = entries(await order());
 
   assert.deepEqual(
@@ -65,10 +69,10 @@ test("an entry's role comes from its heading, and an inline code tag overrides i
     ],
   );
 
-  // The same link under another heading is another role, which is what
-  // dragging an entry across a heading does.
-  const moved = entries(readOrder("\n# Back matter\n\n- [[Chapter Twelve]]\n"));
-  assert.deepEqual(moved.map((entry) => entry.role), ["back-matter"]);
+  // The heading is organisational: an untagged entry takes the default
+  // role wherever the note puts it.
+  const under = entries(readOrder("\n# Back matter\n\n- [[Chapter Twelve]]\n"));
+  assert.deepEqual(under.map((entry) => entry.role), ["chapter"]);
 });
 
 test("a book note's reading order parsed and written back is byte-identical", async () => {
@@ -203,7 +207,8 @@ test("a new chapter is appended at the end of its group, or dropped at a place i
     "Contents",
     "Chapter Thirteen",
   ]);
-  assert.equal(entries(appended)[4]?.role, "front-matter");
+  // The section it landed in does not give it a role.
+  assert.equal(entries(appended)[4]?.role, "chapter");
 
   const between = insert(book, "Chapter Thirteen", { heading: "Body", at: 1 });
   assert.deepEqual(entries(between).map(entryName).slice(4, 8), [
@@ -214,7 +219,7 @@ test("a new chapter is appended at the end of its group, or dropped at a place i
   ]);
 });
 
-test("a drag reorders the list, and a drag across a heading re-roles the entry", async () => {
+test("a drag reorders the list, and an entry carries its role across a heading", async () => {
   const book = await order();
 
   // Inside a group, the entry lands where it was dropped.
@@ -225,17 +230,19 @@ test("a drag reorders the list, and a drag across a heading re-roles the entry",
     "Chapter Twelve",
   ]);
 
-  // Across one, the group it lands in is its role, and the tag that
-  // overrode the old heading goes with it.
-  const rolled = move(book, 2, { heading: "Body", at: 0 });
-  const moved = entries(rolled)[3];
+  // Across one, the entry keeps the role it had. A section groups the
+  // reading order and says nothing about what is in it.
+  const across = move(book, 2, { heading: "Body", at: 0 });
+  const moved = entries(across)[3];
   assert.equal(moved?.link, "A note on the text");
-  assert.equal(moved?.role, "chapter");
-  assert.equal(moved?.tag, undefined);
-  assert.match(writeOrder(rolled), /# Body\n\n- \[\[A note on the text\]\]\n/);
+  assert.equal(moved?.role, "epigraph");
+  assert.equal(moved?.tag, "epigraph");
+  assert.match(
+    writeOrder(across),
+    /# Body\n\n- \[\[A note on the text\]\] `epigraph`\n/,
+  );
 
-  // A per-entry override is the tag, and a role the heading already
-  // gives is written as no tag at all.
+  // A role is the tag, and the default role is written as no tag.
   const tagged = retag(book, 6, "epigraph");
   assert.match(writeOrder(tagged), /- \[\[Chapter Four\]\] `epigraph`\n/);
   assert.equal(writeOrder(retag(tagged, 6, "chapter")), writeOrder(book));
@@ -252,6 +259,59 @@ test("a drag reorders the list, and a drag across a heading re-roles the entry",
   );
 });
 
+test("a section is made, renamed, moved and taken out, and its entries stay", async () => {
+  const book = await order();
+  const headings = (found: Order): string[] =>
+    groups(found).map((group) => group.heading);
+  const named = (found: Order): [string, string][] =>
+    entries(found).map((entry) => [entryName(entry), entry.heading]);
+
+  const made = addGroup(book, "Appendices");
+  assert.deepEqual(headings(made), [
+    "Front matter",
+    "Body",
+    "Back matter",
+    "The book's css",
+    "Appendices",
+  ]);
+
+  // A rename is the heading's line and nothing else: the entries under
+  // it keep their roles, because the heading never gave them one.
+  const renamed = renameGroup(book, "Front matter", "Prelims");
+  assert.deepEqual(headings(renamed), [
+    "Prelims",
+    "Body",
+    "Back matter",
+    "The book's css",
+  ]);
+  assert.deepEqual(
+    entries(renamed).map((entry) => entry.role),
+    entries(book).map((entry) => entry.role),
+  );
+  assert.equal(entries(renamed)[1]?.heading, "Prelims");
+
+  // A section moves with everything under it.
+  const moved = moveGroup(book, "Back matter", 0);
+  assert.deepEqual(headings(moved), [
+    "Back matter",
+    "Front matter",
+    "Body",
+    "The book's css",
+  ]);
+  assert.deepEqual(named(moved).slice(0, 2), [
+    ["Acknowledgements", "Back matter"],
+    ["Title page", "Front matter"],
+  ]);
+
+  // Taking a section out takes its heading and nothing else. The
+  // entries join the section above, in the places they already had.
+  const gone = removeGroup(book, "Back matter");
+  assert.deepEqual(headings(gone), ["Front matter", "Body", "The book's css"]);
+  assert.deepEqual(entries(gone).map(entryName), entries(book).map(entryName));
+  assert.equal(entries(gone).at(-1)?.heading, "Body");
+  assert.equal(entries(gone).at(-1)?.role, "back-matter");
+});
+
 test("removing an entry takes out its line and nothing else", async () => {
   const book = await order();
   const before = writeOrder(book);
@@ -263,6 +323,6 @@ test("removing an entry takes out its line and nothing else", async () => {
 });
 
 // What this tier does not cover: the navigator, which renders a
-// missing entry in place with `Locate` and `Remove` and re-roles an
-// entry on a drag, and the crossing to the engine, which is the op
-// planner's and waits on the theme.
+// missing entry in place and drags a row or a whole section, and the
+// crossing to the engine, which is the op planner's and waits on the
+// theme.

@@ -52,7 +52,8 @@ test("the quick pick, `Add to book` and a pasted wikilink write the same line", 
   await navigator.reveal();
   await expect(navigator.book(BOOK)).toBeVisible();
 
-  await navigator.button("Add a note to a book").click();
+  await navigator.adding(BOOK);
+  await obsidian.item("Add an existing note").click();
   await navigator.pick("Route One");
   await expect(navigator.entry(BOOK, "Route One")).toBeVisible();
 
@@ -72,13 +73,15 @@ test("the quick pick, `Add to book` and a pasted wikilink write the same line", 
 
 test("`New chapter` makes a note in the book's folder and appends it in one step", async ({
   navigator,
+  obsidian,
   vault,
 }) => {
   vault.touch(BOOK);
   vault.touch("New chapter.md");
   await navigator.reveal();
 
-  await navigator.newChapter(BOOK).click();
+  await navigator.adding(BOOK);
+  await obsidian.item("New chapter").click();
 
   await expect(navigator.entry(BOOK, "New chapter")).toBeVisible();
   expect(await vault.read("New chapter.md")).toContain("# New chapter");
@@ -87,7 +90,7 @@ test("`New chapter` makes a note in the book's folder and appends it in one step
     .toContain("- [[Chapter Four]]\n- [[New chapter]]\n");
 });
 
-test("a drag reorders the list, a drag across a heading re-roles the entry, and the menu overrides one role", async ({
+test("a drag reorders the list, an entry keeps its role across a section, and the menu sets one", async ({
   navigator,
   obsidian,
   vault,
@@ -117,8 +120,9 @@ test("a drag reorders the list, a drag across a heading re-roles the entry, and 
     .poll(async () => vault.read(BOOK))
     .toContain("- [[Chapter Four]]\n- [[Volume the First]] `part`\n");
 
-  // The heading an entry lands under is its role, and the tag that
-  // overrode the old one goes with it.
+  // A section groups the reading order and says nothing about what is
+  // in it, so an entry carries its role across one. A drop on a
+  // heading is the end of that section.
   await navigator.drag(
     navigator.entry(BOOK, "Acknowledgements"),
     navigator.group(BOOK, "Front matter"),
@@ -127,10 +131,10 @@ test("a drag reorders the list, a drag across a heading re-roles the entry, and 
 
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("# Front matter\n\n- [[Acknowledgements]]\n");
+    .toContain("- `contents`\n- [[Acknowledgements]] `back-matter`\n");
   await expect(navigator.entry(BOOK, "Acknowledgements")).toHaveAttribute(
     "data-role",
-    "front-matter",
+    "back-matter",
   );
 
   // A per-entry override sits in the context menu.
@@ -163,23 +167,79 @@ test("`Remove from book` takes the entry out and nothing else, and no menu here 
   expect(await vault.notes()).toContain("Chapter Twelve.md");
 });
 
-test("a quiet line reports the notes in the book's folder that are not in it", async ({
+test("a section is made, renamed, dragged and taken out, and its entries stay", async ({
   navigator,
+  obsidian,
   vault,
 }) => {
   vault.touch(BOOK);
   await navigator.reveal();
-  await expect(navigator.loose(BOOK)).toHaveCount(0);
+  await expect(navigator.groups(BOOK)).toContainText([
+    "Front matter",
+    "Body",
+    "Back matter",
+    "The book's css",
+  ]);
 
-  await vault.write("Chapter Four (rewrite).md", "# Chapter Four\n");
+  await navigator.adding(BOOK);
+  await obsidian.item("New section").click();
 
-  await expect(navigator.loose(BOOK)).toContainText(
-    "1 note in this book's folder isn't in the reading order",
+  await expect.poll(async () => vault.read(BOOK)).toContain("# New section\n");
+
+  // A rename is the heading's own line. The entries under it keep the
+  // roles they carry, because the heading never gave them one.
+  await navigator.group(BOOK, "Front matter").click({ button: "right" });
+  await obsidian.item("Rename section").click();
+  await navigator.renaming(BOOK).fill("Prelims");
+  await navigator.renaming(BOOK).press("Enter");
+
+  await expect.poll(async () => vault.read(BOOK)).toContain("# Prelims\n");
+  await expect(navigator.entry(BOOK, "Copyright")).toHaveAttribute(
+    "data-role",
+    "copyright",
   );
-  await navigator.loose(BOOK).getByRole("button", { name: "Add" }).click();
 
-  await expect(navigator.entry(BOOK, "Chapter Four (rewrite)")).toBeVisible();
-  await expect(navigator.loose(BOOK)).toHaveCount(0);
+  // A whole section drags, and everything under it goes along.
+  await navigator.drag(
+    navigator.group(BOOK, "Back matter"),
+    navigator.group(BOOK, "Prelims"),
+    "above",
+  );
+
+  await expect(navigator.groups(BOOK)).toContainText([
+    "Back matter",
+    "Prelims",
+    "Body",
+    "The book's css",
+    "New section",
+  ]);
+
+  // Taking a section out takes its heading and nothing else.
+  await navigator.group(BOOK, "New section").click({ button: "right" });
+  await obsidian.item("Remove section").click();
+
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("# New section");
+  await expect(navigator.entry(BOOK, "Acknowledgements")).toBeVisible();
+});
+
+test("a book note opens as a book, and the editor is never mounted on the way", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.reveal();
+
+  // Every route in reaches a leaf through `setViewState`, so a book
+  // note put on the editor is on the book view by the time it draws.
+  const shown = await obsidian.page.evaluate(async (at) => {
+    const leaf = window.app.workspace.getLeaf(false);
+    await leaf.setViewState({ type: "markdown", state: { file: at } });
+    return leaf.view.getViewType();
+  }, BOOK);
+
+  expect(shown).toEqual("orca-book");
+  await expect(obsidian.view("orca-book")).toBeVisible();
 });
 
 test("the navigator highlights the book the active note is in, and both books when it is in two", async ({

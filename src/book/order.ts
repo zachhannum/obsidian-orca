@@ -1,6 +1,10 @@
 /**
  * The body of a book note is the reading order: headings that group
- * the matter, and a list of wikilinks under them.
+ * the entries, and a list of wikilinks under them.
+ *
+ * A heading is organisational and nothing more. An entry's role is its
+ * own tag, so moving or renaming a group never changes what its
+ * entries are.
  *
  * A line orca does not read is kept as it was written, and an entry is
  * written back in the format's own shape, so a book note orca has
@@ -8,13 +12,7 @@
  */
 
 import { type Links, target } from "@/book/links";
-import {
-  DEFAULT_ROLE,
-  ROLES,
-  headingRole,
-  roleOf,
-  type Role,
-} from "@/book/roles";
+import { DEFAULT_ROLE, ROLES, roleOf, type Role } from "@/book/roles";
 
 /** One entry in the reading order. */
 export interface Entry {
@@ -22,9 +20,9 @@ export interface Entry {
   link?: string;
   /** The alias on the link, in place of the note's name. */
   alias?: string;
-  /** The tag that overrides the heading's role. */
+  /** The role as the note writes it. The default role is written as no tag. */
   tag?: Role;
-  /** The role this section has: the entry's own tag, or its heading's. */
+  /** The role this section has: its own tag, or the default. */
   role: Role;
   /** The heading it sits under, as written in the note. */
   heading: string;
@@ -32,7 +30,7 @@ export interface Entry {
 
 /** One line of the body: a heading, an entry, or a line kept as it was written. */
 export type Block =
-  | { kind: "heading"; line: string; heading: string; role: Role }
+  | { kind: "heading"; line: string; heading: string }
   | { kind: "entry"; entry: Entry }
   | { kind: "other"; line: string };
 
@@ -51,7 +49,6 @@ export interface Place {
 /** One heading and the entries under it, by their place in the reading order. */
 export interface Group {
   heading: string;
-  role: Role;
   entries: number[];
 }
 
@@ -76,8 +73,11 @@ export interface Resolution {
   warnings: Warning[];
 }
 
-/** The heading an add writes when the note has no group of chapters. */
+/** The heading an add writes when the note has no group to put one in. */
 const BODY = "Body";
+
+/** What a new group is called before the author names it. */
+export const NEW_GROUP = "New section";
 
 const HEADING = /^#{1,6}\s+(.*?)\s*$/;
 const ITEM = /^\s*[-*+]\s+(?:\[\[([^\]]+)\]\])?\s*(?:`([^`]*)`)?\s*$/;
@@ -86,17 +86,15 @@ const ITEM = /^\s*[-*+]\s+(?:\[\[([^\]]+)\]\])?\s*(?:`([^`]*)`)?\s*$/;
 export function readOrder(body: string): Order {
   const blocks: Block[] = [];
   let heading = "";
-  let role: Role = DEFAULT_ROLE;
 
   for (const line of body.split("\n")) {
     const head = HEADING.exec(line);
     if (head !== null) {
       heading = head[1] ?? "";
-      role = headingRole(heading);
-      blocks.push({ kind: "heading", line, heading, role });
+      blocks.push({ kind: "heading", line, heading });
       continue;
     }
-    const entry = readEntry(line, heading, role);
+    const entry = readEntry(line, heading);
     blocks.push(
       entry === undefined ? { kind: "other", line } : { kind: "entry", entry },
     );
@@ -141,15 +139,13 @@ export function groups(order: Order): Group[] {
   let at = 0;
   for (const block of order.blocks) {
     if (block.kind === "heading") {
-      found.push({ heading: block.heading, role: block.role, entries: [] });
+      found.push({ heading: block.heading, entries: [] });
       continue;
     }
     if (block.kind !== "entry") continue;
     // An entry above the first heading is in a group of its own, which
     // the note writes no heading for.
-    if (found.length === 0) {
-      found.push({ heading: "", role: DEFAULT_ROLE, entries: [] });
-    }
+    if (found.length === 0) found.push({ heading: "", entries: [] });
     found.at(-1)?.entries.push(at);
     at += 1;
   }
@@ -157,13 +153,31 @@ export function groups(order: Order): Group[] {
 }
 
 /**
- * The heading a note added without a place goes under: the first group
- * of chapters, or a group the add makes. A book's later chapter groups
- * are its own; the body is the one it opens with.
+ * The heading a note added without a place goes under: the group most
+ * of the book's chapters are already in, which is derived the way the
+ * chapter folder is. A book with no chapters yet appends to its last
+ * group, and a book with no groups at all gets one.
  */
 export function defaultHeading(order: Order): string {
-  const body = groups(order).find((group) => group.role === DEFAULT_ROLE);
-  return body?.heading ?? BODY;
+  const found = groups(order);
+  const all = entries(order);
+  const counted = new Map<string, number>();
+  for (const group of found) {
+    const chapters = group.entries.filter(
+      (at) => all[at]?.role === DEFAULT_ROLE,
+    ).length;
+    if (chapters > 0) counted.set(group.heading, chapters);
+  }
+
+  let home: string | undefined;
+  let most = 0;
+  for (const [heading, count] of counted) {
+    if (count > most) {
+      home = heading;
+      most = count;
+    }
+  }
+  return home ?? found.at(-1)?.heading ?? BODY;
 }
 
 /**
@@ -179,16 +193,14 @@ export function add(order: Order, link: string, heading?: string): Order {
   return insert(order, link, { heading: under, at: group?.entries.length ?? 0 });
 }
 
-/** The order with one more entry at a place in it. */
+/** The order with one more entry at a place in it, in the default role. */
 export function insert(order: Order, link: string, to: Place): Order {
-  const role = headingRole(to.heading);
-  return into(order, { link, role, heading: to.heading }, to);
+  return into(order, { link, role: DEFAULT_ROLE, heading: to.heading }, to);
 }
 
 /**
- * The order with one entry moved. The group it lands in is its role,
- * so a drag across a heading re-roles it and drops the tag that
- * overrode the old heading.
+ * The order with one entry moved. A group is organisational, so an
+ * entry carries its role across one unchanged.
  */
 export function move(order: Order, from: number, to: Place): Order {
   const held = entries(order)[from];
@@ -197,9 +209,10 @@ export function move(order: Order, from: number, to: Place): Order {
   const group = groups(order).find((found) => found.entries.includes(from));
   const above =
     group?.heading === to.heading && group.entries.indexOf(from) < to.at;
-  const moved: Entry = { role: headingRole(to.heading), heading: to.heading };
+  const moved: Entry = { role: held.role, heading: to.heading };
   if (held.link !== undefined) moved.link = held.link;
   if (held.alias !== undefined) moved.alias = held.alias;
+  if (held.tag !== undefined) moved.tag = held.tag;
 
   return into(remove(order, from), moved, {
     heading: to.heading,
@@ -208,13 +221,13 @@ export function move(order: Order, from: number, to: Place): Order {
 }
 
 /**
- * The order with one entry in a role of its own. A role the entry's
- * heading already gives is written as no tag at all.
+ * The order with one entry in another role. The default role is
+ * written as no tag at all.
  */
 export function retag(order: Order, at: number, role: Role): Order {
   return rewrite(order, at, (entry) => {
     const next: Entry = { ...entry, role };
-    if (headingRole(entry.heading) === role) delete next.tag;
+    if (role === DEFAULT_ROLE) delete next.tag;
     else next.tag = role;
     return next;
   });
@@ -268,11 +281,116 @@ export function resolve(order: Order, links: Links, from: string): Resolution {
 }
 
 /**
+ * Where one group's lines are: its heading and everything under it up
+ * to the next heading. The entries above the first heading are a group
+ * with no heading of its own, which cannot be renamed or moved.
+ */
+interface Span {
+  heading: string;
+  from: number;
+  /** One past its last line. */
+  to: number;
+}
+
+/** The order with a group at the end of the note. */
+export function addGroup(order: Order, heading: string): Order {
+  const blocks = [...order.blocks];
+  if (!blank(blocks.at(-1))) blocks.push({ kind: "other", line: "" });
+  blocks.push(
+    { kind: "heading", line: `# ${heading}`, heading },
+    { kind: "other", line: "" },
+  );
+  return settle({ blocks });
+}
+
+/**
+ * The order with one group renamed, keeping the level the heading was
+ * written at. The entries under it are untouched: a heading names the
+ * group and nothing else.
+ */
+export function renameGroup(order: Order, heading: string, named: string): Order {
+  const blocks = order.blocks.map((block) => {
+    if (block.kind !== "heading" || block.heading !== heading) return block;
+    const level = /^(#{1,6})\s/.exec(block.line)?.[1] ?? "#";
+    return { kind: "heading" as const, line: `${level} ${named}`, heading: named };
+  });
+  return settle({ blocks });
+}
+
+/**
+ * The order with one group's heading taken out. Its entries stay in
+ * the book and join the group above, in the places they already had.
+ */
+export function removeGroup(order: Order, heading: string): Order {
+  if (heading === "") return order;
+  const blocks = order.blocks.filter(
+    (block) => block.kind !== "heading" || block.heading !== heading,
+  );
+  return settle({ blocks });
+}
+
+/**
+ * The order with one group, and every line under it, at another place
+ * among the groups. A group with no heading stays where it is and
+ * nothing moves above it, because a heading written above those
+ * entries would take them.
+ */
+export function moveGroup(order: Order, heading: string, at: number): Order {
+  if (heading === "") return order;
+  const found = spans(order.blocks);
+  const from = found.findIndex((span) => span.heading === heading);
+  const held = found[from];
+  if (held === undefined) return order;
+
+  const first = found[0]?.heading === "" ? 1 : 0;
+  const to = Math.min(Math.max(at, first), found.length - 1);
+  if (to === from) return order;
+
+  // The held group is taken out first, so the place it lands is the
+  // same index either way it travelled.
+  const rest = found.filter((_, index) => index !== from);
+  const lines = (span: Span): Block[] => order.blocks.slice(span.from, span.to);
+  return settle({
+    blocks: [
+      ...rest.slice(0, to).flatMap(lines),
+      ...lines(held),
+      ...rest.slice(to).flatMap(lines),
+    ],
+  });
+}
+
+/** Every group's lines, in the order the note has them. */
+function spans(blocks: Block[]): Span[] {
+  const found: Span[] = [];
+  for (const [at, block] of blocks.entries()) {
+    if (block.kind === "heading") {
+      const last = found.at(-1);
+      if (last !== undefined) last.to = at;
+      found.push({ heading: block.heading, from: at, to: blocks.length });
+      continue;
+    }
+    if (found.length === 0) {
+      found.push({ heading: "", from: 0, to: blocks.length });
+    }
+  }
+  return found;
+}
+
+/**
+ * The order read again from what it writes, so every entry names the
+ * heading it is now under. A group edit moves headings around the
+ * entries, and the heading each entry carries is read from the note.
+ */
+function settle(order: Order): Order {
+  return readOrder(writeOrder(order));
+}
+
+/**
  * One list item as an entry, or nothing for a line orca cannot read
  * whole. An item tagged with a word that is no role is one of those,
  * and is kept as it was written.
  */
-function readEntry(line: string, heading: string, role: Role): Entry | undefined {
+function readEntry(line: string, heading: string): Entry | undefined {
   const item = ITEM.exec(line);
   if (item === null) return undefined;
   const [, link, code] = item;
@@ -280,7 +398,7 @@ function readEntry(line: string, heading: string, role: Role): Entry | undefined
   if (code !== undefined && tag === undefined) return undefined;
   if (link === undefined && tag === undefined) return undefined;
 
-  const entry: Entry = { role: tag ?? role, heading };
+  const entry: Entry = { role: tag ?? DEFAULT_ROLE, heading };
   if (link !== undefined) {
     const bar = link.indexOf("|");
     entry.link = (bar < 0 ? link : link.slice(0, bar)).trim();
@@ -308,7 +426,7 @@ function into(order: Order, entry: Entry, to: Place): Order {
 
   if (!blank(blocks.at(-1))) blocks.push({ kind: "other", line: "" });
   blocks.push(
-    { kind: "heading", line: `# ${to.heading}`, heading: to.heading, role: entry.role },
+    { kind: "heading", line: `# ${to.heading}`, heading: to.heading },
     { kind: "other", line: "" },
     { kind: "entry", entry },
     { kind: "other", line: "" },

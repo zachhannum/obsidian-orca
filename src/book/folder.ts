@@ -1,6 +1,6 @@
 /**
- * A book's own folder: where its chapters live, and which notes in it
- * the reading order does not have.
+ * A book's own folder: where its chapters live, and where a new one is
+ * written.
  *
  * The folder is derived from the book rather than declared, so moving
  * the chapters moves it and nothing in the note goes stale.
@@ -26,28 +26,6 @@ export function chapterFolder(sections: Section[], note: string): string {
     }
   }
   return home ?? folderOf(note);
-}
-
-/**
- * The notes directly in a folder that the book does not read, in the
- * order a listing has them. The book note itself is not one of them.
- */
-export function loose(
-  folder: string,
-  paths: Iterable<string>,
-  sections: Section[],
-  note: string,
-): string[] {
-  const read = new Set(
-    sections.flatMap((section) => (section.kind === "note" ? [section.path] : [])),
-  );
-  return [...paths].filter(
-    (path) =>
-      path !== note &&
-      path.endsWith(".md") &&
-      folderOf(path) === folder &&
-      !read.has(path),
-  );
 }
 
 /** The folder a path is in, which is empty for a note at the top of the vault. */

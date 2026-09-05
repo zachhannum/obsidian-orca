@@ -46,9 +46,19 @@ export class Navigator {
       .first();
   }
 
-  /** One of a book's headings. */
+  /** One of a book's sections, by the heading it is written with. */
   group(book: string, heading: string): Locator {
     return this.book(book).locator(`[data-heading="${heading}"]`);
+  }
+
+  /** Every section of a book, in the order the note has them. */
+  groups(book: string): Locator {
+    return this.book(book).locator("[data-heading]");
+  }
+
+  /** The input a rename is answered in. */
+  renaming(book: string): Locator {
+    return this.book(book).getByTestId("orca-rename");
   }
 
   /** Every entry in a book's reading order, in the order it lists them. */
@@ -56,19 +66,18 @@ export class Navigator {
     return this.book(book).getByTestId("orca-entry");
   }
 
-  /** The quiet line about the notes the book does not read. */
-  loose(book: string): Locator {
-    return this.book(book).getByTestId("orca-loose");
-  }
-
-  /** The row that makes a chapter at the end of the body. */
-  newChapter(book: string): Locator {
-    return this.book(book).getByTestId("orca-new-chapter");
-  }
-
   /** A button in the navigator's own header. */
   button(label: string): Locator {
     return this.pane.locator(`[aria-label="${label}"]`);
+  }
+
+  /**
+   * The `+` on a book's own row, opened. Every way of adding to a book
+   * is behind it, so a spec that adds something starts here.
+   */
+  async adding(book: string): Promise<void> {
+    await this.book(book).locator('[aria-label="Add to this book"]').click();
+    await expect(this.obsidian.menu()).toBeVisible();
   }
 
   /** How many times the shelf has been drawn. */
@@ -85,8 +94,9 @@ export class Navigator {
   }
 
   /**
-   * One entry dragged onto another. The drag is pointer events, so the
-   * pointer travels far enough to pass the slop before it lands.
+   * One row dragged onto another. dnd-kit starts a drag once the
+   * pointer has travelled its activation distance, so the pointer moves
+   * away before it travels to where it lands.
    */
   async drag(from: Locator, to: Locator, onto: Onto): Promise<void> {
     const { mouse } = this.obsidian.page;
@@ -94,11 +104,16 @@ export class Navigator {
     const end = await box(to);
     await mouse.move(start.x + 20, start.y + start.height / 2);
     await mouse.down();
-    await mouse.move(start.x + 20, start.y + start.height / 2 + 8, { steps: 4 });
+    await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
     await mouse.move(
       end.x + 20,
-      onto === "above" ? end.y + 1 : end.y + end.height - 1,
-      { steps: 10 },
+      onto === "above" ? end.y + 2 : end.y + end.height - 2,
+      { steps: 15 },
+    );
+    // dnd-kit settles the drop on the frame after the last move.
+    await mouse.move(
+      end.x + 20,
+      onto === "above" ? end.y + 2 : end.y + end.height - 2,
     );
     await mouse.up();
   }

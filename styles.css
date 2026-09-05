@@ -112,28 +112,15 @@
   align-items: center;
   gap: var(--size-4-1);
   padding: var(--size-4-1) var(--size-4-2) var(--size-4-2);
-  color: var(--text-faint);
 }
 
 .orca-nav-title {
   flex: 1;
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.orca-nav-button {
-  display: flex;
-  padding: var(--size-4-1);
-  border-radius: var(--radius-s);
-  color: var(--text-faint);
-  cursor: pointer;
-}
-
-.orca-nav-button:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
 }
 
 .orca-nav-quiet {
@@ -146,12 +133,13 @@
   outline: none;
 }
 
+/* Every row is one height, whatever it carries. */
 .orca-nav-item {
   display: flex;
   align-items: center;
   gap: var(--size-4-1);
-  min-height: 24px;
-  padding: 3px var(--size-4-2);
+  height: 26px;
+  padding: 0 var(--size-4-2);
   border-radius: var(--radius-s);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
@@ -168,8 +156,9 @@
   color: var(--text-normal);
 }
 
-.orca-nav-item.is-dragged {
-  opacity: 0.4;
+.orca-nav-item.is-dragged,
+.orca-section.is-dragged {
+  opacity: 0.35;
 }
 
 .orca-shelf-name {
@@ -179,7 +168,9 @@
 
 .orca-fold {
   display: flex;
+  flex: none;
   color: var(--text-faint);
+  --icon-size: var(--icon-xs);
 }
 
 .orca-label {
@@ -193,137 +184,129 @@
   border-left: 1px solid var(--divider-color);
 }
 
+/* A section reads as a divider, so it is never mistaken for a row. */
 .orca-nav-heading {
-  padding: var(--size-4-2) var(--size-4-2) var(--size-4-1);
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-medium);
-}
-
-.orca-nav-make {
   display: flex;
   align-items: center;
-  gap: var(--size-4-1);
-  padding: var(--size-4-1) var(--size-4-2);
+  gap: var(--size-4-2);
+  height: 24px;
+  margin-top: var(--size-4-2);
+  padding: 0 var(--size-4-2);
   color: var(--text-faint);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: grab;
+}
+
+.orca-nav-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+.orca-heading-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orca-rename {
+  height: 20px;
+  padding: 0 var(--size-4-1);
   font-size: var(--font-ui-smaller);
-  cursor: pointer;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
-.orca-nav-make:hover {
-  color: var(--text-normal);
-}
-
-.orca-nav-make-icon {
+/* A fixed slot, so every label starts at the same edge. */
+.orca-entry-mark {
   display: flex;
+  flex: none;
+  width: 14px;
   --icon-size: var(--icon-xs);
 }
 
 .orca-entry[data-kind="generated"] {
   color: var(--text-faint);
+  font-style: italic;
+}
+
+.orca-entry[data-kind="generated"] .orca-entry-mark {
+  color: var(--text-faint);
+}
+
+.orca-entry[data-kind="missing"] .orca-entry-mark {
+  color: var(--color-orange);
 }
 
 .orca-entry[data-kind="missing"] .orca-label {
   text-decoration: line-through;
 }
 
-.orca-entry-warn {
-  display: flex;
-  color: var(--color-orange);
-  --icon-size: var(--icon-xs);
-}
-
-.orca-entry-fix,
-.orca-loose-note {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-1);
-  margin-left: auto;
-}
-
-.orca-nav-action {
-  padding: 0;
-  border: none;
-  box-shadow: none;
-  background: none;
-  color: var(--text-accent);
-  font-size: var(--font-ui-smaller);
-  cursor: pointer;
-}
-
-.orca-nav-action:hover {
-  background: none;
-  text-decoration: underline;
-}
-
 .orca-chip {
+  flex: none;
   margin-left: auto;
   padding: 0 7px;
   border-radius: 9px;
   background: var(--background-modifier-hover);
   color: var(--text-accent);
   font-size: var(--font-ui-smaller);
+  font-style: normal;
 }
 
-.orca-chip.mod-generated {
+.orca-entry[data-kind="generated"] .orca-chip {
+  background: none;
   color: var(--text-faint);
 }
 
-.orca-loose {
-  margin: var(--size-4-2) var(--size-4-2) 0;
-  padding: var(--size-4-2);
-  border-radius: var(--radius-s);
-  background: rgba(var(--mono-rgb-100), 0.04);
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
+.orca-nav-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
 }
 
-.orca-loose-head {
+/* An icon with no fill of its own until the pointer is on it. */
+.orca-nav-action {
   display: flex;
   align-items: center;
-  gap: var(--size-4-1);
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-s);
+  box-shadow: none;
+  background: none;
+  color: var(--text-faint);
   cursor: pointer;
-}
-
-.orca-loose-said {
-  flex: 1;
-}
-
-.orca-loose-close {
-  display: flex;
   --icon-size: var(--icon-xs);
 }
 
-.orca-loose-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: var(--size-4-1);
+.orca-nav-action:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
-.orca-loose-note {
-  color: var(--text-muted);
+/* The book's own `+` is quiet until the row is under the pointer. */
+.orca-shelf-name .orca-nav-actions {
+  opacity: 0;
 }
 
-.orca-loose-note .orca-label {
-  flex: 1;
-  margin-right: auto;
-}
-
-.orca-drop {
-  height: 2px;
-  margin: 1px var(--size-4-2);
-  border-radius: 2px;
-  background: var(--color-accent);
+.orca-shelf-name:hover .orca-nav-actions,
+.orca-shelf-name:focus-within .orca-nav-actions {
+  opacity: 1;
 }
 
 .orca-ghost {
-  position: fixed;
-  z-index: var(--layer-menu);
   display: flex;
   align-items: center;
   gap: var(--size-4-1);
-  padding: 3px var(--size-4-2);
+  height: 26px;
+  padding: 0 var(--size-4-2);
   border-radius: var(--radius-s);
   background: var(--background-primary);
   box-shadow:
@@ -331,14 +314,11 @@
     0 0 0 1px var(--color-accent);
   color: var(--text-normal);
   font-size: var(--font-ui-small);
-  pointer-events: none;
+  cursor: grabbing;
 }
 
 .orca-ghost-grip {
   display: flex;
   color: var(--text-faint);
-}
-
-.orca-ghost-role:empty {
-  display: none;
+  --icon-size: var(--icon-xs);
 }

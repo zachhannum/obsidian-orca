@@ -15,7 +15,7 @@ export const MODULES = ["engine", "book", "style", "assets", "ui"];
 const APPLICATION = ["obsidian", "electron"];
 
 /** The packages only `ui` may reach, by the prefix their subpaths share. */
-const APPLICATION_SCOPES = ["react", "react-dom", "@dnd-kit/"];
+const APPLICATION_SCOPES = ["react", "react-dom", "@dnd-kit"];
 
 const RULES = [
   /**

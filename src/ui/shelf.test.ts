@@ -21,7 +21,7 @@ async function model(): Promise<Model> {
 
 async function shelving(active: string | undefined): Promise<Shelving> {
   const paths = (await vault.list("/")).files;
-  return { paths, links: pathLinks([...paths, SECOND]), active };
+  return { links: pathLinks([...paths, SECOND]), active };
 }
 
 test("the navigator highlights the book the active note is in, and both books when it is in two", async () => {
@@ -51,6 +51,11 @@ test("a note that is gone keeps its row, and the row says the note is missing", 
   const shelf = shelve(book, await shelving(undefined));
 
   const rows = shelf.groups.flatMap((group) => group.rows);
+  // The sections are the note's own headings, in the order it has them.
+  assert.deepEqual(
+    shelf.groups.map((group) => group.heading),
+    ["Front matter", "Body", "Back matter", "The book's css"],
+  );
   assert.deepEqual(
     rows.filter((row) => row.kind === "missing").map((row) => row.name),
     ["Chapter Four"],
@@ -70,13 +75,21 @@ test("a note that is gone keeps its row, and the row says the note is missing", 
       [7, "Acknowledgements", "note"],
     ],
   );
-  // A new chapter is appended to the body, which is the group the
-  // book opens its chapters with rather than the author's css heading.
-  assert.equal(shelf.body, "Body");
-  // The tagged entries are the ones the navigator draws a chip on.
+  // A chip says the role, and the default role is not worth saying.
   assert.deepEqual(
-    rows.filter((row) => row.tagged).map((row) => row.role),
-    ["title-page", "copyright", "epigraph", "contents", "part"],
+    rows.filter((row) => row.named).map((row) => row.role),
+    [
+      "title-page",
+      "copyright",
+      "epigraph",
+      "contents",
+      "part",
+      "back-matter",
+    ],
+  );
+  assert.deepEqual(
+    rows.filter((row) => !row.named).map((row) => row.name),
+    ["Chapter Twelve", "Chapter Four"],
   );
 });
 

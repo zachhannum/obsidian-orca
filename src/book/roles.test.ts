@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  DEFAULT_ROLE,
-  ROLES,
-  headingRole,
-  roleOf,
-  type Origin,
-} from "@/book/roles";
+import { DEFAULT_ROLE, ROLES, roleOf, type Origin } from "@/book/roles";
 
 /** The roles the format has, and whether a section in each comes from a note. */
 const TABLE: Readonly<Record<string, Origin>> = {
@@ -32,13 +26,9 @@ test("every role resolves, and a generated one has no note behind it", () => {
     assert.notEqual(ROLES[role].name, "");
   }
   assert.equal(roleOf("prologue"), undefined);
-});
-
-test("a heading is the role its own words name, and `chapter` otherwise", () => {
-  assert.equal(headingRole("Front matter"), "front-matter");
-  assert.equal(headingRole("back matter"), "back-matter");
-  assert.equal(headingRole("Body"), DEFAULT_ROLE);
-  assert.equal(headingRole(""), DEFAULT_ROLE);
+  // An entry names its own role or takes the default. A heading names
+  // none: it groups the entries and nothing else.
+  assert.equal(roleOf(DEFAULT_ROLE), DEFAULT_ROLE);
 });
 
 // What this tier does not cover: the CSS each role generates, and the

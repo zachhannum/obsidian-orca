@@ -4,10 +4,11 @@ import {
   Plugin,
   TFile,
   TFolder,
+  WorkspaceLeaf,
   normalizePath,
   type Menu,
   type TAbstractFile,
-  type WorkspaceLeaf,
+  type ViewState,
 } from "obsidian";
 import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
@@ -24,6 +25,13 @@ import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
 
 /** The view a book note is handed back to. */
 const MARKDOWN_VIEW = "markdown";
+
+/** How a leaf is put on a view, which is the call orca answers first. */
+type SetViewState = (
+  this: WorkspaceLeaf,
+  state: ViewState,
+  ...rest: unknown[]
+) => Promise<void>;
 
 /**
  * Orca, as Obsidian loads it. The plugin owns the engine, and every
@@ -46,6 +54,8 @@ export default class OrcaPlugin extends Plugin {
     // The session is opened before anything is registered, so the views
     // Obsidian restores at startup all wait on the one engine.
     const opening = this.open();
+
+    this.catchOpening();
 
     this.registerView(PREVIEW_VIEW, (leaf) => new PreviewView(leaf, opening));
     this.registerView(
@@ -103,6 +113,39 @@ export default class OrcaPlugin extends Plugin {
     );
 
     await opening;
+  }
+
+  /**
+   * A book note goes straight to the book view, before the editor is
+   * ever mounted. The explorer, the switcher, a link and the navigator
+   * all reach a leaf through `setViewState`, and a swap made after the
+   * fact is a frame of raw markdown the author sees.
+   */
+  private catchOpening(): void {
+    const held = WorkspaceLeaf.prototype.setViewState as SetViewState;
+    const plugin = this;
+    const caught: SetViewState = function (state, ...rest) {
+      return held.call(this, plugin.asBook(this, state), ...rest);
+    };
+    WorkspaceLeaf.prototype.setViewState = caught;
+    this.register(() => {
+      // Another plugin may have wrapped this one since. Its wrapper
+      // stays, because taking it off would take that plugin with it.
+      if (WorkspaceLeaf.prototype.setViewState === caught) {
+        WorkspaceLeaf.prototype.setViewState = held;
+      }
+    });
+  }
+
+  /** The state a leaf is really put on: the book view, for a book note. */
+  private asBook(leaf: WorkspaceLeaf, state: ViewState): ViewState {
+    if (state.type !== MARKDOWN_VIEW) return state;
+    const path = state.state?.["file"];
+    if (typeof path !== "string") return state;
+    if (this.asMarkdown.get(leaf) === path) return state;
+    const file = this.app.vault.getFileByPath(path);
+    if (file === null || !isBook(this.notes(), file)) return state;
+    return { ...state, type: BOOK_VIEW, state: { file: path } };
   }
 
   override onunload(): void {
