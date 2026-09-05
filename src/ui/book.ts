@@ -56,7 +56,9 @@ export class BookView extends FileView {
     // The note is gone, so an unwritten edit has nowhere to settle.
     this.registerEvent(
       this.app.vault.on("delete", (file) => {
-        if (file.path === this.file?.path) this.writer = undefined;
+        if (file.path !== this.file?.path) return;
+        this.writer?.stop();
+        this.writer = undefined;
       }),
     );
     return Promise.resolve();
@@ -173,6 +175,9 @@ export class BookView extends FileView {
   }
 
   private async write(file: TFile, model: Model): Promise<void> {
+    // A settle already in flight when the note went writes nothing: the
+    // vault no longer holds the file the writer was made for.
+    if (this.app.vault.getFileByPath(file.path) !== file) return;
     this.saving += 1;
     try {
       this.disk = await save(this.app, file, this.disk, model);

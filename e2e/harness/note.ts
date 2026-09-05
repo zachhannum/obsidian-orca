@@ -57,10 +57,29 @@ export class Note {
    * so the frames land inside the settle rather than around it.
    */
   async drag(title: string, frames: number): Promise<void> {
+    await this.edited(title, frames, false);
+  }
+
+  /**
+   * One edit, and the note trashed in the same turn of the renderer, so
+   * the settle the edit armed is still waiting when the note goes.
+   */
+  async editAndDelete(title: string): Promise<void> {
+    await this.edited(title, 1, true);
+  }
+
+  /** The one shape of an edit through the view, and what may follow it. */
+  private async edited(
+    title: string,
+    frames: number,
+    trash: boolean,
+  ): Promise<void> {
     await this.obsidian.page.evaluate(
-      ({ name, count, type }) => {
+      async ({ name, count, gone, type }) => {
         const leaf = window.app.workspace.getLeavesOfType(type)[0];
-        const view = leaf?.view as unknown as Editing | undefined;
+        const view = leaf?.view as unknown as
+          | (Editing & { file: TFile | null })
+          | undefined;
         if (view === undefined) throw new Error("no book view is open");
         for (let frame = 0; frame < count; frame += 1) {
           const held = count === 1 ? name : `${name} ${frame}`;
@@ -72,33 +91,12 @@ export class Note {
             },
           }));
         }
+        if (!gone) return;
+        const note = view.file;
+        if (note === null) throw new Error("the view has no note");
+        await window.app.fileManager.trashFile(note);
       },
-      { name: title, count: frames, type: BOOK },
-    );
-  }
-
-  /**
-   * One edit, and the note trashed in the same turn of the renderer, so
-   * the settle the edit armed is still waiting when the note goes.
-   */
-  async editAndDelete(title: string): Promise<void> {
-    await this.obsidian.page.evaluate(
-      async ({ name, type }) => {
-        const leaf = window.app.workspace.getLeavesOfType(type)[0];
-        const view = leaf?.view as unknown as (Editing & { file: TFile | null }) | undefined;
-        if (view === undefined) throw new Error("no book view is open");
-        view.edit((model) => ({
-          ...model,
-          book: {
-            ...model.book,
-            metadata: { ...model.book.metadata, title: name },
-          },
-        }));
-        const held = view.file;
-        if (held === null) throw new Error("the view has no note");
-        await window.app.fileManager.trashFile(held);
-      },
-      { name: title, type: BOOK },
+      { name: title, count: frames, gone: trash, type: BOOK },
     );
   }
 

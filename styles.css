@@ -290,8 +290,13 @@
   margin-left: auto;
 }
 
-/* An icon with no fill of its own until the pointer is on it. */
-.orca-nav-action {
+/*
+ * An icon with no fill of its own until the pointer is on it. Obsidian
+ * fills every button that is not one of its own clickable icons, and
+ * that rule is as specific as a class, so this one is written to match
+ * it rather than to be outweighed by it.
+ */
+button.orca-nav-action {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -307,7 +312,7 @@
   --icon-size: var(--icon-xs);
 }
 
-.orca-nav-action:hover {
+button.orca-nav-action:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }

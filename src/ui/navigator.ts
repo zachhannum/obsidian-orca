@@ -1,6 +1,7 @@
 import { ItemView, Menu, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
+import { bookFormat } from "@/book/note";
 import {
   add,
   addGenerated,
@@ -78,14 +79,23 @@ export class NavigatorView extends ItemView {
     this.registerEvent(vault.on("delete", again));
     this.registerEvent(vault.on("rename", again));
     // Every note in the vault raises this, and a read costs every book
-    // on the shelf. A note that gains the key reaches the shelf through
-    // the metadata cache instead.
+    // on the shelf, so it is worth one only for a note the shelf reads.
     this.registerEvent(
       vault.on("modify", (file) => {
         if (file instanceof TFile && this.reads(file)) again();
       }),
     );
-    this.registerEvent(metadataCache.on("resolved", again));
+    // Obsidian resolves the cache after any note is written, so the
+    // filter is on this side too. A note that gains the key arrives
+    // here, with the frontmatter it was just parsed with.
+    this.registerEvent(
+      metadataCache.on("changed", (file, _data, cache) => {
+        const properties = cache.frontmatter;
+        const held =
+          properties !== undefined && bookFormat(properties) !== undefined;
+        if (held || this.shelved.has(file.path)) again();
+      }),
+    );
     // The highlight follows the active note. Nothing else here does:
     // the navigator never folds, unfolds or scrolls itself.
     this.registerEvent(workspace.on("file-open", again));
@@ -200,7 +210,13 @@ export class NavigatorView extends ItemView {
       // settles it.
       if (!isBook(index, note) && !this.shelved.has(note.path)) continue;
       // One note orca cannot read leaves the rest of the shelf standing.
-      const model = await this.edits.model(note.path).catch(() => undefined);
+      // A book note orca refuses reads as undefined; anything else here
+      // is a read that failed for a reason orca does not have a name
+      // for, and it leaves a trace rather than only a gap in the list.
+      const model = await this.edits.model(note.path).catch((cause: unknown) => {
+        console.error(`Orca: ${note.path} was not read.`, cause);
+        return undefined;
+      });
       if (model === undefined) continue;
       shelf.push(shelve({ path: note.path, name: note.basename, model }, vault));
     }
@@ -448,8 +464,14 @@ export class NavigatorView extends ItemView {
   private pasted(event: ClipboardEvent): void {
     // A rename is an input inside this view, and what is pasted into
     // one is the section's name.
+    // A leaf can be in a popout window, whose elements belong to that
+    // window rather than this one. `instanceOf` is Obsidian's own way
+    // to ask across the two.
     const into = event.target;
-    if (into instanceof HTMLInputElement || into instanceof HTMLTextAreaElement) {
+    if (
+      into instanceof Node &&
+      (into.instanceOf(HTMLInputElement) || into.instanceOf(HTMLTextAreaElement))
+    ) {
       return;
     }
     const path = this.focused;

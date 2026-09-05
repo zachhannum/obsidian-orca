@@ -204,18 +204,19 @@ test("a book is deleted only after the author says so, and its notes stay", asyn
   await navigator.answer("Cancel");
   await expect(navigator.book(SECOND)).toBeVisible();
 
-  await navigator.menuOn(navigator.name(SECOND));
-  await obsidian.choose("Delete book");
-  await navigator.answer("Delete");
+  const said = await obsidian.notices(async () => {
+    await navigator.menuOn(navigator.name(SECOND));
+    await obsidian.choose("Delete book");
+    await navigator.answer("Delete");
+    await expect(navigator.book(SECOND)).toHaveCount(0);
+  });
 
-  await expect(navigator.book(SECOND)).toHaveCount(0);
   await expect.poll(async () => vault.notes()).not.toContain(SECOND);
   // The notes the book listed are borrowed, and stay in the vault.
   expect(await vault.notes()).toContain("Chapter Twelve.md");
   // The view the note was open in wrote nothing back to a path the
   // vault no longer has.
-  await expect(obsidian.notice()).toHaveCount(0);
-  expect(await vault.notes()).not.toContain(SECOND);
+  expect(said).toEqual([]);
 });
 
 test("a book deleted under an unwritten edit has nothing written back to it", async ({
@@ -230,17 +231,19 @@ test("a book deleted under an unwritten edit has nothing written back to it", as
   await note.open(SECOND);
   await expect(note.page).toBeVisible();
 
-  await note.editAndDelete("The Bennet Novels");
+  const said = await obsidian.notices(async () => {
+    await note.editAndDelete("The Bennet Novels");
 
-  // The settle that edit armed comes due a second later. The fixture
-  // book's own settle is the wait for that second having passed, since
-  // it is armed after the delete and lands after its own.
-  await note.open(BOOK);
-  await note.edit("Settled");
-  await expect.poll(async () => vault.read(BOOK)).toContain("title: Settled");
+    // The settle that edit armed comes due a second later. The fixture
+    // book's own settle is the wait for that second having passed,
+    // since it is armed after the delete and lands after its own.
+    await note.open(BOOK);
+    await note.edit("Settled");
+    await expect.poll(async () => vault.read(BOOK)).toContain("title: Settled");
+  });
 
+  expect(said).toEqual([]);
   expect(await vault.notes()).not.toContain(SECOND);
-  await expect(obsidian.notice()).toHaveCount(0);
   await expect(navigator.book(SECOND)).toHaveCount(0);
 });
 
@@ -295,7 +298,8 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   await navigator.renaming(BOOK).press("Enter");
 
   await expect.poll(async () => vault.read(BOOK)).toContain("# Prelims\n");
-  expect(await vault.read(BOOK)).not.toContain("- [[Chapter Ten]]");
+  await expect(navigator.group(BOOK, "Prelims")).toBeVisible();
+  expect(await vault.read(BOOK)).not.toContain("[[Chapter Ten]]");
   await expect(navigator.entry(BOOK, "Copyright")).toHaveAttribute(
     "data-role",
     "copyright",

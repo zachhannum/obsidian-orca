@@ -20,6 +20,8 @@ declare global {
   interface Window {
     /** Undefined until Obsidian has opened the vault. */
     app: App & { commands: Commands };
+    /** What a spec records Obsidian's notices in. */
+    orcaNotices?: { said: string[]; watch: MutationObserver } | undefined;
   }
 }
 
@@ -162,9 +164,43 @@ export class Obsidian {
     return this.page.locator(CHROME.suggestion);
   }
 
-  /** What orca has told the author, which a spec reads to find nothing said. */
+  /** What orca has told the author, while one is still on screen. */
   notice(): Locator {
     return this.page.locator(CHROME.notice);
+  }
+
+  /**
+   * Everything said while `during` ran. Obsidian takes a notice off the
+   * screen after a few seconds, so they are recorded as they appear
+   * rather than counted afterwards.
+   */
+  async notices(during: () => Promise<void>): Promise<string[]> {
+    await this.page.evaluate((selector) => {
+      const said: string[] = [];
+      // Obsidian makes the container the first time it says anything,
+      // so the watch is on the body rather than on the container.
+      const watch = new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (node instanceof HTMLElement && node.matches(selector)) {
+              said.push(node.textContent ?? "");
+            }
+          }
+        }
+      });
+      watch.observe(document.body, { childList: true, subtree: true });
+      window.orcaNotices = { said, watch };
+    }, CHROME.notice);
+
+    await during();
+
+    return this.page.evaluate(() => {
+      const held = window.orcaNotices;
+      if (held === undefined) return [];
+      held.watch.disconnect();
+      window.orcaNotices = undefined;
+      return held.said;
+    });
   }
 
   /**

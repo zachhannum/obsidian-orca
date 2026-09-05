@@ -72,9 +72,12 @@ test("an edit aimed at a book its view cannot write is refused out loud", async 
   // A view is the note's one writer while it is open, and a refused
   // book has none at all. The edit goes to the note rather than to a
   // view that would drop it, and the note refuses it in turn.
-  await obsidian.fileMenu("Acknowledgements.md", "Add to book");
-  await navigator.pick("Brobdingnag");
+  const said = await obsidian.notices(async () => {
+    await obsidian.fileMenu("Acknowledgements.md", "Add to book");
+    await navigator.pick("Brobdingnag");
+    await expect(obsidian.notice()).toContainText("the book was not edited");
+  });
 
-  await expect(obsidian.notice()).toContainText("the book was not edited");
+  expect(said.join(" ")).toContain("the book was not edited");
   expect(await vault.read(AHEAD)).toEqual(newer("The Voyage to Brobdingnag"));
 });
