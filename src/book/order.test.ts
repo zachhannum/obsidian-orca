@@ -9,6 +9,7 @@ import { pathLinks } from "@/book/links";
 import { linksIn } from "@/book/links";
 import {
   add,
+  addGenerated,
   addGroup,
   entries,
   entryName,
@@ -320,6 +321,54 @@ test("removing an entry takes out its line and nothing else", async () => {
 
   assert.equal(after, before.replace("- [[Chapter Twelve]]\n", ""));
   assert.equal(await vault.exists("Chapter Twelve.md"), true);
+});
+
+test("a section moves to the last place among the groups", async () => {
+  const book = await order();
+  const headings = (found: Order): string[] =>
+    groups(found).map((group) => group.heading);
+
+  const moved = moveGroup(book, "Front matter", 3);
+
+  assert.deepEqual(headings(moved), [
+    "Body",
+    "Back matter",
+    "The book's css",
+    "Front matter",
+  ]);
+  assert.deepEqual(
+    entries(moved)
+      .slice(-4)
+      .map(entryName),
+    ["Title page", "Copyright", "A note on the text", "Contents"],
+  );
+
+  // Prose above the first heading belongs to no group, so it stays at
+  // the top of the note and counts in no group's place.
+  const prose = readOrder("Some prose.\n\n# One\n\n- [[A]]\n\n# Two\n\n- [[B]]\n");
+  assert.equal(
+    writeOrder(moveGroup(prose, "One", 1)),
+    "Some prose.\n\n# Two\n\n- [[B]]\n\n# One\n\n- [[A]]\n",
+  );
+});
+
+test("a generated section is added by its role, and has no note to find", async () => {
+  const book = await order();
+
+  const made = addGenerated(book, "contents", "Back matter");
+
+  const last = entries(made).at(-1);
+  assert.equal(last?.link, undefined);
+  assert.equal(last?.role, "contents");
+  assert.equal(last?.heading, "Back matter");
+  assert.equal(writeOrder(made).includes("- `contents`\n\n# The book's css"), true);
+
+  const { sections, warnings } = resolve(made, pathLinks(await paths()), BOOK);
+  assert.equal(sections.at(-1)?.kind, "generated");
+  assert.equal(
+    warnings.some((warning) => warning.entry.role === "contents"),
+    false,
+  );
 });
 
 // What this tier does not cover: the navigator, which renders a

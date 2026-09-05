@@ -188,14 +188,33 @@ export function defaultHeading(order: Order): string {
  * the same note.
  */
 export function add(order: Order, link: string, heading?: string): Order {
-  const under = heading ?? defaultHeading(order);
-  const group = groups(order).find((found) => found.heading === under);
-  return insert(order, link, { heading: under, at: group?.entries.length ?? 0 });
+  return insert(order, link, endOf(order, heading));
+}
+
+/**
+ * The order with one more generated section, at the end of a heading's
+ * group. A generated section has no note: its role is what the engine
+ * is asked to set in its place.
+ */
+export function addGenerated(order: Order, role: Role, heading?: string): Order {
+  return insertGenerated(order, role, endOf(order, heading));
 }
 
 /** The order with one more entry at a place in it, in the default role. */
 export function insert(order: Order, link: string, to: Place): Order {
   return into(order, { link, role: DEFAULT_ROLE, heading: to.heading }, to);
+}
+
+/** The order with one generated section at a place in it. */
+export function insertGenerated(order: Order, role: Role, to: Place): Order {
+  return into(order, { role, tag: role, heading: to.heading }, to);
+}
+
+/** The end of a group: the place an add without one of its own goes. */
+function endOf(order: Order, heading: string | undefined): Place {
+  const under = heading ?? defaultHeading(order);
+  const group = groups(order).find((found) => found.heading === under);
+  return { heading: under, at: group?.entries.length ?? 0 };
 }
 
 /**
@@ -292,6 +311,13 @@ interface Span {
   to: number;
 }
 
+/** The groups a body is made of, and the lines above the first of them. */
+interface Body {
+  /** One past the last line that belongs to no group. */
+  head: number;
+  groups: Span[];
+}
+
 /** The order with a group at the end of the note. */
 export function addGroup(order: Order, heading: string): Order {
   const blocks = [...order.blocks];
@@ -337,7 +363,7 @@ export function removeGroup(order: Order, heading: string): Order {
  */
 export function moveGroup(order: Order, heading: string, at: number): Order {
   if (heading === "") return order;
-  const found = spans(order.blocks);
+  const { head, groups: found } = spans(order.blocks);
   const from = found.findIndex((span) => span.heading === heading);
   const held = found[from];
   if (held === undefined) return order;
@@ -352,6 +378,7 @@ export function moveGroup(order: Order, heading: string, at: number): Order {
   const lines = (span: Span): Block[] => order.blocks.slice(span.from, span.to);
   return settle({
     blocks: [
+      ...order.blocks.slice(0, head),
       ...rest.slice(0, to).flatMap(lines),
       ...lines(held),
       ...rest.slice(to).flatMap(lines),
@@ -359,21 +386,29 @@ export function moveGroup(order: Order, heading: string, at: number): Order {
   });
 }
 
-/** Every group's lines, in the order the note has them. */
-function spans(blocks: Block[]): Span[] {
+/**
+ * Every group's lines, in the order the note has them, counted the way
+ * `groups` counts them: an entry above the first heading opens the
+ * group with no heading, and a line above it that is not an entry
+ * belongs to no group and stays at the top of the note.
+ */
+function spans(blocks: Block[]): Body {
   const found: Span[] = [];
+  let head = blocks.length;
   for (const [at, block] of blocks.entries()) {
     if (block.kind === "heading") {
       const last = found.at(-1);
-      if (last !== undefined) last.to = at;
+      if (last === undefined) head = at;
+      else last.to = at;
       found.push({ heading: block.heading, from: at, to: blocks.length });
       continue;
     }
-    if (found.length === 0) {
+    if (block.kind === "entry" && found.length === 0) {
       found.push({ heading: "", from: 0, to: blocks.length });
+      head = 0;
     }
   }
-  return found;
+  return { head, groups: found };
 }
 
 /**
