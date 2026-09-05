@@ -2,16 +2,16 @@ import { ButtonComponent, Modal, type App } from "obsidian";
 
 /** The two versions of the note, and which one the author keeps. */
 export interface Choice {
-  /** Writes the edit the view is holding over the note. */
+  /** Writes the view's unwritten edit over the note. */
   keep(): void;
   /** Drops that edit and opens the note as it is on disk. */
   reload(): void;
 }
 
 /**
- * The note changed on disk while the view was holding an edit. Closing
- * without choosing leaves both as they are, and the next edit settles
- * over the note.
+ * The note changed on disk while the view had an unwritten edit. Closing
+ * without choosing leaves the note and the edit as they are, and the
+ * next edit is written over the note on settle.
  */
 export class Changed extends Modal {
   constructor(
@@ -26,7 +26,7 @@ export class Changed extends Modal {
     const pane = this.contentEl;
     pane.dataset["testid"] = "orca-book-changed";
     pane.createEl("p", {
-      text: "This note was written outside orca, and orca is holding an edit that is not in it.",
+      text: "This note was written outside orca. Your edit is not in it.",
     });
 
     const buttons = pane.createDiv({ cls: "modal-button-container" });

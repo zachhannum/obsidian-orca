@@ -1,11 +1,11 @@
 /**
  * The one writer on a book note.
  *
- * An edit repaints from the model it holds and the note is written
- * once the edits stop, so a slider dragged across forty values leaves
- * one revision behind rather than forty. A change on disk reloads a
- * view holding no edit. A view holding one asks the author which
- * version to keep.
+ * The view repaints from its model and the note is written once the
+ * edits stop, so a control dragged across forty values leaves one
+ * revision rather than forty. A change on disk reloads a view with no
+ * unwritten edit. A view with one asks the author which version to
+ * keep.
  */
 
 import type { Model } from "@/book/model";
@@ -13,9 +13,9 @@ import type { Model } from "@/book/model";
 /** How long the edits stop for before the note is written, in milliseconds. */
 export const SETTLE = 1000;
 
-/** Where an edited book goes: the surfaces now, the note on settle. */
+/** What an edit is painted onto now, and written to on settle. */
 export interface Writing {
-  /** The model, every time it changes, with the number of changes it has taken. */
+  /** The model, every time it changes, with how many times it has changed. */
   paint(model: Model, generation: number): void;
   /** The settled model, written to the note. */
   save(model: Model): Promise<void>;
@@ -27,7 +27,7 @@ export interface Clock {
   after(ms: number, fire: () => void): () => void;
 }
 
-/** What a change on disk means for the view holding the note. */
+/** What a change on disk means for the view the note is open in. */
 export type Arrival = "reload" | "ask";
 
 /** The clock a view runs on. */
@@ -56,7 +56,7 @@ export class Writer {
     this.held = model;
   }
 
-  /** The book as the view holds it, the edits waiting on the settle included. */
+  /** The view's book, the edits waiting on the settle included. */
   get model(): Model {
     return this.held;
   }
@@ -86,17 +86,13 @@ export class Writer {
     await this.write();
   }
 
-  /**
-   * What a change on disk means: a view holding no edit reloads, and
-   * one holding an edit asks.
-   */
   arrived(): Arrival {
     return this.behind ? "ask" : "reload";
   }
 
   /**
-   * The book the note now holds, taken as the model and painted. An
-   * edit the view was holding is dropped.
+   * The book now in the note, painted as the model. An unwritten edit
+   * is dropped.
    */
   take(model: Model): void {
     this.stop();
@@ -106,7 +102,7 @@ export class Writer {
     this.to.paint(this.held, this.painted);
   }
 
-  /** Stops the settle. What the model holds stays unwritten. */
+  /** Stops the settle. The model stays unwritten. */
   stop(): void {
     this.cancel?.();
     this.cancel = undefined;
@@ -120,8 +116,8 @@ export class Writer {
   }
 
   /**
-   * One save at a time. A settle that lands while a save is out waits
-   * for it, so two writes cannot cross on the note.
+   * One save at a time. A settle that comes due while a save is
+   * running waits for it, so two writes cannot cross on the note.
    */
   private async write(): Promise<void> {
     if (!this.behind) return;

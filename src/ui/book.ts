@@ -30,7 +30,7 @@ export class BookView extends FileView {
   private writer: Writer | undefined;
   /** The note as orca last read it from disk. */
   private disk = "";
-  /** How many saves of orca's own are out. */
+  /** How many saves of orca's own are running. */
   private saving = 0;
 
   constructor(
@@ -67,8 +67,8 @@ export class BookView extends FileView {
   }
 
   override async onUnloadFile(): Promise<void> {
-    // The leaf is closing or taking another note, so what the model
-    // holds is written before it goes.
+    // The leaf is closing or opening another note, so the model is
+    // written first.
     await this.settle();
     this.writer = undefined;
     this.contentEl.empty();
@@ -87,7 +87,7 @@ export class BookView extends FileView {
     this.writer?.edit(change);
   }
 
-  /** The note opened: the book on the page, and the writer over it. */
+  /** The note opened: the model read, the writer made, the book painted. */
   private hold(file: TFile, text: string): void {
     this.disk = text;
     this.writer = undefined;
@@ -102,7 +102,7 @@ export class BookView extends FileView {
     this.show(model.book, 0);
   }
 
-  /** The book the note holds, or nothing when orca refused it. */
+  /** The book in the note, or nothing when orca refused it. */
   private opened(text: string): Model | undefined {
     try {
       return readModel(text);
@@ -122,7 +122,7 @@ export class BookView extends FileView {
     const text = await this.app.vault.read(file);
     if (text === this.disk) return;
 
-    // A refused book holds no writer, and a change that fixes its
+    // A refused book has no writer, and a change that fixes its
     // format opens it.
     const writer = this.writer;
     if (writer === undefined) {
@@ -135,7 +135,7 @@ export class BookView extends FileView {
       this.reload(text);
       return;
     }
-    // The settle would otherwise write the held edit over the note
+    // The settle would otherwise write the unwritten edit over the note
     // while the author is still reading the question.
     writer.stop();
     new Changed(this.app, {
@@ -153,7 +153,7 @@ export class BookView extends FileView {
     if (model !== undefined) this.writer?.take(model);
   }
 
-  /** Writes what the model holds, and reports a write that failed. */
+  /** Writes the model, and reports a write that failed. */
   private async settle(): Promise<void> {
     try {
       await this.writer?.flush();
@@ -206,9 +206,8 @@ export class BookView extends FileView {
   }
 
   /**
-   * What the book note reports about the book, with the number of
-   * changes the model has taken, which a test waits on rather than a
-   * clock.
+   * What the book note reports about the book, with how many times the
+   * model has changed, which a test waits on rather than a clock.
    */
   private show(book: Book, generation: number): void {
     const pane = this.pane();

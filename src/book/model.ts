@@ -1,10 +1,9 @@
 /**
- * A book note in memory: the book its properties hold, and the reading
- * order its body holds.
+ * A book note in memory: the book from its properties, and the reading
+ * order from its body.
  *
- * The view holds one of these and paints from it. The note is written
- * back in two halves, so an edit to one leaves the other as the author
- * wrote it.
+ * The view paints from one of these. The note is written back in two
+ * halves, so an edit to one leaves the other as the author wrote it.
  */
 
 import { readFrontmatter } from "@/book/frontmatter";
@@ -18,8 +17,8 @@ export interface Model {
 }
 
 /**
- * The book a note's text holds. A note orca does not read comes back as
- * a `BookError`.
+ * The book in a note's text. A note orca does not read comes back as a
+ * `BookError`.
  */
 export function readModel(text: string): Model {
   const { properties, body } = readFrontmatter(text);
@@ -32,7 +31,7 @@ export function writeModel(model: Model): string {
 }
 
 /**
- * The note with this reading order in place of the one it holds. The
+ * The note with this reading order in place of the one in it. The
  * properties are left byte for byte as they are on disk, because they
  * are written through Obsidian's own frontmatter API.
  */

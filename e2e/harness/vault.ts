@@ -48,7 +48,7 @@ export class Vault {
   }
 
   /**
-   * A write on a note the vault already holds, through the vault
+   * A write on a note that is already in the vault, through the vault
    * rather than the adapter, which is how an editor or a sync client
    * writes one.
    */

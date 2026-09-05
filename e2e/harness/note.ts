@@ -18,13 +18,13 @@ export const MARKDOWN = "markdown";
 export const AS_MARKDOWN = "Open as markdown";
 export const AS_BOOK = "Open as book";
 
-/** The view's own front door, which every edit to the book goes through. */
+/** The view method every edit to the book goes through. */
 interface Editing {
   edit(change: (model: Model) => Model): void;
 }
 
 export class Note {
-  /** The page orca draws for the book note, carrying the change it was painted from. */
+  /** The page orca draws for the book note, carrying the model it was painted from. */
   readonly page: Locator;
   /** The state a book from a newer orca stops at. */
   readonly refused: Locator;
@@ -40,13 +40,13 @@ export class Note {
     this.markdown = obsidian.view(MARKDOWN);
   }
 
-  /** How many changes the page has been painted from. */
+  /** How many times the model the page shows has changed. */
   async painted(): Promise<number> {
     await expect(this.page).toHaveAttribute("data-generation", /\d+/);
     return Number(await this.page.getAttribute("data-generation"));
   }
 
-  /** One edit, through the view that holds the book. */
+  /** One edit, through the view the book is open in. */
   async edit(title: string): Promise<void> {
     await this.drag(title, 1);
   }

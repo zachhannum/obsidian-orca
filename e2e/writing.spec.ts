@@ -28,7 +28,7 @@ test("an edit is written through the frontmatter API, and the author's own prope
   expect(body(after)).toEqual(body(before));
 });
 
-test("a change on disk reloads a clean view and asks a view holding an edit", async ({
+test("a change on disk reloads a clean view and asks one with an unwritten edit", async ({
   note,
   vault,
 }) => {
@@ -38,14 +38,14 @@ test("a change on disk reloads a clean view and asks a view holding an edit", as
   await note.open(BOOK);
   await expect(note.page).toContainText("Pride and Prejudice");
 
-  // Nothing is held, so the note as it now is goes straight onto the
+  // There is no unwritten edit, so the note goes straight onto the
   // page.
   await vault.modify(BOOK, outside("First Impressions"));
 
   await expect(note.page).toContainText("First Impressions");
   await expect(note.changed).toHaveCount(0);
 
-  // An edit is held, so the two versions are the author's to settle.
+  // There is an unwritten edit, so the author settles the two versions.
   await note.edit("Dragged");
   await vault.modify(BOOK, outside("Written outside"));
 

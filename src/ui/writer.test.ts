@@ -31,7 +31,7 @@ function held(): Clock & { settle(): void } {
   };
 }
 
-/** Everything a save that is already out has to get through. */
+/** One turn of the event loop, so a save that is already running finishes. */
 function tick(): Promise<void> {
   return new Promise((resolve) => {
     setImmediate(resolve);
@@ -81,7 +81,7 @@ test("a dragged control repaints per frame and writes once, on settle", async ()
   for (let frame = 0; frame < 40; frame += 1) writer.edit(drag(`Frame ${frame}`));
 
   // Every frame is on the surfaces already and none of them is on
-  // disk: the settle restarts under each one.
+  // disk: the settle restarts on each one.
   assert.equal(painted.length, 40);
   assert.equal(writer.generation, 40);
   assert.deepEqual(saved, []);
@@ -93,7 +93,7 @@ test("a dragged control repaints per frame and writes once, on settle", async ()
   assert.deepEqual(titles(saved), ["Frame 39"]);
   assert.equal(writer.dirty, false);
 
-  // A settle with nothing held writes nothing.
+  // A settle with no unwritten edit writes nothing.
   clock.settle();
   await tick();
   assert.equal(saved.length, 1);
@@ -120,8 +120,8 @@ test("an external change reloads a clean view and asks a dirty one", async () =>
   assert.deepEqual(titles(saved), ["Dragged"]);
   assert.equal(writer.arrived(), "reload");
 
-  // The author takes the note instead: the edit the view was holding
-  // is dropped, what is on disk is painted, and nothing is written.
+  // The author takes the note instead: the unwritten edit is dropped,
+  // what is on disk is painted, and nothing is written.
   writer.edit(drag("Dropped"));
   writer.take(outside);
   clock.settle();
@@ -133,7 +133,7 @@ test("an external change reloads a clean view and asks a dirty one", async () =>
   assert.equal(saved.length, 1);
 });
 
-test("a save that is out holds the next one, so two writes cannot cross", async () => {
+test("a save that is running delays the next one, so two writes cannot cross", async () => {
   let land: (() => void) | undefined;
   const { writer, saved } = await writing(
     async () =>

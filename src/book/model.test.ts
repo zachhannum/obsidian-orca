@@ -26,7 +26,7 @@ test("with the plugin disabled the note is an index of the book, with working li
   const paths = (await vault.list("/")).files;
 
   // Every entry is a line of markdown a reader follows: a wikilink,
-  // and the role it takes where the heading does not carry it.
+  // and its role, where the heading does not name one.
   const lines = writeOrder(model.order)
     .split("\n")
     .filter((line) => line.startsWith("- "));

@@ -133,8 +133,7 @@ export function writeBook(book: Book): Properties {
 /**
  * The book, written into properties a note already has. Orca's own
  * keys are set at `FORMAT` and the ones the book no longer has are
- * taken out; every other property is the author's and is left as it
- * is. `ui` hands this the object Obsidian's frontmatter API parsed.
+ * removed; every other property is the author's and is left as it is. `ui` hands this the object Obsidian's frontmatter API parsed.
  */
 export function applyBook(properties: Properties, book: Book): void {
   properties[BOOK_KEY] = FORMAT;
