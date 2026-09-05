@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 import { check, lint } from "./lint.mjs";
 
@@ -109,6 +112,29 @@ test("a test file missing the note on what it does not cover is a violation", ()
       'import "@/book/note";\n\n// What this tier does not cover: the vault.\n',
     ),
     [],
+  );
+});
+
+test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
+  const from = await mkdtemp(path.join(tmpdir(), "orca-lint-"));
+  const files = {
+    "src/book/note.ts": 'import { view } from "@/ui/preview";\n',
+    "e2e/harness/note.ts":
+      "/** What a spec opens. */\nexport const NOTE = 1;\n",
+    "scripts/summary.mjs":
+      "/** How much is quoted. */\nexport const QUOTED = 1;\n",
+  };
+  for (const [file, text] of Object.entries(files)) {
+    await mkdir(path.join(from, path.dirname(file)), { recursive: true });
+    await writeFile(path.join(from, file), text);
+  }
+  assert.deepEqual(
+    (await lint(from)).map(({ file, said }) => `${file}: ${said}`),
+    [
+      "src/book/note.ts: `book` may not import `ui`",
+      "e2e/harness/note.ts: a doc comment opens with a question word; name the thing",
+      "scripts/summary.mjs: a doc comment opens with a question word; name the thing",
+    ],
   );
 });
 
