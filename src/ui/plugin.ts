@@ -139,7 +139,9 @@ export default class OrcaPlugin extends Plugin {
 
   /** The state a leaf is really put on: the book view, for a book note. */
   private asBook(leaf: WorkspaceLeaf, state: ViewState): ViewState {
-    if (state.type !== MARKDOWN_VIEW) return state;
+    // Another plugin's wrapper keeps this one installed after orca
+    // unloads, and the book view is no longer registered by then.
+    if (this.unloaded || state.type !== MARKDOWN_VIEW) return state;
     const path = state.state?.["file"];
     if (typeof path !== "string") return state;
     if (this.asMarkdown.get(leaf) === path) return state;

@@ -467,6 +467,9 @@ function into(order: Order, entry: Entry, to: Place): Order {
     if (blocks[at + 1]?.kind === "heading") {
       blocks.splice(at + 1, 0, { kind: "other", line: "" });
     }
+    // The body ends on a blank line, which is what every other write
+    // leaves it on, and what gives the note its last newline.
+    if (at === blocks.length - 1) blocks.push({ kind: "other", line: "" });
     return { blocks };
   }
 

@@ -68,6 +68,9 @@ export class Edits {
       await save(this.app, file, disk, change(readModel(disk)));
     } catch (cause) {
       this.refused(cause);
+      // The surfaces that drew the edit are told either way, so a list
+      // showing an order the note does not have is let go.
+      this.changed();
       return;
     }
     this.changed();

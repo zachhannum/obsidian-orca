@@ -361,6 +361,17 @@ test("a section moves to the last place among the groups", async () => {
   );
 });
 
+test("an entry added at the end of an empty section keeps the note's last line", () => {
+  const made = addGroup(readOrder("# Body\n\n- [[A]]\n"), "Appendices");
+
+  const added = add(made, "B", "Appendices");
+
+  assert.equal(
+    writeOrder(added),
+    "# Body\n\n- [[A]]\n\n# Appendices\n\n- [[B]]\n",
+  );
+});
+
 test("a generated section is added by its role, and has no note to find", async () => {
   const book = await order();
 

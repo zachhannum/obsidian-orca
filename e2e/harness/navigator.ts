@@ -81,8 +81,10 @@ export class Navigator {
    * is behind it, so a spec that adds something starts here.
    */
   async adding(book: string): Promise<void> {
-    await this.book(book).locator('[aria-label="Add to this book"]').click();
-    await expect(this.obsidian.menu()).toBeVisible();
+    await this.opening(
+      this.book(book).locator('[aria-label="Add to this book"]'),
+      {},
+    );
   }
 
   /**
@@ -91,8 +93,22 @@ export class Navigator {
    * before it is up is an item nothing answers.
    */
   async menuOn(row: Locator): Promise<void> {
-    await row.click({ button: "right" });
-    await expect(this.obsidian.menu()).toBeVisible();
+    await this.opening(row, { button: "right" });
+  }
+
+  /**
+   * A menu, opened from a row. The shelf is drawn again on every edit,
+   * and a click that lands across one of those redraws opens nothing.
+   * Opening a menu changes nothing, so it is asked for again.
+   */
+  private async opening(
+    row: Locator,
+    how: { button?: "right" },
+  ): Promise<void> {
+    await expect(async () => {
+      await row.click(how);
+      await expect(this.obsidian.menu()).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
   }
 
   /** How many times the shelf has been drawn. */
