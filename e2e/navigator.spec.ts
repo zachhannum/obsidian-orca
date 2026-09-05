@@ -201,6 +201,7 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
 
   // The wait is on the view running out of scroll, not on a duration:
   // a shelf that grows under the row never reaches its own end.
+  const dropping = await navigator.painted();
   await navigator.dragOffTheEnd(navigator.entry(BOOK, "Chapter 0"), async () => {
     await expect
       .poll(async () => {
@@ -211,9 +212,9 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   });
 
   // The row moved, and it is the same one row: a drop that lost it or
-  // wrote it twice would leave the count somewhere other than 48.
-  const settled = await navigator.painted();
-  await navigator.repainted(settled - 1);
+  // wrote it twice would leave the count somewhere other than 48. The
+  // wait is on the paint that read the drop's write back.
+  await navigator.repainted(dropping);
   await expect(navigator.entries(BOOK)).toHaveCount(48);
   expect((await vault.read(BOOK)).match(/\[\[Chapter 0\]\]/g)).toHaveLength(1);
   expect((await navigator.reach()).height).toBe(tall.height);

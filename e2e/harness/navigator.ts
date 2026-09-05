@@ -163,17 +163,17 @@ export class Navigator {
     const floor = await this.obsidian.page.evaluate(() => window.innerHeight - 2);
     await mouse.move(start.x + 20, start.y + start.height / 2);
     await mouse.down();
-    await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
-    await mouse.move(start.x + 20, floor, { steps: 15 });
-    await mouse.move(start.x + 20, floor);
-    // dnd-kit presses the row it is carrying, so the wait is on that.
-    await expect(from).toHaveAttribute("aria-pressed", "true");
-    await expect(from).toHaveCSS("transform", /matrix\(/);
-    // One app runs the whole suite, so a hold that throws lets go and
-    // takes the drag back: a button left down, or a drop whose write
-    // outruns the fixture going back, is every spec after this one
-    // failing on this one's finding.
+    // One app runs the whole suite, so everything the button is down
+    // for lets go and takes the drag back on the way out. A button
+    // left down, or a drop whose write outruns the fixture going back,
+    // is every spec after this one failing on this one's finding.
     try {
+      await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
+      await mouse.move(start.x + 20, floor, { steps: 15 });
+      await mouse.move(start.x + 20, floor);
+      // dnd-kit presses the row it is carrying, so the wait is on that.
+      await expect(from).toHaveAttribute("aria-pressed", "true");
+      await expect(from).toHaveCSS("transform", /matrix\(/);
       await held();
     } catch (cause) {
       await this.obsidian.page.keyboard.press("Escape");
