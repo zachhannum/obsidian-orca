@@ -1,7 +1,7 @@
 /**
- * Orca's preview, reached by the test ids its own markup carries.
+ * Orca's preview, reached by the test ids in its own markup.
  *
- * The surface carries the generation last painted into it and what
+ * The surface has the generation last painted into it and what
  * that render cost in stage runs, so every wait here is on the page
  * rather than on a clock.
  */
@@ -33,7 +33,7 @@ export class Book {
     await this.obsidian.detach(PREVIEW);
   }
 
-  /** The generation the surface carries, once there is one. */
+  /** The generation on the surface, once there is one. */
   async painted(): Promise<number> {
     await expect(this.surface).toHaveAttribute("data-generation", /\d+/);
     return Number(await this.surface.getAttribute("data-generation"));

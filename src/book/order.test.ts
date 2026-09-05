@@ -44,10 +44,10 @@ function found(sections: Section[]): string[] {
 }
 
 test("an entry's role comes from its heading, and an inline code tag overrides it", async () => {
-  const held = entries(await order());
+  const all = entries(await order());
 
   assert.deepEqual(
-    held.map((entry) => [entryName(entry), entry.role]),
+    all.map((entry) => [entryName(entry), entry.role]),
     [
       ["Title page", "title-page"],
       ["Copyright", "copyright"],
@@ -67,8 +67,8 @@ test("an entry's role comes from its heading, and an inline code tag overrides i
 });
 
 test("a book note's reading order parsed and written back is byte-identical", async () => {
-  const held = await body();
-  assert.equal(writeOrder(readOrder(held)), held);
+  const text = await body();
+  assert.equal(writeOrder(readOrder(text)), text);
 
   // A body orca does not read is kept as it was written.
   for (const kept of [
@@ -81,8 +81,8 @@ test("a book note's reading order parsed and written back is byte-identical", as
 });
 
 test("a renamed or moved chapter keeps its entry, and orca writes nothing", async () => {
-  const held = await body();
-  const book = readOrder(held);
+  const text = await body();
+  const book = readOrder(text);
   const before = await paths();
 
   // The link is resolved whenever the file is wanted, so a note that
@@ -98,12 +98,12 @@ test("a renamed or moved chapter keeps its entry, and orca writes nothing", asyn
 
   // Obsidian rewrites the link on a rename. The entry keeps its place,
   // its role and its heading, and orca rewrites nothing itself.
-  const renamed = readOrder(held.replace("[[Chapter Twelve]]", "[[Chapter XII]]"));
+  const renamed = readOrder(text.replace("[[Chapter Twelve]]", "[[Chapter XII]]"));
   assert.deepEqual(
     entries(renamed).map((entry) => [entry.role, entry.heading]),
     entries(book).map((entry) => [entry.role, entry.heading]),
   );
-  assert.equal(writeOrder(book), held);
+  assert.equal(writeOrder(book), text);
   assert.deepEqual(await paths(), before);
 });
 

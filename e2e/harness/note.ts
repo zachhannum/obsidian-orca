@@ -1,7 +1,7 @@
 /**
- * The book note's own view, reached by the test ids its markup carries.
+ * The book note's own view, reached by the test ids in its markup.
  * The way back to the manuscript is Obsidian's own chrome, so it goes
- * through the page object that holds those class names.
+ * through the page object that has those class names.
  */
 
 import type { Locator } from "@playwright/test";

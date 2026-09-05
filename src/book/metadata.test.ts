@@ -30,15 +30,15 @@ test("title, author, language and date reach the PDF's document information", as
   assert.match(written, /\/Lang \(en-GB\)/);
   assert.match(written, /\/CreationDate \(D:18130128/);
 
-  // Publisher, series and isbn are orca's: the engine carries none of
+  // Publisher, series and isbn are orca's: the engine has none of
   // them, and they land on the page orca generates.
   assert.deepEqual(imprint(book), {
     publisher: "Whitehall Press",
     series: "The Bennet Novels",
     isbn: "978-0-000-00000-0",
   });
-  for (const held of Object.values(imprint(book))) {
-    assert.equal(written.includes(held), false, held);
+  for (const value of Object.values(imprint(book))) {
+    assert.equal(written.includes(value), false, value);
   }
 });
 

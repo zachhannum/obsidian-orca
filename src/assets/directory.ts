@@ -33,8 +33,8 @@ export function directoryVault(root: string): VaultAdapter {
       const under = at(folder);
       const listing: Listing = { files: [], folders: [] };
       for (const entry of await readdir(under, { withFileTypes: true })) {
-        const held = entry.isDirectory() ? listing.folders : listing.files;
-        held.push(vaultPath(root, path.join(under, entry.name)));
+        const into = entry.isDirectory() ? listing.folders : listing.files;
+        into.push(vaultPath(root, path.join(under, entry.name)));
       }
       listing.files.sort();
       listing.folders.sort();

@@ -29,7 +29,7 @@ test("a page is the painter's markup in one write, not a node at a time", () => 
   ]);
 });
 
-test("the surface carries the generation painted into it, and what that cost", () => {
+test("the surface has the generation painted into it, and what that cost", () => {
   const node = surface();
 
   showPage(node, {

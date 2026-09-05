@@ -9,7 +9,7 @@
 import type { Properties } from "@/book/frontmatter";
 import { bookFormat } from "@/book/note";
 
-/** A note in the vault, by the path the cache holds it under. */
+/** A note in the vault, by the path it is cached under. */
 export interface Note {
   path: string;
 }
@@ -22,7 +22,7 @@ export interface NoteIndex<T extends Note = Note> {
   properties(note: T): Properties | undefined;
 }
 
-/** Whether a note carries the key that makes it a book. */
+/** Whether a note has the key that makes it a book. */
 export function isBook<T extends Note>(index: NoteIndex<T>, note: T): boolean {
   const properties = index.properties(note);
   return properties !== undefined && bookFormat(properties) !== undefined;

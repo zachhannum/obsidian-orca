@@ -66,7 +66,7 @@ export class Session {
     return this.layout;
   }
 
-  /** The generation the last render carried. */
+  /** The generation of the last render. */
   get generation(): number {
     return this.client.current;
   }
@@ -77,7 +77,7 @@ export class Session {
 
   /**
    * Lays the book out once. A second view, or the same one opened
-   * again, paints the pages this already holds.
+   * again, paints the pages this already has.
    */
   async open(ops: Op[]): Promise<void> {
     this.opening ??= this.lay(ops).catch((cause: unknown) => {

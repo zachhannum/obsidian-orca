@@ -15,7 +15,7 @@ import type {
 } from "@playwright/test/reporter";
 import { OBSIDIAN } from "./launch";
 
-/** How much of a failure's message a summary carries. */
+/** How much of a failure's message goes in a summary. */
 const QUOTED = 2000;
 
 const MARK: Record<string, string> = {

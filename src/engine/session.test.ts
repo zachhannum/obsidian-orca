@@ -97,7 +97,7 @@ function laidOut(): LayoutOutput {
   };
 }
 
-test("a view opened again paints the pages the session already holds", async () => {
+test("a view opened again paints the pages the session already has", async () => {
   const client = new FakeClient(laidOut());
   const session = new Session(client, faces());
 
@@ -191,7 +191,7 @@ test("a note in the fixture vault sets to PDF bytes, with no application around 
     const pdf = await session.pdf();
 
     // The pages the export was drawn from are the ones the session
-    // already holds.
+    // already has.
     assert.ok((session.output?.pages.length ?? 0) > 0);
     assert.equal(new TextDecoder().decode(pdf.subarray(0, 5)), "%PDF-");
     assert.ok(new TextDecoder().decode(pdf.subarray(-32)).includes("%%EOF"));

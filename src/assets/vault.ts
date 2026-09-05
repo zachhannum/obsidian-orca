@@ -1,6 +1,6 @@
 import { AssetError } from "@/assets/errors";
 
-/** What a folder holds, as vault paths. */
+/** What is in a folder, as vault paths. */
 export interface Listing {
   files: string[];
   folders: string[];

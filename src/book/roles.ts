@@ -35,13 +35,13 @@ export const DEFAULT_ROLE: Role = "chapter";
 
 /** The role a tag names, or nothing if it names none. */
 export function roleOf(tag: string): Role | undefined {
-  const held = tag.trim();
-  return Object.hasOwn(MATTER, held) ? (held as Role) : undefined;
+  const name = tag.trim();
+  return Object.hasOwn(MATTER, name) ? (name as Role) : undefined;
 }
 
 /**
- * The role an entry under this heading takes, when the entry carries
- * no tag of its own. A heading whose words name a role is that role,
+ * The role an entry under this heading has, when the entry itself
+ * has no tag. A heading whose words name a role is that role,
  * and every other heading is `chapter`.
  */
 export function headingRole(heading: string): Role {
