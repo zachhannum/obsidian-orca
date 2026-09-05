@@ -69,7 +69,12 @@ export class Obsidian {
     // it nor click it, and it holds the renderer until someone answers
     // it. The run asks Obsidian for its own menus instead.
     await page.evaluate(() => {
-      (window.app.vault as unknown as Config).setConfig("nativeMenus", false);
+      const vault = window.app.vault as unknown as Config;
+      vault.setConfig("nativeMenus", false);
+      // A delete goes where the author sends it. The run sends one
+      // inside the vault it opened, rather than to the machine's own
+      // wastebasket.
+      vault.setConfig("trashOption", "local");
     });
     return new Obsidian(page);
   }

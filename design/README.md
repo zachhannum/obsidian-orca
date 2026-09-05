@@ -52,6 +52,9 @@ its editor around these files and returns a URL. The artboard list and
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.
+- The navigator deletes the book note and nothing else, after asking.
+  Every note a book lists is borrowed, so `Remove from book` is the
+  only thing an entry's own menu offers.
 - No implementation vocabulary reaches a surface. The per-stage counts
   stay as attributes for the tests, which contradicts the acceptance
   wording on the stage-counter issue.

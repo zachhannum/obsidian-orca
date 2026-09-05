@@ -3,6 +3,7 @@ import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
 import {
   add,
+  addGenerated,
   addGroup,
   groups,
   insert,
@@ -18,6 +19,7 @@ import {
 } from "@/book/order";
 import { ROLES, type Role } from "@/book/roles";
 import { isBook } from "@/ui/books";
+import { confirm } from "@/ui/confirm";
 import type { Edits } from "@/ui/edits";
 import { createChapter, emptyBook } from "@/ui/make";
 import { cacheLinks, noteIndex } from "@/ui/notes";
@@ -201,6 +203,17 @@ export class NavigatorView extends ItemView {
         }),
     );
     this.offerAdding(menu, book, undefined);
+    menu.addSeparator();
+    // The book note is orca's own. Every note it lists is borrowed, so
+    // this is the one delete the navigator offers.
+    menu.addItem((item) =>
+      item
+        .setTitle("Delete book…")
+        .setIcon("trash-2")
+        .onClick(() => {
+          this.deleteBook(book);
+        }),
+    );
     menu.showAtMouseEvent(event);
   }
 
@@ -234,6 +247,14 @@ export class NavigatorView extends ItemView {
         .setIcon("book-plus")
         .onClick(() => {
           this.pickNote(book, heading);
+        }),
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle("New generated section…")
+        .setIcon("wand-sparkles")
+        .onClick(() => {
+          this.pickGenerated(book, heading);
         }),
     );
     menu.addSeparator();
@@ -358,6 +379,44 @@ export class NavigatorView extends ItemView {
     });
   }
 
+  /**
+   * A section orca sets in place of a note, picked by its role. The
+   * text it is set from is the synthesis pass's, and the reading order
+   * is where the author says one belongs.
+   */
+  private pickGenerated(book: Shelved, heading: string | undefined): void {
+    const made = (Object.keys(ROLES) as Role[]).filter(
+      (role) => ROLES[role].origin === "generated",
+    );
+    pick(this.app, {
+      items: made,
+      label: (role) => ROLES[role].name,
+      placeholder: `Add a generated section to ${book.name}`,
+      chose: (role) => {
+        this.change(book.path, (model) => ({
+          ...model,
+          order: addGenerated(model.order, role, heading),
+        }));
+      },
+    });
+  }
+
+  /**
+   * The book note, in the trash. The notes it lists are borrowed and
+   * stay in the vault.
+   */
+  private deleteBook(book: Shelved): void {
+    confirm(this.app, {
+      title: `Delete ${book.name}?`,
+      said: "The book note goes to the trash. The notes it lists are borrowed, and stay in the vault.",
+      verb: "Delete",
+      done: () => {
+        const note = this.app.vault.getFileByPath(book.path);
+        if (note !== null) void this.app.fileManager.trashFile(note);
+      },
+    });
+  }
+
   /** A wikilink pasted into a book's list, which is the third route in. */
   private pasted(event: ClipboardEvent): void {
     const path = this.focused;
@@ -411,7 +470,7 @@ export class NavigatorView extends ItemView {
     pick(this.app, {
       items: this.app.vault.getMarkdownFiles(),
       label: (note) => note.path,
-      placeholder: `The note ${row.name} means`,
+      placeholder: `Locate ${row.name}`,
       chose: (note) => {
         this.change(book.path, (model) => ({
           ...model,

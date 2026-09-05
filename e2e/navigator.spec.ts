@@ -121,12 +121,13 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     .toContain("- [[Chapter Four]]\n- [[Volume the First]] `part`\n");
 
   // A section groups the reading order and says nothing about what is
-  // in it, so an entry carries its role across one. A drop on a
-  // heading is the end of that section.
+  // in it, so an entry carries its role across one. A row lands where
+  // the gap opened: on the heading below, and so at the end of the
+  // section above it.
   await navigator.drag(
     navigator.entry(BOOK, "Acknowledgements"),
-    navigator.group(BOOK, "Front matter"),
-    "below",
+    navigator.group(BOOK, "Body"),
+    "above",
   );
 
   await expect
@@ -153,7 +154,7 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     .toContain("- [[Chapter Twelve]] `epigraph`");
 });
 
-test("`Remove from book` takes the entry out and nothing else, and no menu here deletes", async ({
+test("`Remove from book` takes the entry out and nothing else, and an entry never deletes", async ({
   navigator,
   obsidian,
   vault,
@@ -171,6 +172,53 @@ test("`Remove from book` takes the entry out and nothing else, and no menu here 
   await expect.poll(async () => vault.read(BOOK)).not.toContain("Chapter Twelve");
   // The note the entry borrowed is still in the vault.
   expect(await vault.notes()).toContain("Chapter Twelve.md");
+});
+
+test("a book is deleted only after the author says so, and its notes stay", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  await vault.write(SECOND, NOVELS);
+  await navigator.reveal();
+  await expect(navigator.book(SECOND)).toBeVisible();
+
+  // The book note is orca's own, so it is the one thing here that
+  // deletes. Nothing goes until the question is answered.
+  await navigator.name(SECOND).click({ button: "right" });
+  await obsidian.item("Delete book").click();
+  await navigator.answer("Cancel");
+  await expect(navigator.book(SECOND)).toBeVisible();
+
+  await navigator.name(SECOND).click({ button: "right" });
+  await obsidian.item("Delete book").click();
+  await navigator.answer("Delete");
+
+  await expect(navigator.book(SECOND)).toHaveCount(0);
+  await expect.poll(async () => vault.notes()).not.toContain(SECOND);
+  // The notes the book listed are borrowed, and stay in the vault.
+  expect(await vault.notes()).toContain("Chapter Twelve.md");
+});
+
+test("a generated section is added by its role, and reads as one", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.reveal();
+
+  await navigator.adding(BOOK);
+  await obsidian.item("New generated section").click();
+  await navigator.pick("Title page");
+
+  // It goes where a chapter would, and carries no link at all.
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("- [[Chapter Four]]\n- `title-page`\n");
+  const made = navigator.entries(BOOK).filter({ hasText: "Title page" });
+  await expect(made).toHaveCount(2);
+  await expect(made.last()).toHaveAttribute("data-kind", "generated");
 });
 
 test("a section is made, renamed, dragged and taken out, and its entries stay", async ({
@@ -227,10 +275,30 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
     "New section",
   ]);
 
+  // The last place is a place. A section dropped past every other one
+  // lands after it rather than short of it.
+  const again = await navigator.painted();
+  await navigator.drag(
+    navigator.group(BOOK, "Back matter"),
+    navigator.group(BOOK, "New section"),
+    "below",
+  );
+
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toMatch(/# New section\n[\s\S]*# Back matter\n\n- \[\[Acknowledgements\]\]/);
+  await navigator.repainted(again);
+  await expect(navigator.groups(BOOK)).toContainText([
+    "Prelims",
+    "Body",
+    "The book's css",
+    "New section",
+    "Back matter",
+  ]);
+
   // Taking a section out takes its heading and nothing else.
   await navigator.group(BOOK, "New section").click({ button: "right" });
   await obsidian.item("Remove section").click();
-
   await expect.poll(async () => vault.read(BOOK)).not.toContain("# New section");
   await expect(navigator.entry(BOOK, "Acknowledgements")).toBeVisible();
 });

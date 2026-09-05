@@ -38,6 +38,11 @@ export class Navigator {
     return this.pane.locator(`[data-book="${path}"]`);
   }
 
+  /** A book's own row, which is what its menu opens from. */
+  name(path: string): Locator {
+    return this.book(path).getByTestId("orca-book");
+  }
+
   /** One entry in a book's reading order, by what the row is called. */
   entry(book: string, name: string): Locator {
     return this.book(book)
@@ -106,25 +111,31 @@ export class Navigator {
    * One row dragged onto another. dnd-kit starts a drag once the
    * pointer has travelled its activation distance, so the pointer moves
    * away before it travels to where it lands.
+   *
+   * The list is measured when the drag starts, and a dragged section
+   * hides its entries at that moment, so where a row ends up is read
+   * from the row rather than from the pointer.
    */
   async drag(from: Locator, to: Locator, onto: Onto): Promise<void> {
     const { mouse } = this.obsidian.page;
     const start = await box(from);
     const end = await box(to);
+    const land = onto === "above" ? end.y + 2 : end.y + end.height - 2;
     await mouse.move(start.x + 20, start.y + start.height / 2);
     await mouse.down();
     await mouse.move(start.x + 20, start.y + start.height / 2 + 10, { steps: 5 });
-    await mouse.move(
-      end.x + 20,
-      onto === "above" ? end.y + 2 : end.y + end.height - 2,
-      { steps: 15 },
-    );
+    await mouse.move(end.x + 20, land, { steps: 15 });
     // dnd-kit settles the drop on the frame after the last move.
-    await mouse.move(
-      end.x + 20,
-      onto === "above" ? end.y + 2 : end.y + end.height - 2,
-    );
+    await mouse.move(end.x + 20, land);
     await mouse.up();
+  }
+
+  /** The question a delete asks, answered by the button named. */
+  async answer(verb: string): Promise<void> {
+    const modal = this.obsidian.page.getByTestId("orca-confirm");
+    await expect(modal).toBeVisible();
+    await modal.getByRole("button", { name: verb }).click();
+    await expect(modal).toHaveCount(0);
   }
 
   /** A wikilink pasted into a book's list, with the list focused. */

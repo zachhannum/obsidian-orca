@@ -141,6 +141,14 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
 }
 
 /**
+ * A row goes to its new place at once. The drag has already shown the
+ * author where it lands, so animating the list into the order the note
+ * came back with would only replay it, from wherever the drag left the
+ * row.
+ */
+const settled = (): boolean => false;
+
+/**
  * What the pointer is over, by where it is down the list. A rectangle
  * holding the pointer wins, and otherwise the nearest one does, so a
  * drop past the last row still lands on the list rather than nowhere.
@@ -336,6 +344,7 @@ function Book({
     >
       <div
         className={`orca-nav-item orca-shelf-name${book.holds ? " is-active" : ""}`}
+        data-testid="orca-book"
         onClick={() => {
           acting.open(book.path);
         }}
@@ -431,7 +440,10 @@ function Heading({
   renaming: boolean;
   rename: (open: boolean) => void;
 }): JSX.Element {
-  const sortable = useSortable({ id: groupId(heading) });
+  const sortable = useSortable({
+    id: groupId(heading),
+    animateLayoutChanges: settled,
+  });
   const style = {
     transform: CSS.Translate.toString(sortable.transform),
     transition: sortable.transition,
@@ -518,7 +530,10 @@ function Entry({
   after: Place;
   acting: Acting;
 }): JSX.Element {
-  const sortable = useSortable({ id: rowId(row.at) });
+  const sortable = useSortable({
+    id: rowId(row.at),
+    animateLayoutChanges: settled,
+  });
   const style = {
     transform: CSS.Translate.toString(sortable.transform),
     transition: sortable.transition,
