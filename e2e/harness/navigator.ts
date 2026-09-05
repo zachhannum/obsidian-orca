@@ -11,9 +11,6 @@ import type { Obsidian } from "./obsidian";
 /** The type the navigator is registered under. */
 export const NAVIGATOR = "orca-navigator";
 
-/** How many redraws a row is measured across before the drag gives up. */
-const TRIES = 20;
-
 /** Where a dragged entry is let go: over a row, or under it. */
 export type Onto = "above" | "below";
 
@@ -256,14 +253,14 @@ export class Navigator {
 
 /**
  * Where a row is on screen. The shelf is drawn again after every edit,
- * so a row measured across one of those redraws is measured again.
+ * and a row measured across one of those redraws has no box, so the
+ * measure waits for one rather than asking a fixed number of times.
  */
 async function box(
   locator: Locator,
 ): Promise<{ x: number; y: number; width: number; height: number }> {
-  for (let tries = 0; tries < TRIES; tries += 1) {
-    const found = await locator.boundingBox();
-    if (found !== null) return found;
-  }
-  throw new Error("nothing to drag");
+  await expect.poll(async () => locator.boundingBox()).not.toBeNull();
+  const found = await locator.boundingBox();
+  if (found === null) throw new Error("nothing to drag");
+  return found;
 }

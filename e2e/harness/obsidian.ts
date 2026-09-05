@@ -192,15 +192,22 @@ export class Obsidian {
       window.orcaNotices = { said, watch };
     }, CHROME.notice);
 
-    await during();
-
-    return this.page.evaluate(() => {
-      const held = window.orcaNotices;
-      if (held === undefined) return [];
-      held.watch.disconnect();
-      window.orcaNotices = undefined;
-      return held.said;
-    });
+    // One app runs the whole suite, so the watch comes off even when
+    // `during` throws: a spec that fails inside one would otherwise
+    // leave an observer on the body for every spec after it.
+    let said: string[] = [];
+    try {
+      await during();
+    } finally {
+      said = await this.page.evaluate(() => {
+        const held = window.orcaNotices;
+        if (held === undefined) return [];
+        held.watch.disconnect();
+        window.orcaNotices = undefined;
+        return held.said;
+      });
+    }
+    return said;
   }
 
   /**
