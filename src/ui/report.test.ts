@@ -21,17 +21,10 @@ async function model(): Promise<Model> {
 
 /** The fixture vault, every note counted. */
 async function counting(): Promise<Counting> {
-  const paths = await notes("/");
+  const paths = (await vault.list("/")).files.filter((at) => at.endsWith(".md"));
   const counted = new Map<string, number>();
   for (const at of paths) counted.set(at, countWords(await readText(vault, at)));
   return { links: pathLinks(paths), words: (at) => counted.get(at) };
-}
-
-/** Every markdown note under a folder, however deep. */
-async function notes(folder: string): Promise<string[]> {
-  const listed = await vault.list(folder);
-  const below = await Promise.all(listed.folders.map((at) => notes(at)));
-  return [...listed.files.filter((at) => at.endsWith(".md")), ...below.flat()];
 }
 
 test("word counts come from the notes, and an entry with no note has none", async () => {
