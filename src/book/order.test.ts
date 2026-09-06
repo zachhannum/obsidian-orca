@@ -426,6 +426,4 @@ test("a section taken out takes one blank line with it, wherever it sits", () =>
 });
 
 // What this tier does not cover: the navigator, which renders a
-// missing entry in place and drags a row or a whole section, and the
-// crossing to the engine, which is the op planner's and waits on the
-// theme.
+// missing entry in place and drags a row or a whole section.
