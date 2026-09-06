@@ -12,7 +12,7 @@ const vault = directoryVault(path.join(root, "fixture"));
 test("a word count comes from the note's body, and its properties are not words", async () => {
   const chapter = await readText(vault, "Chapter Twelve.md");
 
-  assert.equal(countWords(chapter), 186);
+  assert.equal(countWords(chapter), 674);
   // The frontmatter names the book and its author, and neither is in
   // the chapter.
   assert.equal(

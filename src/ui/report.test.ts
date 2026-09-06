@@ -46,12 +46,12 @@ test("word counts come from the notes, and an entry with no note has none", asyn
       [2, "A note on the text", 21],
       [3, "Contents", undefined],
       [4, "Volume the First", 3],
-      [5, "Chapter Twelve", 186],
+      [5, "Chapter Twelve", 674],
       [6, "Chapter Four", undefined],
       [7, "Acknowledgements", 22],
     ],
   );
-  assert.equal(made.words, 16 + 21 + 3 + 186 + 22);
+  assert.equal(made.words, 16 + 21 + 3 + 674 + 22);
   // The two entries in the default role, the missing one included.
   assert.equal(made.chapters, 2);
 

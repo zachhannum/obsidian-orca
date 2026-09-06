@@ -33,6 +33,54 @@ being considered as intruding themselves needlessly long, she urged Jane
 to borrow Mr. Bingley's carriage immediately, and at length it was
 settled that their original design of leaving Netherfield that morning
 should be mentioned, and the request made.
+
+The communication excited many professions of concern; and enough was
+said of wishing them to stay at least till the following day to work on
+Jane; and till the morrow their going was deferred. Miss Bingley was
+then sorry that she had proposed the delay, for her jealousy and dislike
+of one sister much exceeded her affection for the other.
+
+The master of the house heard with real sorrow that they were to go so
+soon, and repeatedly tried to persuade Miss Bennet that it would not be
+safe for her—that she was not enough recovered; but Jane was firm where
+she felt herself to be right.
+
+To Mr. Darcy it was welcome intelligence—Elizabeth had been at
+Netherfield long enough. She attracted him more than he liked—and Miss
+Bingley was uncivil to her, and more teasing than usual to himself. He
+wisely resolved to be particularly careful that no sign of admiration
+should now escape him, nothing that could elevate her with the hope of
+influencing his felicity; sensible that if such an idea had been
+suggested, his behaviour during the last day must have material weight
+in confirming or crushing it. Steady to his purpose, he scarcely spoke
+ten words to her through the whole of Saturday, and though they were at
+one time left by themselves for half-an-hour, he adhered most
+conscientiously to his book, and would not even look at her.
+
+On Sunday, after morning service, the separation, so agreeable to almost
+all, took place. Miss Bingley's civility to Elizabeth increased at last
+very rapidly, as well as her affection for Jane; and when they parted,
+after assuring the latter of the pleasure it would always give her to
+see her either at Longbourn or Netherfield, and embracing her most
+tenderly, she even shook hands with the former. Elizabeth took leave of
+the whole party in the liveliest spirits.
+
+They were not welcomed home very cordially by their mother. Mrs. Bennet
+wondered at their coming, and thought them very wrong to give so much
+trouble, and was sure Jane would have caught cold again. But their
+father, though very laconic in his expressions of pleasure, was really
+glad to see them; he had felt their importance in the family circle. The
+evening conversation, when they were all assembled, had lost much of its
+animation, and almost all its sense, by the absence of Jane and
+Elizabeth.
+
+They found Mary, as usual, deep in the study of thorough-bass and human
+nature; and had some extracts to admire, and some new observations of
+threadbare morality to listen to. Catherine and Lydia had information
+for them of a different sort. Much had been done, and much had been said
+in the regiment since the preceding Wednesday; several of the officers
+had dined lately with their uncle, a private had been flogged, and it
+had actually been hinted that Colonel Forster was going to be married.
 `,
 };
 

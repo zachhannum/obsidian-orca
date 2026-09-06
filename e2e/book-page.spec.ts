@@ -6,10 +6,10 @@ const BOOK = "Pride and Prejudice.md";
 
 /** The one chapter the fixture has a note for, and its words. */
 const CHAPTER = "Chapter Twelve";
-const CHAPTER_WORDS = 186;
+const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 248;
+const BOOK_WORDS = 736;
 
 test("a metadata edit on the page is written to the note once, on settle", async ({
   note,

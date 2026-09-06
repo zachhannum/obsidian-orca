@@ -1,5 +1,26 @@
 import type { Stages } from "@/engine/session";
 
+/** The keys that turn a page, as the page each one turns to. */
+const KEYS: Record<string, (at: number, pages: number) => number> = {
+  PageDown: (at) => at + 1,
+  PageUp: (at) => at - 1,
+  Home: () => 0,
+  End: (_at, pages) => pages - 1,
+};
+
+/**
+ * The page `key` turns to from `at`, counting from 0, or nothing for a
+ * key that turns none. The page it names can be off either end of the
+ * book, which the session holds inside it.
+ */
+export function turnedTo(
+  key: string,
+  at: number,
+  pages: number,
+): number | undefined {
+  return KEYS[key]?.(at, pages);
+}
+
 /** The node a page is written into. */
 export interface Surface {
   innerHTML: string;

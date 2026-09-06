@@ -18,10 +18,39 @@ export class Book {
   readonly surface: Locator;
   /** The page itself: one `<svg>` the painter wrote in one go. */
   readonly page: Locator;
+  /** The folio being read, which an author can type into. */
+  readonly folio: Locator;
+  /** The line that reads `page 1 of 2`. */
+  readonly status: Locator;
+  readonly previous: Locator;
+  readonly next: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
-    this.surface = obsidian.view(PREVIEW).getByTestId("orca-page");
+    const pane = obsidian.view(PREVIEW);
+    this.surface = pane.getByTestId("orca-page");
     this.page = this.surface.locator("svg");
+    this.folio = pane.getByTestId("orca-folio");
+    this.status = pane.getByTestId("orca-status");
+    this.previous = pane.getByLabel("Previous page");
+    this.next = pane.getByLabel("Next page");
+  }
+
+  /** Turns to `folio` by typing it, the way an author reaches a page. */
+  async type(folio: string): Promise<void> {
+    await this.folio.fill(folio);
+    await this.folio.press("Enter");
+  }
+
+  /** Presses a key at the page, which is what the page-through listens on. */
+  async press(key: string): Promise<void> {
+    await this.surface.click();
+    await this.surface.press(key);
+  }
+
+  /** The folio the surface says it painted, once it says one. */
+  async reading(): Promise<number> {
+    await expect(this.surface).toHaveAttribute("data-page", /\d+/);
+    return Number(await this.surface.getAttribute("data-page"));
   }
 
   /** Opens the book from the ribbon. */

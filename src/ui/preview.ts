@@ -3,18 +3,10 @@ import { ItemView, setIcon, type WorkspaceLeaf } from "obsidian";
 import { SAMPLE, openBook } from "@/book/sample";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
-import { showPage } from "@/ui/page";
+import { showPage, turnedTo } from "@/ui/page";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
-
-/** The keys that turn a page, as the page they turn to. */
-const KEYS: Record<string, (at: number, pages: number) => number> = {
-  PageDown: (at) => at + 1,
-  PageUp: (at) => at - 1,
-  Home: () => 0,
-  End: (_at, pages) => pages - 1,
-};
 
 /**
  * One page of the book, and the chrome to page through it: previous,
@@ -126,10 +118,10 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(this.containerEl, "keydown", (event) => {
       // The folio is a field, so Home and End belong to its caret.
       if (event.target === folio) return;
-      const key = KEYS[event.key];
-      if (key === undefined) return;
+      const to = turnedTo(event.key, this.at, this.pages);
+      if (to === undefined) return;
       event.preventDefault();
-      void this.turn(key(this.at, this.pages));
+      void this.turn(to);
     });
   }
 

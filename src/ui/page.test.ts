@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { showPage, type Surface } from "@/ui/page";
+import { showPage, turnedTo, type Surface } from "@/ui/page";
 
 function surface(): Surface & { readonly writes: string[] } {
   const writes: string[] = [];
@@ -59,6 +59,17 @@ test("the surface has the generation painted into it, what that cost, and where 
   assert.equal(node.dataset["stagePaint"], "2");
   assert.equal(node.dataset["page"], "12");
   assert.equal(node.dataset["pages"], "337");
+});
+
+test("page up, page down, home and end turn to the page each one names", () => {
+  assert.equal(turnedTo("PageDown", 11, 337), 12);
+  assert.equal(turnedTo("PageUp", 11, 337), 10);
+  assert.equal(turnedTo("Home", 11, 337), 0);
+  assert.equal(turnedTo("End", 11, 337), 336);
+  // Off either end is the session's to hold inside the book.
+  assert.equal(turnedTo("PageUp", 0, 337), -1);
+  assert.equal(turnedTo("PageDown", 336, 337), 337);
+  assert.equal(turnedTo("ArrowDown", 11, 337), undefined);
 });
 
 // What this tier does not cover: the surface inside a leaf, which the
