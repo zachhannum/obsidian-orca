@@ -20,7 +20,7 @@ export class Book {
   readonly page: Locator;
   /** The folio being read, which an author can type into. */
   readonly folio: Locator;
-  /** The line that reads `page 1 of 2`. */
+  /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
   readonly next: Locator;
@@ -30,7 +30,9 @@ export class Book {
     this.surface = pane.getByTestId("orca-page");
     this.page = this.surface.locator("svg");
     this.folio = pane.getByTestId("orca-folio");
-    this.status = pane.getByTestId("orca-status");
+    // The folio being read is Obsidian's own status bar item, outside
+    // the pane, which is where the artboard draws it.
+    this.status = obsidian.page.getByTestId("orca-status");
     this.previous = pane.getByLabel("Previous page");
     this.next = pane.getByLabel("Next page");
   }

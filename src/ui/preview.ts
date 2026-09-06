@@ -19,7 +19,6 @@ export class PreviewView extends ItemView {
   private message: HTMLElement | undefined;
   private folio: HTMLInputElement | undefined;
   private total: HTMLElement | undefined;
-  private status: HTMLElement | undefined;
   private back: HTMLButtonElement | undefined;
   private on: HTMLButtonElement | undefined;
   private session: Session | undefined;
@@ -33,6 +32,8 @@ export class PreviewView extends ItemView {
   constructor(
     leaf: WorkspaceLeaf,
     private readonly opening: Promise<Session>,
+    /** Writes the folio being read into the window's status bar. */
+    private readonly reading: (text: string | undefined) => void,
   ) {
     super(leaf);
   }
@@ -74,7 +75,7 @@ export class PreviewView extends ItemView {
     this.message = undefined;
     this.folio = undefined;
     this.total = undefined;
-    this.status = undefined;
+    this.reading(undefined);
     this.back = undefined;
     this.on = undefined;
     this.session = undefined;
@@ -107,10 +108,6 @@ export class PreviewView extends ItemView {
     const surface = well.createDiv({ cls: "orca-page" });
     surface.dataset["testid"] = "orca-page";
     this.surface = surface;
-
-    const status = pane.createDiv({ cls: "orca-preview-status" });
-    status.dataset["testid"] = "orca-status";
-    this.status = status;
 
     this.registerDomEvent(folio, "change", () => {
       this.typed(folio.value);
@@ -193,7 +190,7 @@ export class PreviewView extends ItemView {
     const folio = at + 1;
     if (this.folio !== undefined) this.folio.value = String(folio);
     this.total?.setText(`of ${String(pages)}`);
-    this.status?.setText(`page ${String(folio)} of ${String(pages)}`);
+    this.reading(`page ${String(folio)} of ${String(pages)}`);
     if (this.back !== undefined) this.back.disabled = at === 0;
     if (this.on !== undefined) this.on.disabled = at >= pages - 1;
   }
