@@ -317,7 +317,7 @@ export class BookView extends FileView {
     const held = this.held;
     if (file === null || held === undefined) return;
     const generation = (this.laying += 1);
-    let pages: Page[] = [];
+    let pages = this.pages;
     try {
       const client = await this.client;
       const ops = await sendBook(
@@ -331,7 +331,7 @@ export class BookView extends FileView {
         ...ops,
         { op: "style", css: BUNDLED_THEME },
       ]);
-      pages = output?.pages ?? this.pages;
+      pages = output?.pages ?? pages;
     } catch (cause) {
       console.error(`Orca: ${file.path} did not lay out.`, cause);
     }

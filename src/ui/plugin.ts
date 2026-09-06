@@ -13,7 +13,12 @@ import {
 import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule, type VaultFiles } from "@/engine/module";
-import { Session, documentFaces, type EngineClient } from "@/engine/session";
+import {
+  Session,
+  documentFaces,
+  serialized,
+  type EngineClient,
+} from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
@@ -364,9 +369,13 @@ export default class OrcaPlugin extends Plugin {
       // the module is still being read.
       if (this.unloaded) handle.stop();
       else this.engine = handle;
+      // Every view that renders shares this client, so its renders are
+      // serialized: the engine holds one document, and two in flight at
+      // once would race it.
+      const client = serialized(handle.client);
       return {
-        session: new Session(handle.client, documentFaces(document)),
-        client: handle.client,
+        session: new Session(client, documentFaces(document)),
+        client,
       };
     } catch (cause) {
       new Notice(

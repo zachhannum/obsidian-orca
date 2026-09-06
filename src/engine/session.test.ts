@@ -18,6 +18,7 @@ import { EngineError } from "@/engine/errors";
 import { readModule } from "@/engine/module";
 import {
   Session,
+  serialized,
   type EngineClient,
   type FaceSet,
   type Stages,
@@ -130,6 +131,71 @@ test("the faces a run drew with come from the module, under the painter's names"
 
   assert.deepEqual(client.asked, [0]);
   assert.deepEqual(set.added, ["fleuron-face-0"]);
+});
+
+test("a serialized client holds a second render back until the first answers", async () => {
+  const order: string[] = [];
+  let release = (): void => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+
+  const client: EngineClient = {
+    preview: async () => {
+      calls += 1;
+      const label = calls === 1 ? "a" : "b";
+      order.push(`${label}:start`);
+      if (label === "a") await gate;
+      order.push(`${label}:end`);
+      return laidOut();
+    },
+    exportPdf: () => Promise.resolve(new Uint8Array()),
+    fontBytes: () => Promise.resolve(new Uint8Array()),
+    current: 0,
+    stages: { style: 0, lines: 0, flow: 0, paint: 0 },
+  };
+  const wrapped = serialized(client);
+
+  const a = wrapped.preview();
+  const b = wrapped.preview();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(order, ["a:start"]);
+
+  release();
+  await Promise.all([a, b]);
+  assert.deepEqual(order, ["a:start", "a:end", "b:start", "b:end"]);
+});
+
+test("a serialized client's queue moves on from a render that failed", async () => {
+  let calls = 0;
+  const client: EngineClient = {
+    preview: () => {
+      calls += 1;
+      return calls === 1
+        ? Promise.reject(new Error("the engine refused it"))
+        : Promise.resolve(laidOut());
+    },
+    exportPdf: () => Promise.resolve(new Uint8Array()),
+    fontBytes: () => Promise.resolve(new Uint8Array()),
+    current: 0,
+    stages: { style: 0, lines: 0, flow: 0, paint: 0 },
+  };
+  const wrapped = serialized(client);
+
+  await assert.rejects(wrapped.preview());
+  assert.ok(await wrapped.preview());
+});
+
+test("a serialized client reads current and stages live off the one it wraps", () => {
+  const client = new FakeClient(laidOut());
+  const wrapped = serialized(client);
+
+  assert.equal(wrapped.current, 0);
+  client.current = 5;
+  assert.equal(wrapped.current, 5);
+  assert.equal(wrapped.stages, client.stages);
 });
 
 test("a book the engine refuses comes back as an engine error, not re-worded", async () => {
