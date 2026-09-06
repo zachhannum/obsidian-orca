@@ -27,7 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { setIcon, setTooltip } from "obsidian";
+import { setTooltip } from "obsidian";
 import { createRoot } from "react-dom/client";
 import {
   useEffect,
@@ -53,6 +53,7 @@ import {
   rowId,
   type Item,
 } from "@/ui/list";
+import { Icon } from "@/ui/icon";
 import type { Row, Shelved } from "@/ui/shelf";
 
 /** The actions a shelf row can ask the view to perform. */
@@ -87,13 +88,29 @@ export interface Shelves {
   acting: Acting;
   renaming: Renaming | undefined;
   renamed: (open: Renaming | undefined) => void;
+  /** The entry another surface has asked the shelf to focus. */
+  wanted: Wanted | undefined;
+  /** Called once the entry has focus, or once it is known not to exist. */
+  located: () => void;
 }
 
-/** The shelf as the view holds it: painted, renamed, and let go. */
+/** An entry asked for by its book and its place in the reading order. */
+export interface Wanted {
+  book: string;
+  at: number;
+}
+
+/** The shelf as the view holds it: painted, renamed, focused, and let go. */
 export interface Mounted {
   paint(shelf: Shelved[], generation: number): void;
   /** Opens the rename on one section, which the menu asks for. */
   rename(book: string, heading: string): void;
+  /**
+   * Focuses one entry, unfolding its book and scrolling to it. The ask
+   * is held until the row has been painted, so it survives a shelf
+   * that is still being read.
+   */
+  focus(book: string, at: number): void;
   unmount(): void;
 }
 
@@ -108,6 +125,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
   let shelf: Shelved[] = [];
   let generation = 0;
   let renaming: Renaming | undefined;
+  let wanted: Wanted | undefined;
 
   const draw = (): void => {
     root.render(
@@ -118,6 +136,11 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
         renaming={renaming}
         renamed={(open) => {
           renaming = open;
+          draw();
+        }}
+        wanted={wanted}
+        located={() => {
+          wanted = undefined;
           draw();
         }}
       />,
@@ -133,6 +156,10 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
     },
     rename(book, heading) {
       renaming = { book, heading };
+      draw();
+    },
+    focus(book, at) {
+      wanted = { book, at };
       draw();
     },
     unmount() {
@@ -209,21 +236,6 @@ const inside =
 const clamp = (value: number, low: number, high: number): number =>
   Math.min(Math.max(value, low), high);
 
-/** Draws an Obsidian icon into the node after the commit. */
-function Icon({
-  name,
-  className,
-}: {
-  name: string;
-  className?: string;
-}): JSX.Element {
-  const held = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (held.current !== null) setIcon(held.current, name);
-  }, [name]);
-  return <span ref={held} className={className} />;
-}
-
 /** An icon button. Pressing it never starts a drag. */
 function Action({
   icon,
@@ -263,6 +275,8 @@ export function Shelf({
   acting,
   renaming,
   renamed,
+  wanted,
+  located,
 }: Shelves): JSX.Element {
   const pane = useRef<HTMLDivElement>(null);
   // The suite waits on the generation the pane has painted, so it is
@@ -271,6 +285,17 @@ export function Shelf({
     if (pane.current !== null)
       pane.current.dataset["generation"] = String(generation);
   }, [generation, shelf]);
+
+  // A book asked for by a path the shelf does not have, whether it was
+  // renamed, deleted, or never existed, lets the ask go rather than
+  // holding it for a book that might later reuse the path. Generation
+  // 0 is the shelf before its first real paint, an empty array that
+  // says nothing about which books exist, so an ask made before then
+  // waits for the paint that actually answers it.
+  useEffect(() => {
+    if (wanted === undefined || generation === 0) return;
+    if (!shelf.some((book) => book.path === wanted.book)) located();
+  }, [wanted, shelf, generation, located]);
 
   return (
     <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
@@ -295,6 +320,8 @@ export function Shelf({
               acting={acting}
               renaming={renaming}
               renamed={renamed}
+              wanted={wanted?.book === book.path ? wanted.at : undefined}
+              located={located}
             />
           ))
         )}
@@ -308,13 +335,19 @@ function Book({
   acting,
   renaming,
   renamed,
+  wanted,
+  located,
 }: {
   book: Shelved;
   acting: Acting;
   renaming: Renaming | undefined;
   renamed: (open: Renaming | undefined) => void;
+  /** The place of the entry this book has been asked to focus. */
+  wanted: number | undefined;
+  located: () => void;
 }): JSX.Element {
   const [folded, setFolded] = useState(false);
+  const shelf = useRef<HTMLDivElement>(null);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
   /** The section a drag is carrying, whose entries move with it. */
   const [carried, setCarried] = useState<string | undefined>(undefined);
@@ -345,6 +378,32 @@ function Book({
     () => dropped ?? flatten(book.groups),
     [dropped, book.groups],
   );
+
+  // A focus asked for from the book page. The book unfolds first, and
+  // the row is focused on the commit that draws it, against the list
+  // actually on screen rather than the note's own order. A place that
+  // list does not have is let go.
+  useEffect(() => {
+    if (wanted === undefined) return;
+    if (folded) {
+      setFolded(false);
+      return;
+    }
+    const has = base.some(
+      (item) => item.kind === "row" && item.row.at === wanted,
+    );
+    if (!has) {
+      located();
+      return;
+    }
+    const found = shelf.current?.querySelector<HTMLElement>(
+      `[data-at="${wanted}"]`,
+    );
+    if (found === null || found === undefined) return;
+    found.scrollIntoView({ block: "nearest" });
+    found.focus();
+    located();
+  }, [wanted, folded, base, located]);
   const items = useMemo(
     () => (carried === undefined ? base : collapse(base, carried)),
     [base, carried],
@@ -380,6 +439,7 @@ function Book({
 
   return (
     <div
+      ref={shelf}
       className="orca-shelf"
       data-testid="orca-shelf"
       data-book={book.path}

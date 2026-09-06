@@ -33,12 +33,18 @@ export class Note {
   readonly changed: Locator;
   /** The note as the editor shows it. */
   readonly markdown: Locator;
+  /** The line under the title: the format, and the chapter and word counts. */
+  readonly line: Locator;
+  /** The reading order, drawn read-only. */
+  readonly order: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.page = obsidian.view(BOOK).getByTestId("orca-book");
     this.refused = this.page.getByTestId("orca-book-refused");
     this.changed = obsidian.page.getByTestId("orca-book-changed");
     this.markdown = obsidian.view(MARKDOWN);
+    this.line = this.page.getByTestId("orca-book-line");
+    this.order = this.page.getByTestId("orca-order");
   }
 
   /** Returns the generation of the model the page shows. */
@@ -106,9 +112,22 @@ export class Note {
     await this.obsidian.open(path);
   }
 
-  /** One property orca keeps, as the page reports it. */
+  /** The field one property orca owns is edited in. */
   metadata(key: string): Locator {
     return this.page.getByTestId(`orca-metadata-${key}`);
+  }
+
+  /** One entry in the reading order, by what the row is called. */
+  entry(name: string): Locator {
+    return this.order
+      .getByTestId("orca-order-entry")
+      .filter({ hasText: name })
+      .first();
+  }
+
+  /** The word count drawn beside an entry. */
+  words(name: string): Locator {
+    return this.entry(name).locator(".orca-order-count");
   }
 
   /** The action in the book page's header, which hands the leaf to the editor. */

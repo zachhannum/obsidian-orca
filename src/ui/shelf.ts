@@ -60,12 +60,17 @@ export interface Shelving {
   active?: string | undefined;
 }
 
+/** The book's title, or the note's name when it has none. */
+export function bookName(book: Opened): string {
+  return book.model.book.metadata.title ?? book.name;
+}
+
 /** One book on the shelf, resolved against the vault. */
 export function shelve(book: Opened, vault: Shelving): Shelved {
   const { sections } = resolve(book.model.order, vault.links, book.path);
   return {
     path: book.path,
-    name: book.model.book.metadata.title ?? book.name,
+    name: bookName(book),
     groups: groups(book.model.order).map((group) => ({
       heading: group.heading,
       rows: group.entries.flatMap((at) => {
@@ -78,7 +83,8 @@ export function shelve(book: Opened, vault: Shelving): Shelved {
   };
 }
 
-function row(section: Section, at: number): Row {
+/** One entry as a row, by its place in the reading order. */
+export function row(section: Section, at: number): Row {
   const { entry } = section;
   const made: Row = {
     at,

@@ -97,7 +97,8 @@ export class NavigatorView extends ItemView {
       }),
     );
     // The highlight follows the active note. Nothing else here does:
-    // the navigator never folds, unfolds or scrolls itself.
+    // the navigator never folds, unfolds or scrolls on its own, only
+    // when the book page asks it to focus an entry.
     this.registerEvent(workspace.on("file-open", again));
     this.register(this.edits.watch(again));
 
@@ -166,6 +167,14 @@ export class NavigatorView extends ItemView {
     this.mounted?.unmount();
     this.mounted = undefined;
     return Promise.resolve();
+  }
+
+  /**
+   * Focuses one entry of a book, by its place in the reading order.
+   * The book page asks for this, since the order is edited here.
+   */
+  focus(book: string, at: number): void {
+    this.mounted?.focus(book, at);
   }
 
   /** Repaints the shelf once, however many events arrived. */

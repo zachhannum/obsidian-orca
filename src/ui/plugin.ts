@@ -61,8 +61,13 @@ export default class OrcaPlugin extends Plugin {
     this.registerView(
       BOOK_VIEW,
       (leaf) =>
-        new BookView(leaf, this.edits, (view) => {
-          void this.openAsMarkdown(view.leaf, view.file);
+        new BookView(leaf, this.edits, {
+          asMarkdown: (view) => {
+            void this.openAsMarkdown(view.leaf, view.file);
+          },
+          locate: (book, at) => {
+            void this.locate(book, at);
+          },
         }),
     );
     this.registerView(
@@ -303,10 +308,20 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /** Reveals the navigator in its sidebar. */
-  private async show(): Promise<void> {
-    await this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
+  private async show(): Promise<WorkspaceLeaf> {
+    return this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
       reveal: true,
     });
+  }
+
+  /** Reveals the navigator and focuses one entry of a book in it. */
+  private async locate(book: string, at: number): Promise<void> {
+    const leaf = await this.show();
+    // A leaf Obsidian restored in the background is deferred until
+    // something asks for it, and the view underneath is not this one
+    // until it has.
+    await leaf.loadIfDeferred();
+    if (leaf.view instanceof NavigatorView) leaf.view.focus(book, at);
   }
 
   private async openAsMarkdown(
