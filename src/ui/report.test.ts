@@ -21,14 +21,21 @@ async function model(): Promise<Model> {
 
 /** The fixture vault, every note counted. */
 async function counting(): Promise<Counting> {
-  const paths = (await vault.list("/")).files;
+  const paths = await notes("/");
   const counted = new Map<string, number>();
   for (const at of paths) counted.set(at, countWords(await readText(vault, at)));
   return { links: pathLinks(paths), words: (at) => counted.get(at) };
 }
 
+/** Every markdown note under a folder, however deep. */
+async function notes(folder: string): Promise<string[]> {
+  const listed = await vault.list(folder);
+  const below = await Promise.all(listed.folders.map((at) => notes(at)));
+  return [...listed.files.filter((at) => at.endsWith(".md")), ...below.flat()];
+}
+
 test("word counts come from the notes, and an entry with no note has none", async () => {
-  const held = { path: BOOK, name: "Pride and Prejudice", model: await model() };
+  const held = { path: BOOK, name: "PP draft", model: await model() };
 
   const made = report(held, await counting());
 
@@ -103,10 +110,10 @@ test("every property orca owns is a field, and an emptied one comes off the note
   assert.equal(edited.order, held.order);
   // A note with no title is named after itself.
   const untitled = report(
-    { path: BOOK, name: "Pride and Prejudice", model: setField(held, "title", "") },
+    { path: BOOK, name: "PP draft", model: setField(held, "title", "") },
     vaulted,
   );
-  assert.equal(untitled.name, "Pride and Prejudice");
+  assert.equal(untitled.name, "PP draft");
   assert.equal(untitled.fields[0]?.value, "");
 });
 

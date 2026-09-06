@@ -12,7 +12,7 @@ import type { Model } from "@/book/model";
 import { FIELD_KEYS, type BookMetadata } from "@/book/note";
 import { resolve } from "@/book/order";
 import { DEFAULT_ROLE } from "@/book/roles";
-import { row, type Opened, type Row } from "@/ui/shelf";
+import { bookName, row, type Opened, type Row } from "@/ui/shelf";
 
 /** One property orca owns, as the page edits it. A property the note does not have is empty. */
 export interface Field {
@@ -57,7 +57,7 @@ export function report(book: Opened, vault: Counting): Report {
     return line;
   });
   return {
-    name: metadata.title ?? book.name,
+    name: bookName(book),
     format: book.model.book.format,
     chapters: lines.filter((line) => line.role === DEFAULT_ROLE).length,
     words: lines.reduce((sum, line) => sum + (line.words ?? 0), 0),
