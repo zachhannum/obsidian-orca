@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { Worker, type TransferListItem } from "node:worker_threads";
-import { paintPage, type LayoutOutput, type Op } from "fleuron";
+import { paintPage, type LayoutOutput, type Op, type Page } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
@@ -21,6 +21,7 @@ import {
   serialized,
   type EngineClient,
   type FaceSet,
+  type Range,
   type Stages,
 } from "@/engine/session";
 
@@ -28,17 +29,42 @@ const root = process.env["ORCA_ROOT"] ?? process.cwd();
 
 class FakeClient implements EngineClient {
   readonly rendered: Op[][] = [];
+  /** Every window asked for, in the order it was asked. */
+  readonly ranges: Range[] = [];
   readonly asked: number[] = [];
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
+  private book: Page[];
 
-  constructor(private readonly layout: LayoutOutput) {}
+  constructor(private readonly layout: LayoutOutput) {
+    this.book = layout.pages;
+  }
 
-  preview(ops: Op[] = []): Promise<LayoutOutput | null> {
-    this.rendered.push(ops);
+  /** The edit that leaves the book `pages` long. */
+  rewrite(pages: number): void {
+    this.book = leaves(pages);
     this.current += 1;
-    this.stages = { style: 1, lines: 1, flow: 1, paint: this.current };
-    return Promise.resolve(this.layout);
+  }
+
+  preview(ops: Op[] = [], range?: Range): Promise<LayoutOutput | null> {
+    // A range with nothing to apply is a question about the book as it
+    // stands, so it raises no generation.
+    if (ops.length > 0) {
+      this.rendered.push(ops);
+      this.current += 1;
+      this.stages = { style: 1, lines: 1, flow: 1, paint: this.current };
+    }
+    if (range !== undefined) this.ranges.push(range);
+    const first = range?.first ?? 0;
+    return Promise.resolve({
+      ...this.layout,
+      pages:
+        range === undefined
+          ? this.book
+          : this.book.slice(first, first + range.count),
+      first,
+      bookPages: this.book.length,
+    });
   }
 
   exportPdf(): Promise<Uint8Array | null> {
@@ -62,34 +88,37 @@ function faces(): FaceSet & { readonly added: string[] } {
   };
 }
 
-function laidOut(): LayoutOutput {
-  return {
-    pages: [
+/** A book of `count` pages, each saying which one it is. */
+function leaves(count: number): Page[] {
+  return Array.from({ length: count }, (_, at) => ({
+    number: at + 1,
+    side: at % 2 === 0 ? ("recto" as const) : ("verso" as const),
+    width: 432,
+    height: 648,
+    sections: [],
+    items: [
       {
-        number: 1,
-        side: "recto",
-        width: 432,
-        height: 648,
-        sections: [],
-        items: [
-          {
-            kind: "text",
-            x: 54,
-            y: 73,
-            fontId: 0,
-            size: 18,
-            text: "Chapter Twelve",
-            source: "",
-            sourceMap: [],
-            features: { smallCaps: false },
-            color: "#000000",
-            glyphs: [],
-          },
-        ],
+        kind: "text" as const,
+        x: 54,
+        y: 73,
+        fontId: 0,
+        size: 18,
+        text: `Page ${String(at + 1)}`,
+        source: "",
+        sourceMap: [],
+        features: { smallCaps: false },
+        color: "#000000",
+        glyphs: [],
       },
     ],
+  }));
+}
+
+function laidOut(pages = 1): LayoutOutput {
+  return {
+    pages: leaves(pages),
     first: 0,
-    bookPages: 1,
+    bookPages: pages,
     fonts: [
       {
         family: "eb garamond",
@@ -127,6 +156,74 @@ test("two leaves on one book lay it out once between them", async () => {
   ]);
 
   assert.equal(client.rendered.length, 1);
+});
+
+test("opening asks for the first page and the one after it, not the book", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+
+  await session.open(openBook(SAMPLE));
+
+  assert.deepEqual(client.ranges, [{ first: 0, count: 2 }]);
+  assert.equal(session.pages, 337);
+});
+
+test("a page rides in with the one either side, so the turn onto it waits on nothing", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+
+  const first = await session.read(0);
+  const second = await session.read(1);
+
+  assert.equal(first?.page.number, 1);
+  // Page 2 came in with page 1, so the turn onto it asked for nothing
+  // and page 3 is what rode along behind it.
+  assert.equal(second?.page.number, 2);
+  assert.deepEqual(client.ranges, [
+    { first: 0, count: 2 },
+    { first: 2, count: 1 },
+  ]);
+});
+
+test("a page already held is painted from the cache rather than asked for again", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  await session.read(1);
+  const asked = client.ranges.length;
+
+  await session.read(0);
+
+  assert.equal(client.ranges.length, asked);
+});
+
+test("an edit drops the pages from before it rather than painting one of them", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  await session.read(0);
+  const asked = client.ranges.length;
+
+  client.rewrite(337);
+  const reading = await session.read(0);
+
+  assert.ok(client.ranges.length > asked, "page 1 was painted from the book before the edit");
+  assert.equal(reading?.page.number, 1);
+});
+
+test("a book that got shorter reads its last page rather than nothing", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  await session.read(336);
+
+  client.rewrite(3);
+  const reading = await session.read(336);
+
+  assert.equal(reading?.at, 2);
+  assert.equal(reading?.pages, 3);
+  assert.equal(reading?.page.number, 3);
 });
 
 test("the faces a run drew with come from the module, under the painter's names", async () => {
@@ -229,15 +326,15 @@ test("the sample note sets to a page the painter can draw", async () => {
 
     await session.open(openBook(SAMPLE));
 
-    const output = session.output;
-    assert.ok(output, "nothing came back from the engine");
-    assert.deepEqual(output.warnings, []);
-    const page = output.pages[0];
-    assert.ok(page, "the sample set to no pages");
+    assert.deepEqual(session.output?.warnings, []);
+    const reading = await session.read(0);
+    assert.ok(reading, "the sample set to no pages");
+    assert.equal(reading.at, 0);
+    assert.equal(reading.pages, session.pages);
 
-    const markup = paintPage(page, {
-      fonts: output.fonts,
-      assets: output.assets,
+    const markup = paintPage(reading.page, {
+      fonts: reading.fonts,
+      assets: reading.assets,
     });
     assert.match(markup, /^<svg /);
     assert.ok(markup.includes("Chapter Twelve"));
