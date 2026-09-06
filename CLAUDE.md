@@ -74,6 +74,43 @@ one, and UI work starts by opening the one it belongs to.
 - After a major change, run `roborev review --branch --wait` in the
   background for branch-level findings.
 
+## Context usage
+
+A feature session keeps its context bounded on purpose.
+
+- A lookup that spans modules (where a case is handled, what calls a
+  symbol, what an artboard's README section settles) goes to a
+  subagent. Read only the files about to change.
+- A feature with a design decision the issue and its artboard do not
+  already settle is planned once, with a planning subagent, before the
+  first edit, rather than re-explored piecemeal as questions come up
+  mid-implementation.
+- A feature that spans more than one module fans implementation out to
+  a subagent per module, along the boundary the lint pass already
+  enforces (`engine/`, `book/`, `style/`, `assets/`, `ui/`). A module
+  another depends on is committed first; independent modules run in
+  separate worktrees at the same time.
+- The lead session commits, runs roborev, checks off the issue's
+  acceptance boxes and opens the PR. A subagent hands back a diff or a
+  plan; it does not own the definition of done.
+- A subagent is not spawned to save one lookup or a one-file edit.
+  Fan-out pays for itself at a module boundary, not by default.
+- A command with long output (`npm test`, `npm run e2e`, `npm run
+  build`, `npm run lint`, `gh run watch`, `roborev wait`, `roborev
+  show`) runs in the background. Only the failing lines come back into
+  context.
+- A generated or large file (`design/parts/*.html`, generated CSS, the
+  fixture vault, a snapshot) is read at the section under change, not
+  whole. A snapshot is diffed with `git diff --stat` before it is
+  opened.
+- A file just edited is not read back to confirm the edit. Edit and
+  Write fail loudly when they do not apply.
+- Work stays inside the issue's acceptance checkboxes. A drive-by fix
+  noticed along the way rides in the same PR; a read of an unrelated
+  module "to be safe" does not.
+- A session compacts at a milestone, once tests are green and a commit
+  has landed, rather than wherever the harness forces it mid-task.
+
 ## Unit testing
 
 - Tests are colocated: `<name>.test.ts` beside the file under test.

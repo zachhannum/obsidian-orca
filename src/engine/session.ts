@@ -23,6 +23,36 @@ export interface EngineClient {
   readonly stages: Stages;
 }
 
+/**
+ * A client whose renders run one at a time. The engine holds one
+ * document, so two callers racing it over the same client would see
+ * each other's ops: one view's render can come back superseded by a
+ * request the engine applied first but rendered last. Serialized,
+ * every render still answers the render it was asked for.
+ */
+export function serialized(client: EngineClient): EngineClient {
+  let queue = Promise.resolve();
+  const queued = <T>(run: () => Promise<T>): Promise<T> => {
+    const settled = queue.then(run, run);
+    queue = settled.then(
+      () => undefined,
+      () => undefined,
+    );
+    return settled;
+  };
+  return {
+    preview: (ops) => queued(() => client.preview(ops)),
+    exportPdf: (ops) => queued(() => client.exportPdf(ops)),
+    fontBytes: (font) => client.fontBytes(font),
+    get current(): number {
+      return client.current;
+    },
+    get stages(): Stages {
+      return client.stages;
+    },
+  };
+}
+
 /** A document's faces, narrowed to what a session adds to them. */
 export interface FaceSet {
   add(

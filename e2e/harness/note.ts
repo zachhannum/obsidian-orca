@@ -127,7 +127,12 @@ export class Note {
 
   /** The word count drawn beside an entry. */
   words(name: string): Locator {
-    return this.entry(name).locator(".orca-order-count");
+    return this.entry(name).getByTestId("orca-order-words");
+  }
+
+  /** The folio range drawn beside an entry. */
+  pages(name: string): Locator {
+    return this.entry(name).getByTestId("orca-order-pages");
   }
 
   /** The action in the book page's header, which hands the leaf to the editor. */

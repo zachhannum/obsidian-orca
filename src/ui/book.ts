@@ -1,8 +1,12 @@
+import type { Page } from "fleuron";
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { resolve } from "@/book/order";
+import { sendBook } from "@/book/plan";
 import { countWords } from "@/book/words";
+import type { EngineClient } from "@/engine/session";
+import { BUNDLED_THEME } from "@/style/theme";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
 import { cacheLinks } from "@/ui/notes";
@@ -27,9 +31,12 @@ export interface Handoff {
  * `Open as markdown` hands the leaf back to the editor.
  *
  * The page reports on the book: its properties, edited here, and its
- * reading order with a word count beside each note. The counts are
- * read from the vault as the page needs them and kept until the note
- * changes, so a repaint costs no reads.
+ * reading order with a word count and a folio range beside each note.
+ * The counts are read from the vault as the page needs them and kept
+ * until the note changes, so a repaint costs no reads. The folio
+ * ranges come from a run of the book through the engine, which the
+ * view sends again once an edit to the order or a note it reads
+ * settles.
  */
 export class BookView extends FileView {
   private writer: Writer | undefined;
@@ -44,10 +51,15 @@ export class BookView extends FileView {
   private readonly counts = new Map<string, number>();
   /** The reads still counting, so a note is read once however often the page paints. */
   private readonly counting = new Map<string, Promise<number>>();
+  /** The pages the last run through the engine came back with. */
+  private pages: Page[] = [];
+  /** Counts the runs sent, so a run a later one overtakes is dropped rather than painted. */
+  private laying = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly edits: Edits,
+    private readonly client: Promise<EngineClient>,
     private readonly handoff: Handoff,
   ) {
     super(leaf);
@@ -85,8 +97,12 @@ export class BookView extends FileView {
           void this.arrived(file);
           return;
         }
-        // A note the book reads has changed, so its count is stale.
-        if (this.forget(file.path)) this.repaint();
+        // A note the book reads has changed, so its count and its
+        // pages are both stale.
+        if (this.forget(file.path)) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     // The note is gone, so an unwritten edit has nowhere to settle.
@@ -97,14 +113,25 @@ export class BookView extends FileView {
           this.writer = undefined;
           return;
         }
-        this.forget(file.path);
-        this.repaint();
+        // A note this book was reading is gone, so its count and its
+        // pages are both stale.
+        if (this.forget(file.path)) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     this.registerEvent(
-      vault.on("rename", (_file, was) => {
-        this.forget(was);
-        this.repaint();
+      vault.on("rename", (file, was) => {
+        if (file.path === this.file?.path) {
+          // The book's own note, whose displayed name follows it.
+          this.repaint();
+          return;
+        }
+        if (this.forget(was)) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     // A new note or a resolved cache can only change what this book
@@ -113,12 +140,18 @@ export class BookView extends FileView {
     // the whole order on each one.
     this.registerEvent(
       vault.on("create", () => {
-        if (this.hasMissing()) this.repaint();
+        if (this.hasMissing()) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     this.registerEvent(
       metadataCache.on("resolved", () => {
-        if (this.hasMissing()) this.repaint();
+        if (this.hasMissing()) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     return Promise.resolve();
@@ -161,6 +194,7 @@ export class BookView extends FileView {
   private hold(file: TFile, text: string): void {
     this.disk = text;
     this.writer = undefined;
+    this.pages = [];
     const model = this.opened(text);
     if (model === undefined) return;
     this.writer = new Writer(model, {
@@ -171,6 +205,7 @@ export class BookView extends FileView {
       save: (held) => this.write(file, held),
     });
     this.show(model, 0);
+    void this.relay();
   }
 
   /** The book in the note, or nothing when orca refused it. */
@@ -222,7 +257,10 @@ export class BookView extends FileView {
 
   private reload(text: string): void {
     const model = this.opened(text);
-    if (model !== undefined) this.writer?.take(model);
+    if (model !== undefined) {
+      this.writer?.take(model);
+      void this.relay();
+    }
   }
 
   /** Writes the model, and reports a write that failed. */
@@ -248,6 +286,9 @@ export class BookView extends FileView {
     } finally {
       this.saving -= 1;
     }
+    // The edit that just settled may have reordered the book or
+    // changed what a note holds, so its pages are sent again.
+    void this.relay();
   }
 
   /** Paints the book page from a model at the generation it is at. */
@@ -258,8 +299,8 @@ export class BookView extends FileView {
 
   /**
    * Paints the page again from the model it already holds, with the
-   * generation it already carries. The counts and the links may have
-   * changed; the book has not.
+   * generation it already carries. The counts, the pages and the
+   * links may have changed; the book has not.
    */
   private repaint(): void {
     const file = this.file;
@@ -270,8 +311,50 @@ export class BookView extends FileView {
       report: report(
         { path: file.path, name: file.basename, model: this.held.model },
         { links: cacheLinks(this.app), words: (path) => this.words(path) },
+        this.pages,
       ),
     });
+  }
+
+  /**
+   * Sends the book through the engine again and paints the pages it
+   * comes back with. A run a later one overtakes before it lands is
+   * dropped rather than painted.
+   */
+  private async relay(): Promise<void> {
+    const file = this.file;
+    const held = this.held;
+    if (file === null || held === undefined) return;
+    const generation = (this.laying += 1);
+    let pages = this.pages;
+    try {
+      const client = await this.client;
+      const ops = await sendBook(
+        held.model.book,
+        held.model.order,
+        cacheLinks(this.app),
+        file.path,
+        (path) => this.readNote(path),
+      );
+      const output = await client.preview([
+        ...ops,
+        { op: "style", css: BUNDLED_THEME },
+      ]);
+      pages = output?.pages ?? pages;
+    } catch (cause) {
+      console.error(`Orca: ${file.path} did not lay out.`, cause);
+    }
+    if (generation !== this.laying) return;
+    this.pages = pages;
+    this.repaint();
+  }
+
+  /** Reads a note a section names, for the run `relay` sends. */
+  private readNote(path: string): Promise<string> {
+    const note = this.app.vault.getFileByPath(path);
+    return note === null
+      ? Promise.reject(new Error(`${path} is gone`))
+      : this.app.vault.cachedRead(note);
   }
 
   /**

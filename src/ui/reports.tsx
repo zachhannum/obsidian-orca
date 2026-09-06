@@ -12,7 +12,7 @@ import { useEffect, useRef, type JSX, type KeyboardEvent } from "react";
 import { BOOK_KEY, type BookMetadata } from "@/book/note";
 import { ROLES } from "@/book/roles";
 import { Icon } from "@/ui/icon";
-import type { Line, Report } from "@/ui/report";
+import { foliate, type Line, type Report } from "@/ui/report";
 
 /** The actions the page asks the view to perform. */
 export interface Acting {
@@ -138,6 +138,7 @@ function Book({
           <div className="orca-order-columns">
             <span>Entry</span>
             <span className="orca-order-count">Words</span>
+            <span className="orca-order-count">Pages</span>
           </div>
           {report.lines.map((line) => (
             <Entry key={line.at} line={line} acting={acting} />
@@ -179,11 +180,18 @@ function Entry({ line, acting }: { line: Line; acting: Acting }): JSX.Element {
           </span>
         ) : null}
       </span>
-      <span className="orca-order-count">
+      <span className="orca-order-count" data-testid="orca-order-words">
         {line.kind !== "note" ? (
           <span className="orca-order-none">—</span>
         ) : line.words === undefined ? null : (
           line.words.toLocaleString()
+        )}
+      </span>
+      <span className="orca-order-count" data-testid="orca-order-pages">
+        {line.pages === undefined ? (
+          <span className="orca-order-none">—</span>
+        ) : (
+          foliate(line.pages)
         )}
       </span>
     </div>
