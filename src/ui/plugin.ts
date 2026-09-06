@@ -13,7 +13,7 @@ import {
 import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule, type VaultFiles } from "@/engine/module";
-import { Session, documentFaces } from "@/engine/session";
+import { Session, documentFaces, type EngineClient } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
@@ -57,18 +57,26 @@ export default class OrcaPlugin extends Plugin {
 
     this.catchOpening();
 
-    this.registerView(PREVIEW_VIEW, (leaf) => new PreviewView(leaf, opening));
+    this.registerView(
+      PREVIEW_VIEW,
+      (leaf) => new PreviewView(leaf, opening.then((held) => held.session)),
+    );
     this.registerView(
       BOOK_VIEW,
       (leaf) =>
-        new BookView(leaf, this.edits, {
-          asMarkdown: (view) => {
-            void this.openAsMarkdown(view.leaf, view.file);
+        new BookView(
+          leaf,
+          this.edits,
+          opening.then((held) => held.client),
+          {
+            asMarkdown: (view) => {
+              void this.openAsMarkdown(view.leaf, view.file);
+            },
+            locate: (book, at) => {
+              void this.locate(book, at);
+            },
           },
-          locate: (book, at) => {
-            void this.locate(book, at);
-          },
-        }),
+        ),
     );
     this.registerView(
       NAVIGATOR_VIEW,
@@ -347,7 +355,7 @@ export default class OrcaPlugin extends Plugin {
     });
   }
 
-  private async open(): Promise<Session> {
+  private async open(): Promise<{ session: Session; client: EngineClient }> {
     try {
       const handle = await startEngine(
         await readModule(this.files(), this.directory()),
@@ -356,7 +364,10 @@ export default class OrcaPlugin extends Plugin {
       // the module is still being read.
       if (this.unloaded) handle.stop();
       else this.engine = handle;
-      return new Session(handle.client, documentFaces(document));
+      return {
+        session: new Session(handle.client, documentFaces(document)),
+        client: handle.client,
+      };
     } catch (cause) {
       new Notice(
         cause instanceof EngineError
