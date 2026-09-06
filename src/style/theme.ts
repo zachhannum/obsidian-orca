@@ -5,6 +5,9 @@
  * the size its headings open on.
  */
 
+/** The sheet orca sends its own styling under, which a warning names. */
+export const THEME_SHEET = "orca.css";
+
 /** The bundled theme's CSS, sent as one `style` op. */
 export const BUNDLED_THEME = `
 book {

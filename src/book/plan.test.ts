@@ -12,7 +12,7 @@ import { readModel, type Model } from "@/book/model";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder } from "@/book/order";
 import { GENERATED_ORIGIN, sendBook } from "@/book/plan";
-import { BUNDLED_THEME } from "@/style/theme";
+import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -102,7 +102,10 @@ test("the fixture book lays out and paints, over the bundled theme", async () =>
         });
       },
     });
-    const output = await client.preview([...ops, styleOp(BUNDLED_THEME)]);
+    const output = await client.preview([
+      ...ops,
+      styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
+    ]);
 
     assert.ok(output, "the render was overtaken");
     assert.deepEqual(output.warnings, []);

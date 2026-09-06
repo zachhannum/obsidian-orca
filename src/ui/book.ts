@@ -6,7 +6,7 @@ import { resolve } from "@/book/order";
 import { sendBook } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { EngineClient } from "@/engine/session";
-import { BUNDLED_THEME } from "@/style/theme";
+import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
 import { cacheLinks } from "@/ui/notes";
@@ -336,7 +336,10 @@ export class BookView extends FileView {
         file.path,
         (path) => this.readNote(path),
       );
-      const output = await client.preview([...ops, styleOp(BUNDLED_THEME)]);
+      const output = await client.preview([
+        ...ops,
+        styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
+      ]);
       pages = output?.pages ?? pages;
     } catch (cause) {
       console.error(`Orca: ${file.path} did not lay out.`, cause);

@@ -6,6 +6,7 @@ import { styleOp } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
+import { THEME_SHEET } from "@/style/theme";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 
@@ -13,7 +14,7 @@ test("the sample note crosses as the whole book, in Obsidian's markdown, with no
   assert.deepEqual(openBook(SAMPLE), [
     { op: "dialect", dialect: "obsidian" },
     { op: "markdown", name: SAMPLE.name, text: SAMPLE.text },
-    styleOp(""),
+    styleOp([{ name: THEME_SHEET, css: "" }]),
   ]);
 });
 

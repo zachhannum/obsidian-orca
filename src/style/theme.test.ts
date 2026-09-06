@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { Client, createEngine, styleOp, type Op } from "fleuron";
-import { BUNDLED_THEME } from "@/style/theme";
+import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
 test("the bundled theme sets one face in two sizes, with nothing the engine warns about", async () => {
   const engine = await createEngine({ wasm: await moduleBytes() });
@@ -17,7 +17,7 @@ test("the bundled theme sets one face in two sizes, with nothing the engine warn
     });
     const ops: Op[] = [
       { op: "dialect", dialect: "obsidian" },
-      styleOp(BUNDLED_THEME),
+      styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
       {
         op: "markdown",
         name: "chapter.md",
