@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { Client, createEngine, type Op } from "fleuron";
+import { Client, createEngine, styleOp, type Op } from "fleuron";
 import { BUNDLED_THEME } from "@/style/theme";
 
 test("the bundled theme sets one face in two sizes, with nothing the engine warns about", async () => {
@@ -17,7 +17,7 @@ test("the bundled theme sets one face in two sizes, with nothing the engine warn
     });
     const ops: Op[] = [
       { op: "dialect", dialect: "obsidian" },
-      { op: "style", css: BUNDLED_THEME },
+      styleOp(BUNDLED_THEME),
       {
         op: "markdown",
         name: "chapter.md",

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
+import { styleOp } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
@@ -12,7 +13,7 @@ test("the sample note crosses as the whole book, in Obsidian's markdown, with no
   assert.deepEqual(openBook(SAMPLE), [
     { op: "dialect", dialect: "obsidian" },
     { op: "markdown", name: SAMPLE.name, text: SAMPLE.text },
-    { op: "style", css: "" },
+    styleOp(""),
   ]);
 });
 

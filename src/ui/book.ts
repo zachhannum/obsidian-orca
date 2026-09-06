@@ -1,4 +1,4 @@
-import type { Page } from "fleuron";
+import { styleOp, type Page } from "fleuron";
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
@@ -336,10 +336,7 @@ export class BookView extends FileView {
         file.path,
         (path) => this.readNote(path),
       );
-      const output = await client.preview([
-        ...ops,
-        { op: "style", css: BUNDLED_THEME },
-      ]);
+      const output = await client.preview([...ops, styleOp(BUNDLED_THEME)]);
       pages = output?.pages ?? pages;
     } catch (cause) {
       console.error(`Orca: ${file.path} did not lay out.`, cause);

@@ -1,4 +1,4 @@
-import type { Op, Source } from "fleuron";
+import { styleOp, type Op, type Source } from "fleuron";
 
 /**
  * One note, standing in for a book in the vault. A book of one file
@@ -41,6 +41,6 @@ export function openBook(source: Source): Op[] {
     { op: "markdown", name: source.name, text: source.text },
     // The session keeps every input between renders, style included, so
     // the sample resets it rather than inheriting a real book's.
-    { op: "style", css: "" },
+    styleOp(""),
   ];
 }

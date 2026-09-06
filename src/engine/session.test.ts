@@ -79,11 +79,17 @@ function laidOut(): LayoutOutput {
             fontId: 0,
             size: 18,
             text: "Chapter Twelve",
+            source: "",
+            sourceMap: [],
+            features: { smallCaps: false },
+            color: "#000000",
             glyphs: [],
           },
         ],
       },
     ],
+    first: 0,
+    bookPages: 1,
     fonts: [
       {
         family: "eb garamond",

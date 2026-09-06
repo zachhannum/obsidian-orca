@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { Client, createEngine, type Op } from "fleuron";
+import { Client, createEngine, styleOp, type Op } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
@@ -102,7 +102,7 @@ test("the fixture book lays out and paints, over the bundled theme", async () =>
         });
       },
     });
-    const output = await client.preview([...ops, { op: "style", css: BUNDLED_THEME }]);
+    const output = await client.preview([...ops, styleOp(BUNDLED_THEME)]);
 
     assert.ok(output, "the render was overtaken");
     assert.deepEqual(output.warnings, []);
