@@ -317,6 +317,10 @@ export default class OrcaPlugin extends Plugin {
   /** Reveals the navigator and focuses one entry of a book in it. */
   private async locate(book: string, at: number): Promise<void> {
     const leaf = await this.show();
+    // A leaf Obsidian restored in the background is deferred until
+    // something asks for it, and the view underneath is not this one
+    // until it has.
+    await leaf.loadIfDeferred();
     if (leaf.view instanceof NavigatorView) leaf.view.focus(book, at);
   }
 
