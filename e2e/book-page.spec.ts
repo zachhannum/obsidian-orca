@@ -18,11 +18,9 @@ test("a metadata edit on the page is written to the note once, on settle", async
   await expect(note.metadata("publisher")).toHaveValue("Whitehall Press");
 
   const writes = await vault.writes(BOOK, async () => {
-    // One keystroke is one edit and one paint, and the settle waits for
-    // the last of them.
-    await note.metadata("publisher").click();
-    await note.metadata("publisher").press("End");
-    await note.metadata("publisher").pressSequentially(", London");
+    // Two fields, two edits and two paints, and the settle waits for
+    // the last of them, however far apart the two land.
+    await note.metadata("publisher").fill("Whitehall Press, London");
     await note.metadata("series").fill("");
 
     await expect(note.metadata("publisher")).toHaveValue(
