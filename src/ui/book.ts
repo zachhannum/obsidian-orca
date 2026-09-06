@@ -1,6 +1,7 @@
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
+import { resolve } from "@/book/order";
 import { countWords } from "@/book/words";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
@@ -42,7 +43,7 @@ export class BookView extends FileView {
   /** The word count of each note the book reads, once counted. */
   private readonly counts = new Map<string, number>();
   /** The reads still counting, so a note is read once however often the page paints. */
-  private readonly counting = new Map<string, Promise<void>>();
+  private readonly counting = new Map<string, Promise<number>>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -106,10 +107,20 @@ export class BookView extends FileView {
         this.repaint();
       }),
     );
-    this.registerEvent(vault.on("create", () => this.repaint()));
-    // A link resolves once the cache has caught up with the vault, so an
-    // entry that was missing is drawn again when it does.
-    this.registerEvent(metadataCache.on("resolved", () => this.repaint()));
+    // A new note or a resolved cache can only change what this book
+    // draws when an entry is missing, so the two events that fire for
+    // every note in the vault are gated on that rather than repainting
+    // the whole order on each one.
+    this.registerEvent(
+      vault.on("create", () => {
+        if (this.hasMissing()) this.repaint();
+      }),
+    );
+    this.registerEvent(
+      metadataCache.on("resolved", () => {
+        if (this.hasMissing()) this.repaint();
+      }),
+    );
     return Promise.resolve();
   }
 
@@ -266,7 +277,8 @@ export class BookView extends FileView {
   /**
    * A note's word count, or nothing while it is still being read. The
    * first ask starts the read, and the page is painted again once it
-   * lands.
+   * lands. A read that fails counts as zero, so a note orca cannot
+   * read is not read again on every vault event until it changes.
    */
   private words(path: string): number | undefined {
     const counted = this.counts.get(path);
@@ -275,20 +287,33 @@ export class BookView extends FileView {
     const file = this.app.vault.getFileByPath(path);
     if (file === null) return undefined;
     const reading = this.app.vault.cachedRead(file).then(
-      (text) => {
-        // A change while the read was out has already dropped this one.
-        if (this.counting.get(path) !== reading) return;
-        this.counting.delete(path);
-        this.counts.set(path, countWords(text));
-        this.repaint();
-      },
+      (text) => countWords(text),
       (cause: unknown) => {
-        if (this.counting.get(path) === reading) this.counting.delete(path);
         console.error(`Orca: ${path} was not counted.`, cause);
+        return 0;
       },
     );
+    reading.then((count) => {
+      // A change while the read was out has already dropped this one.
+      if (this.counting.get(path) !== reading) return;
+      this.counting.delete(path);
+      this.counts.set(path, count);
+      this.repaint();
+    });
     this.counting.set(path, reading);
     return undefined;
+  }
+
+  /** Whether the order has an entry with no note to read. */
+  private hasMissing(): boolean {
+    const file = this.file;
+    if (this.held === undefined || file === null) return false;
+    const { sections } = resolve(
+      this.held.model.order,
+      cacheLinks(this.app),
+      file.path,
+    );
+    return sections.some((section) => section.kind === "missing");
   }
 
   /** Drops what is known of a note's count. Whether anything was. */
