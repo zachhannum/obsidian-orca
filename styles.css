@@ -34,7 +34,17 @@
   font-size: var(--font-ui-small);
 }
 
+/* The React root mounts inside the view, one flex step below the
+   scroller Obsidian sizes for it, so both steps carry the sizing down. */
+.orca-book-host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .orca-book {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: var(--size-4-8) var(--size-4-12);
 }
