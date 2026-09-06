@@ -68,7 +68,7 @@ export default class OrcaPlugin extends Plugin {
       PREVIEW_VIEW,
       (leaf) =>
         new PreviewView(leaf, opening.then((held) => held.session), (text) => {
-          this.reading(text);
+          this.reading(leaf, text);
         }),
     );
     this.registerView(
@@ -187,8 +187,14 @@ export default class OrcaPlugin extends Plugin {
    * Writes the folio being read into the window's status bar, and takes
    * the item down with the leaf that was reading.
    */
-  private reading(text: string | undefined): void {
+  private reading(from: WorkspaceLeaf, text: string | undefined): void {
     if (text === undefined) {
+      // The bar is the window's, not the leaf's, so a split that leaves
+      // another preview reading keeps it.
+      const reading = this.app.workspace
+        .getLeavesOfType(PREVIEW_VIEW)
+        .some((leaf) => leaf !== from);
+      if (reading) return;
       this.folio?.remove();
       this.folio = undefined;
       return;

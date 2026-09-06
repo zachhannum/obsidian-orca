@@ -80,6 +80,18 @@ test("page down, page up, end and home turn the page from the keyboard", async (
   await expect(book.surface).toHaveAttribute("data-page", "1");
 });
 
+test("the folio leaves the status bar with the leaf that was reading", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+  await expect(book.status).toHaveText(`page 1 of ${String(PAGES)}`);
+
+  await book.close();
+
+  await expect(book.status).toHaveCount(0);
+});
+
 test("the page matches the one checked in beside the spec", async ({ book }) => {
   await book.open();
   await book.painted();
