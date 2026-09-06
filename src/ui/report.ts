@@ -7,10 +7,12 @@
  * asked to focus.
  */
 
+import type { Page } from "fleuron";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { FIELD_KEYS, type BookMetadata } from "@/book/note";
 import { resolve } from "@/book/order";
+import { pageRanges, type Range } from "@/book/pages";
 import { DEFAULT_ROLE } from "@/book/roles";
 import { bookName, row, type Opened, type Row } from "@/ui/shelf";
 
@@ -24,6 +26,8 @@ export interface Field {
 export interface Line extends Row {
   /** The note's word count, or nothing for an entry with no note or a note not yet counted. */
   words?: number;
+  /** The folio range its content lands on, once a run reaches it. */
+  pages?: Range;
 }
 
 export interface Report {
@@ -45,15 +49,27 @@ export interface Counting {
   words(path: string): number | undefined;
 }
 
-/** The report for one book note, resolved against the vault. */
-export function report(book: Opened, vault: Counting): Report {
+/**
+ * The report for one book note, resolved against the vault. `pages`
+ * is the last run's own; an entry it has not reached, or no run yet,
+ * names no range.
+ */
+export function report(
+  book: Opened,
+  vault: Counting,
+  pages: Page[] = [],
+): Report {
   const { metadata } = book.model.book;
   const { sections } = resolve(book.model.order, vault.links, book.path);
+  const ranges = pageRanges(sections, pages);
   const lines = sections.map((section, at): Line => {
     const line: Line = row(section, at);
-    if (section.kind !== "note") return line;
-    const words = vault.words(section.path);
-    if (words !== undefined) line.words = words;
+    if (section.kind === "note") {
+      const words = vault.words(section.path);
+      if (words !== undefined) line.words = words;
+    }
+    const range = ranges.get(at);
+    if (range !== undefined) line.pages = range;
     return line;
   });
   return {
@@ -79,4 +95,11 @@ export function setField(
   if (value === "") delete metadata[key];
   else metadata[key] = value;
   return { ...model, book: { ...model.book, metadata } };
+}
+
+/** A folio range, as `147` for one page or `147–159` for a span. */
+export function foliate(range: Range): string {
+  return range.first === range.last
+    ? String(range.first)
+    : `${range.first}–${range.last}`;
 }

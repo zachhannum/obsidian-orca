@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
+import type { Page } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, writeModel, type Model } from "@/book/model";
 import { countWords } from "@/book/words";
-import { report, setField, type Counting } from "@/ui/report";
+import { foliate, report, setField, type Counting } from "@/ui/report";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -108,6 +109,48 @@ test("every property orca owns is a field, and an emptied one comes off the note
   );
   assert.equal(untitled.name, "PP draft");
   assert.equal(untitled.fields[0]?.value, "");
+});
+
+test("page ranges come from a run's own pages, and an entry it has not reached has none", async () => {
+  const held = { path: BOOK, name: "PP draft", model: await model() };
+
+  // The 7 present sections' ids, in reading order: the missing
+  // "Chapter Four" got none, and the run has not reached
+  // "Acknowledgements" yet.
+  const pages: Page[] = [
+    { number: 1, side: "recto", width: 1, height: 1, sections: [1], items: [] },
+    { number: 2, side: "verso", width: 1, height: 1, sections: [50], items: [] },
+    // A section ending mid-page is followed there by the next one opening.
+    { number: 3, side: "recto", width: 1, height: 1, sections: [80, 81], items: [] },
+    { number: 4, side: "verso", width: 1, height: 1, sections: [82], items: [] },
+    { number: 5, side: "recto", width: 1, height: 1, sections: [83], items: [] },
+    { number: 6, side: "verso", width: 1, height: 1, sections: [83], items: [] },
+  ];
+
+  const made = report(held, await counting(), pages);
+
+  assert.deepEqual(
+    made.lines.map((line) => [line.name, line.pages]),
+    [
+      ["Title page", { first: 1, last: 1 }],
+      ["Copyright", { first: 2, last: 2 }],
+      ["A note on the text", { first: 3, last: 3 }],
+      ["Contents", { first: 3, last: 3 }],
+      ["Volume the First", { first: 4, last: 4 }],
+      ["Chapter Twelve", { first: 5, last: 6 }],
+      ["Chapter Four", undefined],
+      ["Acknowledgements", undefined],
+    ],
+  );
+
+  // No run at all names no range, generated sections included.
+  const before = report(held, await counting());
+  assert.ok(before.lines.every((line) => line.pages === undefined));
+});
+
+test("a folio range is a single number for one page, and a span for more", () => {
+  assert.equal(foliate({ first: 5, last: 5 }), "5");
+  assert.equal(foliate({ first: 121, last: 134 }), "121–134");
 });
 
 // What this tier does not cover: the page drawn from the report, the

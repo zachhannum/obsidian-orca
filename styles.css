@@ -155,7 +155,7 @@
 .orca-order-columns,
 .orca-order-row {
   display: grid;
-  grid-template-columns: 1fr 92px;
+  grid-template-columns: 1fr 92px 92px;
   padding: 6px 14px;
 }
 
