@@ -77,6 +77,28 @@ class FakeClient implements EngineClient {
   }
 }
 
+/** A client whose replies the test releases, one window at a time. */
+class HeldClient extends FakeClient {
+  private waiting: (() => void)[] = [];
+
+  /** Lets every request held so far run. */
+  release(): void {
+    const waiting = this.waiting;
+    this.waiting = [];
+    for (const resume of waiting) resume();
+  }
+
+  override async preview(
+    ops: Op[] = [],
+    range?: Range,
+  ): Promise<LayoutOutput | null> {
+    // The reply is read off the book as it stands when the request
+    // runs, not when it was sent, the same as the engine reads it.
+    await new Promise<void>((resolve) => this.waiting.push(resolve));
+    return super.preview(ops, range);
+  }
+}
+
 function faces(): FaceSet & { readonly added: string[] } {
   const added: string[] = [];
   return {
@@ -138,12 +160,12 @@ test("a view opened again paints the pages the session already has", async () =>
   const session = new Session(client, faces());
 
   await session.open(openBook(SAMPLE));
-  const first = session.output;
+  const first = await session.read(0);
   // The leaf closes and opens again, against the same session.
   await session.open(openBook(SAMPLE));
 
   assert.equal(client.rendered.length, 1);
-  assert.equal(session.output, first);
+  assert.equal((await session.read(0))?.page, first?.page);
 });
 
 test("two leaves on one book lay it out once between them", async () => {
@@ -224,6 +246,66 @@ test("a book that got shorter reads its last page rather than nothing", async ()
   assert.equal(reading?.at, 2);
   assert.equal(reading?.pages, 3);
   assert.equal(reading?.page.number, 3);
+});
+
+test("two turns onto one window ask for it once between them", async () => {
+  const client = new HeldClient(laidOut(337));
+  const session = new Session(client, faces());
+  const opened = session.open(openBook(SAMPLE));
+  client.release();
+  await opened;
+
+  const both = Promise.all([session.read(4), session.read(4)]);
+  await Promise.resolve();
+  client.release();
+  const [first, second] = await both;
+
+  assert.equal(first?.page.number, 5);
+  assert.equal(second?.page.number, 5);
+  assert.deepEqual(client.ranges, [
+    { first: 0, count: 2 },
+    { first: 3, count: 3 },
+  ]);
+});
+
+test("an edit that overtakes a window in flight is answered with the book it made", async () => {
+  const client = new HeldClient(laidOut(337));
+  const session = new Session(client, faces());
+  const opened = session.open(openBook(SAMPLE));
+  client.release();
+  await opened;
+
+  const reading = session.read(120);
+  await Promise.resolve();
+  // The edit lands while the window is still out, so what comes back
+  // is the book the edit made rather than the one before it.
+  client.rewrite(200);
+  client.release();
+  await Promise.resolve();
+  client.release();
+
+  assert.equal((await reading)?.page.number, 121);
+  // Those pages are the edit's, so the turn back onto them is served
+  // from the cache rather than fetched a second time.
+  const asked = client.ranges.length;
+  const again = session.read(120);
+  await Promise.resolve();
+  client.release();
+  await again;
+  assert.equal(client.ranges.length, asked);
+});
+
+test("the cache is the window, not every page read on the way to it", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  for (let at = 0; at < 12; at += 1) await session.read(at);
+  const asked = client.ranges.length;
+
+  // Page 1 was read past long ago, so it is asked for again.
+  await session.read(0);
+
+  assert.ok(client.ranges.length > asked, "the whole book was still held");
 });
 
 test("the faces a run drew with come from the module, under the painter's names", async () => {
@@ -326,7 +408,7 @@ test("the sample note sets to a page the painter can draw", async () => {
 
     await session.open(openBook(SAMPLE));
 
-    assert.deepEqual(session.output?.warnings, []);
+    assert.deepEqual(session.warnings, []);
     const reading = await session.read(0);
     assert.ok(reading, "the sample set to no pages");
     assert.equal(reading.at, 0);
@@ -361,7 +443,7 @@ test("a note in the fixture vault sets to PDF bytes, with no application around 
 
     // The pages the export was drawn from are the ones the session
     // already has.
-    assert.ok((session.output?.pages.length ?? 0) > 0);
+    assert.ok(session.pages > 0);
     assert.equal(new TextDecoder().decode(pdf.subarray(0, 5)), "%PDF-");
     assert.ok(new TextDecoder().decode(pdf.subarray(-32)).includes("%%EOF"));
   } finally {
@@ -421,4 +503,5 @@ function engineDirectory(): string {
 // What this tier does not cover: registering the view, and the page
 // inside a leaf. Both wait on the e2e harness. It reads the PDF's header
 // and trailer only; `qpdf --check` and a `pdftotext` round trip wait on
-// the export flow.
+// the export flow. The window fetches run against a fake here, so what
+// the engine does with a range it cannot fill is the e2e run's to prove.

@@ -20,8 +20,20 @@ test("a page is the painter's markup in one write, not a node at a time", () => 
   const node = surface();
   const stages = { style: 1, lines: 1, flow: 1, paint: 1 };
 
-  showPage(node, { markup: '<svg data-page="1"></svg>', generation: 1, stages });
-  showPage(node, { markup: '<svg data-page="2"></svg>', generation: 2, stages });
+  const place = { page: 1, pages: 337 };
+
+  showPage(node, {
+    markup: '<svg data-page="1"></svg>',
+    generation: 1,
+    stages,
+    ...place,
+  });
+  showPage(node, {
+    markup: '<svg data-page="2"></svg>',
+    generation: 2,
+    stages,
+    ...place,
+  });
 
   assert.deepEqual(node.writes, [
     '<svg data-page="1"></svg>',
@@ -29,13 +41,15 @@ test("a page is the painter's markup in one write, not a node at a time", () => 
   ]);
 });
 
-test("the surface has the generation painted into it, and what that cost", () => {
+test("the surface has the generation painted into it, what that cost, and where in the book it is", () => {
   const node = surface();
 
   showPage(node, {
     markup: "<svg></svg>",
     generation: 7,
     stages: { style: 1, lines: 4, flow: 3, paint: 2 },
+    page: 12,
+    pages: 337,
   });
 
   assert.equal(node.dataset["generation"], "7");
@@ -43,6 +57,8 @@ test("the surface has the generation painted into it, and what that cost", () =>
   assert.equal(node.dataset["stageLines"], "4");
   assert.equal(node.dataset["stageFlow"], "3");
   assert.equal(node.dataset["stagePaint"], "2");
+  assert.equal(node.dataset["page"], "12");
+  assert.equal(node.dataset["pages"], "337");
 });
 
 // What this tier does not cover: the surface inside a leaf, which the

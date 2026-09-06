@@ -7,6 +7,7 @@ import {
   type LayoutOutput,
   type Op,
   type Page,
+  type Warning,
 } from "fleuron";
 import { EngineError } from "@/engine/errors";
 
@@ -113,17 +114,17 @@ export class Session {
   private readonly held = new Map<number, Page>();
   /** The generation {@link Session.held} holds pages from. */
   private heldAt = -1;
-  /** The window fetches in flight, by the page each one starts at. */
-  private readonly fetching = new Map<number, Promise<void>>();
+  /** The window fetches in flight, by the range each one asked for. */
+  private readonly fetching = new Map<string, Promise<void>>();
 
   constructor(
     private readonly client: EngineClient,
     private readonly faces: FaceSet,
   ) {}
 
-  /** Nothing until the first render lands. */
-  get output(): LayoutOutput | undefined {
-    return this.layout;
+  /** Everything the last run had to complain about. */
+  get warnings(): Warning[] {
+    return this.layout?.warnings ?? [];
   }
 
   /** The book's length in pages, as the last reply counted it. */
@@ -186,6 +187,7 @@ export class Session {
     const page = this.held.get(index);
     const layout = this.layout;
     if (page === undefined || layout === undefined) return undefined;
+    this.evict(index);
     return {
       at: index,
       page,
@@ -198,6 +200,13 @@ export class Session {
   /** `at`, held inside the book. */
   private bound(at: number): number {
     return Math.min(Math.max(at, 0), Math.max(this.pages - 1, 0));
+  }
+
+  /** Drops the pages the window around `at` has read past. */
+  private evict(at: number): void {
+    for (const page of this.held.keys()) {
+      if (Math.abs(page - at) > NEIGHBOURS) this.held.delete(page);
+    }
   }
 
   /** Empties the cache of pages from before the last edit. */
@@ -223,12 +232,14 @@ export class Session {
       last = page;
     }
     if (first < 0) return Promise.resolve();
-    const running = this.fetching.get(first);
+    const range = { first, count: last - first + 1 };
+    const key = `${String(first)}:${String(range.count)}`;
+    const running = this.fetching.get(key);
     if (running !== undefined) return running;
-    const fetch = this.take({ first, count: last - first + 1 }).finally(() => {
-      this.fetching.delete(first);
+    const fetch = this.take(range).finally(() => {
+      this.fetching.delete(key);
     });
-    this.fetching.set(first, fetch);
+    this.fetching.set(key, fetch);
     return fetch;
   }
 
@@ -251,11 +262,12 @@ export class Session {
 
   /** Asks for one window and keeps what comes back. */
   private async take(range: Range): Promise<void> {
-    const asked = this.client.current;
     const layout = await routed(() => this.client.preview([], range));
-    // An edit that landed while the range was out has already dropped
-    // the pages this answers with.
-    if (layout === null || this.client.current !== asked) return;
+    // A range asked for before an edit answers nothing. One the edit
+    // overtook in the queue answers the book the edit made, so the
+    // pages from before it go first.
+    if (layout === null) return;
+    this.drop();
     this.keep(layout);
     await this.load(layout);
   }

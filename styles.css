@@ -2,12 +2,61 @@
 
 .orca-preview {
   display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.orca-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-bottom: 1px solid var(--divider-color);
+  flex: none;
+}
+
+.orca-preview-folio {
+  width: 58px;
+  height: 26px;
+  padding: 0 var(--size-4-2);
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+.orca-preview-total {
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.orca-preview-well {
+  display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   min-height: 0;
   padding: var(--size-4-5);
   background: rgba(var(--mono-rgb-100), 0.03);
   overflow: hidden;
+}
+
+.orca-preview-well:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+  outline: none;
+}
+
+.orca-preview-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 24px;
+  padding: 0 var(--size-4-3);
+  border-top: 1px solid var(--divider-color);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  flex: none;
 }
 
 .orca-page {
@@ -29,7 +78,7 @@
     0 0 0 1px var(--background-modifier-border);
 }
 
-.orca-status {
+.orca-preview-message {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
