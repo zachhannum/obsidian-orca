@@ -114,3 +114,35 @@ test("word counts come from the notes, and follow a note as it is written", asyn
   await expect(note.words(CHAPTER)).toHaveText(String(CHAPTER_WORDS + 5));
   await expect(note.line).toContainText(`${BOOK_WORDS + 5} words`);
 });
+
+/** A folio, or a span of them. */
+const FOLIO = /^\d+(–\d+)?$/;
+
+test("folio ranges come from a run of the book through the engine", async ({
+  note,
+}) => {
+  await note.open(BOOK);
+
+  await expect(note.pages("Title page")).toHaveText(FOLIO);
+  await expect(note.pages("Copyright")).toHaveText(FOLIO);
+  await expect(note.pages(CHAPTER)).toHaveText(FOLIO);
+  // A note the vault has none for never lands on a page.
+  await expect(note.pages("Chapter Four")).toHaveText("—");
+});
+
+test("a folio range follows a note as it grows past its page", async ({
+  note,
+  vault,
+}) => {
+  await note.open(BOOK);
+  await expect(note.pages(CHAPTER)).toHaveText(FOLIO);
+  const before = await note.pages(CHAPTER).textContent();
+
+  const chapter = await vault.read(`${CHAPTER}.md`);
+  const grown = `${chapter}\n\n${"And so the evening passed. ".repeat(600)}\n`;
+  await vault.modify(`${CHAPTER}.md`, grown);
+
+  // The chapter now spans more than the one page it opened on.
+  await expect(note.pages(CHAPTER)).toHaveText(/–/);
+  expect(await note.pages(CHAPTER).textContent()).not.toEqual(before);
+});
