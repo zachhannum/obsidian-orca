@@ -30,5 +30,10 @@ test("a hyphen or an apostrophe joins a word, and a dash or a mark does not", ()
   assert.equal(countWords("1813 was the year"), 4);
 });
 
+test("an embed is not a word, and a code block is set on the page and counted", () => {
+  assert.equal(countWords("![[cover.png]]\n\nA frontispiece"), 2);
+  assert.equal(countWords("```css\nh1 { color: red }\n```"), 4);
+});
+
 // What this tier does not cover: a note read through Obsidian's vault,
 // which the e2e suite counts on the book page.
