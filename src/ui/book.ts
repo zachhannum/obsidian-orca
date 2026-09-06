@@ -113,15 +113,25 @@ export class BookView extends FileView {
           this.writer = undefined;
           return;
         }
-        this.repaint();
-        // A note this book was reading is gone, so its pages are stale.
-        if (this.forget(file.path)) void this.relay();
+        // A note this book was reading is gone, so its count and its
+        // pages are both stale.
+        if (this.forget(file.path)) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     this.registerEvent(
-      vault.on("rename", (_file, was) => {
-        this.repaint();
-        if (this.forget(was)) void this.relay();
+      vault.on("rename", (file, was) => {
+        if (file.path === this.file?.path) {
+          // The book's own note, whose displayed name follows it.
+          this.repaint();
+          return;
+        }
+        if (this.forget(was)) {
+          this.repaint();
+          void this.relay();
+        }
       }),
     );
     // A new note or a resolved cache can only change what this book
