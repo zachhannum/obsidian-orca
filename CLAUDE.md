@@ -67,12 +67,6 @@ one, and UI work starts by opening the one it belongs to.
 
 - Commit as you go, in small testable chunks, rather than once at the
   end of a feature.
-- After committing, run `roborev wait` in the background to block on
-  the review the post-commit hook enqueued. On findings, run
-  `roborev show`, fix, commit, repeat. Surface only what you cannot
-  resolve.
-- After a major change, run `roborev review --branch --wait` in the
-  background for branch-level findings.
 
 ## Context usage
 
