@@ -78,7 +78,8 @@ export function shelve(book: Opened, vault: Shelving): Shelved {
   };
 }
 
-function row(section: Section, at: number): Row {
+/** One entry as a row, by its place in the reading order. */
+export function row(section: Section, at: number): Row {
   const { entry } = section;
   const made: Row = {
     at,
