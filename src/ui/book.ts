@@ -1,29 +1,53 @@
-import { FileView, Notice, TFile, setIcon, type WorkspaceLeaf } from "obsidian";
+import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
-import { BOOK_KEY, BookError, FIELD_KEYS, type Book } from "@/book/note";
+import { BookError } from "@/book/note";
+import { countWords } from "@/book/words";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
+import { cacheLinks } from "@/ui/notes";
+import { report, setField } from "@/ui/report";
+import { mountPage, type Mounted } from "@/ui/reports";
 import { Writer } from "@/ui/writer";
 
 /** The type the book note is registered under. */
 export const BOOK_VIEW = "orca-book";
 
+/** The plugin, as much of it as the view reaches: it owns the other leaves. */
+export interface Handoff {
+  /** Gives the leaf back to the editor. */
+  asMarkdown(view: BookView): void;
+  /** Reveals the navigator and focuses one entry of a book there. */
+  locate(book: string, at: number): void;
+}
+
 /**
  * The view for a book note, and the only writer on the note while it
  * is open. Every other surface edits the book through `edit`, and
  * `Open as markdown` hands the leaf back to the editor.
+ *
+ * The page reports on the book: its properties, edited here, and its
+ * reading order with a word count beside each note. The counts are
+ * read from the vault as the page needs them and kept until the note
+ * changes, so a repaint costs no reads.
  */
 export class BookView extends FileView {
   private writer: Writer | undefined;
+  private mounted: Mounted | undefined;
   /** The note as orca last read it from disk. */
   private disk = "";
   /** Number of orca's own saves in flight. */
   private saving = 0;
+  /** The model the page shows, and the generation it is at. */
+  private held: { model: Model; generation: number } | undefined;
+  /** The word count of each note the book reads, once counted. */
+  private readonly counts = new Map<string, number>();
+  /** The reads still counting, so a note is read once however often the page paints. */
+  private readonly counting = new Map<string, Promise<void>>();
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly edits: Edits,
-    private readonly asMarkdown: (view: BookView) => void,
+    private readonly handoff: Handoff,
   ) {
     super(leaf);
   }
@@ -38,23 +62,54 @@ export class BookView extends FileView {
 
   override onOpen(): Promise<void> {
     this.addAction("file-text", "Open as markdown", () => {
-      this.asMarkdown(this);
+      this.handoff.asMarkdown(this);
     });
+    this.mounted = mountPage(this.contentEl, {
+      set: (key, value) => {
+        this.edit((model) => setField(model, key, value));
+      },
+      locate: (at) => {
+        if (this.file !== null) this.handoff.locate(this.file.path, at);
+      },
+      asMarkdown: () => {
+        this.handoff.asMarkdown(this);
+      },
+    });
+
+    const { vault, metadataCache } = this.app;
     this.registerEvent(
-      this.app.vault.on("modify", (file) => {
-        if (file instanceof TFile && file.path === this.file?.path) {
+      vault.on("modify", (file) => {
+        if (!(file instanceof TFile)) return;
+        if (file.path === this.file?.path) {
           void this.arrived(file);
+          return;
         }
+        // A note the book reads has changed, so its count is stale.
+        if (this.forget(file.path)) this.repaint();
       }),
     );
     // The note is gone, so an unwritten edit has nowhere to settle.
     this.registerEvent(
-      this.app.vault.on("delete", (file) => {
-        if (file.path !== this.file?.path) return;
-        this.writer?.stop();
-        this.writer = undefined;
+      vault.on("delete", (file) => {
+        if (file.path === this.file?.path) {
+          this.writer?.stop();
+          this.writer = undefined;
+          return;
+        }
+        this.forget(file.path);
+        this.repaint();
       }),
     );
+    this.registerEvent(
+      vault.on("rename", (_file, was) => {
+        this.forget(was);
+        this.repaint();
+      }),
+    );
+    this.registerEvent(vault.on("create", () => this.repaint()));
+    // A link resolves once the cache has caught up with the vault, so an
+    // entry that was missing is drawn again when it does.
+    this.registerEvent(metadataCache.on("resolved", () => this.repaint()));
     return Promise.resolve();
   }
 
@@ -67,12 +122,15 @@ export class BookView extends FileView {
     // written first.
     await this.settle();
     this.writer = undefined;
-    this.contentEl.empty();
+    this.held = undefined;
+    this.mounted?.paint({ kind: "none" });
   }
 
   override async onClose(): Promise<void> {
     await this.settle();
     this.writer = undefined;
+    this.mounted?.unmount();
+    this.mounted = undefined;
   }
 
   /** The book as the view paints it, the unwritten edits included. */
@@ -96,12 +154,12 @@ export class BookView extends FileView {
     if (model === undefined) return;
     this.writer = new Writer(model, {
       paint: (held, generation) => {
-        this.show(held.book, generation);
+        this.show(held, generation);
         this.edits.changed();
       },
       save: (held) => this.write(file, held),
     });
-    this.show(model.book, 0);
+    this.show(model, 0);
   }
 
   /** The book in the note, or nothing when orca refused it. */
@@ -110,7 +168,8 @@ export class BookView extends FileView {
       return readModel(text);
     } catch (cause) {
       if (!(cause instanceof BookError)) throw cause;
-      this.refuse(this.pane(), cause.message);
+      this.held = undefined;
+      this.mounted?.paint({ kind: "refused", said: cause.message });
       return undefined;
     }
   }
@@ -180,60 +239,62 @@ export class BookView extends FileView {
     }
   }
 
-  private pane(): HTMLElement {
-    const pane = this.contentEl;
-    pane.empty();
-    pane.addClass("orca-book");
-    pane.dataset["testid"] = "orca-book";
-    return pane;
+  /** Paints the book page from a model at the generation it is at. */
+  private show(model: Model, generation: number): void {
+    this.held = { model, generation };
+    this.repaint();
   }
 
   /**
-   * Paints the book page, with the model's generation as a data
-   * attribute so a test can wait on it rather than on a clock.
+   * Paints the page again from the model it already holds, with the
+   * generation it already carries. The counts and the links may have
+   * changed; the book has not.
    */
-  private show(book: Book, generation: number): void {
-    const pane = this.pane();
-    pane.dataset["generation"] = String(generation);
-    const page = pane.createDiv({ cls: "orca-book-page" });
-    const head = page.createDiv({ cls: "orca-book-head" });
-    head.createDiv({
-      cls: "orca-book-name",
-      text: book.metadata.title ?? this.file?.basename ?? "",
+  private repaint(): void {
+    const file = this.file;
+    if (this.held === undefined || file === null) return;
+    this.mounted?.paint({
+      kind: "book",
+      generation: this.held.generation,
+      report: report(
+        { path: file.path, name: file.basename, model: this.held.model },
+        { links: cacheLinks(this.app), words: (path) => this.words(path) },
+      ),
     });
-    head.createDiv({
-      cls: "orca-book-format",
-      text: `${BOOK_KEY}: ${book.format}`,
-    });
-
-    const rows = page.createDiv({ cls: "orca-book-metadata" });
-    for (const key of FIELD_KEYS) {
-      const value = book.metadata[key];
-      if (value === undefined) continue;
-      const row = rows.createDiv({ cls: "orca-book-row" });
-      row.dataset["testid"] = `orca-metadata-${key}`;
-      row.createDiv({ cls: "orca-book-label", text: key });
-      row.createDiv({ cls: "orca-book-value", text: value });
-    }
   }
 
-  /** Paints the refusal message, with a way back to the editor. */
-  private refuse(pane: HTMLElement, said: string): void {
-    const state = pane.createDiv({ cls: "orca-book-refused" });
-    state.dataset["testid"] = "orca-book-refused";
-    setIcon(state.createDiv({ cls: "orca-book-icon" }), "lock");
-    state.createDiv({
-      cls: "orca-book-said",
-      text: "This book was made by a newer version of orca than this one.",
-    });
-    state.createDiv({ cls: "orca-book-versions", text: said });
-    state.createDiv({
-      cls: "orca-book-hint",
-      text: "Update the plugin to open it",
-    });
-    const button = state.createEl("button", { text: "Open as markdown" });
-    this.registerDomEvent(button, "click", () => {
-      this.asMarkdown(this);
-    });
+  /**
+   * A note's word count, or nothing while it is still being read. The
+   * first ask starts the read, and the page is painted again once it
+   * lands.
+   */
+  private words(path: string): number | undefined {
+    const counted = this.counts.get(path);
+    if (counted !== undefined) return counted;
+    if (this.counting.has(path)) return undefined;
+    const file = this.app.vault.getFileByPath(path);
+    if (file === null) return undefined;
+    const reading = this.app.vault.cachedRead(file).then(
+      (text) => {
+        // A change while the read was out has already dropped this one.
+        if (this.counting.get(path) !== reading) return;
+        this.counting.delete(path);
+        this.counts.set(path, countWords(text));
+        this.repaint();
+      },
+      (cause: unknown) => {
+        if (this.counting.get(path) === reading) this.counting.delete(path);
+        console.error(`Orca: ${path} was not counted.`, cause);
+      },
+    );
+    this.counting.set(path, reading);
+    return undefined;
+  }
+
+  /** Drops what is known of a note's count. Whether anything was. */
+  private forget(path: string): boolean {
+    const known = this.counts.delete(path);
+    const reading = this.counting.delete(path);
+    return known || reading;
   }
 }
