@@ -288,11 +288,14 @@ export function Shelf({
 
   // A book asked for by a path the shelf does not have, whether it was
   // renamed, deleted, or never existed, lets the ask go rather than
-  // holding it for a book that might later reuse the path.
+  // holding it for a book that might later reuse the path. Generation
+  // 0 is the shelf before its first real paint, an empty array that
+  // says nothing about which books exist, so an ask made before then
+  // waits for the paint that actually answers it.
   useEffect(() => {
-    if (wanted === undefined) return;
+    if (wanted === undefined || generation === 0) return;
     if (!shelf.some((book) => book.path === wanted.book)) located();
-  }, [wanted, shelf, located]);
+  }, [wanted, shelf, generation, located]);
 
   return (
     <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>

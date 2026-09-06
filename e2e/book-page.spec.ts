@@ -1,4 +1,5 @@
 import { expect, test } from "./harness/test";
+import { NAVIGATOR } from "./harness/navigator";
 
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
@@ -74,6 +75,21 @@ test("the reading order is read-only on the page, and clicking an entry focuses 
   await expect(navigator.entry(BOOK, CHAPTER)).toBeFocused();
   // The click edited nothing.
   expect(await vault.read(BOOK)).toEqual(before);
+});
+
+test("a locate that creates the navigator still focuses the entry, however the leaf came up", async ({
+  navigator,
+  note,
+  obsidian,
+}) => {
+  // The navigator leaf is gone, so the click below has to make one
+  // from nothing rather than reveal one already holding the book.
+  await obsidian.detach(NAVIGATOR);
+  await note.open(BOOK);
+
+  await note.entry(CHAPTER).click();
+
+  await expect(navigator.entry(BOOK, CHAPTER)).toBeFocused();
 });
 
 test("word counts come from the notes, and follow a note as it is written", async ({
