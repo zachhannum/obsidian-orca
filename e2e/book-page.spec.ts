@@ -142,7 +142,9 @@ test("a folio range follows a note as it grows past its page", async ({
   const grown = `${chapter}\n\n${"And so the evening passed. ".repeat(600)}\n`;
   await vault.modify(`${CHAPTER}.md`, grown);
 
-  // The chapter now spans more than the one page it opened on.
-  await expect(note.pages(CHAPTER)).toHaveText(/–/);
-  expect(await note.pages(CHAPTER).textContent()).not.toEqual(before);
+  // The chapter now spans more pages than it opened on. The range it
+  // opened on already reads as a span, so the wait is on the range
+  // moving rather than on a dash appearing in it.
+  await expect(note.pages(CHAPTER)).not.toHaveText(before ?? "");
+  await expect(note.pages(CHAPTER)).toHaveText(FOLIO);
 });
