@@ -39,5 +39,8 @@ export function openBook(source: Source): Op[] {
   return [
     { op: "dialect", dialect: "obsidian" },
     { op: "markdown", name: source.name, text: source.text },
+    // The session keeps every input between renders, style included, so
+    // the sample resets it rather than inheriting a real book's.
+    { op: "style", css: "" },
   ];
 }

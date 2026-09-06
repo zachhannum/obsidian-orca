@@ -8,10 +8,11 @@ import { SAMPLE, openBook } from "@/book/sample";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 
-test("the sample note crosses as the whole book, in Obsidian's markdown", () => {
+test("the sample note crosses as the whole book, in Obsidian's markdown, with no style of its own", () => {
   assert.deepEqual(openBook(SAMPLE), [
     { op: "dialect", dialect: "obsidian" },
     { op: "markdown", name: SAMPLE.name, text: SAMPLE.text },
+    { op: "style", css: "" },
   ]);
 });
 
