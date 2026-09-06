@@ -286,6 +286,14 @@ export function Shelf({
       pane.current.dataset["generation"] = String(generation);
   }, [generation, shelf]);
 
+  // A book asked for by a path the shelf does not have, whether it was
+  // renamed, deleted, or never existed, lets the ask go rather than
+  // holding it for a book that might later reuse the path.
+  useEffect(() => {
+    if (wanted === undefined) return;
+    if (!shelf.some((book) => book.path === wanted.book)) located();
+  }, [wanted, shelf, located]);
+
   return (
     <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
       <div className="orca-nav-header">
@@ -337,29 +345,6 @@ function Book({
 }): JSX.Element {
   const [folded, setFolded] = useState(false);
   const shelf = useRef<HTMLDivElement>(null);
-
-  // A focus asked for from the book page. The book unfolds first, and
-  // the row is focused on the commit that draws it. A place the book no
-  // longer has is let go.
-  useEffect(() => {
-    if (wanted === undefined) return;
-    if (folded) {
-      setFolded(false);
-      return;
-    }
-    const rows = book.groups.flatMap((group) => group.rows);
-    if (!rows.some((row) => row.at === wanted)) {
-      located();
-      return;
-    }
-    const found = shelf.current?.querySelector<HTMLElement>(
-      `[data-at="${wanted}"]`,
-    );
-    if (found === null || found === undefined) return;
-    found.scrollIntoView({ block: "nearest" });
-    found.focus();
-    located();
-  }, [wanted, folded, book.groups, located]);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
   /** The section a drag is carrying, whose entries move with it. */
   const [carried, setCarried] = useState<string | undefined>(undefined);
@@ -390,6 +375,32 @@ function Book({
     () => dropped ?? flatten(book.groups),
     [dropped, book.groups],
   );
+
+  // A focus asked for from the book page. The book unfolds first, and
+  // the row is focused on the commit that draws it, against the list
+  // actually on screen rather than the note's own order. A place that
+  // list does not have is let go.
+  useEffect(() => {
+    if (wanted === undefined) return;
+    if (folded) {
+      setFolded(false);
+      return;
+    }
+    const has = base.some(
+      (item) => item.kind === "row" && item.row.at === wanted,
+    );
+    if (!has) {
+      located();
+      return;
+    }
+    const found = shelf.current?.querySelector<HTMLElement>(
+      `[data-at="${wanted}"]`,
+    );
+    if (found === null || found === undefined) return;
+    found.scrollIntoView({ block: "nearest" });
+    found.focus();
+    located();
+  }, [wanted, folded, base, located]);
   const items = useMemo(
     () => (carried === undefined ? base : collapse(base, carried)),
     [base, carried],
