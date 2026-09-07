@@ -14,7 +14,6 @@ import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule, type VaultFiles } from "@/engine/module";
 import {
-  Session,
   documentFaces,
   serialized,
   type EngineClient,
@@ -23,10 +22,17 @@ import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
+import { membership, type Member } from "@/ui/member";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
-import { noteIndex } from "@/ui/notes";
+import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
-import { PREVIEW_VIEW, PreviewView } from "@/ui/preview";
+import {
+  PREVIEW_VIEW,
+  PreviewView,
+  type PreviewState,
+} from "@/ui/preview";
+import { Setter, type Setting } from "@/ui/setter";
+import type { Opened } from "@/ui/shelf";
 
 /** The view a book note is handed back to. */
 const MARKDOWN_VIEW = "markdown";
@@ -38,6 +44,12 @@ type SetViewState = (
   ...rest: unknown[]
 ) => Promise<void>;
 
+/** The place a leaf left the manuscript, so a toggle back lands on it. */
+interface Held {
+  at: string;
+  state: unknown;
+}
+
 /**
  * The plugin entry point. It owns the engine, and every view borrows
  * the same session.
@@ -46,52 +58,70 @@ export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
   /** Every edit to a book, routed to the note's one writer. */
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
+  /** Sets a book on the engine. Every preview reads the pages it lays out. */
+  private setter: Setter | undefined;
+  /** Every note the vault's books read, which is what carries the toggle. */
+  private members = new Map<string, Member>();
+  private indexing: number | undefined;
   private unloaded = false;
   /** The status bar item the folio being read is written into. */
   private folio: HTMLElement | undefined;
   /** The leaves an author has asked to keep in markdown, and for which note. */
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
-  /** The icon back to the book on each of those notes. */
+  /** The place each leaf left the manuscript it toggled away from. */
+  private readonly manuscript = new WeakMap<WorkspaceLeaf, Held>();
+  /** The icon on each note that belongs to a book, and where it leads. */
   private readonly back = new WeakMap<
     MarkdownView,
     { at: string; icon: HTMLElement }
   >();
 
   override async onload(): Promise<void> {
-    // The session is opened before anything is registered, so the views
-    // Obsidian restores at startup all wait on the one engine.
+    // The engine is started before anything is registered, so the views
+    // Obsidian restores at startup all wait on the one module.
     const opening = this.open();
-
-    this.catchOpening();
+    const setter = new Setter(this.setting(opening));
+    this.setter = setter;
 
     this.registerView(
       PREVIEW_VIEW,
       (leaf) =>
-        new PreviewView(leaf, opening.then((held) => held.session), (text) => {
-          this.reading(leaf, text);
-        }),
+        new PreviewView(
+          leaf,
+          setter,
+          {
+            asMarkdown: (view, note) => {
+              void this.openAsMarkdown(view.leaf, note);
+            },
+            follows: (view, note) => {
+              void this.follows(view, note);
+            },
+          },
+          (text) => {
+            this.reading(leaf, text);
+          },
+        ),
     );
     this.registerView(
       BOOK_VIEW,
       (leaf) =>
-        new BookView(
-          leaf,
-          this.edits,
-          opening.then((held) => held.client),
-          {
-            asMarkdown: (view) => {
-              void this.openAsMarkdown(view.leaf, view.file);
-            },
-            locate: (book, at) => {
-              void this.locate(book, at);
-            },
+        new BookView(leaf, this.edits, opening, {
+          asMarkdown: (view) => {
+            if (view.file !== null) {
+              this.asMarkdown.set(view.leaf, view.file.path);
+              void this.openAsMarkdown(view.leaf, view.file.path);
+            }
           },
-        ),
+          locate: (book, at) => {
+            void this.locate(book, at);
+          },
+        }),
     );
     this.registerView(
       NAVIGATOR_VIEW,
       (leaf) => new NavigatorView(leaf, this.edits),
     );
+    this.catchOpening();
     this.addRibbonIcon("book", "Open the book", () => {
       void this.reveal();
     });
@@ -103,6 +133,22 @@ export default class OrcaPlugin extends Plugin {
       },
     });
     this.addCommand({
+      id: "preview-to-the-right",
+      name: "Open preview to the right",
+      checkCallback: (checking) => {
+        const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+        const member =
+          file === null || file === undefined
+            ? undefined
+            : this.members.get(file.path);
+        if (member === undefined || file === null || file === undefined) {
+          return false;
+        }
+        if (!checking) void this.splitPreview(file, member);
+        return true;
+      },
+    });
+    this.addCommand({
       id: "new-book",
       name: "New book",
       callback: () => {
@@ -111,7 +157,7 @@ export default class OrcaPlugin extends Plugin {
     });
 
     this.app.workspace.onLayoutReady(() => {
-      this.swap();
+      this.index();
       void this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
         reveal: false,
       });
@@ -121,14 +167,27 @@ export default class OrcaPlugin extends Plugin {
         this.swap();
       }),
     );
+    // A writer moving between panes has opened no file, so the linked
+    // book follows the leaf rather than the note.
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", (leaf) => {
+        const view = leaf?.view;
+        if (view instanceof MarkdownView && view.file !== null) {
+          this.turned(view.file);
+        }
+      }),
+    );
     this.registerEvent(
       this.app.workspace.on("file-open", (file) => {
         this.swap();
+        if (file === null) return;
         // A book nobody can reorder is what a collapsed sidebar would
         // otherwise mean.
-        if (file !== null && isBook(this.notes(), file)) void this.show();
+        if (isBook(this.notes(), file)) void this.show();
+        this.turned(file);
       }),
     );
+    this.watchBooks();
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file, _source, leaf) => {
         this.offer(menu, file, leaf);
@@ -176,6 +235,8 @@ export default class OrcaPlugin extends Plugin {
 
   override onunload(): void {
     this.unloaded = true;
+    if (this.indexing !== undefined) window.clearTimeout(this.indexing);
+    this.indexing = undefined;
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       if (leaf.view instanceof MarkdownView) this.release(leaf.view);
     }
@@ -219,8 +280,77 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /**
-   * Swaps every leaf showing a book note as markdown to orca's view.
-   * A leaf the author has asked for markdown keeps the manuscript and
+   * Reads every book note again, so the toggle knows which notes belong
+   * to a book. One read answers however many events arrived.
+   */
+  private index(): void {
+    if (this.indexing !== undefined) return;
+    this.indexing = window.setTimeout(() => {
+      this.indexing = undefined;
+      void this.reindex();
+    }, 0);
+  }
+
+  private async reindex(): Promise<void> {
+    const index = this.notes();
+    const shelf: Opened[] = [];
+    for (const note of books(index)) {
+      // One note orca cannot read leaves the rest of the shelf standing.
+      const model = await this.edits.model(note.path).catch(() => undefined);
+      if (model === undefined) continue;
+      shelf.push({ path: note.path, name: note.basename, model });
+    }
+    if (this.unloaded) return;
+    this.members = membership(shelf, cacheLinks(this.app));
+    this.swap();
+  }
+
+  /**
+   * Watches the vault for what changes membership, and for what leaves
+   * a book on the engine older than the notes it was set from.
+   */
+  private watchBooks(): void {
+    const { vault, metadataCache } = this.app;
+    const changed = (path: string): void => {
+      const book = this.members.get(path)?.book;
+      this.setter?.forget(book ?? path);
+      this.index();
+    };
+    this.registerEvent(
+      vault.on("modify", (file) => {
+        changed(file.path);
+      }),
+    );
+    this.registerEvent(
+      vault.on("create", (file) => {
+        changed(file.path);
+      }),
+    );
+    this.registerEvent(
+      vault.on("delete", (file) => {
+        changed(file.path);
+      }),
+    );
+    this.registerEvent(
+      vault.on("rename", (file, was) => {
+        changed(was);
+        changed(file.path);
+      }),
+    );
+    // A note that gains or loses the key is a book more or fewer, and
+    // Obsidian has already parsed the frontmatter by the time this
+    // arrives.
+    this.registerEvent(
+      metadataCache.on("changed", () => {
+        this.index();
+      }),
+    );
+  }
+
+  /**
+   * Swaps every leaf showing a book note as markdown to orca's view,
+   * and puts the way to the book on every note that belongs to one. A
+   * leaf the author has asked for markdown keeps the manuscript and
    * gets the icon back to the book, until it shows another note.
    */
   private swap(): void {
@@ -229,15 +359,29 @@ export default class OrcaPlugin extends Plugin {
       const view = leaf.view;
       if (!(view instanceof MarkdownView)) continue;
       const file = view.file;
-      if (file === null || !isBook(index, file)) {
+      if (file === null) {
         this.release(view);
         continue;
       }
-      if (this.asMarkdown.get(leaf) === file.path) {
-        this.attach(view, file);
+      if (isBook(index, file)) {
+        if (this.asMarkdown.get(leaf) === file.path) {
+          this.attach(view, `book:${file.path}`, () => {
+            void this.openAsBook(leaf, file);
+          });
+          continue;
+        }
+        this.release(view);
+        void leaf.setViewState({ type: BOOK_VIEW, state: { file: file.path } });
         continue;
       }
-      void leaf.setViewState({ type: BOOK_VIEW, state: { file: file.path } });
+      const member = this.members.get(file.path);
+      if (member === undefined) {
+        this.release(view);
+        continue;
+      }
+      this.attach(view, `page:${file.path}`, () => {
+        void this.openAsPreview(leaf, file, member);
+      });
     }
   }
 
@@ -246,14 +390,12 @@ export default class OrcaPlugin extends Plugin {
    * Obsidian's own reading toggle. `addAction` is the API for adding an
    * icon to a view orca does not own.
    */
-  private attach(view: MarkdownView, file: TFile): void {
+  private attach(view: MarkdownView, at: string, opens: () => void): void {
     const existing = this.back.get(view);
-    if (existing?.at === file.path) return;
+    if (existing?.at === at) return;
     existing?.icon.remove();
-    const icon = view.addAction("book", "Open as book", () => {
-      void this.openAsBook(view.leaf, file);
-    });
-    this.back.set(view, { at: file.path, icon });
+    const icon = view.addAction("book", "Open as book", opens);
+    this.back.set(view, { at, icon });
   }
 
   private release(view: MarkdownView): void {
@@ -299,9 +441,12 @@ export default class OrcaPlugin extends Plugin {
         .setTitle(asBook ? "Open as book" : "Open as markdown")
         .setIcon(asBook ? "book" : "file-text")
         .onClick(() => {
-          void (asBook
-            ? this.openAsBook(shown, file)
-            : this.openAsMarkdown(shown, file));
+          if (asBook) {
+            void this.openAsBook(shown, file);
+            return;
+          }
+          this.asMarkdown.set(shown, file.path);
+          void this.openAsMarkdown(shown, file.path);
         }),
     );
   }
@@ -363,17 +508,22 @@ export default class OrcaPlugin extends Plugin {
     if (leaf.view instanceof NavigatorView) leaf.view.focus(book, at);
   }
 
+  /**
+   * Hands a leaf back to the editor, at the place in the manuscript it
+   * was left. Nothing else puts a writer back where they were: the
+   * ephemeral state is the leaf's, and the swap makes a new view.
+   */
   private async openAsMarkdown(
     leaf: WorkspaceLeaf,
-    file: TFile | null,
+    path: string,
   ): Promise<void> {
-    if (file === null) return;
-    this.asMarkdown.set(leaf, file.path);
     await leaf.setViewState({
       type: MARKDOWN_VIEW,
-      state: { file: file.path, mode: "source" },
+      state: { file: path, mode: "source" },
       active: true,
     });
+    const held = this.manuscript.get(leaf);
+    if (held?.at === path) leaf.setEphemeralState(held.state);
     this.swap();
   }
 
@@ -386,7 +536,76 @@ export default class OrcaPlugin extends Plugin {
     });
   }
 
-  private async open(): Promise<{ session: Session; client: EngineClient }> {
+  /**
+   * Swaps a manuscript for the book it belongs to, turned to this
+   * chapter's first page. Where the writer was in the note is kept, so
+   * the toggle back lands on the same line.
+   */
+  private async openAsPreview(
+    leaf: WorkspaceLeaf,
+    file: TFile,
+    member: Member,
+  ): Promise<void> {
+    this.manuscript.set(leaf, {
+      at: file.path,
+      state: leaf.getEphemeralState(),
+    });
+    await leaf.setViewState({
+      type: PREVIEW_VIEW,
+      state: { book: member.book, note: file.path } satisfies PreviewState,
+      active: true,
+    });
+  }
+
+  /**
+   * Splits the pane and ties the two: the manuscript where it was, the
+   * book beside it. Moving through one moves the other, chapter by
+   * chapter, which is as fine as a page-through can be.
+   */
+  private async splitPreview(file: TFile, member: Member): Promise<void> {
+    const leaf = this.app.workspace.getLeaf("split", "vertical");
+    await leaf.setViewState({
+      type: PREVIEW_VIEW,
+      state: {
+        book: member.book,
+        note: file.path,
+        linked: true,
+      } satisfies PreviewState,
+      active: false,
+    });
+  }
+
+  /** Turns every linked preview of this note's book to the chapter it is. */
+  private turned(file: TFile): void {
+    const member = this.members.get(file.path);
+    if (member === undefined) return;
+    for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
+      const view = leaf.view;
+      if (!(view instanceof PreviewView)) continue;
+      if (view.linked && view.book === member.book) view.turnTo(file.path);
+    }
+  }
+
+  /**
+   * Turns the manuscript tied to a preview to the note its pages read
+   * as. The pane is the one already reading that book, which is what a
+   * split left beside it.
+   */
+  private async follows(view: PreviewView, note: string): Promise<void> {
+    const book = view.book;
+    const file = this.app.vault.getFileByPath(note);
+    if (book === undefined || file === null) return;
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
+      const shown = leaf.view;
+      if (!(shown instanceof MarkdownView) || shown.file === null) continue;
+      if (shown.file.path === note) return;
+      if (this.members.get(shown.file.path)?.book !== book) continue;
+      await leaf.openFile(file, { active: false });
+      return;
+    }
+  }
+
+  private async open(): Promise<EngineClient> {
     try {
       const handle = await startEngine(
         await readModule(this.files(), this.directory()),
@@ -398,11 +617,7 @@ export default class OrcaPlugin extends Plugin {
       // Every view that renders shares this client, so its renders are
       // serialized: the engine holds one document, and two in flight at
       // once would race it.
-      const client = serialized(handle.client);
-      return {
-        session: new Session(client, documentFaces(document)),
-        client,
-      };
+      return serialized(handle.client);
     } catch (cause) {
       new Notice(
         cause instanceof EngineError
@@ -413,15 +628,72 @@ export default class OrcaPlugin extends Plugin {
     }
   }
 
+  /** The vault and the engine, as the setter reaches them. */
+  private setting(client: Promise<EngineClient>): Setting {
+    return {
+      model: (path) => this.edits.model(path),
+      read: (path) => {
+        const note = this.app.vault.getFileByPath(path);
+        return note === null
+          ? Promise.reject(new Error(`${path} is gone`))
+          : this.app.vault.cachedRead(note);
+      },
+      name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
+      links: cacheLinks(this.app),
+      client,
+      faces: documentFaces(document),
+    };
+  }
+
+  /** Opens the book the workspace is on, and reveals one already open. */
   private async reveal(): Promise<void> {
     const { workspace } = this.app;
     const open: WorkspaceLeaf | undefined =
       workspace.getLeavesOfType(PREVIEW_VIEW)[0];
-    const leaf = open ?? workspace.getLeaf(true);
-    if (open === undefined) {
-      await leaf.setViewState({ type: PREVIEW_VIEW, active: true });
+    if (open !== undefined) {
+      await workspace.revealLeaf(open);
+      return;
     }
-    await workspace.revealLeaf(leaf);
+    const on = this.onBook();
+    if (on !== undefined) {
+      await this.openPreview(on);
+      return;
+    }
+    const shelf = books(this.notes());
+    const one = shelf[0];
+    if (one === undefined) {
+      new Notice("Orca: this vault has no book yet");
+      return;
+    }
+    if (shelf.length === 1) {
+      await this.openPreview({ book: one.path });
+      return;
+    }
+    pick(this.app, {
+      items: shelf,
+      label: (book) => book.basename,
+      placeholder: "Open which book",
+      chose: (book) => {
+        void this.openPreview({ book: book.path });
+      },
+    });
+  }
+
+  /** The book the workspace is on, whether by one of its notes or its own. */
+  private onBook(): PreviewState | undefined {
+    const active = this.app.workspace.getActiveFile();
+    if (active === null) return undefined;
+    if (isBook(this.notes(), active)) return { book: active.path };
+    const member = this.members.get(active.path);
+    return member === undefined
+      ? undefined
+      : { book: member.book, note: active.path };
+  }
+
+  private async openPreview(state: PreviewState): Promise<void> {
+    const leaf = this.app.workspace.getLeaf(true);
+    await leaf.setViewState({ type: PREVIEW_VIEW, state: { ...state }, active: true });
+    await this.app.workspace.revealLeaf(leaf);
   }
 
   private files(): VaultFiles {

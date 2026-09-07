@@ -148,6 +148,8 @@ export interface Painted {
   stages: Stages;
   /** The book's length in pages. */
   pages: number;
+  /** The note the span reads as, empty for one no note covers. */
+  note: string;
   columns: number;
   rows: number;
 }
@@ -179,6 +181,7 @@ export function showPages(surface: Surface, painted: Painted): void {
   surface.dataset["first"] = String(painted.leaves[0]?.page ?? 0);
   surface.dataset["count"] = String(painted.leaves.length);
   surface.dataset["pages"] = String(painted.pages);
+  surface.dataset["note"] = painted.note;
 
   readable(surface);
 }

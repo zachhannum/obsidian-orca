@@ -38,6 +38,9 @@ its editor around these files and returns a URL. The artboard list and
   note's header. `MarkdownView` inherits `addAction` from `ItemView`,
   and the swap is `leaf.setViewState`, so the affordance costs no
   hand-built DOM in a view orca does not own.
+- `Open preview to the right` splits instead of swapping, and the two
+  panes follow each other chapter by chapter. A page-through has no
+  finer unit to follow.
 - One ribbon icon, with the issues badge on it.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
