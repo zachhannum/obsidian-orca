@@ -183,8 +183,10 @@ test("a cold session says what the book is waiting on rather than showing an emp
   vault,
 }) => {
   // A book is laid out once a session, so the run puts this one back on
-  // the shelf before asking for the state that only a cold one shows.
-  await vault.modify(CHAPTER, await vault.read(CHAPTER));
+  // the shelf before asking for the state that only a cold one shows. A
+  // chapter's words are an edit to the book on the engine, so it is the
+  // book note that takes it off the shelf.
+  await vault.modify(BOOK, await vault.read(BOOK));
 
   const said = await book.settings(async () => {
     await manuscript.open(CHAPTER);

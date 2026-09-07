@@ -35,6 +35,7 @@ class FakeClient implements EngineClient {
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   private book: Page[];
+  private overtaken: number | undefined;
 
   constructor(private readonly layout: LayoutOutput) {
     this.book = layout.pages;
@@ -46,6 +47,14 @@ class FakeClient implements EngineClient {
     this.current += 1;
   }
 
+  /**
+   * The next render is overtaken: the engine applies its ops, a later
+   * render lands on top, and the reply comes back as nothing at all.
+   */
+  overtake(pages: number): void {
+    this.overtaken = pages;
+  }
+
   preview(ops: Op[] = [], range?: Range): Promise<LayoutOutput | null> {
     // A range with nothing to apply is a question about the book as it
     // stands, so it raises no generation.
@@ -53,6 +62,12 @@ class FakeClient implements EngineClient {
       this.rendered.push(ops);
       this.current += 1;
       this.stages = { style: 1, lines: 1, flow: 1, paint: this.current };
+      const overtaken = this.overtaken;
+      this.overtaken = undefined;
+      if (overtaken !== undefined) {
+        this.rewrite(overtaken);
+        return Promise.resolve(null);
+      }
     }
     if (range !== undefined) this.ranges.push(range);
     const first = range?.first ?? 0;
@@ -281,6 +296,25 @@ test("an edit drops the pages from before it rather than painting one of them", 
 
   assert.ok(client.ranges.length > asked, "page 1 was painted from the book before the edit");
   assert.equal(reading?.pages[0]?.number, 1);
+});
+
+test("a render overtaken by a later one paints no page of the book it asked for", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  await session.read(0);
+  const asked = client.ranges.length;
+
+  client.overtake(12);
+  await session.render([{ op: "edit", name: "chapter", text: "It is" }]);
+  const reading = await session.read(0);
+
+  // The reply came back behind the current generation, so it was
+  // dropped: nothing of it was kept, and the page painted is asked for
+  // again off the book the engine now has.
+  assert.ok(client.ranges.length > asked, "a page from before the render was painted");
+  assert.equal(reading?.length, 12);
+  assert.equal(session.pages, 12);
 });
 
 test("a book that got shorter reads its last page rather than nothing", async () => {
@@ -555,4 +589,5 @@ function engineDirectory(): string {
 // inside a leaf. Both wait on the e2e harness. It reads the PDF's header
 // and trailer only; `qpdf --check` and a `pdftotext` round trip wait on
 // the export flow. The window fetches run against a fake here, so what
-// the engine does with a range it cannot fill is the e2e run's to prove.
+// the engine does with a range it cannot fill is the e2e run's to prove,
+// and so is which generation a real render comes back on.
