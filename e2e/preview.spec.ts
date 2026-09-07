@@ -92,9 +92,28 @@ test("the folio leaves the status bar with the leaf that was reading", async ({
   await expect(book.status).toHaveCount(0);
 });
 
-test("the page matches the one checked in beside the spec", async ({ book }) => {
+test("the page matches the one checked in beside the spec", async ({
+  book,
+  obsidian,
+}) => {
   await book.open();
   await book.painted();
 
+  // The page is as tall as the pane leaves it, so it lands on fractions
+  // of a pixel, and a machine that lays the pane out a hair differently
+  // rasterizes every glyph differently. The photograph pins the page to
+  // whole pixels first; where it sits in the pane is the well's job.
+  await obsidian.page.evaluate(() => {
+    const pin = document.createElement("style");
+    pin.id = "orca-photograph";
+    pin.textContent =
+      ".orca-page { position: fixed; inset: 0 auto auto 0; height: 600px }";
+    document.head.append(pin);
+  });
+
   await expect(book.page).toHaveScreenshot("page-one.png");
+
+  await obsidian.page.evaluate(() => {
+    document.getElementById("orca-photograph")?.remove();
+  });
 });
