@@ -53,3 +53,38 @@ export function pageRanges(sections: Section[], pages: Page[]): Map<number, Rang
   }
   return ranges;
 }
+
+/**
+ * The place in the reading order of the section that reads this note,
+ * or nothing when no section does. A note two entries read is found at
+ * the first of them, which is where a toggle from it opens.
+ */
+export function sectionOf(
+  sections: Section[],
+  path: string,
+): number | undefined {
+  const at = sections.findIndex(
+    (section) => section.kind === "note" && section.path === path,
+  );
+  return at < 0 ? undefined : at;
+}
+
+/**
+ * The section a folio reads as: the last one to open on or before it.
+ * A chapter that ends mid-page is followed there by the next one, and
+ * the page belongs to the chapter the reader is now in.
+ */
+export function sectionAt(
+  ranges: Map<number, Range>,
+  folio: number,
+): number | undefined {
+  let found: number | undefined;
+  let opened = 0;
+  for (const [at, range] of ranges) {
+    if (range.first > folio) continue;
+    if (found !== undefined && range.first < opened) continue;
+    found = at;
+    opened = range.first;
+  }
+  return found;
+}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Page } from "fleuron";
-import { pageRanges } from "@/book/pages";
+import { pageRanges, sectionAt, sectionOf } from "@/book/pages";
 import type { Section } from "@/book/order";
 import { DEFAULT_ROLE } from "@/book/roles";
 
@@ -62,6 +62,35 @@ test("a run still laying out has no pages, so no section has a range", () => {
   const sections = [note("a.md")];
 
   assert.equal(pageRanges(sections, []).size, 0);
+});
+
+test("a note is found at the place its section has in the reading order", () => {
+  const sections = [note("a.md"), missing(), note("c.md")];
+
+  assert.equal(sectionOf(sections, "c.md"), 2);
+  assert.equal(sectionOf(sections, "gone.md"), undefined);
+});
+
+test("a folio reads as the last section to open on or before it", () => {
+  const ranges = new Map([
+    [0, { first: 1, last: 2 }],
+    [1, { first: 2, last: 4 }],
+    [2, { first: 4, last: 5 }],
+  ]);
+
+  // Page 2 carries the end of one section and the opening of the next,
+  // and the reader is in the one that opened.
+  assert.equal(sectionAt(ranges, 1), 0);
+  assert.equal(sectionAt(ranges, 2), 1);
+  assert.equal(sectionAt(ranges, 3), 1);
+  assert.equal(sectionAt(ranges, 4), 2);
+});
+
+test("a folio before the first section has opened reads as no section", () => {
+  const ranges = new Map([[0, { first: 3, last: 4 }]]);
+
+  assert.equal(sectionAt(ranges, 1), undefined);
+  assert.equal(sectionAt(new Map(), 1), undefined);
 });
 
 // What this tier does not cover: a run whose section ids do not run in

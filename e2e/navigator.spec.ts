@@ -26,6 +26,9 @@ test("a folder of notes becomes a book in sorted order, and `New book` makes an 
   );
   await obsidian.fileMenu(FOLDER, "Create book from these notes");
 
+  // The command returns before the note is written, and a read of a
+  // note the vault has not got yet throws rather than retrying.
+  await expect.poll(async () => vault.notes()).toContain(`${FOLDER}.md`);
   // Alphabetical order is trusted here and nowhere else.
   await expect
     .poll(async () => vault.read(`${FOLDER}.md`))
@@ -34,6 +37,7 @@ test("a folder of notes becomes a book in sorted order, and `New book` makes an 
 
   await obsidian.command("orca:new-book");
 
+  await expect.poll(async () => vault.notes()).toContain("Untitled book.md");
   await expect
     .poll(async () => vault.read("Untitled book.md"))
     .toContain("orca-book: 1");
