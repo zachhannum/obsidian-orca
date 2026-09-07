@@ -13,6 +13,12 @@ import { FLOATING, type Obsidian } from "./obsidian";
 /** The command that splits the pane and ties the two. */
 export const TO_THE_RIGHT = "orca:preview-to-the-right";
 
+/** The same split, run from the book's side. */
+export const TO_THE_LEFT = "orca:manuscript-to-the-left";
+
+/** The item a chapter's own menu carries for that split. */
+export const SPLIT = "Open preview to the right";
+
 /** The label of the action that hands the pane back to the manuscript. */
 const AS_MARKDOWN = "Open as markdown";
 
@@ -114,6 +120,11 @@ export class Book {
   /** Splits the pane and ties the two, the way the palette runs it. */
   async split(): Promise<void> {
     await this.obsidian.command(TO_THE_RIGHT);
+  }
+
+  /** Splits the manuscript out beside the book, from the book's side. */
+  async manuscriptBeside(): Promise<void> {
+    await this.obsidian.command(TO_THE_LEFT);
   }
 
   /** Turns to `folio` by typing it, the way an author reaches a page. */

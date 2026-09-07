@@ -1,3 +1,4 @@
+import { SPLIT } from "./harness/book";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. */
@@ -110,6 +111,45 @@ test("and the book follows the manuscript, to the page each chapter opens on", a
   // The page the chapter opens on, rather than whichever of its pages
   // the book happened to be turned to.
   await expect(book.surface).toHaveAttribute("data-first", String(opens));
+});
+
+test("a chapter's own menu offers the split, and a note outside a book does not", async ({
+  book,
+  manuscript,
+  obsidian,
+  vault,
+}) => {
+  await vault.write(OUTSIDE, "# Loose\n\nA note no book reads.\n");
+  await manuscript.open(OUTSIDE);
+  expect(await obsidian.fileMenu(OUTSIDE)).not.toContain(SPLIT);
+
+  expect(await obsidian.fileMenu(CHAPTER)).toContain(SPLIT);
+  await obsidian.fileMenu(CHAPTER, SPLIT);
+
+  await book.painted();
+  await expect(manuscript.pane).toHaveCount(1);
+  await expect(book.panes).toHaveCount(1);
+  await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
+});
+
+test("`Open manuscript to the left` makes the same split from the book's side", async ({
+  book,
+  manuscript,
+}) => {
+  await manuscript.open(CHAPTER);
+  await manuscript.asBook.click();
+  await book.painted();
+  await expect(manuscript.pane).toHaveCount(0);
+
+  await book.manuscriptBeside();
+  await expect(manuscript.pane).toHaveCount(1);
+  await expect.poll(async () => manuscript.showing()).toEqual([CHAPTER]);
+
+  // Tied both ways from here, the same as a split made from the
+  // manuscript.
+  await book.press("End");
+  await expect(book.surface).toHaveAttribute("data-note", LAST);
+  await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
 });
 
 test("the link is chapter-granular, which is all a page-through can be", async ({

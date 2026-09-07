@@ -154,6 +154,16 @@ export class PreviewView extends ItemView {
     return this.state.linked === true;
   }
 
+  /** The note this preview's pages read as, for a folio one covers. */
+  get note(): string | undefined {
+    return this.state.note;
+  }
+
+  /** Ties a manuscript pane to this one, for a split made from this side. */
+  link(): void {
+    this.state = { ...this.state, linked: true };
+  }
+
   override async onOpen(): Promise<void> {
     const pane = this.contentEl;
     pane.empty();

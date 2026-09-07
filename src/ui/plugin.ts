@@ -149,6 +149,19 @@ export default class OrcaPlugin extends Plugin {
       },
     });
     this.addCommand({
+      id: "manuscript-to-the-left",
+      name: "Open manuscript to the left",
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(PreviewView);
+        const note = view?.note;
+        if (view === null || view === undefined || note === undefined) {
+          return false;
+        }
+        if (!checking) void this.splitManuscript(view, note);
+        return true;
+      },
+    });
+    this.addCommand({
       id: "new-book",
       name: "New book",
       callback: () => {
@@ -428,6 +441,7 @@ export default class OrcaPlugin extends Plugin {
     }
     if (!(file instanceof TFile)) return;
     if (!isBook(this.notes(), file)) {
+      this.offerSplitting(menu, file);
       this.offerAdding(menu, file);
       return;
     }
@@ -447,6 +461,20 @@ export default class OrcaPlugin extends Plugin {
           }
           this.asMarkdown.set(shown, file.path);
           void this.openAsMarkdown(shown, file.path);
+        }),
+    );
+  }
+
+  /** `Open preview to the right`, for a note that belongs to a book. */
+  private offerSplitting(menu: Menu, note: TFile): void {
+    const member = this.members.get(note.path);
+    if (member === undefined) return;
+    menu.addItem((item) =>
+      item
+        .setTitle("Open preview to the right")
+        .setIcon("book")
+        .onClick(() => {
+          void this.splitPreview(note, member);
         }),
     );
   }
@@ -563,7 +591,8 @@ export default class OrcaPlugin extends Plugin {
    * chapter, which is as fine as a page-through can be.
    */
   private async splitPreview(file: TFile, member: Member): Promise<void> {
-    const leaf = this.app.workspace.getLeaf("split", "vertical");
+    const beside = this.manuscriptOn(file.path) ?? (await this.openedIn(file));
+    const leaf = this.app.workspace.createLeafBySplit(beside, "vertical");
     await leaf.setViewState({
       type: PREVIEW_VIEW,
       state: {
@@ -573,6 +602,42 @@ export default class OrcaPlugin extends Plugin {
       } satisfies PreviewState,
       active: false,
     });
+  }
+
+  /**
+   * Splits the other way: the book where it is, the manuscript beside
+   * it on the left, which is the arrangement a split from the
+   * manuscript leaves.
+   */
+  private async splitManuscript(
+    view: PreviewView,
+    note: string,
+  ): Promise<void> {
+    const file = this.app.vault.getFileByPath(note);
+    if (file === null) return;
+    view.link();
+    const leaf = this.app.workspace.createLeafBySplit(
+      view.leaf,
+      "vertical",
+      true,
+    );
+    await leaf.openFile(file);
+  }
+
+  /** The pane a note is open in as markdown, if one is. */
+  private manuscriptOn(path: string): WorkspaceLeaf | undefined {
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file?.path === path) return leaf;
+    }
+    return undefined;
+  }
+
+  /** Opens a note in the active pane, and answers the pane it landed in. */
+  private async openedIn(file: TFile): Promise<WorkspaceLeaf> {
+    const leaf = this.app.workspace.getLeaf(false);
+    await leaf.openFile(file);
+    return leaf;
   }
 
   /** Turns every linked preview of this note's book to the chapter it is. */
