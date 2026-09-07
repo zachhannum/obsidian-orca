@@ -143,9 +143,9 @@ export function writeBook(book: Book): Properties {
 export function applyBook(properties: Properties, book: Book): void {
   properties[BOOK_KEY] = FORMAT;
   for (const { key } of FIELDS) {
-    const held = book.metadata[key];
-    if (held === undefined) delete properties[key];
-    else properties[key] = held;
+    const value = book.metadata[key];
+    if (value === undefined) delete properties[key];
+    else properties[key] = value;
   }
 }
 

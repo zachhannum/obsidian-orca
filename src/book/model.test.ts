@@ -21,8 +21,8 @@ async function text(): Promise<string> {
 }
 
 test("with the plugin disabled the note is an index of the book, with working links and a css block", async () => {
-  const held = await text();
-  const model = readModel(held);
+  const note = await text();
+  const model = readModel(note);
   const paths = (await vault.list("/")).files;
 
   // Every entry is a line of markdown a reader follows: a wikilink,
@@ -53,20 +53,20 @@ test("with the plugin disabled the note is an index of the book, with working li
 
   // The author's css sits in the note in a fence, and is neither an
   // entry nor rewritten.
-  assert.match(held, /\n```css\n[\s\S]*\n```\n$/);
+  assert.match(note, /\n```css\n[\s\S]*\n```\n$/);
   assert.equal(entries(model.order).length, 8);
-  assert.equal(writeModel(model), held);
+  assert.equal(writeModel(model), note);
 });
 
 test("a body written back leaves the properties byte for byte as the note has them", async () => {
-  const held = await text();
-  const model = readModel(held);
+  const note = await text();
+  const model = readModel(note);
 
-  const grown = withOrder(held, add(model.order, "Chapter Thirteen", "Body"));
+  const grown = withOrder(note, add(model.order, "Chapter Thirteen", "Body"));
 
   assert.equal(
-    grown.slice(0, held.indexOf("\n\n# Front matter")),
-    held.slice(0, held.indexOf("\n\n# Front matter")),
+    grown.slice(0, note.indexOf("\n\n# Front matter")),
+    note.slice(0, note.indexOf("\n\n# Front matter")),
   );
   assert.match(grown, /- \[\[Chapter Four\]\]\n- \[\[Chapter Thirteen\]\]\n/);
   assert.equal(readFrontmatter(grown).properties["status"], "drafting");

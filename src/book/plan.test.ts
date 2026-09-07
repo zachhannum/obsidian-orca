@@ -20,12 +20,12 @@ import { FORMAT, type Book } from "@/book/note";
 import { readOrder } from "@/book/order";
 import {
   GENERATED_ORIGIN,
-  HELD_NOTHING,
+  LOADED_NOTHING,
   bookSources,
   sendBook,
   sendEdit,
   type Edit,
-  type Held,
+  type Loaded,
 } from "@/book/plan";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
@@ -106,7 +106,7 @@ test("a title page with no metadata falls back to its role's own name", async ()
   assert.equal(only(ops, "book").sources[0]?.text, "# Title page");
 });
 
-test("the fixture book lays out and paints, over the bundled theme", async () => {
+test("the fixture book typesets and paints, over the bundled theme", async () => {
   const ops = await planned(await fixture());
   const engine = await createEngine({ wasm: await moduleBytes() });
   try {
@@ -142,7 +142,7 @@ const FACED: Sheet[] = [
 ];
 
 /** A session with the theme on it and one face registered. */
-const HELD: Held = { sheets: SET, faces: new Set(["eb-garamond"]) };
+const LOADED: Loaded = { sheets: SET, faces: new Set(["eb-garamond"]) };
 
 /** Reads one row of the table, by what the reader did. */
 function row(did: string): Edit {
@@ -191,13 +191,13 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
 
 test("each edit sends the ops its row names, and nothing else", () => {
   for (const entry of TABLE) {
-    const { ops } = sendEdit(entry.edit, HELD);
+    const { ops } = sendEdit(entry.edit, LOADED);
     assert.deepEqual(ops.map((op) => op.op), entry.ops, entry.did);
   }
 
-  const typed = sendEdit(row("typed in a chapter"), HELD).ops;
+  const typed = sendEdit(row("typed in a chapter"), LOADED).ops;
   assert.equal(only(typed, "edit").name, "Chapter Twelve.md");
-  const reordered = sendEdit(row("reordered chapters"), HELD).ops;
+  const reordered = sendEdit(row("reordered chapters"), LOADED).ops;
   assert.deepEqual(only(reordered, "style").sheets, SET);
 });
 
@@ -208,19 +208,19 @@ test("a face already registered plans no font op at all", () => {
     sheets: FACED,
   };
 
-  const first = sendEdit(picked, HELD);
+  const first = sendEdit(picked, LOADED);
   assert.deepEqual(first.ops.map((op) => op.op), ["font", "style"]);
 
-  const again = sendEdit(picked, first.held);
+  const again = sendEdit(picked, first.loaded);
   assert.deepEqual(again.ops.map((op) => op.op), ["style"]);
-  const third = sendEdit(picked, again.held);
+  const third = sendEdit(picked, again.loaded);
   assert.deepEqual(third.ops.map((op) => op.op), ["style"]);
 });
 
 test("the same edit against the same session plans the same ops", () => {
   for (const entry of TABLE) {
-    const once = sendEdit(entry.edit, HELD_NOTHING);
-    const twice = sendEdit(entry.edit, HELD_NOTHING);
+    const once = sendEdit(entry.edit, LOADED_NOTHING);
+    const twice = sendEdit(entry.edit, LOADED_NOTHING);
     assert.deepEqual(once.ops, twice.ops, entry.did);
   }
 });
@@ -232,7 +232,7 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
   try {
     const client = connected(engine);
     await client.preview([...(await planned(model)), styleOp(SET)]);
-    const held: Held = { sheets: SET, faces: new Set() };
+    const loaded: Loaded = { sheets: SET, faces: new Set() };
     assert.equal(await opens(client, []), "Pride and Prejudice");
     assert.ok((await words(client, [])).includes("Whitehall"));
 
@@ -242,7 +242,7 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
         name: "Chapter Twelve.md",
         text: "# Chapter Twelve\n\nElizabeth walked to Netherfield.",
       },
-      held,
+      loaded,
     );
     assert.ok((await words(client, typed.ops)).includes("Netherfield."));
 
@@ -255,13 +255,13 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
     );
     const reordered = sendEdit(
       { did: "reordered", sources: [...sources].reverse() },
-      typed.held,
+      typed.loaded,
     );
     assert.equal(await opens(client, reordered.ops), "Acknowledgements");
 
     const deleted = sendEdit(
       { did: "deleted", name: "Copyright.md" },
-      reordered.held,
+      reordered.loaded,
     );
     const rest = await words(client, deleted.ops);
     assert.ok(!rest.includes("Whitehall"));

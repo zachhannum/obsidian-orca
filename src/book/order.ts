@@ -230,16 +230,16 @@ function endOf(order: Order, heading: string | undefined): Place {
  * entry carries its role across one unchanged.
  */
 export function move(order: Order, from: number, to: Place): Order {
-  const held = entries(order)[from];
-  if (held === undefined) return order;
+  const entry = entries(order)[from];
+  if (entry === undefined) return order;
 
   const group = groups(order).find((found) => found.entries.includes(from));
   const above =
     group?.heading === to.heading && group.entries.indexOf(from) < to.at;
-  const moved: Entry = { role: held.role, heading: to.heading };
-  if (held.link !== undefined) moved.link = held.link;
-  if (held.alias !== undefined) moved.alias = held.alias;
-  if (held.tag !== undefined) moved.tag = held.tag;
+  const moved: Entry = { role: entry.role, heading: to.heading };
+  if (entry.link !== undefined) moved.link = entry.link;
+  if (entry.alias !== undefined) moved.alias = entry.alias;
+  if (entry.tag !== undefined) moved.tag = entry.tag;
 
   return into(remove(order, from), moved, {
     heading: to.heading,
@@ -390,14 +390,14 @@ export function moveGroup(order: Order, heading: string, at: number): Order {
   if (heading === "") return order;
   const { head, groups: found } = spans(order.blocks);
   const from = found.findIndex((span) => span.heading === heading);
-  const held = found[from];
-  if (held === undefined) return order;
+  const moved = found[from];
+  if (moved === undefined) return order;
 
   const first = found[0]?.heading === "" ? 1 : 0;
   const to = Math.min(Math.max(at, first), found.length - 1);
   if (to === from) return order;
 
-  // The held group is taken out first, so the place it lands is the
+  // The moved group is taken out first, so the place it lands is the
   // same index either way it travelled.
   const rest = found.filter((_, index) => index !== from);
   const lines = (span: Span): Block[] => order.blocks.slice(span.from, span.to);
@@ -405,7 +405,7 @@ export function moveGroup(order: Order, heading: string, at: number): Order {
     blocks: [
       ...order.blocks.slice(0, head),
       ...rest.slice(0, to).flatMap(lines),
-      ...lines(held),
+      ...lines(moved),
       ...rest.slice(to).flatMap(lines),
     ],
   });
@@ -506,9 +506,9 @@ function rewrite(
   let seen = 0;
   const blocks = order.blocks.map((block) => {
     if (block.kind !== "entry") return block;
-    const held = seen;
+    const index = seen;
     seen += 1;
-    return held === at
+    return index === at
       ? { kind: "entry" as const, entry: made(block.entry) }
       : block;
   });

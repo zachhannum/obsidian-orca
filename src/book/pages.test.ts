@@ -76,7 +76,7 @@ test("a section no page names yet has no range", () => {
   assert.equal(ranges.get(1), undefined);
 });
 
-test("a run still laying out has no pages, so no section has a range", () => {
+test("a run still typesetting has no pages, so no section has a range", () => {
   const sections = [note("a.md")];
 
   assert.equal(pageRanges(sections, []).size, 0);
@@ -118,7 +118,7 @@ test("the chapters offered are the ones the book set, named and in order", () =>
     [2, { first: 4, last: 6 }],
   ]);
 
-  // Three has no range because the run laid no page for it, so it is
+  // Three has no range because the run typeset no page for it, so it is
   // nowhere a reader can turn to.
   assert.deepEqual(chapters(sections, ranges), [
     { at: 0, name: "One", first: 1 },
