@@ -1,3 +1,4 @@
+import { EditorView } from "@codemirror/view";
 import {
   MarkdownView,
   Notice,
@@ -5,6 +6,7 @@ import {
   TFile,
   TFolder,
   WorkspaceLeaf,
+  editorInfoField,
   normalizePath,
   type Menu,
   type TAbstractFile,
@@ -23,6 +25,7 @@ import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
+import { byteOf, offsetOf } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import { cacheLinks, noteIndex } from "@/ui/notes";
@@ -45,10 +48,14 @@ type SetViewState = (
   ...rest: unknown[]
 ) => Promise<void>;
 
-/** The place a leaf left the manuscript, so a toggle back lands on it. */
+/** The place a leaf left each side of the toggle, so a swap back lands on it. */
 interface Place {
   at: string;
   state: unknown;
+  /** The byte of the note the caret was on when the book took the pane. */
+  caret?: number | undefined;
+  /** The page the book was left turned to, counting from 1. */
+  folio?: number | undefined;
 }
 
 /**
@@ -71,6 +78,8 @@ export default class OrcaPlugin extends Plugin {
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
   /** The place each leaf left the manuscript it toggled away from. */
   private readonly manuscript = new WeakMap<WorkspaceLeaf, Place>();
+  /** The caret the book last placed, which is not a move for it to follow. */
+  private placed: { note: string; byte: number } | undefined;
   /** The icon on each note that belongs to a book, and where it leads. */
   private readonly back = new WeakMap<
     MarkdownView,
@@ -94,8 +103,8 @@ export default class OrcaPlugin extends Plugin {
             asMarkdown: (view, note) => {
               void this.openAsMarkdown(view.leaf, note);
             },
-            follows: (view, note) => {
-              void this.follows(view, note);
+            follows: (view, note, at) => {
+              void this.follows(view, note, at);
             },
           },
           (text) => {
@@ -209,6 +218,20 @@ export default class OrcaPlugin extends Plugin {
         // otherwise mean.
         if (isBook(this.notes(), file)) void this.show();
         this.turned(file);
+      }),
+    );
+    // Obsidian has no event for a caret that moved without an edit, so
+    // the link reads the editor's own updates.
+    this.registerEditorExtension(
+      EditorView.updateListener.of((update) => {
+        if (!update.selectionSet && !update.docChanged) return;
+        const path = update.state.field(editorInfoField, false)?.file?.path;
+        if (path === undefined) return;
+        const before = update.state.doc.sliceString(
+          0,
+          update.state.selection.main.head,
+        );
+        this.moved(path, byteOf(before, before.length));
       }),
     );
     this.watchBooks();
@@ -597,13 +620,17 @@ export default class OrcaPlugin extends Plugin {
     leaf: WorkspaceLeaf,
     path: string,
   ): Promise<void> {
+    const from = leaf.view;
+    const left = this.manuscript.get(leaf);
+    if (from instanceof PreviewView && left?.at === path) {
+      left.folio = from.turned;
+    }
     await leaf.setViewState({
       type: MARKDOWN_VIEW,
       state: { file: path, mode: "source" },
       active: true,
     });
-    const place = this.manuscript.get(leaf);
-    if (place?.at === path) leaf.setEphemeralState(place.state);
+    if (left?.at === path) leaf.setEphemeralState(left.state);
     this.swap();
   }
 
@@ -626,13 +653,28 @@ export default class OrcaPlugin extends Plugin {
     file: TFile,
     member: Member,
   ): Promise<void> {
+    const view = leaf.view;
+    const caret = view instanceof MarkdownView ? caretByte(view) : undefined;
+    const left = this.manuscript.get(leaf);
+    // The page the book was left on stands until the writer moves the
+    // caret. Once they have, the book opens at the page that caret is
+    // set on instead.
+    const folio =
+      left?.at === file.path && left.caret === caret ? left.folio : undefined;
     this.manuscript.set(leaf, {
       at: file.path,
       state: leaf.getEphemeralState(),
+      caret,
+      folio,
     });
     await leaf.setViewState({
       type: PREVIEW_VIEW,
-      state: { book: member.book, note: file.path } satisfies PreviewState,
+      state: {
+        book: member.book,
+        note: file.path,
+        folio,
+        at: caret,
+      } satisfies PreviewState,
       active: true,
     });
   }
@@ -645,12 +687,14 @@ export default class OrcaPlugin extends Plugin {
   private async splitPreview(file: TFile, member: Member): Promise<void> {
     const beside = this.manuscriptOn(file.path) ?? (await this.openedIn(file));
     const leaf = this.app.workspace.createLeafBySplit(beside, "vertical");
+    const from = beside.view;
     await leaf.setViewState({
       type: PREVIEW_VIEW,
       state: {
         book: member.book,
         note: file.path,
         linked: true,
+        at: from instanceof MarkdownView ? caretByte(from) : undefined,
       } satisfies PreviewState,
       active: false,
     });
@@ -692,34 +736,88 @@ export default class OrcaPlugin extends Plugin {
     return leaf;
   }
 
-  /** Turns every linked preview of this note's book to the chapter it is. */
+  /** Turns every linked preview to the page this note's caret is on. */
   private turned(file: TFile): void {
-    const member = this.members.get(file.path);
+    this.follow(file.path, this.caretIn(file.path));
+  }
+
+  /**
+   * A caret that moved, which every linked preview of that note's book
+   * follows. The caret the book itself just placed is the book's own
+   * move, and following it would turn the page back.
+   */
+  private moved(path: string, byte: number): void {
+    const placed = this.placed;
+    if (placed?.note === path && placed.byte === byte) return;
+    this.placed = undefined;
+    this.follow(path, byte);
+  }
+
+  /**
+   * Turns every linked preview of this note's book to the page the
+   * caret is set on. A note no book lists turns none of them.
+   */
+  private follow(path: string, byte: number | undefined): void {
+    const member = this.members.get(path);
     if (member === undefined) return;
     for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
       const view = leaf.view;
       if (!(view instanceof PreviewView)) continue;
-      if (view.linked && view.book === member.book) view.turnTo(file.path);
+      if (view.linked && view.book === member.book) {
+        void view.turnTo(path, byte);
+      }
     }
   }
 
+  /** The byte of a note the caret in the pane showing it is on. */
+  private caretIn(path: string): number | undefined {
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file?.path === path) {
+        return caretByte(view);
+      }
+    }
+    return undefined;
+  }
+
   /**
-   * Turns the manuscript tied to a preview to the note its pages read
-   * as. The pane is the one already reading that book, which is what a
-   * split left beside it.
+   * Turns the manuscript tied to a preview to the line a page opens at,
+   * `at` bytes into the note. The pane is the one already reading that
+   * book, which is what a split left beside it.
    */
-  private async follows(view: PreviewView, note: string): Promise<void> {
+  private async follows(
+    view: PreviewView,
+    note: string,
+    at: number,
+  ): Promise<void> {
     const book = view.book;
     const file = this.app.vault.getFileByPath(note);
     if (book === undefined || file === null) return;
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       const shown = leaf.view;
       if (!(shown instanceof MarkdownView) || shown.file === null) continue;
-      if (shown.file.path === note) return;
-      if (this.members.get(shown.file.path)?.book !== book) continue;
-      await leaf.openFile(file, { active: false });
+      const path = shown.file.path;
+      if (path !== note && this.members.get(path)?.book !== book) continue;
+      if (path !== note) await leaf.openFile(file, { active: false });
+      this.places(leaf, note, at);
       return;
     }
+  }
+
+  /**
+   * Puts the caret on the line `at` bytes into a note. The place is
+   * kept, so the move the book made is not read back as the writer's.
+   */
+  private places(leaf: WorkspaceLeaf, note: string, at: number): void {
+    const view = leaf.view;
+    if (!(view instanceof MarkdownView)) return;
+    const { editor } = view;
+    const text = editor.getValue();
+    const offset = offsetOf(text, at);
+    const pos = editor.offsetToPos(offset);
+    this.placed = { note, byte: byteOf(text, offset) };
+    editor.setCursor(pos);
+    editor.scrollIntoView({ from: pos, to: pos }, true);
   }
 
   private async open(): Promise<EngineClient> {
@@ -833,4 +931,10 @@ export default class OrcaPlugin extends Plugin {
     }
     return dir;
   }
+}
+
+/** The byte of its note the caret in a manuscript pane is on. */
+function caretByte(view: MarkdownView): number {
+  const { editor } = view;
+  return byteOf(editor.getValue(), editor.posToOffset(editor.getCursor()));
 }
