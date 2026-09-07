@@ -274,6 +274,30 @@ test("the preview keeps the page a swap left it on, mid-chapter included", async
   await swap();
 });
 
+test("the toggle opens the book at the page the caret is on", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  const text = await pagedOut(vault);
+  const deep = lineOf(text, "Paragraph 40.");
+
+  await manuscript.open(CHAPTER);
+  await manuscript.asBook.click();
+  await book.painted();
+  const opens = await book.reading();
+
+  await book.asMarkdown.click();
+  await expect(manuscript.pane).toHaveCount(1);
+  await manuscript.place({ line: deep, ch: 0 });
+  await manuscript.asBook.click();
+  await book.painted();
+
+  // The caret moved since the swap, so the page the book was left on
+  // gives way to the page that paragraph is set on.
+  await expect.poll(async () => book.reading()).toBeGreaterThan(opens);
+});
+
 test("a workspace reopened on a preview opens it at the page it was closed on", async ({
   book,
   manuscript,

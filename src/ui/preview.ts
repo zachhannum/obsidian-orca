@@ -300,10 +300,10 @@ export class PreviewView extends ItemView {
       if (node === undefined) return undefined;
       const read = async (folio: number) =>
         (await session.read(folio - 1, 1))?.pages[0];
-      // The chapter's own pages are a handful, and are where the node
-      // almost always is. An edit since the book was set can have moved
-      // it out of them, and node ids run in document order across the
-      // whole book, so the rest of it answers the same question.
+      // The node is almost always on the chapter's own pages, and
+      // those are a handful. An edit since the book was set can have
+      // moved it off them, and node ids run in document order across
+      // the whole book, so the rest of it answers the same question.
       return (
         (await folioOf(node, within, read)) ??
         (await folioOf(node, { first: 1, last: session.pages }, read))
