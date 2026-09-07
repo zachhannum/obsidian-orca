@@ -14,12 +14,16 @@
   gap: var(--size-4-2);
   padding: var(--size-4-2) var(--size-4-3);
   border-bottom: 1px solid var(--divider-color);
+  background: var(--background-secondary);
   flex: none;
 }
 
-.orca-preview-folio {
+/* The row is as tall as the tallest thing in it, so the field is the
+   bar's height rather than the one Obsidian gives an input. */
+.orca-preview-bar input.orca-preview-folio {
   width: 58px;
   height: 26px;
+  min-height: 26px;
   padding: 0 var(--size-4-2);
   text-align: center;
   font-size: var(--font-ui-small);
