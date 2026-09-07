@@ -437,6 +437,7 @@ export class PreviewView extends ItemView {
       generation: session.generation,
       stages: session.stages,
       pages: reading.length,
+      note: this.noteAt(reading.at + 1) ?? "",
       columns: SEATS[this.mode] ?? this.columns,
       rows: this.mode === "grid" ? this.rows : 1,
     });
@@ -471,16 +472,21 @@ export class PreviewView extends ItemView {
    * restored at startup opens where the reader left the book.
    */
   private reads(folio: number): void {
+    const note = this.noteAt(folio);
+    if (note === undefined || note === this.showing) return;
+    this.showing = note;
+    this.state = { ...this.state, note };
+    this.attach();
+    if (this.linked) this.handoff.follows(this, note);
+  }
+
+  /** The note the page at this folio reads as, for a folio one covers. */
+  private noteAt(folio: number): string | undefined {
     const laid = this.laid;
-    if (laid === undefined) return;
+    if (laid === undefined) return undefined;
     const at = sectionAt(laid.ranges, folio);
     const section = at === undefined ? undefined : laid.sections[at];
-    if (section?.kind !== "note") return;
-    if (section.path === this.showing) return;
-    this.showing = section.path;
-    this.state = { ...this.state, note: section.path };
-    this.attach();
-    if (this.linked) this.handoff.follows(this, section.path);
+    return section?.kind === "note" ? section.path : undefined;
   }
 
   /**

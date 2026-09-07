@@ -146,6 +146,7 @@ test("a view's pages are the painter's markup in one write, not a node at a time
     generation: 1,
     stages,
     pages: 337,
+    note: "",
     columns: 2,
     rows: 1,
   });
@@ -163,6 +164,7 @@ test("the surface has the generation painted into it, what that cost, and the sp
     generation: 7,
     stages: { style: 1, lines: 4, flow: 3, paint: 2 },
     pages: 337,
+    note: "Chapter Twelve.md",
     columns: 3,
     rows: 1,
   });
@@ -176,6 +178,7 @@ test("the surface has the generation painted into it, what that cost, and the sp
   assert.equal(node.dataset["first"], "12");
   assert.equal(node.dataset["count"], "3");
   assert.equal(node.dataset["pages"], "337");
+  assert.equal(node.dataset["note"], "Chapter Twelve.md");
 });
 
 test("the sheet box is the trim the painter drew, laid out on the view's own grid", () => {
@@ -187,6 +190,7 @@ test("the sheet box is the trim the painter drew, laid out on the view's own gri
     generation: 1,
     stages,
     pages: 337,
+    note: "",
     columns: 4,
     rows: 3,
   });
@@ -207,6 +211,7 @@ test("a page is named for what reads it aloud, and the drawn glyphs are left out
     generation: 1,
     stages,
     pages: 337,
+    note: "",
     columns: 1,
     rows: 1,
   });

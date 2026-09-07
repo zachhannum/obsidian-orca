@@ -71,7 +71,7 @@ test("toggling back returns to the manuscript, on the line it was left on", asyn
   });
 });
 
-test("`Open preview to the right` splits, and the two panes follow each other", async ({
+test("`Open preview to the right` splits, and the manuscript follows the book", async ({
   book,
   manuscript,
 }) => {
@@ -83,17 +83,32 @@ test("`Open preview to the right` splits, and the two panes follow each other", 
   // beside it, opened at the chapter the writer was in.
   await expect(manuscript.pane).toHaveCount(1);
   await expect(book.panes).toHaveCount(1);
+  await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
+
+  // Turning to the end of the book takes the manuscript to the note the
+  // book ends on.
+  await book.press("End");
+  await expect(book.surface).toHaveAttribute("data-note", LAST);
+  await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
+});
+
+test("and the book follows the manuscript, to the page each chapter opens on", async ({
+  book,
+  manuscript,
+}) => {
+  await manuscript.open(CHAPTER);
+  await book.split();
+  await book.painted();
   const opens = await book.reading();
   expect(opens).toBeGreaterThan(1);
 
-  // Turning to the end of the book takes the manuscript to the note
-  // the book ends on.
-  await book.press("End");
-  await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
+  await manuscript.moveTo(LAST);
+  await expect(book.surface).toHaveAttribute("data-note", LAST);
 
-  // And moving through the manuscript turns the book back to the page
-  // that chapter opens on.
   await manuscript.moveTo(CHAPTER);
+  await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
+  // The page the chapter opens on, rather than whichever of its pages
+  // the book happened to be turned to.
   await expect(book.surface).toHaveAttribute("data-first", String(opens));
 });
 
@@ -118,6 +133,7 @@ test("the link is chapter-granular, which is all a page-through can be", async (
   // page can be traced back to.
   await book.next.click();
   await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+  await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
   await expect.poll(async () => manuscript.showing()).toEqual([CHAPTER]);
 });
 
