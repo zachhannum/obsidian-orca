@@ -13,6 +13,7 @@
  */
 
 import { styleOp, type Op, type Sheet, type Source } from "fleuron";
+import type { Hashed, Sent } from "@/assets/registry";
 import type { Links } from "@/book/links";
 import { documentMetadata } from "@/book/metadata";
 import type { Book } from "@/book/note";
@@ -97,15 +98,8 @@ function matter(entry: Entry, book: Book): string {
   return author === undefined ? heading : `${heading}\n\n${author}`;
 }
 
-/** A face a book is set in. */
-export interface Face {
-  /**
-   * The face file's content hash. Two picks of the same file cross
-   * once, whatever they were named.
-   */
-  key: string;
-  bytes: Uint8Array;
-}
+/** A face a book is set in, as the registry read and keyed it. */
+export type Face = Hashed;
 
 /** One thing the author did, as much of it as deciding the ops takes. */
 export type Edit =
@@ -124,68 +118,81 @@ export type Edit =
   /** Deleted a note, so the rest of the sources stand. */
   | { did: "deleted"; name: string };
 
-/**
- * The session as a plan leaves it. A face is kept for the session's
- * life, so a pick that names one already registered plans no `font`
- * op at all.
- */
+/** The session as a plan leaves it. */
 export interface Loaded {
   /** The sheets the engine is styling with, in cascade order. */
   sheets: readonly Sheet[];
-  /** The faces registered on the session, by key. */
-  faces: ReadonlySet<string>;
 }
 
 /** A session with nothing on it yet. */
-export const LOADED_NOTHING: Loaded = { sheets: [], faces: new Set<string>() };
+export const LOADED_NOTHING: Loaded = { sheets: [] };
 
 /** One edit, planned. */
 export interface Planned {
   ops: Op[];
   /** The session the ops leave behind, which the next plan reads. */
   loaded: Loaded;
+  /** The asset keys these ops put on the wire, for the registry to record. */
+  crossed: readonly string[];
 }
 
 /**
- * Plans the ops one edit sends. The same edit against the same session
- * plans the same ops, so a plan can be compared rather than run.
+ * Plans the ops one edit sends. `assets` says what has already
+ * crossed, and no plan writes to it: the same edit against the same
+ * session plans the same ops, so a plan can be compared rather than
+ * run. What the ops put on the wire comes back as
+ * {@link Planned.crossed}, for the caller that sends them to record.
  *
  * A reorder sends the sheets again unchanged. A positional selector
  * matches on where a source sits, so a sheet compiled against the
  * order before the move is stale even though its text is not.
  */
-export function sendEdit(edit: Edit, loaded: Loaded): Planned {
+export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
   switch (edit.did) {
     case "typed":
       return {
         ops: [{ op: "edit", name: edit.name, text: edit.text }],
         loaded,
+        crossed: [],
       };
     case "deleted":
-      return { ops: [{ op: "remove", name: edit.name }], loaded };
+      return {
+        ops: [{ op: "remove", name: edit.name }],
+        loaded,
+        crossed: [],
+      };
     case "styled":
       return {
         ops: [styling(edit.sheets)],
         loaded: { ...loaded, sheets: edit.sheets },
+        crossed: [],
       };
     case "reordered":
       return {
         ops: [{ op: "book", sources: edit.sources }, styling(loaded.sheets)],
         loaded,
+        crossed: [],
       };
     case "faced":
-      return faced(edit.face, edit.sheets, loaded);
+      return faced(edit.face, edit.sheets, loaded, assets);
   }
 }
 
-/** Registers the face unless the session already holds it, then styles. */
-function faced(face: Face, sheets: Sheet[], loaded: Loaded): Planned {
-  if (loaded.faces.has(face.key)) {
-    return { ops: [styling(sheets)], loaded: { ...loaded, sheets } };
+/** Registers the face unless the registry says it has crossed, then styles. */
+function faced(
+  face: Face,
+  sheets: Sheet[],
+  loaded: Loaded,
+  assets: Sent,
+): Planned {
+  const styled = { ...loaded, sheets };
+  if (assets.sent(face.key)) {
+    return { ops: [styling(sheets)], loaded: styled, crossed: [] };
   }
   return {
     ops: [{ op: "font", bytes: face.bytes }, styling(sheets)],
-    loaded: { sheets, faces: new Set([...loaded.faces, face.key]) },
+    loaded: styled,
+    crossed: [face.key],
   };
 }
 
