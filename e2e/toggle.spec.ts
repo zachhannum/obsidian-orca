@@ -49,7 +49,7 @@ test("the book opens turned to the first page of the chapter the writer was in",
   await manuscript.asBook.click();
   await book.painted();
 
-  // A chapter laid out by itself is a different chapter, so the page
+  // A chapter typeset by itself is a different chapter, so the page
   // is the one the whole book put it on.
   await expect(book.surface).toHaveAttribute("data-first", String(opens));
 });
@@ -182,7 +182,7 @@ test("a cold session says what the book is waiting on rather than showing an emp
   manuscript,
   vault,
 }) => {
-  // A book is laid out once a session, so the run puts this one back on
+  // A book is typeset once a session, so the run puts this one back on
   // the shelf before asking for the state that only a cold one shows. A
   // chapter's words are an edit to the book on the engine, so it is the
   // book note that takes it off the shelf.

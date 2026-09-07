@@ -152,11 +152,11 @@ export class Navigator {
   }
 
   /**
-   * Drags a row past the bottom of the pane, holds it there while
-   * `held` runs, then drops it. A drop past the last row lands on the
+   * Drags a row past the bottom of the pane, keeps it there while
+   * `during` runs, then drops it. A drop past the last row lands on the
    * last row.
    */
-  async dragOffTheEnd(from: Locator, held: () => Promise<void>): Promise<void> {
+  async dragOffTheEnd(from: Locator, during: () => Promise<void>): Promise<void> {
     const { mouse } = this.obsidian.page;
     const start = await box(from);
     const floor = await this.obsidian.page.evaluate(
@@ -177,7 +177,7 @@ export class Navigator {
       // dnd-kit presses the row it is carrying, so the wait is on that.
       await expect(from).toHaveAttribute("aria-pressed", "true");
       await expect(from).toHaveCSS("transform", /matrix\(/);
-      await held();
+      await during();
     } catch (cause) {
       await this.obsidian.page.keyboard.press("Escape");
       throw cause;

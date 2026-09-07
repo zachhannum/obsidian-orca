@@ -190,8 +190,9 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
 
   // A book long enough to scroll the view it is drawn in. The shelf
   // stretched here too, and the view then scrolled after the row for
-  // as long as it was held. Where the row lands is left to the drag
-  // above: under an auto-scroll it depends on how long the hold ran.
+  // as long as the drag stayed at the bottom. Where the row lands is
+  // left to the drag above: under an auto-scroll it depends on how
+  // long that drag ran.
   const drawn = await navigator.painted();
   const long = (await vault.read(BOOK)).replace(
     "# Body\n\n",

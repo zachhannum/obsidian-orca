@@ -36,7 +36,7 @@ declare global {
 /** The trim the page is photographed at, in whole pixels. */
 const POSE = { width: 360, height: 540 };
 
-/** The style tag a pose is held by. */
+/** The id of the style tag that carries the pose. */
 const POSED = "orca-photograph";
 
 /** The type the preview is registered under. */
@@ -59,7 +59,7 @@ export class Book {
   readonly status: Locator;
   readonly previous: Locator;
   readonly next: Locator;
-  /** The state the pane holds while a cold session lays the whole book out. */
+  /** The state the pane holds while a cold session typesets the whole book. */
   readonly setting: Locator;
   /** The action that hands the pane back to the manuscript. */
   readonly asMarkdown: Locator;
@@ -89,14 +89,14 @@ export class Book {
 
   /**
    * Records the state the pane holds while the book is being set, for
-   * as long as `during` runs. A whole book is laid out once a session,
+   * as long as `during` runs. A whole book is typeset once a session,
    * so the state is recorded as it appears rather than looked for
    * after the pages have replaced it.
    */
   async settings(during: () => Promise<void>): Promise<string[]> {
     await this.obsidian.page.evaluate(() => {
       const said: string[] = [];
-      const held = (node: Node): void => {
+      const collect = (node: Node): void => {
         if (!(node instanceof HTMLElement)) return;
         const found = node.matches("[data-testid=\'orca-setting\']")
           ? node
@@ -104,7 +104,7 @@ export class Book {
         if (found !== null) said.push(found.textContent ?? "");
       };
       const watch = new MutationObserver((records) => {
-        for (const record of records) for (const node of record.addedNodes) held(node);
+        for (const record of records) for (const node of record.addedNodes) collect(node);
       });
       watch.observe(document.body, { childList: true, subtree: true });
       window.orcaSetting = { said, watch };
@@ -120,9 +120,9 @@ export class Book {
       });
     }
     const said = await this.obsidian.page.evaluate(() => {
-      const held = window.orcaSetting?.said ?? [];
+      const recorded = window.orcaSetting?.said ?? [];
       window.orcaSetting = undefined;
-      return held;
+      return recorded;
     });
     return said;
   }
@@ -199,12 +199,12 @@ export class Book {
    * Stands the page on whole pixels, with the chrome that floats over
    * the pane out of the shot. The page is otherwise as tall as the pane
    * leaves it, so it lands on fractions of a pixel, and a runner that
-   * lays the pane out a hair differently rasterizes every glyph
+   * sizes the pane a hair differently rasterizes every glyph
    * differently. Where the page stands is what the assertions are for.
    */
   async pose(): Promise<void> {
     await this.obsidian.page.evaluate(
-      ([floating, held, trim]) => {
+      ([floating, id, trim]) => {
         const page = document.querySelector(".orca-page");
         if (page === null) return;
         const box = page.getBoundingClientRect();
@@ -225,7 +225,7 @@ export class Book {
           ` width: ${String(trim.width)}px; height: ${String(trim.height)}px;` +
           ` top: ${String(top)}px; left: ${String(left)}px }`;
         const pose = document.createElement("style");
-        pose.id = held;
+        pose.id = id;
         pose.textContent = stand(0, 0);
         document.head.append(pose);
         // A pane is the containing block for anything fixed inside it,
@@ -240,8 +240,8 @@ export class Book {
 
   /** Puts the pane back the way the pose found it. */
   async stand(): Promise<void> {
-    await this.obsidian.page.evaluate((held) => {
-      document.getElementById(held)?.remove();
+    await this.obsidian.page.evaluate((id) => {
+      document.getElementById(id)?.remove();
     }, POSED);
   }
 

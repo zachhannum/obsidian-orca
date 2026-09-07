@@ -77,21 +77,21 @@ export class Vault {
   async writes(file: string, during: () => Promise<void>): Promise<number> {
     this.touched.add(file);
     await this.page.evaluate((at) => {
-      const held = { at, count: 0, ref: undefined as EventRef | undefined };
-      held.ref = window.app.vault.on("modify", (touched) => {
-        if (touched.path === at) held.count += 1;
+      const writes = { at, count: 0, ref: undefined as EventRef | undefined };
+      writes.ref = window.app.vault.on("modify", (touched) => {
+        if (touched.path === at) writes.count += 1;
       });
-      window.orcaWrites = held;
+      window.orcaWrites = writes;
     }, file);
 
     await during();
 
     return this.page.evaluate(() => {
-      const held = window.orcaWrites;
-      if (held === undefined) return 0;
-      if (held.ref !== undefined) window.app.vault.offref(held.ref);
+      const writes = window.orcaWrites;
+      if (writes === undefined) return 0;
+      if (writes.ref !== undefined) window.app.vault.offref(writes.ref);
       window.orcaWrites = undefined;
-      return held.count;
+      return writes.count;
     });
   }
 
