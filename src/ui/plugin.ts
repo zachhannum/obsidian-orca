@@ -162,6 +162,16 @@ export default class OrcaPlugin extends Plugin {
       },
     });
     this.addCommand({
+      id: "next-chapter",
+      name: "Next chapter",
+      checkCallback: (checking) => this.turnsChapter(checking, 1),
+    });
+    this.addCommand({
+      id: "previous-chapter",
+      name: "Previous chapter",
+      checkCallback: (checking) => this.turnsChapter(checking, -1),
+    });
+    this.addCommand({
       id: "new-book",
       name: "New book",
       callback: () => {
@@ -255,6 +265,19 @@ export default class OrcaPlugin extends Plugin {
     }
     this.engine?.stop();
     this.engine = undefined;
+  }
+
+  /**
+   * Turns the preview being read a chapter along. The command goes grey
+   * at either end of the book, and where no preview is being read.
+   */
+  private turnsChapter(checking: boolean, step: number): boolean {
+    const view = this.app.workspace.getActiveViewOfType(PreviewView);
+    if (view === null) return false;
+    const to = view.chapterBy(step);
+    if (to === undefined) return false;
+    if (!checking) view.turnToChapter(to);
+    return true;
   }
 
   /**

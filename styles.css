@@ -42,6 +42,22 @@
   flex: 1;
 }
 
+/* The chapter reads beside the folio: the two say where the reader is,
+   coarse and fine. A long chapter name is cut rather than pushing the
+   stepper off the bar. */
+.orca-preview-bar select.orca-preview-chapter {
+  height: 26px;
+  max-width: 180px;
+  font-size: var(--font-ui-small);
+}
+
+.orca-preview-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--divider-color);
+  flex: none;
+}
+
 .orca-preview-views {
   display: inline-flex;
   gap: 2px;
