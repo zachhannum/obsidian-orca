@@ -56,3 +56,31 @@ test("the note written after the keystrokes that made it renders nothing a secon
 
   expect(await book.painted()).toEqual(painted + 1);
 });
+
+test("typing in one chapter costs that chapter, and leaves the rest of the book alone", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  vault.touch(CHAPTER);
+  await manuscript.open(CHAPTER);
+  await book.split();
+  const painted = await book.painted();
+  const before = await book.stages();
+  await manuscript.place({ line: 2, ch: 0 });
+
+  await manuscript.type(TYPED);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // The keystroke broke the lines of the chapter it landed in, and the
+  // engine resolved style for that one source. Both counts rise by the
+  // section rather than by the book.
+  const after = await book.stages();
+  expect(after.lines).toEqual(before.lines + 1);
+  expect(after.style).toEqual(before.style + 1);
+
+  // Obsidian writes the note some time after the typing stops, and the
+  // write has to land before the fixture goes back, or the next spec
+  // reads this spec's chapter.
+  await expect.poll(async () => vault.read(CHAPTER)).toContain(TYPED);
+});

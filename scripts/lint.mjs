@@ -1,7 +1,8 @@
 /**
  * The dependency rule and the conventions around it, checked over
- * `src`. The doc comment rule also runs over `e2e` and `scripts`. A
- * violation names the file, the line and the rule.
+ * `src`. The doc comment rule also runs over `e2e` and `scripts`, and
+ * the clock rule over the specs. A violation names the file, the line
+ * and the rule.
  */
 
 import { glob, readFile } from "node:fs/promises";
@@ -23,6 +24,16 @@ const APPLICATION_SCOPES = ["react", "react-dom", "@dnd-kit"];
  * STYLE.md's "Code comments" section holds the rule.
  */
 const PUZZLE = /^(What|How|Which|Where|Who|The way)\b/;
+
+/**
+ * The waits a spec may not take. The preview carries the generation it
+ * painted and what that render cost, and an assertion waits on those.
+ */
+const CLOCKS = [
+  [/\bwaitForTimeout\b/, "`waitForTimeout`"],
+  [/\bsetTimeout\b/, "`setTimeout`"],
+  [/\btimeout\s*:/, "a `timeout`"],
+];
 
 const RULES = [
   /**
@@ -89,15 +100,35 @@ export function checkDocs(file, text) {
   return found;
 }
 
+/** The clock rule, run over one spec. */
+export function checkClock(file, text) {
+  const found = [];
+  blanked(text)
+    .split("\n")
+    .forEach((line, at) => {
+      for (const [pattern, named] of CLOCKS) {
+        if (!pattern.test(line)) continue;
+        found.push({
+          file,
+          line: at + 1,
+          said: `${named} is a clock; wait on what the pane painted`,
+        });
+      }
+    });
+  return found;
+}
+
 /**
  * Every file under `src` checked in path order, then every file under
- * `e2e` and `scripts` checked against the doc comment rule.
+ * `e2e` and `scripts` checked against the doc comment rule, then every
+ * spec against the clock rule.
  */
 export async function lint(from = root) {
   const found = [];
   for (const [pattern, rule] of [
     ["src/**/*.{ts,tsx}", check],
     ["{e2e,scripts}/**/*.{ts,tsx,mjs}", checkDocs],
+    ["e2e/**/*.spec.ts", checkClock],
   ]) {
     const files = [];
     for await (const file of glob(pattern, { cwd: from })) files.push(file);
@@ -126,13 +157,21 @@ function moduleOf(file) {
 }
 
 /**
+ * The file with its comments blanked, line for line, so a rule reads the
+ * code and never a comment about it.
+ */
+function blanked(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/[^\n]*/g, (match, before) => before);
+}
+
+/**
  * Every import specifier, with the line it is on. Comments are blanked
  * first, so an import written inside one is not read as code.
  */
 function imports(text) {
-  const code = text
-    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (match, before) => before);
+  const code = blanked(text);
   const found = [];
   const patterns = [
     /\bfrom\s*["']([^"']+)["']/g,

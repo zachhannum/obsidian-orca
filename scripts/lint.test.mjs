@@ -3,9 +3,11 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { check, lint } from "./lint.mjs";
+import { check, checkClock, lint } from "./lint.mjs";
 
 const said = (file, text) => check(file, text).map((found) => found.said);
+const waited = (text) =>
+  checkClock("e2e/draft.spec.ts", text).map((found) => found.said);
 
 test("the dependency rule runs one way: `ui` imports `book`, `book` does not import `ui`", () => {
   assert.deepEqual(
@@ -115,6 +117,23 @@ test("a test file missing the note on what it does not cover is a violation", ()
   );
 });
 
+test("no assertion in a spec waits on a clock", () => {
+  assert.deepEqual(waited("await book.page.waitForTimeout(200);\n"), [
+    "`waitForTimeout` is a clock; wait on what the pane painted",
+  ]);
+  assert.deepEqual(
+    waited("await expect(book.status).toBeVisible({ timeout: 5 });\n"),
+    ["a `timeout` is a clock; wait on what the pane painted"],
+  );
+  // An attribute the pane carries is what an assertion waits on.
+  assert.deepEqual(
+    waited('await expect(pane).toHaveAttribute("data-stage-lines", "4");'),
+    [],
+  );
+  // A comment is blanked before the rule reads the line.
+  assert.deepEqual(waited("// no timeout: the pane is waited on\n"), []);
+});
+
 test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
   const from = await mkdtemp(path.join(tmpdir(), "orca-lint-"));
   try {
@@ -124,6 +143,7 @@ test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
         "/** What a spec opens. */\nexport const NOTE = 1;\n",
       "scripts/summary.mjs":
         "/** How much is quoted. */\nexport const QUOTED = 1;\n",
+      "e2e/draft.spec.ts": "await page.waitForTimeout(200);\n",
     };
     for (const [file, text] of Object.entries(files)) {
       await mkdir(path.join(from, path.dirname(file)), { recursive: true });
@@ -135,6 +155,7 @@ test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
         "src/book/note.ts: `book` may not import `ui`",
         "e2e/harness/note.ts: a doc comment opens with a question word; name the thing",
         "scripts/summary.mjs: a doc comment opens with a question word; name the thing",
+        "e2e/draft.spec.ts: `waitForTimeout` is a clock; wait on what the pane painted",
       ],
     );
   } finally {
