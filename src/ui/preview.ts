@@ -1,6 +1,12 @@
 import { paintPage } from "fleuron";
-import { ItemView, setIcon, type WorkspaceLeaf } from "obsidian";
-import { SAMPLE, openBook } from "@/book/sample";
+import {
+  ItemView,
+  setIcon,
+  type ViewStateResult,
+  type WorkspaceLeaf,
+} from "obsidian";
+import { BookError } from "@/book/note";
+import { sectionAt, sectionOf } from "@/book/pages";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { copiedText, type SelectionLine } from "@/ui/copy";
@@ -16,9 +22,29 @@ import {
   type ViewMode,
   type Viewing,
 } from "@/ui/page";
+import type { Laid, Progress, Setter } from "@/ui/setter";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
+
+/**
+ * The book a preview reads, the note it opened at, and whether a
+ * manuscript pane is tied to it. The workspace keeps this, so a leaf
+ * restored at startup opens the same book at the same chapter.
+ */
+export interface PreviewState {
+  book?: string;
+  note?: string;
+  linked?: boolean;
+}
+
+/** The plugin, as much of it as the preview reaches: it owns the other leaves. */
+export interface PreviewHandoff {
+  /** Gives the leaf back to the manuscript, where the writer left it. */
+  asMarkdown(view: PreviewView, note: string): void;
+  /** Turns the manuscript pane tied to this one to the note a page reads as. */
+  follows(view: PreviewView, note: string): void;
+}
 
 /**
  * The sheets a view seats across, where that is the view's own rather
@@ -39,6 +65,10 @@ const VIEWS: { mode: ViewMode; icon: string; label: string }[] = [
  * previous, next, and a folio you can type. All three views are
  * page-throughs, each turning by what it shows. The painter settles
  * what is on a page, so its markup goes into the surface in one write.
+ *
+ * A chapter laid out by itself is a different chapter, so a preview
+ * opened from a note is the whole book turned to that chapter's first
+ * page.
  */
 export class PreviewView extends ItemView {
   private well: HTMLElement | undefined;
@@ -48,9 +78,17 @@ export class PreviewView extends ItemView {
   private total: HTMLElement | undefined;
   private back: HTMLButtonElement | undefined;
   private on: HTMLButtonElement | undefined;
+  private edit: HTMLElement | undefined;
   private session: Session | undefined;
+  private laid: Laid | undefined;
   private readonly switches = new Map<ViewMode, HTMLButtonElement>();
   private watching: ResizeObserver | undefined;
+  /** The book note this preview reads, and the note it opened at. */
+  private state: PreviewState = {};
+  /** The note the pages on screen read as, which the manuscript follows. */
+  private showing: string | undefined;
+  /** Counts the books opened here, so a book the author left is dropped. */
+  private opening = 0;
   /** The view the book is being read in. */
   private mode: ViewMode = "single";
   /** The first page being read, counting from 0. */
@@ -69,7 +107,8 @@ export class PreviewView extends ItemView {
 
   constructor(
     leaf: WorkspaceLeaf,
-    private readonly opening: Promise<Session>,
+    private readonly setter: Setter,
+    private readonly handoff: PreviewHandoff,
     /** Writes the pages being read into the window's status bar. */
     private readonly reading: (text: string | undefined) => void,
   ) {
@@ -81,11 +120,38 @@ export class PreviewView extends ItemView {
   }
 
   override getDisplayText(): string {
-    return "Book";
+    return this.laid?.name ?? "Book";
   }
 
   override getIcon(): string {
     return "book";
+  }
+
+  override getState(): Record<string, unknown> {
+    return { ...super.getState(), ...this.state };
+  }
+
+  override async setState(
+    state: unknown,
+    result: ViewStateResult,
+  ): Promise<void> {
+    await super.setState(state, result);
+    const wanted = readState(state);
+    const changed = wanted.book !== this.state.book;
+    this.state = wanted;
+    this.attach();
+    if (changed) await this.lay();
+    else if (wanted.note !== undefined) this.turnTo(wanted.note);
+  }
+
+  /** The book this preview reads, for a plugin pairing it with a manuscript. */
+  get book(): string | undefined {
+    return this.state.book;
+  }
+
+  /** Whether a manuscript pane is tied to this one, both ways. */
+  get linked(): boolean {
+    return this.state.linked === true;
   }
 
   override async onOpen(): Promise<void> {
@@ -94,17 +160,7 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
-
-    try {
-      const session = await this.opening;
-      await session.open(openBook(SAMPLE));
-      this.session = session;
-      await this.turn(0);
-    } catch (cause) {
-      this.report(
-        cause instanceof EngineError ? cause.message : "The book did not set",
-      );
-    }
+    await Promise.resolve();
   }
 
   override onClose(): Promise<void> {
@@ -118,10 +174,33 @@ export class PreviewView extends ItemView {
     this.reading(undefined);
     this.back = undefined;
     this.on = undefined;
+    this.edit?.remove();
+    this.edit = undefined;
     this.switches.clear();
+    // The session belongs to the book, not to this leaf, so closing the
+    // leaf costs the next one no second layout.
     this.session = undefined;
+    this.laid = undefined;
     this.contentEl.empty();
     return Promise.resolve();
+  }
+
+  /**
+   * Turns to a note's first page, unless the pages on screen already
+   * read as that note. A page is the smallest thing a manuscript can
+   * name here, so the link is chapter by chapter.
+   */
+  turnTo(note: string): void {
+    const laid = this.laid;
+    if (laid === undefined) return;
+    const at = sectionOf(laid.sections, note);
+    if (at === undefined) return;
+    const range = laid.ranges.get(at);
+    if (range === undefined) return;
+    if (sectionAt(laid.ranges, this.at + 1) === at) return;
+    this.showing = note;
+    this.state = { ...this.state, note };
+    void this.turn(range.first - 1);
   }
 
   /** Draws the toolbar, the well the pages sit in, and the status line. */
@@ -152,10 +231,7 @@ export class PreviewView extends ItemView {
     // sit in is what a Tab or a click on a page reaches.
     well.tabIndex = 0;
     this.well = well;
-    this.message = well.createDiv({
-      cls: "orca-preview-message",
-      text: "Setting the book",
-    });
+    this.report("Setting the book");
     const surface = well.createDiv({ cls: "orca-preview-sheets" });
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
@@ -182,6 +258,64 @@ export class PreviewView extends ItemView {
     });
     watching.observe(surface);
     this.watching = watching;
+  }
+
+  /**
+   * Puts the way back to the manuscript in the view's header, for a
+   * preview the author toggled into from a note. One opened from the
+   * ribbon has no manuscript to go back to.
+   */
+  private attach(): void {
+    const note = this.state.note;
+    if (note === undefined) {
+      this.edit?.remove();
+      this.edit = undefined;
+      return;
+    }
+    this.edit ??= this.addAction("file-text", "Open as markdown", () => {
+      const at = this.state.note;
+      if (at !== undefined) this.handoff.asMarkdown(this, at);
+    });
+  }
+
+  /** Sets the book this preview was opened on, reporting what it waits for. */
+  private async lay(): Promise<void> {
+    const book = this.state.book;
+    this.session = undefined;
+    this.laid = undefined;
+    this.showing = this.state.note;
+    if (book === undefined) {
+      this.report("No book is open");
+      return;
+    }
+    const opening = (this.opening += 1);
+    try {
+      const laid = await this.setter.open(book, {
+        note: this.state.note,
+        told: (at) => {
+          if (opening === this.opening) this.setting(at);
+        },
+      });
+      if (opening !== this.opening) return;
+      this.laid = laid;
+      this.session = laid.session;
+      await this.turn(this.opensAt(laid));
+    } catch (cause) {
+      if (opening !== this.opening) return;
+      this.report(
+        cause instanceof EngineError || cause instanceof BookError
+          ? cause.message
+          : "The book did not set",
+      );
+    }
+  }
+
+  /** The page the book opens at: the first of the chapter it was toggled from. */
+  private opensAt(laid: Laid): number {
+    const note = this.state.note;
+    const at = note === undefined ? undefined : sectionOf(laid.sections, note);
+    const range = at === undefined ? undefined : laid.ranges.get(at);
+    return range === undefined ? 0 : range.first - 1;
   }
 
   /** A button that reads the book in one of the three views. */
@@ -325,6 +459,25 @@ export class PreviewView extends ItemView {
     }
     if (this.back !== undefined) this.back.disabled = at === 0;
     if (this.on !== undefined) this.on.disabled = last >= pages;
+    this.reads(first);
+  }
+
+  /**
+   * Names the chapter the painted span reads as, and turns a manuscript
+   * tied to this pane to it. The note is kept either way, so a leaf
+   * restored at startup opens where the reader left the book.
+   */
+  private reads(folio: number): void {
+    const laid = this.laid;
+    if (laid === undefined) return;
+    const at = sectionAt(laid.ranges, folio);
+    const section = at === undefined ? undefined : laid.sections[at];
+    if (section?.kind !== "note") return;
+    if (section.path === this.showing) return;
+    this.showing = section.path;
+    this.state = { ...this.state, note: section.path };
+    this.attach();
+    if (this.linked) this.handoff.follows(this, section.path);
   }
 
   /**
@@ -350,12 +503,53 @@ export class PreviewView extends ItemView {
     event.preventDefault();
   }
 
+  /**
+   * Draws what the book is waiting on. A whole book has to be laid out
+   * before any page of it is right, and the first one has nothing
+   * cached, so the wait gets a state rather than an empty pane.
+   */
+  private setting(progress: Progress): void {
+    const well = this.well;
+    if (well === undefined) return;
+    this.message?.remove();
+    const held = well.createDiv({ cls: "orca-preview-setting" });
+    held.dataset["testid"] = "orca-setting";
+    setIcon(held.createDiv({ cls: "orca-preview-setting-icon" }), "book");
+    const name = held.createDiv({ cls: "orca-preview-setting-name" });
+    name.append("Setting ", name.createEl("i", { text: progress.name }));
+    const bar = held.createDiv({ cls: "orca-preview-progress" });
+    const fill = bar.createDiv({ cls: "orca-preview-progress-fill" });
+    const done = progress.of === 0 ? 0 : progress.read / progress.of;
+    fill.style.width = `${String(Math.round(done * 100))}%`;
+    const note = held.createDiv({ cls: "orca-preview-setting-note" });
+    note.append(`${String(progress.read)} chapters of ${String(progress.of)}`);
+    if (progress.opening !== undefined) {
+      note.createEl("br");
+      note.append(`it will open at ${progress.opening}`);
+    }
+    well.prepend(held);
+    this.message = held;
+  }
+
   /** Puts a message in the well in place of the pages. */
   private report(text: string): void {
-    if (this.message !== undefined) {
-      this.message.setText(text);
-      return;
-    }
-    this.message = this.well?.createDiv({ cls: "orca-preview-message", text });
+    this.message?.remove();
+    const message = this.well?.createDiv({
+      cls: "orca-preview-message",
+      text,
+    });
+    if (message !== undefined) this.well?.prepend(message);
+    this.message = message;
   }
+}
+
+/** The state a leaf was opened with, as much of it as a preview reads. */
+function readState(state: unknown): PreviewState {
+  if (typeof state !== "object" || state === null) return {};
+  const held = state as Record<string, unknown>;
+  const made: PreviewState = {};
+  if (typeof held["book"] === "string") made.book = held["book"];
+  if (typeof held["note"] === "string") made.note = held["note"];
+  if (held["linked"] === true) made.linked = true;
+  return made;
 }
