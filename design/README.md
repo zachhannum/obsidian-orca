@@ -60,5 +60,5 @@ its editor around these files and returns a URL. The artboard list and
   Every note a book lists is borrowed, so `Remove from book` is the
   only thing an entry's own menu offers.
 - No implementation vocabulary reaches a surface. The per-stage counts
-  stay as attributes for the tests, which contradicts the acceptance
-  wording on the stage-counter issue.
+  stay as attributes for the tests, and the status line reads the page
+  the author is on.

@@ -33,15 +33,20 @@ test("the ribbon sets the book and paints its first page", async ({ book }) => {
   }
 });
 
-test("the status reads the page being read out of the book's own length", async ({
+test("the status line reads the page, and what the render cost stays off it", async ({
   book,
 }) => {
   await book.open();
   await book.painted();
 
+  // The status line is the reader's: the page they are on, out of the
+  // book's own length, and nothing about a stage or a generation.
   await expect(book.status).toHaveText(`page 1 of ${String(PAGES)}`);
   await expect(book.folio).toHaveValue("1");
   await expect(book.surface).toHaveAttribute("data-pages", String(PAGES));
+  // What the render cost is on the pane instead, where the specs read
+  // it and the author does not.
+  await expect(book.surface).toHaveAttribute("data-stage-lines", /\d+/);
   // There is no page before the first one.
   await expect(book.previous).toBeDisabled();
 });
