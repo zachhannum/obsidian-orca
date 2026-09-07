@@ -10,9 +10,10 @@ import {
   type TAbstractFile,
   type ViewState,
 } from "obsidian";
+import type { VaultAdapter } from "@/assets/vault";
 import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
-import { readModule, type VaultFiles } from "@/engine/module";
+import { readModule } from "@/engine/module";
 import {
   documentFaces,
   serialized,
@@ -755,6 +756,7 @@ export default class OrcaPlugin extends Plugin {
           : this.app.vault.cachedRead(note);
       },
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
+      files: this.files(),
       links: cacheLinks(this.app),
       client,
       faces: documentFaces(document),
@@ -812,9 +814,16 @@ export default class OrcaPlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf);
   }
 
-  private files(): VaultFiles {
-    const adapter = this.app.vault.adapter;
-    return { readBinary: (path) => adapter.readBinary(normalizePath(path)) };
+  /** The vault, as the engine and the asset registry read it. */
+  private files(): VaultAdapter {
+    const { adapter } = this.app.vault;
+    const at = (path: string): string => normalizePath(path);
+    return {
+      exists: (path) => adapter.exists(at(path)),
+      read: (path) => adapter.read(at(path)),
+      readBinary: (path) => adapter.readBinary(at(path)),
+      list: (folder) => adapter.list(at(folder)),
+    };
   }
 
   private directory(): string {

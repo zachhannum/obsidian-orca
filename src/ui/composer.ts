@@ -11,12 +11,14 @@
  */
 
 import { styleOp, type Op, type Sheet } from "fleuron";
+import { Registry } from "@/assets/registry";
+import type { VaultAdapter } from "@/assets/vault";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { pageRanges, type Range } from "@/book/pages";
-import { sendBook, sendEdit, type Loaded } from "@/book/plan";
+import { sendBook, sendEdit, type Edit, type Loaded } from "@/book/plan";
 import { Loop, timers, type Clock } from "@/engine/loop";
 import { Session, type EngineClient, type FaceSet } from "@/engine/session";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
@@ -39,6 +41,8 @@ export class Typeset {
   readonly sections: Section[];
   /** Every section's folio range, by its place in the reading order. */
   readonly ranges: Map<number, Range>;
+  /** The fonts and images this book has put on the wire, by content hash. */
+  readonly assets: Registry;
 
   private readonly loop: Loop;
   private readonly watchers = new Set<() => void>();
@@ -55,6 +59,8 @@ export class Typeset {
       sheets: Sheet[];
       /** The text each note crossed as, by its vault path. */
       sent: Map<string, string>;
+      /** The registry every op path asks before putting bytes on the wire. */
+      assets: Registry;
     },
     clock: Clock,
   ) {
@@ -63,7 +69,8 @@ export class Typeset {
     this.sections = book.sections;
     this.ranges = book.ranges;
     this.sent = book.sent;
-    this.loaded = { sheets: book.sheets, faces: new Set<string>() };
+    this.assets = book.assets;
+    this.loaded = { sheets: book.sheets };
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
 
@@ -75,9 +82,7 @@ export class Typeset {
   retype(note: string, text: string): void {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
-    const planned = sendEdit({ did: "typed", name: note, text }, this.loaded);
-    this.loaded = planned.loaded;
-    this.loop.edit(`typed:${note}`, planned.ops);
+    this.plan(`typed:${note}`, { did: "typed", name: note, text });
   }
 
   /** Told once a render has landed, so a view repaints where it left off. */
@@ -91,6 +96,18 @@ export class Typeset {
   /** Drops the wait, for a book orca is no longer keeping up to date. */
   stop(): void {
     this.loop.stop();
+    this.assets.close();
+  }
+
+  /**
+   * Plans one edit and waits it out. The registry takes down whatever
+   * the ops put on the wire, so the next plan sends none of it twice.
+   */
+  private plan(key: string, edit: Edit): void {
+    const planned = sendEdit(edit, this.loaded, this.assets);
+    this.loaded = planned.loaded;
+    for (const crossed of planned.crossed) this.assets.crossed(crossed);
+    this.loop.edit(key, planned.ops);
   }
 
   private async render(ops: Op[]): Promise<void> {
@@ -118,6 +135,8 @@ export interface Composing {
   read(path: string): Promise<string>;
   /** A note's own name, which titles a book with no title of its own. */
   name(path: string): string;
+  /** The vault's own files, which the asset registry reads and hashes. */
+  files: VaultAdapter;
   links: Links;
   client: Promise<EngineClient>;
   faces: FaceSet;
@@ -223,12 +242,13 @@ export class Composer {
     );
 
     const client = await this.vault.client;
+    const assets = new Registry(this.vault.files);
     const session = new Session(client, this.vault.faces);
     const sheets: Sheet[] = [{ name: THEME_SHEET, css: BUNDLED_THEME }];
     await session.open([...ops, styleOp(sheets)]);
     const ranges = await this.ranges(client, session, sections);
     return new Typeset(
-      { name, session, sections, ranges, sheets, sent },
+      { name, session, sections, ranges, sheets, sent, assets },
       this.clock,
     );
   }

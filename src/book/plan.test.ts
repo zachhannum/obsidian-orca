@@ -13,6 +13,7 @@ import {
   type Sheet,
 } from "fleuron";
 import { directoryVault } from "@/assets/directory";
+import { Registry, SENT_NOTHING, type Sent } from "@/assets/registry";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
@@ -25,6 +26,7 @@ import {
   sendBook,
   sendEdit,
   type Edit,
+  type Face,
   type Loaded,
 } from "@/book/plan";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
@@ -141,8 +143,14 @@ const FACED: Sheet[] = [
   { name: THEME_SHEET, css: 'book { font-family: "Spectral" }' },
 ];
 
-/** A session with the theme on it and one face registered. */
-const LOADED: Loaded = { sheets: SET, faces: new Set(["eb-garamond"]) };
+/** A session with the theme on it. */
+const LOADED: Loaded = { sheets: SET };
+
+/** A registry holding the bundled face and nothing else. */
+const REGISTERED: Sent = { sent: (key) => key === "eb-garamond" };
+
+/** The face the table picks, and the key its bytes hash to. */
+const SPECTRAL: Face = { key: "spectral", bytes: new Uint8Array([1, 2, 3]) };
 
 /** Reads one row of the table, by what the reader did. */
 function row(did: string): Edit {
@@ -177,7 +185,7 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
     did: "picked a new face",
     edit: {
       did: "faced",
-      face: { key: "spectral", bytes: new Uint8Array([1, 2, 3]) },
+      face: SPECTRAL,
       sheets: FACED,
     },
     ops: ["font", "style"],
@@ -191,36 +199,68 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
 
 test("each edit sends the ops its row names, and nothing else", () => {
   for (const entry of TABLE) {
-    const { ops } = sendEdit(entry.edit, LOADED);
+    const { ops } = sendEdit(entry.edit, LOADED, REGISTERED);
     assert.deepEqual(ops.map((op) => op.op), entry.ops, entry.did);
   }
 
-  const typed = sendEdit(row("typed in a chapter"), LOADED).ops;
+  const typed = sendEdit(row("typed in a chapter"), LOADED, REGISTERED).ops;
   assert.equal(only(typed, "edit").name, "Chapter Twelve.md");
-  const reordered = sendEdit(row("reordered chapters"), LOADED).ops;
+  const reordered = sendEdit(row("reordered chapters"), LOADED, REGISTERED).ops;
   assert.deepEqual(only(reordered, "style").sheets, SET);
 });
 
-test("a face already registered plans no font op at all", () => {
-  const picked: Edit = {
-    did: "faced",
-    face: { key: "spectral", bytes: new Uint8Array([1, 2, 3]) },
-    sheets: FACED,
+test("every op path asks the registry before it puts bytes on the wire", () => {
+  const asked: string[] = [];
+  const watching: Sent = {
+    sent: (key) => {
+      asked.push(key);
+      return false;
+    },
   };
 
-  const first = sendEdit(picked, LOADED);
-  assert.deepEqual(first.ops.map((op) => op.op), ["font", "style"]);
+  for (const entry of TABLE) sendEdit(entry.edit, LOADED, watching);
+  assert.deepEqual(asked, ["spectral"], "only the face carries bytes");
 
-  const again = sendEdit(picked, first.loaded);
+  const registry = new Registry(vault);
+  const picked = row("picked a new face");
+  const first = sendEdit(picked, LOADED, registry);
+  assert.deepEqual(first.crossed, ["spectral"]);
+  for (const key of first.crossed) registry.crossed(key);
+  assert.ok(registry.sent("spectral"));
+
+  const again = sendEdit(picked, first.loaded, registry);
   assert.deepEqual(again.ops.map((op) => op.op), ["style"]);
-  const third = sendEdit(picked, again.loaded);
-  assert.deepEqual(third.ops.map((op) => op.op), ["style"]);
+  assert.deepEqual(again.crossed, []);
+});
+
+test("a book with the same face on thirty-four chapters sends it once", async () => {
+  const registry = new Registry(vault);
+  const bytes = await readFile(path.join(root, "fixture", BOOK));
+  // Thirty-four picks over one file, named by two different paths.
+  const picks = await Promise.all(
+    Array.from({ length: 34 }, (_, at) =>
+      registry.take(at % 2 === 0 ? BOOK : `/${BOOK}`),
+    ),
+  );
+
+  let loaded = LOADED;
+  let fonts = 0;
+  for (const face of picks) {
+    const planned = sendEdit({ did: "faced", face, sheets: FACED }, loaded, registry);
+    loaded = planned.loaded;
+    for (const key of planned.crossed) registry.crossed(key);
+    fonts += planned.ops.filter((op) => op.op === "font").length;
+  }
+
+  assert.equal(fonts, 1);
+  assert.equal(new Set(picks.map((pick) => pick.key)).size, 1);
+  assert.equal(picks[0]?.bytes.byteLength, bytes.byteLength);
 });
 
 test("the same edit against the same session plans the same ops", () => {
   for (const entry of TABLE) {
-    const once = sendEdit(entry.edit, LOADED_NOTHING);
-    const twice = sendEdit(entry.edit, LOADED_NOTHING);
+    const once = sendEdit(entry.edit, LOADED_NOTHING, SENT_NOTHING);
+    const twice = sendEdit(entry.edit, LOADED_NOTHING, SENT_NOTHING);
     assert.deepEqual(once.ops, twice.ops, entry.did);
   }
 });
@@ -232,7 +272,7 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
   try {
     const client = connected(engine);
     await client.preview([...(await planned(model)), styleOp(SET)]);
-    const loaded: Loaded = { sheets: SET, faces: new Set() };
+    const loaded: Loaded = { sheets: SET };
     assert.equal(await opens(client, []), "Pride and Prejudice");
     assert.ok((await words(client, [])).includes("Whitehall"));
 
@@ -243,6 +283,7 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
         text: "# Chapter Twelve\n\nElizabeth walked to Netherfield.",
       },
       loaded,
+      SENT_NOTHING,
     );
     assert.ok((await words(client, typed.ops)).includes("Netherfield."));
 
@@ -256,12 +297,14 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
     const reordered = sendEdit(
       { did: "reordered", sources: [...sources].reverse() },
       typed.loaded,
+      SENT_NOTHING,
     );
     assert.equal(await opens(client, reordered.ops), "Acknowledgements");
 
     const deleted = sendEdit(
       { did: "deleted", name: "Copyright.md" },
       reordered.loaded,
+      SENT_NOTHING,
     );
     const rest = await words(client, deleted.ops);
     assert.ok(!rest.includes("Whitehall"));

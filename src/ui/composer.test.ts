@@ -142,6 +142,7 @@ async function setting(client: EngineClient): Promise<Composing> {
   return {
     model: async (at) => readModel(await readText(vault, at)),
     read: (at) => readText(vault, at),
+    files: vault,
     name: (at) => path.basename(at, ".md"),
     links: pathLinks(paths),
     client: Promise.resolve(client),
