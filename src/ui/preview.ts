@@ -119,7 +119,7 @@ export class PreviewView extends ItemView {
   private rows = 1;
   /** The turn the next painted span has to be, so a slow one is dropped. */
   private turning = 0;
-  /** Stops watching the book this pane is reading for renders. */
+  /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
 
   constructor(

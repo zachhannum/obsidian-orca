@@ -77,7 +77,7 @@ class FakeClient implements EngineClient {
 class HeldClient extends FakeClient {
   private waiting: (() => void)[] | undefined;
 
-  /** Answers nothing from here on. */
+  /** Holds every reply from here on. */
   hold(): void {
     this.waiting = [];
   }
@@ -126,7 +126,7 @@ class Steps implements Clock {
   }
 }
 
-/** Lets every promise already settled run its way through. */
+/** Lets the promises already settled run before the test looks again. */
 function drain(): Promise<void> {
   return new Promise<void>((resolve) => {
     setImmediate(resolve);
@@ -257,7 +257,7 @@ test("a chapter the engine already has the words of is no edit at all", async ()
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real
 // chapter opens on the page the real run put it on. A render does not
-// work the folio ranges out again, so a chapter the edit moved keeps
-// the range the book was set with until it is set again; asking for
-// them costs the whole book over the wire, which is the cost a
-// page-through exists to avoid.
+// work the folio ranges out again, so a chapter an edit moved keeps the
+// range the book was set with until the book is set again. Asking for
+// them costs the whole book over the wire, which is what a page-through
+// exists to avoid.

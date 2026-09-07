@@ -367,9 +367,9 @@ export default class OrcaPlugin extends Plugin {
       vault.on("modify", (file) => {
         const member = this.members.get(file.path);
         // A chapter's words are an edit to a book already on the engine,
-        // not a reason to set it again from nothing. The words a writer
-        // typed are already there; a change from outside Obsidian is
-        // this.
+        // not a reason to set it again from nothing. A writer's own
+        // keystrokes are on the engine already; this is how a change
+        // from outside Obsidian gets there.
         if (member === undefined || !(file instanceof TFile)) {
           changed(file.path);
         } else this.retype(member.book, file);

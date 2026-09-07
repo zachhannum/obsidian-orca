@@ -25,8 +25,8 @@ test("a burst of keystrokes is one render, and the pages last painted stay until
       .toBeGreaterThan(painted);
   });
 
-  // Eighteen keystrokes, one render: the generation the pane painted
-  // rose once, not once per key.
+  // One burst, one render: the generation the pane painted rose once,
+  // not once per key.
   expect(await book.painted()).toEqual(painted + 1);
   // The book was never set again from nothing, so the pages the reader
   // had were on screen the whole time the render ran.

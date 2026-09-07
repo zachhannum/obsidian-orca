@@ -64,8 +64,7 @@ export class Manuscript {
 
   /**
    * Types at the caret, one keystroke at a time, the way a writer does.
-   * The editor is focused through Obsidian's own view rather than by
-   * clicking, which would move the caret to wherever the click landed.
+   * The caret is where {@link Manuscript.place} left it.
    */
   async type(text: string): Promise<void> {
     await this.obsidian.page.evaluate((type) => {
