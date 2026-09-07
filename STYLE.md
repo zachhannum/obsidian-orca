@@ -192,7 +192,7 @@ A quickstart opens with install, then the one action that produces a
 page, then what came back.
 
 A section that explains a mechanism ends in a snippet that runs it. A
-snippet that is also a file in the repo is held against that file by a
+snippet that is also a file in the repo is checked against that file by a
 test, so the page cannot drift from the code.
 
 A reference table links out rather than carrying a paragraph inline.
