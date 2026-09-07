@@ -1,12 +1,12 @@
 /**
  * The books orca has set on the engine.
  *
- * A chapter laid out by itself is a different chapter, so a preview of
+ * A chapter typeset by itself is a different chapter, so a preview of
  * one is a page of the whole book. The whole book crosses once, its
  * pages come back a window at a time, and where each section landed
  * comes from the same run.
  *
- * A book is laid out once and kept, so the second view of it, and the
+ * A book is typeset once and kept, so the second view of it, and the
  * same one opened again, waits for nothing.
  */
 
@@ -16,7 +16,7 @@ import type { Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { pageRanges, type Range } from "@/book/pages";
-import { sendBook, sendEdit, type Held } from "@/book/plan";
+import { sendBook, sendEdit, type Loaded } from "@/book/plan";
 import { Loop, timers, type Clock } from "@/engine/loop";
 import { Session, type EngineClient, type FaceSet } from "@/engine/session";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
@@ -30,7 +30,7 @@ import { bookName } from "@/ui/shelf";
  * told once it lands. A render that fails leaves the pages already
  * painted where they are.
  */
-export class Laid {
+export class Typeset {
   /** The book's title, or the note's name when it has none. */
   readonly name: string;
   /** Its pages, fetched a window at a time. */
@@ -43,10 +43,10 @@ export class Laid {
   private readonly loop: Loop;
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
-  private held: Held;
+  private loaded: Loaded;
 
   constructor(
-    laid: {
+    book: {
       name: string;
       session: Session;
       sections: Section[];
@@ -58,12 +58,12 @@ export class Laid {
     },
     clock: Clock,
   ) {
-    this.name = laid.name;
-    this.session = laid.session;
-    this.sections = laid.sections;
-    this.ranges = laid.ranges;
-    this.sent = laid.sent;
-    this.held = { sheets: laid.sheets, faces: new Set<string>() };
+    this.name = book.name;
+    this.session = book.session;
+    this.sections = book.sections;
+    this.ranges = book.ranges;
+    this.sent = book.sent;
+    this.loaded = { sheets: book.sheets, faces: new Set<string>() };
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
 
@@ -75,8 +75,8 @@ export class Laid {
   retype(note: string, text: string): void {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
-    const planned = sendEdit({ did: "typed", name: note, text }, this.held);
-    this.held = planned.held;
+    const planned = sendEdit({ did: "typed", name: note, text }, this.loaded);
+    this.loaded = planned.loaded;
     this.loop.edit(`typed:${note}`, planned.ops);
   }
 
@@ -111,7 +111,7 @@ export interface Progress {
 }
 
 /** The vault and the engine, as much of them as setting a book takes. */
-export interface Setting {
+export interface Composing {
   /** The book at this path, or nothing for a note orca refuses. */
   model(path: string): Promise<Model | undefined>;
   /** A note the book reads, by its vault path. */
@@ -134,39 +134,39 @@ export interface Opening {
 /** The number of times the whole book is asked for before its folios are given up on. */
 const ASKS = 3;
 
-export class Setter {
-  private readonly laid = new Map<string, Promise<Laid>>();
+export class Composer {
+  private readonly books = new Map<string, Promise<Typeset>>();
 
   constructor(
-    private readonly vault: Setting,
+    private readonly vault: Composing,
     private readonly clock: Clock = timers,
   ) {}
 
   /**
-   * The book at this path, laid out. A book already set, or one still
+   * The book at this path, typeset. A book already set, or one still
    * setting, is handed back as it stands, so only the caller that
    * starts a run is told how far along it is.
    */
-  open(path: string, opening: Opening = {}): Promise<Laid> {
-    const held = this.laid.get(path);
-    if (held !== undefined) return held;
-    const laying = this.lay(path, opening);
-    this.laid.set(path, laying);
-    // A run that fails is not kept, so the next open lays the book out
+  open(path: string, opening: Opening = {}): Promise<Typeset> {
+    const existing = this.books.get(path);
+    if (existing !== undefined) return existing;
+    const composing = this.compose(path, opening);
+    this.books.set(path, composing);
+    // A run that fails is not kept, so the next open typesets the book
     // again rather than handing back the failure for the session's life.
-    laying.catch(() => {
-      if (this.laid.get(path) === laying) this.laid.delete(path);
+    composing.catch(() => {
+      if (this.books.get(path) === composing) this.books.delete(path);
     });
-    return laying;
+    return composing;
   }
 
-  /** Drops a book, so the next open lays it out from the notes as they are now. */
+  /** Drops a book, so the next open typesets it from the notes as they are now. */
   forget(path: string): void {
-    const held = this.laid.get(path);
-    this.laid.delete(path);
-    void held?.then(
-      (laid) => {
-        laid.stop();
+    const existing = this.books.get(path);
+    this.books.delete(path);
+    void existing?.then(
+      (book) => {
+        book.stop();
       },
       () => undefined,
     );
@@ -177,15 +177,15 @@ export class Setter {
    * opened is untouched: the next open reads the note as it now is.
    */
   retype(book: string, note: string, text: string): void {
-    void this.laid.get(book)?.then(
-      (laid) => {
-        laid.retype(note, text);
+    void this.books.get(book)?.then(
+      (typeset) => {
+        typeset.retype(note, text);
       },
       () => undefined,
     );
   }
 
-  private async lay(path: string, opening: Opening): Promise<Laid> {
+  private async compose(path: string, opening: Opening): Promise<Typeset> {
     const model = await this.vault.model(path);
     if (model === undefined) {
       throw new BookError(`${path} is not a book orca reads`);
@@ -227,7 +227,7 @@ export class Setter {
     const sheets: Sheet[] = [{ name: THEME_SHEET, css: BUNDLED_THEME }];
     await session.open([...ops, styleOp(sheets)]);
     const ranges = await this.ranges(client, session, sections);
-    return new Laid(
+    return new Typeset(
       { name, session, sections, ranges, sheets, sent },
       this.clock,
     );

@@ -99,7 +99,7 @@ export function row(section: Section, at: number): Row {
 
 /**
  * A book holds the active note when the note is one of its sections or
- * the book note itself. A note in two books is held by both.
+ * the book note itself. A note in two books belongs to both.
  */
 function holds(
   path: string,

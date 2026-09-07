@@ -46,7 +46,7 @@ export class BookView extends FileView {
   /** Number of orca's own saves in flight. */
   private saving = 0;
   /** The model the page shows, and the generation it is at. */
-  private held: { model: Model; generation: number } | undefined;
+  private shown: { model: Model; generation: number } | undefined;
   /** The word count of each note the book reads, once counted. */
   private readonly counts = new Map<string, number>();
   /** The reads still counting, so a note is read once however often the page paints. */
@@ -54,7 +54,7 @@ export class BookView extends FileView {
   /** The pages the last run through the engine came back with. */
   private pages: Page[] = [];
   /** Counts the runs sent, so a run a later one overtakes is dropped rather than painted. */
-  private laying = 0;
+  private typesetting = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -166,7 +166,7 @@ export class BookView extends FileView {
     // written first.
     await this.settle();
     this.writer = undefined;
-    this.held = undefined;
+    this.shown = undefined;
     this.mounted?.paint({ kind: "none" });
   }
 
@@ -198,11 +198,11 @@ export class BookView extends FileView {
     const model = this.opened(text);
     if (model === undefined) return;
     this.writer = new Writer(model, {
-      paint: (held, generation) => {
-        this.show(held, generation);
+      paint: (model, generation) => {
+        this.show(model, generation);
         this.edits.changed();
       },
-      save: (held) => this.write(file, held),
+      save: (model) => this.write(file, model),
     });
     this.show(model, 0);
     void this.relay();
@@ -214,7 +214,7 @@ export class BookView extends FileView {
       return readModel(text);
     } catch (cause) {
       if (!(cause instanceof BookError)) throw cause;
-      this.held = undefined;
+      this.shown = undefined;
       this.mounted?.paint({ kind: "refused", said: cause.message });
       return undefined;
     }
@@ -293,7 +293,7 @@ export class BookView extends FileView {
 
   /** Paints the book page from a model at the generation it is at. */
   private show(model: Model, generation: number): void {
-    this.held = { model, generation };
+    this.shown = { model, generation };
     this.repaint();
   }
 
@@ -304,12 +304,12 @@ export class BookView extends FileView {
    */
   private repaint(): void {
     const file = this.file;
-    if (this.held === undefined || file === null) return;
+    if (this.shown === undefined || file === null) return;
     this.mounted?.paint({
       kind: "book",
-      generation: this.held.generation,
+      generation: this.shown.generation,
       report: report(
-        { path: file.path, name: file.basename, model: this.held.model },
+        { path: file.path, name: file.basename, model: this.shown.model },
         { links: cacheLinks(this.app), words: (path) => this.words(path) },
         this.pages,
       ),
@@ -323,15 +323,15 @@ export class BookView extends FileView {
    */
   private async relay(): Promise<void> {
     const file = this.file;
-    const held = this.held;
-    if (file === null || held === undefined) return;
-    const generation = (this.laying += 1);
+    const shown = this.shown;
+    if (file === null || shown === undefined) return;
+    const generation = (this.typesetting += 1);
     let pages = this.pages;
     try {
       const client = await this.client;
       const ops = await sendBook(
-        held.model.book,
-        held.model.order,
+        shown.model.book,
+        shown.model.order,
         cacheLinks(this.app),
         file.path,
         (path) => this.readNote(path),
@@ -342,9 +342,9 @@ export class BookView extends FileView {
       ]);
       pages = output?.pages ?? pages;
     } catch (cause) {
-      console.error(`Orca: ${file.path} did not lay out.`, cause);
+      console.error(`Orca: ${file.path} did not typeset.`, cause);
     }
-    if (generation !== this.laying) return;
+    if (generation !== this.typesetting) return;
     this.pages = pages;
     this.repaint();
   }
@@ -390,9 +390,9 @@ export class BookView extends FileView {
   /** Whether the order has an entry with no note to read. */
   private hasMissing(): boolean {
     const file = this.file;
-    if (this.held === undefined || file === null) return false;
+    if (this.shown === undefined || file === null) return false;
     const { sections } = resolve(
-      this.held.model.order,
+      this.shown.model.order,
       cacheLinks(this.app),
       file.path,
     );

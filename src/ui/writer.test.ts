@@ -14,7 +14,7 @@ const vault = directoryVault(path.join(root, "fixture"));
 const BOOK = "Pride and Prejudice.md";
 
 /** The settle, run when the test says so. */
-function held(): Clock & { settle(): void } {
+function manualClock(): Clock & { settle(): void } {
   let fire: (() => void) | undefined;
   return {
     after(_ms, run) {
@@ -48,7 +48,7 @@ async function writing(save?: (model: Model) => Promise<void>): Promise<{
   const model = readModel(await readText(vault, BOOK));
   const painted: Model[] = [];
   const saved: Model[] = [];
-  const clock = held();
+  const clock = manualClock();
   const writer = new Writer(
     model,
     {

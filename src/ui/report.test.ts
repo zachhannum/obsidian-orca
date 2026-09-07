@@ -29,9 +29,9 @@ async function counting(): Promise<Counting> {
 }
 
 test("word counts come from the notes, and an entry with no note has none", async () => {
-  const held = { path: BOOK, name: "PP draft", model: await model() };
+  const book = { path: BOOK, name: "PP draft", model: await model() };
 
-  const made = report(held, await counting());
+  const made = report(book, await counting());
 
   assert.equal(made.name, "Pride and Prejudice");
   assert.equal(made.format, 1);
@@ -57,7 +57,7 @@ test("word counts come from the notes, and an entry with no note has none", asyn
 
   // A note not yet counted is drawn without a count, and the sum leaves
   // it out.
-  const uncounted = report(held, { links: pathLinks([]), words: () => undefined });
+  const uncounted = report(book, { links: pathLinks([]), words: () => undefined });
   assert.deepEqual(
     uncounted.lines.map((line) => line.kind),
     Array.from({ length: 8 }, (_, at) => (at === 0 || at === 3 ? "generated" : "missing")),
@@ -66,10 +66,10 @@ test("word counts come from the notes, and an entry with no note has none", asyn
 });
 
 test("every property orca owns is a field, and an emptied one comes off the note", async () => {
-  const held = await model();
+  const opened = await model();
   const vaulted = await counting();
 
-  const before = report({ path: BOOK, name: "Pride and Prejudice", model: held }, vaulted);
+  const before = report({ path: BOOK, name: "Pride and Prejudice", model: opened }, vaulted);
   assert.deepEqual(
     before.fields.map((field) => [field.key, field.value]),
     [
@@ -83,7 +83,7 @@ test("every property orca owns is a field, and an emptied one comes off the note
     ],
   );
 
-  const edited = setField(setField(held, "publisher", "Whitehall Press, London"), "series", "");
+  const edited = setField(setField(opened, "publisher", "Whitehall Press, London"), "series", "");
   const after = report({ path: BOOK, name: "Pride and Prejudice", model: edited }, vaulted);
   assert.deepEqual(
     after.fields.map((field) => [field.key, field.value]),
@@ -101,10 +101,10 @@ test("every property orca owns is a field, and an emptied one comes off the note
   assert.match(writeModel(edited), /\npublisher: Whitehall Press, London\n/);
   assert.doesNotMatch(writeModel(edited), /\nseries:/);
   // The edit is to the properties alone.
-  assert.equal(edited.order, held.order);
+  assert.equal(edited.order, opened.order);
   // A note with no title is named after itself.
   const untitled = report(
-    { path: BOOK, name: "PP draft", model: setField(held, "title", "") },
+    { path: BOOK, name: "PP draft", model: setField(opened, "title", "") },
     vaulted,
   );
   assert.equal(untitled.name, "PP draft");
@@ -112,7 +112,7 @@ test("every property orca owns is a field, and an emptied one comes off the note
 });
 
 test("page ranges come from a run's own pages, and an entry it has not reached has none", async () => {
-  const held = { path: BOOK, name: "PP draft", model: await model() };
+  const book = { path: BOOK, name: "PP draft", model: await model() };
 
   // The 7 present sections' ids, in reading order: the missing
   // "Chapter Four" got none, and the run has not reached
@@ -127,7 +127,7 @@ test("page ranges come from a run's own pages, and an entry it has not reached h
     { number: 6, side: "verso", width: 1, height: 1, sections: [83], items: [] },
   ];
 
-  const made = report(held, await counting(), pages);
+  const made = report(book, await counting(), pages);
 
   assert.deepEqual(
     made.lines.map((line) => [line.name, line.pages]),
@@ -144,7 +144,7 @@ test("page ranges come from a run's own pages, and an entry it has not reached h
   );
 
   // No run at all names no range, generated sections included.
-  const before = report(held, await counting());
+  const before = report(book, await counting());
   assert.ok(before.lines.every((line) => line.pages === undefined));
 });
 

@@ -91,9 +91,9 @@ export class NavigatorView extends ItemView {
     this.registerEvent(
       metadataCache.on("changed", (file, _data, cache) => {
         const properties = cache.frontmatter;
-        const held =
+        const isBookNote =
           properties !== undefined && bookFormat(properties) !== undefined;
-        if (held || this.shelved.has(file.path)) again();
+        if (isBookNote || this.shelved.has(file.path)) again();
       }),
     );
     // The highlight follows the active note. Nothing else here does:
@@ -414,16 +414,16 @@ export class NavigatorView extends ItemView {
 
   /** Picks a note from the vault and adds it to the book. */
   private pickNote(book: Shelved, heading: string | undefined): void {
-    const held = new Set(
+    const members = new Set(
       book.groups.flatMap((group) =>
         group.rows.flatMap((row) => (row.path === undefined ? [] : [row.path])),
       ),
     );
-    held.add(book.path);
+    members.add(book.path);
     pick(this.app, {
       items: this.app.vault
         .getMarkdownFiles()
-        .filter((note) => !held.has(note.path)),
+        .filter((note) => !members.has(note.path)),
       label: (note) => note.path,
       placeholder: `Add a note to ${book.name}`,
       chose: (note) => {

@@ -9,14 +9,14 @@ import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Clock } from "@/engine/loop";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
-import { Setter, type Progress, type Setting } from "@/ui/setter";
+import { Composer, type Progress, type Composing } from "@/ui/composer";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
 
 const BOOK = "Pride and Prejudice.md";
 
-/** The pages each section of the fake book is laid out to. */
+/** The pages each section of the fake book is typeset to. */
 const SPREAD = 2;
 
 /**
@@ -74,7 +74,7 @@ class FakeClient implements EngineClient {
 }
 
 /** A client that holds its replies from the moment the test says so. */
-class HeldClient extends FakeClient {
+class PausedClient extends FakeClient {
   private waiting: (() => void)[] | undefined;
 
   /** Holds every reply from here on. */
@@ -82,16 +82,16 @@ class HeldClient extends FakeClient {
     this.waiting = [];
   }
 
-  /** The replies held back so far. */
+  /** The replies paused so far. */
   get holding(): number {
     return this.waiting?.length ?? 0;
   }
 
-  /** Lets every reply held since then run. */
+  /** Lets every reply paused since then run. */
   release(): void {
-    const held = this.waiting ?? [];
+    const paused = this.waiting ?? [];
     this.waiting = undefined;
-    for (const resume of held) resume();
+    for (const resume of paused) resume();
   }
 
   override async preview(
@@ -137,7 +137,7 @@ function faces(): FaceSet {
   return { add: () => Promise.resolve() };
 }
 
-async function setting(client: EngineClient): Promise<Setting> {
+async function setting(client: EngineClient): Promise<Composing> {
   const paths = (await vault.list("/")).files;
   return {
     model: async (at) => readModel(await readText(vault, at)),
@@ -151,17 +151,17 @@ async function setting(client: EngineClient): Promise<Setting> {
 
 test("a book is set from its reading order, and every section keeps its folios", async () => {
   const client = new FakeClient();
-  const setter = new Setter(await setting(client));
+  const composer = new Composer(await setting(client));
 
-  const laid = await setter.open(BOOK);
+  const book = await composer.open(BOOK);
 
-  assert.equal(laid.name, "Pride and Prejudice");
-  assert.equal(laid.sections.length, 8);
+  assert.equal(book.name, "Pride and Prejudice");
+  assert.equal(book.sections.length, 8);
   // The fixture names a chapter the vault does not have, so the book
   // is set without it and it has no folios of its own.
-  assert.deepEqual(laid.ranges.get(5), { first: 11, last: 12 });
-  assert.equal(laid.ranges.get(6), undefined);
-  assert.deepEqual(laid.ranges.get(7), { first: 13, last: 14 });
+  assert.deepEqual(book.ranges.get(5), { first: 11, last: 12 });
+  assert.equal(book.ranges.get(6), undefined);
+  assert.deepEqual(book.ranges.get(7), { first: 13, last: 14 });
   // The whole book comes back once, because a section's id says where
   // it falls only against every other id in the book.
   assert.deepEqual(client.ranges.at(-1), { first: 0, count: 14 });
@@ -169,10 +169,10 @@ test("a book is set from its reading order, and every section keeps its folios",
 
 test("a book being set reports the sections it has read and the entry it opens at", async () => {
   const client = new FakeClient();
-  const setter = new Setter(await setting(client));
+  const composer = new Composer(await setting(client));
   const told: Progress[] = [];
 
-  await setter.open(BOOK, {
+  await composer.open(BOOK, {
     note: "Chapter Twelve.md",
     told: (at) => told.push(at),
   });
@@ -189,33 +189,33 @@ test("a book being set reports the sections it has read and the entry it opens a
   assert.equal(last.opening, "Chapter Twelve");
 });
 
-test("a book already set is handed back rather than laid out again", async () => {
+test("a book already set is handed back rather than typeset again", async () => {
   const client = new FakeClient();
-  const setter = new Setter(await setting(client));
+  const composer = new Composer(await setting(client));
 
-  const laid = await setter.open(BOOK);
-  assert.equal(await setter.open(BOOK), laid);
+  const book = await composer.open(BOOK);
+  assert.equal(await composer.open(BOOK), book);
   assert.equal(client.rendered.length, 1);
 
-  setter.forget(BOOK);
-  assert.notEqual(await setter.open(BOOK), laid);
+  composer.forget(BOOK);
+  assert.notEqual(await composer.open(BOOK), book);
   assert.equal(client.rendered.length, 2);
 });
 
 test("a burst of keystrokes leaves the pages last painted up until the render lands", async () => {
   const clock = new Steps();
-  const client = new HeldClient();
-  const setter = new Setter(await setting(client), clock);
-  const laid = await setter.open(BOOK);
-  const laying = client.rendered.length;
+  const client = new PausedClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+  const renders = client.rendered.length;
   let painted = 0;
-  laid.watch(() => {
+  book.watch(() => {
     painted += 1;
   });
 
   client.hold();
   for (const text of ["It i", "It is", "It is a"]) {
-    setter.retype(BOOK, "Chapter Twelve.md", text);
+    composer.retype(BOOK, "Chapter Twelve.md", text);
   }
   await drain();
   clock.tick();
@@ -230,7 +230,7 @@ test("a burst of keystrokes leaves the pages last painted up until the render la
   client.release();
   await drain();
 
-  assert.equal(client.rendered.length, laying + 1);
+  assert.equal(client.rendered.length, renders + 1);
   assert.deepEqual(client.rendered.at(-1), [
     { op: "edit", name: "Chapter Twelve.md", text: "It is a" },
   ]);
@@ -240,18 +240,18 @@ test("a burst of keystrokes leaves the pages last painted up until the render la
 test("a chapter the engine already has the words of is no edit at all", async () => {
   const clock = new Steps();
   const client = new FakeClient();
-  const setter = new Setter(await setting(client), clock);
-  await setter.open(BOOK);
-  const laying = client.rendered.length;
+  const composer = new Composer(await setting(client), clock);
+  await composer.open(BOOK);
+  const renders = client.rendered.length;
 
   // The note is written to disk after the keystrokes that made it, and
   // it arrives back as the text the engine was already sent.
-  setter.retype(BOOK, "Chapter Twelve.md", await readText(vault, "Chapter Twelve.md"));
+  composer.retype(BOOK, "Chapter Twelve.md", await readText(vault, "Chapter Twelve.md"));
   await drain();
   clock.tick();
   await drain();
 
-  assert.equal(client.rendered.length, laying);
+  assert.equal(client.rendered.length, renders);
 });
 
 // What this tier does not cover: the engine's own pagination, so the

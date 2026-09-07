@@ -30,7 +30,7 @@ import {
   type ViewMode,
   type Viewing,
 } from "@/ui/page";
-import type { Laid, Progress, Setter } from "@/ui/setter";
+import type { Composer, Progress, Typeset } from "@/ui/composer";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -74,7 +74,7 @@ const VIEWS: { mode: ViewMode; icon: string; label: string }[] = [
  * page-throughs, each turning by what it shows. The painter settles
  * what is on a page, so its markup goes into the surface in one write.
  *
- * A chapter laid out by itself is a different chapter, so a preview
+ * A chapter typeset by itself is a different chapter, so a preview
  * opened from a note is the whole book turned to that chapter's first
  * page.
  */
@@ -89,7 +89,7 @@ export class PreviewView extends ItemView {
   private on: HTMLButtonElement | undefined;
   private edit: HTMLElement | undefined;
   private session: Session | undefined;
-  private laid: Laid | undefined;
+  private typeset: Typeset | undefined;
   private readonly switches = new Map<ViewMode, HTMLButtonElement>();
   private watching: ResizeObserver | undefined;
   /** The book note this preview reads, and the note it opened at. */
@@ -103,7 +103,7 @@ export class PreviewView extends ItemView {
   /** The chapters the book set, in reading order. */
   private turns: Chapter[] = [];
   /** The chapter the control names, by its place in the reading order. */
-  private held: number | undefined;
+  private named: number | undefined;
   /** The first page being read, counting from 0. */
   private at = 0;
   /** The pages the painted span put on screen. */
@@ -124,7 +124,7 @@ export class PreviewView extends ItemView {
 
   constructor(
     leaf: WorkspaceLeaf,
-    private readonly setter: Setter,
+    private readonly composer: Composer,
     private readonly handoff: PreviewHandoff,
     /** Writes the pages being read into the window's status bar. */
     private readonly reading: (text: string | undefined) => void,
@@ -137,7 +137,7 @@ export class PreviewView extends ItemView {
   }
 
   override getDisplayText(): string {
-    return this.laid?.name ?? "Book";
+    return this.typeset?.name ?? "Book";
   }
 
   override getIcon(): string {
@@ -157,7 +157,7 @@ export class PreviewView extends ItemView {
     const changed = wanted.book !== this.state.book;
     this.state = wanted;
     this.attach();
-    if (changed) await this.lay();
+    if (changed) await this.compose();
     else if (wanted.note !== undefined) this.turnTo(wanted.note);
   }
 
@@ -190,7 +190,7 @@ export class PreviewView extends ItemView {
     // The workspace may have handed this leaf its state before the
     // chrome existed to draw it on, and a paint into a pane with no
     // surface is a paint nobody sees.
-    if (this.state.book !== undefined) await this.lay();
+    if (this.state.book !== undefined) await this.compose();
   }
 
   override onClose(): Promise<void> {
@@ -205,7 +205,7 @@ export class PreviewView extends ItemView {
     this.total = undefined;
     this.chapter = undefined;
     this.turns = [];
-    this.held = undefined;
+    this.named = undefined;
     this.reading(undefined);
     this.back = undefined;
     this.on = undefined;
@@ -215,7 +215,7 @@ export class PreviewView extends ItemView {
     // The session belongs to the book, not to this leaf, so closing the
     // leaf costs the next one no second layout.
     this.session = undefined;
-    this.laid = undefined;
+    this.typeset = undefined;
     this.contentEl.empty();
     return Promise.resolve();
   }
@@ -226,13 +226,13 @@ export class PreviewView extends ItemView {
    * name here, so the link is chapter by chapter.
    */
   turnTo(note: string): void {
-    const laid = this.laid;
-    if (laid === undefined) return;
-    const at = sectionOf(laid.sections, note);
+    const typeset = this.typeset;
+    if (typeset === undefined) return;
+    const at = sectionOf(typeset.sections, note);
     if (at === undefined) return;
-    const range = laid.ranges.get(at);
+    const range = typeset.ranges.get(at);
     if (range === undefined) return;
-    if (sectionAt(laid.ranges, this.at + 1) === at) return;
+    if (sectionAt(typeset.ranges, this.at + 1) === at) return;
     this.showing = note;
     this.state = { ...this.state, note };
     void this.turn(range.first - 1);
@@ -243,16 +243,16 @@ export class PreviewView extends ItemView {
    * at either end of the book.
    */
   chapterBy(step: number): Chapter | undefined {
-    return stepChapter(this.turns, this.held, step);
+    return stepChapter(this.turns, this.named, step);
   }
 
   /**
-   * Turns to a chapter's first page. The chapter is held from the turn,
+   * Turns to a chapter's first page. The chapter is kept from the turn,
    * so a spread or a screenful that also carries the one before it is
    * still named for the one the reader asked for.
    */
   turnToChapter(chapter: Chapter): void {
-    this.held = chapter.at;
+    this.named = chapter.at;
     void this.turn(chapter.first - 1);
   }
 
@@ -344,13 +344,13 @@ export class PreviewView extends ItemView {
   }
 
   /** Sets the book this preview was opened on, reporting what it waits for. */
-  private async lay(): Promise<void> {
+  private async compose(): Promise<void> {
     const book = this.state.book;
     this.unwatch?.();
     this.unwatch = undefined;
     this.session = undefined;
-    this.laid = undefined;
-    this.held = undefined;
+    this.typeset = undefined;
+    this.named = undefined;
     this.showing = this.state.note;
     if (book === undefined) {
       this.report("No book is open");
@@ -358,22 +358,22 @@ export class PreviewView extends ItemView {
     }
     const opening = (this.opening += 1);
     try {
-      const laid = await this.setter.open(book, {
+      const typeset = await this.composer.open(book, {
         note: this.state.note,
         told: (at) => {
           if (opening === this.opening) this.setting(at);
         },
       });
       if (opening !== this.opening) return;
-      this.laid = laid;
-      this.session = laid.session;
+      this.typeset = typeset;
+      this.session = typeset.session;
       // A render replaces the pages under the reader without moving
       // them: the span painted is the span they were already on.
-      this.unwatch = laid.watch(() => {
+      this.unwatch = typeset.watch(() => {
         void this.turn(this.at);
       });
-      this.offers(chapters(laid.sections, laid.ranges));
-      await this.turn(this.opensAt(laid));
+      this.offers(chapters(typeset.sections, typeset.ranges));
+      await this.turn(this.opensAt(typeset));
     } catch (cause) {
       if (opening !== this.opening) return;
       this.report(
@@ -385,10 +385,10 @@ export class PreviewView extends ItemView {
   }
 
   /** The page the book opens at: the first of the chapter it was toggled from. */
-  private opensAt(laid: Laid): number {
+  private opensAt(typeset: Typeset): number {
     const note = this.state.note;
-    const at = note === undefined ? undefined : sectionOf(laid.sections, note);
-    const range = at === undefined ? undefined : laid.ranges.get(at);
+    const at = note === undefined ? undefined : sectionOf(typeset.sections, note);
+    const range = at === undefined ? undefined : typeset.ranges.get(at);
     return range === undefined ? 0 : range.first - 1;
   }
 
@@ -559,11 +559,11 @@ export class PreviewView extends ItemView {
    * a blank verso, is named for the chapter that opened before it.
    */
   private names(span: Range): void {
-    const laid = this.laid;
-    if (laid === undefined) return;
-    this.held = sectionOn(laid.ranges, span, this.held);
+    const typeset = this.typeset;
+    if (typeset === undefined) return;
+    this.named = sectionOn(typeset.ranges, span, this.named);
     if (this.chapter === undefined) return;
-    this.chapter.value = this.held === undefined ? "" : String(this.held);
+    this.chapter.value = this.named === undefined ? "" : String(this.named);
   }
 
   /**
@@ -582,10 +582,10 @@ export class PreviewView extends ItemView {
 
   /** The note the page at this folio reads as, for a folio one covers. */
   private noteAt(folio: number): string | undefined {
-    const laid = this.laid;
-    if (laid === undefined) return undefined;
-    const at = sectionAt(laid.ranges, folio);
-    const section = at === undefined ? undefined : laid.sections[at];
+    const typeset = this.typeset;
+    if (typeset === undefined) return undefined;
+    const at = sectionAt(typeset.ranges, folio);
+    const section = at === undefined ? undefined : typeset.sections[at];
     return section?.kind === "note" ? section.path : undefined;
   }
 
@@ -613,7 +613,7 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Draws what the book is waiting on. A whole book has to be laid out
+   * Draws what the book is waiting on. A whole book has to be typeset
    * before any page of it is right, and the first one has nothing
    * cached, so the wait gets a state rather than an empty pane.
    */
@@ -621,23 +621,23 @@ export class PreviewView extends ItemView {
     const well = this.well;
     if (well === undefined) return;
     this.message?.remove();
-    const held = well.createDiv({ cls: "orca-preview-setting" });
-    held.dataset["testid"] = "orca-setting";
-    setIcon(held.createDiv({ cls: "orca-preview-setting-icon" }), "book");
-    const name = held.createDiv({ cls: "orca-preview-setting-name" });
+    const banner = well.createDiv({ cls: "orca-preview-setting" });
+    banner.dataset["testid"] = "orca-setting";
+    setIcon(banner.createDiv({ cls: "orca-preview-setting-icon" }), "book");
+    const name = banner.createDiv({ cls: "orca-preview-setting-name" });
     name.append("Setting ", name.createEl("i", { text: progress.name }));
-    const bar = held.createDiv({ cls: "orca-preview-progress" });
+    const bar = banner.createDiv({ cls: "orca-preview-progress" });
     const fill = bar.createDiv({ cls: "orca-preview-progress-fill" });
     const done = progress.of === 0 ? 0 : progress.read / progress.of;
     fill.style.width = `${String(Math.round(done * 100))}%`;
-    const note = held.createDiv({ cls: "orca-preview-setting-note" });
+    const note = banner.createDiv({ cls: "orca-preview-setting-note" });
     note.append(`${String(progress.read)} chapters of ${String(progress.of)}`);
     if (progress.opening !== undefined) {
       note.createEl("br");
       note.append(`it will open at ${progress.opening}`);
     }
-    well.prepend(held);
-    this.message = held;
+    well.prepend(banner);
+    this.message = banner;
   }
 
   /** Puts a message in the well in place of the pages. */
@@ -655,10 +655,10 @@ export class PreviewView extends ItemView {
 /** The state a leaf was opened with, as much of it as a preview reads. */
 function readState(state: unknown): PreviewState {
   if (typeof state !== "object" || state === null) return {};
-  const held = state as Record<string, unknown>;
+  const raw = state as Record<string, unknown>;
   const made: PreviewState = {};
-  if (typeof held["book"] === "string") made.book = held["book"];
-  if (typeof held["note"] === "string") made.note = held["note"];
-  if (held["linked"] === true) made.linked = true;
+  if (typeof raw["book"] === "string") made.book = raw["book"];
+  if (typeof raw["note"] === "string") made.note = raw["note"];
+  if (raw["linked"] === true) made.linked = true;
   return made;
 }
