@@ -193,11 +193,11 @@ underneath them.
 production bundle, and the `e2e` job runs the suite on both platforms.
 
 1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier. The
-   lint pass is `scripts/lint.mjs`, and it holds five rules: nothing
+   lint pass is `scripts/lint.mjs`, and it holds six rules: nothing
    outside `ui` imports `ui`, only `ui` imports Obsidian, an import
    inside `src` uses the `@/` alias, a doc comment opens with a name
-   rather than a question word, and a test file ends on what it does
-   not cover
+   rather than a question word, a test file ends on what it does not
+   cover, and no spec waits on a clock
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned
