@@ -9,7 +9,7 @@
  */
 
 import type { Page } from "fleuron";
-import type { Section } from "@/book/order";
+import { entryName, type Section } from "@/book/order";
 
 /** The first and last folio a section's content lands on. */
 export interface Range {
@@ -87,4 +87,72 @@ export function sectionAt(
     opened = range.first;
   }
   return found;
+}
+
+/**
+ * The section a span of pages is at.
+ *
+ * A spread or a screenful holds several sections, so the one named is
+ * the one whose opening is on the span, and the section the reader
+ * turned to wins wherever on the span it opens. A span that opens
+ * nothing is inside a section, and reads as that one.
+ */
+export function sectionOn(
+  ranges: Map<number, Range>,
+  span: Range,
+  held: number | undefined,
+): number | undefined {
+  let first: number | undefined;
+  let opened = 0;
+  for (const [at, range] of ranges) {
+    if (range.first < span.first || range.first > span.last) continue;
+    if (at === held) return held;
+    if (first !== undefined && range.first > opened) continue;
+    first = at;
+    opened = range.first;
+  }
+  if (first !== undefined) return first;
+  const on = held === undefined ? undefined : ranges.get(held);
+  const covers =
+    on !== undefined && on.first <= span.last && on.last >= span.first;
+  return covers ? held : sectionAt(ranges, span.first);
+}
+
+/** A chapter a reader can turn to: what it is called, and where it opens. */
+export interface Chapter {
+  /** Its place in the reading order. */
+  at: number;
+  name: string;
+  /** The folio it opens on. */
+  first: number;
+}
+
+/**
+ * Every section a reader can turn to, in reading order. A section the
+ * run laid no page for is left out, so what a reader is offered is
+ * what the book set.
+ */
+export function chapters(
+  sections: Section[],
+  ranges: Map<number, Range>,
+): Chapter[] {
+  return sections.flatMap((section, at) => {
+    const range = ranges.get(at);
+    if (range === undefined) return [];
+    return [{ at, name: entryName(section.entry), first: range.first }];
+  });
+}
+
+/**
+ * The chapter `step` places along from the one at `at`, or nothing at
+ * either end of the book, which is where the turn commands go quiet.
+ */
+export function stepChapter(
+  chapters: Chapter[],
+  at: number | undefined,
+  step: number,
+): Chapter | undefined {
+  const here = chapters.findIndex((chapter) => chapter.at === at);
+  if (here < 0) return undefined;
+  return chapters[here + step];
 }

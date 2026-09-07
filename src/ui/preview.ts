@@ -6,7 +6,15 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import { BookError } from "@/book/note";
-import { sectionAt, sectionOf } from "@/book/pages";
+import {
+  chapters,
+  sectionAt,
+  sectionOf,
+  sectionOn,
+  stepChapter,
+  type Chapter,
+  type Range,
+} from "@/book/pages";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { copiedText, type SelectionLine } from "@/ui/copy";
@@ -76,6 +84,7 @@ export class PreviewView extends ItemView {
   private message: HTMLElement | undefined;
   private folio: HTMLInputElement | undefined;
   private total: HTMLElement | undefined;
+  private chapter: HTMLSelectElement | undefined;
   private back: HTMLButtonElement | undefined;
   private on: HTMLButtonElement | undefined;
   private edit: HTMLElement | undefined;
@@ -91,8 +100,14 @@ export class PreviewView extends ItemView {
   private opening = 0;
   /** The view the book is being read in. */
   private mode: ViewMode = "single";
+  /** The chapters the book set, in reading order. */
+  private turns: Chapter[] = [];
+  /** The chapter the control names, by its place in the reading order. */
+  private held: number | undefined;
   /** The first page being read, counting from 0. */
   private at = 0;
+  /** The pages the painted span put on screen. */
+  private count = 1;
   /** The book's length in pages, as the last painted span counted it. */
   private pages = 0;
   /** The pages the grid fits on screen, as the well was last measured. */
@@ -184,6 +199,9 @@ export class PreviewView extends ItemView {
     this.message = undefined;
     this.folio = undefined;
     this.total = undefined;
+    this.chapter = undefined;
+    this.turns = [];
+    this.held = undefined;
     this.reading(undefined);
     this.back = undefined;
     this.on = undefined;
@@ -216,6 +234,24 @@ export class PreviewView extends ItemView {
     void this.turn(range.first - 1);
   }
 
+  /**
+   * The chapter `step` places along from the one on screen, or nothing
+   * at either end of the book.
+   */
+  chapterBy(step: number): Chapter | undefined {
+    return stepChapter(this.turns, this.held, step);
+  }
+
+  /**
+   * Turns to a chapter's first page. The chapter is held from the turn,
+   * so a spread or a screenful that also carries the one before it is
+   * still named for the one the reader asked for.
+   */
+  turnToChapter(chapter: Chapter): void {
+    this.held = chapter.at;
+    void this.turn(chapter.first - 1);
+  }
+
   /** Draws the toolbar, the well the pages sit in, and the status line. */
   private chrome(pane: HTMLElement): void {
     const bar = pane.createDiv({ cls: "orca-preview-bar" });
@@ -224,6 +260,14 @@ export class PreviewView extends ItemView {
     views.setAttribute("aria-label", "View");
     for (const view of VIEWS) this.switchesTo(views, view);
     bar.createDiv({ cls: "orca-preview-spacer" });
+
+    const chapter = bar.createEl("select", {
+      cls: "dropdown orca-preview-chapter",
+    });
+    chapter.setAttribute("aria-label", "Chapter");
+    chapter.dataset["testid"] = "orca-chapter";
+    this.chapter = chapter;
+    bar.createDiv({ cls: "orca-preview-divider" });
 
     this.back = this.turnsTo(bar, "chevron-left", "Previous page", () =>
       previousPage(this.viewing()),
@@ -251,6 +295,10 @@ export class PreviewView extends ItemView {
 
     this.registerDomEvent(folio, "change", () => {
       this.typed(folio.value);
+    });
+    this.registerDomEvent(chapter, "change", () => {
+      const to = this.turns.find((turn) => String(turn.at) === chapter.value);
+      if (to !== undefined) this.turnToChapter(to);
     });
     this.registerDomEvent(this.containerEl, "keydown", (event) => {
       // The folio is a field, so Home and End belong to its caret.
@@ -296,6 +344,7 @@ export class PreviewView extends ItemView {
     const book = this.state.book;
     this.session = undefined;
     this.laid = undefined;
+    this.held = undefined;
     this.showing = this.state.note;
     if (book === undefined) {
       this.report("No book is open");
@@ -312,6 +361,7 @@ export class PreviewView extends ItemView {
       if (opening !== this.opening) return;
       this.laid = laid;
       this.session = laid.session;
+      this.offers(chapters(laid.sections, laid.ranges));
       await this.turn(this.opensAt(laid));
     } catch (cause) {
       if (opening !== this.opening) return;
@@ -329,6 +379,21 @@ export class PreviewView extends ItemView {
     const at = note === undefined ? undefined : sectionOf(laid.sections, note);
     const range = at === undefined ? undefined : laid.ranges.get(at);
     return range === undefined ? 0 : range.first - 1;
+  }
+
+  /**
+   * Fills the chapter control with what the book set. A book of one
+   * section has nowhere to turn to, so the control goes quiet.
+   */
+  private offers(turns: Chapter[]): void {
+    this.turns = turns;
+    const chapter = this.chapter;
+    if (chapter === undefined) return;
+    chapter.empty();
+    for (const turn of turns) {
+      chapter.createEl("option", { text: turn.name, value: String(turn.at) });
+    }
+    chapter.disabled = turns.length < 2;
   }
 
   /** A button that reads the book in one of the three views. */
@@ -458,8 +523,9 @@ export class PreviewView extends ItemView {
   private settle(at: number, pages: number, count: number): void {
     this.at = at;
     this.pages = pages;
+    this.count = Math.max(count, 1);
     const first = at + 1;
-    const last = at + Math.max(count, 1);
+    const last = at + this.count;
     if (this.folio !== undefined) this.folio.value = String(first);
     this.total?.setText(`of ${String(pages)}`);
     this.reading(
@@ -473,7 +539,20 @@ export class PreviewView extends ItemView {
     }
     if (this.back !== undefined) this.back.disabled = at === 0;
     if (this.on !== undefined) this.on.disabled = last >= pages;
+    this.names({ first, last });
     this.reads(first);
+  }
+
+  /**
+   * Names the chapter the span is at. A page no section covers, such as
+   * a blank verso, is named for the chapter that opened before it.
+   */
+  private names(span: Range): void {
+    const laid = this.laid;
+    if (laid === undefined) return;
+    this.held = sectionOn(laid.ranges, span, this.held);
+    if (this.chapter === undefined) return;
+    this.chapter.value = this.held === undefined ? "" : String(this.held);
   }
 
   /**
