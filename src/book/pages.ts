@@ -89,6 +89,35 @@ export function sectionAt(
   return found;
 }
 
+/**
+ * The section a span of pages is at.
+ *
+ * A spread or a screenful holds several sections, so the one named is
+ * the one whose opening is on the span, and the section the reader
+ * turned to wins wherever on the span it opens. A span that opens
+ * nothing is inside a section, and reads as that one.
+ */
+export function sectionOn(
+  ranges: Map<number, Range>,
+  span: Range,
+  held: number | undefined,
+): number | undefined {
+  let first: number | undefined;
+  let opened = 0;
+  for (const [at, range] of ranges) {
+    if (range.first < span.first || range.first > span.last) continue;
+    if (at === held) return held;
+    if (first !== undefined && range.first > opened) continue;
+    first = at;
+    opened = range.first;
+  }
+  if (first !== undefined) return first;
+  const on = held === undefined ? undefined : ranges.get(held);
+  const covers =
+    on !== undefined && on.first <= span.last && on.last >= span.first;
+  return covers ? held : sectionAt(ranges, span.first);
+}
+
 /** A chapter a reader can turn to: what it is called, and where it opens. */
 export interface Chapter {
   /** Its place in the reading order. */

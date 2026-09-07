@@ -6,6 +6,7 @@ import {
   pageRanges,
   sectionAt,
   sectionOf,
+  sectionOn,
   stepChapter,
 } from "@/book/pages";
 import type { Section } from "@/book/order";
@@ -27,7 +28,14 @@ function named(alias: string): Section {
 
 /** A page naming the section ids it holds content from. */
 function page(number: number, sections: number[]): Page {
-  return { number, side: "recto", width: 432, height: 648, sections, items: [] };
+  return {
+    number,
+    side: "recto",
+    width: 432,
+    height: 648,
+    sections,
+    items: [],
+  };
 }
 
 test("a section's range is the first and last folio its id lands on", () => {
@@ -142,6 +150,25 @@ test("a chapter turn steps along the reading order and stops at either end", () 
   assert.equal(stepChapter(offered, undefined, 1), undefined);
 });
 
+test("a span is named for the section that opens on it, and holds the one turned to", () => {
+  const ranges = new Map([
+    [0, { first: 1, last: 8 }],
+    [1, { first: 9, last: 20 }],
+    [2, { first: 21, last: 30 }],
+  ]);
+
+  // A spread that opens a section is at that section, not at the one
+  // ending on the verso beside it.
+  assert.equal(sectionOn(ranges, { first: 8, last: 9 }, 0), 1);
+  // A screenful holding several is at the first that opens on it,
+  // until the reader turns to one of the others.
+  assert.equal(sectionOn(ranges, { first: 1, last: 30 }, undefined), 0);
+  assert.equal(sectionOn(ranges, { first: 1, last: 30 }, 2), 2);
+  // A span that opens nothing is inside a section, and reads as it.
+  assert.equal(sectionOn(ranges, { first: 12, last: 13 }, 1), 1);
+  assert.equal(sectionOn(ranges, { first: 12, last: 13 }, undefined), 1);
+});
+
 test("a page no section covers is named for the chapter that opened before it", () => {
   const sections = [named("One"), named("Two")];
   // Two opens recto, so the verso before it is blank and carries no
@@ -152,12 +179,17 @@ test("a page no section covers is named for the chapter that opened before it", 
   ]);
   const offered = chapters(sections, ranges);
 
-  assert.equal(sectionAt(ranges, 4), 0);
-  assert.deepEqual(stepChapter(offered, sectionAt(ranges, 4), 1), {
-    at: 1,
-    name: "Two",
-    first: 5,
-  });
+  // Page 4 is the blank verso: no section covers it, and the reader is
+  // still in the one that opened before it.
+  assert.equal(sectionOn(ranges, { first: 4, last: 4 }, 0), 0);
+  assert.deepEqual(
+    stepChapter(offered, sectionOn(ranges, { first: 4, last: 4 }, 0), 1),
+    {
+      at: 1,
+      name: "Two",
+      first: 5,
+    },
+  );
 });
 
 // What this tier does not cover: a run whose section ids do not run in

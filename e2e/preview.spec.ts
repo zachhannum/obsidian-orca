@@ -1,3 +1,4 @@
+import { NEXT_CHAPTER, PREVIOUS_CHAPTER } from "./harness/book";
 import { expect, test } from "./harness/test";
 
 /** The pages the fixture book sets to. */
@@ -8,6 +9,16 @@ const OPENING = "Pride and Prejudice";
 
 /** The page the fixture's one chapter opens on. */
 const CHAPTER = 11;
+
+/** The chapter that page opens, as the toolbar names it. */
+const CHAPTER_NAME = "Chapter Twelve";
+
+/** The sections either end of the book, as the toolbar names them. */
+const FIRST = "Title page";
+const LAST = "Acknowledgements";
+
+/** The page the fixture's last section opens on. */
+const BACK = 13;
 
 test("the ribbon sets the book and paints its first page", async ({ book }) => {
   await book.open();
@@ -226,4 +237,71 @@ test("a screen reader reads a page: it is named, and the glyphs stay out of the 
   await expect(
     book.page.locator("text:not([data-selection-line])").first(),
   ).toHaveAttribute("aria-hidden", "true");
+});
+
+test("the toolbar names the chapter on screen, and turns the book to another", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+
+  // The book opens on its title page, which is a section like any
+  // other, so the control names it.
+  await expect(book.chapterName).toHaveText(FIRST);
+  expect(await book.offered()).toContain(CHAPTER_NAME);
+
+  await book.choose(CHAPTER_NAME);
+
+  await expect(book.surface).toHaveAttribute("data-first", String(CHAPTER));
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+});
+
+test("next chapter and previous chapter turn the book, and go quiet at the ends", async ({
+  book,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CHAPTER_NAME);
+  await expect(book.surface).toHaveAttribute("data-first", String(CHAPTER));
+
+  await obsidian.command(NEXT_CHAPTER);
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+  await expect(book.chapterName).toHaveText(LAST);
+
+  // The last section has nothing after it, so the command is not there
+  // to run.
+  expect(await obsidian.offers(NEXT_CHAPTER)).toBe(false);
+
+  await obsidian.command(PREVIOUS_CHAPTER);
+  await expect(book.surface).toHaveAttribute("data-first", String(CHAPTER));
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+});
+
+test("paging out of a chapter renames the control, in all three views", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+
+  await book.type(String(CHAPTER));
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+  await book.next.click();
+  await book.next.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+  await expect(book.chapterName).toHaveText(LAST);
+
+  await book.show("Spread", "spread");
+  await book.type(String(CHAPTER));
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+  await book.next.click();
+  await expect(book.chapterName).toHaveText(LAST);
+
+  // The grid fits the whole fixture on one screen, so there is no
+  // second screenful to page into, and the turn is a chapter's.
+  await book.show("Grid", "grid");
+  await book.choose(CHAPTER_NAME);
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+  await book.choose(FIRST);
+  await expect(book.chapterName).toHaveText(FIRST);
 });

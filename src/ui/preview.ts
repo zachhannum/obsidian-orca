@@ -10,8 +10,10 @@ import {
   chapters,
   sectionAt,
   sectionOf,
+  sectionOn,
   stepChapter,
   type Chapter,
+  type Range,
 } from "@/book/pages";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
@@ -100,6 +102,8 @@ export class PreviewView extends ItemView {
   private mode: ViewMode = "single";
   /** The chapters the book set, in reading order. */
   private turns: Chapter[] = [];
+  /** The chapter the control names, by its place in the reading order. */
+  private held: number | undefined;
   /** The first page being read, counting from 0. */
   private at = 0;
   /** The pages the painted span put on screen. */
@@ -197,6 +201,7 @@ export class PreviewView extends ItemView {
     this.total = undefined;
     this.chapter = undefined;
     this.turns = [];
+    this.held = undefined;
     this.reading(undefined);
     this.back = undefined;
     this.on = undefined;
@@ -234,23 +239,17 @@ export class PreviewView extends ItemView {
    * at either end of the book.
    */
   chapterBy(step: number): Chapter | undefined {
-    const laid = this.laid;
-    if (laid === undefined) return undefined;
-    return stepChapter(this.turns, sectionAt(laid.ranges, this.named()), step);
-  }
-
-  /** Turns to a chapter's first page. */
-  turnToChapter(chapter: Chapter): void {
-    void this.turn(chapter.first - 1);
+    return stepChapter(this.turns, this.held, step);
   }
 
   /**
-   * The folio the view is named for, which is the last one on screen. A
-   * spread that opens a chapter is at that chapter rather than at the
-   * one ending on the verso beside it.
+   * Turns to a chapter's first page. The chapter is held from the turn,
+   * so a spread or a screenful that also carries the one before it is
+   * still named for the one the reader asked for.
    */
-  private named(): number {
-    return this.at + this.count;
+  turnToChapter(chapter: Chapter): void {
+    this.held = chapter.at;
+    void this.turn(chapter.first - 1);
   }
 
   /** Draws the toolbar, the well the pages sit in, and the status line. */
@@ -345,6 +344,7 @@ export class PreviewView extends ItemView {
     const book = this.state.book;
     this.session = undefined;
     this.laid = undefined;
+    this.held = undefined;
     this.showing = this.state.note;
     if (book === undefined) {
       this.report("No book is open");
@@ -539,7 +539,7 @@ export class PreviewView extends ItemView {
     }
     if (this.back !== undefined) this.back.disabled = at === 0;
     if (this.on !== undefined) this.on.disabled = last >= pages;
-    this.names(last);
+    this.names({ first, last });
     this.reads(first);
   }
 
@@ -547,12 +547,12 @@ export class PreviewView extends ItemView {
    * Names the chapter the span is at. A page no section covers, such as
    * a blank verso, is named for the chapter that opened before it.
    */
-  private names(folio: number): void {
-    const chapter = this.chapter;
+  private names(span: Range): void {
     const laid = this.laid;
-    if (chapter === undefined || laid === undefined) return;
-    const at = sectionAt(laid.ranges, folio);
-    chapter.value = at === undefined ? "" : String(at);
+    if (laid === undefined) return;
+    this.held = sectionOn(laid.ranges, span, this.held);
+    if (this.chapter === undefined) return;
+    this.chapter.value = this.held === undefined ? "" : String(this.held);
   }
 
   /**

@@ -16,6 +16,10 @@ export const TO_THE_RIGHT = "orca:preview-to-the-right";
 /** The same split, run from the book's side. */
 export const TO_THE_LEFT = "orca:manuscript-to-the-left";
 
+/** The commands that turn the book a chapter at a time. */
+export const NEXT_CHAPTER = "orca:next-chapter";
+export const PREVIOUS_CHAPTER = "orca:previous-chapter";
+
 /** The item a chapter's own menu carries for that split. */
 export const SPLIT = "Open preview to the right";
 
@@ -47,6 +51,10 @@ export class Book {
   readonly page: Locator;
   /** The folio being read, which an author can type into. */
   readonly folio: Locator;
+  /** The chapter control, which names the chapter on screen. */
+  readonly chapter: Locator;
+  /** The name that control is showing. */
+  readonly chapterName: Locator;
   /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
@@ -67,6 +75,8 @@ export class Book {
     this.sheets = this.surface.locator(".orca-page");
     this.page = this.surface.locator("svg").first();
     this.folio = pane.getByTestId("orca-folio");
+    this.chapter = pane.getByTestId("orca-chapter");
+    this.chapterName = this.chapter.locator("option:checked");
     // The folio being read is Obsidian's own status bar item, outside
     // the pane, which is where the artboard draws it.
     this.status = obsidian.page.getByTestId("orca-status");
@@ -131,6 +141,16 @@ export class Book {
   async type(folio: string): Promise<void> {
     await this.folio.fill(folio);
     await this.folio.press("Enter");
+  }
+
+  /** Turns to a chapter by name, the way a reader picks one off the bar. */
+  async choose(name: string): Promise<void> {
+    await this.chapter.selectOption({ label: name });
+  }
+
+  /** Every chapter the control offers, in reading order. */
+  async offered(): Promise<string[]> {
+    return this.chapter.locator("option").allTextContents();
   }
 
   /** Presses a key at the page, which is what the page-through listens on. */

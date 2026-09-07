@@ -15,6 +15,10 @@ import type { App } from "obsidian";
 /** The two pieces of the app the API does not declare. */
 interface Commands {
   executeCommandById(id: string): boolean;
+  commands: Record<
+    string,
+    { checkCallback?: (checking: boolean) => boolean } | undefined
+  >;
 }
 
 interface Config {
@@ -158,6 +162,19 @@ export class Obsidian {
       if (!window.app.commands.executeCommandById(named)) {
         throw new Error(`no command called ${named}`);
       }
+    }, id);
+  }
+
+  /**
+   * Whether a command offers itself to be run, which is what greys it
+   * out of the palette. `executeCommandById` answers that it dispatched
+   * rather than that the command took it, so this asks the check.
+   */
+  async offers(id: string): Promise<boolean> {
+    return this.page.evaluate((named) => {
+      const found = window.app.commands.commands[named];
+      if (found === undefined) throw new Error(`no command called ${named}`);
+      return found.checkCallback?.(true) === true;
     }, id);
   }
 

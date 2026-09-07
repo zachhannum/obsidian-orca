@@ -269,7 +269,7 @@ export default class OrcaPlugin extends Plugin {
 
   /**
    * Turns the preview being read a chapter along. The command goes grey
-   * at either end of the book, and where no preview is being read.
+   * at either end of the book, and where no preview is open.
    */
   private turnsChapter(checking: boolean, step: number): boolean {
     const view = this.app.workspace.getActiveViewOfType(PreviewView);
