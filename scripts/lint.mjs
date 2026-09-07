@@ -27,8 +27,7 @@ const PUZZLE = /^(What|How|Which|Where|Who|The way)\b/;
 
 /**
  * The waits a spec may not take. The preview carries the generation it
- * painted and what that render cost, so an assertion waits on those; a
- * clock only tells a loaded runner from a fast one.
+ * painted and what that render cost, and an assertion waits on those.
  */
 const CLOCKS = [
   [/\bwaitForTimeout\b/, "`waitForTimeout`"],
@@ -158,8 +157,8 @@ function moduleOf(file) {
 }
 
 /**
- * The file with its comments blanked, line for line, so a rule reading
- * it never reads what a comment says about the code.
+ * The file with its comments blanked, line for line, so a rule reads the
+ * code and never a comment about it.
  */
 function blanked(text) {
   return text

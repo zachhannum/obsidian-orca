@@ -125,13 +125,12 @@ test("no assertion in a spec waits on a clock", () => {
     waited("await expect(book.status).toBeVisible({ timeout: 5 });\n"),
     ["a `timeout` is a clock; wait on what the pane painted"],
   );
-  // The pane says what it painted, so the assertion has something to
-  // wait on that is not a clock.
+  // An attribute the pane carries is what an assertion waits on.
   assert.deepEqual(
     waited('await expect(pane).toHaveAttribute("data-stage-lines", "4");'),
     [],
   );
-  // A comment is not code, and neither is a spec that says the word.
+  // A comment is blanked before the rule reads the line.
   assert.deepEqual(waited("// no timeout: the pane is waited on\n"), []);
 });
 

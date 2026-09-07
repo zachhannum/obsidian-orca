@@ -73,15 +73,14 @@ test("typing in one chapter costs that chapter, and leaves the rest of the book 
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
   // The keystroke broke the lines of the chapter it landed in, and the
-  // engine resolved style for that one source, so both counts rise by
-  // the section rather than by the book. A clock here would only say
-  // the machine was fast.
+  // engine resolved style for that one source. Both counts rise by the
+  // section rather than by the book.
   const after = await book.stages();
   expect(after.lines).toEqual(before.lines + 1);
   expect(after.style).toEqual(before.style + 1);
 
   // Obsidian writes the note some time after the typing stops, and the
-  // write has to land before the fixture goes back, or the chapter the
-  // next spec reads is this one's.
+  // write has to land before the fixture goes back, or the next spec
+  // reads this spec's chapter.
   await expect.poll(async () => vault.read(CHAPTER)).toContain(TYPED);
 });
