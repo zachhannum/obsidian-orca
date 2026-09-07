@@ -178,6 +178,19 @@ export class Obsidian {
     }, id);
   }
 
+  /** The workspace as it would be written to disk, for a spec that reopens it. */
+  async layout(): Promise<Record<string, unknown>> {
+    return this.page.evaluate(() => window.app.workspace.getLayout());
+  }
+
+  /** Opens a workspace again, which is what a restart does to every leaf. */
+  async reopen(layout: Record<string, unknown>): Promise<void> {
+    await this.page.evaluate(
+      async (saved) => window.app.workspace.changeLayout(saved),
+      layout,
+    );
+  }
+
   /** Collapses the left sidebar, which is where the navigator lives. */
   async collapse(): Promise<void> {
     await this.page.evaluate(() => {

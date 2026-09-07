@@ -1,5 +1,6 @@
-import { SPLIT } from "./harness/book";
+import { NOWHERE, SPLIT } from "./harness/book";
 import { expect, test } from "./harness/test";
+import type { Vault } from "./harness/vault";
 
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
@@ -13,6 +14,40 @@ const OUTSIDE = "Loose.md";
 
 /** The sections the fixture book is set from: eight entries, one with no note. */
 const SECTIONS = 7;
+
+/** The line the fixture chapter's own heading is on, counting from 0. */
+const HEADING = 5;
+
+/**
+ * The chapter with paragraphs enough to run over several pages, so a
+ * caret has somewhere inside it to be.
+ */
+function lengthened(chapter: string): string {
+  const said = Array.from(
+    { length: 40 },
+    (_, at) =>
+      `Paragraph ${String(at + 1)}. ${"And so the evening passed. ".repeat(12)}`,
+  );
+  return `${chapter}\n\n${said.join("\n\n")}\n`;
+}
+
+/** The line a paragraph opens on, counting from 0. */
+function lineOf(text: string, opening: string): number {
+  return text.split("\n").findIndex((line) => line.startsWith(opening));
+}
+
+/**
+ * Lengthens the chapter and puts the book back on the shelf. A book is
+ * typeset once a session, and it is the book note that takes it off,
+ * so this is what makes a pane open on a book set from the chapter as
+ * it now is.
+ */
+async function pagedOut(vault: Vault): Promise<string> {
+  const text = lengthened(await vault.read(CHAPTER));
+  await vault.modify(CHAPTER, text);
+  await vault.modify(BOOK, await vault.read(BOOK));
+  return text;
+}
 
 test("the icon opens a note as the book, and only a note that belongs to one", async ({
   book,
@@ -93,7 +128,7 @@ test("`Open preview to the right` splits, and the manuscript follows the book", 
   await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
 });
 
-test("and the book follows the manuscript, to the page each chapter opens on", async ({
+test("and the book follows the manuscript, to the page the caret is on", async ({
   book,
   manuscript,
 }) => {
@@ -107,9 +142,10 @@ test("and the book follows the manuscript, to the page each chapter opens on", a
   await expect(book.surface).toHaveAttribute("data-note", LAST);
 
   await manuscript.moveTo(CHAPTER);
+  await manuscript.place({ line: HEADING, ch: 0 });
   await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
-  // The page the chapter opens on, rather than whichever of its pages
-  // the book happened to be turned to.
+  // The page that heading is set on, rather than whichever of the
+  // chapter's pages the book happened to be turned to.
   await expect(book.surface).toHaveAttribute("data-first", String(opens));
 });
 
@@ -152,29 +188,141 @@ test("`Open manuscript to the left` makes the same split from the book's side", 
   await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
 });
 
-test("the link is chapter-granular, which is all a page-through can be", async ({
+test("a linked pane follows the caret paragraph by paragraph", async ({
   book,
   manuscript,
   vault,
 }) => {
-  const chapter = await vault.read(CHAPTER);
-  await vault.modify(
-    CHAPTER,
-    `${chapter}\n\n${"And so the evening passed. ".repeat(600)}\n`,
-  );
+  const text = await pagedOut(vault);
+  const deep = lineOf(text, "Paragraph 40.");
 
   await manuscript.open(CHAPTER);
   await book.split();
   await book.painted();
   const opens = await book.reading();
 
-  // The chapter now runs over several pages, and turning through them
-  // leaves the manuscript where it is. A note is the smallest thing a
-  // page can be traced back to.
+  // The chapter runs over several pages now, and the caret at the end
+  // of it turns the pane to the page that one paragraph is set on.
+  await manuscript.place({ line: deep, ch: 0 });
+  await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
+  await expect.poll(async () => book.reading()).toBeGreaterThan(opens);
+  const far = await book.reading();
+
+  // Back to the chapter's own heading, and back again, inside the one
+  // chapter both times.
+  await manuscript.place({ line: HEADING, ch: 0 });
+  await expect(book.surface).toHaveAttribute("data-first", String(opens));
+  await manuscript.place({ line: deep, ch: 0 });
+  await expect(book.surface).toHaveAttribute("data-first", String(far));
+});
+
+test("and a linked manuscript follows a page turn to the line that page opens at", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  await pagedOut(vault);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.place({ line: HEADING, ch: 0 });
+  await book.split();
+  await book.painted();
+  const opens = await book.reading();
+
   await book.next.click();
   await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
-  await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
+  await expect(book.surface).toHaveAttribute("data-led", CHAPTER);
+  await expect
+    .poll(async () => (await manuscript.caret())?.line ?? 0)
+    .toBeGreaterThan(HEADING);
+  const on = (await manuscript.caret())?.line ?? 0;
+
+  // The page before it opens further back up the chapter, and the
+  // caret goes back with it.
+  await book.previous.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens));
+  await expect
+    .poll(async () => (await manuscript.caret())?.line ?? 0)
+    .toBeLessThan(on);
+});
+
+test("the preview keeps the page a swap left it on, mid-chapter included", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  await pagedOut(vault);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.asBook.click();
+  await book.painted();
+  const opens = await book.reading();
+
+  // Paged into the middle of the chapter, rather than left where the
+  // toggle opened it.
+  await book.next.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+
+  const swap = async (): Promise<void> => {
+    await book.asMarkdown.click();
+    await expect(manuscript.pane).toHaveCount(1);
+    await manuscript.asBook.click();
+    await book.painted();
+    await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+  };
+  await swap();
+  await swap();
+});
+
+test("a workspace reopened on a preview opens it at the page it was closed on", async ({
+  book,
+  manuscript,
+  obsidian,
+  vault,
+}) => {
+  await pagedOut(vault);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.asBook.click();
+  await book.painted();
+  const opens = await book.reading();
+  await book.next.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+
+  const layout = await obsidian.layout();
+  await book.close();
+  await expect(book.panes).toHaveCount(0);
+  await obsidian.reopen(layout);
+
+  await expect(book.panes).toHaveCount(1);
+  await book.painted();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+});
+
+test("a note the book does not list, and a page orca wrote, turn neither pane", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  await vault.write(OUTSIDE, "# Loose\n\nA note no book reads.\n");
+  await manuscript.open(CHAPTER);
+  await book.split();
+  await book.painted();
+  const caret = await manuscript.caret();
+
+  // The title page was written by orca rather than by anyone, so the
+  // pane says it led the manuscript nowhere.
+  await book.type("1");
+  await expect(book.surface).toHaveAttribute("data-first", "1");
+  await expect(book.surface).toHaveAttribute("data-led", NOWHERE);
+  await expect.poll(async () => manuscript.caret()).toEqual(caret);
   await expect.poll(async () => manuscript.showing()).toEqual([CHAPTER]);
+
+  // A note no book reads turns the pane nowhere either.
+  await manuscript.moveTo(OUTSIDE);
+  await manuscript.place({ line: 2, ch: 0 });
+  await expect.poll(async () => manuscript.showing()).toEqual([OUTSIDE]);
+  await expect(book.surface).toHaveAttribute("data-first", "1");
 });
 
 test("a cold session says what the book is waiting on rather than showing an empty pane", async ({
@@ -204,4 +352,7 @@ test("a cold session says what the book is waiting on rather than showing an emp
 
 // What this spec does not cover: a book long enough for the wait to be
 // worth watching. The fixture sets in one frame, so the state is caught
-// as it is written rather than read off the screen.
+// as it is written rather than read off the screen. Nor does it cover a
+// pane that turns when it should not have: the assertions that nothing
+// moved read the pane after the moves they follow have been answered,
+// which catches a turn already made rather than one still coming.

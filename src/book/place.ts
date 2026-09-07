@@ -55,8 +55,12 @@ interface Probe {
  * The folio `node` is set on, looked for between `within.first` and
  * `within.last`. Each page read halves what is left, so a chapter
  * costs a handful of reads rather than one per page. A page naming no
- * node is stood in for by the nearest that does, and a node no page in
- * the range names answers with nothing.
+ * node is stood in for by the nearest that does.
+ *
+ * A node no run names answers with the page its content begins on: a
+ * heading's runs are shaped from the text inside it, so the node a
+ * byte of `#` was read into is on no page of its own. A node the
+ * range runs out before answers with nothing.
  */
 export async function folioOf(
   node: number,
@@ -72,7 +76,7 @@ export async function folioOf(
     else if (node > at.nodes.last) low = at.folio + 1;
     else return at.folio;
   }
-  return undefined;
+  return low > within.last ? undefined : low;
 }
 
 /** The page at `from`, or the nearest either side of it that names a node. */

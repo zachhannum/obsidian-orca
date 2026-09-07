@@ -37,6 +37,9 @@ import type { Composer, Progress, Typeset } from "@/ui/composer";
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
 
+/** The note a page nobody wrote leads the manuscript to. */
+const NOWHERE = "-";
+
 /**
  * The book a preview reads, the note and page it opened at, and
  * whether a manuscript pane is tied to it. The workspace keeps all of
@@ -295,10 +298,16 @@ export class PreviewView extends ItemView {
     try {
       const node = await session.nodeAt(note, byte);
       if (node === undefined) return undefined;
-      return await folioOf(node, within, async (folio) => {
-        const read = await session.read(folio - 1, 1);
-        return read?.pages[0];
-      });
+      const read = async (folio: number) =>
+        (await session.read(folio - 1, 1))?.pages[0];
+      // The chapter's own pages are a handful, and are where the node
+      // almost always is. An edit since the book was set can have moved
+      // it out of them, and node ids run in document order across the
+      // whole book, so the rest of it answers the same question.
+      return (
+        (await folioOf(node, within, read)) ??
+        (await folioOf(node, { first: 1, last: session.pages }, read))
+      );
     } catch {
       // The engine has its own reasons to refuse a question, and none
       // of them are worth a page the reader did not ask for.
@@ -613,7 +622,18 @@ export class PreviewView extends ItemView {
     // neither is one the manuscript asked for.
     if (this.ledAt === reading.at) return;
     this.ledAt = reading.at;
-    if (!led && this.linked) void this.leads(reading);
+    if (led || !this.linked) return;
+    surface.dataset["led"] = "";
+    void this.leads(reading);
+  }
+
+  /**
+   * Says where the page turn left the manuscript, so a test waits on
+   * the answer rather than on a clock. `NOWHERE` is a page nobody
+   * wrote.
+   */
+  private ledTo(note: string): void {
+    if (this.surface !== undefined) this.surface.dataset["led"] = note;
   }
 
   /**
@@ -625,14 +645,20 @@ export class PreviewView extends ItemView {
   private async leads(reading: Reading): Promise<void> {
     const session = this.session;
     const page = reading.pages[0];
-    if (session === undefined || page === undefined) return;
-    const node = nodesOn(page)?.first;
-    if (node === undefined) return;
+    const node = page === undefined ? undefined : nodesOn(page)?.first;
+    if (session === undefined || node === undefined) {
+      this.ledTo(NOWHERE);
+      return;
+    }
     const leading = (this.leading += 1);
     const source = await session.sourceOf(node).catch(() => undefined);
-    if (leading !== this.leading || source === undefined) return;
-    if (isGenerated(source.source)) return;
+    if (leading !== this.leading) return;
+    if (source === undefined || isGenerated(source.source)) {
+      this.ledTo(NOWHERE);
+      return;
+    }
     this.handoff.follows(this, source.source, source.start);
+    this.ledTo(source.source);
   }
 
   /** Puts the chrome on the span that is painted. */

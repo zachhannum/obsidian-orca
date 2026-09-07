@@ -54,8 +54,18 @@ test("the folio a node is set on is found by halving the chapter", async () => {
   assert.equal(await folioOf(25, within, read), 3);
   assert.equal(await folioOf(4, within, read), 1);
   assert.equal(await folioOf(44, within, read), 5);
-  // A node no page in the range names is nowhere to turn to.
+  // A node the range runs out before is nowhere to turn to.
   assert.equal(await folioOf(200, within, read), undefined);
+});
+
+test("a node no run names is set on the page its content begins on", async () => {
+  // A heading's runs are shaped from the text inside it, so the node a
+  // byte of its markup was read into names no run of its own.
+  const read = reads([[4, 9], [12, 19], [22, 29]]);
+  const within = { first: 1, last: 3 };
+  assert.equal(await folioOf(3, within, read), 1);
+  assert.equal(await folioOf(11, within, read), 2);
+  assert.equal(await folioOf(21, within, read), 3);
 });
 
 test("a page the engine wrote alone is stood in for by the nearest that names a node", async () => {
