@@ -10,6 +10,19 @@ import { expect, type Locator } from "@playwright/test";
 import type { Stages } from "@/engine/session";
 import { FLOATING, type Obsidian } from "./obsidian";
 
+/** The command that splits the pane and ties the two. */
+export const TO_THE_RIGHT = "orca:preview-to-the-right";
+
+/** The label of the action that hands the pane back to the manuscript. */
+const AS_MARKDOWN = "Open as markdown";
+
+declare global {
+  interface Window {
+    /** The recorder a spec installs while `settings` runs. */
+    orcaSetting?: { said: string[]; watch: MutationObserver } | undefined;
+  }
+}
+
 /** The trim the page is photographed at, in whole pixels. */
 const POSE = { width: 360, height: 540 };
 
@@ -32,6 +45,12 @@ export class Book {
   readonly status: Locator;
   readonly previous: Locator;
   readonly next: Locator;
+  /** The state the pane holds while a cold session lays the whole book out. */
+  readonly setting: Locator;
+  /** The action that hands the pane back to the manuscript. */
+  readonly asMarkdown: Locator;
+  /** Every pane reading a book. */
+  readonly panes: Locator;
 
   private readonly pane: Locator;
 
@@ -47,6 +66,54 @@ export class Book {
     this.status = obsidian.page.getByTestId("orca-status");
     this.previous = pane.getByLabel("Previous page");
     this.next = pane.getByLabel("Next page");
+    this.setting = pane.getByTestId("orca-setting");
+    this.asMarkdown = obsidian.action(AS_MARKDOWN);
+    this.panes = pane;
+  }
+
+  /**
+   * Records the state the pane holds while the book is being set, for
+   * as long as `during` runs. A whole book is laid out once a session,
+   * so the state is recorded as it appears rather than looked for
+   * after the pages have replaced it.
+   */
+  async settings(during: () => Promise<void>): Promise<string[]> {
+    await this.obsidian.page.evaluate(() => {
+      const said: string[] = [];
+      const held = (node: Node): void => {
+        if (!(node instanceof HTMLElement)) return;
+        const found = node.matches("[data-testid=\'orca-setting\']")
+          ? node
+          : node.querySelector("[data-testid=\'orca-setting\']");
+        if (found !== null) said.push(found.textContent ?? "");
+      };
+      const watch = new MutationObserver((records) => {
+        for (const record of records) for (const node of record.addedNodes) held(node);
+      });
+      watch.observe(document.body, { childList: true, subtree: true });
+      window.orcaSetting = { said, watch };
+    });
+
+    try {
+      await during();
+    } finally {
+      // One app runs the whole suite, so the watch comes off even when
+      // `during` throws.
+      await this.obsidian.page.evaluate(() => {
+        window.orcaSetting?.watch.disconnect();
+      });
+    }
+    const said = await this.obsidian.page.evaluate(() => {
+      const held = window.orcaSetting?.said ?? [];
+      window.orcaSetting = undefined;
+      return held;
+    });
+    return said;
+  }
+
+  /** Splits the pane and ties the two, the way the palette runs it. */
+  async split(): Promise<void> {
+    await this.obsidian.command(TO_THE_RIGHT);
   }
 
   /** Turns to `folio` by typing it, the way an author reaches a page. */

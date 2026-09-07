@@ -160,7 +160,10 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
-    await Promise.resolve();
+    // The workspace may have handed this leaf its state before the
+    // chrome existed to draw it on, and a paint into a pane with no
+    // surface is a paint nobody sees.
+    if (this.state.book !== undefined) await this.lay();
   }
 
   override onClose(): Promise<void> {

@@ -167,6 +167,16 @@ export default class OrcaPlugin extends Plugin {
         this.swap();
       }),
     );
+    // A writer moving between panes has opened no file, so the linked
+    // book follows the leaf rather than the note.
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", (leaf) => {
+        const view = leaf?.view;
+        if (view instanceof MarkdownView && view.file !== null) {
+          this.turned(view.file);
+        }
+      }),
+    );
     this.registerEvent(
       this.app.workspace.on("file-open", (file) => {
         this.swap();

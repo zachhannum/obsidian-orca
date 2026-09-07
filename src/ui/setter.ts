@@ -65,44 +65,29 @@ export interface Opening {
   told?: ((progress: Progress) => void) | undefined;
 }
 
+/** The times the whole book is asked for before its folios are given up on. */
+const TRIES = 3;
+
 export class Setter {
   private readonly laid = new Map<string, Promise<Laid>>();
-  /** Everyone waiting on a book still being set. */
-  private readonly waiting = new Map<string, Set<(at: Progress) => void>>();
-  /** The last report from each book being set, so a late arrival sees one. */
-  private readonly at = new Map<string, Progress>();
 
   constructor(private readonly vault: Setting) {}
 
   /**
-   * The book at this path, laid out. A book already set is handed back
-   * as it stands, and the second caller on one still setting waits on
-   * the same run.
+   * The book at this path, laid out. A book already set, or one still
+   * setting, is handed back as it stands, so only the caller that
+   * starts a run is told how far along it is.
    */
   open(path: string, opening: Opening = {}): Promise<Laid> {
-    const told = opening.told;
-    if (told !== undefined) {
-      const listeners = this.waiting.get(path) ?? new Set();
-      listeners.add(told);
-      this.waiting.set(path, listeners);
-      const reported = this.at.get(path);
-      if (reported !== undefined) told(reported);
-    }
     const held = this.laid.get(path);
     if (held !== undefined) return held;
-    const laying = this.lay(path, opening.note).finally(() => {
-      this.waiting.delete(path);
-      this.at.delete(path);
-    });
+    const laying = this.lay(path, opening);
+    this.laid.set(path, laying);
     // A run that fails is not kept, so the next open lays the book out
     // again rather than handing back the failure for the session's life.
-    this.laid.set(
-      path,
-      laying.catch((cause: unknown) => {
-        this.laid.delete(path);
-        throw cause;
-      }),
-    );
+    laying.catch(() => {
+      if (this.laid.get(path) === laying) this.laid.delete(path);
+    });
     return laying;
   }
 
@@ -111,7 +96,7 @@ export class Setter {
     this.laid.delete(path);
   }
 
-  private async lay(path: string, note: string | undefined): Promise<Laid> {
+  private async lay(path: string, opening: Opening): Promise<Laid> {
     const model = await this.vault.model(path);
     if (model === undefined) {
       throw new BookError(`${path} is not a book orca reads`);
@@ -122,16 +107,16 @@ export class Setter {
     // A generated section is written here rather than read, so it is
     // done before the count starts.
     let read = present.filter((section) => section.kind === "generated").length;
-    const opening = sections.find(
-      (section) => section.kind === "note" && section.path === note,
+    const from = sections.find(
+      (section) => section.kind === "note" && section.path === opening.note,
     );
     const progress: Progress = {
       name,
       read,
       of: present.length,
-      opening: opening === undefined ? undefined : entryName(opening.entry),
+      opening: from === undefined ? undefined : entryName(from.entry),
     };
-    this.tell(path, progress);
+    opening.told?.(progress);
 
     const ops = await sendBook(
       model.book,
@@ -141,7 +126,7 @@ export class Setter {
       async (at) => {
         const text = await this.vault.read(at);
         read += 1;
-        this.tell(path, { ...progress, read });
+        opening.told?.({ ...progress, read });
         return text;
       },
     );
@@ -166,15 +151,16 @@ export class Setter {
     session: Session,
     sections: Section[],
   ): Promise<Map<number, Range>> {
-    const layout = await client.preview([], {
-      first: 0,
-      count: Math.max(session.pages, 1),
-    });
-    return pageRanges(sections, layout?.pages ?? []);
-  }
-
-  private tell(path: string, progress: Progress): void {
-    this.at.set(path, progress);
-    for (const listener of this.waiting.get(path) ?? []) listener(progress);
+    // Another view's render answers before this question does, and the
+    // reply that comes back behind it is nothing at all. The book on
+    // the engine is the same book, so the question is asked again.
+    for (let asked = 0; asked < TRIES; asked += 1) {
+      const layout = await client.preview([], {
+        first: 0,
+        count: Math.max(session.pages, 1),
+      });
+      if (layout !== null) return pageRanges(sections, layout.pages);
+    }
+    return new Map();
   }
 }

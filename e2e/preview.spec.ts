@@ -1,14 +1,20 @@
 import { expect, test } from "./harness/test";
 
-/** The pages the fixture chapter sets to. */
-const PAGES = 2;
+/** The pages the fixture book sets to. */
+const PAGES = 13;
+
+/** The words the book opens on, which is its title page. */
+const OPENING = "Pride and Prejudice";
+
+/** The page the fixture's one chapter opens on. */
+const CHAPTER = 11;
 
 test("the ribbon sets the book and paints its first page", async ({ book }) => {
   await book.open();
 
   expect(await book.painted()).toBeGreaterThan(0);
   await expect(book.surface).toHaveAttribute("data-first", "1");
-  await expect(book.page).toContainText("In consequence of an agreement");
+  await expect(book.page).toContainText(OPENING);
 
   const stages = await book.stages();
   for (const [stage, runs] of Object.entries(stages)) {
@@ -36,13 +42,16 @@ test("next and previous turn the page, and stop at either end of the book", asyn
   await book.painted();
 
   await book.next.click();
-  await expect(book.surface).toHaveAttribute("data-first", String(PAGES));
-  await expect(book.status).toHaveText(`page ${String(PAGES)} of ${String(PAGES)}`);
-  await expect(book.next).toBeDisabled();
+  await expect(book.surface).toHaveAttribute("data-first", "2");
+  await expect(book.status).toHaveText(`page 2 of ${String(PAGES)}`);
 
   await book.previous.click();
   await expect(book.surface).toHaveAttribute("data-first", "1");
   await expect(book.previous).toBeDisabled();
+
+  // There is no page after the last one.
+  await book.type(String(PAGES));
+  await expect(book.next).toBeDisabled();
 });
 
 test("a typed folio turns to that page, and one past the end reads the last", async ({
@@ -68,7 +77,7 @@ test("page down, page up, end and home turn the page from the keyboard", async (
   await book.painted();
 
   await book.press("PageDown");
-  await expect(book.surface).toHaveAttribute("data-first", String(PAGES));
+  await expect(book.surface).toHaveAttribute("data-first", "2");
 
   await book.press("PageUp");
   await expect(book.surface).toHaveAttribute("data-first", "1");
@@ -96,8 +105,13 @@ test("the page matches the one checked in beside the spec", async ({ book }) => 
   await book.open();
   await book.painted();
 
+  // The book opens on its title page, which is two lines. The chapter
+  // is a page of set text, and that is the one worth photographing.
+  await book.type(String(CHAPTER));
+  await expect(book.surface).toHaveAttribute("data-first", String(CHAPTER));
+
   await book.pose();
-  await expect(book.page).toHaveScreenshot("page-one.png");
+  await expect(book.page).toHaveScreenshot("chapter-page.png");
   await book.stand();
 });
 
@@ -132,8 +146,8 @@ test("the spread seats a recto right of the spine and a verso left of it", async
   await expect(book.seat(1)).toHaveAttribute("data-side", "recto");
 
   await book.next.click();
-  await expect(book.surface).toHaveAttribute("data-first", String(PAGES));
-  await expect(book.seat(0)).toHaveAttribute("data-page", String(PAGES));
+  await expect(book.surface).toHaveAttribute("data-first", "2");
+  await expect(book.seat(0)).toHaveAttribute("data-page", "2");
   await expect(book.seat(0)).toHaveAttribute("data-side", "verso");
 });
 
@@ -145,10 +159,15 @@ test("the grid shows a screenful, and asks for exactly the pages it paints", asy
 
   await book.show("Grid", "grid");
 
-  // The sample is shorter than a screenful, so the grid holds it whole.
-  expect(await book.showing()).toBe(PAGES);
-  await expect(book.sheets).toHaveCount(PAGES);
-  await expect(book.status).toHaveText(`pages 1\u2013${String(PAGES)} of ${String(PAGES)}`);
+  // The grid asks for as many pages as the well fits, and paints those
+  // and no others.
+  const shown = await book.showing();
+  expect(shown).toBeGreaterThan(1);
+  expect(shown).toBeLessThanOrEqual(PAGES);
+  await expect(book.sheets).toHaveCount(shown);
+  await expect(book.status).toHaveText(
+    `pages 1\u2013${String(shown)} of ${String(PAGES)}`,
+  );
 });
 
 test("copy off a page returns the text in reading order", async ({
@@ -185,7 +204,7 @@ test("copy off a page returns the text in reading order", async ({
   // A page is paths, so what comes back is the painter's own layer:
   // the lines the drag covered, in the order they are set.
   expect(copied?.text).toBe(copied?.set);
-  expect(copied?.text).toContain("In consequence of an agreement");
+  expect(copied?.text).toContain(OPENING);
 });
 
 test("a screen reader reads a page: it is named, and the glyphs stay out of the tree", async ({

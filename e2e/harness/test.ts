@@ -7,6 +7,7 @@
 import { chromium, test as base } from "@playwright/test";
 import { Book } from "./book";
 import { CDP, FIXTURE } from "./launch";
+import { Manuscript } from "./manuscript";
 import { Navigator } from "./navigator";
 import { Note } from "./note";
 import { Obsidian } from "./obsidian";
@@ -16,6 +17,8 @@ interface Fixtures {
   book: Book;
   /** The book note's own view. */
   note: Note;
+  /** A chapter as the writer has it, and the icon that swaps it for the book. */
+  manuscript: Manuscript;
   /** The navigator, which owns the structure of every book. */
   navigator: Navigator;
   /** The vault a spec changes, put back when the spec ends. */
@@ -47,6 +50,12 @@ export const test = base.extend<Fixtures, Shared>({
     const note = new Note(obsidian);
     await use(note);
     await note.close();
+  },
+
+  manuscript: async ({ obsidian }, use) => {
+    const manuscript = new Manuscript(obsidian);
+    await use(manuscript);
+    await manuscript.close();
   },
 
   navigator: async ({ obsidian }, use) => {
