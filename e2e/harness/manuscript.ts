@@ -32,7 +32,7 @@ export class Manuscript {
 
   /**
    * Opens a note in the pane the manuscript is already in, which is
-   * what moving through a book in a split pane is.
+   * how a writer moves through a book with the preview beside it.
    */
   async moveTo(path: string): Promise<void> {
     await this.obsidian.page.evaluate(

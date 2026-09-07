@@ -13,10 +13,10 @@
 import { styleOp } from "fleuron";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
+import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { pageRanges, type Range } from "@/book/pages";
 import { sendBook } from "@/book/plan";
-import { BookError } from "@/book/note";
 import { Session, type EngineClient, type FaceSet } from "@/engine/session";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 import { bookName } from "@/ui/shelf";
@@ -33,7 +33,7 @@ export interface Laid {
   ranges: Map<number, Range>;
 }
 
-/** A book being set, as the author waiting on it is told about it. */
+/** One report from a book being set. */
 export interface Progress {
   name: string;
   /** The sections orca has read on the way to the engine. */
@@ -65,8 +65,8 @@ export interface Opening {
   told?: ((progress: Progress) => void) | undefined;
 }
 
-/** The times the whole book is asked for before its folios are given up on. */
-const TRIES = 3;
+/** The number of times the whole book is asked for before its folios are given up on. */
+const ASKS = 3;
 
 export class Setter {
   private readonly laid = new Map<string, Promise<Laid>>();
@@ -154,7 +154,7 @@ export class Setter {
     // Another view's render answers before this question does, and the
     // reply that comes back behind it is nothing at all. The book on
     // the engine is the same book, so the question is asked again.
-    for (let asked = 0; asked < TRIES; asked += 1) {
+    for (let asked = 0; asked < ASKS; asked += 1) {
       const layout = await client.preview([], {
         first: 0,
         count: Math.max(session.pages, 1),

@@ -28,8 +28,8 @@ test("the icon opens a note as the book, and only a note that belongs to one", a
 
   await manuscript.asBook.click();
   expect(await book.painted()).toBeGreaterThan(0);
-  // The same pane, swapped: the manuscript is not beside the book, it
-  // is what the book replaced.
+  // The same pane, swapped: the book took the manuscript's place rather
+  // than opening beside it.
   await expect(manuscript.pane).toHaveCount(0);
 });
 
@@ -79,8 +79,8 @@ test("`Open preview to the right` splits, and the two panes follow each other", 
   await book.split();
   await book.painted();
 
-  // A split, not a swap: the manuscript stays, and the book is beside
-  // it, opened at the chapter the writer was in.
+  // A split rather than a swap: the manuscript stays, and the book is
+  // beside it, opened at the chapter the writer was in.
   await expect(manuscript.pane).toHaveCount(1);
   await expect(book.panes).toHaveCount(1);
   const opens = await book.reading();

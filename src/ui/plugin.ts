@@ -679,7 +679,7 @@ export default class OrcaPlugin extends Plugin {
     });
   }
 
-  /** The book the note the workspace is on belongs to, or is. */
+  /** The book the workspace is on, whether by one of its notes or its own. */
   private onBook(): PreviewState | undefined {
     const active = this.app.workspace.getActiveFile();
     if (active === null) return undefined;
