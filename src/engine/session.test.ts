@@ -143,6 +143,7 @@ function leaves(count: number): Page[] {
         text: `Page ${String(at + 1)}`,
         source: "",
         sourceMap: [],
+        origin: null,
         features: { smallCaps: false },
         color: "#000000",
         glyphs: [],

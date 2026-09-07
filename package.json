@@ -14,6 +14,8 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.18",
@@ -28,7 +30,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "fleuron": "0.2.0",
+    "fleuron": "0.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   }
