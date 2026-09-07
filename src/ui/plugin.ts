@@ -346,15 +346,33 @@ export default class OrcaPlugin extends Plugin {
    * a book on the engine older than the notes it was set from.
    */
   private watchBooks(): void {
-    const { vault, metadataCache } = this.app;
+    const { vault, metadataCache, workspace } = this.app;
     const changed = (path: string): void => {
       const book = this.members.get(path)?.book;
       this.setter?.forget(book ?? path);
       this.index();
     };
+    // Every keystroke, which the loop in front of the engine coalesces
+    // into one render.
+    this.registerEvent(
+      workspace.on("editor-change", (editor, info) => {
+        const path = info.file?.path;
+        if (path === undefined) return;
+        const member = this.members.get(path);
+        if (member === undefined) return;
+        this.setter?.retype(member.book, path, editor.getValue());
+      }),
+    );
     this.registerEvent(
       vault.on("modify", (file) => {
-        changed(file.path);
+        const member = this.members.get(file.path);
+        // A chapter's words are an edit to a book already on the engine,
+        // not a reason to set it again from nothing. The words a writer
+        // typed are already there; a change from outside Obsidian is
+        // this.
+        if (member === undefined || !(file instanceof TFile)) {
+          changed(file.path);
+        } else this.retype(member.book, file);
       }),
     );
     this.registerEvent(
@@ -381,6 +399,16 @@ export default class OrcaPlugin extends Plugin {
         this.index();
       }),
     );
+  }
+
+  /** Sends a chapter as it now is on disk to the book that reads it. */
+  private retype(book: string, note: TFile): void {
+    void this.app.vault
+      .cachedRead(note)
+      .then((text) => {
+        this.setter?.retype(book, note.path, text);
+      })
+      .catch(() => undefined);
   }
 
   /**

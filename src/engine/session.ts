@@ -155,6 +155,19 @@ export class Session {
   }
 
   /**
+   * Applies an edit's ops and lays the book out from them, asking for
+   * the span the reader is on so the redraw costs one round trip. The
+   * pages held from before the edit go as the reply lands: nothing
+   * painted mixes two generations.
+   */
+  async render(ops: Op[], at = 0, count = 1): Promise<void> {
+    // A render that overtook the first layout would be an edit to a
+    // book the engine does not have yet.
+    await this.opening;
+    await this.lay(ops, at, count);
+  }
+
+  /**
    * The book as PDF bytes, from the session the pages were laid out
    * in.
    */
@@ -281,12 +294,16 @@ export class Session {
     void this.fill(at, count).catch(() => undefined);
   }
 
-  private async lay(ops: Op[]): Promise<void> {
+  private async lay(ops: Op[], at = 0, count = 1): Promise<void> {
+    const first = Math.max(at - NEIGHBOURS, 0);
     const layout = await routed(() =>
-      this.client.preview(ops, { first: 0, count: 1 + NEIGHBOURS }),
+      this.client.preview(ops, {
+        first,
+        count: at - first + count + NEIGHBOURS,
+      }),
     );
     if (layout === null) return;
-    this.heldAt = this.client.current;
+    this.drop();
     this.keep(layout);
     await this.load(layout);
   }

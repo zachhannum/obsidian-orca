@@ -119,6 +119,8 @@ export class PreviewView extends ItemView {
   private rows = 1;
   /** The turn the next painted span has to be, so a slow one is dropped. */
   private turning = 0;
+  /** Stops watching the book this pane is reading for renders. */
+  private unwatch: (() => void) | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -194,6 +196,8 @@ export class PreviewView extends ItemView {
   override onClose(): Promise<void> {
     this.watching?.disconnect();
     this.watching = undefined;
+    this.unwatch?.();
+    this.unwatch = undefined;
     this.well = undefined;
     this.surface = undefined;
     this.message = undefined;
@@ -342,6 +346,8 @@ export class PreviewView extends ItemView {
   /** Sets the book this preview was opened on, reporting what it waits for. */
   private async lay(): Promise<void> {
     const book = this.state.book;
+    this.unwatch?.();
+    this.unwatch = undefined;
     this.session = undefined;
     this.laid = undefined;
     this.held = undefined;
@@ -361,6 +367,11 @@ export class PreviewView extends ItemView {
       if (opening !== this.opening) return;
       this.laid = laid;
       this.session = laid.session;
+      // A render replaces the pages under the reader without moving
+      // them: the span painted is the span they were already on.
+      this.unwatch = laid.watch(() => {
+        void this.turn(this.at);
+      });
       this.offers(chapters(laid.sections, laid.ranges));
       await this.turn(this.opensAt(laid));
     } catch (cause) {

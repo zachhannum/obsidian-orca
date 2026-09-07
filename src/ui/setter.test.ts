@@ -7,6 +7,7 @@ import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
+import type { Clock } from "@/engine/loop";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
 import { Setter, type Progress, type Setting } from "@/ui/setter";
 
@@ -70,6 +71,66 @@ class FakeClient implements EngineClient {
       items: [],
     }));
   }
+}
+
+/** A client that holds its replies from the moment the test says so. */
+class HeldClient extends FakeClient {
+  private waiting: (() => void)[] | undefined;
+
+  /** Answers nothing from here on. */
+  hold(): void {
+    this.waiting = [];
+  }
+
+  /** The replies held back so far. */
+  get holding(): number {
+    return this.waiting?.length ?? 0;
+  }
+
+  /** Lets every reply held since then run. */
+  release(): void {
+    const held = this.waiting ?? [];
+    this.waiting = undefined;
+    for (const resume of held) resume();
+  }
+
+  override async preview(
+    ops: Op[] = [],
+    range?: Range,
+  ): Promise<LayoutOutput | null> {
+    const waiting = this.waiting;
+    if (waiting !== undefined) {
+      await new Promise<void>((resolve) => waiting.push(resolve));
+    }
+    return super.preview(ops, range);
+  }
+}
+
+/** A clock the test steps itself, so nothing here waits on a real one. */
+class Steps implements Clock {
+  private waiting: (() => void)[] = [];
+
+  after(_ms: number, fire: () => void): () => void {
+    const at = this.waiting.length;
+    this.waiting.push(fire);
+    return () => {
+      this.waiting[at] = () => undefined;
+    };
+  }
+
+  /** Runs every wait that has come due and not been cancelled. */
+  tick(): void {
+    const due = this.waiting;
+    this.waiting = [];
+    for (const fire of due) fire();
+  }
+}
+
+/** Lets every promise already settled run its way through. */
+function drain(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    setImmediate(resolve);
+  });
 }
 
 function faces(): FaceSet {
@@ -139,6 +200,58 @@ test("a book already set is handed back rather than laid out again", async () =>
   setter.forget(BOOK);
   assert.notEqual(await setter.open(BOOK), laid);
   assert.equal(client.rendered.length, 2);
+});
+
+test("a burst of keystrokes leaves the pages last painted up until the render lands", async () => {
+  const clock = new Steps();
+  const client = new HeldClient();
+  const setter = new Setter(await setting(client), clock);
+  const laid = await setter.open(BOOK);
+  const laying = client.rendered.length;
+  let painted = 0;
+  laid.watch(() => {
+    painted += 1;
+  });
+
+  client.hold();
+  for (const text of ["It i", "It is", "It is a"]) {
+    setter.retype(BOOK, "Chapter Twelve.md", text);
+  }
+  await drain();
+  clock.tick();
+  await drain();
+
+  // Three keystrokes, one render, and it has not answered yet: no view
+  // has been told to repaint, so the pages already on screen are still
+  // the last ones painted.
+  assert.equal(client.holding, 1);
+  assert.equal(painted, 0);
+
+  client.release();
+  await drain();
+
+  assert.equal(client.rendered.length, laying + 1);
+  assert.deepEqual(client.rendered.at(-1), [
+    { op: "edit", name: "Chapter Twelve.md", text: "It is a" },
+  ]);
+  assert.equal(painted, 1);
+});
+
+test("a chapter the engine already has the words of is no edit at all", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const setter = new Setter(await setting(client), clock);
+  await setter.open(BOOK);
+  const laying = client.rendered.length;
+
+  // The note is written to disk after the keystrokes that made it, and
+  // it arrives back as the text the engine was already sent.
+  setter.retype(BOOK, "Chapter Twelve.md", await readText(vault, "Chapter Twelve.md"));
+  await drain();
+  clock.tick();
+  await drain();
+
+  assert.equal(client.rendered.length, laying);
 });
 
 // What this tier does not cover: the engine's own pagination, so the
