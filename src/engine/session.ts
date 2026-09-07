@@ -91,13 +91,14 @@ export function documentFaces(document: Document): FaceSet {
 /** The number of pages either side of the one being read that ride along. */
 const NEIGHBOURS = 1;
 
-/** One page of the book, and the tables a painter reads it through. */
+/** The pages a view paints, and the tables a painter reads them through. */
 export interface Reading {
-  /** The page's place in the book, counting from 0. */
+  /** The place in the book the first of them sits at, counting from 0. */
   at: number;
-  page: Page;
+  /** The pages themselves, in reading order. */
+  pages: Page[];
   /** The book's length in pages. */
-  pages: number;
+  length: number;
   fonts: FontRefEntry[];
   assets: Asset[];
 }
@@ -168,33 +169,61 @@ export class Session {
   }
 
   /**
-   * The page at `at`, counting from 0, with the pages either side of it
-   * asked for alongside, so the next turn paints without a round trip.
-   * A book too short for `at` reads its last page rather than none.
+   * The `count` pages from `at`, counting from 0, with the pages either
+   * side of them asked for alongside, so the next turn paints without a
+   * round trip. A book too short for the span reads what it has rather
+   * than none.
    */
-  async read(at: number): Promise<Reading | undefined> {
+  async read(at: number, count = 1): Promise<Reading | undefined> {
     if (this.layout === undefined) return undefined;
     this.drop();
-    // Held or not, the window around the page is asked for. Only a page
+    // Held or not, the window around the span is asked for. Only a span
     // that is not held waits on the answer.
     const wanted = this.bound(at);
-    if (this.held.has(wanted)) this.spare(wanted);
-    else await this.fill(wanted);
+    if (this.holds(wanted, count)) this.spare(wanted, count);
+    else await this.fill(wanted, count);
     // A reply says how long the book is now, and a book that got
-    // shorter lands on its last page rather than past the end.
-    const index = this.bound(at);
-    if (!this.held.has(index)) await this.fill(index);
-    const page = this.held.get(index);
+    // shorter lands on its last pages rather than past the end.
+    const first = this.bound(at);
+    if (!this.holds(first, count)) await this.fill(first, count);
     const layout = this.layout;
-    if (page === undefined || layout === undefined) return undefined;
-    this.evict(index);
+    if (layout === undefined) return undefined;
+    const pages = this.span(first, count);
+    if (pages.length === 0) return undefined;
+    this.evict(first, count);
     return {
-      at: index,
-      page,
-      pages: layout.bookPages,
+      at: first,
+      pages,
+      length: layout.bookPages,
       fonts: layout.fonts,
       assets: layout.assets,
     };
+  }
+
+  /** The last page of the span from `at`, held inside the book. */
+  private last(at: number, count: number): number {
+    return Math.min(at + count - 1, Math.max(this.pages - 1, 0));
+  }
+
+  /** Whether every page of the span from `at` is held. */
+  private holds(at: number, count: number): boolean {
+    const last = this.last(at, count);
+    for (let page = at; page <= last; page += 1) {
+      if (!this.held.has(page)) return false;
+    }
+    return true;
+  }
+
+  /** The span from `at`, as far as the held pages run. */
+  private span(at: number, count: number): Page[] {
+    const pages: Page[] = [];
+    const last = this.last(at, count);
+    for (let page = at; page <= last; page += 1) {
+      const held = this.held.get(page);
+      if (held === undefined) break;
+      pages.push(held);
+    }
+    return pages;
   }
 
   /** `at`, held inside the book. */
@@ -202,10 +231,12 @@ export class Session {
     return Math.min(Math.max(at, 0), Math.max(this.pages - 1, 0));
   }
 
-  /** Drops the pages the window around `at` has read past. */
-  private evict(at: number): void {
+  /** Drops the pages the window around the span from `at` has read past. */
+  private evict(at: number, count: number): void {
+    const from = at - NEIGHBOURS;
+    const to = this.last(at, count) + NEIGHBOURS;
     for (const page of this.held.keys()) {
-      if (Math.abs(page - at) > NEIGHBOURS) this.held.delete(page);
+      if (page < from || page > to) this.held.delete(page);
     }
   }
 
@@ -218,12 +249,12 @@ export class Session {
   }
 
   /**
-   * Fetches whatever of the window around `at` is not held yet, as one
-   * range. A window already held costs nothing.
+   * Fetches whatever of the window around the span from `at` is not
+   * held yet, as one range. A window already held costs nothing.
    */
-  private fill(at: number): Promise<void> {
+  private fill(at: number, count: number): Promise<void> {
     const from = Math.max(at - NEIGHBOURS, 0);
-    const to = Math.min(at + NEIGHBOURS, this.pages - 1);
+    const to = Math.min(this.last(at, count) + NEIGHBOURS, this.pages - 1);
     let first = -1;
     let last = -1;
     for (let page = from; page <= to; page += 1) {
@@ -243,11 +274,11 @@ export class Session {
     return fetch;
   }
 
-  /** The same, for a turn that has its page already and only wants the rest. */
-  private spare(at: number): void {
+  /** The same, for a turn that has its pages already and only wants the rest. */
+  private spare(at: number, count: number): void {
     // A neighbour that never arrives is fetched again by the turn onto
     // it, so nothing here is worth reporting.
-    void this.fill(at).catch(() => undefined);
+    void this.fill(at, count).catch(() => undefined);
   }
 
   private async lay(ops: Op[]): Promise<void> {

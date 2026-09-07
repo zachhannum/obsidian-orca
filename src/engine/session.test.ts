@@ -165,7 +165,7 @@ test("a view opened again paints the pages the session already has", async () =>
   await session.open(openBook(SAMPLE));
 
   assert.equal(client.rendered.length, 1);
-  assert.equal((await session.read(0))?.page, first?.page);
+  assert.equal((await session.read(0))?.pages[0], first?.pages[0]);
 });
 
 test("two leaves on one book lay it out once between them", async () => {
@@ -198,14 +198,63 @@ test("a page rides in with the one either side, so the turn onto it waits on not
   const first = await session.read(0);
   const second = await session.read(1);
 
-  assert.equal(first?.page.number, 1);
+  assert.equal(first?.pages[0]?.number, 1);
   // Page 2 came in with page 1, so the turn onto it asked for nothing
   // and page 3 is what rode along behind it.
-  assert.equal(second?.page.number, 2);
+  assert.equal(second?.pages[0]?.number, 2);
   assert.deepEqual(client.ranges, [
     { first: 0, count: 2 },
     { first: 2, count: 1 },
   ]);
+});
+
+test("a spread reads the two pages it paints, and asks for them as one range", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+
+  const spread = await session.read(1, 2);
+
+  assert.deepEqual(
+    spread?.pages.map((page) => page.number),
+    [2, 3],
+  );
+  // Pages 1 and 2 were already held, so the range asks for the rest of
+  // the spread and the neighbour behind it, not the book.
+  assert.deepEqual(client.ranges, [
+    { first: 0, count: 2 },
+    { first: 2, count: 2 },
+  ]);
+});
+
+test("a grid reads the screenful it paints, and nothing past its neighbours", async () => {
+  const client = new FakeClient(laidOut(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+
+  const screenful = await session.read(0, 6);
+
+  assert.deepEqual(
+    screenful?.pages.map((page) => page.number),
+    [1, 2, 3, 4, 5, 6],
+  );
+  assert.deepEqual(client.ranges, [
+    { first: 0, count: 2 },
+    { first: 2, count: 5 },
+  ]);
+});
+
+test("a span running off the end of the book reads what the book has", async () => {
+  const client = new FakeClient(laidOut(3));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+
+  const spread = await session.read(2, 2);
+
+  assert.deepEqual(
+    spread?.pages.map((page) => page.number),
+    [3],
+  );
 });
 
 test("a page already held is painted from the cache rather than asked for again", async () => {
@@ -231,7 +280,7 @@ test("an edit drops the pages from before it rather than painting one of them", 
   const reading = await session.read(0);
 
   assert.ok(client.ranges.length > asked, "page 1 was painted from the book before the edit");
-  assert.equal(reading?.page.number, 1);
+  assert.equal(reading?.pages[0]?.number, 1);
 });
 
 test("a book that got shorter reads its last page rather than nothing", async () => {
@@ -244,8 +293,8 @@ test("a book that got shorter reads its last page rather than nothing", async ()
   const reading = await session.read(336);
 
   assert.equal(reading?.at, 2);
-  assert.equal(reading?.pages, 3);
-  assert.equal(reading?.page.number, 3);
+  assert.equal(reading?.length, 3);
+  assert.equal(reading?.pages[0]?.number, 3);
 });
 
 test("two turns onto one window ask for it once between them", async () => {
@@ -260,8 +309,8 @@ test("two turns onto one window ask for it once between them", async () => {
   client.release();
   const [first, second] = await both;
 
-  assert.equal(first?.page.number, 5);
-  assert.equal(second?.page.number, 5);
+  assert.equal(first?.pages[0]?.number, 5);
+  assert.equal(second?.pages[0]?.number, 5);
   assert.deepEqual(client.ranges, [
     { first: 0, count: 2 },
     { first: 3, count: 3 },
@@ -284,7 +333,7 @@ test("an edit that overtakes a window in flight is answered with the book it mad
   await Promise.resolve();
   client.release();
 
-  assert.equal((await reading)?.page.number, 121);
+  assert.equal((await reading)?.pages[0]?.number, 121);
   // Those pages are the edit's, so the turn back onto them is served
   // from the cache rather than fetched a second time.
   const asked = client.ranges.length;
@@ -412,9 +461,11 @@ test("the sample note sets to a page the painter can draw", async () => {
     const reading = await session.read(0);
     assert.ok(reading, "the sample set to no pages");
     assert.equal(reading.at, 0);
-    assert.equal(reading.pages, session.pages);
+    assert.equal(reading.length, session.pages);
 
-    const markup = paintPage(reading.page, {
+    const page = reading.pages[0];
+    assert.ok(page, "the sample set to no pages");
+    const markup = paintPage(page, {
       fonts: reading.fonts,
       assets: reading.assets,
     });
