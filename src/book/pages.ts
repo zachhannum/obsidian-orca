@@ -9,7 +9,7 @@
  */
 
 import type { Page } from "fleuron";
-import type { Section } from "@/book/order";
+import { entryName, type Section } from "@/book/order";
 
 /** The first and last folio a section's content lands on. */
 export interface Range {
@@ -87,4 +87,43 @@ export function sectionAt(
     opened = range.first;
   }
   return found;
+}
+
+/** A chapter a reader can turn to: what it is called, and where it opens. */
+export interface Chapter {
+  /** Its place in the reading order. */
+  at: number;
+  name: string;
+  /** The folio it opens on. */
+  first: number;
+}
+
+/**
+ * Every section a reader can turn to, in reading order. A section the
+ * run laid no page for is left out, so what a reader is offered is
+ * what the book set.
+ */
+export function chapters(
+  sections: Section[],
+  ranges: Map<number, Range>,
+): Chapter[] {
+  return sections.flatMap((section, at) => {
+    const range = ranges.get(at);
+    if (range === undefined) return [];
+    return [{ at, name: entryName(section.entry), first: range.first }];
+  });
+}
+
+/**
+ * The chapter `step` places along from the one at `at`, or nothing at
+ * either end of the book, which is where the turn commands go quiet.
+ */
+export function stepChapter(
+  chapters: Chapter[],
+  at: number | undefined,
+  step: number,
+): Chapter | undefined {
+  const here = chapters.findIndex((chapter) => chapter.at === at);
+  if (here < 0) return undefined;
+  return chapters[here + step];
 }
