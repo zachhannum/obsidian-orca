@@ -25,7 +25,11 @@ export function turnedTo(
 export interface Surface {
   innerHTML: string;
   readonly dataset: DOMStringMap;
+  readonly style: { setProperty: (name: string, value: string) => void };
 }
+
+/** The trim the painter drew, read off the page it drew. */
+const TRIM = /viewBox="0 0 ([\d.]+) ([\d.]+)"/;
 
 export interface Painted {
   markup: string;
@@ -44,6 +48,11 @@ export interface Painted {
  */
 export function showPage(surface: Surface, painted: Painted): void {
   surface.innerHTML = painted.markup;
+  // The box is the sheet, because the border and the shadow are drawn
+  // on the box: one wider than the sheet hangs them off its edge.
+  const trim = TRIM.exec(painted.markup);
+  surface.style.setProperty("--orca-trim-w", trim?.[1] ?? "");
+  surface.style.setProperty("--orca-trim-h", trim?.[2] ?? "");
   surface.dataset["generation"] = String(painted.generation);
   surface.dataset["stageStyle"] = String(painted.stages.style);
   surface.dataset["stageLines"] = String(painted.stages.lines);

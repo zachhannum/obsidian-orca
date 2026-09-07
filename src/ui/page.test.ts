@@ -2,11 +2,21 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { showPage, turnedTo, type Surface } from "@/ui/page";
 
-function surface(): Surface & { readonly writes: string[] } {
+function surface(): Surface & {
+  readonly writes: string[];
+  readonly trim: Record<string, string>;
+} {
   const writes: string[] = [];
+  const trim: Record<string, string> = {};
   return {
     writes,
+    trim,
     dataset: {},
+    style: {
+      setProperty(name: string, value: string): void {
+        trim[name] = value;
+      },
+    },
     get innerHTML(): string {
       return writes.at(-1) ?? "";
     },
@@ -59,6 +69,21 @@ test("the surface has the generation painted into it, what that cost, and where 
   assert.equal(node.dataset["stagePaint"], "2");
   assert.equal(node.dataset["page"], "12");
   assert.equal(node.dataset["pages"], "337");
+});
+
+test("the page box is the sheet the painter drew, not the box it was given", () => {
+  const node = surface();
+
+  showPage(node, {
+    markup: '<svg viewBox="0 0 432 648" width="432" height="648"></svg>',
+    generation: 1,
+    stages: { style: 1, lines: 1, flow: 1, paint: 1 },
+    page: 1,
+    pages: 337,
+  });
+
+  assert.equal(node.trim["--orca-trim-w"], "432");
+  assert.equal(node.trim["--orca-trim-h"], "648");
 });
 
 test("page up, page down, home and end turn to the page each one names", () => {

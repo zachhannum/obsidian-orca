@@ -1,9 +1,11 @@
 /* Orca's own chrome. Page styling is the book's CSS and never lands here. */
 
-.orca-preview {
+/* The bar runs the width of the pane, so the pane's own padding goes. */
+.view-content.orca-preview {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -16,6 +18,12 @@
   border-bottom: 1px solid var(--divider-color);
   background: var(--background-secondary);
   flex: none;
+}
+
+/* The bar sits back from the page. Obsidian's chrome tone goes lighter
+   in the dark, so the dark theme is a scrim instead. */
+.theme-dark .orca-preview-bar {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* The row is as tall as the tallest thing in it, so the field is the
@@ -42,6 +50,7 @@
   min-height: 0;
   padding: var(--size-4-5);
   overflow: hidden;
+  container-type: size;
 }
 
 .orca-preview-well:focus-visible {
@@ -49,21 +58,23 @@
   outline: none;
 }
 
-/* The page keeps its trim: the well is the box it fits inside, and the
-   svg takes its width from the height it is given, so a short pane
-   never letterboxes the paper against the well behind it. */
+/* The page is as big as the well leaves it and keeps its trim, and the
+   box is the sheet: the border and the shadow are drawn on the box, so
+   a box the sheet does not fill hangs them off its edge. */
 .orca-page {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
+  --orca-trim-w: 2;
+  --orca-trim-h: 3;
+  aspect-ratio: var(--orca-trim-w) / var(--orca-trim-h);
+  height: min(
+    100cqh,
+    calc(100cqw * var(--orca-trim-h) / var(--orca-trim-w))
+  );
 }
 
 .orca-page svg {
   display: block;
   height: 100%;
-  width: auto;
-  max-width: 100%;
+  width: 100%;
   box-shadow:
     0 2px 10px rgba(0, 0, 0, 0.18),
     0 0 0 1px var(--background-modifier-border);

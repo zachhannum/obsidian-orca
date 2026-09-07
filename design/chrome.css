@@ -26,6 +26,7 @@
   --text-accent: hsl(255, 90%, 76%);
   --mono-100: 255, 255, 255;
   --paper-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 0 1px #363636;
+  --orca-bar: rgba(0,0,0,0.25);
 }
 .orca[data-theme="light"] {
   --color-base-00: #ffffff; --color-base-05: #fcfcfc; --color-base-10: #fafafa;
@@ -37,6 +38,7 @@
   --text-accent: hsl(257, 89%, 71%);
   --mono-100: 0, 0, 0;
   --paper-shadow: 0 2px 10px rgba(0,0,0,0.12), 0 0 0 1px #e0e0e0;
+  --orca-bar: var(--color-base-20);
 }
 .orca {
   --background-primary: var(--color-base-00);

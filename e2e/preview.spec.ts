@@ -100,14 +100,21 @@ test("the page matches the one checked in beside the spec", async ({
   await book.painted();
 
   // The page is as tall as the pane leaves it, so it lands on fractions
-  // of a pixel, and a machine that lays the pane out a hair differently
-  // rasterizes every glyph differently. The photograph pins the page to
-  // whole pixels first; where it sits in the pane is the well's job.
+  // of a pixel, and a runner that lays the pane out a hair differently
+  // rasterizes every glyph differently. The photograph is taken at one
+  // size on whole pixels, near enough where the page already stands to
+  // stay clear of the chrome. Where it stands is what the assertions
+  // above are for.
   await obsidian.page.evaluate(() => {
+    const page = document.querySelector(".orca-page");
+    if (page === null) return;
+    const box = page.getBoundingClientRect();
     const pin = document.createElement("style");
     pin.id = "orca-photograph";
     pin.textContent =
-      ".orca-page { position: fixed; inset: 0 auto auto 0; height: 600px }";
+      ".orca-page { position: fixed; width: 360px; height: 540px;" +
+      ` top: ${String(Math.floor(box.top))}px;` +
+      ` left: ${String(Math.floor(box.left))}px }`;
     document.head.append(pin);
   });
 
