@@ -8,7 +8,13 @@
 
 import { expect, type Locator } from "@playwright/test";
 import type { Stages } from "@/engine/session";
-import type { Obsidian } from "./obsidian";
+import { FLOATING, type Obsidian } from "./obsidian";
+
+/** The trim the page is photographed at, in whole pixels. */
+const POSE = { width: 360, height: 540 };
+
+/** The style tag a pose is held by. */
+const POSED = "orca-photograph";
 
 /** The type the preview is registered under. */
 export const PREVIEW = "orca-book-preview";
@@ -62,6 +68,56 @@ export class Book {
 
   async close(): Promise<void> {
     await this.obsidian.detach(PREVIEW);
+  }
+
+  /**
+   * Stands the page on whole pixels, with the chrome that floats over
+   * the pane out of the shot. The page is otherwise as tall as the pane
+   * leaves it, so it lands on fractions of a pixel, and a runner that
+   * lays the pane out a hair differently rasterizes every glyph
+   * differently. Where the page stands is what the assertions are for.
+   */
+  async pose(): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ([floating, held, trim]) => {
+        const page = document.querySelector(".orca-page");
+        if (page === null) return;
+        const box = page.getBoundingClientRect();
+        // Near enough where the page stands, and inside the window.
+        const want = {
+          top: Math.max(
+            Math.min(Math.floor(box.top), window.innerHeight - trim.height),
+            0,
+          ),
+          left: Math.max(
+            Math.min(Math.floor(box.left), window.innerWidth - trim.width),
+            0,
+          ),
+        };
+        const stand = (top: number, left: number): string =>
+          `${floating} { visibility: hidden }` +
+          ".orca-page { position: fixed;" +
+          ` width: ${String(trim.width)}px; height: ${String(trim.height)}px;` +
+          ` top: ${String(top)}px; left: ${String(left)}px }`;
+        const pose = document.createElement("style");
+        pose.id = held;
+        pose.textContent = stand(0, 0);
+        document.head.append(pose);
+        // A pane is the containing block for anything fixed inside it,
+        // and which pane that is answers in pixels rather than in the
+        // rules, so the offset is read off where the corner landed.
+        const at = page.getBoundingClientRect();
+        pose.textContent = stand(want.top - at.top, want.left - at.left);
+      },
+      [FLOATING, POSED, POSE] as const,
+    );
+  }
+
+  /** Puts the pane back the way the pose found it. */
+  async stand(): Promise<void> {
+    await this.obsidian.page.evaluate((held) => {
+      document.getElementById(held)?.remove();
+    }, POSED);
   }
 
   /** The generation on the surface, once there is one. */

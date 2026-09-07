@@ -48,7 +48,11 @@ const CHROME = {
   item: ".menu-item",
   suggestion: ".suggestion-item",
   notice: ".notice",
+  status: ".status-bar",
 };
+
+/** The chrome that floats over a pane, which a photograph of one drops. */
+export const FLOATING = CHROME.status;
 
 /**
  * The size every page is laid out and photographed at. Obsidian opens

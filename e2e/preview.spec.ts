@@ -92,35 +92,11 @@ test("the folio leaves the status bar with the leaf that was reading", async ({
   await expect(book.status).toHaveCount(0);
 });
 
-test("the page matches the one checked in beside the spec", async ({
-  book,
-  obsidian,
-}) => {
+test("the page matches the one checked in beside the spec", async ({ book }) => {
   await book.open();
   await book.painted();
 
-  // The page is as tall as the pane leaves it, so it lands on fractions
-  // of a pixel, and a runner that lays the pane out a hair differently
-  // rasterizes every glyph differently. The photograph is taken at one
-  // size on whole pixels, near enough where the page already stands to
-  // stay clear of the chrome. Where it stands is what the assertions
-  // above are for.
-  await obsidian.page.evaluate(() => {
-    const page = document.querySelector(".orca-page");
-    if (page === null) return;
-    const box = page.getBoundingClientRect();
-    const pin = document.createElement("style");
-    pin.id = "orca-photograph";
-    pin.textContent =
-      ".orca-page { position: fixed; width: 360px; height: 540px;" +
-      ` top: ${String(Math.floor(box.top))}px;` +
-      ` left: ${String(Math.floor(box.left))}px }`;
-    document.head.append(pin);
-  });
-
+  await book.pose();
   await expect(book.page).toHaveScreenshot("page-one.png");
-
-  await obsidian.page.evaluate(() => {
-    document.getElementById("orca-photograph")?.remove();
-  });
+  await book.stand();
 });
