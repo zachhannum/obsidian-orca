@@ -93,7 +93,7 @@ const NEIGHBOURS = 1;
 
 /** The pages a view paints, and the tables a painter reads them through. */
 export interface Reading {
-  /** Where the first of them sits in the book, counting from 0. */
+  /** The place in the book the first of them sits at, counting from 0. */
   at: number;
   /** The pages themselves, in reading order. */
   pages: Page[];

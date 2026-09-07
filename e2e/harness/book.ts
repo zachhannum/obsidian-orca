@@ -20,9 +20,11 @@ const POSED = "orca-photograph";
 export const PREVIEW = "orca-book-preview";
 
 export class Book {
-  /** The node the page is written into. */
+  /** The node the view's pages are written into. */
   readonly surface: Locator;
-  /** The page itself: one `<svg>` the painter wrote in one go. */
+  /** Every sheet the view seats, empty slots included. */
+  readonly sheets: Locator;
+  /** The first page itself: one `<svg>` the painter wrote in one go. */
   readonly page: Locator;
   /** The folio being read, which an author can type into. */
   readonly folio: Locator;
@@ -31,10 +33,14 @@ export class Book {
   readonly previous: Locator;
   readonly next: Locator;
 
+  private readonly pane: Locator;
+
   constructor(private readonly obsidian: Obsidian) {
     const pane = obsidian.view(PREVIEW);
-    this.surface = pane.getByTestId("orca-page");
-    this.page = this.surface.locator("svg");
+    this.pane = pane;
+    this.surface = pane.getByTestId("orca-sheets");
+    this.sheets = this.surface.locator(".orca-page");
+    this.page = this.surface.locator("svg").first();
     this.folio = pane.getByTestId("orca-folio");
     // The folio being read is Obsidian's own status bar item, outside
     // the pane, which is where the artboard draws it.
@@ -55,10 +61,31 @@ export class Book {
     await this.surface.press(key);
   }
 
-  /** The folio the surface says it painted, once it says one. */
+  /** The first folio the surface says it painted, once it says one. */
   async reading(): Promise<number> {
-    await expect(this.surface).toHaveAttribute("data-page", /\d+/);
-    return Number(await this.surface.getAttribute("data-page"));
+    await expect(this.surface).toHaveAttribute("data-first", /\d+/);
+    return Number(await this.surface.getAttribute("data-first"));
+  }
+
+  /** The button that reads the book in one of the three views. */
+  view(label: string): Locator {
+    return this.pane.getByLabel(label, { exact: true });
+  }
+
+  /** Reads the book in the view `label` names, and waits for its pages. */
+  async show(label: string, mode: string): Promise<void> {
+    await this.view(label).click();
+    await expect(this.surface).toHaveAttribute("data-view", mode);
+  }
+
+  /** The sheet in the `at`th slot, empty slots counted. */
+  seat(at: number): Locator {
+    return this.sheets.nth(at);
+  }
+
+  /** The pages the view says it is showing. */
+  async showing(): Promise<number> {
+    return Number(await this.surface.getAttribute("data-count"));
   }
 
   /** Opens the book from the ribbon. */
