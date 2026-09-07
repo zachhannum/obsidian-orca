@@ -61,6 +61,14 @@ class FakeClient implements EngineClient {
     return Promise.resolve(new Uint8Array());
   }
 
+  nodeAt(): Promise<number | null> {
+    return Promise.resolve(null);
+  }
+
+  sourceOf(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
   private pages(): Page[] {
     return Array.from({ length: this.sources * SPREAD }, (_, at) => ({
       number: at + 1,

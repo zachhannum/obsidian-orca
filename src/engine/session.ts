@@ -5,6 +5,7 @@ import {
   type FaceAttributes,
   type FontRefEntry,
   type LayoutOutput,
+  type NodeSource,
   type Op,
   type Page,
   type Warning,
@@ -30,6 +31,8 @@ export interface EngineClient {
   preview(ops?: Op[], range?: Range): Promise<LayoutOutput | null>;
   exportPdf(ops?: Op[]): Promise<Uint8Array | null>;
   fontBytes(font: number): Promise<Uint8Array>;
+  nodeAt(source: string, byte: number): Promise<number | null>;
+  sourceOf(node: number): Promise<NodeSource | null>;
   readonly current: number;
   readonly stages: Stages;
 }
@@ -55,6 +58,10 @@ export function serialized(client: EngineClient): EngineClient {
     preview: (ops, range) => queued(() => client.preview(ops, range)),
     exportPdf: (ops) => queued(() => client.exportPdf(ops)),
     fontBytes: (font) => client.fontBytes(font),
+    // A question rather than a render: the engine answers it off the
+    // book it holds without taking a turn in the queue.
+    nodeAt: (source, byte) => client.nodeAt(source, byte),
+    sourceOf: (node) => client.sourceOf(node),
     get current(): number {
       return client.current;
     },
@@ -165,6 +172,26 @@ export class Session {
     // book the engine does not have yet.
     await this.opening;
     await this.typeset(ops, at, count);
+  }
+
+  /**
+   * The node one byte of a note was read into, which is the first step
+   * from a cursor to the page it is set on. Nothing where the byte was
+   * read into no node: a blank line, or a note the book does not list.
+   */
+  async nodeAt(source: string, byte: number): Promise<number | undefined> {
+    const node = await routed(() => this.client.nodeAt(source, byte));
+    return node ?? undefined;
+  }
+
+  /**
+   * The note a node was read from and the bytes of it the node covers,
+   * which is the way back from a run to the manuscript. Nothing for
+   * matter the engine wrote itself.
+   */
+  async sourceOf(node: number): Promise<NodeSource | undefined> {
+    const source = await routed(() => this.client.sourceOf(node));
+    return source ?? undefined;
   }
 
   /**

@@ -5,7 +5,13 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { Worker, type TransferListItem } from "node:worker_threads";
-import { paintPage, type LayoutOutput, type Op, type Page } from "fleuron";
+import {
+  paintPage,
+  type LayoutOutput,
+  type NodeSource,
+  type Op,
+  type Page,
+} from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
@@ -32,6 +38,10 @@ class FakeClient implements EngineClient {
   /** Every window asked for, in the order it was asked. */
   readonly ranges: Range[] = [];
   readonly asked: number[] = [];
+  /** The node each byte of each source was read into, as a test sets them. */
+  readonly nodes = new Map<string, number>();
+  /** The place in a manuscript each node was read from. */
+  readonly sources = new Map<number, NodeSource>();
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   private book: Page[];
@@ -89,6 +99,14 @@ class FakeClient implements EngineClient {
   fontBytes(font: number): Promise<Uint8Array> {
     this.asked.push(font);
     return Promise.resolve(new Uint8Array([font]));
+  }
+
+  nodeAt(source: string, byte: number): Promise<number | null> {
+    return Promise.resolve(this.nodes.get(`${source}:${String(byte)}`) ?? null);
+  }
+
+  sourceOf(node: number): Promise<NodeSource | null> {
+    return Promise.resolve(this.sources.get(node) ?? null);
   }
 }
 
@@ -421,6 +439,8 @@ test("a serialized client holds a second render back until the first answers", a
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     fontBytes: () => Promise.resolve(new Uint8Array()),
+    nodeAt: () => Promise.resolve(null),
+    sourceOf: () => Promise.resolve(null),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -448,6 +468,8 @@ test("a serialized client's queue moves on from a render that failed", async () 
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     fontBytes: () => Promise.resolve(new Uint8Array()),
+    nodeAt: () => Promise.resolve(null),
+    sourceOf: () => Promise.resolve(null),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -472,6 +494,8 @@ test("a book the engine refuses comes back as an engine error, not re-worded", a
     preview: () => Promise.reject(new Error("unknown property `leadin`")),
     exportPdf: () => Promise.reject(new Error("unknown property `leadin`")),
     fontBytes: () => Promise.reject(new Error("no faces")),
+    nodeAt: () => Promise.reject(new Error("no book")),
+    sourceOf: () => Promise.reject(new Error("no book")),
     current: 1,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -585,6 +609,23 @@ function engineDirectory(): string {
   const require = createRequire(import.meta.url);
   return path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
 }
+
+test("a byte answers with its node, a node with its place, and neither with nothing", async () => {
+  const client = new FakeClient(typeset(2));
+  client.nodes.set("Chapter Twelve.md:812", 412);
+  client.sources.set(412, { source: "Chapter Twelve.md", start: 812, end: 1043 });
+  const session = new Session(client, faces());
+
+  assert.equal(await session.nodeAt("Chapter Twelve.md", 812), 412);
+  assert.deepEqual(await session.sourceOf(412), {
+    source: "Chapter Twelve.md",
+    start: 812,
+    end: 1043,
+  });
+  // A blank line between chapters, and matter the engine wrote itself.
+  assert.equal(await session.nodeAt("Chapter Twelve.md", 0), undefined);
+  assert.equal(await session.sourceOf(9), undefined);
+});
 
 // What this tier does not cover: registering the view, and the page
 // inside a leaf. Both wait on the e2e harness. It reads the PDF's header

@@ -33,6 +33,11 @@ export interface Read {
 /** The prefix a generated section's name carries, so it is never read as a note's path. */
 export const GENERATED_ORIGIN = "orca-generated";
 
+/** Whether a source the engine named is generated matter rather than a note. */
+export function isGenerated(name: string): boolean {
+  return name.startsWith(`${GENERATED_ORIGIN}:`);
+}
+
 /** A resolved section with something to send: a note or a generated one. */
 type Sendable = Exclude<Section, { kind: "missing" }>;
 
