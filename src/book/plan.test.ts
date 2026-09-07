@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { Client, createEngine, type Op } from "fleuron";
+import { Client, createEngine, styleOp, type Op } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
@@ -12,7 +12,7 @@ import { readModel, type Model } from "@/book/model";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder } from "@/book/order";
 import { GENERATED_ORIGIN, sendBook } from "@/book/plan";
-import { BUNDLED_THEME } from "@/style/theme";
+import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -102,7 +102,10 @@ test("the fixture book lays out and paints, over the bundled theme", async () =>
         });
       },
     });
-    const output = await client.preview([...ops, { op: "style", css: BUNDLED_THEME }]);
+    const output = await client.preview([
+      ...ops,
+      styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
+    ]);
 
     assert.ok(output, "the render was overtaken");
     assert.deepEqual(output.warnings, []);

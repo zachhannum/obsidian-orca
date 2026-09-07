@@ -1,4 +1,4 @@
-import type { Page } from "fleuron";
+import { styleOp, type Page } from "fleuron";
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
@@ -6,7 +6,7 @@ import { resolve } from "@/book/order";
 import { sendBook } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { EngineClient } from "@/engine/session";
-import { BUNDLED_THEME } from "@/style/theme";
+import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
 import { cacheLinks } from "@/ui/notes";
@@ -338,7 +338,7 @@ export class BookView extends FileView {
       );
       const output = await client.preview([
         ...ops,
-        { op: "style", css: BUNDLED_THEME },
+        styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
       ]);
       pages = output?.pages ?? pages;
     } catch (cause) {

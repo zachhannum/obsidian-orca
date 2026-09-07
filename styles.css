@@ -1,35 +1,86 @@
 /* Orca's own chrome. Page styling is the book's CSS and never lands here. */
 
-.orca-preview {
+/* The bar runs the width of the pane, so the pane's own padding goes. */
+.view-content.orca-preview {
   display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.orca-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-bottom: 1px solid var(--divider-color);
+  background: var(--background-secondary);
+  flex: none;
+}
+
+/* The bar sits back from the page. Obsidian's chrome tone goes lighter
+   in the dark, so the dark theme is a scrim instead. */
+.theme-dark .orca-preview-bar {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* The row is as tall as the tallest thing in it, so the field is the
+   bar's height rather than the one Obsidian gives an input. */
+.orca-preview-bar input.orca-preview-folio {
+  width: 58px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 var(--size-4-2);
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+.orca-preview-total {
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.orca-preview-well {
+  display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   min-height: 0;
   padding: var(--size-4-5);
-  background: rgba(var(--mono-rgb-100), 0.03);
   overflow: hidden;
+  container-type: size;
 }
 
+.orca-preview-well:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+  outline: none;
+}
+
+/* The page is as big as the well leaves it and keeps its trim, and the
+   box is the sheet: the border and the shadow are drawn on the box, so
+   a box the sheet does not fill hangs them off its edge. */
 .orca-page {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  max-width: 100%;
-  max-height: 100%;
+  --orca-trim-w: 2;
+  --orca-trim-h: 3;
+  aspect-ratio: var(--orca-trim-w) / var(--orca-trim-h);
+  height: min(
+    100cqh,
+    calc(100cqw * var(--orca-trim-h) / var(--orca-trim-w))
+  );
 }
 
 .orca-page svg {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
+  height: 100%;
+  width: 100%;
   box-shadow:
     0 2px 10px rgba(0, 0, 0, 0.18),
     0 0 0 1px var(--background-modifier-border);
 }
 
-.orca-status {
+.orca-preview-message {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }

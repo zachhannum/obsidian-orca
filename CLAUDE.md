@@ -84,15 +84,14 @@ A feature session keeps its context bounded on purpose.
   enforces (`engine/`, `book/`, `style/`, `assets/`, `ui/`). A module
   another depends on is committed first; independent modules run in
   separate worktrees at the same time.
-- The lead session commits, runs roborev, checks off the issue's
-  acceptance boxes and opens the PR. A subagent hands back a diff or a
-  plan; it does not own the definition of done.
+- The lead session commits, checks off the issue's acceptance boxes
+  and opens the PR. A subagent hands back a diff or a plan; it does not
+  own the definition of done.
 - A subagent is not spawned to save one lookup or a one-file edit.
   Fan-out pays for itself at a module boundary, not by default.
 - A command with long output (`npm test`, `npm run e2e`, `npm run
-  build`, `npm run lint`, `gh run watch`, `roborev wait`, `roborev
-  show`) runs in the background. Only the failing lines come back into
-  context.
+  build`, `npm run lint`, `gh run watch`) runs in the background. Only
+  the failing lines come back into context.
 - A generated or large file (`design/parts/*.html`, generated CSS, the
   fixture vault, a snapshot) is read at the section under change, not
   whole. A snapshot is diffed with `git diff --stat` before it is
