@@ -589,4 +589,5 @@ function engineDirectory(): string {
 // inside a leaf. Both wait on the e2e harness. It reads the PDF's header
 // and trailer only; `qpdf --check` and a `pdftotext` round trip wait on
 // the export flow. The window fetches run against a fake here, so what
-// the engine does with a range it cannot fill is the e2e run's to prove.
+// the engine does with a range it cannot fill is the e2e run's to prove,
+// and so is which generation a real render comes back on.

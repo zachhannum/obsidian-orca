@@ -62,6 +62,22 @@ export class Manuscript {
     );
   }
 
+  /**
+   * Types at the caret, one keystroke at a time, the way a writer does.
+   * The editor is focused through Obsidian's own view rather than by
+   * clicking, which would move the caret to wherever the click landed.
+   */
+  async type(text: string): Promise<void> {
+    await this.obsidian.page.evaluate((type) => {
+      const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+        | MarkdownView
+        | undefined;
+      if (view?.editor === undefined) throw new Error("no manuscript is open");
+      view.editor.focus();
+    }, MARKDOWN);
+    await this.obsidian.page.keyboard.type(text);
+  }
+
   /** The caret in the first manuscript pane, or nothing when none is open. */
   async caret(): Promise<Caret | undefined> {
     return this.obsidian.page.evaluate((type) => {

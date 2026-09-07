@@ -256,4 +256,8 @@ test("a chapter the engine already has the words of is no edit at all", async ()
 
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real
-// chapter opens on the page the real run put it on.
+// chapter opens on the page the real run put it on. A render does not
+// work the folio ranges out again, so a chapter the edit moved keeps
+// the range the book was set with until it is set again; asking for
+// them costs the whole book over the wire, which is the cost a
+// page-through exists to avoid.
