@@ -93,10 +93,10 @@ class FakeClient implements EngineClient {
 }
 
 /** A client whose replies the test releases, one window at a time. */
-class HeldClient extends FakeClient {
+class PausedClient extends FakeClient {
   private waiting: (() => void)[] = [];
 
-  /** Lets every request held so far run. */
+  /** Lets every request paused so far run. */
   release(): void {
     const waiting = this.waiting;
     this.waiting = [];
@@ -151,7 +151,7 @@ function leaves(count: number): Page[] {
   }));
 }
 
-function laidOut(pages = 1): LayoutOutput {
+function typeset(pages = 1): LayoutOutput {
   return {
     pages: leaves(pages),
     first: 0,
@@ -171,7 +171,7 @@ function laidOut(pages = 1): LayoutOutput {
 }
 
 test("a view opened again paints the pages the session already has", async () => {
-  const client = new FakeClient(laidOut());
+  const client = new FakeClient(typeset());
   const session = new Session(client, faces());
 
   await session.open(openBook(SAMPLE));
@@ -184,7 +184,7 @@ test("a view opened again paints the pages the session already has", async () =>
 });
 
 test("two leaves on one book lay it out once between them", async () => {
-  const client = new FakeClient(laidOut());
+  const client = new FakeClient(typeset());
   const session = new Session(client, faces());
 
   await Promise.all([
@@ -196,7 +196,7 @@ test("two leaves on one book lay it out once between them", async () => {
 });
 
 test("opening asks for the first page and the one after it, not the book", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
 
   await session.open(openBook(SAMPLE));
@@ -206,7 +206,7 @@ test("opening asks for the first page and the one after it, not the book", async
 });
 
 test("a page rides in with the one either side, so the turn onto it waits on nothing", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
 
@@ -224,7 +224,7 @@ test("a page rides in with the one either side, so the turn onto it waits on not
 });
 
 test("a spread reads the two pages it paints, and asks for them as one range", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
 
@@ -234,7 +234,7 @@ test("a spread reads the two pages it paints, and asks for them as one range", a
     spread?.pages.map((page) => page.number),
     [2, 3],
   );
-  // Pages 1 and 2 were already held, so the range asks for the rest of
+  // Pages 1 and 2 were already cached, so the range asks for the rest of
   // the spread and the neighbour behind it, not the book.
   assert.deepEqual(client.ranges, [
     { first: 0, count: 2 },
@@ -243,7 +243,7 @@ test("a spread reads the two pages it paints, and asks for them as one range", a
 });
 
 test("a grid reads the screenful it paints, and nothing past its neighbours", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
 
@@ -260,7 +260,7 @@ test("a grid reads the screenful it paints, and nothing past its neighbours", as
 });
 
 test("a span running off the end of the book reads what the book has", async () => {
-  const client = new FakeClient(laidOut(3));
+  const client = new FakeClient(typeset(3));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
 
@@ -272,8 +272,8 @@ test("a span running off the end of the book reads what the book has", async () 
   );
 });
 
-test("a page already held is painted from the cache rather than asked for again", async () => {
-  const client = new FakeClient(laidOut(337));
+test("a page already cached is painted from the cache rather than asked for again", async () => {
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
   await session.read(1);
@@ -285,7 +285,7 @@ test("a page already held is painted from the cache rather than asked for again"
 });
 
 test("an edit drops the pages from before it rather than painting one of them", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
   await session.read(0);
@@ -299,7 +299,7 @@ test("an edit drops the pages from before it rather than painting one of them", 
 });
 
 test("a render overtaken by a later one paints no page of the book it asked for", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
   await session.read(0);
@@ -318,7 +318,7 @@ test("a render overtaken by a later one paints no page of the book it asked for"
 });
 
 test("a book that got shorter reads its last page rather than nothing", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
   await session.read(336);
@@ -332,7 +332,7 @@ test("a book that got shorter reads its last page rather than nothing", async ()
 });
 
 test("two turns onto one window ask for it once between them", async () => {
-  const client = new HeldClient(laidOut(337));
+  const client = new PausedClient(typeset(337));
   const session = new Session(client, faces());
   const opened = session.open(openBook(SAMPLE));
   client.release();
@@ -352,7 +352,7 @@ test("two turns onto one window ask for it once between them", async () => {
 });
 
 test("an edit that overtakes a window in flight is answered with the book it made", async () => {
-  const client = new HeldClient(laidOut(337));
+  const client = new PausedClient(typeset(337));
   const session = new Session(client, faces());
   const opened = session.open(openBook(SAMPLE));
   client.release();
@@ -379,7 +379,7 @@ test("an edit that overtakes a window in flight is answered with the book it mad
 });
 
 test("the cache is the window, not every page read on the way to it", async () => {
-  const client = new FakeClient(laidOut(337));
+  const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());
   await session.open(openBook(SAMPLE));
   for (let at = 0; at < 12; at += 1) await session.read(at);
@@ -388,11 +388,11 @@ test("the cache is the window, not every page read on the way to it", async () =
   // Page 1 was read past long ago, so it is asked for again.
   await session.read(0);
 
-  assert.ok(client.ranges.length > asked, "the whole book was still held");
+  assert.ok(client.ranges.length > asked, "the whole book was still cached");
 });
 
 test("the faces a run drew with come from the module, under the painter's names", async () => {
-  const client = new FakeClient(laidOut());
+  const client = new FakeClient(typeset());
   const set = faces();
 
   await new Session(client, set).open(openBook(SAMPLE));
@@ -416,7 +416,7 @@ test("a serialized client holds a second render back until the first answers", a
       order.push(`${label}:start`);
       if (label === "a") await gate;
       order.push(`${label}:end`);
-      return laidOut();
+      return typeset();
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     fontBytes: () => Promise.resolve(new Uint8Array()),
@@ -443,7 +443,7 @@ test("a serialized client's queue moves on from a render that failed", async () 
       calls += 1;
       return calls === 1
         ? Promise.reject(new Error("the engine refused it"))
-        : Promise.resolve(laidOut());
+        : Promise.resolve(typeset());
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     fontBytes: () => Promise.resolve(new Uint8Array()),
@@ -457,7 +457,7 @@ test("a serialized client's queue moves on from a render that failed", async () 
 });
 
 test("a serialized client reads current and stages live off the one it wraps", () => {
-  const client = new FakeClient(laidOut());
+  const client = new FakeClient(typeset());
   const wrapped = serialized(client);
 
   assert.equal(wrapped.current, 0);
