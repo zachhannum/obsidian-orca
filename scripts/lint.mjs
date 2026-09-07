@@ -91,7 +91,7 @@ export function checkDocs(file, text) {
 
 /**
  * Every file under `src` checked in path order, then every file under
- * `e2e` and `scripts` held to the doc comment rule.
+ * `e2e` and `scripts` checked against the doc comment rule.
  */
 export async function lint(from = root) {
   const found = [];
@@ -131,8 +131,8 @@ function moduleOf(file) {
  */
 function imports(text) {
   const code = text
-    .replace(/\/\*[\s\S]*?\*\//g, (held) => held.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (held, before) => before);
+    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/[^\n]*/g, (match, before) => before);
   const found = [];
   const patterns = [
     /\bfrom\s*["']([^"']+)["']/g,

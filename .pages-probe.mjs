@@ -18,5 +18,5 @@ const reply = await new Promise((ok) => {
 });
 if (!reply.bytes) { console.log('no bytes', reply); process.exit(1); }
 const out = decodeDisplayList(reply.bytes);
-console.log('bookPages', out.bookPages, 'first', out.first, 'held', out.pages.length);
+console.log('bookPages', out.bookPages, 'first', out.first, 'pages', out.pages.length);
 console.log(out.pages.map((p) => `${p.number}:${p.side}:${p.items.length}`).join(' '));

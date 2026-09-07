@@ -35,7 +35,7 @@ export const GENERATED_ORIGIN = "orca-generated";
 /** A resolved section with something to send: a note or a generated one. */
 type Sendable = Exclude<Section, { kind: "missing" }>;
 
-/** The book's reading order, as the ops that lay it out. */
+/** The book's reading order, as the ops that typeset it. */
 export async function sendBook(
   book: Book,
   order: Order,
@@ -129,7 +129,7 @@ export type Edit =
  * life, so a pick that names one already registered plans no `font`
  * op at all.
  */
-export interface Held {
+export interface Loaded {
   /** The sheets the engine is styling with, in cascade order. */
   sheets: readonly Sheet[];
   /** The faces registered on the session, by key. */
@@ -137,13 +137,13 @@ export interface Held {
 }
 
 /** A session with nothing on it yet. */
-export const HELD_NOTHING: Held = { sheets: [], faces: new Set<string>() };
+export const LOADED_NOTHING: Loaded = { sheets: [], faces: new Set<string>() };
 
 /** One edit, planned. */
 export interface Planned {
   ops: Op[];
   /** The session the ops leave behind, which the next plan reads. */
-  held: Held;
+  loaded: Loaded;
 }
 
 /**
@@ -154,35 +154,38 @@ export interface Planned {
  * matches on where a source sits, so a sheet compiled against the
  * order before the move is stale even though its text is not.
  */
-export function sendEdit(edit: Edit, held: Held): Planned {
+export function sendEdit(edit: Edit, loaded: Loaded): Planned {
   switch (edit.did) {
     case "typed":
-      return { ops: [{ op: "edit", name: edit.name, text: edit.text }], held };
+      return {
+        ops: [{ op: "edit", name: edit.name, text: edit.text }],
+        loaded,
+      };
     case "deleted":
-      return { ops: [{ op: "remove", name: edit.name }], held };
+      return { ops: [{ op: "remove", name: edit.name }], loaded };
     case "styled":
       return {
         ops: [styling(edit.sheets)],
-        held: { ...held, sheets: edit.sheets },
+        loaded: { ...loaded, sheets: edit.sheets },
       };
     case "reordered":
       return {
-        ops: [{ op: "book", sources: edit.sources }, styling(held.sheets)],
-        held,
+        ops: [{ op: "book", sources: edit.sources }, styling(loaded.sheets)],
+        loaded,
       };
     case "faced":
-      return faced(edit.face, edit.sheets, held);
+      return faced(edit.face, edit.sheets, loaded);
   }
 }
 
 /** Registers the face unless the session already holds it, then styles. */
-function faced(face: Face, sheets: Sheet[], held: Held): Planned {
-  if (held.faces.has(face.key)) {
-    return { ops: [styling(sheets)], held: { ...held, sheets } };
+function faced(face: Face, sheets: Sheet[], loaded: Loaded): Planned {
+  if (loaded.faces.has(face.key)) {
+    return { ops: [styling(sheets)], loaded: { ...loaded, sheets } };
   }
   return {
     ops: [{ op: "font", bytes: face.bytes }, styling(sheets)],
-    held: { sheets, faces: new Set([...held.faces, face.key]) },
+    loaded: { sheets, faces: new Set([...loaded.faces, face.key]) },
   };
 }
 

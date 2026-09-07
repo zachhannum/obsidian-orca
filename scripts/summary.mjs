@@ -22,14 +22,14 @@ export default async function* summary(events) {
     if (details?.type === "suite") continue;
 
     const at = source(file);
-    const held = files.get(at) ?? { tests: 0, failed: 0, ms: 0 };
-    held.tests += 1;
-    held.ms += details?.duration_ms ?? 0;
+    const tally = files.get(at) ?? { tests: 0, failed: 0, ms: 0 };
+    tally.tests += 1;
+    tally.ms += details?.duration_ms ?? 0;
     if (event.type === "test:fail") {
-      held.failed += 1;
+      tally.failed += 1;
       failures.push({ at, name, message: details?.error?.message ?? "" });
     }
-    files.set(at, held);
+    files.set(at, tally);
   }
 
   const out = process.env["GITHUB_STEP_SUMMARY"];
@@ -50,8 +50,8 @@ function source(file) {
 }
 
 function markdown(files, failures) {
-  const passed = total(files, (held) => held.tests - held.failed);
-  const failed = total(files, (held) => held.failed);
+  const passed = total(files, (tally) => tally.tests - tally.failed);
+  const failed = total(files, (tally) => tally.failed);
   const lines = [
     "## Node tier",
     "",
@@ -60,9 +60,9 @@ function markdown(files, failures) {
     "| | file | tests | time |",
     "| --- | --- | --- | --- |",
   ];
-  for (const [at, held] of [...files].sort()) {
-    const mark = held.failed > 0 ? "✗" : "✓";
-    lines.push(`| ${mark} | \`${at}\` | ${held.tests} | ${seconds(held.ms)} |`);
+  for (const [at, tally] of [...files].sort()) {
+    const mark = tally.failed > 0 ? "✗" : "✓";
+    lines.push(`| ${mark} | \`${at}\` | ${tally.tests} | ${seconds(tally.ms)} |`);
   }
   for (const { at, name, message } of failures) {
     lines.push("", `### \`${at}\` › ${name}`, "", "```", quote(message), "```");
@@ -71,7 +71,7 @@ function markdown(files, failures) {
 }
 
 function total(files, of) {
-  return [...files.values()].reduce((sum, held) => sum + of(held), 0);
+  return [...files.values()].reduce((sum, tally) => sum + of(tally), 0);
 }
 
 function seconds(ms) {

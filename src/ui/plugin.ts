@@ -31,7 +31,7 @@ import {
   PreviewView,
   type PreviewState,
 } from "@/ui/preview";
-import { Setter, type Setting } from "@/ui/setter";
+import { Composer, type Composing } from "@/ui/composer";
 import type { Opened } from "@/ui/shelf";
 
 /** The view a book note is handed back to. */
@@ -45,7 +45,7 @@ type SetViewState = (
 ) => Promise<void>;
 
 /** The place a leaf left the manuscript, so a toggle back lands on it. */
-interface Held {
+interface Place {
   at: string;
   state: unknown;
 }
@@ -58,8 +58,8 @@ export default class OrcaPlugin extends Plugin {
   private engine: EngineHandle | undefined;
   /** Every edit to a book, routed to the note's one writer. */
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
-  /** Sets a book on the engine. Every preview reads the pages it lays out. */
-  private setter: Setter | undefined;
+  /** Sets a book on the engine. Every preview reads the pages it typesets. */
+  private composer: Composer | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
   private indexing: number | undefined;
@@ -69,7 +69,7 @@ export default class OrcaPlugin extends Plugin {
   /** The leaves an author has asked to keep in markdown, and for which note. */
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
   /** The place each leaf left the manuscript it toggled away from. */
-  private readonly manuscript = new WeakMap<WorkspaceLeaf, Held>();
+  private readonly manuscript = new WeakMap<WorkspaceLeaf, Place>();
   /** The icon on each note that belongs to a book, and where it leads. */
   private readonly back = new WeakMap<
     MarkdownView,
@@ -80,15 +80,15 @@ export default class OrcaPlugin extends Plugin {
     // The engine is started before anything is registered, so the views
     // Obsidian restores at startup all wait on the one module.
     const opening = this.open();
-    const setter = new Setter(this.setting(opening));
-    this.setter = setter;
+    const composer = new Composer(this.composing(opening));
+    this.composer = composer;
 
     this.registerView(
       PREVIEW_VIEW,
       (leaf) =>
         new PreviewView(
           leaf,
-          setter,
+          composer,
           {
             asMarkdown: (view, note) => {
               void this.openAsMarkdown(view.leaf, note);
@@ -228,17 +228,17 @@ export default class OrcaPlugin extends Plugin {
    * sees.
    */
   private catchOpening(): void {
-    const held = WorkspaceLeaf.prototype.setViewState as SetViewState;
+    const original = WorkspaceLeaf.prototype.setViewState as SetViewState;
     const plugin = this;
     const caught: SetViewState = function (state, ...rest) {
-      return held.call(this, plugin.asBook(this, state), ...rest);
+      return original.call(this, plugin.asBook(this, state), ...rest);
     };
     WorkspaceLeaf.prototype.setViewState = caught;
     this.register(() => {
       // Another plugin may have wrapped this one since. Its wrapper
       // stays, because taking it off would take that plugin with it.
       if (WorkspaceLeaf.prototype.setViewState === caught) {
-        WorkspaceLeaf.prototype.setViewState = held;
+        WorkspaceLeaf.prototype.setViewState = original;
       }
     });
   }
@@ -349,7 +349,7 @@ export default class OrcaPlugin extends Plugin {
     const { vault, metadataCache, workspace } = this.app;
     const changed = (path: string): void => {
       const book = this.members.get(path)?.book;
-      this.setter?.forget(book ?? path);
+      this.composer?.forget(book ?? path);
       this.index();
     };
     // Every keystroke, which the loop in front of the engine coalesces
@@ -360,7 +360,7 @@ export default class OrcaPlugin extends Plugin {
         if (path === undefined) return;
         const member = this.members.get(path);
         if (member === undefined) return;
-        this.setter?.retype(member.book, path, editor.getValue());
+        this.composer?.retype(member.book, path, editor.getValue());
       }),
     );
     this.registerEvent(
@@ -406,7 +406,7 @@ export default class OrcaPlugin extends Plugin {
     void this.app.vault
       .cachedRead(note)
       .then((text) => {
-        this.setter?.retype(book, note.path, text);
+        this.composer?.retype(book, note.path, text);
       })
       .catch(() => undefined);
   }
@@ -601,8 +601,8 @@ export default class OrcaPlugin extends Plugin {
       state: { file: path, mode: "source" },
       active: true,
     });
-    const held = this.manuscript.get(leaf);
-    if (held?.at === path) leaf.setEphemeralState(held.state);
+    const place = this.manuscript.get(leaf);
+    if (place?.at === path) leaf.setEphemeralState(place.state);
     this.swap();
   }
 
@@ -744,8 +744,8 @@ export default class OrcaPlugin extends Plugin {
     }
   }
 
-  /** The vault and the engine, as the setter reaches them. */
-  private setting(client: Promise<EngineClient>): Setting {
+  /** The vault and the engine, as the composer reaches them. */
+  private composing(client: Promise<EngineClient>): Composing {
     return {
       model: (path) => this.edits.model(path),
       read: (path) => {

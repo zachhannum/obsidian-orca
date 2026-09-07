@@ -181,7 +181,7 @@ test("the surface has the generation painted into it, what that cost, and the sp
   assert.equal(node.dataset["note"], "Chapter Twelve.md");
 });
 
-test("the sheet box is the trim the painter drew, laid out on the view's own grid", () => {
+test("the sheet box is the trim the painter drew, placed on the view's own grid", () => {
   const node = surface();
 
   showPages(node, {

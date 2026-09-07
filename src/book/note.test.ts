@@ -68,22 +68,22 @@ test("orca's own properties are set on the note, and the author's are left as th
   const { properties } = await note();
   // The object Obsidian's frontmatter API hands over is the note's own
   // properties, orca's among them.
-  const held = structuredClone(properties);
+  const existing = structuredClone(properties);
   const book = readBook(properties);
   book.metadata.title = "First Impressions";
   delete book.metadata.series;
 
-  applyBook(held, book);
+  applyBook(existing, book);
 
-  assert.equal(held[BOOK_KEY], FORMAT);
-  assert.equal(held["title"], "First Impressions");
-  assert.equal(Object.hasOwn(held, "series"), false);
+  assert.equal(existing[BOOK_KEY], FORMAT);
+  assert.equal(existing["title"], "First Impressions");
+  assert.equal(Object.hasOwn(existing, "series"), false);
   // A property orca does not own survives the round trip whole, in the
   // place the author put it.
-  assert.deepEqual(held["tags"], ["novel"]);
-  assert.equal(held["status"], "drafting");
+  assert.deepEqual(existing["tags"], ["novel"]);
+  assert.equal(existing["status"], "drafting");
   assert.deepEqual(
-    Object.keys(held).filter(
+    Object.keys(existing).filter(
       (key) => key !== BOOK_KEY && !(FIELD_KEYS as readonly string[]).includes(key),
     ),
     ["tags", "status"],

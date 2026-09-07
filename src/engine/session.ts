@@ -112,9 +112,9 @@ export class Session {
   private opening: Promise<void> | undefined;
   private readonly loaded = new Set<number>();
   /** The pages decoded so far, by their place in the book. */
-  private readonly held = new Map<number, Page>();
-  /** The generation {@link Session.held} holds pages from. */
-  private heldAt = -1;
+  private readonly cached = new Map<number, Page>();
+  /** The generation {@link Session.cached} holds pages from. */
+  private cachedAt = -1;
   /** The window fetches in flight, by the range each one asked for. */
   private readonly fetching = new Map<string, Promise<void>>();
 
@@ -143,11 +143,11 @@ export class Session {
   }
 
   /**
-   * Lays the book out once. A second view, or the same one opened
+   * Typesets the book once. A second view, or the same one opened
    * again, paints the pages this already has.
    */
   async open(ops: Op[]): Promise<void> {
-    this.opening ??= this.lay(ops).catch((cause: unknown) => {
+    this.opening ??= this.typeset(ops).catch((cause: unknown) => {
       this.opening = undefined;
       throw cause;
     });
@@ -155,20 +155,20 @@ export class Session {
   }
 
   /**
-   * Applies an edit's ops and lays the book out from them, asking for
+   * Applies an edit's ops and typesets the book from them, asking for
    * the span the reader is on so the redraw costs one round trip. The
-   * pages held from before the edit go as the reply lands: nothing
+   * pages cached from before the edit go as the reply lands: nothing
    * painted mixes two generations.
    */
   async render(ops: Op[], at = 0, count = 1): Promise<void> {
     // A render that overtook the first layout would be an edit to a
     // book the engine does not have yet.
     await this.opening;
-    await this.lay(ops, at, count);
+    await this.typeset(ops, at, count);
   }
 
   /**
-   * The book as PDF bytes, from the session the pages were laid out
+   * The book as PDF bytes, from the session the pages were typeset
    * in.
    */
   async pdf(): Promise<Uint8Array> {
@@ -190,8 +190,8 @@ export class Session {
   async read(at: number, count = 1): Promise<Reading | undefined> {
     if (this.layout === undefined) return undefined;
     this.drop();
-    // Held or not, the window around the span is asked for. Only a span
-    // that is not held waits on the answer.
+    // Cached or not, the window around the span is asked for. Only a
+    // span that is not cached waits on the answer.
     const wanted = this.bound(at);
     if (this.holds(wanted, count)) this.spare(wanted, count);
     else await this.fill(wanted, count);
@@ -213,33 +213,33 @@ export class Session {
     };
   }
 
-  /** The last page of the span from `at`, held inside the book. */
+  /** The last page of the span from `at`, clamped to the book. */
   private last(at: number, count: number): number {
     return Math.min(at + count - 1, Math.max(this.pages - 1, 0));
   }
 
-  /** Whether every page of the span from `at` is held. */
+  /** Whether every page of the span from `at` is cached. */
   private holds(at: number, count: number): boolean {
     const last = this.last(at, count);
     for (let page = at; page <= last; page += 1) {
-      if (!this.held.has(page)) return false;
+      if (!this.cached.has(page)) return false;
     }
     return true;
   }
 
-  /** The span from `at`, as far as the held pages run. */
+  /** The span from `at`, as far as the cached pages run. */
   private span(at: number, count: number): Page[] {
     const pages: Page[] = [];
     const last = this.last(at, count);
     for (let page = at; page <= last; page += 1) {
-      const held = this.held.get(page);
-      if (held === undefined) break;
-      pages.push(held);
+      const cached = this.cached.get(page);
+      if (cached === undefined) break;
+      pages.push(cached);
     }
     return pages;
   }
 
-  /** `at`, held inside the book. */
+  /** `at`, clamped to the book. */
   private bound(at: number): number {
     return Math.min(Math.max(at, 0), Math.max(this.pages - 1, 0));
   }
@@ -248,22 +248,22 @@ export class Session {
   private evict(at: number, count: number): void {
     const from = at - NEIGHBOURS;
     const to = this.last(at, count) + NEIGHBOURS;
-    for (const page of this.held.keys()) {
-      if (page < from || page > to) this.held.delete(page);
+    for (const page of this.cached.keys()) {
+      if (page < from || page > to) this.cached.delete(page);
     }
   }
 
   /** Empties the cache of pages from before the last edit. */
   private drop(): void {
     const at = this.client.current;
-    if (at === this.heldAt) return;
-    this.held.clear();
-    this.heldAt = at;
+    if (at === this.cachedAt) return;
+    this.cached.clear();
+    this.cachedAt = at;
   }
 
   /**
    * Fetches whatever of the window around the span from `at` is not
-   * held yet, as one range. A window already held costs nothing.
+   * cached yet, as one range. A window already cached costs nothing.
    */
   private fill(at: number, count: number): Promise<void> {
     const from = Math.max(at - NEIGHBOURS, 0);
@@ -271,7 +271,7 @@ export class Session {
     let first = -1;
     let last = -1;
     for (let page = from; page <= to; page += 1) {
-      if (this.held.has(page)) continue;
+      if (this.cached.has(page)) continue;
       if (first < 0) first = page;
       last = page;
     }
@@ -294,7 +294,7 @@ export class Session {
     void this.fill(at, count).catch(() => undefined);
   }
 
-  private async lay(ops: Op[], at = 0, count = 1): Promise<void> {
+  private async typeset(ops: Op[], at = 0, count = 1): Promise<void> {
     const first = Math.max(at - NEIGHBOURS, 0);
     const layout = await routed(() =>
       this.client.preview(ops, {
@@ -320,11 +320,11 @@ export class Session {
     await this.load(layout);
   }
 
-  /** Holds a reply's pages at the places in the book it says they are. */
+  /** Caches a reply's pages at the places in the book it says they are. */
   private keep(layout: LayoutOutput): void {
     this.layout = layout;
     for (const [offset, page] of layout.pages.entries()) {
-      this.held.set(layout.first + offset, page);
+      this.cached.set(layout.first + offset, page);
     }
   }
 

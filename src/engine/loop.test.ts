@@ -71,12 +71,12 @@ test("an edit typed under a render in flight rides the run after it", async () =
   const clock = new Steps();
   const rendered: Op[][] = [];
   /** The first render's answer, which the test holds back. */
-  let held: (() => void) | undefined;
+  let release: (() => void) | undefined;
   const loop = new Loop((ops) => {
     rendered.push(ops);
-    if (held !== undefined) return Promise.resolve();
+    if (release !== undefined) return Promise.resolve();
     return new Promise<void>((resolve) => {
-      held = resolve;
+      release = resolve;
     });
   }, clock);
 
@@ -86,7 +86,7 @@ test("an edit typed under a render in flight rides the run after it", async () =
   clock.tick();
   assert.equal(rendered.length, 1);
 
-  held?.();
+  release?.();
   await loop.settled;
 
   // The engine holds one document, so the second render is the run

@@ -9,9 +9,9 @@ export function Icon({
   name: string;
   className?: string;
 }): JSX.Element {
-  const held = useRef<HTMLSpanElement>(null);
+  const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (held.current !== null) setIcon(held.current, name);
+    if (ref.current !== null) setIcon(ref.current, name);
   }, [name]);
-  return <span ref={held} className={className} />;
+  return <span ref={ref} className={className} />;
 }

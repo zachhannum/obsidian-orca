@@ -141,15 +141,15 @@ export async function save(
   disk: string,
   model: Model,
 ): Promise<string> {
-  const held = readFrontmatter(disk);
-  const after = structuredClone(held.properties);
+  const before = readFrontmatter(disk);
+  const after = structuredClone(before.properties);
   applyBook(after, model.book);
-  if (JSON.stringify(after) !== JSON.stringify(held.properties)) {
+  if (JSON.stringify(after) !== JSON.stringify(before.properties)) {
     await app.fileManager.processFrontMatter(file, (properties: Properties) => {
       applyBook(properties, model.book);
     });
   }
-  if (writeOrder(model.order) !== held.body) {
+  if (writeOrder(model.order) !== before.body) {
     await app.vault.process(file, (text) => withOrder(text, model.order));
   }
   return app.vault.read(file);

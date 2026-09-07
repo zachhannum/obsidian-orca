@@ -1,6 +1,6 @@
 /**
- * A section's folio range, from the pages the engine laid the book
- * out to.
+ * A section's folio range, from the pages the engine typeset the
+ * book to.
  *
  * fleuron assigns a section its content-tree id before any node
  * inside it, and ids run in document order, so the section ids a run
@@ -100,22 +100,22 @@ export function sectionAt(
 export function sectionOn(
   ranges: Map<number, Range>,
   span: Range,
-  held: number | undefined,
+  current: number | undefined,
 ): number | undefined {
   let first: number | undefined;
   let opened = 0;
   for (const [at, range] of ranges) {
     if (range.first < span.first || range.first > span.last) continue;
-    if (at === held) return held;
+    if (at === current) return current;
     if (first !== undefined && range.first > opened) continue;
     first = at;
     opened = range.first;
   }
   if (first !== undefined) return first;
-  const on = held === undefined ? undefined : ranges.get(held);
+  const on = current === undefined ? undefined : ranges.get(current);
   const covers =
     on !== undefined && on.first <= span.last && on.last >= span.first;
-  return covers ? held : sectionAt(ranges, span.first);
+  return covers ? current : sectionAt(ranges, span.first);
 }
 
 /** A chapter a reader can turn to: what it is called, and where it opens. */
@@ -129,7 +129,7 @@ export interface Chapter {
 
 /**
  * Every section a reader can turn to, in reading order. A section the
- * run laid no page for is left out, so what a reader is offered is
+ * run typeset no page for is left out, so what a reader is offered is
  * what the book set.
  */
 export function chapters(

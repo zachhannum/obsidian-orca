@@ -89,12 +89,12 @@ export class Note {
           (Editing & { file: TFile | null }) | undefined;
         if (view === undefined) throw new Error("no book view is open");
         for (let frame = 0; frame < count; frame += 1) {
-          const held = count === 1 ? name : `${name} ${frame}`;
+          const title = count === 1 ? name : `${name} ${frame}`;
           view.edit((model) => ({
             ...model,
             book: {
               ...model.book,
-              metadata: { ...model.book.metadata, title: held },
+              metadata: { ...model.book.metadata, title },
             },
           }));
         }

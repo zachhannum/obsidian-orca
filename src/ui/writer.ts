@@ -41,7 +41,7 @@ export const timers: Clock = {
 };
 
 export class Writer {
-  private held: Model;
+  private current: Model;
   private painted = 0;
   private behind = false;
   private cancel: (() => void) | undefined;
@@ -53,12 +53,12 @@ export class Writer {
     private readonly clock: Clock = timers,
     private readonly settle: number = SETTLE,
   ) {
-    this.held = model;
+    this.current = model;
   }
 
   /** The view's book, the edits waiting on the settle included. */
   get model(): Model {
-    return this.held;
+    return this.current;
   }
 
   /** The number of times the model has changed since the note was opened. */
@@ -73,10 +73,10 @@ export class Writer {
 
   /** One edit: painted now, and written on settle. */
   edit(change: (model: Model) => Model): void {
-    this.held = change(this.held);
+    this.current = change(this.current);
     this.painted += 1;
     this.behind = true;
-    this.to.paint(this.held, this.painted);
+    this.to.paint(this.current, this.painted);
     this.restart();
   }
 
@@ -96,10 +96,10 @@ export class Writer {
    */
   take(model: Model): void {
     this.stop();
-    this.held = model;
+    this.current = model;
     this.behind = false;
     this.painted += 1;
-    this.to.paint(this.held, this.painted);
+    this.to.paint(this.current, this.painted);
   }
 
   /** Stops the settle. The model stays unwritten. */
@@ -121,12 +121,12 @@ export class Writer {
    */
   private async write(): Promise<void> {
     if (!this.behind) return;
-    const written = this.held;
+    const written = this.current;
     const out = (this.writing ?? Promise.resolve()).then(() =>
       this.to.save(written),
     );
     this.writing = out.catch(() => undefined);
     await out;
-    if (this.held === written) this.behind = false;
+    if (this.current === written) this.behind = false;
   }
 }

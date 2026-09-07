@@ -112,14 +112,14 @@ export function moveRow(
 ): Moved | undefined {
   const from = items.findIndex((item) => item.id === id);
   const to = items.findIndex((item) => item.id === onto);
-  const held = items[from];
-  if (held === undefined || held.kind !== "row" || to < 0 || from === to) {
+  const row = items[from];
+  if (row === undefined || row.kind !== "row" || to < 0 || from === to) {
     return undefined;
   }
 
   const next = [...items];
   next.splice(from, 1);
-  next.splice(to, 0, held);
+  next.splice(to, 0, row);
 
   const was = places(items)[from];
   const now = places(next)[to];
@@ -132,7 +132,7 @@ export function moveRow(
     was.heading === now.heading && now.at > was.at ? now.at + 1 : now.at;
   return {
     items: settle(next),
-    from: held.row.at,
+    from: row.row.at,
     to: { heading: now.heading, at },
   };
 }
@@ -146,12 +146,12 @@ export function moveSection(
   const from = items.findIndex(
     (item) => item.kind === "group" && item.heading === heading,
   );
-  const held = items[from];
+  const group = items[from];
   const over = items.findIndex((item) => item.id === onto);
-  if (held === undefined || held.kind !== "group" || over < 0) return undefined;
+  if (group === undefined || group.kind !== "group" || over < 0) return undefined;
 
-  const block = items.slice(from, from + held.rows + 1);
-  const rest = [...items.slice(0, from), ...items.slice(from + held.rows + 1)];
+  const block = items.slice(from, from + group.rows + 1);
+  const rest = [...items.slice(0, from), ...items.slice(from + group.rows + 1)];
   const landing = rest.findIndex((item) => item.id === onto);
   if (landing < 0) return undefined;
 

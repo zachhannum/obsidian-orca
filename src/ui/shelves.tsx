@@ -107,7 +107,7 @@ export interface Mounted {
   rename(book: string, heading: string): void;
   /**
    * Focuses one entry, unfolding its book and scrolling to it. The ask
-   * is held until the row has been painted, so it survives a shelf
+   * is kept until the row has been painted, so it survives a shelf
    * that is still being read.
    */
   focus(book: string, at: number): void;
@@ -246,13 +246,13 @@ function Action({
   label: string;
   onClick: (event: Pointed) => void;
 }): JSX.Element {
-  const held = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (held.current !== null) setTooltip(held.current, label);
+    if (ref.current !== null) setTooltip(ref.current, label);
   }, [label]);
   return (
     <button
-      ref={held}
+      ref={ref}
       type="button"
       className="orca-nav-action"
       aria-label={label}
@@ -612,7 +612,7 @@ function Rename({
   name: string;
   done: (named: string) => void;
 }): JSX.Element {
-  const held = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLInputElement>(null);
   // Taking the input off the page blurs it, so Escape would be answered
   // twice: once cancelled, and once with the name it was cancelling.
   const answered = useRef(false);
@@ -622,12 +622,12 @@ function Rename({
     done(named);
   };
   useLayoutEffect(() => {
-    held.current?.focus();
-    held.current?.select();
+    ref.current?.focus();
+    ref.current?.select();
   }, []);
   return (
     <input
-      ref={held}
+      ref={ref}
       className="orca-rename"
       data-testid="orca-rename"
       defaultValue={name}

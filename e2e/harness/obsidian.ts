@@ -59,9 +59,9 @@ const CHROME = {
 export const FLOATING = CHROME.status;
 
 /**
- * The size every page is laid out and photographed at. Obsidian opens
+ * The size every page is typeset and photographed at. Obsidian opens
  * its window at the size of the display it is on, so the renderer is
- * given these metrics instead and every run lays the page out the same.
+ * given these metrics instead and every run typesets the page the same.
  */
 const WINDOW = {
   width: 1280,
@@ -234,11 +234,11 @@ export class Obsidian {
     } finally {
       try {
         said = await this.page.evaluate(() => {
-          const held = window.orcaNotices;
-          if (held === undefined) return [];
-          held.watch.disconnect();
+          const notices = window.orcaNotices;
+          if (notices === undefined) return [];
+          notices.watch.disconnect();
           window.orcaNotices = undefined;
-          return held.said;
+          return notices.said;
         });
       } catch (cause) {
         // A page that is gone cannot be read, and the reason it is
