@@ -221,10 +221,14 @@ export default class OrcaPlugin extends Plugin {
       }),
     );
     // Obsidian has no event for a caret that moved without an edit, so
-    // the link reads the editor's own updates.
+    // the link reads the editor's own updates. A keystroke drags the
+    // caret along with it and is not a move to follow: the writer is
+    // already reading the page they are typing on, and asking the
+    // engine where they are on every character would race the render
+    // that character started.
     this.registerEditorExtension(
       EditorView.updateListener.of((update) => {
-        if (!update.selectionSet && !update.docChanged) return;
+        if (!update.selectionSet || update.docChanged) return;
         const path = update.state.field(editorInfoField, false)?.file?.path;
         if (path === undefined) return;
         const before = update.state.doc.sliceString(
