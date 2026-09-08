@@ -1,35 +1,35 @@
 /**
  * The design panel, reached by the test ids in its own markup.
  *
- * The picker offers the families the scan found, so what a spec types
- * narrows the list rather than naming a face. Every wait here is on
- * what the panel or the pages painted.
+ * The picker lists the families the scan found, so a spec types to
+ * narrow that list rather than naming a face. Every wait here is on
+ * the panel's own state rather than on a clock.
  */
 
 import { expect, type Locator } from "@playwright/test";
 import type { Obsidian } from "./obsidian";
 
-/** The command that opens the panel, the way the palette runs it. */
+/** The command that opens the panel. */
 export const OPEN_PANEL = "orca:open-design";
 
 /** The type the panel is registered under. */
 export const PANEL = "orca-design";
 
 export class Panel {
-  /** The panel itself, once it has a book to design. */
+  /** The panel itself, drawn when there is a book to design. */
   readonly panel: Locator;
-  /** The closed field, which reads the family the book is set in. */
+  /** The closed field, which shows the family the book is set in. */
   readonly face: Locator;
   /** The filter, which narrows the list rather than naming a family. */
   readonly filter: Locator;
-  /** The list of families, and the count it says it is offering. */
+  /** The list of families, which carries the number of them shown. */
   readonly rows: Locator;
   readonly options: Locator;
-  /** The state the list holds when nothing matches what was typed. */
+  /** The empty state, shown when nothing matches what was typed. */
   readonly nothing: Locator;
   /** The cuts the engine registered for the family the book is set in. */
   readonly cuts: Locator;
-  /** The complaint a family the machine does not have raises. */
+  /** The warning for a family the machine does not have. */
   readonly missing: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
@@ -44,44 +44,44 @@ export class Panel {
     this.missing = pane.getByTestId("orca-panel-missing");
   }
 
-  /** Opens the panel and waits for it to have read the machine's faces. */
+  /** Opens the panel and waits for it to be drawn. */
   async open(): Promise<void> {
     await this.obsidian.command(OPEN_PANEL);
     await expect(this.panel).toBeVisible();
   }
 
-  /** Opens the picker, which is where the index is offered. */
+  /** Opens the picker and waits for its filter. */
   async pick(): Promise<void> {
     await this.face.click();
     await expect(this.filter).toBeVisible();
   }
 
-  /** Types into the filter, which narrows what is offered. */
+  /** Types into the filter, which narrows the list. */
   async type(typed: string): Promise<void> {
     await this.filter.fill(typed);
   }
 
-  /** The families the list is offering, in the order it offers them. */
+  /** The families in the list, in the order they are shown. */
   async offered(): Promise<string[]> {
     return this.options.allTextContents();
   }
 
-  /** The number the list says it is offering, which a filter changes. */
+  /** The number of families the list shows, which a filter changes. */
   async offering(): Promise<number> {
     return Number(await this.rows.getAttribute("data-offered"));
   }
 
-  /** The family the closed field reads. */
+  /** The family the closed field shows. */
   async reading(): Promise<string> {
     return (await this.face.textContent()) ?? "";
   }
 
-  /** The styles the panel offers, which are the cuts the engine answered. */
+  /** The styles the panel shows, which are the cuts the engine registered. */
   async styles(): Promise<string[]> {
     return this.cuts.allTextContents();
   }
 
-  /** The axes a cut sits on, by the style the panel names it. */
+  /** The axes a cut sits on, by the name of its style. */
   async axes(style: string): Promise<string> {
     return (
       (await this.cuts

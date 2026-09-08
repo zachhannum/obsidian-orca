@@ -212,8 +212,8 @@ test("each edit sends the ops its row names, and nothing else", () => {
   const reordered = sendEdit(row("reordered chapters"), LOADED, REGISTERED).ops;
   assert.deepEqual(only(reordered, "style").sheets, SET);
 
-  // A family is set from several cuts, so each one crosses on a `font`
-  // op of its own, in the order the family lists them.
+  // A family has several cuts, so each one crosses on a `font` op of
+  // its own, in the order `faces` holds them.
   const picked = sendEdit(row("picked a new family"), LOADED, REGISTERED).ops;
   assert.deepEqual(
     picked.flatMap((op) => (op.op === "font" ? [op.bytes] : [])),
@@ -277,8 +277,8 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   assert.equal(new Set(picks.map((pick) => pick.key)).size, 1);
   assert.equal(picks[0]?.bytes.byteLength, bytes.byteLength);
 
-  // The family that cut has already crossed under is picked again: the
-  // two cuts the registry has not seen go on the wire, and it does not.
+  // The family is picked again with a cut that has already crossed.
+  // The other two cuts go on the wire and that one does not.
   const crossed = picks[0];
   assert.ok(crossed, "the file was never read");
   const family = [crossed, ...SPECTRAL.slice(1)];
@@ -392,5 +392,5 @@ async function moduleBytes(): Promise<Buffer> {
 }
 
 // What this tier does not cover: the face bytes of a `font` op reaching
-// the engine, which the session tier drives, nor which cuts a family is
-// made of, which the index that reads them owns.
+// the engine, which the session tier tests, and the cuts a family is
+// made of, which belong to the font index.

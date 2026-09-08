@@ -32,9 +32,9 @@ export const external = [
   "@lezer/highlight",
   "@lezer/lr",
   ...builtins,
-  // esbuild matches the specifier as written, and orca writes the
-  // `node:` form. The plugin is desktop only, so the application
-  // underneath it has these.
+  // esbuild matches the specifier as written, and orca imports the
+  // `node:` form. The plugin is desktop only, so Obsidian provides
+  // these.
   ...builtins.map((name) => `node:${name}`),
 ];
 

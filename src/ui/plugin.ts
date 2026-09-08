@@ -218,9 +218,9 @@ export default class OrcaPlugin extends Plugin {
         reveal: false,
       });
       // The panel is a tab in the sidebar rather than a leaf a command
-      // makes, so there is something to click before anyone knows the
-      // command is there. It reads the machine's faces only once it
-      // has a book, so a startup with no book open scans nothing.
+      // makes, so it can be opened without the command. It reads the
+      // machine's faces only once it has a book, so a startup with no
+      // book open scans nothing.
       void this.app.workspace.ensureSideLeaf(PANEL_VIEW, "right", {
         reveal: false,
       });
@@ -914,7 +914,7 @@ export default class OrcaPlugin extends Plugin {
     };
   }
 
-  /** The book being designed, the faces the machine has, and the way to both. */
+  /** The book being designed and the faces the machine has. */
   private designing(): Designing {
     return {
       book: () => this.designed(),
@@ -923,8 +923,8 @@ export default class OrcaPlugin extends Plugin {
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the
-        // reader moving between books; a layout change is the preview
-        // that holds one arriving or going.
+        // reader moving between books, and a layout change is a preview
+        // arriving or going.
         const on = [
           this.app.workspace.on("active-leaf-change", again),
           this.app.workspace.on("layout-change", again),
@@ -937,8 +937,8 @@ export default class OrcaPlugin extends Plugin {
   }
 
   /**
-   * The book the panel designs: the one the reader is in, or the only
-   * one open when the panel itself has focus.
+   * The book the panel designs. It is the one the reader is in, or the
+   * only one open when the panel itself has focus.
    */
   private async designed(): Promise<Typeset | undefined> {
     const { workspace } = this.app;
@@ -951,8 +951,7 @@ export default class OrcaPlugin extends Plugin {
     try {
       return await this.composer.opened(path);
     } catch {
-      // A book that will not set is the preview's report to make, not
-      // the panel's.
+      // The preview reports a book that will not set, not the panel.
       return undefined;
     }
   }

@@ -33,7 +33,7 @@ const INDEX: FontIndex = {
   refused: [],
 };
 
-/** One cut, as the engine answers for it. */
+/** One cut, as the engine returns it. */
 function cut(
   family: string,
   style: string,
@@ -54,8 +54,8 @@ test("the picker offers the index, and typing narrows it to what matches", () =>
     picking(INDEX, "", 0).offered.map((one) => one.name),
     ["Alegreya", "Charter", "Spectral"],
   );
-  // Charter is offered first because the string opens its name; the
-  // rest match on a substring.
+  // Charter is offered first because its name starts with the string;
+  // the rest match on a substring.
   assert.deepEqual(
     picking(INDEX, "c", 0).offered.map((one) => one.name),
     ["Charter", "Spectral"],
@@ -96,8 +96,8 @@ test("a book naming a family the machine does not have is warned about by name",
   assert.match(missingFace(INDEX, "Charter Italic") ?? "", /Charter Italic/);
 });
 
-// What this tier does not cover: the panel's own drawing, which is
-// React over these answers; the keys that move between rows, which the
-// e2e suite drives in the application the picker is mounted in; and a
-// family whose files have gone since the scan, which the panel reports
-// on and no fake here can take off a disk.
+// What this tier does not cover: the panel's drawing, which is React
+// over these functions; the keys that move between rows, which the e2e
+// suite drives in the application the picker is mounted in; and a
+// family whose files have gone since the scan, which no fake here can
+// take off a disk.

@@ -1,10 +1,9 @@
 /**
- * Draws the design panel: the book's face, picked from the families
- * the machine has.
+ * Draws the design panel, where the book's face is picked out of the
+ * families the machine has.
  *
- * A row is set in the face it offers, and the browser is what sets it.
- * Nothing crosses to the engine to fill the list, which on a Mac is
- * over six hundred files.
+ * The browser sets each row in the face it offers. Nothing crosses to
+ * the engine to fill the list.
  */
 
 import { createRoot } from "react-dom/client";
@@ -20,7 +19,7 @@ import type { Family, FontIndex } from "@/assets/fonts";
 import { picking, type Cut } from "@/ui/face";
 import { Icon } from "@/ui/icon";
 
-/** The actions the panel asks the view to perform. */
+/** The actions the view performs for the panel. */
 export interface Acting {
   /** Sets the book in a family. */
   pick(family: Family): void;
@@ -33,26 +32,26 @@ export type Shown =
       /** The book the panel is designing. */
       name: string;
       index: FontIndex;
-      /** The family the book is set in, or nothing for the theme's own. */
+      /** The family the book is set in, or nothing for the theme's face. */
       face: string | undefined;
       /** The cuts the engine registered for it. */
       cuts: Cut[];
-      /** The complaint a family the machine does not have raised. */
+      /** The warning for a family the machine does not have. */
       missing: string | undefined;
     }
   | { kind: "reading" }
   | { kind: "none" };
 
-/** The panel as the view holds it: painted, and let go. */
+/** The mounted panel, held by the view. */
 export interface Mounted {
   paint(shown: Shown): void;
   unmount(): void;
 }
 
 /**
- * Mounts the panel under a view's element. The view owns the root: it
- * makes one here and unmounts it when the leaf closes, and nothing
- * else empties the element underneath.
+ * Mounts the panel under a view's element. The view owns the root and
+ * unmounts it when the leaf closes, and nothing else empties the
+ * element underneath.
  */
 export function mountPanel(el: HTMLElement, acting: Acting): Mounted {
   const host = el.createDiv({ cls: "orca-panel-host" });
@@ -114,9 +113,9 @@ export function Panel({
 }
 
 /**
- * The families the index has, filtered by what was typed. A commit
- * takes the row the keys are on, so a string matching nothing leaves
- * the book set in the face it already has.
+ * The families in the index, filtered by what was typed. A commit
+ * takes the selected row, so a string matching nothing leaves the book
+ * in the face it already has.
  */
 function Picker({
   index,
@@ -144,8 +143,8 @@ function Picker({
   };
 
   const commit = (family: Family | undefined): void => {
-    // Text matching nothing does not commit: the picker offers the
-    // index, and a family is never named by hand.
+    // Text matching nothing does not commit, because the picker offers
+    // only families in the index.
     if (family === undefined) return;
     acting.pick(family);
     close();
@@ -211,9 +210,9 @@ function Picker({
                 }
                 data-testid="orca-panel-option"
                 data-family={family.name}
-                // A row previews its own face, and the browser is what
-                // draws it: the family is already installed, or the
-                // vault's own face was registered with the document.
+                // The browser draws the row in its own face, from an
+                // installed family or a vault face registered with the
+                // document.
                 style={{ fontFamily: `"${family.name}", var(--font-text)` }}
                 // The filter keeps focus, so the blur that would close
                 // the menu never fires before the click lands.
@@ -240,7 +239,7 @@ function Picker({
   );
 }
 
-/** The cuts the engine registered, which are the styles a family offers. */
+/** The cuts the engine registered, which are a family's styles. */
 function Cuts({ cuts }: { cuts: Cut[] }): JSX.Element | null {
   if (cuts.length === 0) return null;
   return (

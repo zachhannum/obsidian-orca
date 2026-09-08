@@ -1,13 +1,13 @@
 /**
- * The families an author actually has: the platform's own faces and the
- * ones a book carries in its vault, read from the files themselves. A
- * name a picker offers is a name the engine can be handed.
+ * The font families an author has, read from the font files
+ * themselves. A family comes from the platform's font directories or
+ * from a folder in the vault.
  */
 
 import { faceOffsets, readFace, type Refusal, type Ranges } from "@/assets/sfnt";
 import type { Listing } from "@/assets/vault";
 
-/** Font files, listed and read a range at a time. `ui` implements it over the platform and the vault. */
+/** Reads font directories and font files. `ui` implements it over the platform and the vault. */
 export interface FontFiles {
   list(directory: string): Promise<Listing>;
   read(path: string, at: number, length: number): Promise<Uint8Array>;
@@ -16,10 +16,10 @@ export interface FontFiles {
 /** The place a face was found. */
 export type Where = "platform" | "vault";
 
-/** One face a family is set from. */
+/** One face of a family. */
 export interface Face {
   path: string;
-  /** The face of a collection this is, counting from 0. */
+  /** The index of this face in its collection, counting from 0. */
   face: number;
   family: string;
   style: string;
@@ -27,36 +27,36 @@ export interface Face {
   where: Where;
 }
 
-/** One family, and the faces it is set from. */
+/** One family and its faces. */
 export interface Family {
   name: string;
   where: Where;
   faces: Face[];
 }
 
-/** A face the scan turned down. */
+/** A face the scan rejected. */
 export interface Refused {
   path: string;
   face: number;
   why: Refusal;
 }
 
-/** One scan's faces, and the faces it turned down. */
+/** The faces one scan accepted, and the ones it rejected. */
 export interface Found {
   faces: Face[];
   refused: Refused[];
 }
 
-/** The families the author has, and the faces the scan turned down. */
+/** The families an author has, and the faces the scans rejected. */
 export interface FontIndex {
   families: Family[];
   refused: Refused[];
 }
 
-/** The folder a book's own faces live in, inside the vault. */
+/** The vault folder for a book's own faces. */
 export const VAULT_FONTS = "fonts";
 
-/** The directories a platform keeps fonts in, for `darwin`, `win32` and anything else. */
+/** The font directories for `darwin`, `win32`, or any other platform. */
 export function fontDirectories(platform: string, home: string): string[] {
   if (platform === "darwin") {
     return ["/System/Library/Fonts", "/Library/Fonts", `${home}/Library/Fonts`];
@@ -104,7 +104,10 @@ export function fontIndex(platform: Found, vault: Found): FontIndex {
   return { families: listed, refused: [...platform.refused, ...vault.refused] };
 }
 
-/** The families a typed string matches, in the order a picker offers them. */
+/**
+ * The families a typed string matches. A name that starts with the
+ * string comes before one that only contains it.
+ */
 export function matching(index: FontIndex, typed: string): Family[] {
   const want = typed.trim().toLowerCase();
   if (want === "") return [...index.families];
@@ -118,13 +121,13 @@ export function matching(index: FontIndex, typed: string): Family[] {
   return [...starting, ...holding];
 }
 
-/** Whether the index has this family. Matching ignores case, since a name table's casing is its own. */
+/** Whether the index has this family. The comparison ignores case. */
 export function has(index: FontIndex, family: string): boolean {
   const want = family.trim().toLowerCase();
   return index.families.some((known) => known.name.toLowerCase() === want);
 }
 
-/** The folders a scan walks down before it stops, so a linked loop cannot run away. */
+/** The number of folders a scan walks down. The bound stops a loop of linked folders. */
 const DEPTH = 4;
 
 const SFNT = [".ttf", ".otf", ".ttc", ".otc"];
@@ -166,8 +169,8 @@ async function open(
   try {
     offsets = await faceOffsets(read);
   } catch {
-    // A file that will not parse is not a face the author was offered
-    // and turned down.
+    // A file that does not parse is not a face, so it is not reported
+    // as rejected.
     return;
   }
   for (const [face, offset] of offsets.entries()) {

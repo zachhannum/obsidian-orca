@@ -140,7 +140,7 @@ export class Session {
     return this.layout?.bookPages ?? 0;
   }
 
-  /** Every face the engine has registered, by the id it gave. */
+  /** Every face the engine registered, indexed by the font id. */
   get faces(): FontRefEntry[] {
     return this.layout?.fonts ?? [];
   }

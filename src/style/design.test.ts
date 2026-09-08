@@ -28,8 +28,8 @@ test("a design with no face generates nothing that overrides the theme", () => {
 test("a family name with a quote in it is escaped rather than left to close the string", () => {
   const css = designSheet({ face: 'Ba"d\\Face' }).css;
 
-  // The name is read off a font file's own table, so a quote in it
-  // closes nothing: the declaration is still one string.
+  // The name comes from a font file's own name table, so a quote in
+  // it is escaped and the declaration stays one string.
   assert.ok(css.includes('font-family: "Ba\\"d\\\\Face", serif;'));
   assert.equal(css.split('"').length - 1, 3);
 });
@@ -56,8 +56,8 @@ test("a book set in a family the engine does not have still sets, and warns abou
     const output = await client.preview(ops);
 
     assert.ok(output, "the render was overtaken");
-    // The engine falls back to the face it carries and says nothing, so
-    // naming a family the author has not got is orca's own to report.
+    // The engine falls back to the face it carries without a warning,
+    // so a family the author has not got is orca's to report.
     assert.deepEqual(output.warnings, []);
     assert.ok(output.pages.length > 0);
     assert.deepEqual([...new Set(output.fonts.map((font) => font.family))], [
@@ -74,5 +74,5 @@ async function moduleBytes(): Promise<Buffer> {
 }
 
 // What this tier does not cover: a design that sets anything but a
-// face, which waits on the settings model, and the warning orca raises
-// for a family the vault has not got, which the picker owns.
+// face, which waits on the settings model, and the warning for a
+// family the vault has not got, which belongs to the picker.

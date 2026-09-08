@@ -17,7 +17,7 @@ interface Named {
   text: string;
 }
 
-/** Windows' English and Windows' Spanish, the two a face is listed in here. */
+/** Windows' English and Windows' Spanish, the two languages a face is listed in here. */
 const ENGLISH = 0x0409;
 const SPANISH = 0x0c0a;
 
@@ -73,7 +73,7 @@ function os2(fsType: number): Table {
   return { tag: "OS/2", bytes };
 }
 
-/** The name table a plain face carries, listed in English alone. */
+/** The name table for a face listed in English alone. */
 function english(family: string, style: string, postscript = family): Table {
   return {
     tag: "name",
@@ -85,7 +85,7 @@ function english(family: string, style: string, postscript = family): Table {
   };
 }
 
-/** The tables of one or more faces, laid out as one file. */
+/** Lays the tables of one or more faces out as one file. */
 function assemble(faces: readonly (readonly Table[])[], collect: boolean): Uint8Array {
   const head = collect ? 12 + faces.length * 4 : 0;
   let at = head;
@@ -208,7 +208,7 @@ test("a face is named in English, whatever order its name table lists languages 
   });
 });
 
-/** The one face this tier reads from the machine, where the machine has it. */
+/** The one face this tier reads from the machine, when the machine has it. */
 const HELVETICA = "/System/Library/Fonts/Helvetica.ttc";
 
 test(
@@ -245,7 +245,7 @@ test(
   },
 );
 
-// This tier does not cover the faces a machine other than macOS keeps,
-// which are read through the same two functions but named by files no
-// runner is guaranteed; nor a name table written in a language a
-// platform 2 record encodes, which no shipping face uses.
+// What this tier does not cover: the faces on a machine other than
+// macOS, which go through the same two functions but are in files no
+// runner is guaranteed to have, and a name table with a platform 2
+// record, which no shipping face uses.

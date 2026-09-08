@@ -22,7 +22,7 @@ function utf16(text: string): Uint8Array {
   return bytes;
 }
 
-/** A name table listing each name once, in Windows English. */
+/** Makes a name table with each name once, in Windows English. */
 function nameTable(names: readonly (readonly [number, string])[]): Uint8Array {
   const records = names.map(([id, text]) => ({ id, bytes: utf16(text) }));
   const strings = 6 + records.length * 12;
@@ -48,7 +48,7 @@ function nameTable(names: readonly (readonly [number, string])[]): Uint8Array {
   return out;
 }
 
-/** A file of one face, named this way and embedded on these terms. */
+/** Makes a file of one face with these names and this `fsType`. */
 function face(family: string, style: string, fsType = 0): Uint8Array {
   const os2 = new Uint8Array(96);
   new DataView(os2.buffer).setUint16(8, fsType);
@@ -87,7 +87,7 @@ function face(family: string, style: string, fsType = 0): Uint8Array {
   return out;
 }
 
-/** Files at fixed paths. A directory none of them is under is not there. */
+/** Font files at fixed paths. A directory none of them is under is not there. */
 function fontFiles(files: Readonly<Record<string, Uint8Array>>): FontFiles {
   return {
     list: async (directory) => {
@@ -217,6 +217,7 @@ test("the faces of a family are in style order, whatever order the files were li
   );
 });
 
-// This tier does not cover the platform's real font directories, which
-// no runner is guaranteed to have, nor the walk stopping at four
-// folders deep, which needs a linked loop a fake cannot make.
+// What this tier does not cover: the platform's real font
+// directories, which no runner is guaranteed to have, and the walk
+// stopping at four folders deep, which needs a loop of linked folders
+// a fake cannot build.

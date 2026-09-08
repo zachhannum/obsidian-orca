@@ -54,7 +54,6 @@ export class Typeset {
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
   private loaded: Loaded;
-  /** The design the book is set under, which the next pick replaces. */
   private design: Design;
 
   constructor(
@@ -96,15 +95,15 @@ export class Typeset {
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
   }
 
-  /** The family the book is set in, or nothing while it is set in the theme's own. */
+  /** The family the book is set in, or nothing for the theme's face. */
   get face(): string | undefined {
     return this.design.face;
   }
 
   /**
    * Sets the book in a family. Every face of it crosses the first time
-   * it is picked and stays registered for the session's life, so
-   * picking it again sends the sheet alone.
+   * the family is picked and stays registered for the session, so a
+   * later pick sends the sheet alone.
    */
   reface(family: string, faces: readonly Face[]): void {
     this.design = { ...this.design, face: family };
@@ -210,10 +209,8 @@ export class Composer {
   }
 
   /**
-   * The book at this path, for a caller that reads one rather than
-   * opens it. Nothing is typeset here: a surface that only reports on
-   * a book cannot be the reason it is set, nor take the report of a
-   * caller that is.
+   * The book already open at this path. Nothing is typeset here, so a
+   * surface that only reports on a book does not cause one to be set.
    */
   opened(path: string): Promise<Typeset> | undefined {
     return this.books.get(path);

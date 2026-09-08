@@ -1,23 +1,21 @@
 /**
- * The sheet a design generates, over the theme orca bundles. The theme
- * is a constant and the design is not, so they cross as two sheets: an
- * author who picks a face and picks the bundled one again is back at
- * the theme rather than at a sheet that overrides it with itself.
+ * The sheet a design generates, which cascades over the theme orca
+ * bundles. The theme is constant and the design is not, so the two
+ * cross as separate sheets.
  */
 
 import type { Sheet } from "fleuron";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
-/** The sheet a design generates, which a warning names and which cascades over the theme. */
+/** The sheet a design is sent under, which a warning names. */
 export const DESIGN_SHEET = "design.css";
 
-/** A book's design, as much of it as a face is. */
 export interface Design {
-  /** The family the book is set in, or nothing for the theme's own. */
+  /** The family the book is set in, or nothing for the theme's face. */
   face?: string | undefined;
 }
 
-/** The design as one sheet. A design that names no face generates an empty one. */
+/** The design as one sheet. A design with no face generates an empty sheet. */
 export function designSheet(design: Design): Sheet {
   const face = design.face;
   return {
@@ -32,9 +30,8 @@ export function designSheets(design: Design): Sheet[] {
 }
 
 /**
- * A family name as a CSS string. The name is read off a font file's
- * own table, so a quote or a backslash in it is escaped rather than
- * left to close the string early.
+ * A family name as a CSS string. The name comes from a font file's own
+ * name table, so a quote or a backslash in it is escaped.
  */
 function quoted(family: string): string {
   return `"${family.replace(/[\\"]/g, (char) => `\\${char}`)}"`;

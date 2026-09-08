@@ -435,7 +435,7 @@ test("the cuts the engine registered come back indexed by the id it gave them", 
   layout.fonts = [...layout.fonts, registered];
   const session = new Session(new FakeClient(layout), faces());
 
-  // A session with nothing on it has registered nothing.
+  // A session that has not opened a book has no faces.
   assert.deepEqual(session.faces, []);
   await session.open(openBook(SAMPLE));
 
@@ -514,8 +514,8 @@ test("a serialized client reads current and stages live off the one it wraps", (
 
 test("a cut off a variable file is painted at the place on its axes the run named", async () => {
   const layout = typeset();
-  // One variable file names several cuts, and each is a location on
-  // that file rather than a file of its own.
+  // One variable file carries several cuts, each of them a point on
+  // its axes rather than a file of its own.
   layout.fonts = [
     {
       family: "alegreya",
@@ -533,8 +533,8 @@ test("a cut off a variable file is painted at the place on its axes the run name
   const page = reading.pages[0];
   assert.ok(page, "the reading carried no page");
 
-  // The painter is handed the run's own font table, so a painter that
-  // was handed none would draw every cut at the file's default weight.
+  // The painter is given the run's font table. Without it every cut
+  // draws at the file's default weight.
   const markup = paintPage(page, { fonts: reading.fonts });
   assert.match(markup, /font-variation-settings: &quot;wght&quot; 500/);
 });
@@ -588,7 +588,7 @@ test("the sample note sets to a page the painter can draw", async () => {
   }
 });
 
-/** A sheet setting the book in the family the second file carries. */
+/** A sheet setting the book in the family the installed file carries. */
 const TIMES = 'book { font-family: "Times New Roman", serif; }';
 
 /** A face the machine has, for a test that registers a second family. */
@@ -604,8 +604,8 @@ test(
       await session.open(openBook(SAMPLE));
       const bundled = session.faces;
 
-      // The whole registered table comes back, so the cuts the page
-      // never drew with are in it too.
+      // The whole registered table comes back, including the cuts the
+      // page never drew with.
       assert.ok(bundled.length > 1, "the bundled family answered one cut");
       assert.deepEqual([...new Set(bundled.map((face) => face.family))], [
         "eb garamond",

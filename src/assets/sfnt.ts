@@ -1,15 +1,15 @@
 /**
- * An sfnt file, read for the names its faces go by. A collection holds
- * several faces in one file, and the engine parses a face rather than a
+ * An sfnt file, read for its faces' names. A collection holds several
+ * faces in one file, and the engine parses a face rather than a
  * collection, so a face crosses as an sfnt of its own.
  */
 
 import { AssetError } from "@/assets/errors";
 
-/** A face the index turns down, and the reason it names. */
+/** The reason the index rejects a face. */
 export type Refusal = "unnamed" | "restricted" | "hidden";
 
-/** The names one face's tables give it. */
+/** The names of one face. */
 export interface FaceNames {
   family: string;
   style: string;
@@ -17,12 +17,12 @@ export interface FaceNames {
   variable: boolean;
 }
 
-/** Reads a slice of one file. A read past the end answers with what is there. */
+/** Reads a slice of one file. A read past the end returns what is there. */
 export interface Ranges {
   (at: number, length: number): Promise<Uint8Array>;
 }
 
-/** The offset each face of a file begins at. A file of one face answers with one offset. */
+/** The offset each face of a file begins at. A file of one face has one offset. */
 export async function faceOffsets(read: Ranges): Promise<number[]> {
   const head = viewing(await slice(read, 0, HEADER));
   if (tagAt(head, 0) !== COLLECTION) return [0];
@@ -36,7 +36,7 @@ export async function faceOffsets(read: Ranges): Promise<number[]> {
   return offsets;
 }
 
-/** One face's names, or the reason the index turns it down. */
+/** One face's names, or the reason it is rejected. */
 export async function readFace(
   read: Ranges,
   offset: number,
@@ -47,8 +47,8 @@ export async function readFace(
   const names = readNames(await slice(read, table.at, table.length));
   const family = (names.get(TYPOGRAPHIC_FAMILY) ?? names.get(FAMILY) ?? "").trim();
   if (family === "") return "unnamed";
-  // A face the system hides names itself with a leading dot, in its
-  // family or in its PostScript name.
+  // A face the system hides has a leading dot in its family or in its
+  // PostScript name.
   const postscript = names.get(POSTSCRIPT) ?? "";
   if (family.startsWith(".") || postscript.startsWith(".")) return "hidden";
   if (await restricted(read, directory.get("OS/2"))) return "restricted";
@@ -59,7 +59,7 @@ export async function readFace(
   };
 }
 
-/** One face of a file, as an sfnt of its own. A collection's face cannot cross as the collection. */
+/** One face of a file, as an sfnt of its own. */
 export function faceBytes(file: Uint8Array, face: number): Uint8Array {
   if (file.length < HEADER) throw new AssetError("a font file has no header");
   const view = viewing(file);
@@ -88,7 +88,7 @@ export function faceBytes(file: Uint8Array, face: number): Uint8Array {
     at += padded(length);
   }
 
-  // The checksums are copied as they stand: the engine parses the
+  // The checksums are copied as they stand. The engine parses the
   // tables, not the sums over them.
   const out = new Uint8Array(at);
   const wrote = viewing(out);
@@ -109,23 +109,23 @@ export function faceBytes(file: Uint8Array, face: number): Uint8Array {
   return out;
 }
 
-/** The sfnt header, and one entry of a table directory. */
+/** The byte lengths of an sfnt header and of one table directory entry. */
 const HEADER = 12;
 const RECORD = 16;
 
 const COLLECTION = "ttcf";
 
-/** The name records a family and a style are read from, in the order they are tried. */
+/** The name ids a family and a style are read from, in the order they are tried. */
 const FAMILY = 1;
 const STYLE = 2;
 const POSTSCRIPT = 6;
 const TYPOGRAPHIC_FAMILY = 16;
 const TYPOGRAPHIC_STYLE = 17;
 
-/** Windows' English, the language a name is preferred in. */
+/** Windows' English, the preferred language for a name. */
 const ENGLISH = 0x0409;
 
-/** Restricted embedding, the one `fsType` bit that turns a face down. */
+/** Restricted embedding, the one `fsType` bit that keeps a face out of the index. */
 const RESTRICTED = 0x0002;
 
 interface Table {
@@ -166,9 +166,9 @@ async function restricted(read: Ranges, os2: Table | undefined): Promise<boolean
 }
 
 /**
- * The names one table holds, keyed by name record. English wins: a
- * name table lists a face in every language it ships in, and the first
- * of those is as often Spanish as it is English.
+ * The names one table holds, keyed by name id. An English record is
+ * preferred, since a face is listed in every language it ships in and
+ * the first record is as often Spanish as English.
  */
 function readNames(table: Uint8Array): Map<number, string> {
   if (table.length < 6) throw new AssetError("a font's name table has no header");

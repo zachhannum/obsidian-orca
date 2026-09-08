@@ -1,9 +1,10 @@
 /**
- * The font files the author has, as the index reads them.
+ * Reads the font files the machine and the vault hold.
  *
  * A face installed on the machine is not in the vault, so the
  * platform's directories are read through the file system rather than
- * the vault adapter. Orca is desktop only, so it has one.
+ * the vault adapter. Orca is desktop only, so the file system is
+ * available.
  */
 
 import { open, readFile, readdir } from "node:fs/promises";
@@ -26,9 +27,8 @@ import { contentKey, type Hashed } from "@/assets/registry";
 import { readBytes, type Listing, type VaultAdapter } from "@/assets/vault";
 
 /**
- * Font files, read a range at a time to index them and whole for a
- * face that crosses. The index reads headers; only a face the author
- * picked is read entire.
+ * Font files, read a range at a time for the index and whole for a
+ * face that crosses.
  */
 export interface FontSource extends FontFiles {
   whole(file: string): Promise<Uint8Array>;
@@ -59,10 +59,10 @@ export function platformFonts(): FontSource {
   };
 }
 
-/** The vault's own faces, read through the vault the rest of `assets` reads. */
+/** The vault's own faces, read through the vault adapter. */
 export function vaultFonts(vault: VaultAdapter): FontSource {
   // A vault holds few faces and the index reads a handful of ranges
-  // out of each, so a file read once answers every range of it.
+  // out of each, so each file is read once and held whole.
   const held = new Map<string, Promise<Uint8Array>>();
   const file = (at: string): Promise<Uint8Array> => {
     const known = held.get(at);
@@ -80,13 +80,13 @@ export function vaultFonts(vault: VaultAdapter): FontSource {
   };
 }
 
-/** The places the index looks. A test stands a directory in for a system one. */
+/** The places the index reads. A test substitutes its own directory. */
 export interface FontPlaces {
   platform: FontSource;
   vault: FontSource;
   /** The platform's own directories. */
   directories: readonly string[];
-  /** The folder in the vault a book's own faces live in. */
+  /** The vault folder a book's own faces are in. */
   folder: string;
 }
 
@@ -101,10 +101,9 @@ export function fontPlaces(vault: VaultAdapter): FontPlaces {
 }
 
 /**
- * The families the author has. The vault's faces are scanned last and
- * win a name collision, so a book carrying its own face is set in that
- * one rather than in whatever the machine happens to install under the
- * same name.
+ * The families the machine and the vault hold. The vault's faces are
+ * scanned last and win a name collision, so a book carrying its own
+ * face is set in that one.
  */
 export async function readFontIndex(places: FontPlaces): Promise<FontIndex> {
   const [platform, vault] = await Promise.all([
@@ -116,8 +115,8 @@ export async function readFontIndex(places: FontPlaces): Promise<FontIndex> {
 
 /**
  * One family's faces, as the bytes that cross and the key they go
- * under. A collection's face is split out here: the engine refuses a
- * collection, and a family is rarely every face in one.
+ * under. A face is split out of a collection first, because the engine
+ * does not read a collection and a family is rarely every face in one.
  */
 export async function familyFaces(
   places: FontPlaces,
@@ -142,11 +141,11 @@ export function documentPreviews(document: Document): Previews {
 }
 
 /**
- * Registers the vault's own faces with the document. A family the
- * machine installs is the browser's to resolve by name; one the vault
- * carries is not, so a row offering it would otherwise preview in the
- * interface face. Nothing here crosses to the engine: a picker row is
- * the browser's own type, not a page the engine set.
+ * Registers the vault's own faces with the document. The browser
+ * resolves an installed family by name but not one the vault carries,
+ * so a row offering it would draw in the interface face instead.
+ * Nothing crosses to the engine, because the browser draws a picker
+ * row.
  */
 export async function previewFaces(
   places: FontPlaces,
@@ -163,15 +162,14 @@ export async function previewFaces(
           const { bytes } = await crossing(places, face);
           await previews.add(family.name, bytes);
         } catch {
-          // A face that will not load leaves its row set in the
-          // interface face, which is a row that reads rather than one
-          // that is missing.
+          // A face that will not load leaves its row in the interface
+          // face, which still reads.
         }
       }),
   );
 }
 
-/** The cut a family previews in: its regular one, or the first it has. */
+/** The cut a family previews in, its regular one where it has one. */
 function regular(family: Family): Face | undefined {
   return (
     family.faces.find((face) => face.style.toLowerCase() === "regular") ??

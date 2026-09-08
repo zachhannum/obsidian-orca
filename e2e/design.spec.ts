@@ -1,6 +1,6 @@
 import { expect, test } from "./harness/test";
 
-/** The face the fixture vault ships, which is the one the picker commits. */
+/** The face the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FACE = "Alegreya";
 
 /** A family no machine installs, so the filter matches nothing. */
@@ -48,8 +48,8 @@ test("text matching nothing does not commit, so the book keeps the face it has",
   expect(await panel.offering()).toBe(0);
 
   await panel.filter.press("Enter");
-  // The picker is still open on nothing, the field still reads the
-  // face the book was set in, and no render went out for it.
+  // The field still shows the face the book was set in, and no render
+  // went out.
   expect(await panel.reading()).toContain(CARRIED);
   expect(await book.painted()).toBe(painted);
 });
@@ -73,16 +73,16 @@ test("picking a family sets the book in it, and the styles are the cuts the engi
     .poll(async () => book.painted())
     .toBeGreaterThan(painted);
 
-  // The cuts are the engine's answer. Alegreya is one variable file,
-  // and the engine names every instance in it.
+  // Alegreya is one variable file, and the engine registers every
+  // instance in it.
   const styles = await panel.styles();
   expect(styles).toContain("Regular");
   expect(styles.length).toBeGreaterThan(1);
   // A cut off a variable file sits somewhere on the file's axes, and
-  // the painter pins it there rather than drawing the default weight.
+  // the painter pins it there.
   expect(await panel.axes("Medium")).toContain("wght");
 
-  // The machine has the family, so nothing is warned about.
+  // The machine has the family, so there is no warning.
   await expect(panel.missing).toHaveCount(0);
 });
 
@@ -105,8 +105,8 @@ test("a face crosses once, so picking the same family again sends the sheet alon
   await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
 
   // The registry keys the bytes by content, so the second pick
-  // registers nothing new: the engine answers the same cuts under the
-  // same ids.
+  // registers nothing new and the engine returns the same cuts under
+  // the same ids.
   await expect(panel.face).toContainText(FIXTURE_FACE);
   expect(await panel.styles()).toEqual(cuts);
 });

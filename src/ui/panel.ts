@@ -11,7 +11,7 @@ export const PANEL_VIEW = "orca-design";
 /** The face the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
 
-/** The panel's way to the book it designs and the faces the machine has. */
+/** The book the panel designs and the faces the machine has. */
 export interface Designing {
   /** The book the panel designs, which is the one being read. */
   book(): Promise<Typeset | undefined>;
@@ -24,14 +24,14 @@ export interface Designing {
 }
 
 /**
- * The design panel. It holds no settings of its own: a pick lands on
- * the book the engine is holding, and the panel is painted from what
- * the engine answered.
+ * The design panel. It holds no settings of its own. A pick goes to
+ * the book the engine holds, and the panel is painted from what the
+ * engine returned.
  */
 export class DesignPanelView extends ItemView {
   private mounted: Mounted | undefined;
   private watching: (() => void) | undefined;
-  /** The last pick whose files would not read, which the panel says out. */
+  /** The last pick whose files would not read. The panel warns about it. */
   private unread: string | undefined;
   /** Counts the paints, so a scan that lands late does not overwrite a later one. */
   private painting = 0;
@@ -79,13 +79,13 @@ export class DesignPanelView extends ItemView {
   }
 
   /**
-   * Sends the family's faces and sets the book in it. The faces cross
-   * once: the registry keys them by content, so picking the family
-   * again sends the sheet alone.
+   * Sends the family's faces and sets the book in it. The registry
+   * keys faces by content, so picking the family again sends the sheet
+   * alone.
    *
    * A file that has gone since the scan still names its family in the
    * design. The engine sets the book in the face it carries, and the
-   * panel is what says the family it was asked for is not there.
+   * panel warns that the family asked for is missing.
    */
   private async pick(family: Family): Promise<void> {
     const typeset = await this.designing.book();
@@ -102,8 +102,8 @@ export class DesignPanelView extends ItemView {
   }
 
   /**
-   * Paints the panel again. The leaf stands in the sidebar from
-   * startup, so the book it designs arrives long after it opened.
+   * Paints the panel again. The leaf is in the sidebar from startup, so
+   * the book it designs arrives long after it opened.
    */
   refresh(): void {
     void this.repaint();
@@ -121,7 +121,8 @@ export class DesignPanelView extends ItemView {
       return;
     }
     // The first scan takes as long as the machine's font directories
-    // do, and the panel says so rather than opening on an empty list.
+    // do, so the panel shows that it is reading rather than an empty
+    // list.
     mounted.paint({ kind: "reading" });
     const index = await this.designing.index();
     if (run !== this.painting) return;
@@ -129,7 +130,7 @@ export class DesignPanelView extends ItemView {
     mounted.paint(this.shownFor(typeset, index));
   }
 
-  /** Follows the book's renders, so the cuts appear as the engine answers them. */
+  /** Follows the book's renders, so the cuts appear as the engine returns them. */
   private watch(typeset: Typeset): void {
     this.watching?.();
     this.watching = typeset.watch(() => {
@@ -143,7 +144,7 @@ export class DesignPanelView extends ItemView {
     mounted.paint(this.shownFor(typeset, await this.designing.index()));
   }
 
-  /** The panel's state for one book, as the engine and the index leave it. */
+  /** The panel's state for one book, from the engine and the index. */
   private shownFor(typeset: Typeset, index: FontIndex): Shown {
     const face = typeset.face;
     return {
@@ -160,7 +161,7 @@ export class DesignPanelView extends ItemView {
   }
 }
 
-/** The complaint a family whose files would not read raises. */
+/** The warning for a family whose files would not read. */
 function unreadable(family: string): string {
   return `${family} has no file this machine could read. The book is set in the one orca carries.`;
 }

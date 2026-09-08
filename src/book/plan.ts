@@ -118,7 +118,7 @@ export type Edit =
   | { did: "styled"; sheets: Sheet[] }
   /** Reordered chapters, so every source crosses in its new place. */
   | { did: "reordered"; sources: Source[] }
-  /** Picked a new family, and the cuts it is set from. */
+  /** Picked a new family, and the cuts it is made of. */
   | { did: "faced"; faces: readonly Face[]; sheets: Sheet[] }
   /** Deleted a note, so the rest of the sources stand. */
   | { did: "deleted"; name: string };
@@ -184,9 +184,9 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
 }
 
 /**
- * Registers the cuts the registry has not seen, in the order the
- * family lists them, then styles. A family whose every cut has already
- * crossed sends the style op alone.
+ * Registers the cuts not already in the registry, in `faces` order,
+ * then styles. A family whose cuts have all crossed sends the style
+ * op alone.
  */
 function faced(
   faces: readonly Face[],
