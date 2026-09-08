@@ -118,8 +118,8 @@ export type Edit =
   | { did: "styled"; sheets: Sheet[] }
   /** Reordered chapters, so every source crosses in its new place. */
   | { did: "reordered"; sources: Source[] }
-  /** Picked a new face, and the sheet that names it. */
-  | { did: "faced"; face: Face; sheets: Sheet[] }
+  /** Picked a new family, and the cuts it is made of. */
+  | { did: "faced"; faces: readonly Face[]; sheets: Sheet[] }
   /** Deleted a note, so the rest of the sources stand. */
   | { did: "deleted"; name: string };
 
@@ -179,25 +179,29 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
         crossed: [],
       };
     case "faced":
-      return faced(edit.face, edit.sheets, loaded, assets);
+      return faced(edit.faces, edit.sheets, loaded, assets);
   }
 }
 
-/** Registers the face unless the registry says it has crossed, then styles. */
+/**
+ * Registers the cuts not already in the registry, in `faces` order,
+ * then styles. A family whose cuts have all crossed sends the style
+ * op alone.
+ */
 function faced(
-  face: Face,
+  faces: readonly Face[],
   sheets: Sheet[],
   loaded: Loaded,
   assets: Sent,
 ): Planned {
-  const styled = { ...loaded, sheets };
-  if (assets.sent(face.key)) {
-    return { ops: [styling(sheets)], loaded: styled, crossed: [] };
-  }
+  const crossing = faces.filter((face) => !assets.sent(face.key));
   return {
-    ops: [{ op: "font", bytes: face.bytes }, styling(sheets)],
-    loaded: styled,
-    crossed: [face.key],
+    ops: [
+      ...crossing.map((face): Op => ({ op: "font", bytes: face.bytes })),
+      styling(sheets),
+    ],
+    loaded: { ...loaded, sheets },
+    crossed: crossing.map((face) => face.key),
   };
 }
 

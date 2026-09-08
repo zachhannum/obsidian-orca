@@ -11,6 +11,7 @@ import { Manuscript } from "./manuscript";
 import { Navigator } from "./navigator";
 import { Note } from "./note";
 import { Obsidian } from "./obsidian";
+import { Panel } from "./panel";
 import { Vault } from "./vault";
 
 interface Fixtures {
@@ -21,6 +22,8 @@ interface Fixtures {
   manuscript: Manuscript;
   /** The navigator, which owns the structure of every book. */
   navigator: Navigator;
+  /** The design panel, where a book's face is picked. */
+  panel: Panel;
   /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;
   record: void;
@@ -60,6 +63,12 @@ export const test = base.extend<Fixtures, Shared>({
 
   navigator: async ({ obsidian }, use) => {
     await use(new Navigator(obsidian));
+  },
+
+  panel: async ({ obsidian }, use) => {
+    const panel = new Panel(obsidian);
+    await use(panel);
+    await panel.close();
   },
 
   vault: async ({ obsidian }, use) => {

@@ -19,7 +19,7 @@ test("the fixture directory is a vault every read goes through", async () => {
       "Pride and Prejudice.md",
       "Volume the First.md",
     ],
-    folders: [],
+    folders: ["fonts"],
   });
   assert.equal(await vault.exists("Chapter Twelve.md"), true);
   assert.equal(await vault.exists("Chapter Thirteen.md"), false);
@@ -51,5 +51,5 @@ test("a path that leads outside the directory is refused", async () => {
 });
 
 // What this tier does not cover: the adapter over Obsidian's own vault,
-// which the e2e job reaches, and the font index, the content-hash
-// registry and image resolution, which are not written yet.
+// which the e2e job reaches, and image resolution, which is not
+// written yet.

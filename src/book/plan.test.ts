@@ -149,8 +149,12 @@ const LOADED: Loaded = { sheets: SET };
 /** A registry holding the bundled face and nothing else. */
 const REGISTERED: Sent = { sent: (key) => key === "eb-garamond" };
 
-/** The face the table picks, and the key its bytes hash to. */
-const SPECTRAL: Face = { key: "spectral", bytes: new Uint8Array([1, 2, 3]) };
+/** The cuts the table picks, and the key each one's bytes hash to. */
+const SPECTRAL: Face[] = [
+  { key: "spectral-regular", bytes: new Uint8Array([1, 2, 3]) },
+  { key: "spectral-italic", bytes: new Uint8Array([4, 5, 6]) },
+  { key: "spectral-bold", bytes: new Uint8Array([7, 8, 9]) },
+];
 
 /** Reads one row of the table, by what the reader did. */
 function row(did: string): Edit {
@@ -182,13 +186,13 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
     ops: ["book", "style"],
   },
   {
-    did: "picked a new face",
+    did: "picked a new family",
     edit: {
       did: "faced",
-      face: SPECTRAL,
+      faces: SPECTRAL,
       sheets: FACED,
     },
-    ops: ["font", "style"],
+    ops: ["font", "font", "font", "style"],
   },
   {
     did: "deleted a note",
@@ -207,6 +211,15 @@ test("each edit sends the ops its row names, and nothing else", () => {
   assert.equal(only(typed, "edit").name, "Chapter Twelve.md");
   const reordered = sendEdit(row("reordered chapters"), LOADED, REGISTERED).ops;
   assert.deepEqual(only(reordered, "style").sheets, SET);
+
+  // A family has several cuts, so each one crosses on a `font` op of
+  // its own, in the order `faces` holds them.
+  const picked = sendEdit(row("picked a new family"), LOADED, REGISTERED).ops;
+  assert.deepEqual(
+    picked.flatMap((op) => (op.op === "font" ? [op.bytes] : [])),
+    SPECTRAL.map((face) => face.bytes),
+  );
+  assert.equal(picked.at(-1)?.op, "style");
 });
 
 test("every op path asks the registry before it puts bytes on the wire", () => {
@@ -219,14 +232,18 @@ test("every op path asks the registry before it puts bytes on the wire", () => {
   };
 
   for (const entry of TABLE) sendEdit(entry.edit, LOADED, watching);
-  assert.deepEqual(asked, ["spectral"], "only the face carries bytes");
+  assert.deepEqual(
+    asked,
+    SPECTRAL.map((face) => face.key),
+    "only the family's cuts carry bytes",
+  );
 
   const registry = new Registry(vault);
-  const picked = row("picked a new face");
+  const picked = row("picked a new family");
   const first = sendEdit(picked, LOADED, registry);
-  assert.deepEqual(first.crossed, ["spectral"]);
+  assert.deepEqual(first.crossed, SPECTRAL.map((face) => face.key));
   for (const key of first.crossed) registry.crossed(key);
-  assert.ok(registry.sent("spectral"));
+  assert.ok(registry.sent("spectral-italic"));
 
   const again = sendEdit(picked, first.loaded, registry);
   assert.deepEqual(again.ops.map((op) => op.op), ["style"]);
@@ -246,7 +263,11 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   let loaded = LOADED;
   let fonts = 0;
   for (const face of picks) {
-    const planned = sendEdit({ did: "faced", face, sheets: FACED }, loaded, registry);
+    const planned = sendEdit(
+      { did: "faced", faces: [face], sheets: FACED },
+      loaded,
+      registry,
+    );
     loaded = planned.loaded;
     for (const key of planned.crossed) registry.crossed(key);
     fonts += planned.ops.filter((op) => op.op === "font").length;
@@ -255,6 +276,23 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   assert.equal(fonts, 1);
   assert.equal(new Set(picks.map((pick) => pick.key)).size, 1);
   assert.equal(picks[0]?.bytes.byteLength, bytes.byteLength);
+
+  // The family is picked again with a cut that has already crossed.
+  // The other two cuts go on the wire and that one does not.
+  const crossed = picks[0];
+  assert.ok(crossed, "the file was never read");
+  const family = [crossed, ...SPECTRAL.slice(1)];
+  const again = sendEdit(
+    { did: "faced", faces: family, sheets: FACED },
+    loaded,
+    registry,
+  );
+
+  assert.deepEqual(again.ops.map((op) => op.op), ["font", "font", "style"]);
+  assert.deepEqual(
+    again.crossed,
+    SPECTRAL.slice(1).map((face) => face.key),
+  );
 });
 
 test("the same edit against the same session plans the same ops", () => {
@@ -354,4 +392,5 @@ async function moduleBytes(): Promise<Buffer> {
 }
 
 // What this tier does not cover: the face bytes of a `font` op reaching
-// the engine, which waits on the font index that hashes a file.
+// the engine, which the session tier tests, and the cuts a family is
+// made of, which belong to the font index.
