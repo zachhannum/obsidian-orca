@@ -127,7 +127,7 @@ export class Session {
 
   constructor(
     private readonly client: EngineClient,
-    private readonly faces: FaceSet,
+    private readonly document: FaceSet,
   ) {}
 
   /** Everything the last run had to complain about. */
@@ -138,6 +138,11 @@ export class Session {
   /** The book's length in pages, as the last reply counted it. */
   get pages(): number {
     return this.layout?.bookPages ?? 0;
+  }
+
+  /** Every face the engine has registered, by the id it gave. */
+  get faces(): FontRefEntry[] {
+    return this.layout?.fonts ?? [];
   }
 
   /** The generation of the last render. */
@@ -377,7 +382,7 @@ export class Session {
     this.loaded.add(id);
     try {
       const bytes = await this.client.fontBytes(id);
-      await this.faces.add(faceFamily(id), bytes, entry.attributes);
+      await this.document.add(faceFamily(id), bytes, entry.attributes);
     } catch {
       // A face that will not load falls through the painter's stack, so
       // the page is set in the wrong one rather than left blank.
