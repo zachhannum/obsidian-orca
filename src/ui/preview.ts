@@ -40,6 +40,13 @@ export const PREVIEW_VIEW = "orca-book-preview";
 /** The note a page nobody wrote leads the manuscript to. */
 const NOWHERE = "-";
 
+/** The place in the manuscript a page opens at. */
+export interface Opens {
+  note: string;
+  /** The byte of that note the page's first paragraph begins at. */
+  at: number;
+}
+
 /**
  * The book a preview reads, the note and page it opened at, and
  * whether a manuscript pane is tied to it. The workspace keeps all of
@@ -144,6 +151,8 @@ export class PreviewView extends ItemView {
   private leading = 0;
   /** The span the manuscript was last led to, so a repaint moves no caret. */
   private ledAt: number | undefined;
+  /** The folio the book opened at here, so a swap back knows it moved. */
+  private openedAt: number | undefined;
   /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
 
@@ -191,6 +200,28 @@ export class PreviewView extends ItemView {
   /** The page this preview is turned to, counting from 1, once it has one. */
   get turned(): number | undefined {
     return this.state.folio;
+  }
+
+  /** Whether the reader has paged away from where the book opened here. */
+  get paged(): boolean {
+    return this.openedAt !== undefined && this.state.folio !== this.openedAt;
+  }
+
+  /**
+   * The place in the manuscript the page being read opens at: the
+   * earliest node the page's runs name, taken back to the note it was
+   * read from. Nothing for a page orca wrote itself.
+   */
+  async opensIn(): Promise<Opens | undefined> {
+    const session = this.session;
+    if (session === undefined) return undefined;
+    const reading = await session.read(this.at, 1);
+    const page = reading?.pages[0];
+    const node = page === undefined ? undefined : nodesOn(page)?.first;
+    if (node === undefined) return undefined;
+    const source = await session.sourceOf(node);
+    if (source === undefined || isGenerated(source.source)) return undefined;
+    return { note: source.source, at: source.start };
   }
 
   /** The book this preview reads, for a plugin pairing it with a manuscript. */
@@ -454,6 +485,7 @@ export class PreviewView extends ItemView {
       // The book opens where the note asked it to, so the note is
       // already there and the opening turn leads it nowhere.
       await this.turn(await this.opensAt(typeset), true);
+      this.openedAt = this.state.folio;
     } catch (cause) {
       if (opening !== this.opening) return;
       this.report(
@@ -624,7 +656,7 @@ export class PreviewView extends ItemView {
     this.ledAt = reading.at;
     if (led || !this.linked) return;
     surface.dataset["led"] = "";
-    void this.leads(reading);
+    void this.leads();
   }
 
   /**
@@ -642,23 +674,16 @@ export class PreviewView extends ItemView {
    * read from. Matter orca generated was written by nobody, so a page
    * of it moves no caret.
    */
-  private async leads(reading: Reading): Promise<void> {
-    const session = this.session;
-    const page = reading.pages[0];
-    const node = page === undefined ? undefined : nodesOn(page)?.first;
-    if (session === undefined || node === undefined) {
-      this.ledTo(NOWHERE);
-      return;
-    }
+  private async leads(): Promise<void> {
     const leading = (this.leading += 1);
-    const source = await session.sourceOf(node).catch(() => undefined);
+    const opens = await this.opensIn().catch(() => undefined);
     if (leading !== this.leading) return;
-    if (source === undefined || isGenerated(source.source)) {
+    if (opens === undefined) {
       this.ledTo(NOWHERE);
       return;
     }
-    this.handoff.follows(this, source.source, source.start);
-    this.ledTo(source.source);
+    this.handoff.follows(this, opens.note, opens.at);
+    this.ledTo(opens.note);
   }
 
   /** Puts the chrome on the span that is painted. */

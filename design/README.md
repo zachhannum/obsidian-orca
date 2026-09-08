@@ -49,8 +49,11 @@ its editor around these files and returns a URL. The artboard list and
   the book's side.
 - The preview keeps the page it is on, so a swap to the manuscript and
   back opens on it, mid-chapter included, and a workspace reopened at
-  startup opens the preview where it was closed. The icon on a note
-  opens the book at the page the caret is on.
+  startup opens the preview where it was closed.
+- The icon on a note opens the book at the page the caret is on. A
+  reader who paged through the book comes back to the line that page
+  opens at. One who turned no page comes back to the line they were
+  writing on.
 - One ribbon icon, with the issues badge on it.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.

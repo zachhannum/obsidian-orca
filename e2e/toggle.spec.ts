@@ -298,6 +298,51 @@ test("the toggle opens the book at the page the caret is on", async ({
   await expect.poll(async () => book.reading()).toBeGreaterThan(opens);
 });
 
+test("paging through the book takes the swap back to the line that page opens at", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  await pagedOut(vault);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.place({ line: HEADING, ch: 0 });
+  await manuscript.asBook.click();
+  await book.painted();
+  const opens = await book.reading();
+
+  await book.next.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+
+  await book.asMarkdown.click();
+  await expect(manuscript.pane).toHaveCount(1);
+  // The reader paged through, so the caret comes back to the line that
+  // page opens at rather than to the line they were writing on.
+  await expect
+    .poll(async () => (await manuscript.caret())?.line ?? 0)
+    .toBeGreaterThan(HEADING);
+});
+
+test("and a reader who only looked comes back to the line they were on", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  await pagedOut(vault);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.place({ line: HEADING + 2, ch: 3 });
+  await manuscript.asBook.click();
+  await book.painted();
+
+  await book.asMarkdown.click();
+  await expect(manuscript.pane).toHaveCount(1);
+  await expect.poll(async () => manuscript.caret()).toEqual({
+    line: HEADING + 2,
+    ch: 3,
+  });
+});
+
 test("a workspace reopened on a preview opens it at the page it was closed on", async ({
   book,
   manuscript,

@@ -626,6 +626,12 @@ export default class OrcaPlugin extends Plugin {
   ): Promise<void> {
     const from = leaf.view;
     const left = this.manuscript.get(leaf);
+    // The page being read is asked for while the pane still holds it,
+    // because the swap takes the view down with it.
+    const opens =
+      from instanceof PreviewView && from.paged
+        ? await from.opensIn().catch(() => undefined)
+        : undefined;
     if (from instanceof PreviewView && left?.at === path) {
       left.folio = from.turned;
     }
@@ -634,7 +640,11 @@ export default class OrcaPlugin extends Plugin {
       state: { file: path, mode: "source" },
       active: true,
     });
-    if (left?.at === path) leaf.setEphemeralState(left.state);
+    // A reader who paged through the book comes back to the line the
+    // page they stopped on opens at. One who only looked comes back to
+    // the line they were writing on.
+    if (opens?.note === path) this.places(leaf, path, opens.at);
+    else if (left?.at === path) leaf.setEphemeralState(left.state);
     this.swap();
   }
 
