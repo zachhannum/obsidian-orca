@@ -18,10 +18,16 @@ import type { Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { pageRanges, type Range } from "@/book/pages";
-import { sendBook, sendEdit, type Edit, type Loaded } from "@/book/plan";
+import {
+  sendBook,
+  sendEdit,
+  type Edit,
+  type Face,
+  type Loaded,
+} from "@/book/plan";
 import { Loop, timers, type Clock } from "@/engine/loop";
 import { Session, type EngineClient, type FaceSet } from "@/engine/session";
-import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
+import { designSheets, type Design } from "@/style/design";
 import { bookName } from "@/ui/shelf";
 
 /**
@@ -48,6 +54,8 @@ export class Typeset {
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
   private loaded: Loaded;
+  /** The design the book is set under, which the next pick replaces. */
+  private design: Design;
 
   constructor(
     book: {
@@ -61,6 +69,8 @@ export class Typeset {
       sent: Map<string, string>;
       /** The registry every op path asks before putting bytes on the wire. */
       assets: Registry;
+      /** The design the sheets were generated from. */
+      design: Design;
     },
     clock: Clock,
   ) {
@@ -71,6 +81,7 @@ export class Typeset {
     this.sent = book.sent;
     this.assets = book.assets;
     this.loaded = { sheets: book.sheets };
+    this.design = book.design;
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
 
@@ -83,6 +94,25 @@ export class Typeset {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
+  }
+
+  /** The family the book is set in, or nothing while it is set in the theme's own. */
+  get face(): string | undefined {
+    return this.design.face;
+  }
+
+  /**
+   * Sets the book in a family. Every face of it crosses the first time
+   * it is picked and stays registered for the session's life, so
+   * picking it again sends the sheet alone.
+   */
+  reface(family: string, faces: readonly Face[]): void {
+    this.design = { ...this.design, face: family };
+    this.plan(`faced:${family}`, {
+      did: "faced",
+      faces,
+      sheets: designSheets(this.design),
+    });
   }
 
   /** Told once a render has landed, so a view repaints where it left off. */
@@ -244,11 +274,12 @@ export class Composer {
     const client = await this.vault.client;
     const assets = new Registry(this.vault.files);
     const session = new Session(client, this.vault.faces);
-    const sheets: Sheet[] = [{ name: THEME_SHEET, css: BUNDLED_THEME }];
+    const design: Design = {};
+    const sheets = designSheets(design);
     await session.open([...ops, styleOp(sheets)]);
     const ranges = await this.ranges(client, session, sections);
     return new Typeset(
-      { name, session, sections, ranges, sheets, sent, assets },
+      { name, session, sections, ranges, sheets, sent, assets, design },
       this.clock,
     );
   }

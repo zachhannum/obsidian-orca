@@ -647,3 +647,151 @@ button.orca-nav-action:hover {
 .orca-shelf-name:focus-within .orca-nav-actions {
   opacity: 1;
 }
+
+/* The design panel. The rows are the artboard's: a 96px label column,
+   a field that fills the rest, and a menu over it. */
+.orca-panel-host {
+  height: 100%;
+}
+
+.orca-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  padding: var(--size-4-3);
+}
+
+.orca-panel-empty {
+  padding: var(--size-4-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.orca-panel-group {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  letter-spacing: 0.06em;
+}
+
+.orca-panel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-height: 26px;
+}
+
+.orca-panel-label {
+  width: 96px;
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* The picker is the field's positioning context, so the menu hangs
+   from the field rather than from the pane. */
+.orca-panel-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+button.orca-panel-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 var(--size-4-2);
+  border-radius: var(--input-radius);
+  background: var(--interactive-normal);
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  text-align: left;
+  cursor: pointer;
+}
+
+.orca-panel-menu {
+  position: absolute;
+  z-index: var(--layer-menu);
+  top: calc(var(--input-height) + 4px);
+  left: 0;
+  right: 0;
+  padding: var(--size-4-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-s);
+}
+
+input.orca-panel-filter {
+  width: 100%;
+  height: 26px;
+  min-height: 26px;
+  font-size: var(--font-ui-small);
+}
+
+/* The list is bounded rather than as long as the machine's font
+   folder, which on a Mac is six hundred families. */
+.orca-panel-rows {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: var(--size-4-1);
+}
+
+.orca-panel-option {
+  padding: 0 var(--size-4-2);
+  height: 28px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  cursor: pointer;
+}
+
+.orca-panel-option.is-on,
+.orca-panel-option:hover {
+  background: var(--background-modifier-hover);
+}
+
+.orca-panel-none {
+  padding: var(--size-4-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.orca-panel-cuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+}
+
+.orca-panel-cut {
+  padding: 0 6px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-panel-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+  border-left: 2px solid var(--color-orange);
+  background: var(--background-modifier-error-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+}
+
+.orca-panel-icon {
+  flex: none;
+  --icon-size: var(--icon-xs);
+}

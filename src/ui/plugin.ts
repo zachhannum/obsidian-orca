@@ -12,6 +12,7 @@ import {
   type TAbstractFile,
   type ViewState,
 } from "obsidian";
+import type { FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
 import { startEngine, type EngineHandle } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
@@ -27,7 +28,14 @@ import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
+import {
+  familyFaces,
+  fontPlaces,
+  readFontIndex,
+  type FontPlaces,
+} from "@/ui/fonts";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
+import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
 import {
@@ -35,7 +43,7 @@ import {
   PreviewView,
   type PreviewState,
 } from "@/ui/preview";
-import { Composer, type Composing } from "@/ui/composer";
+import { Composer, type Composing, type Typeset } from "@/ui/composer";
 import type { Opened } from "@/ui/shelf";
 
 /** The view a book note is handed back to. */
@@ -68,6 +76,10 @@ export default class OrcaPlugin extends Plugin {
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
   /** Sets a book on the engine. Every preview reads the pages it typesets. */
   private composer: Composer | undefined;
+  /** The families the machine has, read once and held for the session. */
+  private families: Promise<FontIndex> | undefined;
+  /** The directories and adapters the index is read through. */
+  private fonts: FontPlaces | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
   private indexing: number | undefined;
@@ -129,6 +141,10 @@ export default class OrcaPlugin extends Plugin {
       NAVIGATOR_VIEW,
       (leaf) => new NavigatorView(leaf, this.edits),
     );
+    this.registerView(
+      PANEL_VIEW,
+      (leaf) => new DesignPanelView(leaf, this.designing()),
+    );
     this.catchOpening();
     this.addRibbonIcon("book", "Open the book", () => {
       void this.reveal();
@@ -138,6 +154,13 @@ export default class OrcaPlugin extends Plugin {
       name: "Open the book",
       callback: () => {
         void this.reveal();
+      },
+    });
+    this.addCommand({
+      id: "open-design",
+      name: "Open the design panel",
+      callback: () => {
+        void this.openPanel();
       },
     });
     this.addCommand({
@@ -880,6 +903,73 @@ export default class OrcaPlugin extends Plugin {
       client,
       faces: documentFaces(document),
     };
+  }
+
+  /** The book being designed, the faces the machine has, and the way to both. */
+  private designing(): Designing {
+    return {
+      book: () => this.designed(),
+      index: () => this.fontIndex(),
+      faces: (family) => familyFaces(this.places(), family),
+      watch: (again) => {
+        const on = this.app.workspace.on("active-leaf-change", again);
+        return () => {
+          this.app.workspace.offref(on);
+        };
+      },
+    };
+  }
+
+  /**
+   * The book the panel designs: the one the reader is in, or the only
+   * one open when the panel itself has focus.
+   */
+  private async designed(): Promise<Typeset | undefined> {
+    const { workspace } = this.app;
+    const active = workspace.getActiveViewOfType(PreviewView)?.book;
+    const leaf: WorkspaceLeaf | undefined =
+      workspace.getLeavesOfType(PREVIEW_VIEW)[0];
+    const other = leaf?.view instanceof PreviewView ? leaf.view.book : undefined;
+    const path = active ?? other;
+    if (path === undefined || this.composer === undefined) return undefined;
+    try {
+      return await this.composer.open(path);
+    } catch {
+      // A book that will not set is the preview's report to make, not
+      // the panel's.
+      return undefined;
+    }
+  }
+
+  /**
+   * The families the machine has. The scan reads a header out of every
+   * font file the platform installs, so it runs once and is held for
+   * the session.
+   */
+  private fontIndex(): Promise<FontIndex> {
+    this.families ??= readFontIndex(this.places()).catch((cause: unknown) => {
+      this.families = undefined;
+      throw cause;
+    });
+    return this.families;
+  }
+
+  private places(): FontPlaces {
+    this.fonts ??= fontPlaces(this.files());
+    return this.fonts;
+  }
+
+  /** Opens the design panel in the right sidebar, revealing one already there. */
+  private async openPanel(): Promise<void> {
+    const { workspace } = this.app;
+    const open: WorkspaceLeaf | undefined =
+      workspace.getLeavesOfType(PANEL_VIEW)[0];
+    const leaf = open ?? workspace.getRightLeaf(false);
+    if (leaf === null || leaf === undefined) return;
+    if (open === undefined) {
+      await leaf.setViewState({ type: PANEL_VIEW, active: true });
+    }
+    await workspace.revealLeaf(leaf);
   }
 
   /** Opens the book the workspace is on, and reveals one already open. */
