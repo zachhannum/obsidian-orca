@@ -60,7 +60,7 @@ export interface PreviewState {
   /** The page being read, counting from 1. */
   folio?: number;
   /**
-   * The byte of the note the writer's caret was on. It says where a
+   * The byte of the note the manuscript is scrolled to. It says where a
    * book opens rather than where it is, so the workspace never keeps
    * it: a leaf restored at startup opens at the folio instead.
    */
@@ -118,7 +118,7 @@ export class PreviewView extends ItemView {
   private watching: ResizeObserver | undefined;
   /** The book note this preview reads, and the note it opened at. */
   private state: PreviewState = {};
-  /** The byte of the note the caret was on when the book took the pane. */
+  /** The byte of the note the manuscript was scrolled to when it handed over. */
   private caret: number | undefined;
   /** The note the pages on screen read as, which the manuscript follows. */
   private showing: string | undefined;
@@ -296,7 +296,14 @@ export class PreviewView extends ItemView {
     const range = typeset.ranges.get(section);
     if (range === undefined) return;
     const following = (this.following += 1);
-    const found = at === undefined ? undefined : await this.folioAt(note, at, range);
+    const node = at === undefined ? undefined : await this.nodeIn(note, at);
+    if (following !== this.following) return;
+    // The span being read already sets that node, so the reader is
+    // looking at it and the pane has nowhere to turn. This is also what
+    // keeps a manuscript the book itself scrolled from turning it back.
+    if (node !== undefined && (await this.sets(node))) return;
+    const found =
+      node === undefined ? undefined : await this.folioOfNode(node, range);
     if (following !== this.following) return;
     const chapter =
       sectionAt(typeset.ranges, this.at + 1) === section
@@ -315,22 +322,29 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * The folio the caret `byte` bytes into a note is set on, looked for
-   * inside the chapter's own pages. Nothing where the engine read that
-   * byte into no node, or cannot answer at all.
+   * The node `byte` bytes into a note was read into. Nothing where the
+   * engine read that byte into none, or cannot answer at all: it has
+   * its own reasons to refuse a question, and none of them are worth a
+   * page the reader did not ask for.
    */
-  private async folioAt(
-    note: string,
-    byte: number,
+  private async nodeIn(note: string, byte: number): Promise<number | undefined> {
+    try {
+      return await this.session?.nodeAt(note, byte);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** The folio a node is set on, looked for in the chapter and then the book. */
+  private async folioOfNode(
+    node: number,
     within: Range,
   ): Promise<number | undefined> {
     const session = this.session;
     if (session === undefined) return undefined;
+    const read = async (folio: number) =>
+      (await session.read(folio - 1, 1))?.pages[0];
     try {
-      const node = await session.nodeAt(note, byte);
-      if (node === undefined) return undefined;
-      const read = async (folio: number) =>
-        (await session.read(folio - 1, 1))?.pages[0];
       // The node is almost always on the chapter's own pages, and
       // those are a handful. An edit since the book was set can have
       // moved it off them, and node ids run in document order across
@@ -340,10 +354,29 @@ export class PreviewView extends ItemView {
         (await folioOf(node, { first: 1, last: session.pages }, read))
       );
     } catch {
-      // The engine has its own reasons to refuse a question, and none
-      // of them are worth a page the reader did not ask for.
       return undefined;
     }
+  }
+
+  /** Whether the runs on this folio's page name the node. */
+  private async holds(folio: number, node: number): Promise<boolean> {
+    const session = this.session;
+    if (session === undefined) return false;
+    try {
+      const page = (await session.read(folio - 1, 1))?.pages[0];
+      const nodes = page === undefined ? undefined : nodesOn(page);
+      return nodes !== undefined && node >= nodes.first && node <= nodes.last;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The same, across every page of the span being read. */
+  private async sets(node: number): Promise<boolean> {
+    for (let folio = this.at + 1; folio <= this.at + this.count; folio += 1) {
+      if (await this.holds(folio, node)) return true;
+    }
+    return false;
   }
 
   /**
@@ -498,19 +531,29 @@ export class PreviewView extends ItemView {
 
   /**
    * The page the book opens at: the one the reader was left on, then
-   * the one holding the writer's caret, then the first of the chapter
-   * it was toggled from.
+   * the one holding what the manuscript is scrolled to, then the first
+   * of the chapter it was toggled from.
    */
   private async opensAt(typeset: Typeset): Promise<number> {
     const folio = this.state.folio;
-    if (folio !== undefined) return folio - 1;
     const note = this.state.note;
-    const at = note === undefined ? undefined : sectionOf(typeset.sections, note);
-    const range = at === undefined ? undefined : typeset.ranges.get(at);
-    if (range === undefined || note === undefined) return 0;
-    const caret = this.caret;
+    const at = this.caret;
+    const node =
+      note === undefined || at === undefined
+        ? undefined
+        : await this.nodeIn(note, at);
+    // The page the book was left on stands while the manuscript is
+    // still scrolled inside it. Once it has moved off, the book opens
+    // at the page holding what the pane is scrolled to.
+    if (folio !== undefined) {
+      if (node === undefined || (await this.holds(folio, node))) return folio - 1;
+    }
+    const section =
+      note === undefined ? undefined : sectionOf(typeset.sections, note);
+    const range = section === undefined ? undefined : typeset.ranges.get(section);
+    if (range === undefined) return folio === undefined ? 0 : folio - 1;
     const found =
-      caret === undefined ? undefined : await this.folioAt(note, caret, range);
+      node === undefined ? undefined : await this.folioOfNode(node, range);
     return (found ?? range.first) - 1;
   }
 

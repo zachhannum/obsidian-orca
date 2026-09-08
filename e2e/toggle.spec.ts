@@ -128,7 +128,7 @@ test("`Open preview to the right` splits, and the manuscript follows the book", 
   await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
 });
 
-test("and the book follows the manuscript, to the page the caret is on", async ({
+test("and the book follows the manuscript, to the page it is scrolled to", async ({
   book,
   manuscript,
 }) => {
@@ -142,7 +142,7 @@ test("and the book follows the manuscript, to the page the caret is on", async (
   await expect(book.surface).toHaveAttribute("data-note", LAST);
 
   await manuscript.moveTo(CHAPTER);
-  await manuscript.place({ line: HEADING, ch: 0 });
+  await manuscript.scrollTo(HEADING);
   await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
   // The page that heading is set on, rather than whichever of the
   // chapter's pages the book happened to be turned to.
@@ -188,7 +188,7 @@ test("`Open manuscript to the left` makes the same split from the book's side", 
   await expect.poll(async () => manuscript.showing()).toEqual([LAST]);
 });
 
-test("a linked pane follows the caret paragraph by paragraph", async ({
+test("a linked pane follows what is scrolled into view, paragraph by paragraph", async ({
   book,
   manuscript,
   vault,
@@ -201,18 +201,18 @@ test("a linked pane follows the caret paragraph by paragraph", async ({
   await book.painted();
   const opens = await book.reading();
 
-  // The chapter runs over several pages now, and the caret at the end
+  // The chapter runs over several pages now, and scrolling to the end
   // of it turns the pane to the page that one paragraph is set on.
-  await manuscript.place({ line: deep, ch: 0 });
+  await manuscript.scrollTo(deep);
   await expect(book.surface).toHaveAttribute("data-note", CHAPTER);
   await expect.poll(async () => book.reading()).toBeGreaterThan(opens);
   const far = await book.reading();
 
   // Back to the chapter's own heading, and back again, inside the one
   // chapter both times.
-  await manuscript.place({ line: HEADING, ch: 0 });
+  await manuscript.scrollTo(HEADING);
   await expect(book.surface).toHaveAttribute("data-first", String(opens));
-  await manuscript.place({ line: deep, ch: 0 });
+  await manuscript.scrollTo(deep);
   await expect(book.surface).toHaveAttribute("data-first", String(far));
 });
 
@@ -224,7 +224,7 @@ test("and a linked manuscript follows a page turn to the line that page opens at
   await pagedOut(vault);
 
   await manuscript.open(CHAPTER);
-  await manuscript.place({ line: HEADING, ch: 0 });
+  await manuscript.scrollTo(HEADING);
   await book.split();
   await book.painted();
   const opens = await book.reading();
@@ -232,18 +232,14 @@ test("and a linked manuscript follows a page turn to the line that page opens at
   await book.next.click();
   await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
   await expect(book.surface).toHaveAttribute("data-led", CHAPTER);
-  await expect
-    .poll(async () => (await manuscript.caret())?.line ?? 0)
-    .toBeGreaterThan(HEADING);
-  const on = (await manuscript.caret())?.line ?? 0;
+  await expect.poll(async () => manuscript.scroll()).toBeGreaterThan(HEADING);
+  const on = await manuscript.scroll();
 
   // The page before it opens further back up the chapter, and the
-  // caret goes back with it.
+  // manuscript goes back with it.
   await book.previous.click();
   await expect(book.surface).toHaveAttribute("data-first", String(opens));
-  await expect
-    .poll(async () => (await manuscript.caret())?.line ?? 0)
-    .toBeLessThan(on);
+  await expect.poll(async () => manuscript.scroll()).toBeLessThan(on);
 });
 
 test("the preview keeps the page a swap left it on, mid-chapter included", async ({
@@ -274,7 +270,7 @@ test("the preview keeps the page a swap left it on, mid-chapter included", async
   await swap();
 });
 
-test("the toggle opens the book at the page the caret is on", async ({
+test("the toggle opens the book at the page the manuscript is scrolled to", async ({
   book,
   manuscript,
   vault,
@@ -289,12 +285,12 @@ test("the toggle opens the book at the page the caret is on", async ({
 
   await book.asMarkdown.click();
   await expect(manuscript.pane).toHaveCount(1);
-  await manuscript.place({ line: deep, ch: 0 });
+  await manuscript.scrollTo(deep);
   await manuscript.asBook.click();
   await book.painted();
 
-  // The caret moved since the swap, so the page the book was left on
-  // gives way to the page that paragraph is set on.
+  // The manuscript scrolled since the swap, so the page the book was
+  // left on gives way to the page that paragraph is set on.
   await expect.poll(async () => book.reading()).toBeGreaterThan(opens);
 });
 
@@ -306,7 +302,7 @@ test("paging through the book takes the swap back to the line that page opens at
   await pagedOut(vault);
 
   await manuscript.open(CHAPTER);
-  await manuscript.place({ line: HEADING, ch: 0 });
+  await manuscript.scrollTo(HEADING);
   await manuscript.asBook.click();
   await book.painted();
   const opens = await book.reading();
@@ -316,8 +312,9 @@ test("paging through the book takes the swap back to the line that page opens at
 
   await book.asMarkdown.click();
   await expect(manuscript.pane).toHaveCount(1);
-  // The reader paged through, so the caret comes back to the line that
-  // page opens at rather than to the line they were writing on.
+  // The reader paged through, so the pane comes back to the line that
+  // page opens at, with the caret on it to write from.
+  await expect.poll(async () => manuscript.scroll()).toBeGreaterThan(HEADING);
   await expect
     .poll(async () => (await manuscript.caret())?.line ?? 0)
     .toBeGreaterThan(HEADING);
@@ -377,19 +374,19 @@ test("a note the book does not list, and a page orca wrote, turn neither pane", 
   await manuscript.open(CHAPTER);
   await book.split();
   await book.painted();
-  const caret = await manuscript.caret();
+  const on = await manuscript.scroll();
 
   // The title page was written by orca rather than by anyone, so the
   // pane says it led the manuscript nowhere.
   await book.type("1");
   await expect(book.surface).toHaveAttribute("data-first", "1");
   await expect(book.surface).toHaveAttribute("data-led", NOWHERE);
-  await expect.poll(async () => manuscript.caret()).toEqual(caret);
+  await expect.poll(async () => manuscript.scroll()).toEqual(on);
   await expect.poll(async () => manuscript.showing()).toEqual([CHAPTER]);
 
   // A note no book reads turns the pane nowhere either.
   await manuscript.moveTo(OUTSIDE);
-  await manuscript.place({ line: 2, ch: 0 });
+  await manuscript.scrollTo(1);
   await expect.poll(async () => manuscript.showing()).toEqual([OUTSIDE]);
   await expect(book.surface).toHaveAttribute("data-first", "1");
 });

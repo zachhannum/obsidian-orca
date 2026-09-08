@@ -1,4 +1,4 @@
-import { EditorView } from "@codemirror/view";
+import { ViewPlugin } from "@codemirror/view";
 import {
   MarkdownView,
   Notice,
@@ -52,8 +52,8 @@ type SetViewState = (
 interface Place {
   at: string;
   state: unknown;
-  /** The byte of the note the caret was on when the book took the pane. */
-  caret?: number | undefined;
+  /** The line at the top of the pane, counting from 0. */
+  line?: number | undefined;
   /** The page the book was left turned to, counting from 1. */
   folio?: number | undefined;
 }
@@ -78,8 +78,6 @@ export default class OrcaPlugin extends Plugin {
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
   /** The place each leaf left the manuscript it toggled away from. */
   private readonly manuscript = new WeakMap<WorkspaceLeaf, Place>();
-  /** The caret the book last placed, which is not a move for it to follow. */
-  private placed: { note: string; byte: number } | undefined;
   /** The icon on each note that belongs to a book, and where it leads. */
   private readonly back = new WeakMap<
     MarkdownView,
@@ -220,22 +218,22 @@ export default class OrcaPlugin extends Plugin {
         this.turned(file);
       }),
     );
-    // Obsidian has no event for a caret that moved without an edit, so
-    // the link reads the editor's own updates. A keystroke drags the
-    // caret along with it and is not a move to follow: the writer is
-    // already reading the page they are typing on, and asking the
-    // engine where they are on every character would race the render
-    // that character started.
+    // Obsidian raises no event for a pane that scrolled, so the link
+    // reads the editor's own scroller.
     this.registerEditorExtension(
-      EditorView.updateListener.of((update) => {
-        if (!update.selectionSet || update.docChanged) return;
-        const path = update.state.field(editorInfoField, false)?.file?.path;
-        if (path === undefined) return;
-        const before = update.state.doc.sliceString(
-          0,
-          update.state.selection.main.head,
-        );
-        this.moved(path, byteOf(before, before.length));
+      ViewPlugin.define((editor) => {
+        const scrolled = (): void => {
+          const path = editor.state.field(editorInfoField, false)?.file?.path;
+          if (path !== undefined) this.scrolled(path);
+        };
+        editor.scrollDOM.addEventListener("scroll", scrolled, {
+          passive: true,
+        });
+        return {
+          destroy: () => {
+            editor.scrollDOM.removeEventListener("scroll", scrolled);
+          },
+        };
       }),
     );
     this.watchBooks();
@@ -626,15 +624,13 @@ export default class OrcaPlugin extends Plugin {
   ): Promise<void> {
     const from = leaf.view;
     const left = this.manuscript.get(leaf);
+    const folio = from instanceof PreviewView ? from.turned : undefined;
     // The page being read is asked for while the pane still holds it,
     // because the swap takes the view down with it.
     const opens =
       from instanceof PreviewView && from.paged
         ? await from.opensIn().catch(() => undefined)
         : undefined;
-    if (from instanceof PreviewView && left?.at === path) {
-      left.folio = from.turned;
-    }
     await leaf.setViewState({
       type: MARKDOWN_VIEW,
       state: { file: path, mode: "source" },
@@ -643,8 +639,23 @@ export default class OrcaPlugin extends Plugin {
     // A reader who paged through the book comes back to the line the
     // page they stopped on opens at. One who only looked comes back to
     // the line they were writing on.
-    if (opens?.note === path) this.places(leaf, path, opens.at);
-    else if (left?.at === path) leaf.setEphemeralState(left.state);
+    const shown = leaf.view;
+    if (opens?.note === path) {
+      this.leadsTo(leaf, opens.at, true);
+    } else if (left?.at === path) {
+      leaf.setEphemeralState(left.state);
+      // The caret is put back centred, which is a different line at the
+      // top of the pane, and the top line is what the book reads.
+      if (left.line !== undefined && shown instanceof MarkdownView) {
+        shown.currentMode.applyScroll(left.line);
+      }
+    }
+    this.manuscript.set(leaf, {
+      at: path,
+      state: leaf.getEphemeralState(),
+      line: shown instanceof MarkdownView ? scrolledLine(shown) : undefined,
+      folio,
+    });
     this.swap();
   }
 
@@ -668,17 +679,15 @@ export default class OrcaPlugin extends Plugin {
     member: Member,
   ): Promise<void> {
     const view = leaf.view;
-    const caret = view instanceof MarkdownView ? caretByte(view) : undefined;
+    const at = view instanceof MarkdownView ? scrolledTo(view) : undefined;
     const left = this.manuscript.get(leaf);
-    // The page the book was left on stands until the writer moves the
-    // caret. Once they have, the book opens at the page that caret is
-    // set on instead.
-    const folio =
-      left?.at === file.path && left.caret === caret ? left.folio : undefined;
+    // The book decides whether that page still stands: it is the side
+    // that knows whether the pane is scrolled inside it.
+    const folio = left?.at === file.path ? left.folio : undefined;
     this.manuscript.set(leaf, {
       at: file.path,
       state: leaf.getEphemeralState(),
-      caret,
+      line: view instanceof MarkdownView ? scrolledLine(view) : undefined,
       folio,
     });
     await leaf.setViewState({
@@ -687,7 +696,7 @@ export default class OrcaPlugin extends Plugin {
         book: member.book,
         note: file.path,
         folio,
-        at: caret,
+        at,
       } satisfies PreviewState,
       active: true,
     });
@@ -708,7 +717,7 @@ export default class OrcaPlugin extends Plugin {
         book: member.book,
         note: file.path,
         linked: true,
-        at: from instanceof MarkdownView ? caretByte(from) : undefined,
+        at: from instanceof MarkdownView ? scrolledTo(from) : undefined,
       } satisfies PreviewState,
       active: false,
     });
@@ -750,26 +759,24 @@ export default class OrcaPlugin extends Plugin {
     return leaf;
   }
 
-  /** Turns every linked preview to the page this note's caret is on. */
+  /** Turns every linked preview to the page this note is scrolled to. */
   private turned(file: TFile): void {
-    this.follow(file.path, this.caretIn(file.path));
+    this.follow(file.path, this.readAt(file.path));
   }
 
   /**
-   * A caret that moved, which every linked preview of that note's book
-   * follows. The caret the book itself just placed is the book's own
-   * move, and following it would turn the page back.
+   * A pane that scrolled, which every linked preview of that note's
+   * book follows. A scroll the book itself asked for turns nothing: the
+   * page it led to is the page that node is set on, and a pane already
+   * showing it has nowhere to turn.
    */
-  private moved(path: string, byte: number): void {
-    const placed = this.placed;
-    if (placed?.note === path && placed.byte === byte) return;
-    this.placed = undefined;
-    this.follow(path, byte);
+  private scrolled(path: string): void {
+    this.follow(path, this.readAt(path));
   }
 
   /**
    * Turns every linked preview of this note's book to the page the
-   * caret is set on. A note no book lists turns none of them.
+   * pane is scrolled to. A note no book lists turns none of them.
    */
   private follow(path: string, byte: number | undefined): void {
     const member = this.members.get(path);
@@ -783,12 +790,12 @@ export default class OrcaPlugin extends Plugin {
     }
   }
 
-  /** The byte of a note the caret in the pane showing it is on. */
-  private caretIn(path: string): number | undefined {
+  /** The byte of a note the pane showing it is scrolled to. */
+  private readAt(path: string): number | undefined {
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       const view = leaf.view;
       if (view instanceof MarkdownView && view.file?.path === path) {
-        return caretByte(view);
+        return scrolledTo(view);
       }
     }
     return undefined;
@@ -813,25 +820,25 @@ export default class OrcaPlugin extends Plugin {
       const path = shown.file.path;
       if (path !== note && this.members.get(path)?.book !== book) continue;
       if (path !== note) await leaf.openFile(file, { active: false });
-      this.places(leaf, note, at);
+      this.leadsTo(leaf, at, false);
       return;
     }
   }
 
   /**
-   * Puts the caret on the line `at` bytes into a note. The place is
-   * kept, so the move the book made is not read back as the writer's.
+   * Puts the line `at` bytes into a note at the top of a manuscript
+   * pane, and the caret on it for a pane being handed back to write in.
    */
-  private places(leaf: WorkspaceLeaf, note: string, at: number): void {
+  private leadsTo(leaf: WorkspaceLeaf, at: number, caret: boolean): void {
     const view = leaf.view;
     if (!(view instanceof MarkdownView)) return;
     const { editor } = view;
-    const text = editor.getValue();
-    const offset = offsetOf(text, at);
-    const pos = editor.offsetToPos(offset);
-    this.placed = { note, byte: byteOf(text, offset) };
-    editor.setCursor(pos);
-    editor.scrollIntoView({ from: pos, to: pos }, true);
+    const pos = editor.offsetToPos(offsetOf(editor.getValue(), at));
+    if (caret) editor.setCursor(pos);
+    view.currentMode.applyScroll(pos.line);
+    // Read back rather than assumed: a scroll near the end of a note
+    // stops where the note stops.
+    view.currentMode.applyScroll(pos.line);
   }
 
   private async open(): Promise<EngineClient> {
@@ -947,8 +954,20 @@ export default class OrcaPlugin extends Plugin {
   }
 }
 
-/** The byte of its note the caret in a manuscript pane is on. */
-function caretByte(view: MarkdownView): number {
+/**
+ * The line at the top of a manuscript pane, counting from 0. The scroll
+ * is a fraction of a line, and the line it names is the first one whole
+ * on screen, so it rounds rather than truncates.
+ */
+function scrolledLine(view: MarkdownView): number | undefined {
+  const line = Math.round(view.currentMode.getScroll());
+  return Number.isFinite(line) ? Math.max(line, 0) : undefined;
+}
+
+/** The byte of its note a manuscript pane is scrolled to. */
+function scrolledTo(view: MarkdownView): number | undefined {
+  const line = scrolledLine(view);
+  if (line === undefined) return undefined;
   const { editor } = view;
-  return byteOf(editor.getValue(), editor.posToOffset(editor.getCursor()));
+  return byteOf(editor.getValue(), editor.posToOffset({ line, ch: 0 }));
 }

@@ -40,20 +40,23 @@ its editor around these files and returns a URL. The artboard list and
   hand-built DOM in a view orca does not own.
 - `Open preview to the right`, on a chapter's own menu, splits instead
   of swapping, and the two panes follow each other paragraph by
-  paragraph: moving the caret turns the preview to the page that
-  paragraph is set on, and turning a page moves the caret to the line
-  that page opens at. A caret in a note the book does not list, and a
-  page of generated matter, move neither pane. The link stops at the
-  paragraph, because a byte of markdown and a byte of set text are not
-  the same byte. `Open manuscript to the left` is the same split from
-  the book's side.
+  paragraph. What the panes follow is what is scrolled into view, not
+  the caret: reading a draft is scrolling, and a caret that never
+  moves would turn nothing. Scrolling the manuscript turns the preview
+  to the page the line at the top of the pane is set on, and turning a
+  page scrolls the manuscript to the line that page opens at. A note
+  the book does not list, and a page of generated matter, move neither
+  pane. The link stops at the paragraph, because a byte of markdown
+  and a byte of set text are not the same byte. `Open manuscript to
+  the left` is the same split from the book's side.
 - The preview keeps the page it is on, so a swap to the manuscript and
   back opens on it, mid-chapter included, and a workspace reopened at
   startup opens the preview where it was closed.
-- The icon on a note opens the book at the page the caret is on. A
-  reader who paged through the book comes back to the line that page
-  opens at. One who turned no page comes back to the line they were
-  writing on.
+- The icon on a note opens the book at the page the manuscript is
+  scrolled to, unless the pane is still scrolled inside the page the
+  book was left on. A reader who paged through the book comes back to
+  the line that page opens at, with the caret on it. One who turned no
+  page comes back to the line they were writing on.
 - One ribbon icon, with the issues badge on it.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.

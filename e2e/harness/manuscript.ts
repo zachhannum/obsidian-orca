@@ -63,6 +63,35 @@ export class Manuscript {
   }
 
   /**
+   * The line the first manuscript pane is scrolled to, counting from 0.
+   * The scroll is a fraction of a line, and the line it names is the
+   * first one whole on screen.
+   */
+  async scroll(): Promise<number> {
+    return this.obsidian.page.evaluate((type) => {
+      const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+        | MarkdownView
+        | undefined;
+      if (view === undefined) throw new Error("no manuscript is open");
+      return Math.round(view.currentMode.getScroll());
+    }, MARKDOWN);
+  }
+
+  /** Scrolls that pane so `line` is at its top, the way a reader reads. */
+  async scrollTo(line: number): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ({ type, at }) => {
+        const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+          | MarkdownView
+          | undefined;
+        if (view === undefined) throw new Error("no manuscript is open");
+        view.currentMode.applyScroll(at);
+      },
+      { type: MARKDOWN, at: line },
+    );
+  }
+
+  /**
    * Types at the caret, one keystroke at a time, the way a writer does.
    * The caret is where {@link Manuscript.place} left it.
    */
