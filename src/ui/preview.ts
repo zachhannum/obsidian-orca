@@ -15,6 +15,8 @@ import {
   type Chapter,
   type Range,
 } from "@/book/pages";
+import { folioOf, nodesOn } from "@/book/place";
+import { isGenerated } from "@/book/plan";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { copiedText, type SelectionLine } from "@/ui/copy";
@@ -35,23 +37,45 @@ import type { Composer, Progress, Typeset } from "@/ui/composer";
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
 
+/** The note a page nobody wrote leads the manuscript to. */
+const NOWHERE = "-";
+
+/** The place in the manuscript a page opens at. */
+export interface Opens {
+  note: string;
+  /** The byte of that note the page's first paragraph begins at. */
+  at: number;
+}
+
 /**
- * The book a preview reads, the note it opened at, and whether a
- * manuscript pane is tied to it. The workspace keeps this, so a leaf
- * restored at startup opens the same book at the same chapter.
+ * The book a preview reads, the note and page it opened at, and
+ * whether a manuscript pane is tied to it. The workspace keeps all of
+ * it but {@link PreviewState.at}, so a leaf restored at startup opens
+ * the same book at the same page.
  */
 export interface PreviewState {
   book?: string;
   note?: string;
   linked?: boolean;
+  /** The page being read, counting from 1. */
+  folio?: number;
+  /**
+   * The byte of the note the manuscript is scrolled to. It says where a
+   * book opens rather than where it is, so the workspace never keeps
+   * it: a leaf restored at startup opens at the folio instead.
+   */
+  at?: number;
 }
 
 /** The plugin, as much of it as the preview reaches: it owns the other leaves. */
 export interface PreviewHandoff {
   /** Gives the leaf back to the manuscript, where the writer left it. */
   asMarkdown(view: PreviewView, note: string): void;
-  /** Turns the manuscript pane tied to this one to the note a page reads as. */
-  follows(view: PreviewView, note: string): void;
+  /**
+   * Puts the manuscript pane tied to this one on the line a page opens
+   * at, `at` bytes into the note.
+   */
+  follows(view: PreviewView, note: string, at: number): void;
 }
 
 /**
@@ -94,6 +118,8 @@ export class PreviewView extends ItemView {
   private watching: ResizeObserver | undefined;
   /** The book note this preview reads, and the note it opened at. */
   private state: PreviewState = {};
+  /** The byte of the note the manuscript was scrolled to when it handed over. */
+  private caret: number | undefined;
   /** The note the pages on screen read as, which the manuscript follows. */
   private showing: string | undefined;
   /** Counts the books opened here, so a book the author left is dropped. */
@@ -119,6 +145,14 @@ export class PreviewView extends ItemView {
   private rows = 1;
   /** The turn the next painted span has to be, so a slow one is dropped. */
   private turning = 0;
+  /** The same, for the searches a moving caret starts. */
+  private following = 0;
+  /** The same, for the questions a page turn asks on the way back. */
+  private leading = 0;
+  /** The span the manuscript was last led to, so a repaint moves no caret. */
+  private ledAt: number | undefined;
+  /** The folio the book opened at here, so a swap back knows it moved. */
+  private openedAt: number | undefined;
   /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
 
@@ -155,10 +189,39 @@ export class PreviewView extends ItemView {
     await super.setState(state, result);
     const wanted = readState(state);
     const changed = wanted.book !== this.state.book;
-    this.state = wanted;
+    this.caret = wanted.at;
+    this.state = kept(wanted);
     this.attach();
     if (changed) await this.compose();
-    else if (wanted.note !== undefined) this.turnTo(wanted.note);
+    else if (wanted.folio !== undefined) await this.turn(wanted.folio - 1);
+    else if (wanted.note !== undefined) await this.turnTo(wanted.note, wanted.at);
+  }
+
+  /** The page this preview is turned to, counting from 1, once it has one. */
+  get turned(): number | undefined {
+    return this.state.folio;
+  }
+
+  /** Whether the reader has paged away from where the book opened here. */
+  get paged(): boolean {
+    return this.openedAt !== undefined && this.state.folio !== this.openedAt;
+  }
+
+  /**
+   * The place in the manuscript the page being read opens at: the
+   * earliest node the page's runs name, taken back to the note it was
+   * read from. Nothing for a page orca wrote itself.
+   */
+  async opensIn(): Promise<Opens | undefined> {
+    const session = this.session;
+    if (session === undefined) return undefined;
+    const reading = await session.read(this.at, 1);
+    const page = reading?.pages[0];
+    const node = page === undefined ? undefined : nodesOn(page)?.first;
+    if (node === undefined) return undefined;
+    const source = await session.sourceOf(node);
+    if (source === undefined || isGenerated(source.source)) return undefined;
+    return { note: source.source, at: source.start };
   }
 
   /** The book this preview reads, for a plugin pairing it with a manuscript. */
@@ -221,21 +284,99 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Turns to a note's first page, unless the pages on screen already
-   * read as that note. A page is the smallest thing a manuscript can
-   * name here, so the link is chapter by chapter.
+   * Turns to the page the caret `at` bytes into a note is set on, or to
+   * the note's first page where the engine read that byte into no node.
+   * A note the book does not list turns nothing.
    */
-  turnTo(note: string): void {
+  async turnTo(note: string, at?: number): Promise<void> {
     const typeset = this.typeset;
     if (typeset === undefined) return;
-    const at = sectionOf(typeset.sections, note);
-    if (at === undefined) return;
-    const range = typeset.ranges.get(at);
+    const section = sectionOf(typeset.sections, note);
+    if (section === undefined) return;
+    const range = typeset.ranges.get(section);
     if (range === undefined) return;
-    if (sectionAt(typeset.ranges, this.at + 1) === at) return;
+    const following = (this.following += 1);
+    const node = at === undefined ? undefined : await this.nodeIn(note, at);
+    if (following !== this.following) return;
+    // The span being read already sets that node, so the reader is
+    // looking at it and the pane has nowhere to turn. This is also what
+    // keeps a manuscript the book itself scrolled from turning it back.
+    if (node !== undefined && (await this.sets(node))) return;
+    const found =
+      node === undefined ? undefined : await this.folioOfNode(node, range);
+    if (following !== this.following) return;
+    const chapter =
+      sectionAt(typeset.ranges, this.at + 1) === section
+        ? undefined
+        : range.first;
+    const folio = found ?? chapter;
+    if (folio === undefined || this.shows(folio)) return;
     this.showing = note;
     this.state = { ...this.state, note };
-    void this.turn(range.first - 1);
+    await this.turn(folio - 1, true);
+  }
+
+  /** Whether the span being read holds this folio. */
+  private shows(folio: number): boolean {
+    return folio > this.at && folio <= this.at + this.count;
+  }
+
+  /**
+   * The node `byte` bytes into a note was read into. Nothing where the
+   * engine read that byte into none, or cannot answer at all: it has
+   * its own reasons to refuse a question, and none of them are worth a
+   * page the reader did not ask for.
+   */
+  private async nodeIn(note: string, byte: number): Promise<number | undefined> {
+    try {
+      return await this.session?.nodeAt(note, byte);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** The folio a node is set on, looked for in the chapter and then the book. */
+  private async folioOfNode(
+    node: number,
+    within: Range,
+  ): Promise<number | undefined> {
+    const session = this.session;
+    if (session === undefined) return undefined;
+    const read = async (folio: number) =>
+      (await session.read(folio - 1, 1))?.pages[0];
+    try {
+      // The node is almost always on the chapter's own pages, and
+      // those are a handful. An edit since the book was set can have
+      // moved it off them, and node ids run in document order across
+      // the whole book, so the rest of it answers the same question.
+      return (
+        (await folioOf(node, within, read)) ??
+        (await folioOf(node, { first: 1, last: session.pages }, read))
+      );
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Whether the runs on this folio's page name the node. */
+  private async holds(folio: number, node: number): Promise<boolean> {
+    const session = this.session;
+    if (session === undefined) return false;
+    try {
+      const page = (await session.read(folio - 1, 1))?.pages[0];
+      const nodes = page === undefined ? undefined : nodesOn(page);
+      return nodes !== undefined && node >= nodes.first && node <= nodes.last;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The same, across every page of the span being read. */
+  private async sets(node: number): Promise<boolean> {
+    for (let folio = this.at + 1; folio <= this.at + this.count; folio += 1) {
+      if (await this.holds(folio, node)) return true;
+    }
+    return false;
   }
 
   /**
@@ -351,6 +492,7 @@ export class PreviewView extends ItemView {
     this.session = undefined;
     this.typeset = undefined;
     this.named = undefined;
+    this.ledAt = undefined;
     this.showing = this.state.note;
     if (book === undefined) {
       this.report("No book is open");
@@ -373,7 +515,10 @@ export class PreviewView extends ItemView {
         void this.turn(this.at);
       });
       this.offers(chapters(typeset.sections, typeset.ranges));
-      await this.turn(this.opensAt(typeset));
+      // The book opens where the note asked it to, so the note is
+      // already there and the opening turn leads it nowhere.
+      await this.turn(await this.opensAt(typeset), true);
+      this.openedAt = this.state.folio;
     } catch (cause) {
       if (opening !== this.opening) return;
       this.report(
@@ -384,12 +529,32 @@ export class PreviewView extends ItemView {
     }
   }
 
-  /** The page the book opens at: the first of the chapter it was toggled from. */
-  private opensAt(typeset: Typeset): number {
+  /**
+   * The page the book opens at: the one the reader was left on, then
+   * the one holding what the manuscript is scrolled to, then the first
+   * of the chapter it was toggled from.
+   */
+  private async opensAt(typeset: Typeset): Promise<number> {
+    const folio = this.state.folio;
     const note = this.state.note;
-    const at = note === undefined ? undefined : sectionOf(typeset.sections, note);
-    const range = at === undefined ? undefined : typeset.ranges.get(at);
-    return range === undefined ? 0 : range.first - 1;
+    const at = this.caret;
+    const node =
+      note === undefined || at === undefined
+        ? undefined
+        : await this.nodeIn(note, at);
+    // The page the book was left on stands while the manuscript is
+    // still scrolled inside it. Once it has moved off, the book opens
+    // at the page holding what the pane is scrolled to.
+    if (folio !== undefined) {
+      if (node === undefined || (await this.holds(folio, node))) return folio - 1;
+    }
+    const section =
+      note === undefined ? undefined : sectionOf(typeset.sections, note);
+    const range = section === undefined ? undefined : typeset.ranges.get(section);
+    if (range === undefined) return folio === undefined ? 0 : folio - 1;
+    const found =
+      node === undefined ? undefined : await this.folioOfNode(node, range);
+    return (found ?? range.first) - 1;
   }
 
   /**
@@ -489,7 +654,7 @@ export class PreviewView extends ItemView {
    * Paints the span at `at`. A turn the reader has already typed past
    * is dropped rather than painted behind the one they are on.
    */
-  private async turn(at: number): Promise<void> {
+  private async turn(at: number, led = false): Promise<void> {
     const session = this.session;
     if (session === undefined) return;
     const span = spanAt(this.mode, at, this.screenful);
@@ -502,10 +667,10 @@ export class PreviewView extends ItemView {
     }
     this.message?.remove();
     this.message = undefined;
-    this.paint(session, reading);
+    this.paint(session, reading, led);
   }
 
-  private paint(session: Session, reading: Reading): void {
+  private paint(session: Session, reading: Reading, led: boolean): void {
     const surface = this.surface;
     if (surface === undefined) return;
     const leaves: Leaf[] = reading.pages.map((page) => ({
@@ -528,6 +693,40 @@ export class PreviewView extends ItemView {
       rows: this.mode === "grid" ? this.rows : 1,
     });
     this.settle(reading.at, reading.length, leaves.length);
+    // A repaint of the span already being read is not a page turn, and
+    // neither is one the manuscript asked for.
+    if (this.ledAt === reading.at) return;
+    this.ledAt = reading.at;
+    if (led || !this.linked) return;
+    surface.dataset["led"] = "";
+    void this.leads();
+  }
+
+  /**
+   * Says where the page turn left the manuscript, so a test waits on
+   * the answer rather than on a clock. `NOWHERE` is a page nobody
+   * wrote.
+   */
+  private ledTo(note: string): void {
+    if (this.surface !== undefined) this.surface.dataset["led"] = note;
+  }
+
+  /**
+   * Puts the manuscript tied to this pane on the line the page opens
+   * at: the earliest node its runs name, taken back to the note it was
+   * read from. Matter orca generated was written by nobody, so a page
+   * of it moves no caret.
+   */
+  private async leads(): Promise<void> {
+    const leading = (this.leading += 1);
+    const opens = await this.opensIn().catch(() => undefined);
+    if (leading !== this.leading) return;
+    if (opens === undefined) {
+      this.ledTo(NOWHERE);
+      return;
+    }
+    this.handoff.follows(this, opens.note, opens.at);
+    this.ledTo(opens.note);
   }
 
   /** Puts the chrome on the span that is painted. */
@@ -536,6 +735,10 @@ export class PreviewView extends ItemView {
     this.pages = pages;
     this.count = Math.max(count, 1);
     const first = at + 1;
+    // The page being read is the leaf's, so a workspace restored at
+    // startup opens the book where it was closed.
+    this.state = { ...this.state, folio: first };
+    this.app.workspace.requestSaveLayout();
     const last = at + this.count;
     if (this.folio !== undefined) this.folio.value = String(first);
     this.total?.setText(`of ${String(pages)}`);
@@ -567,9 +770,9 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Names the chapter the painted span reads as, and turns a manuscript
-   * tied to this pane to it. The note is kept either way, so a leaf
-   * restored at startup opens where the reader left the book.
+   * Names the note the painted span reads as, so a leaf restored at
+   * startup opens where the reader left the book and the way back to
+   * the manuscript leads to the chapter on screen.
    */
   private reads(folio: number): void {
     const note = this.noteAt(folio);
@@ -577,7 +780,6 @@ export class PreviewView extends ItemView {
     this.showing = note;
     this.state = { ...this.state, note };
     this.attach();
-    if (this.linked) this.handoff.follows(this, note);
   }
 
   /** The note the page at this folio reads as, for a folio one covers. */
@@ -660,5 +862,12 @@ function readState(state: unknown): PreviewState {
   if (typeof raw["book"] === "string") made.book = raw["book"];
   if (typeof raw["note"] === "string") made.note = raw["note"];
   if (raw["linked"] === true) made.linked = true;
+  if (typeof raw["folio"] === "number") made.folio = raw["folio"];
+  if (typeof raw["at"] === "number") made.at = raw["at"];
   return made;
+}
+
+/** The state the workspace keeps: where a book opens is not part of it. */
+function kept({ at, ...state }: PreviewState): PreviewState {
+  return state;
 }

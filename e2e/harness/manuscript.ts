@@ -3,7 +3,7 @@
  * it for the book, and the caret a toggle back has to bring with it.
  */
 
-import type { Locator } from "@playwright/test";
+import { expect, type Locator } from "@playwright/test";
 import type { MarkdownView } from "obsidian";
 import { AS_BOOK, MARKDOWN } from "./note";
 import type { Obsidian } from "./obsidian";
@@ -59,6 +59,54 @@ export class Manuscript {
         view.editor.setCursor(caret);
       },
       { type: MARKDOWN, caret: at },
+    );
+  }
+
+  /**
+   * The line the first manuscript pane is scrolled to, counting from 0.
+   * The scroll is a fraction of a line, and the line it names is the
+   * first one whole on screen.
+   */
+  async scroll(): Promise<number> {
+    return this.obsidian.page.evaluate((type) => {
+      const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+        | MarkdownView
+        | undefined;
+      if (view === undefined) throw new Error("no manuscript is open");
+      return Math.round(view.currentMode.getScroll());
+    }, MARKDOWN);
+  }
+
+  /**
+   * Scrolls that pane so `line` is at its top, the way a reader reads,
+   * and answers with the line it landed on. A pane Obsidian has just
+   * rebuilt has no height to scroll until it has been laid out, so the
+   * scroll is applied until the pane reports that line at its top. The
+   * last lines of a note cannot be brought there, so they are not
+   * lines to ask for.
+   */
+  async scrollTo(line: number): Promise<number> {
+    let at = 0;
+    await expect
+      .poll(async () => {
+        await this.applyScroll(line);
+        at = await this.scroll();
+        return at;
+      })
+      .toBe(line);
+    return at;
+  }
+
+  private async applyScroll(line: number): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ({ type, at }) => {
+        const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+          | MarkdownView
+          | undefined;
+        if (view === undefined) throw new Error("no manuscript is open");
+        view.currentMode.applyScroll(at);
+      },
+      { type: MARKDOWN, at: line },
     );
   }
 

@@ -42,6 +42,9 @@ const POSED = "orca-photograph";
 /** The type the preview is registered under. */
 export const PREVIEW = "orca-book-preview";
 
+/** The note the surface names for a page nobody wrote. */
+export const NOWHERE = "-";
+
 export class Book {
   /** The node the view's pages are written into. */
   readonly surface: Locator;
