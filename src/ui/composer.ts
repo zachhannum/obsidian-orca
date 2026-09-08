@@ -209,6 +209,16 @@ export class Composer {
     return composing;
   }
 
+  /**
+   * The book at this path, for a caller that reads one rather than
+   * opens it. Nothing is typeset here: a surface that only reports on
+   * a book cannot be the reason it is set, nor take the report of a
+   * caller that is.
+   */
+  opened(path: string): Promise<Typeset> | undefined {
+    return this.books.get(path);
+  }
+
   /** Drops a book, so the next open typesets it from the notes as they are now. */
   forget(path: string): void {
     const existing = this.books.get(path);

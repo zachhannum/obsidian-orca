@@ -217,6 +217,13 @@ export default class OrcaPlugin extends Plugin {
       void this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
         reveal: false,
       });
+      // The panel is a tab in the sidebar rather than a leaf a command
+      // makes, so there is something to click before anyone knows the
+      // command is there. It reads the machine's faces only once it
+      // has a book, so a startup with no book open scans nothing.
+      void this.app.workspace.ensureSideLeaf(PANEL_VIEW, "right", {
+        reveal: false,
+      });
     });
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
@@ -914,9 +921,16 @@ export default class OrcaPlugin extends Plugin {
       index: () => this.fontIndex(),
       faces: (family) => familyFaces(this.places(), family),
       watch: (again) => {
-        const on = this.app.workspace.on("active-leaf-change", again);
+        // The panel outlives the books it designs, so it follows the
+        // workspace rather than any one of them. A leaf change is the
+        // reader moving between books; a layout change is the preview
+        // that holds one arriving or going.
+        const on = [
+          this.app.workspace.on("active-leaf-change", again),
+          this.app.workspace.on("layout-change", again),
+        ];
         return () => {
-          this.app.workspace.offref(on);
+          for (const ref of on) this.app.workspace.offref(ref);
         };
       },
     };
@@ -935,7 +949,7 @@ export default class OrcaPlugin extends Plugin {
     const path = active ?? other;
     if (path === undefined || this.composer === undefined) return undefined;
     try {
-      return await this.composer.open(path);
+      return await this.composer.opened(path);
     } catch {
       // A book that will not set is the preview's report to make, not
       // the panel's.
@@ -979,6 +993,9 @@ export default class OrcaPlugin extends Plugin {
       await leaf.setViewState({ type: PANEL_VIEW, active: true });
     }
     await workspace.revealLeaf(leaf);
+    // Revealing a sidebar leaf leaves the active leaf where it was, so
+    // nothing the panel watches fires for it.
+    if (leaf.view instanceof DesignPanelView) leaf.view.refresh();
   }
 
   /** Opens the book the workspace is on, and reveals one already open. */

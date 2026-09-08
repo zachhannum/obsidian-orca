@@ -63,10 +63,10 @@ export class DesignPanelView extends ItemView {
     });
     this.register(
       this.designing.watch(() => {
-        void this.refresh();
+        this.refresh();
       }),
     );
-    void this.refresh();
+    this.refresh();
     return Promise.resolve();
   }
 
@@ -98,11 +98,19 @@ export class DesignPanelView extends ItemView {
       this.unread = family.name;
     }
     typeset.reface(family.name, faces);
-    await this.refresh();
+    await this.repaint();
+  }
+
+  /**
+   * Paints the panel again. The leaf stands in the sidebar from
+   * startup, so the book it designs arrives long after it opened.
+   */
+  refresh(): void {
+    void this.repaint();
   }
 
   /** Paints the panel for the book being read, and the index behind it. */
-  private async refresh(): Promise<void> {
+  private async repaint(): Promise<void> {
     const run = (this.painting += 1);
     const mounted = this.mounted;
     if (mounted === undefined) return;
@@ -125,11 +133,11 @@ export class DesignPanelView extends ItemView {
   private watch(typeset: Typeset): void {
     this.watching?.();
     this.watching = typeset.watch(() => {
-      void this.repaint(typeset);
+      void this.painted(typeset);
     });
   }
 
-  private async repaint(typeset: Typeset): Promise<void> {
+  private async painted(typeset: Typeset): Promise<void> {
     const mounted = this.mounted;
     if (mounted === undefined) return;
     mounted.paint(this.shownFor(typeset, await this.designing.index()));
