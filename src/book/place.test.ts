@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Page, TextItem } from "fleuron";
-import { byteOf, folioOf, nodesOn, offsetOf } from "@/book/place";
+import { byteOf, folioOf, nodesOn, offsetOf, writtenAt } from "@/book/place";
 
 /** A run of a page, named for the node it was shaped from. */
 function run(node: number | undefined): TextItem {
@@ -85,6 +85,25 @@ test("a byte of a note and the character it falls in name each other", () => {
   assert.equal(offsetOf(text, 10), 9);
   assert.equal(offsetOf(text, 0), 0);
   assert.equal(offsetOf(text, 1000), text.length);
+});
+
+test("a scroll that stops on a blank line reads the line under it", () => {
+  const note = [
+    "---",
+    "title: Pride and Prejudice",
+    "---",
+    "",
+    "# Chapter Twelve",
+    "",
+    "In consequence of an agreement.",
+  ].join("\n");
+  // The top of the note is its frontmatter, which is no node of the book.
+  assert.equal(writtenAt(note, 0), 4);
+  assert.equal(writtenAt(note, 4), 4);
+  assert.equal(writtenAt(note, 5), 6);
+  // A note with nothing under the line asked for stays where it is.
+  assert.equal(writtenAt(note, 99), 6);
+  assert.equal(writtenAt("# Loose\n\nA note.\n", 0), 0);
 });
 
 // What this tier does not cover: the node a byte was read into and the

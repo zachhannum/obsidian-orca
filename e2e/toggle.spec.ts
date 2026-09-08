@@ -340,6 +340,36 @@ test("and a reader who only looked comes back to the line they were on", async (
   });
 });
 
+test("scrolled back to the top of a chapter, the toggle opens at its first page", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  const text = await pagedOut(vault);
+  const deep = lineOf(text, "Paragraph 20.");
+
+  await manuscript.open(CHAPTER);
+  await manuscript.asBook.click();
+  await book.painted();
+  const opens = await book.reading();
+
+  // Read into the middle of the chapter, then all the way back to the
+  // top of the note, which is its frontmatter.
+  await book.asMarkdown.click();
+  await expect(manuscript.pane).toHaveCount(1);
+  await manuscript.scrollTo(deep);
+  await manuscript.asBook.click();
+  await book.painted();
+  await expect.poll(async () => book.reading()).toBeGreaterThan(opens);
+
+  await book.asMarkdown.click();
+  await expect(manuscript.pane).toHaveCount(1);
+  await manuscript.scrollTo(0);
+  await manuscript.asBook.click();
+  await book.painted();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens));
+});
+
 test("a workspace reopened on a preview opens it at the page it was closed on", async ({
   book,
   manuscript,

@@ -25,7 +25,7 @@ import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
-import { byteOf, offsetOf } from "@/book/place";
+import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import { cacheLinks, noteIndex } from "@/ui/notes";
@@ -969,5 +969,7 @@ function scrolledTo(view: MarkdownView): number | undefined {
   const line = scrolledLine(view);
   if (line === undefined) return undefined;
   const { editor } = view;
-  return byteOf(editor.getValue(), editor.posToOffset({ line, ch: 0 }));
+  const text = editor.getValue();
+  const at = { line: writtenAt(text, line), ch: 0 };
+  return byteOf(text, editor.posToOffset(at));
 }

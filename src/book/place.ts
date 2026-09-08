@@ -97,6 +97,31 @@ async function probe(
   return undefined;
 }
 
+/**
+ * The first line at or after `line` that a note wrote content on,
+ * counting from 0. A blank line and the note's own frontmatter were
+ * read into no node, so a pane that stops on one is reading the line
+ * under it.
+ */
+export function writtenAt(text: string, line: number): number {
+  const lines = text.split("\n");
+  const last = Math.max(lines.length - 1, 0);
+  const from = Math.min(Math.max(line, underMatter(lines)), last);
+  for (let at = from; at < lines.length; at += 1) {
+    if ((lines[at] ?? "").trim() !== "") return at;
+  }
+  return from;
+}
+
+/** The first line under a note's own frontmatter, which is no node of the book. */
+function underMatter(lines: string[]): number {
+  if (lines[0]?.trim() !== "---") return 0;
+  for (let at = 1; at < lines.length; at += 1) {
+    if ((lines[at] ?? "").trim() === "---") return at + 1;
+  }
+  return 0;
+}
+
 /** The byte of `text` the character at `offset` starts at. */
 export function byteOf(text: string, offset: number): number {
   const at = Math.min(Math.max(offset, 0), text.length);
