@@ -3,7 +3,7 @@
  * it for the book, and the caret a toggle back has to bring with it.
  */
 
-import type { Locator } from "@playwright/test";
+import { expect, type Locator } from "@playwright/test";
 import type { MarkdownView } from "obsidian";
 import { AS_BOOK, MARKDOWN } from "./note";
 import type { Obsidian } from "./obsidian";
@@ -77,8 +77,23 @@ export class Manuscript {
     }, MARKDOWN);
   }
 
-  /** Scrolls that pane so `line` is at its top, the way a reader reads. */
-  async scrollTo(line: number): Promise<void> {
+  /**
+   * Scrolls that pane so `line` is at its top, the way a reader reads,
+   * and answers with the line it landed on. A pane Obsidian has just
+   * rebuilt has no height to scroll until it has been laid out, so the
+   * scroll is applied until it takes.
+   */
+  async scrollTo(line: number): Promise<number> {
+    await expect
+      .poll(async () => {
+        await this.applyScroll(line);
+        return this.scroll();
+      })
+      .toBeGreaterThan(0);
+    return this.scroll();
+  }
+
+  private async applyScroll(line: number): Promise<void> {
     await this.obsidian.page.evaluate(
       ({ type, at }) => {
         const view = window.app.workspace.getLeavesOfType(type)[0]?.view as

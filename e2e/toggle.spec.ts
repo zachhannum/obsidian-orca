@@ -386,7 +386,6 @@ test("a note the book does not list, and a page orca wrote, turn neither pane", 
 
   // A note no book reads turns the pane nowhere either.
   await manuscript.moveTo(OUTSIDE);
-  await manuscript.scrollTo(1);
   await expect.poll(async () => manuscript.showing()).toEqual([OUTSIDE]);
   await expect(book.surface).toHaveAttribute("data-first", "1");
 });
