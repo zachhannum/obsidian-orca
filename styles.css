@@ -733,7 +733,7 @@ input.orca-panel-filter {
 }
 
 /* The list is bounded rather than as long as the machine's font
-   folder, which on a Mac is six hundred families. */
+   folders, which on a Mac hold six hundred files. */
 .orca-panel-rows {
   max-height: 260px;
   overflow-y: auto;

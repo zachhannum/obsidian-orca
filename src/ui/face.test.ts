@@ -97,5 +97,7 @@ test("a book naming a family the machine does not have is warned about by name",
 });
 
 // What this tier does not cover: the panel's own drawing, which is
-// React over these answers, and the keys that move between rows, which
-// the e2e suite drives in the application the picker is mounted in.
+// React over these answers; the keys that move between rows, which the
+// e2e suite drives in the application the picker is mounted in; and a
+// family whose files have gone since the scan, which the panel reports
+// on and no fake here can take off a disk.

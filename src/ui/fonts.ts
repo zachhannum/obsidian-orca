@@ -2,9 +2,8 @@
  * The font files the author has, as the index reads them.
  *
  * A face installed on the machine is not in the vault, so the
- * platform's directories are read through the file system the
- * application already runs on. Orca is desktop only, which is what
- * makes that available at all.
+ * platform's directories are read through the file system rather than
+ * the vault adapter. Orca is desktop only, so it has one.
  */
 
 import { open, readFile, readdir } from "node:fs/promises";
@@ -125,6 +124,59 @@ export async function familyFaces(
   family: Family,
 ): Promise<Hashed[]> {
   return Promise.all(family.faces.map((face) => crossing(places, face)));
+}
+
+/** Registers a face with the document, so a picker row previews in it. */
+export interface Previews {
+  add(family: string, bytes: Uint8Array): Promise<void>;
+}
+
+export function documentPreviews(document: Document): Previews {
+  return {
+    add: async (family, bytes) => {
+      const face = new FontFace(family, new Uint8Array(bytes));
+      await face.load();
+      document.fonts.add(face);
+    },
+  };
+}
+
+/**
+ * Registers the vault's own faces with the document. A family the
+ * machine installs is the browser's to resolve by name; one the vault
+ * carries is not, so a row offering it would otherwise preview in the
+ * interface face. Nothing here crosses to the engine: a picker row is
+ * the browser's own type, not a page the engine set.
+ */
+export async function previewFaces(
+  places: FontPlaces,
+  index: FontIndex,
+  previews: Previews,
+): Promise<void> {
+  await Promise.all(
+    index.families
+      .filter((family) => family.where === "vault")
+      .map(async (family) => {
+        const face = regular(family);
+        if (face === undefined) return;
+        try {
+          const { bytes } = await crossing(places, face);
+          await previews.add(family.name, bytes);
+        } catch {
+          // A face that will not load leaves its row set in the
+          // interface face, which is a row that reads rather than one
+          // that is missing.
+        }
+      }),
+  );
+}
+
+/** The cut a family previews in: its regular one, or the first it has. */
+function regular(family: Family): Face | undefined {
+  return (
+    family.faces.find((face) => face.style.toLowerCase() === "regular") ??
+    family.faces[0]
+  );
 }
 
 async function crossing(places: FontPlaces, face: Face): Promise<Hashed> {

@@ -43,7 +43,32 @@
 
     <div class="grp">
       <div class="grp-h">TEXT</div>
-      <div class="row"><span class="lab">Face</span><div class="field is-select" style="flex: 1"><span>EB Garamond</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+      <div class="row"><span class="lab">Face</span>
+        <div style="flex: 1; position: relative">
+          <div class="field is-select"><span>Alegreya</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+          <!-- Open, because the closed field settles nothing about where
+               the names come from. The list is the machine's own font
+               directories and the vault's `fonts/`, filtered by what was
+               typed; a name is never entered by hand. -->
+          <div class="menu" style="position: absolute; top: 34px; left: 0; right: 0; z-index: 5">
+            <div class="field" style="height: 26px; margin-bottom: 5px"><span style="color: var(--text-normal)">Aleg</span><span style="width: 1px; height: 13px; background: var(--text-accent); margin-left: 1px"></span></div>
+            <div class="menu-item is-active" style="font-family: 'Alegreya', Georgia, serif; font-size: 14px">Alegreya</div>
+            <div class="menu-item" style="font-family: 'Alegreya SC', Georgia, serif; font-size: 14px">Alegreya SC</div>
+            <div class="menu-item" style="font-family: 'Alegreya Sans', Helvetica, sans-serif; font-size: 14px">Alegreya Sans</div>
+            <div class="menu-sep"></div>
+            <div style="padding: 0 9px 2px; color: var(--text-faint); font-size: 11px">3 of 214 families</div>
+          </div>
+        </div>
+      </div>
+      <div class="row"><span class="lab">Styles</span>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap">
+          <span class="pending" style="border-style: solid; color: var(--text-muted)">Regular</span>
+          <span class="pending" style="border-style: solid; color: var(--text-muted)">Medium</span>
+          <span class="pending" style="border-style: solid; color: var(--text-muted)">Bold</span>
+          <span class="pending" style="border-style: solid; color: var(--text-muted)">Italic</span>
+        </div>
+      </div>
+      <div class="row" style="min-height: 16px"><span class="lab"></span><span style="color: var(--text-faint); font-size: 11.5px">the cuts the engine registered, not a second reading of the file</span></div>
       <div class="row"><span class="lab">Size</span><div class="field num">10.5 pt</div><span style="color: var(--text-muted); font-size: 12.5px">Leading</span><div class="field num">14 pt</div></div>
       <div class="row"><span class="lab">Setting</span>
         <div class="seg"><div class="is-on">Justified</div><div>Ragged right</div></div>

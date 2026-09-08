@@ -512,6 +512,33 @@ test("a serialized client reads current and stages live off the one it wraps", (
   assert.equal(wrapped.stages, client.stages);
 });
 
+test("a cut off a variable file is painted at the place on its axes the run named", async () => {
+  const layout = typeset();
+  // One variable file names several cuts, and each is a location on
+  // that file rather than a file of its own.
+  layout.fonts = [
+    {
+      family: "alegreya",
+      name: "Alegreya Medium",
+      style: "Medium",
+      attributes: { italic: false, weight: 500 },
+      variations: [{ tag: "wght", value: 500 }],
+    },
+  ];
+  const session = new Session(new FakeClient(layout), faces());
+
+  await session.open(openBook(SAMPLE));
+  const reading = await session.read(0);
+  assert.ok(reading, "the book set to no pages");
+  const page = reading.pages[0];
+  assert.ok(page, "the reading carried no page");
+
+  // The painter is handed the run's own font table, so a painter that
+  // was handed none would draw every cut at the file's default weight.
+  const markup = paintPage(page, { fonts: reading.fonts });
+  assert.match(markup, /font-variation-settings: &quot;wght&quot; 500/);
+});
+
 test("a book the engine refuses comes back as an engine error, not re-worded", async () => {
   const refusing: EngineClient = {
     preview: () => Promise.reject(new Error("unknown property `leadin`")),

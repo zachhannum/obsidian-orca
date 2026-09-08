@@ -5,9 +5,9 @@
  * misspelled into a book. Typing filters what is offered rather than
  * naming a family, and a string matching nothing commits nothing.
  *
- * The styles beside a chosen family are the engine's answer, not a
- * second reading of the name table: a variable file names cuts the
- * file itself does not list.
+ * The styles beside a chosen family come from the engine rather than
+ * from a second reading of the name table. A variable file's cuts are
+ * not in its name table.
  */
 
 import type { FontRefEntry } from "fleuron";

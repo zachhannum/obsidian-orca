@@ -62,6 +62,12 @@ its editor around these files and returns a URL. The artboard list and
   icon in the panel header. The book stays in the pane either way.
 - A control the CSS has taken over dims where it sits and shows the
   line that took it, which is also the way to that line.
+- The Face control opens on the families the machine has, read out of
+  the platform's font directories and the vault's `fonts/`. Typing
+  filters that list rather than naming a family, so a face cannot be
+  misspelled into a book, and a row is set in the face it offers. The
+  styles under it are the cuts the engine registered, since a variable
+  file's cuts are not in its name table.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view

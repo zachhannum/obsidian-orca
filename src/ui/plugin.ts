@@ -29,8 +29,10 @@ import { bookFromFolder, emptyBook } from "@/ui/make";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
 import {
+  documentPreviews,
   familyFaces,
   fontPlaces,
+  previewFaces,
   readFontIndex,
   type FontPlaces,
 } from "@/ui/fonts";
@@ -947,11 +949,18 @@ export default class OrcaPlugin extends Plugin {
    * the session.
    */
   private fontIndex(): Promise<FontIndex> {
-    this.families ??= readFontIndex(this.places()).catch((cause: unknown) => {
+    this.families ??= this.scan().catch((cause: unknown) => {
       this.families = undefined;
       throw cause;
     });
     return this.families;
+  }
+
+  private async scan(): Promise<FontIndex> {
+    const places = this.places();
+    const index = await readFontIndex(places);
+    await previewFaces(places, index, documentPreviews(document));
+    return index;
   }
 
   private places(): FontPlaces {

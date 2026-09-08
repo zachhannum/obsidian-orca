@@ -3,8 +3,8 @@
  * the machine has.
  *
  * A row is set in the face it offers, and the browser is what sets it.
- * Nothing crosses to the engine to fill the list, so a picker opened
- * over six hundred families costs the engine nothing.
+ * Nothing crosses to the engine to fill the list, which on a Mac is
+ * over six hundred files.
  */
 
 import { createRoot } from "react-dom/client";
