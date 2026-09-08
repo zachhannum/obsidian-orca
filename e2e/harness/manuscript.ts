@@ -81,16 +81,20 @@ export class Manuscript {
    * Scrolls that pane so `line` is at its top, the way a reader reads,
    * and answers with the line it landed on. A pane Obsidian has just
    * rebuilt has no height to scroll until it has been laid out, so the
-   * scroll is applied until it takes.
+   * scroll is applied until the pane reports it. The last lines of a
+   * note cannot be brought to the top of a pane, so they are not lines
+   * to ask for.
    */
   async scrollTo(line: number): Promise<number> {
+    let at = 0;
     await expect
       .poll(async () => {
         await this.applyScroll(line);
-        return this.scroll();
+        at = await this.scroll();
+        return at;
       })
-      .toBeGreaterThan(0);
-    return this.scroll();
+      .toBeGreaterThanOrEqual(line);
+    return at;
   }
 
   private async applyScroll(line: number): Promise<void> {

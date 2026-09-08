@@ -194,7 +194,7 @@ test("a linked pane follows what is scrolled into view, paragraph by paragraph",
   vault,
 }) => {
   const text = await pagedOut(vault);
-  const deep = lineOf(text, "Paragraph 40.");
+  const deep = lineOf(text, "Paragraph 20.");
 
   await manuscript.open(CHAPTER);
   await book.split();
@@ -276,7 +276,7 @@ test("the toggle opens the book at the page the manuscript is scrolled to", asyn
   vault,
 }) => {
   const text = await pagedOut(vault);
-  const deep = lineOf(text, "Paragraph 40.");
+  const deep = lineOf(text, "Paragraph 20.");
 
   await manuscript.open(CHAPTER);
   await manuscript.asBook.click();
