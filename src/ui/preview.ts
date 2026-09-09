@@ -315,7 +315,7 @@ export class PreviewView extends ItemView {
     // and so does one whose caret the engine read into no node.
     const page =
       (node === undefined ? undefined : await this.folioOfNode(node)) ??
-      (await typeset.opens(section));
+      (await this.opensSection(section));
     if (following !== this.following) return;
     if (page === undefined || this.shows(page)) return;
     this.showing = note;
@@ -358,6 +358,19 @@ export class PreviewView extends ItemView {
     }
   }
 
+  /**
+   * The page a section opens on now. Nothing where the engine will not
+   * answer: it has its own reasons to refuse a question, and none of
+   * them are worth the book reporting that it did not set.
+   */
+  private async opensSection(at: number): Promise<number | undefined> {
+    try {
+      return await this.typeset?.opens(at);
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Whether the runs on the span being read name the node. */
   private sets(node: number): boolean {
     return this.painted.some(
@@ -392,7 +405,7 @@ export class PreviewView extends ItemView {
    * already in the answer.
    */
   async turnToChapter(chapter: Chapter): Promise<void> {
-    const at = await this.typeset?.opens(chapter.at);
+    const at = await this.opensSection(chapter.at);
     if (at === undefined) return;
     // The chapter is kept from the turn, so a spread or a screenful
     // that also carries the one before it is still named for the one
@@ -560,7 +573,7 @@ export class PreviewView extends ItemView {
       note === undefined ? undefined : sectionOf(typeset.sections, note);
     const found =
       (node === undefined ? undefined : await this.folioOfNode(node)) ??
-      (section === undefined ? undefined : await typeset.opens(section));
+      (section === undefined ? undefined : await this.opensSection(section));
     if (found !== undefined) return found;
     return folio === undefined ? 0 : folio - 1;
   }
