@@ -5,7 +5,7 @@ import type { Clock } from "@/engine/loop";
 import { Pool, type Engine } from "@/engine/pool";
 import type { EngineClient, Stages } from "@/engine/session";
 
-/** A clock the test steps itself, so nothing here waits on a real one. */
+/** A clock the test steps by hand, so no test waits on a real clock. */
 class Steps implements Clock {
   private waiting: (() => void)[] = [];
 
@@ -17,7 +17,7 @@ class Steps implements Clock {
     };
   }
 
-  /** Runs every wait that has come due and not been cancelled. */
+  /** Runs every wait that is due and not cancelled. */
   tick(): void {
     const due = this.waiting;
     this.waiting = [];
@@ -25,7 +25,7 @@ class Steps implements Clock {
   }
 }
 
-/** A client that renders nothing and counts what it was asked for. */
+/** A client that renders nothing and counts the calls it gets. */
 class FakeClient implements EngineClient {
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
@@ -63,7 +63,7 @@ class FakeClient implements EngineClient {
   }
 }
 
-/** The workers a pool started, and which of them are still running. */
+/** The workers a pool started, and which of them still run. */
 class Workers {
   readonly started: string[] = [];
   readonly stopped: string[] = [];
@@ -79,7 +79,7 @@ class Workers {
     });
   };
 
-  /** The books whose worker is still running, in the order they started. */
+  /** The books whose worker still runs, in the order the pool started them. */
   get running(): string[] {
     const stopped = [...this.stopped];
     return this.started.filter((book) => {
@@ -104,8 +104,8 @@ test("a second book gets a second worker, and a third stops the coldest", async 
   assert.deepEqual(workers.started, ["one.md", "two.md"]);
   assert.deepEqual(workers.running, ["one.md", "two.md"]);
 
-  // The first book renders after the second, so the second is the one
-  // that went longest without a render.
+  // The first book renders after the second, so the second book went
+  // longest without a render.
   await second.preview();
   await first.preview();
   await pool.client("three.md");
@@ -134,7 +134,7 @@ test("closing the last view on a book stops it once the grace runs out", async (
   assert.deepEqual(workers.stopped, [], "a book still open on a leaf stays");
 
   reopened();
-  // The grace is running, and a book inside it is still on the engine.
+  // The grace runs, and a book inside the grace stays on the engine.
   assert.deepEqual(workers.stopped, []);
   clock.tick();
 
@@ -166,14 +166,14 @@ test("the ceiling settles how many books stay on the engine", async () => {
   assert.deepEqual(workers.stopped, []);
   assert.equal(pool.ceiling, 4);
 
-  // The reader has lowered it, and the books over the new ceiling go
-  // coldest first.
+  // The reader lowered the ceiling, so the books above it stop, coldest
+  // first.
   pool.ceiling = 2;
   assert.deepEqual(workers.stopped, ["one.md", "two.md"]);
   assert.deepEqual(workers.running, ["three.md", "four.md"]);
 
-  // The ceiling is at least one book, because orca reads a book by
-  // setting it.
+  // The ceiling is one book at least, because orca reads a book by
+  // setting it on an engine.
   pool.ceiling = 0;
   assert.equal(pool.ceiling, 1);
 });
@@ -182,7 +182,7 @@ test("a book opened twice before its worker starts gets one worker", async () =>
   const workers = new Workers();
   const pool = new Pool({ start: workers.start, clock: new Steps() });
 
-  // Both mounts of a double mount, and the unmount between them.
+  // The two mounts of a double mount, and the unmount between them.
   const first = pool.hold("one.md");
   const opening = pool.client("one.md");
   first();
@@ -194,7 +194,7 @@ test("a book opened twice before its worker starts gets one worker", async () =>
   assert.deepEqual(workers.stopped, []);
 });
 
-// What this tier does not cover: the grace itself, since the clock here
-// is stepped rather than run, and the memory a worker holds, which is
-// what the ceiling is written against. Whether two books at once fit on
-// a machine is the e2e run's.
+// What this tier does not cover: the grace itself, because the test
+// steps the clock rather than runs it, and the memory a worker holds,
+// which is the reason for the ceiling. The e2e run covers whether two
+// books fit on a machine at once.

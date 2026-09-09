@@ -179,8 +179,8 @@ export class Typeset {
   }
 
   /**
-   * Whether the book's engine has stopped, so the view reading it sets
-   * the book again rather than reading a session that is gone.
+   * Whether the engine of this book stopped. A view that reads the book
+   * then sets it again rather than reads a session that is gone.
    */
   get dropped(): boolean {
     return this.gone;
@@ -192,7 +192,7 @@ export class Typeset {
     this.assets.close();
   }
 
-  /** Drops the book, for an engine that has stopped. */
+  /** Drops the book after its engine stops. */
   drop(): void {
     this.gone = true;
     this.stop();
@@ -237,7 +237,7 @@ export interface Composing {
   /** The vault's own files, which the asset registry reads and hashes. */
   files: VaultAdapter;
   links: Links;
-  /** The engines orca is running, one per book. */
+  /** The engines orca runs, one per book. */
   engines: Engines;
   faces: FaceSet;
 }
@@ -277,9 +277,8 @@ export class Composer {
   }
 
   /**
-   * Holds this book while a view on it is open. The book's engine
-   * outlives the view, and stops a grace after the last hold on it is
-   * dropped.
+   * Holds this book while a view on it is open. The engine of the book
+   * outlives the view, and stops one grace after the last hold drops.
    */
   hold(path: string): () => void {
     return this.vault.engines.hold(path);
@@ -301,9 +300,9 @@ export class Composer {
   }
 
   /**
-   * Drops a book whose engine has stopped. The next open sets it on a
-   * new engine, and the view reading it sets the book again rather than
-   * going on with the pages it has.
+   * Drops a book after its engine stops. The next open sets the book on
+   * a new engine, and the view sets the book again rather than goes on
+   * with the pages it holds.
    */
   discard(path: string): void {
     this.release(path, (book) => {

@@ -1,66 +1,66 @@
 /**
- * The engines orca is running, one per book.
+ * The engines orca runs, one per book.
  *
- * A worker holds the whole of a book's layout, so the number running at
- * once is capped. Opening a book past
- * the ceiling stops the engine that went longest without a render, and
- * the book on it is set again the next time it is opened.
+ * A worker holds the whole layout of a book, so orca caps the number of
+ * workers that run at once. If a reader opens a book past the ceiling,
+ * orca stops the engine that went longest without a render. Orca sets
+ * that book again the next time a reader opens it.
  */
 
 import { EngineError } from "@/engine/errors";
 import { timers, type Clock } from "@/engine/loop";
 import type { EngineClient } from "@/engine/session";
 
-/** Books on the engine at once, before opening one stops another. */
+/** The most books orca keeps on engines at once. */
 export const CEILING = 2;
 
 /**
- * Time an engine keeps running after the last view on its book closes,
- * in milliseconds.
+ * The grace: how long an engine runs after the last view on its book
+ * closes, in milliseconds.
  */
 export const GRACE = 60_000;
 
 /** One worker, and the client on it. */
 export interface Engine {
   readonly client: EngineClient;
-  /** Terminates the worker. */
+  /** Stops the worker. */
   stop(): void;
 }
 
-/** The pool, as a view reaches it. */
+/** The part of the pool a view reaches. */
 export interface Engines {
-  /** The engine a book is set on, started if it is not running. */
+  /** The engine of this book. Starts one if no engine runs the book. */
   client(book: string): Promise<EngineClient>;
-  /** Holds a book while a view on it is open. What it returns drops the hold. */
+  /** Holds a book while a view on it is open. Call what it returns to drop the hold. */
   hold(book: string): () => void;
 }
 
-/** The workers a pool starts, and the clock its grace runs on. */
+/** The workers a pool starts, and the clock it runs the grace on. */
 export interface Pooling {
   /** Starts one worker with the engine module in it. */
   start(book: string): Promise<Engine>;
-  /** Called when a book's engine has stopped, so what was set on it is dropped. */
+  /** The pool calls this after a book's engine stops, so the caller drops the book. */
   gone?: ((book: string) => void) | undefined;
   ceiling?: number | undefined;
   grace?: number | undefined;
   clock?: Clock | undefined;
 }
 
-/** One book's engine, from the call that started it. */
+/** The engine of one book, from the call that started it. */
 class Live {
   engine: Engine | undefined;
   stopped = false;
   readonly client: Promise<EngineClient>;
 
   constructor(
-    /** The stamp of its last render. The lowest of these is the coldest book. */
+    /** The count at its last render. The lowest count is the coldest book. */
     public used: number,
     stamp: () => number,
     starting: Promise<Engine>,
   ) {
     this.client = starting.then((engine) => {
-      // The book was dropped while its worker was starting, so the
-      // worker is running for a session nothing is waiting on.
+      // The pool dropped the book while its worker started, so the
+      // worker runs a session nobody waits on.
       if (this.stopped) {
         engine.stop();
         throw new EngineError("the engine stopped while it was starting");
@@ -81,9 +81,9 @@ class Live {
 
 export class Pool implements Engines {
   private readonly live = new Map<string, Live>();
-  /** The views open on each book, by the book's path. */
+  /** The number of views open on each book, by the path of the book. */
   private readonly held = new Map<string, number>();
-  /** Cancels the grace a book with no view on it is waiting out, by its path. */
+  /** Cancels the grace of a book with no view on it, by the path of the book. */
   private readonly waiting = new Map<string, () => void>();
   private readonly clock: Clock;
   private readonly grace: number;
@@ -97,24 +97,24 @@ export class Pool implements Engines {
     this.limit = capped(pooling.ceiling ?? CEILING);
   }
 
-  /** Books kept on the engine at once. */
+  /** The most books orca keeps on engines at once. */
   get ceiling(): number {
     return this.limit;
   }
 
-  /** Sets the ceiling, and stops the coldest books over it. */
+  /** Sets the ceiling, and stops the coldest books above it. */
   set ceiling(books: number) {
     this.limit = capped(books);
     this.evict(0);
   }
 
   /**
-   * The engine this book is set on, started if it is not running. A
-   * second call while the first is starting waits on that one, so an
-   * effect that mounts twice starts one worker.
+   * The engine of this book. Starts one if no engine runs the book. A
+   * second call during the start waits on the first call, so an effect
+   * that mounts twice starts one worker.
    *
-   * The client is for the engine running now, so a caller asks for it
-   * again on the next render rather than keeping the one it got.
+   * The client belongs to the engine that runs now. Ask for the client
+   * again on the next render rather than keep the one you got.
    */
   client(book: string): Promise<EngineClient> {
     const running = this.live.get(book);
@@ -129,8 +129,8 @@ export class Pool implements Engines {
       this.pooling.start(book),
     );
     this.live.set(book, live);
-    // A worker that will not start is not kept, so the next open starts
-    // one rather than handing back the failure for orca's life.
+    // The pool drops a worker that fails to start. The next open starts
+    // a new worker rather than hands back the same failure again.
     live.client.catch(() => {
       if (this.live.get(book) === live) this.live.delete(book);
     });
@@ -139,8 +139,8 @@ export class Pool implements Engines {
 
   /**
    * Holds this book while a view on it is open. The engine outlives the
-   * view, so dropping the last hold starts the grace rather than stopping
-   * the book, and a view opened inside the grace leaves the book on its
+   * view, so a drop of the last hold starts the grace rather than stops
+   * the book. If a view opens inside the grace, the book stays on its
    * engine.
    */
   hold(book: string): () => void {
@@ -160,7 +160,7 @@ export class Pool implements Engines {
     };
   }
 
-  /** Stops this book's engine, and reports the book as gone. */
+  /** Stops the engine of this book, and reports the book as gone. */
   stop(book: string): void {
     const live = this.live.get(book);
     if (live === undefined) return;
@@ -170,7 +170,7 @@ export class Pool implements Engines {
     this.pooling.gone?.(book);
   }
 
-  /** Stops every engine, for a plugin being unloaded. */
+  /** Stops every engine, when Obsidian unloads the plugin. */
   close(): void {
     this.closed = true;
     for (const book of [...this.live.keys()]) this.stop(book);
@@ -182,7 +182,7 @@ export class Pool implements Engines {
     return (this.used += 1);
   }
 
-  /** Stops the coldest books until `room` more fit under the ceiling. */
+  /** Stops the coldest books until `room` more books fit under the ceiling. */
   private evict(room: number): void {
     while (this.live.size + room > this.limit) {
       const entries = [...this.live.entries()];
@@ -193,7 +193,7 @@ export class Pool implements Engines {
     }
   }
 
-  /** Starts the grace before this book's engine is stopped. */
+  /** Starts the grace that runs before orca stops the engine of this book. */
   private wait(book: string): void {
     if (!this.live.has(book)) return;
     this.unwait(book);
@@ -214,7 +214,7 @@ export class Pool implements Engines {
   }
 }
 
-/** A client whose renders stamp the book they ran for. */
+/** A client that stamps a book on every render of it. */
 function stamped(client: EngineClient, used: () => void): EngineClient {
   return {
     preview: (ops, range) => {
@@ -238,7 +238,7 @@ function stamped(client: EngineClient, used: () => void): EngineClient {
   };
 }
 
-/** A ceiling of at least one book, in whole books. */
+/** Rounds a ceiling to whole books, and to one book at least. */
 function capped(books: number): number {
   return Number.isFinite(books) ? Math.max(1, Math.floor(books)) : CEILING;
 }

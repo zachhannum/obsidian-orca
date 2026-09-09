@@ -74,7 +74,7 @@ interface Place {
 export default class OrcaPlugin extends Plugin implements Limited {
   /** The settings orca saves beside the plugin. */
   limits: Limits = { ...LIMITS };
-  /** The engines orca is running, one per book. */
+  /** The engines orca runs, one per book. */
   private engines: Pool | undefined;
   /** The engine module, read once and kept for every worker. */
   private bytes: Promise<ArrayBuffer> | undefined;
@@ -103,14 +103,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
   >();
 
   override async onload(): Promise<void> {
-    // The settings and the module are read while the views register,
+    // Orca reads the settings and the module while the views register,
     // because Obsidian restores a leaf as soon as `onload` returns.
     const settings = this.saved();
     const warmed = this.warmed();
     const engines = new Pool({
       start: () => this.startWorker(),
-      // The book on a stopped engine is dropped, so the pane reading it
-      // sets it again rather than reading a session that is gone.
+      // Orca drops the book on a stopped engine, so the pane sets the
+      // book again rather than reads a session that is gone.
       gone: (book) => {
         this.composer?.discard(book);
       },
@@ -890,17 +890,17 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Starts one worker with the engine module in it. The module is
-   * copied for each one, because the bytes are transferred into the
-   * worker that starts from them.
+   * Starts one worker with the engine module in it. Each worker gets a
+   * copy of the module, because the start transfers the bytes into the
+   * worker.
    */
   private async startWorker(): Promise<Engine> {
     try {
       const module = await this.module();
       const handle = await startEngine(module.slice(0));
-      // Every view of one book shares its client, so the book's renders
-      // are serialized: the engine holds one document, and two in
-      // flight at once would race it.
+      // Every view of one book shares its client, so orca runs the
+      // renders of the book one at a time. The engine holds one
+      // document, and two renders at once race it.
       return { client: serialized(handle.client), stop: handle.stop };
     } catch (cause) {
       this.notice(cause);
@@ -914,7 +914,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (this.engines !== undefined) this.engines.ceiling = this.limits.books;
   }
 
-  /** Reads the engine module at load, and reports an install that has none. */
+  /** Reads the engine module at load, and reports an install without one. */
   private async warmed(): Promise<void> {
     try {
       await this.module();
@@ -925,7 +925,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
 
   /**
    * Reads the engine module once, and gives the same bytes back after
-   * that. A read that fails is not kept.
+   * that. Orca does not keep a read that fails.
    */
   private module(): Promise<ArrayBuffer> {
     this.bytes ??= readModule(this.files(), this.directory()).catch(
@@ -946,7 +946,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
   }
 
-  /** Saves the limits and applies them to the engines already running. */
+  /** Saves the limits, and applies them to the engines that already run. */
   limit(limits: Limits): void {
     this.limits = limits;
     if (this.engines !== undefined) this.engines.ceiling = limits.books;

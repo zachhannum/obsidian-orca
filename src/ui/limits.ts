@@ -1,23 +1,23 @@
 /**
  * The settings orca saves beside the plugin.
  *
- * A book's design is in the book's note. These settings are the
- * machine's: how much of the engine orca keeps running on it.
+ * The design of a book lives in the note of the book. These settings
+ * belong to the machine: how much of the engine orca runs on it.
  */
 
 import { CEILING } from "@/engine/pool";
 
 export interface Limits {
-  /** Books kept on the engine at once. */
+  /** The most books orca keeps on engines at once. */
   books: number;
 }
 
 export const LIMITS: Limits = { books: CEILING };
 
-/** The most books the setting offers to keep on the engine. */
+/** The most books the setting offers to keep on engines. */
 export const MOST_BOOKS = 8;
 
-/** Reads the limits `loadData` gave back, with the defaults under them. */
+/** Reads the limits `loadData` gave back, and fills in the defaults. */
 export function readLimits(saved: unknown): Limits {
   if (typeof saved !== "object" || saved === null || !("books" in saved)) {
     return { ...LIMITS };

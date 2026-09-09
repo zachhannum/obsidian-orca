@@ -16,7 +16,8 @@ test("a face still reads whole after an earlier read crossed to the worker", asy
   const crossing = await fonts.whole(FACE);
   assert.ok(crossing.byteLength > 0);
 
-  // The op that carries a face transfers its buffer, which detaches it.
+  // The op that carries a face transfers its buffer, and the transfer
+  // detaches it.
   structuredClone(crossing.buffer, { transfer: [crossing.buffer] });
   assert.equal(crossing.byteLength, 0);
 
@@ -28,4 +29,4 @@ test("a face still reads whole after an earlier read crossed to the worker", asy
 
 // What this tier does not cover: the platform's own font directories,
 // which are the machine's rather than the fixture's, and the picker
-// rows a face is registered for, which need a document.
+// rows a face registers for, which need a document.

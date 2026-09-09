@@ -314,7 +314,7 @@ export class PreviewView extends ItemView {
     this.switches.clear();
     // The session belongs to the book, not to this leaf, so closing the
     // leaf costs the next one no second layout. The pane drops the book
-    // here, and its engine stops a grace later unless another pane holds
+    // here. Its engine stops one grace later unless another pane holds
     // it.
     this.holding?.();
     this.holding = undefined;
@@ -558,15 +558,15 @@ export class PreviewView extends ItemView {
     this.named = undefined;
     this.ledAt = undefined;
     this.showing = this.state.note;
-    // The pane drops the book it was reading.
+    // The pane drops the book it holds.
     this.holding?.();
     this.holding = undefined;
     if (book === undefined) {
       this.report("No book is open");
       return;
     }
-    // The pane holds the book before setting it, so the engine is held
-    // from the moment it starts rather than from the render that comes
+    // The pane holds the book before it sets the book, so the hold
+    // starts with the engine rather than with the render that comes
     // back.
     this.holding = this.composer.hold(book);
     const opening = (this.opening += 1);

@@ -4,7 +4,7 @@ import { MOST_BOOKS, type Limits } from "@/ui/limits";
 /** The plugin, narrowed to the settings this tab writes. */
 export interface Limited {
   readonly limits: Limits;
-  /** Saves the limits and applies them to the engines already running. */
+  /** Saves the limits, and applies them to the engines that already run. */
   limit(limits: Limits): void;
 }
 

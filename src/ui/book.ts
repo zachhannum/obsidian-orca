@@ -345,9 +345,9 @@ export class BookView extends FileView {
     let folios = this.folios;
     try {
       const links = cacheLinks(this.app);
-      // The view asks for the engine on every run rather than keeping
-      // it: a book set on one that has since stopped is set again on a
-      // new one.
+      // The view asks for the engine on every run rather than keeps
+      // one. If that engine stopped, the view sets the book on a new
+      // engine.
       const client = await this.engines.client(file.path);
       const { ops } = await sendBook(
         shown.model.book,
