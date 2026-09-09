@@ -8,6 +8,7 @@ import {
   Client,
   createEngine,
   styleOp,
+  type LayoutOutput,
   type Op,
   type Page,
   type Sheet,
@@ -38,12 +39,18 @@ const vault = directoryVault(path.join(root, "fixture"));
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
+/** The image the fixture book embeds, as its acknowledgements name it. */
+const DEVICE = "device.png";
+
 async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
 }
 
-async function paths(): Promise<string[]> {
-  return (await vault.list("/")).files;
+/** Every file in the fixture vault, the way Obsidian sees one. */
+async function paths(folder = "/"): Promise<string[]> {
+  const { files, folders } = await vault.list(folder);
+  const under = await Promise.all(folders.map((at) => paths(at)));
+  return [...files, ...under.flat()];
 }
 
 /** The book's ops, resolved against the fixture vault. */
@@ -76,7 +83,10 @@ function only<K extends Op["op"]>(ops: Op[], op: K): Extract<Op, { op: K }> {
 test("the resolved order crosses as one book op, split into one section per source", async () => {
   const ops = await planned(await fixture());
 
-  assert.deepEqual(ops.map((op) => op.op), ["dialect", "split", "book", "metadata"]);
+  assert.deepEqual(
+    ops.map((op) => op.op),
+    ["dialect", "split", "image", "book", "metadata"],
+  );
   assert.equal(only(ops, "split").level, 0);
   assert.deepEqual(
     only(ops, "book").sources.map((source) => source.name),
@@ -123,6 +133,67 @@ test("a title page with no metadata falls back to its role's own name", async ()
   );
 
   assert.equal(only(ops, "book").sources[0]?.text, "# Title page");
+});
+
+test("an embed crosses as bytes, under the url the manuscript wrote", async () => {
+  const { ops, images } = await sending(await fixture());
+
+  assert.deepEqual(
+    images.map((image) => image.url),
+    [DEVICE],
+    "the url is the one the note wrote, not the path it resolved to",
+  );
+  const image = only(ops, "image");
+  assert.equal(image.url, DEVICE);
+  assert.deepEqual(
+    image.bytes,
+    new Uint8Array(await vault.readBinary(`images/${DEVICE}`)),
+  );
+});
+
+test("layout reads the header for the size and decodes nothing", async () => {
+  const ops = await planned(await fixture());
+  const output = await set(ops);
+
+  assert.deepEqual(output.assets, [
+    { url: DEVICE, intrinsic: { width: 220, height: 132, dpiX: 96, dpiY: 96 } },
+  ]);
+  const placed = output.pages
+    .flatMap((page) => page.items)
+    .filter((item) => item.kind === "image");
+  assert.equal(placed.length, 1);
+  assert.equal(placed[0]?.asset, 0);
+  // Points, off the header's own pixels and resolution.
+  assert.equal(placed[0]?.w, 165);
+  assert.equal(placed[0]?.h, 99);
+});
+
+test("an embed the vault cannot answer is a warning, and the book still sets", async () => {
+  const model = await fixture();
+  const sources = await bookSources(
+    model.book,
+    model.order,
+    pathLinks(await paths()),
+    BOOK,
+    (at) => readText(vault, at),
+  );
+  const gone = sources.map((source) => ({
+    ...source,
+    text: source.text.replace(`![[${DEVICE}]]`, "![[nothing here.png]]"),
+  }));
+
+  const output = await set([
+    { op: "dialect", dialect: "obsidian" },
+    { op: "split", level: 0 },
+    { op: "book", sources: gone },
+  ]);
+
+  assert.ok(output.pages.length > 0, "the page is set without the image");
+  assert.deepEqual(output.assets, []);
+  assert.deepEqual(
+    output.warnings.map((warning) => warning.message),
+    ["image nothing here.png: no image was supplied for it; it is skipped"],
+  );
 });
 
 test("the fixture book typesets and paints, over the bundled theme", async () => {
@@ -368,6 +439,21 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
     engine.free();
   }
 });
+
+/** Sets these ops on an engine of their own, over the bundled theme. */
+async function set(ops: Op[]): Promise<LayoutOutput> {
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const output = await connected(engine).preview([
+      ...ops,
+      styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
+    ]);
+    assert.ok(output, "the render was overtaken");
+    return output;
+  } finally {
+    engine.free();
+  }
+}
 
 /** Renders the ops and reads the words they put on the page. */
 async function words(client: Client, ops: Op[]): Promise<string[]> {

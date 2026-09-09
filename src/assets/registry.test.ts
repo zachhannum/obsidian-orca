@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { paintPage, type Intrinsic, type Page } from "fleuron";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
@@ -11,6 +12,22 @@ const fixture = directoryVault(path.join(root, "fixture"));
 
 /** A file the fixture vault has, standing in for a face. */
 const FILE = "Chapter Twelve.md";
+
+/** The image the fixture book embeds. */
+const DEVICE = "images/device.png";
+
+/** Its own idea of its size, as the header has it. */
+const SIZE: Intrinsic = { width: 220, height: 132, dpiX: 96, dpiY: 96 };
+
+/** One page with that image on it, as the engine would place it. */
+const PLACED: Page = {
+  number: 1,
+  side: "recto",
+  width: 396,
+  height: 612,
+  sections: [],
+  items: [{ kind: "image", x: 54, y: 54, w: 165, h: 99, asset: 0 }],
+};
 
 /** The same file, named the other way a vault path is written. */
 const AGAIN = `/${FILE}`;
@@ -104,6 +121,34 @@ test("eviction gives back the url it held, and closing gives back the rest", () 
   assert.equal(registry.sent("two"), false, "no session outlives its registry");
 });
 
+test("a page draws an image from the bytes that crossed, as a url of its own", async () => {
+  const registry = new Registry(fixture);
+  const device = await registry.take(DEVICE);
+
+  registry.image("device.png", device);
+  // Two urls over one file share the key, so they share what draws it.
+  registry.image("images/device.png", device);
+  const drawn = registry.imageUrl("device.png");
+
+  assert.ok(drawn !== undefined && drawn.startsWith("blob:"));
+  assert.equal(registry.imageUrl("images/device.png"), drawn);
+  assert.equal(registry.imageUrl("nothing here.png"), undefined);
+  assert.deepEqual(
+    new Uint8Array(await (await fetch(drawn)).arrayBuffer()),
+    device.bytes,
+    "the pixels a page decodes are the ones layout was set from",
+  );
+
+  const markup = paintPage(PLACED, {
+    assets: [{ url: "device.png", intrinsic: SIZE }],
+    asset: (image) => registry.imageUrl(image.url),
+  });
+  assert.ok(markup.includes(drawn), "the painter draws from the url it was given");
+
+  registry.close();
+  await assert.rejects(fetch(drawn), "no url outlives its registry");
+});
+
 test("a read that fails is not kept, so the next ask reads the file again", async () => {
   const { vault, reads } = counted();
   const registry = new Registry(vault);
@@ -113,7 +158,5 @@ test("a read that fails is not kept, so the next ask reads the file again", asyn
   assert.equal(reads.length, 2);
 });
 
-// What this tier does not cover: the blob urls a painter draws an image
-// from, which wait on the engine handing its own asset cache out; and
-// `whenIdle` itself, which is the browser's idle time and has no clock
-// a test can step.
+// What this tier does not cover: `whenIdle` itself, which is the
+// browser's idle time and has no clock a test can step.

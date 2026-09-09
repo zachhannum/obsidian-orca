@@ -19,7 +19,7 @@ test("the fixture directory is a vault every read goes through", async () => {
       "Pride and Prejudice.md",
       "Volume the First.md",
     ],
-    folders: ["fonts"],
+    folders: ["fonts", "images"],
   });
   assert.equal(await vault.exists("Chapter Twelve.md"), true);
   assert.equal(await vault.exists("Chapter Thirteen.md"), false);
