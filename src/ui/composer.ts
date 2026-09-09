@@ -54,6 +54,8 @@ export class Typeset {
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
   private readonly links: Links;
+  /** The embeds the retypes so far started, chained so they run in order. */
+  private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private design: Design;
 
@@ -113,9 +115,21 @@ export class Typeset {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
+    const embedding = (): Promise<void> => this.embed(note, text);
     // An embed that will not read crosses no bytes, and the engine
     // warns about the url.
-    void this.embed(note, text).catch(() => undefined);
+    this.embedding = this.embedding
+      .then(embedding, embedding)
+      .catch(() => undefined);
+  }
+
+  /**
+   * The embeds the retypes so far are still resolving. A caller that
+   * has to see every op an edit sends waits on this before stepping the
+   * loop.
+   */
+  get resolving(): Promise<void> {
+    return this.embedding;
   }
 
   /**

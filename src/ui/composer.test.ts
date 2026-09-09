@@ -9,7 +9,12 @@ import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Clock } from "@/engine/loop";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
-import { Composer, type Progress, type Composing } from "@/ui/composer";
+import {
+  Composer,
+  type Composing,
+  type Progress,
+  type Typeset,
+} from "@/ui/composer";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -324,7 +329,7 @@ test("an image a chapter picks up while it is drafted crosses on the next render
 
   // The same file the acknowledgements embed, under a url of its own.
   composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n`);
-  await settled(clock);
+  await crossed(book, clock);
 
   // The words go first and the bytes follow, so the engine reads the
   // chapter and is then given the file it now names.
@@ -344,7 +349,7 @@ test("an image a chapter picks up while it is drafted crosses on the next render
 
   // A url the engine already holds crosses no second time.
   composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n\n.`);
-  await settled(clock);
+  await crossed(book, clock);
   assert.deepEqual(
     client.rendered.slice(renders).flat().map((op) => op.op),
     ["edit", "image", "edit"],
@@ -352,15 +357,16 @@ test("an image a chapter picks up while it is drafted crosses on the next render
 });
 
 /**
- * Runs the reads and the hashing an embed costs, and the ticks the
- * renders they plan wait on. Each turn runs work already queued rather
- * than waiting on a clock.
+ * Waits out the reads an embed costs, then steps the loop the ops they
+ * planned are waiting on. The book says when it has finished resolving,
+ * so nothing here waits on a clock or on a count of turns.
  */
-async function settled(clock: Steps): Promise<void> {
-  for (let turn = 0; turn < 8; turn += 1) {
-    await drain();
-    clock.tick();
-  }
+async function crossed(book: Typeset, clock: Steps): Promise<void> {
+  // The composer reaches the book on a microtask, so the retype has to
+  // land before the promise it started can be read.
+  await drain();
+  await book.resolving;
+  clock.tick();
   await drain();
 }
 
