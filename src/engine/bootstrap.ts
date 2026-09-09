@@ -16,7 +16,8 @@ export interface WorkerPort {
 export interface WorkerHost {
   url(source: string): string;
   release(url: string): void;
-  start(url: string): WorkerPort;
+  /** Starts one worker under `name`, which is what names it in the tools. */
+  start(url: string, name: string): WorkerPort;
 }
 
 export interface EngineHandle {
@@ -40,20 +41,21 @@ export const browserHost: WorkerHost = {
   release: (url) => {
     URL.revokeObjectURL(url);
   },
-  start: (url) => new Worker(url, { name: "orca" }),
+  start: (url, name) => new Worker(url, { name }),
 };
 
 /**
- * Starts the bundled worker and opens the engine from `module`, whose
- * bytes are moved rather than copied. A worker that cannot open one is
- * torn down before the error comes back.
+ * Starts the bundled worker under `name` and opens the engine from
+ * `module`, whose bytes are moved rather than copied. A worker that
+ * cannot open one is torn down before the error comes back.
  */
 export async function startEngine(
   module: ArrayBuffer,
   host: WorkerHost = browserHost,
+  name = "orca",
 ): Promise<EngineHandle> {
   const url = host.url(workerSource);
-  const worker = host.start(url);
+  const worker = host.start(url, name);
   /** The requests the worker has not answered, by the id each one carries. */
   const holding = new Set<number>();
   let stopped = false;

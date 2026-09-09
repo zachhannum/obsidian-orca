@@ -14,10 +14,10 @@ import {
 } from "obsidian";
 import type { FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
-import { startEngine } from "@/engine/bootstrap";
+import { browserHost, startEngine } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule } from "@/engine/module";
-import { Pool, type Engine } from "@/engine/pool";
+import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
@@ -109,7 +109,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const settings = this.saved();
     const warmed = this.warmed();
     const engines = new Pool({
-      start: () => this.startWorker(),
+      start: (book) => this.startWorker(book),
       // Orca drops the book on a stopped engine, so the pane sets the
       // book again rather than reads a session that is gone. A book
       // whose engine died is set again now, on the page it was on.
@@ -895,12 +895,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /**
    * Starts one worker with the engine module in it. Each worker gets a
    * copy of the module, because the start transfers the bytes into the
-   * worker.
+   * worker, and runs under the name of the book it holds.
    */
-  private async startWorker(): Promise<Engine> {
+  private async startWorker(book: string): Promise<Engine> {
     try {
       const module = await this.module();
-      const handle = await startEngine(module.slice(0));
+      const handle = await startEngine(
+        module.slice(0),
+        browserHost,
+        engineName(book),
+      );
       // Every view of one book shares its client, so orca runs the
       // renders of the book one at a time. The engine holds one
       // document, and two renders at once race it.

@@ -53,7 +53,7 @@ test("a worker killed under a render is set again, and the pages come back", asy
   await expect.poll(async () => book.painted()).toBeGreaterThan(1);
 
   const noticed = await book.noticed(async () => {
-    await book.kill();
+    await book.kill(BOOK);
     await expect(book.surface).toHaveAttribute("data-generation", "1");
   });
 
@@ -80,10 +80,10 @@ test("the second death holds the pages and offers the report", async ({
   await book.open();
   await book.painted();
 
-  const first = await book.kill();
-  await book.restarted(first);
+  const first = await book.kill(BOOK);
+  await book.restarted(BOOK, first);
 
-  await book.kill();
+  await book.kill(BOOK);
   await expect(book.held).toBeVisible();
   await expect(book.held).toContainText(
     "the pages here are the ones from before",
@@ -93,5 +93,5 @@ test("the second death holds the pages and offers the report", async ({
   // The pages the engine that died set are the ones on screen, and
   // orca started no third worker to set them again.
   await expect(book.sheets.first()).toBeVisible();
-  await expect.poll(async () => book.engines()).toBe(0);
+  await expect.poll(async () => book.engines(BOOK)).toBe(0);
 });

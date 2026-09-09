@@ -7,6 +7,7 @@
  */
 
 import { expect, type Locator, type Worker } from "@playwright/test";
+import { engineName } from "@/engine/pool";
 import type { Stages } from "@/engine/session";
 import { FLOATING, type Obsidian } from "./obsidian";
 
@@ -51,9 +52,6 @@ const POSED = "orca-photograph";
 
 /** The type the preview is registered under. */
 export const PREVIEW = "orca-book-preview";
-
-/** The name orca starts its worker under. */
-const ENGINE = "orca";
 
 /** The note the surface names for a page nobody wrote. */
 export const NOWHERE = "-";
@@ -175,19 +173,19 @@ export class Book {
    * Kills the worker the engine runs in. The worker throws where
    * nothing catches it, which is the one death the main thread sees.
    */
-  async kill(): Promise<Worker> {
+  async kill(book: string): Promise<Worker> {
     let engine: Worker | undefined;
     // A worker orca started reaches the page objects a moment after
     // orca started it, so the wait here is for the attach rather than
     // for anything orca is doing.
     await expect
       .poll(async () => {
-        engine = await this.engine();
+        engine = await this.engine(book);
         return engine !== undefined;
       })
       .toBe(true);
     const killed = engine;
-    if (killed === undefined) throw new Error("no engine worker is running");
+    if (killed === undefined) throw new Error(`no engine is running ${book}`);
     await killed.evaluate(() => {
       queueMicrotask(() => {
         throw new Error("the engine was killed");
@@ -196,35 +194,29 @@ export class Book {
     return killed;
   }
 
-  /** Waits for orca to start a worker other than the one that died. */
-  async restarted(killed: Worker): Promise<void> {
+  /** Waits for orca to start a worker on this book other than the one that died. */
+  async restarted(book: string, killed: Worker): Promise<void> {
     await expect
       .poll(async () => {
-        const engine = await this.engine();
+        const engine = await this.engine(book);
         return engine !== undefined && engine !== killed;
       })
       .toBe(true);
   }
 
-  /** The workers orca has running. */
-  async engines(): Promise<number> {
+  /** The workers orca has running on this book. */
+  async engines(book: string): Promise<number> {
     let running = 0;
     for (const worker of this.obsidian.page.workers()) {
-      const named = await worker
-        .evaluate(() => self.name)
-        .catch(() => undefined);
-      if (named === ENGINE) running += 1;
+      if ((await named(worker)) === engineName(book)) running += 1;
     }
     return running;
   }
 
-  /** The worker the engine runs in, of every worker the page has. */
-  private async engine(): Promise<Worker | undefined> {
+  /** The worker this book's engine runs in, of every worker the page has. */
+  private async engine(book: string): Promise<Worker | undefined> {
     for (const worker of this.obsidian.page.workers()) {
-      const named = await worker
-        .evaluate(() => self.name)
-        .catch(() => undefined);
-      if (named === ENGINE) return worker;
+      if ((await named(worker)) === engineName(book)) return worker;
     }
     return undefined;
   }
@@ -378,4 +370,9 @@ export class Book {
       paint: await runs("paint"),
     };
   }
+}
+
+/** The name a worker runs under, or nothing for one already gone. */
+function named(worker: Worker): Promise<string | undefined> {
+  return worker.evaluate(() => self.name).catch(() => undefined);
 }

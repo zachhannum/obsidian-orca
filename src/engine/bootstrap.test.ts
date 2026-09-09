@@ -22,6 +22,7 @@ import {
   type WorkerHost,
   type WorkerPort,
 } from "@/engine/bootstrap";
+import { engineName } from "@/engine/pool";
 import { EngineError } from "@/engine/errors";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
@@ -55,16 +56,19 @@ class FakeWorker implements WorkerPort {
 function fakeHost(reply: unknown): WorkerHost & {
   wrapped: string[];
   started: string[];
+  named: string[];
   released: string[];
   worker: () => FakeWorker;
 } {
   const wrapped: string[] = [];
   const started: string[] = [];
+  const named: string[] = [];
   const released: string[] = [];
   let worker: FakeWorker | undefined;
   return {
     wrapped,
     started,
+    named,
     released,
     worker: () => {
       assert.ok(worker, "no worker was started");
@@ -77,8 +81,9 @@ function fakeHost(reply: unknown): WorkerHost & {
     release: (url) => {
       released.push(url);
     },
-    start: (url) => {
+    start: (url, name) => {
       started.push(url);
+      named.push(name);
       worker = new FakeWorker(reply);
       return worker;
     },
@@ -92,10 +97,13 @@ test("the worker starts from a Blob URL built out of the bundle", async () => {
   assert.ok(workerSource.length > 0);
 
   const host = fakeHost(ready);
-  const handle = await startEngine(new ArrayBuffer(8), host);
+  const handle = await startEngine(new ArrayBuffer(8), host, engineName("a.md"));
 
   assert.deepEqual(host.wrapped, [workerSource]);
   assert.deepEqual(host.started, ["blob:orca/0"]);
+  // The worker runs under the name of the book it holds, so the tools
+  // say which book a worker is.
+  assert.deepEqual(host.named, ["orca:a.md"]);
   handle.stop();
 
   const url = browserHost.url(workerSource);

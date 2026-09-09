@@ -20,6 +20,11 @@ import type { EngineClient } from "@/engine/session";
 /** The most books orca keeps on engines at once. */
 export const CEILING = 2;
 
+/** The name the worker of one book runs under, which is what names it in the tools. */
+export function engineName(book: string): string {
+  return `orca:${book}`;
+}
+
 /** The number of times orca sets one book again after its engine died. */
 export const REPLAYS = 1;
 
