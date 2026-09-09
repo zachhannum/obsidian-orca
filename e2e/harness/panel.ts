@@ -50,6 +50,15 @@ export class Panel {
     await expect(this.panel).toBeVisible();
   }
 
+  /**
+   * Clicks the panel's own tab, which makes it the active leaf. Every
+   * leaf change repaints the panel, so this is what an author does that
+   * asks it for the book again.
+   */
+  async focus(): Promise<void> {
+    await this.obsidian.tab("Design").first().click();
+  }
+
   /** Opens the picker and waits for its filter. */
   async pick(): Promise<void> {
     await this.face.click();

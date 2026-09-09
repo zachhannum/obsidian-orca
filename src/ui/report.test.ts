@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import type { Page } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
@@ -111,23 +110,22 @@ test("every property orca owns is a field, and an emptied one comes off the note
   assert.equal(untitled.fields[0]?.value, "");
 });
 
-test("page ranges come from a run's own pages, and an entry it has not reached has none", async () => {
+test("an entry's page range is what the run placed it at, and one it missed has none", async () => {
   const book = { path: BOOK, name: "PP draft", model: await model() };
 
-  // The 7 present sections' ids, in reading order: the missing
-  // "Chapter Four" got none, and the run has not reached
+  // The 7 present sections, as the engine placed them: the missing
+  // "Chapter Four" crossed at all, and the run has not reached
   // "Acknowledgements" yet.
-  const pages: Page[] = [
-    { number: 1, side: "recto", width: 1, height: 1, sections: [1], items: [] },
-    { number: 2, side: "verso", width: 1, height: 1, sections: [50], items: [] },
-    // A section ending mid-page is followed there by the next one opening.
-    { number: 3, side: "recto", width: 1, height: 1, sections: [80, 81], items: [] },
-    { number: 4, side: "verso", width: 1, height: 1, sections: [82], items: [] },
-    { number: 5, side: "recto", width: 1, height: 1, sections: [83], items: [] },
-    { number: 6, side: "verso", width: 1, height: 1, sections: [83], items: [] },
-  ];
+  const ranges = new Map([
+    [0, { first: 1, last: 1 }],
+    [1, { first: 2, last: 2 }],
+    [2, { first: 3, last: 3 }],
+    [3, { first: 3, last: 3 }],
+    [4, { first: 4, last: 4 }],
+    [5, { first: 5, last: 6 }],
+  ]);
 
-  const made = report(book, await counting(), pages);
+  const made = report(book, await counting(), ranges);
 
   assert.deepEqual(
     made.lines.map((line) => [line.name, line.pages]),

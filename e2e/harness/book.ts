@@ -189,6 +189,16 @@ export class Book {
     return Number(await this.surface.getAttribute("data-count"));
   }
 
+  /** Opens a second pane on the book, in a tab beside the one open. */
+  async again(): Promise<void> {
+    await this.obsidian.page.evaluate(async (type) => {
+      const open = window.app.workspace.getLeavesOfType(type)[0];
+      const state = open?.getViewState();
+      if (state === undefined) throw new Error("no book is open");
+      await window.app.workspace.getLeaf("tab").setViewState(state);
+    }, PREVIEW);
+  }
+
   /** Opens the book from the ribbon. */
   async open(): Promise<void> {
     await this.obsidian.ribbon("Open the book").click();

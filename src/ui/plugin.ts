@@ -939,14 +939,34 @@ export default class OrcaPlugin extends Plugin {
   /**
    * The book the panel designs. It is the one the reader is in, or the
    * only one open when the panel itself has focus.
+   *
+   * The pane answers with the book it is reading, rather than the
+   * composer answering by path. A note the book reads, written from
+   * outside Obsidian, takes the book off the composer so the next open
+   * sets it from the notes as they now are, and the pane goes on
+   * reading the one it has. That book is the one on screen, and the one
+   * a pick has to reach.
    */
   private async designed(): Promise<Typeset | undefined> {
     const { workspace } = this.app;
-    const active = workspace.getActiveViewOfType(PreviewView)?.book;
-    const leaf: WorkspaceLeaf | undefined =
-      workspace.getLeavesOfType(PREVIEW_VIEW)[0];
-    const other = leaf?.view instanceof PreviewView ? leaf.view.book : undefined;
-    const path = active ?? other;
+    // A pane in a background tab is deferred until something asks for
+    // it, and until then its view is not the preview. Loading one would
+    // typeset a book nobody is reading, so the panel passes over it and
+    // designs a pane that is drawn.
+    const drawn = workspace
+      .getLeavesOfType(PREVIEW_VIEW)
+      .map((leaf) => leaf.view)
+      .filter((view): view is PreviewView => view instanceof PreviewView);
+    const view =
+      workspace.getActiveViewOfType(PreviewView) ??
+      drawn.find((pane) => pane.typeset !== undefined) ??
+      drawn[0];
+    if (view === undefined) return undefined;
+    const reading = view.typeset;
+    if (reading !== undefined) return reading;
+    // A pane still setting its book has none yet, so the run it is
+    // waiting on is what the panel waits on too.
+    const path = view.book;
     if (path === undefined || this.composer === undefined) return undefined;
     try {
       return await this.composer.opened(path);

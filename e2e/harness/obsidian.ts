@@ -48,6 +48,7 @@ const CHROME = {
   ribbon: (label: string) => `.side-dock-ribbon-action[aria-label="${label}"]`,
   leaf: (type: string) => `.workspace-leaf-content[data-type="${type}"]`,
   action: (label: string) => `.view-action[aria-label="${label}"]`,
+  tab: (label: string) => `.workspace-tab-header[aria-label="${label}"]`,
   menu: ".menu",
   item: ".menu-item",
   suggestion: ".suggestion-item",
@@ -112,6 +113,11 @@ export class Obsidian {
   /** A view's own action, by the label the view gave it. */
   action(label: string): Locator {
     return this.page.locator(CHROME.action(label));
+  }
+
+  /** A leaf's own tab, by the name the view is displayed under. */
+  tab(label: string): Locator {
+    return this.page.locator(CHROME.tab(label));
   }
 
   /**

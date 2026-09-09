@@ -1,15 +1,14 @@
 /**
- * A section's folio range, from the pages the engine typeset the
- * book to.
+ * The source the engine calls a section by, and the section a source
+ * was sent from.
  *
- * fleuron assigns a section its content-tree id before any node
- * inside it, and ids run in document order, so the section ids a run
- * names are exactly as many, and in the same order, as the sections
- * `sendBook` sent: the Nth smallest id is the Nth section.
+ * A section's folios are the engine's to answer, and are asked for when
+ * they are wanted, so nothing here holds one.
  */
 
-import type { Page } from "fleuron";
+import type { Folios, NodeSource, Page } from "fleuron";
 import { entryName, type Section } from "@/book/order";
+import { GENERATED_ORIGIN } from "@/book/plan";
 
 /** The first and last folio a section's content lands on. */
 export interface Range {
@@ -18,40 +17,100 @@ export interface Range {
 }
 
 /**
- * Every section's range, keyed by its place in the reading order. A
- * section `resolve` dropped, or one a run has not reached yet, has no
- * entry.
+ * The name a section crossed under: a note's vault path, or the
+ * generated name, which counts the sections `sendBook` sends. Nothing
+ * for a section `resolve` dropped.
  */
-export function pageRanges(sections: Section[], pages: Page[]): Map<number, Range> {
-  const present = sections
-    .map((section, at) => ({ section, at }))
-    .filter(({ section }) => section.kind !== "missing")
-    .map(({ at }) => at);
+export function sourceNamed(
+  sections: Section[],
+  at: number,
+): string | undefined {
+  const section = sections[at];
+  if (section === undefined || section.kind === "missing") return undefined;
+  if (section.kind === "note") return section.path;
+  const sent = sections
+    .slice(0, at)
+    .filter((before) => before.kind !== "missing").length;
+  return `${GENERATED_ORIGIN}:${String(sent)}`;
+}
 
-  const ids = [...new Set(pages.flatMap((page) => page.sections))].sort(
+/**
+ * The place in the reading order a source the engine named was sent
+ * from. A note two entries read is found at the first of them, which is
+ * where a toggle from it opens.
+ */
+export function placeOf(
+  sections: Section[],
+  source: string,
+): number | undefined {
+  for (let at = 0; at < sections.length; at += 1) {
+    if (sourceNamed(sections, at) === source) return at;
+  }
+  return undefined;
+}
+
+/** The engine, as much of it as placing a run of pages takes. */
+export interface Placing {
+  sourceOf(node: number): Promise<NodeSource | null>;
+  foliosOf(nodes: number[]): Promise<(Folios | null)[]>;
+}
+
+/**
+ * Every section's folio range, by its place in the reading order. The
+ * engine answers which entry a run belongs to and where the entry
+ * landed; neither is worked out by pairing ids with entries by ordinal.
+ */
+export async function sectionRanges(
+  sections: Section[],
+  pages: Page[],
+  engine: Placing,
+): Promise<Map<number, Range>> {
+  const ids = [...new Set(pages.flatMap((page) => page.sections))];
+  const [sources, folios] = await Promise.all([
+    Promise.all(ids.map((id) => engine.sourceOf(id))),
+    engine.foliosOf(ids),
+  ]);
+  const ranges = new Map<number, Range>();
+  ids.forEach((_id, index) => {
+    const source = sources[index];
+    const set = folios[index];
+    if (source == null || set == null) return;
+    const at = placeOf(sections, source.source);
+    if (at !== undefined) ranges.set(at, { first: set.first, last: set.last });
+  });
+  return ranges;
+}
+
+/** The section ids the pages of a span name, smallest first. */
+export function sectionsOn(pages: Page[]): number[] {
+  return [...new Set(pages.flatMap((page) => page.sections))].sort(
     (a, b) => a - b,
   );
-  const at = new Map<number, number>();
-  ids.forEach((id, index) => {
-    const raw = present[index];
-    if (raw !== undefined) at.set(id, raw);
-  });
+}
 
-  const ranges = new Map<number, Range>();
-  for (const page of pages) {
-    for (const id of page.sections) {
-      const raw = at.get(id);
-      if (raw === undefined) continue;
-      const found = ranges.get(raw);
-      if (found === undefined) {
-        ranges.set(raw, { first: page.number, last: page.number });
-      } else {
-        found.first = Math.min(found.first, page.number);
-        found.last = Math.max(found.last, page.number);
-      }
-    }
-  }
-  return ranges;
+/**
+ * The section a run of pages reads as: the last of the ones they name
+ * to open. A chapter that ends mid-page is followed there by the next
+ * one, and the page belongs to the chapter the reader is now in.
+ *
+ * A chapter the reader turned to wins wherever on the span it opens, so
+ * a screenful holding several is still named for the one they asked
+ * for. Nothing for pages that name no section, such as a blank verso,
+ * which read as whatever opened before them.
+ */
+export function sectionOn(
+  pages: Page[],
+  places: Map<number, number>,
+  turned?: number,
+): number | undefined {
+  const found = pages.flatMap((page) =>
+    page.sections.flatMap((id) => {
+      const at = places.get(id);
+      return at === undefined ? [] : [at];
+    }),
+  );
+  if (turned !== undefined && found.includes(turned)) return turned;
+  return found.length === 0 ? undefined : Math.max(...found);
 }
 
 /**
@@ -69,78 +128,22 @@ export function sectionOf(
   return at < 0 ? undefined : at;
 }
 
-/**
- * The section a folio reads as: the last one to open on or before it.
- * A chapter that ends mid-page is followed there by the next one, and
- * the page belongs to the chapter the reader is now in.
- */
-export function sectionAt(
-  ranges: Map<number, Range>,
-  folio: number,
-): number | undefined {
-  let found: number | undefined;
-  let opened = 0;
-  for (const [at, range] of ranges) {
-    if (range.first > folio) continue;
-    if (found !== undefined && range.first < opened) continue;
-    found = at;
-    opened = range.first;
-  }
-  return found;
-}
-
-/**
- * The section a span of pages is at.
- *
- * A spread or a screenful holds several sections, so the one named is
- * the one whose opening is on the span, and the section the reader
- * turned to wins wherever on the span it opens. A span that opens
- * nothing is inside a section, and reads as that one.
- */
-export function sectionOn(
-  ranges: Map<number, Range>,
-  span: Range,
-  current: number | undefined,
-): number | undefined {
-  let first: number | undefined;
-  let opened = 0;
-  for (const [at, range] of ranges) {
-    if (range.first < span.first || range.first > span.last) continue;
-    if (at === current) return current;
-    if (first !== undefined && range.first > opened) continue;
-    first = at;
-    opened = range.first;
-  }
-  if (first !== undefined) return first;
-  const on = current === undefined ? undefined : ranges.get(current);
-  const covers =
-    on !== undefined && on.first <= span.last && on.last >= span.first;
-  return covers ? current : sectionAt(ranges, span.first);
-}
-
-/** A chapter a reader can turn to: what it is called, and where it opens. */
+/** A chapter a reader can turn to: what it is called, and where it sits. */
 export interface Chapter {
   /** Its place in the reading order. */
   at: number;
   name: string;
-  /** The folio it opens on. */
-  first: number;
 }
 
 /**
- * Every section a reader can turn to, in reading order. A section the
- * run typeset no page for is left out, so what a reader is offered is
- * what the book set.
+ * Every section a reader can turn to, in reading order. A section
+ * `resolve` dropped is left out, so what a reader is offered is what
+ * the book set.
  */
-export function chapters(
-  sections: Section[],
-  ranges: Map<number, Range>,
-): Chapter[] {
-  return sections.flatMap((section, at) => {
-    const range = ranges.get(at);
-    if (range === undefined) return [];
-    return [{ at, name: entryName(section.entry), first: range.first }];
-  });
+export function chapters(sections: Section[]): Chapter[] {
+  return sections.flatMap((section, at) =>
+    section.kind === "missing" ? [] : [{ at, name: entryName(section.entry) }],
+  );
 }
 
 /**

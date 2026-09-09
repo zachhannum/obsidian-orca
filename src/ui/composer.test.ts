@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import type { LayoutOutput, Op, Page } from "fleuron";
+import type { Folios, LayoutOutput, Op, Page } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
@@ -29,14 +29,21 @@ class FakeClient implements EngineClient {
   readonly ranges: Range[] = [];
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
-  private sources = 0;
+  /** The text of each source the book op sent, by the name it sent it under. */
+  private sent: { name: string; text: string }[] = [];
+
+  private get sources(): number {
+    return this.sent.length;
+  }
 
   preview(ops: Op[] = [], range?: Range): Promise<LayoutOutput | null> {
     if (ops.length > 0) {
       this.rendered.push(ops);
       this.current += 1;
       for (const op of ops) {
-        if (op.op === "book") this.sources = op.sources.length;
+        if (op.op === "book") {
+          this.sent = op.sources.map(({ name, text }) => ({ name, text }));
+        }
       }
     }
     if (range !== undefined) this.ranges.push(range);
@@ -61,12 +68,36 @@ class FakeClient implements EngineClient {
     return Promise.resolve(new Uint8Array());
   }
 
-  nodeAt(): Promise<number | null> {
+  /**
+   * The section a byte falls in, as a real engine does: nothing for a
+   * byte of the source's frontmatter, which was read into no node.
+   */
+  nodeAt(source: string, byte: number): Promise<number | null> {
+    const at = this.sent.findIndex((sent) => sent.name === source);
+    const text = this.sent[at]?.text;
+    if (text === undefined) return Promise.resolve(null);
+    const written = new TextEncoder().encode(text).indexOf(0x23);
+    return Promise.resolve(byte < written ? null : at * 10 + 5);
+  }
+
+  sourceOf(node: number): Promise<null> {
+    void node;
     return Promise.resolve(null);
   }
 
-  sourceOf(): Promise<null> {
-    return Promise.resolve(null);
+  foliosOf(nodes: number[]): Promise<(Folios | null)[]> {
+    return Promise.resolve(
+      nodes.map((node) => {
+        const at = Math.floor(node / 10);
+        if (at * 10 + 5 !== node || at >= this.sources) return null;
+        return {
+          first: at * SPREAD + 1,
+          last: at * SPREAD + SPREAD,
+          at: at * SPREAD,
+          count: SPREAD,
+        };
+      }),
+    );
   }
 
   private pages(): Page[] {
@@ -158,7 +189,7 @@ async function setting(client: EngineClient): Promise<Composing> {
   };
 }
 
-test("a book is set from its reading order, and every section keeps its folios", async () => {
+test("a book is set from its reading order, and no page of it comes back to say where", async () => {
   const client = new FakeClient();
   const composer = new Composer(await setting(client));
 
@@ -166,14 +197,26 @@ test("a book is set from its reading order, and every section keeps its folios",
 
   assert.equal(book.name, "Pride and Prejudice");
   assert.equal(book.sections.length, 8);
-  // The fixture names a chapter the vault does not have, so the book
-  // is set without it and it has no folios of its own.
-  assert.deepEqual(book.ranges.get(5), { first: 11, last: 12 });
-  assert.equal(book.ranges.get(6), undefined);
-  assert.deepEqual(book.ranges.get(7), { first: 13, last: 14 });
-  // The whole book comes back once, because a section's id says where
-  // it falls only against every other id in the book.
-  assert.deepEqual(client.ranges.at(-1), { first: 0, count: 14 });
+  // Setting the book asks for the window the first view paints, not
+  // for every page of it to work out where the sections landed.
+  assert.deepEqual(client.ranges, [{ first: 0, count: 2 }]);
+});
+
+test("a section says where it opens now, asked of the engine at the ask", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client));
+
+  const book = await composer.open(BOOK);
+
+  // Chapter Twelve is the sixth section sent, so it opens on the
+  // eleventh page: the answer counts pages from 0.
+  assert.equal(await book.opens(5), 10);
+  // The fixture names a chapter the vault does not have, so nothing
+  // crossed for it and it opens nowhere.
+  assert.equal(await book.opens(6), undefined);
+  assert.equal(await book.opens(7), 12);
+  // Matter orca generated is asked about under the name it crossed as.
+  assert.equal(await book.opens(0), 0);
 });
 
 test("a book being set reports the sections it has read and the entry it opens at", async () => {
@@ -265,8 +308,5 @@ test("a chapter the engine already has the words of is no edit at all", async ()
 
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real
-// chapter opens on the page the real run put it on. A render does not
-// work the folio ranges out again, so a chapter an edit moved keeps the
-// range the book was set with until the book is set again. Asking for
-// them costs the whole book over the wire, which is what a page-through
-// exists to avoid.
+// chapter opens on the page the real run put it on, and where a reflow
+// moves it.
