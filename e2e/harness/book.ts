@@ -58,6 +58,10 @@ export class Book {
   readonly chapter: Locator;
   /** The name that control is showing. */
   readonly chapterName: Locator;
+  /** The images the painted pages draw. */
+  readonly images: Locator;
+  /** The bar's count of what the last run had to complain about. */
+  readonly warnings: Locator;
   /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
@@ -77,6 +81,8 @@ export class Book {
     this.surface = pane.getByTestId("orca-sheets");
     this.sheets = this.surface.locator(".orca-page");
     this.page = this.surface.locator("svg").first();
+    this.images = this.surface.locator("image");
+    this.warnings = pane.getByTestId("orca-warnings");
     this.folio = pane.getByTestId("orca-folio");
     this.chapter = pane.getByTestId("orca-chapter");
     this.chapterName = this.chapter.locator("option:checked");

@@ -20,6 +20,10 @@ const LAST = "Acknowledgements";
 /** The page the fixture's last section opens on. */
 const BACK = 13;
 
+/** The note that section is read from, and the image it embeds. */
+const LAST_NOTE = "Acknowledgements.md";
+const DEVICE = "![[device.png]]";
+
 test("the ribbon sets the book and paints its first page", async ({ book }) => {
   await book.open();
 
@@ -309,4 +313,42 @@ test("paging out of a chapter renames the control, in all three views", async ({
   await expect(book.chapterName).toHaveText(CHAPTER_NAME);
   await book.choose(FIRST);
   await expect(book.chapterName).toHaveText(FIRST);
+});
+
+test("an embed is painted from the bytes the engine set the page from", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+
+  await book.type(String(BACK));
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+
+  // The engine placed the image and decoded none of it; the pixels come
+  // from the url the registry made out of the bytes that crossed.
+  await expect(book.images).toHaveCount(1);
+  await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
+  await expect(book.warnings).toBeHidden();
+});
+
+test("an embed the vault cannot answer is a warning the author can see", async ({
+  book,
+  vault,
+}) => {
+  vault.touch(LAST_NOTE);
+  await book.open();
+  const painted = await book.painted();
+
+  const note = await vault.read(LAST_NOTE);
+  await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await expect(book.warnings).toHaveText("1 warning");
+  await expect(book.warnings).toHaveAttribute("aria-label", /nothing here\.png/);
+
+  // The page is set without the image rather than left broken.
+  await book.type(String(BACK));
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+  await expect(book.page).toContainText(LAST);
+  await expect(book.images).toHaveCount(0);
 });
