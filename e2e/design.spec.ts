@@ -1,5 +1,8 @@
 import { expect, test } from "./harness/test";
 
+/** The book note in the fixture vault. */
+const BOOK = "Pride and Prejudice.md";
+
 /** The face the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FACE = "Alegreya";
 
@@ -109,4 +112,32 @@ test("a face crosses once, so picking the same family again sends the sheet alon
   // the same ids.
   await expect(panel.face).toContainText(FIXTURE_FACE);
   expect(await panel.styles()).toEqual(cuts);
+});
+
+test("a book note written while a pane reads it leaves the panel designing that book", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+  const face = (await panel.reading()).trim();
+
+  // A note written from outside Obsidian takes the book off the
+  // composer, so the next open sets it from the notes as they now are.
+  // The pane goes on reading the book it has, and that is the one the
+  // panel designs.
+  await vault.modify(BOOK, await vault.read(BOOK));
+  await panel.focus();
+
+  await expect(panel.panel).toBeVisible();
+  await expect(panel.face).toContainText(face);
+
+  // And a pick still reaches the book on screen.
+  await panel.pick();
+  await panel.type("aleg");
+  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
+  await expect(panel.face).toContainText(FIXTURE_FACE);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 });

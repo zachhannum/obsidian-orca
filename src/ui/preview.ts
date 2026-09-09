@@ -114,7 +114,7 @@ export class PreviewView extends ItemView {
   private on: HTMLButtonElement | undefined;
   private edit: HTMLElement | undefined;
   private session: Session | undefined;
-  private typeset: Typeset | undefined;
+  private composed: Typeset | undefined;
   private readonly switches = new Map<ViewMode, HTMLButtonElement>();
   private watching: ResizeObserver | undefined;
   /** The book note this preview reads, and the note it opened at. */
@@ -182,7 +182,7 @@ export class PreviewView extends ItemView {
   }
 
   override getDisplayText(): string {
-    return this.typeset?.name ?? "Book";
+    return this.composed?.name ?? "Book";
   }
 
   override getIcon(): string {
@@ -240,6 +240,15 @@ export class PreviewView extends ItemView {
     return this.state.book;
   }
 
+  /**
+   * The book this preview is reading, once it is set. The panel designs
+   * this one, because a book the composer dropped is still the book on
+   * screen.
+   */
+  get typeset(): Typeset | undefined {
+    return this.composed;
+  }
+
   /** Whether a manuscript pane is tied to this one, both ways. */
   get linked(): boolean {
     return this.state.linked === true;
@@ -289,7 +298,7 @@ export class PreviewView extends ItemView {
     // The session belongs to the book, not to this leaf, so closing the
     // leaf costs the next one no second layout.
     this.session = undefined;
-    this.typeset = undefined;
+    this.composed = undefined;
     this.contentEl.empty();
     return Promise.resolve();
   }
@@ -300,7 +309,7 @@ export class PreviewView extends ItemView {
    * A note the book does not list turns nothing.
    */
   async turnTo(note: string, at?: number): Promise<void> {
-    const typeset = this.typeset;
+    const typeset = this.composed;
     if (typeset === undefined) return;
     const section = sectionOf(typeset.sections, note);
     if (section === undefined) return;
@@ -365,7 +374,7 @@ export class PreviewView extends ItemView {
    */
   private async opensSection(at: number): Promise<number | undefined> {
     try {
-      return await this.typeset?.opens(at);
+      return await this.composed?.opens(at);
     } catch {
       return undefined;
     }
@@ -508,7 +517,7 @@ export class PreviewView extends ItemView {
     this.unwatch?.();
     this.unwatch = undefined;
     this.session = undefined;
-    this.typeset = undefined;
+    this.composed = undefined;
     this.named = undefined;
     this.ledAt = undefined;
     this.showing = this.state.note;
@@ -525,7 +534,7 @@ export class PreviewView extends ItemView {
         },
       });
       if (opening !== this.opening) return;
-      this.typeset = typeset;
+      this.composed = typeset;
       this.session = typeset.session;
       // A render repaginates the book under the reader, so the pane
       // follows the content it was on rather than the page number it
@@ -785,7 +794,7 @@ export class PreviewView extends ItemView {
    * it.
    */
   private async namesSpan(reading: Reading): Promise<void> {
-    const typeset = this.typeset;
+    const typeset = this.composed;
     const session = this.session;
     if (typeset === undefined || session === undefined) return;
     const naming = (this.naming += 1);
