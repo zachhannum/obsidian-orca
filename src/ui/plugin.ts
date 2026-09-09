@@ -949,10 +949,18 @@ export default class OrcaPlugin extends Plugin {
    */
   private async designed(): Promise<Typeset | undefined> {
     const { workspace } = this.app;
-    const leaf: WorkspaceLeaf | undefined =
-      workspace.getLeavesOfType(PREVIEW_VIEW)[0];
-    const other = leaf?.view instanceof PreviewView ? leaf.view : undefined;
-    const view = workspace.getActiveViewOfType(PreviewView) ?? other;
+    // A pane in a background tab is deferred until something asks for
+    // it, and until then its view is not the preview. Loading one would
+    // typeset a book nobody is reading, so the panel passes over it and
+    // designs a pane that is drawn.
+    const drawn = workspace
+      .getLeavesOfType(PREVIEW_VIEW)
+      .map((leaf) => leaf.view)
+      .filter((view): view is PreviewView => view instanceof PreviewView);
+    const view =
+      workspace.getActiveViewOfType(PreviewView) ??
+      drawn.find((pane) => pane.typeset !== undefined) ??
+      drawn[0];
     if (view === undefined) return undefined;
     const reading = view.typeset;
     if (reading !== undefined) return reading;

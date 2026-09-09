@@ -141,3 +141,33 @@ test("a book note written while a pane reads it leaves the panel designing that 
   await expect(panel.face).toContainText(FIXTURE_FACE);
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 });
+
+test("a second preview in a background tab is deferred, and the panel designs the drawn one", async ({
+  book,
+  obsidian,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  // A second pane on the same book, so the first is a background tab.
+  await book.again();
+  await expect(book.panes).toHaveCount(2);
+
+  // A workspace reopened defers every tab nothing has asked for, so the
+  // background pane's view is not the preview until it is drawn.
+  const layout = await obsidian.layout();
+  await obsidian.reopen(layout);
+  // Only the drawn pane is in the document: the background tab is
+  // deferred until something asks for it.
+  await expect(book.panes).toHaveCount(1);
+  await book.painted();
+
+  await panel.open();
+  await panel.focus();
+
+  await expect(panel.panel).toBeVisible();
+  await panel.pick();
+  await panel.type("aleg");
+  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
+  await expect(panel.face).toContainText(FIXTURE_FACE);
+});
