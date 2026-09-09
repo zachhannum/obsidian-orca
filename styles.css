@@ -102,6 +102,8 @@
   position: absolute;
   z-index: var(--layer-menu);
   top: calc(100% + 4px);
+  /* `right` and `max-width` are measured onto the panel: the count the
+     panel hangs from sits where the bar's own widths put it. */
   right: var(--size-4-3);
   display: flex;
   flex-direction: column;

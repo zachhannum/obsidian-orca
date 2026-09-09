@@ -343,21 +343,31 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
-  // The count opens the warnings, and each one is the engine's own
-  // line and the place it named.
+  // The count is what the run puts on screen. It opens over the page
+  // rather than moving it, so nothing opens it but the author.
   await expect(book.warnings).toHaveText("1 warning");
   await expect(book.issues).toHaveCount(1);
+  await expect(book.issues.first()).toBeHidden();
+
+  // Opened, each one is the engine's own line and the place it named.
+  await book.warnings.click();
   await expect(book.issues.first()).toBeVisible();
   await expect(book.issues.first()).toContainText(
     "image nothing here.png: no image was supplied for it; it is skipped",
   );
   await expect(book.issues.first()).toContainText("Acknowledgements.md:6:1");
 
-  // The author shuts them, and the count stays to open them again.
+  // The panel hangs under the count rather than off the end of the bar.
+  const count = await book.warnings.boundingBox();
+  const panel = await book.issues.first().boundingBox();
+  expect(count && panel).toBeTruthy();
+  expect(panel?.x).toBeLessThan(count?.x ?? 0);
+  expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeLessThanOrEqual(
+    (count?.x ?? 0) + (count?.width ?? 0) + 12,
+  );
+
   await book.warnings.click();
   await expect(book.issues.first()).toBeHidden();
-  await book.warnings.click();
-  await expect(book.issues.first()).toBeVisible();
 
   // The page is set without the image rather than left broken.
   await book.type(String(BACK));

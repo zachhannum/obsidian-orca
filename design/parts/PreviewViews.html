@@ -14,7 +14,15 @@
         <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="3" y="13" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/></svg>Grid</div>
       </div>
       <div style="flex: 1"></div>
-      <span class="chip mod-warn">1 warning <svg class="icon-xs icon" viewBox="0 0 24 24" style="width: 10px; height: 10px"><path d="m6 9 6 6 6-6"/></svg></span>
+      <span style="position: relative; display: inline-flex">
+        <span class="chip mod-warn">1 warning <svg class="icon-xs icon" viewBox="0 0 24 24" style="width: 10px; height: 10px; transform: rotate(180deg)"><path d="m6 9 6 6 6-6"/></svg></span>
+        <span style="position: absolute; z-index: 5; top: calc(100% + 6px); right: 0; width: 360px; padding: 8px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); box-shadow: 0 8px 30px rgba(0,0,0,0.35)">
+          <span style="display: block; border-left: 2px solid var(--color-orange); background: rgba(233, 151, 63, 0.08); border-radius: 0 var(--radius-s) var(--radius-s) 0; padding: 8px 10px">
+            <span style="display: block; font-size: 12px; color: var(--text-normal); line-height: 1.45; font-weight: 400; letter-spacing: 0">image plate-one.png: no image was supplied for it; it is skipped</span>
+            <span style="display: block; font-family: var(--font-monospace); font-size: 11px; color: var(--text-faint); margin-top: 3px; font-weight: 400; letter-spacing: 0">Chapter Eleven.md:42:1</span>
+          </span>
+        </span>
+      </span>
       <div class="field is-select" style="height: 26px; max-width: 150px"><span>Chapter Twelve</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
       <div style="width: 1px; height: 18px; background: var(--divider-color); margin: 0 4px"></div>
       <div style="display: flex; align-items: center; gap: 8px">
@@ -22,13 +30,6 @@
         <div class="field" style="width: 58px; height: 26px; justify-content: center">146</div>
         <span style="color: var(--text-faint)">of 337</span>
         <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m9 18 6-6-6-6"/></svg>
-      </div>
-    </div>
-
-    <div style="position: absolute; z-index: 5; top: 48px; right: 14px; width: 360px; padding: 8px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); box-shadow: 0 8px 30px rgba(0,0,0,0.35)">
-      <div style="border-left: 2px solid var(--color-orange); background: rgba(233, 151, 63, 0.08); border-radius: 0 var(--radius-s) var(--radius-s) 0; padding: 8px 10px">
-        <div style="font-size: 12px; color: var(--text-normal); line-height: 1.45">image plate-one.png: no image was supplied for it; it is skipped</div>
-        <div style="font-family: var(--font-monospace); font-size: 11px; color: var(--text-faint); margin-top: 3px">Chapter Eleven.md:42:1</div>
       </div>
     </div>
 
@@ -105,7 +106,7 @@
     <div class="callout"><div><span class="k">Opened where you are reading.</span> The icon on a note swaps the pane to the book, turned to the page the top of the pane is set on. The book pane keeps that page: a swap back to the manuscript, and a workspace reopened at startup, both come back to it. A reader who paged through the book comes back to the line that page opens at. <span style="color: var(--text-muted)">Open preview to the right</span>, on a chapter's own menu, splits instead, and the two panes follow each other paragraph by paragraph: scrolling the manuscript turns the book, and turning a page scrolls the manuscript.</div></div>
     <div class="callout"><div><span class="k">Turning by chapter.</span> The toolbar names the chapter the span is at, and turns the book to another. <span style="color: var(--text-muted)">Next chapter</span> and <span style="color: var(--text-muted)">Previous chapter</span> are commands, so a reader can bind a key to the turn. A page no section covers, such as a blank verso, is named for the chapter that opened before it.</div></div>
     <div class="callout"><div><span class="k">Why a page-through.</span> Drawing one page costs about 18 KiB; drawing the whole book to show one page costs 5.94 MiB, on every keystroke. The saving is not DOM nodes, it is that.</div></div>
-    <div class="callout"><div><span class="k">An embed and its warning.</span> Layout opens no file. Orca resolves the embed through the vault and sends the bytes under the url the manuscript names it by, and the page draws those same bytes. An embed with no file behind it is counted on the bar, and the count opens the warnings over the pages, each one the engine's own line and the place it named. The panel floats, so opening it turns no page and moves nothing. The page is set without the image. A warning against matter orca generated, or against the sheet orca generated, is orca's own defect and goes to the console. This is where a content warning lives until the Issues pane has somewhere to put it.</div></div>
+    <div class="callout"><div><span class="k">An embed and its warning.</span> Layout opens no file. Orca resolves the embed through the vault and sends the bytes under the url the manuscript names it by, and the page draws those same bytes. An embed with no file behind it is counted on the bar, and the page is set without the image. The count opens the warnings under it, each one the engine's own line and the place it named. Nothing but the author opens the panel, and it floats over the pages, so opening it turns no page and moves nothing. A warning against matter orca generated, or against the sheet orca generated, is orca's own defect and goes to the console. This is where a content warning lives until the Issues pane has somewhere to put it.</div></div>
     <div class="callout"><div><span class="k">Never a stale page.</span> An edit throws away the pages from before it, so nothing on screen is ever from the book as it used to be. A book that gets shorter takes you to its last page rather than showing nothing.</div></div>
     <div class="callout"><div><span class="k">Selectable text</span> is invisible spans over the drawn glyphs, so copy comes back in reading order and a screen reader reads a page. It arrives with the painter's overlay upstream.</div></div>
   </div>

@@ -42,6 +42,9 @@ export const PREVIEW_VIEW = "orca-book-preview";
 /** The note a page nobody wrote leads the manuscript to. */
 const NOWHERE = "-";
 
+/** The narrowest the warnings are worth hanging under the count, in pixels. */
+const NARROW = 240;
+
 /** The place in the manuscript a page opens at. */
 export interface Opens {
   note: string;
@@ -170,11 +173,11 @@ export class PreviewView extends ItemView {
   /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
   /**
-   * Whether the warnings are open, once the author has said. A run
-   * that warns opens them the first time, and a pane the author shut
-   * stays shut until the warnings clear.
+   * Whether the author has the warnings open. The count on the bar is
+   * what a run that warns puts on screen; the panel opens over the
+   * page being read, so nothing opens it but the author.
    */
-  private opened: boolean | undefined;
+  private opened = false;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -295,7 +298,7 @@ export class PreviewView extends ItemView {
     this.message = undefined;
     this.warnings = undefined;
     this.issues = undefined;
-    this.opened = undefined;
+    this.opened = false;
     this.folio = undefined;
     this.total = undefined;
     this.chapter = undefined;
@@ -450,7 +453,7 @@ export class PreviewView extends ItemView {
     warnings.toggleVisibility(false);
     this.warnings = warnings;
     this.registerDomEvent(warnings, "click", () => {
-      this.opened = this.opened !== true;
+      this.opened = !this.opened;
       this.showsIssues();
     });
 
@@ -682,6 +685,7 @@ export class PreviewView extends ItemView {
    * changed, since the span it asks for is the span it shows.
    */
   private measure(): void {
+    this.showsIssues();
     const surface = this.surface;
     if (surface === undefined) return;
     const grid = fits(
@@ -790,7 +794,7 @@ export class PreviewView extends ItemView {
     chip.toggleVisibility(said.length > 0);
     issues.empty();
     if (said.length === 0) {
-      this.opened = undefined;
+      this.opened = false;
       this.showsIssues();
       return;
     }
@@ -807,9 +811,6 @@ export class PreviewView extends ItemView {
         card.createDiv({ cls: "orca-preview-issue-at", text: warning.origin });
       }
     }
-    // A run that warns opens the list the first time. The author shuts
-    // it, and it stays shut until the warnings clear.
-    this.opened ??= true;
     this.showsIssues();
   }
 
@@ -817,10 +818,35 @@ export class PreviewView extends ItemView {
   private showsIssues(): void {
     const issues = this.issues;
     if (issues === undefined) return;
-    const open = this.opened === true && issues.childElementCount > 0;
+    const open = this.opened && issues.childElementCount > 0;
+    if (open) this.placesIssues();
     issues.toggleVisibility(open);
     this.warnings?.setAttribute("aria-expanded", String(open));
     this.warnings?.toggleClass("is-on", open);
+  }
+
+  /**
+   * Hangs the panel under the count it opens from, and bounds it to
+   * the room left of there. The count sits where the bar's own widths
+   * put it, so where that is has to be measured rather than written
+   * into the sheet. A pane too narrow to hang it there spans the bar
+   * instead.
+   */
+  private placesIssues(): void {
+    const issues = this.issues;
+    const chip = this.warnings;
+    if (issues === undefined || chip === undefined) return;
+    const bar = chip.parentElement;
+    if (bar === null) return;
+    const edge = bar.getBoundingClientRect();
+    const count = chip.getBoundingClientRect();
+    const gutter = Number.parseFloat(getComputedStyle(bar).paddingLeft) || 0;
+    const room = count.right - edge.left - gutter;
+    const under = room >= NARROW;
+    issues.style.right = `${String(under ? edge.right - count.right : gutter)}px`;
+    issues.style.maxWidth = `${String(
+      under ? room : Math.max(edge.width - gutter * 2, 0),
+    )}px`;
   }
 
   /**
