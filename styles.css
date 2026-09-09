@@ -10,6 +10,9 @@
 }
 
 .orca-preview-bar {
+  /* The bar is the warnings' positioning context, so the panel hangs
+     from it rather than from the pane. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
@@ -92,18 +95,27 @@
   color: var(--color-orange);
 }
 
-/* The warnings themselves, between the bar and the pages. A long list
-   scrolls rather than pushing the book off the pane. */
+/* The warnings hang from the bar and float over the pages, so opening
+   them turns no page and moves nothing. A long list scrolls inside the
+   panel, and a narrow pane bounds its width. */
 .orca-preview-issues {
+  position: absolute;
+  z-index: var(--layer-menu);
+  top: calc(100% + 4px);
+  right: var(--size-4-3);
   display: flex;
   flex-direction: column;
   gap: var(--size-4-1);
-  max-height: 30%;
+  width: max-content;
+  min-width: 240px;
+  max-width: calc(100% - var(--size-4-3) * 2);
+  max-height: 40vh;
   overflow-y: auto;
-  padding: var(--size-4-2) var(--size-4-3);
-  border-bottom: 1px solid var(--divider-color);
-  background: var(--background-secondary);
-  flex: none;
+  padding: var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
 }
 
 .orca-preview-issue {

@@ -454,6 +454,11 @@ export class PreviewView extends ItemView {
       this.showsIssues();
     });
 
+    const issues = bar.createDiv({ cls: "orca-preview-issues" });
+    issues.dataset["testid"] = "orca-issues";
+    issues.toggleVisibility(false);
+    this.issues = issues;
+
     const chapter = bar.createEl("select", {
       cls: "dropdown orca-preview-chapter",
     });
@@ -475,11 +480,6 @@ export class PreviewView extends ItemView {
     this.on = this.turnsTo(bar, "chevron-right", "Next page", () =>
       nextPage(this.viewing()),
     );
-
-    const issues = pane.createDiv({ cls: "orca-preview-issues" });
-    issues.dataset["testid"] = "orca-issues";
-    issues.toggleVisibility(false);
-    this.issues = issues;
 
     const well = pane.createDiv({ cls: "orca-preview-well" });
     // The pane pages through from the keyboard, so the well the pages
