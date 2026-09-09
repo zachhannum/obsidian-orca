@@ -9,7 +9,12 @@ import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Clock } from "@/engine/loop";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
-import { Composer, type Progress, type Composing } from "@/ui/composer";
+import {
+  Composer,
+  type Composing,
+  type Progress,
+  type Typeset,
+} from "@/ui/composer";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -176,14 +181,21 @@ function faces(): FaceSet {
   return { add: () => Promise.resolve() };
 }
 
+/** Every file in the fixture vault, the way Obsidian sees one. */
+async function paths(folder = "/"): Promise<string[]> {
+  const { files, folders } = await vault.list(folder);
+  const under = await Promise.all(folders.map((at) => paths(at)));
+  return [...files, ...under.flat()];
+}
+
 async function setting(client: EngineClient): Promise<Composing> {
-  const paths = (await vault.list("/")).files;
+  const found = await paths();
   return {
     model: async (at) => readModel(await readText(vault, at)),
     read: (at) => readText(vault, at),
     files: vault,
     name: (at) => path.basename(at, ".md"),
-    links: pathLinks(paths),
+    links: pathLinks(found),
     client: Promise.resolve(client),
     faces: faces(),
   };
@@ -305,6 +317,58 @@ test("a chapter the engine already has the words of is no edit at all", async ()
 
   assert.equal(client.rendered.length, renders);
 });
+
+test("an image a chapter picks up while it is drafted crosses on the next render", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+  const renders = client.rendered.length;
+  const note = "Copyright.md";
+  const copyright = await readText(vault, note);
+
+  // The same file the acknowledgements embed, under a url of its own.
+  composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n`);
+  await crossed(book, clock);
+
+  // The words go first and the bytes follow, so the engine reads the
+  // chapter and is then given the file it now names.
+  const sent = client.rendered.slice(renders).flat();
+  assert.deepEqual(sent.map((op) => op.op), ["edit", "image"]);
+  const image = sent.find((op) => op.op === "image");
+  assert.equal(image?.url, "images/device.png");
+  assert.deepEqual(
+    image?.bytes,
+    new Uint8Array(await vault.readBinary("images/device.png")),
+  );
+  // One file has one set of pixels, whichever url draws it.
+  assert.equal(
+    book.assets.imageUrl("images/device.png"),
+    book.assets.imageUrl("device.png"),
+  );
+
+  // A url the engine already holds crosses no second time.
+  composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n\n.`);
+  await crossed(book, clock);
+  assert.deepEqual(
+    client.rendered.slice(renders).flat().map((op) => op.op),
+    ["edit", "image", "edit"],
+  );
+});
+
+/**
+ * Waits out the reads an embed costs, then steps the loop the ops they
+ * planned are waiting on. The book says when it has finished resolving,
+ * so nothing here waits on a clock or on a count of turns.
+ */
+async function crossed(book: Typeset, clock: Steps): Promise<void> {
+  // The composer reaches the book on a microtask, so the retype has to
+  // land before the promise it started can be read.
+  await drain();
+  await book.resolving;
+  clock.tick();
+  await drain();
+}
 
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real

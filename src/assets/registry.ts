@@ -7,8 +7,9 @@
  * that, and an op path asks it before putting bytes on the wire.
  *
  * The engine keeps the other cache, the one that decides what a page
- * is drawn from. A url here is held rather than made, so the two
- * cannot disagree about which bytes a page was painted with.
+ * is set from. A url a page draws from is made here out of the bytes
+ * that crossed under the same key, so the two cannot disagree about
+ * which pixels a page was painted with.
  */
 
 import { readBytes, type VaultAdapter } from "@/assets/vault";
@@ -49,9 +50,17 @@ export interface Later {
   (run: () => void): void;
 }
 
+/** Makes the url a page draws bytes from. */
+export interface Mint {
+  (bytes: Uint8Array): string;
+}
+
 export const revokeUrl: Revoke = (url) => {
   URL.revokeObjectURL(url);
 };
+
+export const blobUrl: Mint = (bytes) =>
+  URL.createObjectURL(new Blob([new Uint8Array(bytes)]));
 
 /** The browser's idle time, or the next turn of the loop without it. */
 export const whenIdle: Later = (run) => {
@@ -76,11 +85,14 @@ export class Registry implements Sent {
   private readonly held = new Map<string, Held>();
   /** The key each vault path hashed to, so a file is hashed once. */
   private readonly keys = new Map<string, Promise<string>>();
+  /** The key the image behind each manuscript url went under. */
+  private readonly named = new Map<string, string>();
 
   constructor(
     private readonly vault: VaultAdapter,
     private readonly revoke: Revoke = revokeUrl,
     private readonly later: Later = whenIdle,
+    private readonly mint: Mint = blobUrl,
   ) {}
 
   /** The key the file at this vault path goes under. */
@@ -142,6 +154,31 @@ export class Registry implements Sent {
     if (was !== undefined && was !== objectUrl) this.revoke(was);
   }
 
+  /**
+   * Keeps one image the manuscript names, under the key its bytes
+   * hashed to, and makes the url a page draws them from. The same bytes
+   * cross to the engine under the same manuscript url, so a page and
+   * the layout it was set from cannot disagree about what an embed is.
+   *
+   * Two urls over one file share a key, and therefore one url to draw
+   * from.
+   */
+  image(named: string, image: Hashed): void {
+    this.named.set(named, image.key);
+    if (this.url(image.key) === undefined) {
+      this.hold(image.key, this.mint(image.bytes));
+    }
+  }
+
+  /**
+   * The url a page draws the image a manuscript url names from.
+   * Nothing for an embed that never resolved.
+   */
+  imageUrl(named: string): string | undefined {
+    const key = this.named.get(named);
+    return key === undefined ? undefined : this.url(key);
+  }
+
   /** Drops one asset, giving back the url it held. */
   evict(key: string): void {
     const held = this.held.get(key);
@@ -154,6 +191,7 @@ export class Registry implements Sent {
   close(): void {
     for (const key of [...this.held.keys()]) this.evict(key);
     this.keys.clear();
+    this.named.clear();
   }
 
   private async hash(path: string): Promise<string> {

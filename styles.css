@@ -10,6 +10,9 @@
 }
 
 .orca-preview-bar {
+  /* The bar is the warnings' positioning context, so the panel hangs
+     from it rather than from the pane. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
@@ -49,6 +52,92 @@
   height: 26px;
   max-width: 180px;
   font-size: var(--font-ui-small);
+}
+
+/* The count of what the last run had to complain about, beside the
+   page it set. It opens the warnings under the bar. */
+.orca-preview-bar button.orca-preview-warnings {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 9px;
+  box-shadow: none;
+  font-size: 10.5px;
+  font-weight: var(--font-medium);
+  letter-spacing: 0.02em;
+  background: rgba(233, 151, 63, 0.15);
+  color: var(--color-orange);
+  cursor: pointer;
+  flex: none;
+}
+
+/* The chevron turns over as the warnings open, the way a disclosure
+   control does. */
+.orca-preview-warnings .orca-preview-opens {
+  display: inline-flex;
+  margin-left: 3px;
+}
+
+.orca-preview-warnings .orca-preview-opens .svg-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.orca-preview-warnings.is-on .orca-preview-opens {
+  transform: rotate(180deg);
+}
+
+.orca-preview-bar button.orca-preview-warnings:hover,
+.orca-preview-bar button.orca-preview-warnings.is-on {
+  background: rgba(233, 151, 63, 0.28);
+  color: var(--color-orange);
+}
+
+/* The warnings hang from the bar and float over the pages, so opening
+   them turns no page and moves nothing. A long list scrolls inside the
+   panel, and a narrow pane bounds its width. */
+.orca-preview-issues {
+  position: absolute;
+  z-index: var(--layer-menu);
+  top: calc(100% + 4px);
+  /* `right` and `max-width` are measured onto the panel: the count the
+     panel hangs from sits where the bar's own widths put it. */
+  right: var(--size-4-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  width: max-content;
+  min-width: 240px;
+  max-width: calc(100% - var(--size-4-3) * 2);
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+}
+
+.orca-preview-issue {
+  border-left: 2px solid var(--color-orange);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  background: rgba(233, 151, 63, 0.08);
+  padding: var(--size-4-2);
+}
+
+.orca-preview-issue-said {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.45;
+  color: var(--text-normal);
+}
+
+.orca-preview-issue-at {
+  margin-top: 3px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
 }
 
 .orca-preview-divider {

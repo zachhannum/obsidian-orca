@@ -20,6 +20,7 @@ import { entryName, resolve, type Section } from "@/book/order";
 import { sourceNamed } from "@/book/pages";
 import { writtenByte } from "@/book/place";
 import {
+  bookImages,
   sendBook,
   sendEdit,
   type Edit,
@@ -52,6 +53,9 @@ export class Typeset {
   private readonly loop: Loop;
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
+  private readonly links: Links;
+  /** The embeds the retypes so far started, chained so they run in order. */
+  private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private design: Design;
 
@@ -66,6 +70,8 @@ export class Typeset {
       sent: Map<string, string>;
       /** The registry every op path asks before putting bytes on the wire. */
       assets: Registry;
+      /** Resolves the embeds a chapter picks up while it is being drafted. */
+      links: Links;
       /** The design the sheets were generated from. */
       design: Design;
     },
@@ -76,6 +82,7 @@ export class Typeset {
     this.sections = book.sections;
     this.sent = book.sent;
     this.assets = book.assets;
+    this.links = book.links;
     this.loaded = { sheets: book.sheets };
     this.design = book.design;
     this.loop = new Loop((ops) => this.render(ops), clock);
@@ -108,6 +115,38 @@ export class Typeset {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
+    const embedding = (): Promise<void> => this.embed(note, text);
+    // An embed that will not read crosses no bytes, and the engine
+    // warns about the url.
+    this.embedding = this.embedding
+      .then(embedding, embedding)
+      .catch(() => undefined);
+  }
+
+  /**
+   * The embeds the retypes so far are still resolving. A caller that
+   * has to see every op an edit sends waits on this before stepping the
+   * loop.
+   */
+  get resolving(): Promise<void> {
+    return this.embedding;
+  }
+
+  /**
+   * Sends the images a chapter has picked up since it last crossed.
+   * The words go first and the bytes follow, so an image added while
+   * drafting is a second render rather than a book opened again.
+   */
+  private async embed(note: string, text: string): Promise<void> {
+    const found = await bookImages([{ name: note, text }], this.links, (at) =>
+      this.assets.take(at),
+    );
+    const fresh = found.filter(
+      (image) => this.assets.imageUrl(image.url) === undefined,
+    );
+    if (fresh.length === 0) return;
+    for (const image of fresh) this.assets.image(image.url, image);
+    this.plan(`embedded:${note}`, { did: "embedded", images: fresh });
   }
 
   /** The family the book is set in, or nothing for the theme's face. */
@@ -276,7 +315,8 @@ export class Composer {
     opening.told?.(progress);
 
     const sent = new Map<string, string>();
-    const ops = await sendBook(
+    const assets = new Registry(this.vault.files);
+    const { ops, images } = await sendBook(
       model.book,
       model.order,
       this.vault.links,
@@ -288,16 +328,28 @@ export class Composer {
         opening.told?.({ ...progress, read });
         return text;
       },
+      (at) => assets.take(at),
     );
+    // The url a page draws an embed from is made from the bytes that
+    // crossed, so the preview decodes what the layout was set from.
+    for (const image of images) assets.image(image.url, image);
 
     const client = await this.vault.client;
-    const assets = new Registry(this.vault.files);
     const session = new Session(client, this.vault.faces);
     const design: Design = {};
     const sheets = designSheets(design);
     await session.open([...ops, styleOp(sheets)]);
     return new Typeset(
-      { name, session, sections, sheets, sent, assets, design },
+      {
+        name,
+        session,
+        sections,
+        sheets,
+        sent,
+        assets,
+        links: this.vault.links,
+        design,
+      },
       this.clock,
     );
   }

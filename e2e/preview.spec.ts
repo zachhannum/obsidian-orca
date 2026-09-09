@@ -20,6 +20,10 @@ const LAST = "Acknowledgements";
 /** The page the fixture's last section opens on. */
 const BACK = 13;
 
+/** The note that section is read from, and the image it embeds. */
+const LAST_NOTE = "Acknowledgements.md";
+const DEVICE = "![[device.png]]";
+
 test("the ribbon sets the book and paints its first page", async ({ book }) => {
   await book.open();
 
@@ -309,4 +313,103 @@ test("paging out of a chapter renames the control, in all three views", async ({
   await expect(book.chapterName).toHaveText(CHAPTER_NAME);
   await book.choose(FIRST);
   await expect(book.chapterName).toHaveText(FIRST);
+});
+
+test("an embed is painted from the bytes the engine set the page from", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+
+  await book.type(String(BACK));
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+
+  // The engine placed the image and decoded none of it; the pixels come
+  // from the url the registry made out of the bytes that crossed.
+  await expect(book.images).toHaveCount(1);
+  await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
+  await expect(book.warnings).toBeHidden();
+});
+
+test("an embed with no file behind it is a warning the author can see", async ({
+  book,
+  vault,
+}) => {
+  vault.touch(LAST_NOTE);
+  await book.open();
+  const painted = await book.painted();
+
+  const note = await vault.read(LAST_NOTE);
+  await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // The count is what the run puts on screen. It opens over the page
+  // rather than moving it, so nothing opens it but the author.
+  await expect(book.warnings).toHaveText("1 warning");
+  await expect(book.issues).toHaveCount(1);
+  await expect(book.issues.first()).toBeHidden();
+
+  // Opened, each one is the engine's own line and the place it named.
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeVisible();
+  await expect(book.issues.first()).toContainText(
+    "image nothing here.png: no image was supplied for it; it is skipped",
+  );
+  await expect(book.issues.first()).toContainText("Acknowledgements.md:6:1");
+
+  // The panel hangs under the count rather than off the end of the bar.
+  const count = await book.warnings.boundingBox();
+  const panel = await book.issues.first().boundingBox();
+  expect(count && panel).toBeTruthy();
+  expect(panel?.x).toBeLessThan(count?.x ?? 0);
+  expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeLessThanOrEqual(
+    (count?.x ?? 0) + (count?.width ?? 0) + 12,
+  );
+
+  // A click in the pane outside the panel shuts it, and so does Escape.
+  // The panel covers the top of the page in a pane this narrow, so the
+  // click goes under it rather than at a corner it may be sitting on.
+  const sheets = await book.surface.boundingBox();
+  expect(sheets).toBeTruthy();
+  const below = (panel?.y ?? 0) + (panel?.height ?? 0) - (sheets?.y ?? 0) + 12;
+  await book.surface.click({ position: { x: 8, y: below } });
+  await expect(book.issues.first()).toBeHidden();
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeVisible();
+  await book.key("Escape");
+  await expect(book.issues.first()).toBeHidden();
+
+  // The count is still there to open them again.
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeVisible();
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeHidden();
+
+  // The page is set without the image rather than left broken.
+  await book.type(String(BACK));
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+  await expect(book.page).toContainText(LAST);
+  await expect(book.images).toHaveCount(0);
+});
+
+test("an embed added while drafting crosses without the book being opened again", async ({
+  book,
+  vault,
+}) => {
+  vault.touch(LAST_NOTE);
+  await book.open();
+  const painted = await book.painted();
+  await book.type(String(BACK));
+  await expect(book.images).toHaveCount(1);
+
+  // The same file the note already embeds, under a url the engine has
+  // no bytes for yet.
+  const note = await vault.read(LAST_NOTE);
+  await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[images/device.png]]"));
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+  await expect(book.images).toHaveCount(1);
+  await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
+  await expect(book.warnings).toBeHidden();
 });

@@ -1,4 +1,4 @@
-import { paintPage } from "fleuron";
+import { paintPage, type Warning } from "fleuron";
 import {
   ItemView,
   setIcon,
@@ -20,6 +20,7 @@ import { nodesOn, type Nodes } from "@/book/place";
 import { isGenerated } from "@/book/plan";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
+import { THEME_SHEET } from "@/style/theme";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import {
   fits,
@@ -40,6 +41,9 @@ export const PREVIEW_VIEW = "orca-book-preview";
 
 /** The note a page nobody wrote leads the manuscript to. */
 const NOWHERE = "-";
+
+/** The narrowest the warnings are worth hanging under the count, in pixels. */
+const NARROW = 240;
 
 /** The place in the manuscript a page opens at. */
 export interface Opens {
@@ -107,6 +111,8 @@ export class PreviewView extends ItemView {
   private well: HTMLElement | undefined;
   private surface: HTMLElement | undefined;
   private message: HTMLElement | undefined;
+  private warnings: HTMLButtonElement | undefined;
+  private issues: HTMLElement | undefined;
   private folio: HTMLInputElement | undefined;
   private total: HTMLElement | undefined;
   private chapter: HTMLSelectElement | undefined;
@@ -166,6 +172,12 @@ export class PreviewView extends ItemView {
   private openedAt: number | undefined;
   /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
+  /**
+   * Whether the author has the warnings open. The count on the bar is
+   * what a run that warns puts on screen; the panel opens over the
+   * page being read, so nothing opens it but the author.
+   */
+  private opened = false;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -284,6 +296,9 @@ export class PreviewView extends ItemView {
     this.well = undefined;
     this.surface = undefined;
     this.message = undefined;
+    this.warnings = undefined;
+    this.issues = undefined;
+    this.opened = false;
     this.folio = undefined;
     this.total = undefined;
     this.chapter = undefined;
@@ -432,6 +447,22 @@ export class PreviewView extends ItemView {
     views.setAttribute("aria-label", "View");
     for (const view of VIEWS) this.switchesTo(views, view);
     bar.createDiv({ cls: "orca-preview-spacer" });
+
+    const warnings = bar.createEl("button", { cls: "orca-preview-warnings" });
+    warnings.dataset["testid"] = "orca-warnings";
+    warnings.toggleVisibility(false);
+    this.warnings = warnings;
+    this.registerDomEvent(warnings, "click", () => {
+      this.opened = !this.opened;
+      this.showsIssues();
+    });
+
+    const issues = bar.createDiv({ cls: "orca-preview-issues" });
+    issues.dataset["testid"] = "orca-issues";
+    issues.toggleVisibility(false);
+    this.issues = issues;
+
+    this.shuts(pane, warnings, issues);
 
     const chapter = bar.createEl("select", {
       cls: "dropdown orca-preview-chapter",
@@ -656,6 +687,7 @@ export class PreviewView extends ItemView {
    * changed, since the span it asks for is the span it shows.
    */
   private measure(): void {
+    this.showsIssues();
     const surface = this.surface;
     if (surface === undefined) return;
     const grid = fits(
@@ -703,8 +735,14 @@ export class PreviewView extends ItemView {
   private paint(session: Session, reading: Reading, led: boolean): void {
     const surface = this.surface;
     if (surface === undefined) return;
+    const drawn = this.composed?.assets;
     const leaves: Leaf[] = reading.pages.map((page) => ({
-      markup: paintPage(page, { fonts: reading.fonts, assets: reading.assets }),
+      markup: paintPage(page, {
+        fonts: reading.fonts,
+        assets: reading.assets,
+        // The bytes that crossed, decoded here rather than in layout.
+        asset: (image) => drawn?.imageUrl(image.url),
+      }),
       page: page.number,
       side: page.side,
     }));
@@ -724,6 +762,7 @@ export class PreviewView extends ItemView {
       rows: this.mode === "grid" ? this.rows : 1,
     });
     this.settle(reading.at, reading.length, leaves.length);
+    this.warns(session);
     void this.namesSpan(reading);
     // A repaint of the span already being read is not a page turn, and
     // neither is one the manuscript asked for.
@@ -732,6 +771,121 @@ export class PreviewView extends ItemView {
     if (led || !this.linked) return;
     surface.dataset["led"] = "";
     void this.leads();
+  }
+
+  /**
+   * Draws what the last run had to complain about: a count on the bar,
+   * and the warnings themselves under it. A warning is routed, never
+   * re-worded, so each card carries the engine's own line and the
+   * place it named.
+   *
+   * A warning against matter orca generated, or against the sheet orca
+   * generated, is orca's own defect. The author has nothing to do
+   * about either, so those go to the console.
+   */
+  private warns(session: Session): void {
+    const chip = this.warnings;
+    const issues = this.issues;
+    if (chip === undefined || issues === undefined) return;
+    const said: Warning[] = [];
+    for (const warning of session.warnings) {
+      if (ours(warning)) console.warn(`Orca: ${warning.message}`, warning.origin);
+      else said.push(warning);
+    }
+
+    chip.toggleVisibility(said.length > 0);
+    issues.empty();
+    if (said.length === 0) {
+      this.opened = false;
+      this.showsIssues();
+      return;
+    }
+
+    const count = said.length === 1 ? "1 warning" : `${String(said.length)} warnings`;
+    chip.empty();
+    chip.createSpan({ text: count });
+    setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
+    chip.setAttribute("aria-label", count);
+    for (const warning of said) {
+      const card = issues.createDiv({ cls: "orca-preview-issue" });
+      card.createDiv({ cls: "orca-preview-issue-said", text: warning.message });
+      if (warning.origin !== null) {
+        card.createDiv({ cls: "orca-preview-issue-at", text: warning.origin });
+      }
+    }
+    this.showsIssues();
+  }
+
+  /**
+   * Shuts the warnings on Escape, and on a click in the pane that is
+   * neither the panel nor the count that opens it.
+   *
+   * The pane's own element rather than the window's: an author who
+   * goes to the manuscript to fix the note a warning names comes back
+   * to the panel as they left it.
+   */
+  private shuts(
+    pane: HTMLElement,
+    count: HTMLElement,
+    issues: HTMLElement,
+  ): void {
+    const shut = (): void => {
+      this.opened = false;
+      this.showsIssues();
+    };
+    this.registerDomEvent(pane, "pointerdown", (event) => {
+      const at = event.target;
+      const inside =
+        at instanceof Node && (issues.contains(at) || count.contains(at));
+      // The count's own click toggles it; a pointer down on it here
+      // would shut the panel before that ran.
+      if (this.opened && !inside) shut();
+    });
+    this.registerDomEvent(pane, "keydown", (event) => {
+      if (!this.opened || event.key !== "Escape") return;
+      event.preventDefault();
+      // Focus goes back to the control the panel opened from, and only
+      // from inside the panel: a reader paging with the keyboard keeps
+      // the well.
+      const held = issues.contains(pane.ownerDocument.activeElement);
+      shut();
+      if (held) count.focus();
+    });
+  }
+
+  /** Opens or shuts the warnings, and says which on the bar. */
+  private showsIssues(): void {
+    const issues = this.issues;
+    if (issues === undefined) return;
+    const open = this.opened && issues.childElementCount > 0;
+    if (open) this.placesIssues();
+    issues.toggleVisibility(open);
+    this.warnings?.setAttribute("aria-expanded", String(open));
+    this.warnings?.toggleClass("is-on", open);
+  }
+
+  /**
+   * Hangs the panel under the count it opens from, and bounds it to
+   * the room left of there. The count sits where the bar's own widths
+   * put it, so where that is has to be measured rather than written
+   * into the sheet. A pane too narrow to hang it there spans the bar
+   * instead.
+   */
+  private placesIssues(): void {
+    const issues = this.issues;
+    const chip = this.warnings;
+    if (issues === undefined || chip === undefined) return;
+    const bar = chip.parentElement;
+    if (bar === null) return;
+    const edge = bar.getBoundingClientRect();
+    const count = chip.getBoundingClientRect();
+    const gutter = Number.parseFloat(getComputedStyle(bar).paddingLeft) || 0;
+    const room = count.right - edge.left - gutter;
+    const under = room >= NARROW;
+    issues.style.right = `${String(under ? edge.right - count.right : gutter)}px`;
+    issues.style.maxWidth = `${String(
+      under ? room : Math.max(edge.width - gutter * 2, 0),
+    )}px`;
   }
 
   /**
@@ -927,6 +1081,18 @@ export class PreviewView extends ItemView {
     if (message !== undefined) this.well?.prepend(message);
     this.message = message;
   }
+}
+
+/**
+ * A warning orca raised against its own work rather than the author's.
+ * The generated matter and the generated sheet are both orca's, and an
+ * author has nothing to do about either.
+ */
+function ours(warning: Warning): boolean {
+  const origin = warning.origin;
+  return (
+    origin !== null && (isGenerated(origin) || origin.startsWith(THEME_SHEET))
+  );
 }
 
 /** The state a leaf was opened with, as much of it as a preview reads. */
