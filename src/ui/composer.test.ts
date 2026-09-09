@@ -417,8 +417,17 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   assert.equal(book.dropped, true);
   assert.equal(told, 1, "the views on a dead book are told to set it again");
 
-  const again = await composer.open(BOOK);
+  const said: Progress[] = [];
+  const again = await composer.open(BOOK, {
+    told: (at) => said.push(at),
+  });
   assert.equal(clients.started.length, 2, "the book went onto a second engine");
+  // The pane says what it is doing, and says it is doing it again.
+  assert.deepEqual(
+    said.map((at) => at.again),
+    said.map(() => true),
+  );
+  assert.ok(said.length > 0);
   const opened = clients.started[1]?.rendered[0] ?? [];
   const sources = opened.find((op) => op.op === "book");
   assert.ok(sources?.op === "book");
