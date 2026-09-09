@@ -196,7 +196,10 @@ async function setting(client: EngineClient): Promise<Composing> {
     files: vault,
     name: (at) => path.basename(at, ".md"),
     links: pathLinks(found),
-    client: Promise.resolve(client),
+    engines: {
+      client: () => Promise.resolve(client),
+      hold: () => () => undefined,
+    },
     faces: faces(),
   };
 }

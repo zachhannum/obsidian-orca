@@ -28,7 +28,8 @@ import {
   type Loaded,
 } from "@/book/plan";
 import { Loop, timers, type Clock } from "@/engine/loop";
-import { Session, type EngineClient, type FaceSet } from "@/engine/session";
+import type { Engines } from "@/engine/pool";
+import { Session, type FaceSet } from "@/engine/session";
 import { designSheets, type Design } from "@/style/design";
 import { bookName } from "@/ui/shelf";
 
@@ -58,6 +59,7 @@ export class Typeset {
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private design: Design;
+  private gone = false;
 
   constructor(
     book: {
@@ -176,10 +178,24 @@ export class Typeset {
     };
   }
 
+  /**
+   * Whether the engine of this book stopped. A view that reads the book
+   * then sets it again rather than reads a session that is gone.
+   */
+  get dropped(): boolean {
+    return this.gone;
+  }
+
   /** Drops the wait, for a book orca is no longer keeping up to date. */
   stop(): void {
     this.loop.stop();
     this.assets.close();
+  }
+
+  /** Drops the book after its engine stops. */
+  drop(): void {
+    this.gone = true;
+    this.stop();
   }
 
   /**
@@ -221,7 +237,8 @@ export interface Composing {
   /** The vault's own files, which the asset registry reads and hashes. */
   files: VaultAdapter;
   links: Links;
-  client: Promise<EngineClient>;
+  /** The engines orca runs, one per book. */
+  engines: Engines;
   faces: FaceSet;
 }
 
@@ -260,6 +277,14 @@ export class Composer {
   }
 
   /**
+   * Holds this book while a view on it is open. The engine of the book
+   * outlives the view, and stops one grace after the last hold drops.
+   */
+  hold(path: string): () => void {
+    return this.vault.engines.hold(path);
+  }
+
+  /**
    * The book already open at this path. Nothing is typeset here, so a
    * surface that only reports on a book does not cause one to be set.
    */
@@ -269,14 +294,26 @@ export class Composer {
 
   /** Drops a book, so the next open typesets it from the notes as they are now. */
   forget(path: string): void {
+    this.release(path, (book) => {
+      book.stop();
+    });
+  }
+
+  /**
+   * Drops a book after its engine stops. The next open sets the book on
+   * a new engine, and the view sets the book again rather than goes on
+   * with the pages it holds.
+   */
+  discard(path: string): void {
+    this.release(path, (book) => {
+      book.drop();
+    });
+  }
+
+  private release(path: string, dropped: (book: Typeset) => void): void {
     const existing = this.books.get(path);
     this.books.delete(path);
-    void existing?.then(
-      (book) => {
-        book.stop();
-      },
-      () => undefined,
-    );
+    void existing?.then(dropped, () => undefined);
   }
 
   /**
@@ -334,7 +371,7 @@ export class Composer {
     // crossed, so the preview decodes what the layout was set from.
     for (const image of images) assets.image(image.url, image);
 
-    const client = await this.vault.client;
+    const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
     const design: Design = {};
     const sheets = designSheets(design);

@@ -221,8 +221,8 @@ Applies to code comments and all documentation — internal (CLAUDE.md,
 - Keep them short.
 - Only write documentation when the WHY is non-obvious.
 - Write docs as statements of how things are.
-- Run the `humanizer` skill over prose before it lands: comments, doc
-  comments, `design/`, README, PR and issue bodies.
+- Run the `simple-english` skill over prose before it lands: comments,
+  doc comments, `design/`, README, PR and issue bodies.
 
 **DO NOT**
 
