@@ -14,14 +14,11 @@ import {
 } from "obsidian";
 import type { FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
-import { startEngine, type EngineHandle } from "@/engine/bootstrap";
+import { startEngine } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule } from "@/engine/module";
-import {
-  documentFaces,
-  serialized,
-  type EngineClient,
-} from "@/engine/session";
+import { Pool, type Engine } from "@/engine/pool";
+import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
@@ -36,6 +33,7 @@ import {
   readFontIndex,
   type FontPlaces,
 } from "@/ui/fonts";
+import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
@@ -45,6 +43,7 @@ import {
   PreviewView,
   type PreviewState,
 } from "@/ui/preview";
+import { OrcaSettingTab, type Limited } from "@/ui/settings";
 import { Composer, type Composing, type Typeset } from "@/ui/composer";
 import type { Opened } from "@/ui/shelf";
 
@@ -69,11 +68,16 @@ interface Place {
 }
 
 /**
- * The plugin entry point. It owns the engine, and every view borrows
- * the same session.
+ * The plugin entry point. It owns the engines, one per book, and every
+ * view of a book borrows the same session.
  */
-export default class OrcaPlugin extends Plugin {
-  private engine: EngineHandle | undefined;
+export default class OrcaPlugin extends Plugin implements Limited {
+  /** The settings orca saves beside the plugin. */
+  limits: Limits = { ...LIMITS };
+  /** The engines orca is running, one per book. */
+  private engines: Pool | undefined;
+  /** The engine module, read once for every worker started from it. */
+  private bytes: Promise<ArrayBuffer> | undefined;
   /** Every edit to a book, routed to the note's one writer. */
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
   /** Sets a book on the engine. Every preview reads the pages it typesets. */
@@ -99,11 +103,23 @@ export default class OrcaPlugin extends Plugin {
   >();
 
   override async onload(): Promise<void> {
-    // The engine is started before anything is registered, so the views
-    // Obsidian restores at startup all wait on the one module.
-    const opening = this.open();
-    const composer = new Composer(this.composing(opening));
+    this.limits = readLimits(await this.loadData());
+    // The module is read before anything is registered, so the views
+    // Obsidian restores at startup all wait on the one read.
+    const warmed = this.warmed();
+    const engines = new Pool({
+      start: () => this.startWorker(),
+      // The book on a stopped engine is dropped, so the pane reading it
+      // sets it again rather than reading a session that is gone.
+      gone: (book) => {
+        this.composer?.forget(book);
+      },
+      ceiling: this.limits.books,
+    });
+    this.engines = engines;
+    const composer = new Composer(this.composing(engines));
     this.composer = composer;
+    this.addSettingTab(new OrcaSettingTab(this.app, this));
 
     this.registerView(
       PREVIEW_VIEW,
@@ -127,7 +143,7 @@ export default class OrcaPlugin extends Plugin {
     this.registerView(
       BOOK_VIEW,
       (leaf) =>
-        new BookView(leaf, this.edits, opening, {
+        new BookView(leaf, this.edits, engines, {
           asMarkdown: (view) => {
             if (view.file !== null) {
               this.asMarkdown.set(view.leaf, view.file.path);
@@ -275,7 +291,7 @@ export default class OrcaPlugin extends Plugin {
       }),
     );
 
-    await opening;
+    await warmed;
   }
 
   /**
@@ -321,8 +337,8 @@ export default class OrcaPlugin extends Plugin {
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       if (leaf.view instanceof MarkdownView) this.release(leaf.view);
     }
-    this.engine?.stop();
-    this.engine = undefined;
+    this.engines?.close();
+    this.engines = undefined;
   }
 
   /**
@@ -873,31 +889,66 @@ export default class OrcaPlugin extends Plugin {
     view.currentMode.applyScroll(pos.line);
   }
 
-  private async open(): Promise<EngineClient> {
+  /**
+   * Starts one worker with the engine module in it. The module is
+   * copied for each one, because the bytes are transferred into the
+   * worker that starts from them.
+   */
+  private async startWorker(): Promise<Engine> {
     try {
-      const handle = await startEngine(
-        await readModule(this.files(), this.directory()),
-      );
-      // Obsidian does not await `onload`, so an unload can land while
-      // the module is still being read.
-      if (this.unloaded) handle.stop();
-      else this.engine = handle;
-      // Every view that renders shares this client, so its renders are
-      // serialized: the engine holds one document, and two in flight at
-      // once would race it.
-      return serialized(handle.client);
+      const module = await this.module();
+      const handle = await startEngine(module.slice(0));
+      // Every view of one book shares its client, so the book's renders
+      // are serialized: the engine holds one document, and two in
+      // flight at once would race it.
+      return { client: serialized(handle.client), stop: handle.stop };
     } catch (cause) {
-      new Notice(
-        cause instanceof EngineError
-          ? `Orca: ${cause.message}`
-          : "Orca: the engine did not start",
-      );
+      this.notice(cause);
       throw cause;
     }
   }
 
-  /** The vault and the engine, as the composer reaches them. */
-  private composing(client: Promise<EngineClient>): Composing {
+  /**
+   * Reads the engine module at load, so a plugin installed without it
+   * says so before a book is opened.
+   */
+  private async warmed(): Promise<void> {
+    try {
+      await this.module();
+    } catch (cause) {
+      this.notice(cause);
+    }
+  }
+
+  /** The engine module, read once and kept for the workers to come. */
+  private module(): Promise<ArrayBuffer> {
+    this.bytes ??= readModule(this.files(), this.directory()).catch(
+      (cause: unknown) => {
+        this.bytes = undefined;
+        throw cause;
+      },
+    );
+    return this.bytes;
+  }
+
+  /** The engine's own message, as something the author sees. */
+  private notice(cause: unknown): void {
+    new Notice(
+      cause instanceof EngineError
+        ? `Orca: ${cause.message}`
+        : "Orca: the engine did not start",
+    );
+  }
+
+  /** Saves the limits and applies them to the engines already running. */
+  limit(limits: Limits): void {
+    this.limits = limits;
+    if (this.engines !== undefined) this.engines.ceiling = limits.books;
+    void this.saveData(limits);
+  }
+
+  /** The vault and the engines, as the composer reaches them. */
+  private composing(engines: Pool): Composing {
     return {
       model: (path) => this.edits.model(path),
       read: (path) => {
@@ -909,7 +960,7 @@ export default class OrcaPlugin extends Plugin {
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
       files: this.files(),
       links: cacheLinks(this.app),
-      client,
+      engines,
       faces: documentFaces(document),
     };
   }

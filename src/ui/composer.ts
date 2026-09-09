@@ -28,7 +28,8 @@ import {
   type Loaded,
 } from "@/book/plan";
 import { Loop, timers, type Clock } from "@/engine/loop";
-import { Session, type EngineClient, type FaceSet } from "@/engine/session";
+import type { Engines } from "@/engine/pool";
+import { Session, type FaceSet } from "@/engine/session";
 import { designSheets, type Design } from "@/style/design";
 import { bookName } from "@/ui/shelf";
 
@@ -58,6 +59,7 @@ export class Typeset {
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private design: Design;
+  private stopped = false;
 
   constructor(
     book: {
@@ -176,8 +178,18 @@ export class Typeset {
     };
   }
 
+  /**
+   * Whether the book was dropped, and the view reading it has to set it
+   * again. A book is dropped when its notes have changed under it, and
+   * when its engine has stopped to make room for another book.
+   */
+  get dropped(): boolean {
+    return this.stopped;
+  }
+
   /** Drops the wait, for a book orca is no longer keeping up to date. */
   stop(): void {
+    this.stopped = true;
     this.loop.stop();
     this.assets.close();
   }
@@ -221,7 +233,8 @@ export interface Composing {
   /** The vault's own files, which the asset registry reads and hashes. */
   files: VaultAdapter;
   links: Links;
-  client: Promise<EngineClient>;
+  /** The engines orca is running, one per book. */
+  engines: Engines;
   faces: FaceSet;
 }
 
@@ -257,6 +270,15 @@ export class Composer {
       if (this.books.get(path) === composing) this.books.delete(path);
     });
     return composing;
+  }
+
+  /**
+   * A view on this book, held while the view is open. The book's engine
+   * outlives the view, and is stopped a grace after the last hold on it
+   * is dropped.
+   */
+  hold(path: string): () => void {
+    return this.vault.engines.hold(path);
   }
 
   /**
@@ -334,7 +356,7 @@ export class Composer {
     // crossed, so the preview decodes what the layout was set from.
     for (const image of images) assets.image(image.url, image);
 
-    const client = await this.vault.client;
+    const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
     const design: Design = {};
     const sheets = designSheets(design);

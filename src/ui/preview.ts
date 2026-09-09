@@ -172,6 +172,8 @@ export class PreviewView extends ItemView {
   private openedAt: number | undefined;
   /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
+  /** Drops this pane's hold on its book, so the book's engine can stop. */
+  private holding: (() => void) | undefined;
   /**
    * Whether the author has the warnings open. The count on the bar is
    * what a run that warns puts on screen; the panel opens over the
@@ -311,7 +313,11 @@ export class PreviewView extends ItemView {
     this.edit = undefined;
     this.switches.clear();
     // The session belongs to the book, not to this leaf, so closing the
-    // leaf costs the next one no second layout.
+    // leaf costs the next one no second layout. The book is let go of
+    // here, and its engine stops a grace later if no other pane holds
+    // it.
+    this.holding?.();
+    this.holding = undefined;
     this.session = undefined;
     this.composed = undefined;
     this.contentEl.empty();
@@ -552,10 +558,17 @@ export class PreviewView extends ItemView {
     this.named = undefined;
     this.ledAt = undefined;
     this.showing = this.state.note;
+    // The pane lets go of the book it was reading. That book's engine
+    // stops a grace later, unless another pane holds it.
+    this.holding?.();
+    this.holding = undefined;
     if (book === undefined) {
       this.report("No book is open");
       return;
     }
+    // The book is held before it is set, so its engine is held from the
+    // moment it starts rather than from the render that lands.
+    this.holding = this.composer.hold(book);
     const opening = (this.opening += 1);
     try {
       const typeset = await this.composer.open(book, {
@@ -717,6 +730,14 @@ export class PreviewView extends ItemView {
    * is dropped rather than painted behind the one they are on.
    */
   private async turn(at: number, led = false): Promise<void> {
+    // The book was dropped: its engine stopped to make room for another
+    // book, or its notes changed under it. The pane sets it again, and
+    // the reader comes back to the page they asked for.
+    if (this.composed?.dropped === true) {
+      this.state = { ...this.state, folio: at + 1 };
+      await this.compose();
+      return;
+    }
     const session = this.session;
     if (session === undefined) return;
     const span = spanAt(this.mode, at, this.screenful);

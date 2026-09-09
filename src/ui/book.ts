@@ -13,7 +13,7 @@ import { resolve } from "@/book/order";
 import { sectionRanges, type Range } from "@/book/pages";
 import { sendBook } from "@/book/plan";
 import { countWords } from "@/book/words";
-import type { EngineClient } from "@/engine/session";
+import type { Engines } from "@/engine/pool";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
@@ -63,11 +63,13 @@ export class BookView extends FileView {
   private folios = new Map<number, Range>();
   /** Counts the runs sent, so a run a later one overtakes is dropped rather than painted. */
   private typesetting = 0;
+  /** Drops this page's hold on its book, so the book's engine can stop. */
+  private holding: (() => void) | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly edits: Edits,
-    private readonly client: Promise<EngineClient>,
+    private readonly engines: Engines,
     private readonly handoff: Handoff,
   ) {
     super(leaf);
@@ -166,6 +168,8 @@ export class BookView extends FileView {
   }
 
   override async onLoadFile(file: TFile): Promise<void> {
+    this.holding?.();
+    this.holding = this.engines.hold(file.path);
     this.hold(file, await this.app.vault.cachedRead(file));
   }
 
@@ -173,6 +177,8 @@ export class BookView extends FileView {
     // The leaf is closing or opening another note, so the model is
     // written first.
     await this.settle();
+    this.holding?.();
+    this.holding = undefined;
     this.writer = undefined;
     this.shown = undefined;
     this.mounted?.paint({ kind: "none" });
@@ -180,6 +186,8 @@ export class BookView extends FileView {
 
   override async onClose(): Promise<void> {
     await this.settle();
+    this.holding?.();
+    this.holding = undefined;
     this.writer = undefined;
     this.mounted?.unmount();
     this.mounted = undefined;
@@ -337,7 +345,9 @@ export class BookView extends FileView {
     let folios = this.folios;
     try {
       const links = cacheLinks(this.app);
-      const client = await this.client;
+      // The engine is asked for on every run rather than kept: a book
+      // set on one that has since stopped is set again on a new one.
+      const client = await this.engines.client(file.path);
       const { ops } = await sendBook(
         shown.model.book,
         shown.model.order,
