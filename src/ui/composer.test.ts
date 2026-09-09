@@ -7,7 +7,9 @@ import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
+import type { Face } from "@/book/plan";
 import type { Clock } from "@/engine/loop";
+import type { Engines } from "@/engine/pool";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
 import {
   Composer,
@@ -117,6 +119,20 @@ class FakeClient implements EngineClient {
   }
 }
 
+/** A pool that starts a client of its own each time a book is set. */
+class Clients {
+  readonly started: FakeClient[] = [];
+
+  readonly engines: Engines = {
+    client: () => {
+      const client = new FakeClient();
+      this.started.push(client);
+      return Promise.resolve(client);
+    },
+    hold: () => () => undefined,
+  };
+}
+
 /** A client that holds its replies from the moment the test says so. */
 class PausedClient extends FakeClient {
   private waiting: (() => void)[] | undefined;
@@ -195,6 +211,7 @@ async function setting(client: EngineClient): Promise<Composing> {
     read: (at) => readText(vault, at),
     files: vault,
     name: (at) => path.basename(at, ".md"),
+    cuts: () => Promise.resolve([]),
     links: pathLinks(found),
     engines: {
       client: () => Promise.resolve(client),
@@ -372,6 +389,51 @@ async function crossed(book: Typeset, clock: Steps): Promise<void> {
   clock.tick();
   await drain();
 }
+
+test("a book whose engine died is set again from what crossed, cuts and all", async () => {
+  const clock = new Steps();
+  const clients = new Clients();
+  const cut: Face = { key: "spectral-regular", bytes: new Uint8Array([1, 2, 3]) };
+  const composer = new Composer(
+    { ...(await setting(new FakeClient())), engines: clients.engines, cuts: () => Promise.resolve([cut]) },
+    clock,
+  );
+
+  const book = await composer.open(BOOK);
+  book.reface("Spectral", [cut]);
+  await crossed(book, clock);
+  // The keystroke is on this thread and nowhere else: the wait has not
+  // run, so the engine that dies never saw it.
+  composer.retype(BOOK, "Chapter Twelve.md", "# Chapter Twelve\n\nIt is a truth.\n");
+  await drain();
+
+  let told = 0;
+  book.watch(() => {
+    told += 1;
+  });
+  composer.died(BOOK);
+  await drain();
+
+  assert.equal(book.dropped, true);
+  assert.equal(told, 1, "the views on a dead book are told to set it again");
+
+  const again = await composer.open(BOOK);
+  assert.equal(clients.started.length, 2, "the book went onto a second engine");
+  const opened = clients.started[1]?.rendered[0] ?? [];
+  const sources = opened.find((op) => op.op === "book");
+  assert.ok(sources?.op === "book");
+  const chapter = sources.sources.find((source) => source.name === "Chapter Twelve.md");
+  assert.match(chapter?.text ?? "", /It is a truth\./);
+  // The face is registered for one session, and that session is gone,
+  // so the cuts cross again ahead of the sheets that name them.
+  assert.deepEqual(
+    opened.filter((op) => op.op === "font").map((op) => [...op.bytes]),
+    [[1, 2, 3]],
+  );
+  assert.equal(again.face, "Spectral");
+  const styled = opened.at(-1);
+  assert.equal(styled?.op, "style");
+});
 
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real

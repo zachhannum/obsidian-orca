@@ -23,6 +23,7 @@ import {
   bookImages,
   sendBook,
   sendEdit,
+  sendFaces,
   type Edit,
   type Face,
   type Loaded,
@@ -32,6 +33,16 @@ import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
 import { designSheets, type Design } from "@/style/design";
 import { bookName } from "@/ui/shelf";
+
+/** The book, as much of it as crosses from the engine that died onto its next one. */
+export interface Replay {
+  /** The text each note last crossed as, which is newer than the note on disk. */
+  sent: Map<string, string>;
+  /** The design its sheets were generated from. */
+  design: Design;
+  /** The sheets it was styled with, in cascade order. */
+  sheets: readonly Sheet[];
+}
 
 /**
  * One book on the engine, and the loop that keeps it up with the notes.
@@ -186,6 +197,19 @@ export class Typeset {
     return this.gone;
   }
 
+  /**
+   * Everything this book needs to be set again on another engine. The
+   * words come from what crossed rather than from the vault, so a
+   * chapter typed but not yet saved is set as the author has it.
+   */
+  get replay(): Replay {
+    return {
+      sent: new Map(this.sent),
+      design: this.design,
+      sheets: this.loaded.sheets,
+    };
+  }
+
   /** Drops the wait, for a book orca is no longer keeping up to date. */
   stop(): void {
     this.loop.stop();
@@ -196,6 +220,16 @@ export class Typeset {
   drop(): void {
     this.gone = true;
     this.stop();
+  }
+
+  /**
+   * Drops the book after its engine died, and tells the views to set it
+   * again. A book orca stopped waits for a reader to turn a page; one
+   * that died is put back now, on the page the reader was on.
+   */
+  died(): void {
+    this.drop();
+    for (const painted of this.watchers) painted();
   }
 
   /**
@@ -218,6 +252,8 @@ export class Typeset {
 /** One report from a book being set. */
 export interface Progress {
   name: string;
+  /** Whether this is the book being set again, after its engine died. */
+  again: boolean;
   /** The sections orca has read on the way to the engine. */
   read: number;
   /** The sections the book has. */
@@ -234,6 +270,8 @@ export interface Composing {
   read(path: string): Promise<string>;
   /** A note's own name, which titles a book with no title of its own. */
   name(path: string): string;
+  /** Every cut of a family, for a book being set in the face it already had. */
+  cuts(family: string): Promise<readonly Face[]>;
   /** The vault's own files, which the asset registry reads and hashes. */
   files: VaultAdapter;
   links: Links;
@@ -252,6 +290,8 @@ export interface Opening {
 
 export class Composer {
   private readonly books = new Map<string, Promise<Typeset>>();
+  /** The replay each book that died left behind, by its path. */
+  private readonly again = new Map<string, Replay>();
 
   constructor(
     private readonly vault: Composing,
@@ -266,7 +306,9 @@ export class Composer {
   open(path: string, opening: Opening = {}): Promise<Typeset> {
     const existing = this.books.get(path);
     if (existing !== undefined) return existing;
-    const composing = this.compose(path, opening);
+    const carried = this.again.get(path);
+    this.again.delete(path);
+    const composing = this.compose(path, opening, carried);
     this.books.set(path, composing);
     // A run that fails is not kept, so the next open typesets the book
     // again rather than handing back the failure for the session's life.
@@ -310,6 +352,18 @@ export class Composer {
     });
   }
 
+  /**
+   * Drops a book whose engine died, and sets it again now. What the
+   * dead engine was sent crosses to the new one, so the replay is the
+   * book as the author has it rather than the book as the vault has it.
+   */
+  died(path: string): void {
+    this.release(path, (book) => {
+      this.again.set(path, book.replay);
+      book.died();
+    });
+  }
+
   private release(path: string, dropped: (book: Typeset) => void): void {
     const existing = this.books.get(path);
     this.books.delete(path);
@@ -329,7 +383,11 @@ export class Composer {
     );
   }
 
-  private async compose(path: string, opening: Opening): Promise<Typeset> {
+  private async compose(
+    path: string,
+    opening: Opening,
+    carried: Replay | undefined,
+  ): Promise<Typeset> {
     const model = await this.vault.model(path);
     if (model === undefined) {
       throw new BookError(`${path} is not a book orca reads`);
@@ -345,6 +403,7 @@ export class Composer {
     );
     const progress: Progress = {
       name,
+      again: carried !== undefined,
       read,
       of: present.length,
       opening: from === undefined ? undefined : entryName(from.entry),
@@ -359,7 +418,9 @@ export class Composer {
       this.vault.links,
       path,
       async (at) => {
-        const text = await this.vault.read(at);
+        // A note the dead engine was sent crosses as it was sent. The
+        // author may have typed since the vault last held it.
+        const text = carried?.sent.get(at) ?? (await this.vault.read(at));
         sent.set(at, text);
         read += 1;
         opening.told?.({ ...progress, read });
@@ -373,9 +434,13 @@ export class Composer {
 
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
-    const design: Design = {};
-    const sheets = designSheets(design);
-    await session.open([...ops, styleOp(sheets)]);
+    const design: Design = carried?.design ?? {};
+    const sheets = [...(carried?.sheets ?? designSheets(design))];
+    // The sheets name the family, and a new engine has none of its
+    // cuts, so the cuts cross ahead of the sheets that ask for them.
+    const cuts = await this.cutsOf(design.face);
+    for (const cut of cuts) assets.crossed(cut.key);
+    await session.open([...ops, ...sendFaces(cuts), styleOp(sheets)]);
     return new Typeset(
       {
         name,
@@ -389,5 +454,19 @@ export class Composer {
       },
       this.clock,
     );
+  }
+
+  /**
+   * Every cut of the family a book is set in. A family the machine no
+   * longer has crosses nothing: the engine sets the book in the face it
+   * carries and warns about the one it was asked for.
+   */
+  private async cutsOf(family: string | undefined): Promise<readonly Face[]> {
+    if (family === undefined) return [];
+    try {
+      return await this.vault.cuts(family);
+    } catch {
+      return [];
+    }
   }
 }
