@@ -103,9 +103,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
   >();
 
   override async onload(): Promise<void> {
-    this.limits = readLimits(await this.loadData());
-    // The module is read before anything is registered, so the views
-    // Obsidian restores at startup all wait on the one read.
+    // The settings and the module are read while the views register,
+    // because Obsidian restores a leaf as soon as `onload` returns.
+    const settings = this.saved();
     const warmed = this.warmed();
     const engines = new Pool({
       start: () => this.startWorker(),
@@ -291,7 +291,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       }),
     );
 
-    await warmed;
+    await Promise.all([settings, warmed]);
   }
 
   /**
@@ -906,6 +906,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
       this.notice(cause);
       throw cause;
     }
+  }
+
+  /** Reads the settings, and applies the ceiling in them. */
+  private async saved(): Promise<void> {
+    this.limits = readLimits(await this.loadData());
+    if (this.engines !== undefined) this.engines.ceiling = this.limits.books;
   }
 
   /**
