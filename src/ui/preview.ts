@@ -107,6 +107,7 @@ export class PreviewView extends ItemView {
   private well: HTMLElement | undefined;
   private surface: HTMLElement | undefined;
   private message: HTMLElement | undefined;
+  private warnings: HTMLElement | undefined;
   private folio: HTMLInputElement | undefined;
   private total: HTMLElement | undefined;
   private chapter: HTMLSelectElement | undefined;
@@ -284,6 +285,7 @@ export class PreviewView extends ItemView {
     this.well = undefined;
     this.surface = undefined;
     this.message = undefined;
+    this.warnings = undefined;
     this.folio = undefined;
     this.total = undefined;
     this.chapter = undefined;
@@ -432,6 +434,11 @@ export class PreviewView extends ItemView {
     views.setAttribute("aria-label", "View");
     for (const view of VIEWS) this.switchesTo(views, view);
     bar.createDiv({ cls: "orca-preview-spacer" });
+
+    const warnings = bar.createSpan({ cls: "orca-preview-warnings" });
+    warnings.dataset["testid"] = "orca-warnings";
+    warnings.toggleVisibility(false);
+    this.warnings = warnings;
 
     const chapter = bar.createEl("select", {
       cls: "dropdown orca-preview-chapter",
@@ -703,8 +710,14 @@ export class PreviewView extends ItemView {
   private paint(session: Session, reading: Reading, led: boolean): void {
     const surface = this.surface;
     if (surface === undefined) return;
+    const drawn = this.composed?.assets;
     const leaves: Leaf[] = reading.pages.map((page) => ({
-      markup: paintPage(page, { fonts: reading.fonts, assets: reading.assets }),
+      markup: paintPage(page, {
+        fonts: reading.fonts,
+        assets: reading.assets,
+        // The bytes that crossed, decoded here rather than in layout.
+        asset: (image) => drawn?.imageUrl(image.url),
+      }),
       page: page.number,
       side: page.side,
     }));
@@ -724,6 +737,7 @@ export class PreviewView extends ItemView {
       rows: this.mode === "grid" ? this.rows : 1,
     });
     this.settle(reading.at, reading.length, leaves.length);
+    this.warns(session);
     void this.namesSpan(reading);
     // A repaint of the span already being read is not a page turn, and
     // neither is one the manuscript asked for.
@@ -732,6 +746,27 @@ export class PreviewView extends ItemView {
     if (led || !this.linked) return;
     surface.dataset["led"] = "";
     void this.leads();
+  }
+
+  /**
+   * Names what the last run had to complain about: an embed the vault
+   * could not answer, a declaration the book cannot be set with. The
+   * engine's own wording is put on screen, never a rewrite of it.
+   */
+  private warns(session: Session): void {
+    const chip = this.warnings;
+    if (chip === undefined) return;
+    const said = session.warnings;
+    chip.toggleVisibility(said.length > 0);
+    if (said.length === 0) return;
+    chip.setText(said.length === 1 ? "1 warning" : `${String(said.length)} warnings`);
+    const lines = said.map((warning) =>
+      warning.origin === null
+        ? warning.message
+        : `${warning.origin} — ${warning.message}`,
+    );
+    chip.setAttribute("aria-label", lines.join("\n"));
+    chip.title = lines.join("\n");
   }
 
   /**

@@ -1,5 +1,12 @@
 import { styleOp } from "fleuron";
-import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
+import {
+  FileView,
+  Notice,
+  TFile,
+  normalizePath,
+  type WorkspaceLeaf,
+} from "obsidian";
+import { contentKey, type Hashed } from "@/assets/registry";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { resolve } from "@/book/order";
@@ -331,12 +338,13 @@ export class BookView extends FileView {
     try {
       const links = cacheLinks(this.app);
       const client = await this.client;
-      const ops = await sendBook(
+      const { ops } = await sendBook(
         shown.model.book,
         shown.model.order,
         links,
         file.path,
         (path) => this.readNote(path),
+        (path) => this.readFile(path),
       );
       const output = await client.preview([
         ...ops,
@@ -352,6 +360,18 @@ export class BookView extends FileView {
     if (generation !== this.typesetting) return;
     this.folios = folios;
     this.repaint();
+  }
+
+  /**
+   * Reads the file an embed names, for the same run. The page keeps no
+   * registry: it sends the book once an edit settles rather than on the
+   * keystroke, and nothing here paints an image.
+   */
+  private async readFile(path: string): Promise<Hashed> {
+    const bytes = new Uint8Array(
+      await this.app.vault.adapter.readBinary(normalizePath(path)),
+    );
+    return { key: await contentKey(bytes), bytes };
   }
 
   /** Reads a note a section names, for the run `relay` sends. */

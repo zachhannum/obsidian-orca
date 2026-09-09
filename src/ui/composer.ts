@@ -276,7 +276,8 @@ export class Composer {
     opening.told?.(progress);
 
     const sent = new Map<string, string>();
-    const ops = await sendBook(
+    const assets = new Registry(this.vault.files);
+    const { ops, images } = await sendBook(
       model.book,
       model.order,
       this.vault.links,
@@ -288,10 +289,13 @@ export class Composer {
         opening.told?.({ ...progress, read });
         return text;
       },
+      (at) => assets.take(at),
     );
+    // The url a page draws an embed from is made from the bytes that
+    // crossed, so the preview decodes what the layout was set from.
+    for (const image of images) assets.image(image.url, image);
 
     const client = await this.vault.client;
-    const assets = new Registry(this.vault.files);
     const session = new Session(client, this.vault.faces);
     const design: Design = {};
     const sheets = designSheets(design);

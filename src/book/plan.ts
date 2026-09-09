@@ -10,10 +10,14 @@
  * An edit's op is decided here, because orca is the only side that
  * knows what the edit invalidated. Which stages the engine re-runs
  * from it is the engine's own business.
+ *
+ * The engine opens no file, so an embed is resolved through the vault
+ * here and its bytes cross ahead of the sources that name it.
  */
 
 import { styleOp, type Op, type Sheet, type Source } from "fleuron";
 import type { Hashed, Sent } from "@/assets/registry";
+import { imagesIn } from "@/book/images";
 import type { Links } from "@/book/links";
 import { documentMetadata } from "@/book/metadata";
 import type { Book } from "@/book/note";
@@ -30,6 +34,27 @@ export interface Read {
   (path: string): Promise<string>;
 }
 
+/**
+ * Reads the file an embed resolved to and keys its bytes. `ui`
+ * implements this over the registry.
+ */
+export interface Take {
+  (path: string): Promise<Hashed>;
+}
+
+/** An image the book embeds, as the registry read and keyed it. */
+export interface Image extends Hashed {
+  /** The url the manuscript names it by, which the engine keys it on. */
+  url: string;
+}
+
+/** A book, as the ops that typeset it and the images those ops registered. */
+export interface Sending {
+  ops: Op[];
+  /** The images the ops put on the wire, for the registry to record. */
+  images: Image[];
+}
+
 /** The prefix a generated section's name carries, so it is never read as a note's path. */
 export const GENERATED_ORIGIN = "orca-generated";
 
@@ -41,20 +66,68 @@ export function isGenerated(name: string): boolean {
 /** A resolved section with something to send: a note or a generated one. */
 type Sendable = Exclude<Section, { kind: "missing" }>;
 
-/** The book's reading order, as the ops that typeset it. */
+/**
+ * The book's reading order, as the ops that typeset it, with every
+ * image its sources embed registered ahead of them.
+ */
 export async function sendBook(
   book: Book,
   order: Order,
   links: Links,
   from: string,
   read: Read,
-): Promise<Op[]> {
-  return [
-    { op: "dialect", dialect: "obsidian" },
-    { op: "split", level: 0 },
-    { op: "book", sources: await bookSources(book, order, links, from, read) },
-    { op: "metadata", metadata: documentMetadata(book) },
-  ];
+  take: Take,
+): Promise<Sending> {
+  const sources = await bookSources(book, order, links, from, read);
+  const images = await bookImages(sources, links, take);
+  return {
+    ops: [
+      { op: "dialect", dialect: "obsidian" },
+      { op: "split", level: 0 },
+      ...images.map((image): Op => ({
+        op: "image",
+        url: image.url,
+        bytes: image.bytes,
+      })),
+      { op: "book", sources },
+      { op: "metadata", metadata: documentMetadata(book) },
+    ],
+    images,
+  };
+}
+
+/**
+ * Every image the sources embed, resolved through the vault, each url
+ * once. An embed the vault cannot answer sends nothing and is left to
+ * the engine, which warns about the url it was given no bytes for.
+ *
+ * A note is not an image. An embed that resolves to one is a
+ * transclusion, which orca does not set.
+ */
+export async function bookImages(
+  sources: readonly Source[],
+  links: Links,
+  take: Take,
+): Promise<Image[]> {
+  const wanted = new Map<string, string>();
+  for (const source of sources) {
+    if (isGenerated(source.name)) continue;
+    for (const embed of imagesIn(source.text)) {
+      if (wanted.has(embed.url)) continue;
+      const path = links.find(embed.link, source.name);
+      if (path === undefined || path.endsWith(".md")) continue;
+      wanted.set(embed.url, path);
+    }
+  }
+  const read = await Promise.all(
+    [...wanted].map(async ([url, path]) => {
+      // A file that will not read is an embed the engine warns about,
+      // the same as one the vault never had.
+      const bytes = await take(path).catch(() => undefined);
+      return bytes === undefined ? undefined : { url, ...bytes };
+    }),
+  );
+  return read.filter((image) => image !== undefined);
 }
 
 /**

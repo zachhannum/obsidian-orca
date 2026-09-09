@@ -28,6 +28,7 @@ import {
   type Edit,
   type Face,
   type Loaded,
+  type Sending,
 } from "@/book/plan";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
@@ -46,9 +47,20 @@ async function paths(): Promise<string[]> {
 }
 
 /** The book's ops, resolved against the fixture vault. */
-async function planned({ book, order }: Model): Promise<Op[]> {
-  return sendBook(book, order, pathLinks(await paths()), BOOK, (at) =>
-    readText(vault, at),
+async function planned(model: Model): Promise<Op[]> {
+  return (await sending(model)).ops;
+}
+
+/** The same, with the images the ops registered. */
+async function sending({ book, order }: Model): Promise<Sending> {
+  const registry = new Registry(vault);
+  return sendBook(
+    book,
+    order,
+    pathLinks(await paths()),
+    BOOK,
+    (at) => readText(vault, at),
+    (at) => registry.take(at),
   );
 }
 
@@ -101,8 +113,13 @@ test("a generated section is synthetic markdown, under a name no note can have",
 test("a title page with no metadata falls back to its role's own name", async () => {
   const book: Book = { format: FORMAT, metadata: {}, own: {} };
   const order = readOrder("- `title-page`\n");
-  const ops = await sendBook(book, order, pathLinks([]), "Test.md", () =>
-    Promise.reject(new Error("a generated section reads no note")),
+  const { ops } = await sendBook(
+    book,
+    order,
+    pathLinks([]),
+    "Test.md",
+    () => Promise.reject(new Error("a generated section reads no note")),
+    () => Promise.reject(new Error("a generated section embeds nothing")),
   );
 
   assert.equal(only(ops, "book").sources[0]?.text, "# Title page");
