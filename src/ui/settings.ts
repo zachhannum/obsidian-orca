@@ -24,8 +24,8 @@ export class OrcaSettingTab extends PluginSettingTab {
       .setName("Books kept on the engine")
       .setDesc(
         "A book stays typeset after its last pane closes, so opening it " +
-          "again costs no second layout. Each one is a worker holding the " +
-          "whole book.",
+          "again does not lay it out a second time. Each book kept this " +
+          "way runs a worker that holds the whole book.",
       )
       .addSlider((slider) =>
         slider

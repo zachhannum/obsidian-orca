@@ -13,8 +13,8 @@ test("the ceiling is a setting, saved and read back in whole books", () => {
   assert.deepEqual(readLimits({ books: 4 }), { books: 4 });
   assert.deepEqual(readLimits({ books: 4.5 }), { books: 4 });
 
-  // The person with 64 GB and four books open sets it higher; nobody
-  // sets it to no books at all.
+  // A reader with the memory for it raises the ceiling; nobody sets it
+  // to no books at all.
   assert.equal(bookCount(MOST_BOOKS + 1), MOST_BOOKS);
   assert.equal(bookCount(0), 1);
   assert.equal(bookCount(Number.NaN), CEILING);

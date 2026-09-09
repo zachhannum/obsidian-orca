@@ -277,9 +277,9 @@ export class Composer {
   }
 
   /**
-   * A view on this book, held while the view is open. The book's engine
-   * outlives the view, and is stopped a grace after the last hold on it
-   * is dropped.
+   * Holds this book while a view on it is open. The book's engine
+   * outlives the view, and stops a grace after the last hold on it is
+   * dropped.
    */
   hold(path: string): () => void {
     return this.vault.engines.hold(path);

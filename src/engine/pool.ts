@@ -2,7 +2,7 @@
  * The engines orca is running, one per book.
  *
  * A worker holds the whole of a book's layout, so the number running at
- * once is capped rather than left to the workspace. Opening a book past
+ * once is capped. Opening a book past
  * the ceiling stops the engine that went longest without a render, and
  * the book on it is set again the next time it is opened.
  */
@@ -14,7 +14,10 @@ import type { EngineClient } from "@/engine/session";
 /** Books on the engine at once, before opening one stops another. */
 export const CEILING = 2;
 
-/** Time a book with no view on it keeps its engine, in milliseconds. */
+/**
+ * Time an engine keeps running after the last view on its book closes,
+ * in milliseconds.
+ */
 export const GRACE = 60_000;
 
 /** One worker, and the client on it. */
@@ -28,7 +31,7 @@ export interface Engine {
 export interface Engines {
   /** The engine a book is set on, started if it is not running. */
   client(book: string): Promise<EngineClient>;
-  /** A view on a book, held while the view is open. */
+  /** Holds a book while a view on it is open. What it returns drops the hold. */
   hold(book: string): () => void;
 }
 
@@ -36,7 +39,7 @@ export interface Engines {
 export interface Pooling {
   /** Starts one worker with the engine module in it. */
   start(book: string): Promise<Engine>;
-  /** Told when a book's engine has stopped, so what was set on it is dropped. */
+  /** Called when a book's engine has stopped, so what was set on it is dropped. */
   gone?: ((book: string) => void) | undefined;
   ceiling?: number | undefined;
   grace?: number | undefined;
@@ -80,7 +83,7 @@ export class Pool implements Engines {
   private readonly live = new Map<string, Live>();
   /** The views open on each book, by the book's path. */
   private readonly held = new Map<string, number>();
-  /** The grace each book with no view on it is inside, by its path. */
+  /** Cancels the grace a book with no view on it is waiting out, by its path. */
   private readonly waiting = new Map<string, () => void>();
   private readonly clock: Clock;
   private readonly grace: number;
@@ -110,8 +113,8 @@ export class Pool implements Engines {
    * second call while the first is starting waits on that one, so an
    * effect that mounts twice starts one worker.
    *
-   * The client answers for the engine running now, so a caller asks for
-   * it again on the next render rather than keeping the one it got.
+   * The client is for the engine running now, so a caller asks for it
+   * again on the next render rather than keeping the one it got.
    */
   client(book: string): Promise<EngineClient> {
     const running = this.live.get(book);
@@ -135,9 +138,10 @@ export class Pool implements Engines {
   }
 
   /**
-   * A view on this book. The engine outlives the view, so dropping the
-   * last hold starts the grace rather than stopping the book, and a
-   * view opened inside the grace keeps the book where it is.
+   * Holds this book while a view on it is open. The engine outlives the
+   * view, so dropping the last hold starts the grace rather than stopping
+   * the book, and a view opened inside the grace leaves the book on its
+   * engine.
    */
   hold(book: string): () => void {
     this.held.set(book, (this.held.get(book) ?? 0) + 1);
@@ -156,7 +160,7 @@ export class Pool implements Engines {
     };
   }
 
-  /** Stops this book's engine, and tells the owner it is gone. */
+  /** Stops this book's engine, and reports the book as gone. */
   stop(book: string): void {
     const live = this.live.get(book);
     if (live === undefined) return;
@@ -189,7 +193,7 @@ export class Pool implements Engines {
     }
   }
 
-  /** Starts the grace this book is stopped after. */
+  /** Starts the grace before this book's engine is stopped. */
   private wait(book: string): void {
     if (!this.live.has(book)) return;
     this.unwait(book);

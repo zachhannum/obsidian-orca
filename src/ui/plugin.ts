@@ -76,7 +76,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   limits: Limits = { ...LIMITS };
   /** The engines orca is running, one per book. */
   private engines: Pool | undefined;
-  /** The engine module, read once for every worker started from it. */
+  /** The engine module, read once and kept for every worker. */
   private bytes: Promise<ArrayBuffer> | undefined;
   /** Every edit to a book, routed to the note's one writer. */
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
@@ -914,7 +914,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (this.engines !== undefined) this.engines.ceiling = this.limits.books;
   }
 
-  /** Reads the engine module at load, and reports an install with none. */
+  /** Reads the engine module at load, and reports an install that has none. */
   private async warmed(): Promise<void> {
     try {
       await this.module();
@@ -923,7 +923,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
     }
   }
 
-  /** The engine module, read once and kept for the workers to come. */
+  /**
+   * Reads the engine module once, and gives the same bytes back after
+   * that. A read that fails is not kept.
+   */
   private module(): Promise<ArrayBuffer> {
     this.bytes ??= readModule(this.files(), this.directory()).catch(
       (cause: unknown) => {
@@ -934,7 +937,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     return this.bytes;
   }
 
-  /** The engine's own message, as something the author sees. */
+  /** Shows the engine's own message to the author. */
   private notice(cause: unknown): void {
     new Notice(
       cause instanceof EngineError

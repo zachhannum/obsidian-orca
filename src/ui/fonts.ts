@@ -76,9 +76,9 @@ export function vaultFonts(vault: VaultAdapter): FontSource {
     list: (directory) => vault.list(directory),
     read: async (at, from, length) =>
       (await file(at)).subarray(from, from + length),
-    // The bytes a face crosses in are transferred, which detaches the
-    // buffer they were read into. The held file is copied on the way
-    // out, so the next face read from it still has its bytes.
+    // Sending a face to the worker transfers its buffer, which detaches
+    // the file it was read out of. The copy leaves the held file with its
+    // bytes for the next read.
     whole: async (at) => (await file(at)).slice(),
   };
 }

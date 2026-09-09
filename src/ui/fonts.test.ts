@@ -11,7 +11,7 @@ const vault = directoryVault(path.join(root, "fixture"));
 /** The face the fixture vault carries. */
 const FACE = "fonts/Alegreya-VariableFont_wght.ttf";
 
-test("a face read twice reads whole the second time, though the first crossed", async () => {
+test("a face still reads whole after an earlier read crossed to the worker", async () => {
   const fonts = vaultFonts(vault);
   const crossing = await fonts.whole(FACE);
   assert.ok(crossing.byteLength > 0);
@@ -28,5 +28,4 @@ test("a face read twice reads whole the second time, though the first crossed", 
 
 // What this tier does not cover: the platform's own font directories,
 // which are the machine's rather than the fixture's, and the picker
-// rows a face is registered with the document for, which need a
-// document.
+// rows a face is registered for, which need a document.

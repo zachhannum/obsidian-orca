@@ -172,7 +172,8 @@ test("the ceiling settles how many books stay on the engine", async () => {
   assert.deepEqual(workers.stopped, ["one.md", "two.md"]);
   assert.deepEqual(workers.running, ["three.md", "four.md"]);
 
-  // A ceiling of no books is not one: orca reads a book by setting it.
+  // The ceiling is at least one book, because orca reads a book by
+  // setting it.
   pool.ceiling = 0;
   assert.equal(pool.ceiling, 1);
 });
