@@ -51,6 +51,8 @@ export interface Engines {
   client(book: string): Promise<EngineClient>;
   /** Holds a book while a view on it is open. Call what it returns to drop the hold. */
   hold(book: string): () => void;
+  /** Forgets the deaths of a book, so orca starts a worker for it again. */
+  retry(book: string): void;
 }
 
 /** The workers a pool starts, and the clock it runs the grace on. */
@@ -193,6 +195,14 @@ export class Pool implements Engines {
       this.held.delete(book);
       this.wait(book);
     };
+  }
+
+  /**
+   * Forgets the deaths of this book. A reader who opens a book that
+   * stopped is asking for another try, and gets one.
+   */
+  retry(book: string): void {
+    this.deaths.delete(book);
   }
 
   /**

@@ -130,6 +130,7 @@ class Clients {
       return Promise.resolve(client);
     },
     hold: () => () => undefined,
+    retry: () => undefined,
   };
 }
 
@@ -216,6 +217,7 @@ async function setting(client: EngineClient): Promise<Composing> {
     engines: {
       client: () => Promise.resolve(client),
       hold: () => () => undefined,
+      retry: () => undefined,
     },
     faces: faces(),
   };

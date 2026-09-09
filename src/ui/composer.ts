@@ -308,6 +308,10 @@ export class Composer {
     if (existing !== undefined) return existing;
     const carried = this.again.get(path);
     this.again.delete(path);
+    // A reader opening a book that stopped is asking for another try.
+    // Orca sets a book again after a death; asking a third time is the
+    // reader's own call, not orca's.
+    if (carried === undefined) this.vault.engines.retry(path);
     const composing = this.compose(path, opening, carried);
     this.books.set(path, composing);
     // A run that fails is not kept, so the next open typesets the book

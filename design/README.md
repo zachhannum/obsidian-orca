@@ -79,6 +79,12 @@ its editor around these files and returns a URL. The artboard list and
 - The navigator deletes the book note and nothing else, after asking.
   Every note a book lists is borrowed, so `Remove from book` is the
   only thing an entry's own menu offers.
+- A book whose engine dies is set again on a new one, from what orca
+  sent rather than from what the vault holds, and the pages already
+  painted stay under the notice that says so. A fault that comes back
+  on the same book would set it again for ever, so the second death
+  holds those pages and offers what each death said. Opening the book
+  again is the author's own try.
 - No implementation vocabulary reaches a surface. The per-stage counts
   stay as attributes for the tests, and the status line reads the page
   the author is on.

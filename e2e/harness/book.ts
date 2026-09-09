@@ -6,7 +6,7 @@
  * rather than on a clock.
  */
 
-import { expect, type Locator } from "@playwright/test";
+import { expect, type Locator, type Worker } from "@playwright/test";
 import type { Stages } from "@/engine/session";
 import { FLOATING, type Obsidian } from "./obsidian";
 
@@ -28,9 +28,19 @@ const AS_MARKDOWN = "Open as markdown";
 
 declare global {
   interface Window {
-    /** The recorder a spec installs while `settings` runs. */
-    orcaSetting?: { said: string[]; watch: MutationObserver } | undefined;
+    /** The recorder a spec installs while `noticed` runs. */
+    orcaSetting?: { said: Notice[]; watch: MutationObserver } | undefined;
   }
+}
+
+/** One notice the pane put up while a book was being set. */
+export interface Notice {
+  /** The words it put on screen. */
+  said: string;
+  /** Set on a notice that says the book is being set again. */
+  again: boolean;
+  /** The pages on screen under it. */
+  pages: number;
 }
 
 /** The trim the page is photographed at, in whole pixels. */
@@ -41,6 +51,9 @@ const POSED = "orca-photograph";
 
 /** The type the preview is registered under. */
 export const PREVIEW = "orca-book-preview";
+
+/** The name orca starts its worker under. */
+const ENGINE = "orca";
 
 /** The note the surface names for a page nobody wrote. */
 export const NOWHERE = "-";
@@ -70,6 +83,10 @@ export class Book {
   readonly next: Locator;
   /** The state the pane holds while a cold session typesets the whole book. */
   readonly setting: Locator;
+  /** The state the pane holds once orca has stopped setting the book. */
+  readonly held: Locator;
+  /** The offer of what each stop said. */
+  readonly report: Locator;
   /** The action that hands the pane back to the manuscript. */
   readonly asMarkdown: Locator;
   /** Every pane reading a book. */
@@ -95,6 +112,8 @@ export class Book {
     this.previous = pane.getByLabel("Previous page");
     this.next = pane.getByLabel("Next page");
     this.setting = pane.getByTestId("orca-setting");
+    this.held = pane.getByTestId("orca-held");
+    this.report = pane.getByTestId("orca-report");
     this.asMarkdown = obsidian.action(AS_MARKDOWN);
     this.panes = pane;
   }
@@ -106,14 +125,28 @@ export class Book {
    * after the pages have replaced it.
    */
   async settings(during: () => Promise<void>): Promise<string[]> {
+    return (await this.noticed(during)).map((notice) => notice.said);
+  }
+
+  /**
+   * The same, with what stood under each notice. A book set for the
+   * first time has no pages yet; one set again has the pages it last
+   * painted, and they stay.
+   */
+  async noticed(during: () => Promise<void>): Promise<Notice[]> {
     await this.obsidian.page.evaluate(() => {
-      const said: string[] = [];
+      const said: Notice[] = [];
       const collect = (node: Node): void => {
         if (!(node instanceof HTMLElement)) return;
         const found = node.matches("[data-testid=\'orca-setting\']")
           ? node
           : node.querySelector("[data-testid=\'orca-setting\']");
-        if (found !== null) said.push(found.textContent ?? "");
+        if (found === null) return;
+        said.push({
+          said: found.textContent ?? "",
+          again: found.classList.contains("mod-again"),
+          pages: document.querySelectorAll(".orca-page").length,
+        });
       };
       const watch = new MutationObserver((records) => {
         for (const record of records) for (const node of record.addedNodes) collect(node);
@@ -131,12 +164,69 @@ export class Book {
         window.orcaSetting?.watch.disconnect();
       });
     }
-    const said = await this.obsidian.page.evaluate(() => {
+    return this.obsidian.page.evaluate(() => {
       const recorded = window.orcaSetting?.said ?? [];
       window.orcaSetting = undefined;
       return recorded;
     });
-    return said;
+  }
+
+  /**
+   * Kills the worker the engine runs in. The worker throws where
+   * nothing catches it, which is the one death the main thread sees.
+   */
+  async kill(): Promise<Worker> {
+    let engine: Worker | undefined;
+    // A worker orca started reaches the page objects a moment after
+    // orca started it, so the wait here is for the attach rather than
+    // for anything orca is doing.
+    await expect
+      .poll(async () => {
+        engine = await this.engine();
+        return engine !== undefined;
+      })
+      .toBe(true);
+    const killed = engine;
+    if (killed === undefined) throw new Error("no engine worker is running");
+    await killed.evaluate(() => {
+      queueMicrotask(() => {
+        throw new Error("the engine was killed");
+      });
+    });
+    return killed;
+  }
+
+  /** Waits for orca to start a worker other than the one that died. */
+  async restarted(killed: Worker): Promise<void> {
+    await expect
+      .poll(async () => {
+        const engine = await this.engine();
+        return engine !== undefined && engine !== killed;
+      })
+      .toBe(true);
+  }
+
+  /** The workers orca has running. */
+  async engines(): Promise<number> {
+    let running = 0;
+    for (const worker of this.obsidian.page.workers()) {
+      const named = await worker
+        .evaluate(() => self.name)
+        .catch(() => undefined);
+      if (named === ENGINE) running += 1;
+    }
+    return running;
+  }
+
+  /** The worker the engine runs in, of every worker the page has. */
+  private async engine(): Promise<Worker | undefined> {
+    for (const worker of this.obsidian.page.workers()) {
+      const named = await worker
+        .evaluate(() => self.name)
+        .catch(() => undefined);
+      if (named === ENGINE) return worker;
+    }
+    return undefined;
   }
 
   /** Splits the pane and ties the two, the way the palette runs it. */

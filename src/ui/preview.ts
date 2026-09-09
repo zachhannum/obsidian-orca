@@ -748,7 +748,14 @@ export class PreviewView extends ItemView {
     if (session === undefined) return;
     const span = spanAt(this.mode, at, this.screenful);
     const turn = (this.turning += 1);
-    const reading = await session.read(span.at, span.count);
+    let reading: Reading | undefined;
+    try {
+      reading = await session.read(span.at, span.count);
+    } catch {
+      // The engine stopped under the read. The pages already painted
+      // stay while the book is set again on a new engine.
+      return;
+    }
     if (turn !== this.turning || this.surface === undefined) return;
     if (reading === undefined) {
       this.report("The book set to no pages");
@@ -1113,9 +1120,9 @@ export class PreviewView extends ItemView {
 
   /**
    * The pages, held. The engine of this book died more times than orca
-   * sets the book again, so orca stops rather than starts a third one.
-   * The report is what each death said, for an author who has one to
-   * send on.
+   * sets the book again, so orca starts no third one. Opening the book
+   * again is the reader's own try. The report is what each death said,
+   * for an author who has one to send on.
    */
   private held(dead: EngineDead): void {
     const well = this.well;
@@ -1130,9 +1137,9 @@ export class PreviewView extends ItemView {
     const name = banner.createDiv({ cls: "orca-preview-setting-name" });
     name.append("Orca could not set the book again");
     const note = banner.createDiv({ cls: "orca-preview-setting-note" });
-    note.append("nothing you wrote was lost");
-    note.createEl("br");
     note.append("the pages here are the ones from before");
+    note.createEl("br");
+    note.append("open the book again to try once more");
     const report = banner.createEl("button", {
       cls: "orca-preview-report",
       text: "Copy the report",
