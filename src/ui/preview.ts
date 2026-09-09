@@ -462,6 +462,8 @@ export class PreviewView extends ItemView {
     issues.toggleVisibility(false);
     this.issues = issues;
 
+    this.shuts(pane, warnings, issues);
+
     const chapter = bar.createEl("select", {
       cls: "dropdown orca-preview-chapter",
     });
@@ -812,6 +814,43 @@ export class PreviewView extends ItemView {
       }
     }
     this.showsIssues();
+  }
+
+  /**
+   * Shuts the warnings on Escape, and on a click in the pane that is
+   * neither the panel nor the count that opens it.
+   *
+   * The pane's own element rather than the window's: an author who
+   * goes to the manuscript to fix the note a warning names comes back
+   * to the panel as they left it.
+   */
+  private shuts(
+    pane: HTMLElement,
+    count: HTMLElement,
+    issues: HTMLElement,
+  ): void {
+    const shut = (): void => {
+      this.opened = false;
+      this.showsIssues();
+    };
+    this.registerDomEvent(pane, "pointerdown", (event) => {
+      const at = event.target;
+      const inside =
+        at instanceof Node && (issues.contains(at) || count.contains(at));
+      // The count's own click toggles it; a pointer down on it here
+      // would shut the panel before that ran.
+      if (this.opened && !inside) shut();
+    });
+    this.registerDomEvent(pane, "keydown", (event) => {
+      if (!this.opened || event.key !== "Escape") return;
+      event.preventDefault();
+      // Focus goes back to the control the panel opened from, and only
+      // from inside the panel: a reader paging with the keyboard keeps
+      // the well.
+      const held = issues.contains(pane.ownerDocument.activeElement);
+      shut();
+      if (held) count.focus();
+    });
   }
 
   /** Opens or shuts the warnings, and says which on the bar. */

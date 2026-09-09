@@ -171,6 +171,11 @@ export class Book {
     await this.surface.press(key);
   }
 
+  /** Presses a key where the focus already is, without moving it. */
+  async key(key: string): Promise<void> {
+    await this.obsidian.page.keyboard.press(key);
+  }
+
   /** The first folio the surface says it painted, once it says one. */
   async reading(): Promise<number> {
     await expect(this.surface).toHaveAttribute("data-first", /\d+/);

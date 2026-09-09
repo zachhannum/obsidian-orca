@@ -366,6 +366,22 @@ test("an embed with no file behind it is a warning the author can see", async ({
     (count?.x ?? 0) + (count?.width ?? 0) + 12,
   );
 
+  // A click in the pane outside the panel shuts it, and so does Escape.
+  // The panel covers the top of the page in a pane this narrow, so the
+  // click goes under it rather than at a corner it may be sitting on.
+  const sheets = await book.surface.boundingBox();
+  expect(sheets).toBeTruthy();
+  const below = (panel?.y ?? 0) + (panel?.height ?? 0) - (sheets?.y ?? 0) + 12;
+  await book.surface.click({ position: { x: 8, y: below } });
+  await expect(book.issues.first()).toBeHidden();
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeVisible();
+  await book.key("Escape");
+  await expect(book.issues.first()).toBeHidden();
+
+  // The count is still there to open them again.
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeVisible();
   await book.warnings.click();
   await expect(book.issues.first()).toBeHidden();
 
