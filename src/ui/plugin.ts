@@ -112,7 +112,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       // The book on a stopped engine is dropped, so the pane reading it
       // sets it again rather than reading a session that is gone.
       gone: (book) => {
-        this.composer?.forget(book);
+        this.composer?.discard(book);
       },
       ceiling: this.limits.books,
     });

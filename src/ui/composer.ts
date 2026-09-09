@@ -59,7 +59,7 @@ export class Typeset {
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private design: Design;
-  private stopped = false;
+  private gone = false;
 
   constructor(
     book: {
@@ -179,19 +179,23 @@ export class Typeset {
   }
 
   /**
-   * Whether the book was dropped, and the view reading it has to set it
-   * again. A book is dropped when its notes have changed under it, and
-   * when its engine has stopped to make room for another book.
+   * Whether the book's engine has stopped, so the view reading it sets
+   * the book again rather than reading a session that is gone.
    */
   get dropped(): boolean {
-    return this.stopped;
+    return this.gone;
   }
 
   /** Drops the wait, for a book orca is no longer keeping up to date. */
   stop(): void {
-    this.stopped = true;
     this.loop.stop();
     this.assets.close();
+  }
+
+  /** Drops the book, for one whose engine has stopped. */
+  drop(): void {
+    this.gone = true;
+    this.stop();
   }
 
   /**
@@ -291,14 +295,26 @@ export class Composer {
 
   /** Drops a book, so the next open typesets it from the notes as they are now. */
   forget(path: string): void {
+    this.release(path, (book) => {
+      book.stop();
+    });
+  }
+
+  /**
+   * Drops a book whose engine has stopped. The next open sets it on a
+   * new one, and the view reading it turns to it rather than going on
+   * with the pages it has.
+   */
+  discard(path: string): void {
+    this.release(path, (book) => {
+      book.drop();
+    });
+  }
+
+  private release(path: string, dropped: (book: Typeset) => void): void {
     const existing = this.books.get(path);
     this.books.delete(path);
-    void existing?.then(
-      (book) => {
-        book.stop();
-      },
-      () => undefined,
-    );
+    void existing?.then(dropped, () => undefined);
   }
 
   /**
