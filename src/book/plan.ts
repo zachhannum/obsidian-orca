@@ -98,7 +98,7 @@ export async function sendBook(
 
 /**
  * The cuts of one family, as the ops that register them. A book set on
- * a new engine sends them again: a face is registered for the session,
+ * a new engine sends them again. A face is registered for one session,
  * and a session that stopped took its faces with it.
  */
 export function sendFaces(faces: readonly Face[]): Op[] {

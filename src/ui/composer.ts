@@ -199,8 +199,8 @@ export class Typeset {
 
   /**
    * Everything this book needs to be set again on another engine. The
-   * words come from what crossed rather than from the vault, so a
-   * chapter typed but not yet saved is set as the author has it.
+   * words come from what crossed rather than from the vault. A chapter
+   * typed but not yet saved is set as the author has it.
    */
   get replay(): Replay {
     return {
@@ -224,7 +224,7 @@ export class Typeset {
 
   /**
    * Drops the book after its engine died, and tells the views to set it
-   * again. A book orca stopped waits for a reader to turn a page; one
+   * again. A book orca stopped waits for a reader to turn a page. One
    * that died is put back now, on the page the reader was on.
    */
   died(): void {
@@ -309,8 +309,8 @@ export class Composer {
     const carried = this.again.get(path);
     this.again.delete(path);
     // A reader opening a book that stopped is asking for another try.
-    // Orca sets a book again after a death; asking a third time is the
-    // reader's own call, not orca's.
+    // Orca sets a book again after a death. Asking a third time is the
+    // reader's own call rather than orca's.
     if (carried === undefined) this.vault.engines.retry(path);
     const composing = this.compose(path, opening, carried);
     this.books.set(path, composing);
@@ -358,8 +358,8 @@ export class Composer {
 
   /**
    * Drops a book whose engine died, and sets it again now. What the
-   * dead engine was sent crosses to the new one, so the replay is the
-   * book as the author has it rather than the book as the vault has it.
+   * dead engine was sent crosses to the new one. The book that comes
+   * back is the book the author has, not the book the vault has.
    */
   died(path: string): void {
     this.release(path, (book) => {
@@ -462,8 +462,8 @@ export class Composer {
 
   /**
    * Every cut of the family a book is set in. A family the machine no
-   * longer has crosses nothing: the engine sets the book in the face it
-   * carries and warns about the one it was asked for.
+   * longer has crosses nothing. The engine sets the book in the face it
+   * carries, and warns about the one it was asked for.
    */
   private async cutsOf(family: string | undefined): Promise<readonly Face[]> {
     if (family === undefined) return [];

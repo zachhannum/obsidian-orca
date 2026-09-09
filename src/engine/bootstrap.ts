@@ -29,8 +29,8 @@ export interface EngineHandle {
   dies(told: (cause: EngineError) => void): void;
   /**
    * Terminates the worker and revokes its Blob URL. Every request the
-   * worker was still holding is refused, because a terminated worker
-   * answers none of them and a caller awaiting one would wait forever.
+   * worker was still holding is refused. A worker that stopped answers
+   * none of them, and a caller waiting on one would wait for ever.
    */
   stop(): void;
 }

@@ -6,10 +6,10 @@
  * orca stops the engine that went longest without a render. Orca sets
  * that book again the next time a reader opens it.
  *
- * A worker can also die on its own. Everything that book was made of is
- * on this thread, so the pool starts another worker and orca sets the
- * book again on it. A fault that comes back on the same book would
- * replay for ever, so the second death on one book starts no third
+ * A worker can also die on its own. Everything that book was made of
+ * is on this thread, so the pool starts another worker and orca sets
+ * the book again on it. A fault that comes back on the same book would
+ * replay for ever. The second death on one book starts no third
  * worker.
  */
 
