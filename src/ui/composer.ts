@@ -2,9 +2,9 @@
  * The books orca has set on the engine.
  *
  * A chapter typeset by itself is a different chapter, so a preview of
- * one is a page of the whole book. The whole book crosses once, its
- * pages come back a window at a time, and where each section landed
- * comes from the same run.
+ * one is a page of the whole book. The whole book crosses once and its
+ * pages come back a window at a time; where a section landed is asked
+ * of the engine when it is wanted, because a reflow moves it.
  *
  * A book is typeset once and kept, so the second view of it, and the
  * same one opened again, waits for nothing.
@@ -17,7 +17,8 @@ import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
-import { pageRanges, type Range } from "@/book/pages";
+import { sourceNamed } from "@/book/pages";
+import { writtenByte } from "@/book/place";
 import {
   sendBook,
   sendEdit,
@@ -45,8 +46,6 @@ export class Typeset {
   readonly session: Session;
   /** Its sections, in reading order. */
   readonly sections: Section[];
-  /** Every section's folio range, by its place in the reading order. */
-  readonly ranges: Map<number, Range>;
   /** The fonts and images this book has put on the wire, by content hash. */
   readonly assets: Registry;
 
@@ -61,7 +60,6 @@ export class Typeset {
       name: string;
       session: Session;
       sections: Section[];
-      ranges: Map<number, Range>;
       /** The sheets the book was set under, which the next plan reads. */
       sheets: Sheet[];
       /** The text each note crossed as, by its vault path. */
@@ -76,12 +74,29 @@ export class Typeset {
     this.name = book.name;
     this.session = book.session;
     this.sections = book.sections;
-    this.ranges = book.ranges;
     this.sent = book.sent;
     this.assets = book.assets;
     this.loaded = { sheets: book.sheets };
     this.design = book.design;
     this.loop = new Loop((ops) => this.render(ops), clock);
+  }
+
+  /**
+   * The page a section opens on now, counting from 0. The engine is
+   * asked where the section's first written byte was set, so the answer
+   * is the book as it stands rather than the book it was opened as.
+   */
+  async opens(at: number): Promise<number | undefined> {
+    const source = sourceNamed(this.sections, at);
+    if (source === undefined) return undefined;
+    const text = this.sent.get(source);
+    const node = await this.session.nodeAt(
+      source,
+      text === undefined ? 0 : writtenByte(text),
+    );
+    if (node === undefined) return undefined;
+    const [folios] = await this.session.foliosOf([node]);
+    return folios?.at;
   }
 
   /**
@@ -178,9 +193,6 @@ export interface Opening {
   /** Told what the book is waiting on, until it is set. */
   told?: ((progress: Progress) => void) | undefined;
 }
-
-/** The number of times the whole book is asked for before its folios are given up on. */
-const ASKS = 3;
 
 export class Composer {
   private readonly books = new Map<string, Promise<Typeset>>();
@@ -284,33 +296,9 @@ export class Composer {
     const design: Design = {};
     const sheets = designSheets(design);
     await session.open([...ops, styleOp(sheets)]);
-    const ranges = await this.ranges(client, session, sections);
     return new Typeset(
-      { name, session, sections, ranges, sheets, sent, assets, design },
+      { name, session, sections, sheets, sent, assets, design },
       this.clock,
     );
-  }
-
-  /**
-   * Every section's folios. The whole book comes back over the wire to
-   * answer this, and nothing smaller can: a section's id says where it
-   * falls only against every other id in the book.
-   */
-  private async ranges(
-    client: EngineClient,
-    session: Session,
-    sections: Section[],
-  ): Promise<Map<number, Range>> {
-    // Another view's render answers before this question does, and the
-    // reply that comes back behind it is nothing at all. The book on
-    // the engine is the same book, so the question is asked again.
-    for (let asked = 0; asked < ASKS; asked += 1) {
-      const layout = await client.preview([], {
-        first: 0,
-        count: Math.max(session.pages, 1),
-      });
-      if (layout !== null) return pageRanges(sections, layout.pages);
-    }
-    return new Map();
   }
 }

@@ -1,8 +1,9 @@
-import { styleOp, type Page } from "fleuron";
+import { styleOp } from "fleuron";
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { resolve } from "@/book/order";
+import { sectionRanges, type Range } from "@/book/pages";
 import { sendBook } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { EngineClient } from "@/engine/session";
@@ -51,8 +52,8 @@ export class BookView extends FileView {
   private readonly counts = new Map<string, number>();
   /** The reads still counting, so a note is read once however often the page paints. */
   private readonly counting = new Map<string, Promise<number>>();
-  /** The pages the last run through the engine came back with. */
-  private pages: Page[] = [];
+  /** Every entry's folio range, as the last run through the engine placed it. */
+  private folios = new Map<number, Range>();
   /** Counts the runs sent, so a run a later one overtakes is dropped rather than painted. */
   private typesetting = 0;
 
@@ -194,7 +195,7 @@ export class BookView extends FileView {
   private hold(file: TFile, text: string): void {
     this.disk = text;
     this.writer = undefined;
-    this.pages = [];
+    this.folios = new Map();
     const model = this.opened(text);
     if (model === undefined) return;
     this.writer = new Writer(model, {
@@ -311,7 +312,7 @@ export class BookView extends FileView {
       report: report(
         { path: file.path, name: file.basename, model: this.shown.model },
         { links: cacheLinks(this.app), words: (path) => this.words(path) },
-        this.pages,
+        this.folios,
       ),
     });
   }
@@ -326,13 +327,14 @@ export class BookView extends FileView {
     const shown = this.shown;
     if (file === null || shown === undefined) return;
     const generation = (this.typesetting += 1);
-    let pages = this.pages;
+    let folios = this.folios;
     try {
+      const links = cacheLinks(this.app);
       const client = await this.client;
       const ops = await sendBook(
         shown.model.book,
         shown.model.order,
-        cacheLinks(this.app),
+        links,
         file.path,
         (path) => this.readNote(path),
       );
@@ -340,12 +342,15 @@ export class BookView extends FileView {
         ...ops,
         styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
       ]);
-      pages = output?.pages ?? pages;
+      if (output !== null) {
+        const { sections } = resolve(shown.model.order, links, file.path);
+        folios = await sectionRanges(sections, output.pages, client);
+      }
     } catch (cause) {
       console.error(`Orca: ${file.path} did not typeset.`, cause);
     }
     if (generation !== this.typesetting) return;
-    this.pages = pages;
+    this.folios = folios;
     this.repaint();
   }
 

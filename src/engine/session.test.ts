@@ -10,6 +10,7 @@ import {
   paintPage,
   styleOp,
   type LayoutOutput,
+  type Folios,
   type NodeSource,
   type Op,
   type Page,
@@ -45,6 +46,8 @@ class FakeClient implements EngineClient {
   readonly nodes = new Map<string, number>();
   /** The place in a manuscript each node was read from. */
   readonly sources = new Map<number, NodeSource>();
+  /** The pages each node's content is set on, as a test sets them. */
+  readonly folios = new Map<number, Folios>();
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   private book: Page[];
@@ -110,6 +113,10 @@ class FakeClient implements EngineClient {
 
   sourceOf(node: number): Promise<NodeSource | null> {
     return Promise.resolve(this.sources.get(node) ?? null);
+  }
+
+  foliosOf(nodes: number[]): Promise<(Folios | null)[]> {
+    return Promise.resolve(nodes.map((node) => this.folios.get(node) ?? null));
   }
 }
 
@@ -464,6 +471,7 @@ test("a serialized client holds a second render back until the first answers", a
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
+    foliosOf: () => Promise.resolve([]),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -493,6 +501,7 @@ test("a serialized client's queue moves on from a render that failed", async () 
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
+    foliosOf: () => Promise.resolve([]),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -546,6 +555,7 @@ test("a book the engine refuses comes back as an engine error, not re-worded", a
     fontBytes: () => Promise.reject(new Error("no faces")),
     nodeAt: () => Promise.reject(new Error("no book")),
     sourceOf: () => Promise.reject(new Error("no book")),
+    foliosOf: () => Promise.reject(new Error("no book")),
     current: 1,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -726,6 +736,21 @@ test("a byte answers with its node, a node with its place, and neither with noth
   // A blank line between chapters, and matter the engine wrote itself.
   assert.equal(await session.nodeAt("Chapter Twelve.md", 0), undefined);
   assert.equal(await session.sourceOf(9), undefined);
+});
+
+test("several nodes answer with where each is set now, in the order asked about", async () => {
+  const client = new FakeClient(typeset(2));
+  client.folios.set(412, { first: 38, last: 52, at: 37, count: 15 });
+  client.folios.set(90, { first: 3, last: 3, at: 2, count: 1 });
+  const session = new Session(client, faces());
+
+  // A node the book does not hold answers with nothing rather than
+  // failing the call, so one stale id does not cost the rest.
+  assert.deepEqual(await session.foliosOf([412, 7, 90]), [
+    { first: 38, last: 52, at: 37, count: 15 },
+    undefined,
+    { first: 3, last: 3, at: 2, count: 1 },
+  ]);
 });
 
 // What this tier does not cover: registering the view, and the page

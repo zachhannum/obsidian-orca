@@ -3,6 +3,7 @@ import {
   type Asset,
   type Client,
   type FaceAttributes,
+  type Folios,
   type FontRefEntry,
   type LayoutOutput,
   type NodeSource,
@@ -33,6 +34,7 @@ export interface EngineClient {
   fontBytes(font: number): Promise<Uint8Array>;
   nodeAt(source: string, byte: number): Promise<number | null>;
   sourceOf(node: number): Promise<NodeSource | null>;
+  foliosOf(nodes: number[]): Promise<(Folios | null)[]>;
   readonly current: number;
   readonly stages: Stages;
 }
@@ -62,6 +64,7 @@ export function serialized(client: EngineClient): EngineClient {
     // book it holds without taking a turn in the queue.
     nodeAt: (source, byte) => client.nodeAt(source, byte),
     sourceOf: (node) => client.sourceOf(node),
+    foliosOf: (nodes) => client.foliosOf(nodes),
     get current(): number {
       return client.current;
     },
@@ -197,6 +200,17 @@ export class Session {
   async sourceOf(node: number): Promise<NodeSource | undefined> {
     const source = await routed(() => this.client.sourceOf(node));
     return source ?? undefined;
+  }
+
+  /**
+   * The pages each of these nodes' content is set on now, in the order
+   * asked about. This is the direction a reflow invalidates, so the
+   * answer is asked for when it is wanted and never kept. Nothing for a
+   * node the book does not hold, or one whose content reaches no page.
+   */
+  async foliosOf(nodes: number[]): Promise<(Folios | undefined)[]> {
+    const found = await routed(() => this.client.foliosOf(nodes));
+    return found.map((folios) => folios ?? undefined);
   }
 
   /**

@@ -1,10 +1,6 @@
 /**
- * A place in the book, either way round: the page a byte of a
- * manuscript is set on, and the node a page opens at.
- *
- * fleuron assigns node ids in document order, so the runs on a page
- * name a span of them and the page holding one node is found by
- * halving a chapter rather than reading it through.
+ * A place in the manuscript: the node a page opens at, and the bytes of
+ * a note the engine is asked about.
  *
  * A byte of a note and a byte of a node's text are different bytes,
  * because markup is not text. Everything here counts bytes of the
@@ -12,7 +8,6 @@
  */
 
 import type { Page } from "fleuron";
-import type { Range } from "@/book/pages";
 
 /** The content nodes a page's runs name. */
 export interface Nodes {
@@ -40,63 +35,6 @@ export function nodesOn(page: Page): Nodes | undefined {
     : { first, last };
 }
 
-/** A page of the book, as the search reads them. Folios count from 1. */
-export interface ReadPage {
-  (folio: number): Promise<Page | undefined>;
-}
-
-/** A page the search read, and the nodes it names. */
-interface Probe {
-  folio: number;
-  nodes: Nodes;
-}
-
-/**
- * The folio `node` is set on, looked for between `within.first` and
- * `within.last`. Each page read halves what is left, so a chapter
- * costs a handful of reads rather than one per page. A page naming no
- * node is stood in for by the nearest that does.
- *
- * A node no run names answers with the page its content begins on: a
- * heading's runs are shaped from the text inside it, so the node a
- * byte of `#` was read into is on no page of its own. A node the
- * range runs out before answers with nothing.
- */
-export async function folioOf(
-  node: number,
-  within: Range,
-  read: ReadPage,
-): Promise<number | undefined> {
-  let low = within.first;
-  let high = within.last;
-  while (low <= high) {
-    const at = await probe(Math.floor((low + high) / 2), low, high, read);
-    if (at === undefined) return undefined;
-    if (node < at.nodes.first) high = at.folio - 1;
-    else if (node > at.nodes.last) low = at.folio + 1;
-    else return at.folio;
-  }
-  return low > within.last ? undefined : low;
-}
-
-/** The page at `from`, or the nearest either side of it that names a node. */
-async function probe(
-  from: number,
-  low: number,
-  high: number,
-  read: ReadPage,
-): Promise<Probe | undefined> {
-  for (let step = 0; from - step >= low || from + step <= high; step += 1) {
-    for (const folio of step === 0 ? [from] : [from - step, from + step]) {
-      if (folio < low || folio > high) continue;
-      const page = await read(folio);
-      const nodes = page === undefined ? undefined : nodesOn(page);
-      if (nodes !== undefined) return { folio, nodes };
-    }
-  }
-  return undefined;
-}
-
 /**
  * The first line at or after `line` that a note wrote content on,
  * counting from 0. A blank line and the note's own frontmatter were
@@ -120,6 +58,18 @@ function underMatter(lines: string[]): number {
     if ((lines[at] ?? "").trim() === "---") return at + 1;
   }
   return 0;
+}
+
+/**
+ * The byte a note's own content begins at, past its frontmatter and the
+ * blank lines under it. The engine read those into no node, so this is
+ * the byte a section with no caret in it is asked about.
+ */
+export function writtenByte(text: string): number {
+  const line = writtenAt(text, 0);
+  const lines = text.split("\n");
+  const before = lines.slice(0, line).reduce((at, on) => at + on.length + 1, 0);
+  return byteOf(text, before);
 }
 
 /** The byte of `text` the character at `offset` starts at. */

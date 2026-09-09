@@ -7,12 +7,11 @@
  * asked to focus.
  */
 
-import type { Page } from "fleuron";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { FIELD_KEYS, type BookMetadata } from "@/book/note";
 import { resolve } from "@/book/order";
-import { pageRanges, type Range } from "@/book/pages";
+import type { Range } from "@/book/pages";
 import { DEFAULT_ROLE } from "@/book/roles";
 import { bookName, row, type Opened, type Row } from "@/ui/shelf";
 
@@ -50,18 +49,17 @@ export interface Counting {
 }
 
 /**
- * The report for one book note, resolved against the vault. `pages`
+ * The report for one book note, resolved against the vault. `ranges`
  * is the last run's own; an entry it has not reached, or no run yet,
  * names no range.
  */
 export function report(
   book: Opened,
   vault: Counting,
-  pages: Page[] = [],
+  ranges: Map<number, Range> = new Map(),
 ): Report {
   const { metadata } = book.model.book;
   const { sections } = resolve(book.model.order, vault.links, book.path);
-  const ranges = pageRanges(sections, pages);
   const lines = sections.map((section, at): Line => {
     const line: Line = row(section, at);
     if (section.kind === "note") {
