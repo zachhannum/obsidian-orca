@@ -287,6 +287,14 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
     edit: { did: "deleted", name: "Copyright.md" },
     ops: ["remove"],
   },
+  {
+    did: "embedded an image",
+    edit: {
+      did: "embedded",
+      images: [{ url: DEVICE, key: "device", bytes: new Uint8Array([1, 2]) }],
+    },
+    ops: ["image"],
+  },
 ];
 
 test("each edit sends the ops its row names, and nothing else", () => {
@@ -302,6 +310,12 @@ test("each edit sends the ops its row names, and nothing else", () => {
 
   // A family has several cuts, so each one crosses on a `font` op of
   // its own, in the order `faces` holds them.
+  // An image is keyed on its url rather than on its bytes, so the
+  // registry is not what decides whether it crosses.
+  const embedded = sendEdit(row("embedded an image"), LOADED, REGISTERED).ops;
+  assert.equal(only(embedded, "image").url, DEVICE);
+  assert.deepEqual(only(embedded, "image").bytes, new Uint8Array([1, 2]));
+
   const picked = sendEdit(row("picked a new family"), LOADED, REGISTERED).ops;
   assert.deepEqual(
     picked.flatMap((op) => (op.op === "font" ? [op.bytes] : [])),

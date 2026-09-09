@@ -194,7 +194,13 @@ export type Edit =
   /** Picked a new family, and the cuts it is made of. */
   | { did: "faced"; faces: readonly Face[]; sheets: Sheet[] }
   /** Deleted a note, so the rest of the sources stand. */
-  | { did: "deleted"; name: string };
+  | { did: "deleted"; name: string }
+  /**
+   * Embedded an image a chapter did not name before. The engine keys
+   * an image on the url rather than on its bytes, so a file already
+   * registered under another url crosses again.
+   */
+  | { did: "embedded"; images: readonly Image[] };
 
 /** The session as a plan leaves it. */
 export interface Loaded {
@@ -248,6 +254,16 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
     case "reordered":
       return {
         ops: [{ op: "book", sources: edit.sources }, styling(loaded.sheets)],
+        loaded,
+        crossed: [],
+      };
+    case "embedded":
+      return {
+        ops: edit.images.map((image) => ({
+          op: "image",
+          url: image.url,
+          bytes: image.bytes,
+        })),
         loaded,
         crossed: [],
       };

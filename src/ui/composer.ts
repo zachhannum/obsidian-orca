@@ -20,6 +20,7 @@ import { entryName, resolve, type Section } from "@/book/order";
 import { sourceNamed } from "@/book/pages";
 import { writtenByte } from "@/book/place";
 import {
+  bookImages,
   sendBook,
   sendEdit,
   type Edit,
@@ -52,6 +53,7 @@ export class Typeset {
   private readonly loop: Loop;
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
+  private readonly links: Links;
   private loaded: Loaded;
   private design: Design;
 
@@ -66,6 +68,8 @@ export class Typeset {
       sent: Map<string, string>;
       /** The registry every op path asks before putting bytes on the wire. */
       assets: Registry;
+      /** Resolves the embeds a chapter picks up while it is being drafted. */
+      links: Links;
       /** The design the sheets were generated from. */
       design: Design;
     },
@@ -76,6 +80,7 @@ export class Typeset {
     this.sections = book.sections;
     this.sent = book.sent;
     this.assets = book.assets;
+    this.links = book.links;
     this.loaded = { sheets: book.sheets };
     this.design = book.design;
     this.loop = new Loop((ops) => this.render(ops), clock);
@@ -108,6 +113,26 @@ export class Typeset {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
+    // An embed that will not read is one the engine warns about, the
+    // same as one the vault never had.
+    void this.embed(note, text).catch(() => undefined);
+  }
+
+  /**
+   * Sends the images a chapter has picked up since it last crossed.
+   * The words go first and the bytes follow, so an image added while
+   * drafting is a second render rather than a book opened again.
+   */
+  private async embed(note: string, text: string): Promise<void> {
+    const found = await bookImages([{ name: note, text }], this.links, (at) =>
+      this.assets.take(at),
+    );
+    const fresh = found.filter(
+      (image) => this.assets.imageUrl(image.url) === undefined,
+    );
+    if (fresh.length === 0) return;
+    for (const image of fresh) this.assets.image(image.url, image);
+    this.plan(`embedded:${note}`, { did: "embedded", images: fresh });
   }
 
   /** The family the book is set in, or nothing for the theme's face. */
@@ -301,7 +326,16 @@ export class Composer {
     const sheets = designSheets(design);
     await session.open([...ops, styleOp(sheets)]);
     return new Typeset(
-      { name, session, sections, sheets, sent, assets, design },
+      {
+        name,
+        session,
+        sections,
+        sheets,
+        sent,
+        assets,
+        links: this.vault.links,
+        design,
+      },
       this.clock,
     );
   }

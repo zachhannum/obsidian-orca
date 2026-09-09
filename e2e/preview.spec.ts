@@ -352,3 +352,25 @@ test("an embed the vault cannot answer is a warning the author can see", async (
   await expect(book.page).toContainText(LAST);
   await expect(book.images).toHaveCount(0);
 });
+
+test("an embed added while drafting crosses without the book being opened again", async ({
+  book,
+  vault,
+}) => {
+  vault.touch(LAST_NOTE);
+  await book.open();
+  const painted = await book.painted();
+  await book.type(String(BACK));
+  await expect(book.images).toHaveCount(1);
+
+  // The same file the note already embeds, under a url the engine has
+  // no bytes for yet.
+  const note = await vault.read(LAST_NOTE);
+  await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[images/device.png]]"));
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await expect(book.surface).toHaveAttribute("data-first", String(BACK));
+  await expect(book.images).toHaveCount(1);
+  await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
+  await expect(book.warnings).toBeHidden();
+});

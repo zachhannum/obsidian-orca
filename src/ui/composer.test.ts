@@ -176,14 +176,21 @@ function faces(): FaceSet {
   return { add: () => Promise.resolve() };
 }
 
+/** Every file in the fixture vault, the way Obsidian sees one. */
+async function paths(folder = "/"): Promise<string[]> {
+  const { files, folders } = await vault.list(folder);
+  const under = await Promise.all(folders.map((at) => paths(at)));
+  return [...files, ...under.flat()];
+}
+
 async function setting(client: EngineClient): Promise<Composing> {
-  const paths = (await vault.list("/")).files;
+  const found = await paths();
   return {
     model: async (at) => readModel(await readText(vault, at)),
     read: (at) => readText(vault, at),
     files: vault,
     name: (at) => path.basename(at, ".md"),
-    links: pathLinks(paths),
+    links: pathLinks(found),
     client: Promise.resolve(client),
     faces: faces(),
   };
@@ -305,6 +312,57 @@ test("a chapter the engine already has the words of is no edit at all", async ()
 
   assert.equal(client.rendered.length, renders);
 });
+
+test("an image a chapter picks up while it is drafted crosses on the next render", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+  const renders = client.rendered.length;
+  const note = "Copyright.md";
+  const copyright = await readText(vault, note);
+
+  // The same file the acknowledgements embed, under a url of its own.
+  composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n`);
+  await settled(clock);
+
+  // The words go first and the bytes follow: the engine reads the
+  // chapter, then is given the file the chapter now names.
+  const sent = client.rendered.slice(renders).flat();
+  assert.deepEqual(sent.map((op) => op.op), ["edit", "image"]);
+  const image = sent.find((op) => op.op === "image");
+  assert.equal(image?.url, "images/device.png");
+  assert.deepEqual(
+    image?.bytes,
+    new Uint8Array(await vault.readBinary("images/device.png")),
+  );
+  // One file, one set of pixels, whichever url a page draws it by.
+  assert.equal(
+    book.assets.imageUrl("images/device.png"),
+    book.assets.imageUrl("device.png"),
+  );
+
+  // A url the engine already holds crosses no second time.
+  composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n\n.`);
+  await settled(clock);
+  assert.deepEqual(
+    client.rendered.slice(renders).flat().map((op) => op.op),
+    ["edit", "image", "edit"],
+  );
+});
+
+/**
+ * Runs the reads and the hashing an embed costs, and the ticks the
+ * renders they plan wait on. Every turn here is a turn of the loop the
+ * work is already queued on rather than a wait on a clock.
+ */
+async function settled(clock: Steps): Promise<void> {
+  for (let turn = 0; turn < 8; turn += 1) {
+    await drain();
+    clock.tick();
+  }
+  await drain();
+}
 
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real
