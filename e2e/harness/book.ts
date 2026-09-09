@@ -62,6 +62,8 @@ export class Book {
   readonly images: Locator;
   /** The bar's count of what the last run had to complain about. */
   readonly warnings: Locator;
+  /** The warnings themselves, as the count opens them. */
+  readonly issues: Locator;
   /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
@@ -83,6 +85,7 @@ export class Book {
     this.page = this.surface.locator("svg").first();
     this.images = this.surface.locator("image");
     this.warnings = pane.getByTestId("orca-warnings");
+    this.issues = pane.getByTestId("orca-issues").locator(".orca-preview-issue");
     this.folio = pane.getByTestId("orca-folio");
     this.chapter = pane.getByTestId("orca-chapter");
     this.chapterName = this.chapter.locator("option:checked");

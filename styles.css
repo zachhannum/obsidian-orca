@@ -52,21 +52,78 @@
 }
 
 /* The count of what the last run had to complain about, beside the
-   page it set. The engine's own wording is the tooltip, until the
-   Issues pane has somewhere to put it. */
-.orca-preview-warnings {
+   page it set. It opens the warnings under the bar. */
+.orca-preview-bar button.orca-preview-warnings {
   display: inline-flex;
   align-items: center;
   height: 18px;
   padding: 0 7px;
+  border: none;
   border-radius: 9px;
+  box-shadow: none;
   font-size: 10.5px;
   font-weight: var(--font-medium);
   letter-spacing: 0.02em;
   background: rgba(233, 151, 63, 0.15);
   color: var(--color-orange);
-  cursor: default;
+  cursor: pointer;
   flex: none;
+}
+
+/* The chevron turns over as the warnings open, the way a disclosure
+   control does. */
+.orca-preview-warnings .orca-preview-opens {
+  display: inline-flex;
+  margin-left: 3px;
+}
+
+.orca-preview-warnings .orca-preview-opens .svg-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.orca-preview-warnings.is-on .orca-preview-opens {
+  transform: rotate(180deg);
+}
+
+.orca-preview-bar button.orca-preview-warnings:hover,
+.orca-preview-bar button.orca-preview-warnings.is-on {
+  background: rgba(233, 151, 63, 0.28);
+  color: var(--color-orange);
+}
+
+/* The warnings themselves, between the bar and the pages. A long list
+   scrolls rather than pushing the book off the pane. */
+.orca-preview-issues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  max-height: 30%;
+  overflow-y: auto;
+  padding: var(--size-4-2) var(--size-4-3);
+  border-bottom: 1px solid var(--divider-color);
+  background: var(--background-secondary);
+  flex: none;
+}
+
+.orca-preview-issue {
+  border-left: 2px solid var(--color-orange);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  background: rgba(233, 151, 63, 0.08);
+  padding: var(--size-4-2);
+}
+
+.orca-preview-issue-said {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.45;
+  color: var(--text-normal);
+}
+
+.orca-preview-issue-at {
+  margin-top: 3px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
 }
 
 .orca-preview-divider {

@@ -343,8 +343,21 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
+  // The count opens the warnings, and each one is the engine's own
+  // line and the place it named.
   await expect(book.warnings).toHaveText("1 warning");
-  await expect(book.warnings).toHaveAttribute("aria-label", /nothing here\.png/);
+  await expect(book.issues).toHaveCount(1);
+  await expect(book.issues.first()).toBeVisible();
+  await expect(book.issues.first()).toContainText(
+    "image nothing here.png: no image was supplied for it; it is skipped",
+  );
+  await expect(book.issues.first()).toContainText("Acknowledgements.md:6:1");
+
+  // The author shuts them, and the count stays to open them again.
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeHidden();
+  await book.warnings.click();
+  await expect(book.issues.first()).toBeVisible();
 
   // The page is set without the image rather than left broken.
   await book.type(String(BACK));

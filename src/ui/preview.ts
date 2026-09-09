@@ -1,4 +1,4 @@
-import { paintPage } from "fleuron";
+import { paintPage, type Warning } from "fleuron";
 import {
   ItemView,
   setIcon,
@@ -20,6 +20,7 @@ import { nodesOn, type Nodes } from "@/book/place";
 import { isGenerated } from "@/book/plan";
 import { EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
+import { THEME_SHEET } from "@/style/theme";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import {
   fits,
@@ -107,7 +108,8 @@ export class PreviewView extends ItemView {
   private well: HTMLElement | undefined;
   private surface: HTMLElement | undefined;
   private message: HTMLElement | undefined;
-  private warnings: HTMLElement | undefined;
+  private warnings: HTMLButtonElement | undefined;
+  private issues: HTMLElement | undefined;
   private folio: HTMLInputElement | undefined;
   private total: HTMLElement | undefined;
   private chapter: HTMLSelectElement | undefined;
@@ -167,6 +169,12 @@ export class PreviewView extends ItemView {
   private openedAt: number | undefined;
   /** Stops watching this pane's book for renders. */
   private unwatch: (() => void) | undefined;
+  /**
+   * Whether the warnings are open, once the author has said. A run
+   * that warns opens them the first time, and a pane the author shut
+   * stays shut until the warnings clear.
+   */
+  private opened: boolean | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -286,6 +294,8 @@ export class PreviewView extends ItemView {
     this.surface = undefined;
     this.message = undefined;
     this.warnings = undefined;
+    this.issues = undefined;
+    this.opened = undefined;
     this.folio = undefined;
     this.total = undefined;
     this.chapter = undefined;
@@ -435,10 +445,14 @@ export class PreviewView extends ItemView {
     for (const view of VIEWS) this.switchesTo(views, view);
     bar.createDiv({ cls: "orca-preview-spacer" });
 
-    const warnings = bar.createSpan({ cls: "orca-preview-warnings" });
+    const warnings = bar.createEl("button", { cls: "orca-preview-warnings" });
     warnings.dataset["testid"] = "orca-warnings";
     warnings.toggleVisibility(false);
     this.warnings = warnings;
+    this.registerDomEvent(warnings, "click", () => {
+      this.opened = this.opened !== true;
+      this.showsIssues();
+    });
 
     const chapter = bar.createEl("select", {
       cls: "dropdown orca-preview-chapter",
@@ -461,6 +475,11 @@ export class PreviewView extends ItemView {
     this.on = this.turnsTo(bar, "chevron-right", "Next page", () =>
       nextPage(this.viewing()),
     );
+
+    const issues = pane.createDiv({ cls: "orca-preview-issues" });
+    issues.dataset["testid"] = "orca-issues";
+    issues.toggleVisibility(false);
+    this.issues = issues;
 
     const well = pane.createDiv({ cls: "orca-preview-well" });
     // The pane pages through from the keyboard, so the well the pages
@@ -749,24 +768,59 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Counts what the last run had to complain about, and carries the
-   * engine's own wording as the label. A warning is routed, never
-   * re-worded.
+   * Draws what the last run had to complain about: a count on the bar,
+   * and the warnings themselves under it. A warning is routed, never
+   * re-worded, so each card carries the engine's own line and the
+   * place it named.
+   *
+   * A warning against matter orca generated, or against the sheet orca
+   * generated, is orca's own defect. The author has nothing to do
+   * about either, so those go to the console.
    */
   private warns(session: Session): void {
     const chip = this.warnings;
-    if (chip === undefined) return;
-    const said = session.warnings;
+    const issues = this.issues;
+    if (chip === undefined || issues === undefined) return;
+    const said: Warning[] = [];
+    for (const warning of session.warnings) {
+      if (ours(warning)) console.warn(`Orca: ${warning.message}`, warning.origin);
+      else said.push(warning);
+    }
+
     chip.toggleVisibility(said.length > 0);
-    if (said.length === 0) return;
-    chip.setText(said.length === 1 ? "1 warning" : `${String(said.length)} warnings`);
-    const lines = said.map((warning) =>
-      warning.origin === null
-        ? warning.message
-        : `${warning.origin} — ${warning.message}`,
-    );
-    chip.setAttribute("aria-label", lines.join("\n"));
-    chip.title = lines.join("\n");
+    issues.empty();
+    if (said.length === 0) {
+      this.opened = undefined;
+      this.showsIssues();
+      return;
+    }
+
+    const count = said.length === 1 ? "1 warning" : `${String(said.length)} warnings`;
+    chip.empty();
+    chip.createSpan({ text: count });
+    setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
+    chip.setAttribute("aria-label", count);
+    for (const warning of said) {
+      const card = issues.createDiv({ cls: "orca-preview-issue" });
+      card.createDiv({ cls: "orca-preview-issue-said", text: warning.message });
+      if (warning.origin !== null) {
+        card.createDiv({ cls: "orca-preview-issue-at", text: warning.origin });
+      }
+    }
+    // A run that warns opens the list the first time. The author shuts
+    // it, and it stays shut until the warnings clear.
+    this.opened ??= true;
+    this.showsIssues();
+  }
+
+  /** Opens or shuts the warnings, and says which on the bar. */
+  private showsIssues(): void {
+    const issues = this.issues;
+    if (issues === undefined) return;
+    const open = this.opened === true && issues.childElementCount > 0;
+    issues.toggleVisibility(open);
+    this.warnings?.setAttribute("aria-expanded", String(open));
+    this.warnings?.toggleClass("is-on", open);
   }
 
   /**
@@ -962,6 +1016,18 @@ export class PreviewView extends ItemView {
     if (message !== undefined) this.well?.prepend(message);
     this.message = message;
   }
+}
+
+/**
+ * A warning orca raised against its own work rather than the author's.
+ * The generated matter and the generated sheet are both orca's, and an
+ * author has nothing to do about either.
+ */
+function ours(warning: Warning): boolean {
+  const origin = warning.origin;
+  return (
+    origin !== null && (isGenerated(origin) || origin.startsWith(THEME_SHEET))
+  );
 }
 
 /** The state a leaf was opened with, as much of it as a preview reads. */
