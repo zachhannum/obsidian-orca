@@ -29,6 +29,7 @@ const ready = { orca: "ready", wire: WIRE_VERSION };
 
 class FakeWorker implements WorkerPort {
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
   readonly received: unknown[] = [];
   terminated = false;
 
@@ -43,6 +44,11 @@ class FakeWorker implements WorkerPort {
 
   terminate(): void {
     this.terminated = true;
+  }
+
+  /** The worker throws where nothing catches it, and stops answering. */
+  die(said: string): void {
+    this.onerror?.({ message: said } as ErrorEvent);
   }
 }
 
@@ -143,6 +149,46 @@ test("stopping terminates the worker and revokes the Blob URL", async () => {
 
   assert.equal(host.worker().terminated, true);
   assert.deepEqual(host.released, ["blob:orca/0"]);
+});
+
+test("a dead worker refuses what it was holding, and says so once", async () => {
+  const host = fakeHost(ready);
+  const handle = await startEngine(new ArrayBuffer(8), host);
+  const said: string[] = [];
+  handle.dies((cause) => said.push(cause.message));
+
+  // The fake answers every request with the start reply, so the render
+  // is still on the worker when the worker dies.
+  const rendering = handle.client.preview([{ op: "split", level: 0 }]);
+  host.worker().die("unreachable");
+
+  await assert.rejects(
+    rendering,
+    (error: unknown) => error instanceof Error && error.message === "unreachable",
+  );
+  assert.equal(host.worker().terminated, true);
+  assert.deepEqual(host.released, ["blob:orca/0"]);
+
+  // A death is one report, and a caller that asks after it is told at
+  // once rather than left waiting on a subscription.
+  host.worker().die("unreachable again");
+  const late: string[] = [];
+  handle.dies((cause) => late.push(cause.message));
+  assert.deepEqual(said, ["unreachable"]);
+  assert.deepEqual(late, ["unreachable"]);
+
+  // Nothing crosses to a worker that is gone.
+  await assert.rejects(handle.client.preview([{ op: "split", level: 1 }]));
+});
+
+test("stopping the worker refuses the requests it was still holding", async () => {
+  const host = fakeHost(ready);
+  const handle = await startEngine(new ArrayBuffer(8), host);
+
+  const rendering = handle.client.preview([{ op: "split", level: 0 }]);
+  handle.stop();
+
+  await assert.rejects(rendering, /the engine stopped/);
 });
 
 test("a worker that cannot open the engine is torn down", async () => {

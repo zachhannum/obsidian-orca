@@ -692,6 +692,7 @@ function nodeHost(): WorkerHost {
       const worker = new Worker(shim, { eval: true, workerData: { source } });
       const port: WorkerPort = {
         onmessage: null,
+        onerror: null,
         postMessage: (message, transfer) => {
           worker.postMessage(message, transfer as TransferListItem[]);
         },

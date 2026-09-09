@@ -901,7 +901,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
       // Every view of one book shares its client, so orca runs the
       // renders of the book one at a time. The engine holds one
       // document, and two renders at once race it.
-      return { client: serialized(handle.client), stop: handle.stop };
+      return {
+        client: serialized(handle.client),
+        dies: handle.dies,
+        stop: handle.stop,
+      };
     } catch (cause) {
       this.notice(cause);
       throw cause;

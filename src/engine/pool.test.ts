@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { LayoutOutput } from "fleuron";
 import type { Clock } from "@/engine/loop";
+import { EngineDead, EngineError } from "@/engine/errors";
 import { Pool, type Engine } from "@/engine/pool";
 import type { EngineClient, Stages } from "@/engine/session";
 
@@ -68,16 +69,26 @@ class Workers {
   readonly started: string[] = [];
   readonly stopped: string[] = [];
   readonly gone: string[] = [];
+  /** The reason each report of a gone book gave. */
+  readonly why: string[] = [];
+  /** The report each worker makes when it dies, by the book. */
+  private readonly dying = new Map<string, (cause: EngineError) => void>();
 
   start = (book: string): Promise<Engine> => {
     this.started.push(book);
     return Promise.resolve({
       client: new FakeClient(),
+      dies: (told) => this.dying.set(book, told),
       stop: () => {
         this.stopped.push(book);
       },
     });
   };
+
+  /** The worker of this book dies where it stands. */
+  kill(book: string, said: string): void {
+    this.dying.get(book)?.(new EngineError(said));
+  }
 
   /** The books whose worker still runs, in the order the pool started them. */
   get running(): string[] {
@@ -192,6 +203,69 @@ test("a book opened twice before its worker starts gets one worker", async () =>
   assert.equal(await opening, await again);
   assert.deepEqual(workers.started, ["one.md"]);
   assert.deepEqual(workers.stopped, []);
+});
+
+test("a dead worker takes its book off the pool, and the next open starts another", async () => {
+  const workers = new Workers();
+  const pool = new Pool({
+    start: workers.start,
+    gone: (book, why) => {
+      workers.gone.push(book);
+      workers.why.push(why);
+    },
+    clock: new Steps(),
+  });
+
+  await pool.client("one.md");
+  workers.kill("one.md", "the engine stopped");
+
+  assert.deepEqual(workers.stopped, ["one.md"]);
+  assert.deepEqual(workers.gone, ["one.md"]);
+  assert.deepEqual(workers.why, ["died"]);
+
+  // Everything the book was made of is on this thread, so the book is
+  // set again on a worker of its own.
+  await pool.client("one.md");
+  assert.deepEqual(workers.started, ["one.md", "one.md"]);
+  assert.deepEqual(workers.running, ["one.md"]);
+});
+
+test("the second death on one book starts no third worker", async () => {
+  const workers = new Workers();
+  const pool = new Pool({ start: workers.start, clock: new Steps() });
+
+  await pool.client("one.md");
+  workers.kill("one.md", "unreachable");
+  await pool.client("one.md");
+  workers.kill("one.md", "unreachable again");
+
+  const refused = await pool.client("one.md").then(
+    () => undefined,
+    (cause: unknown) => cause,
+  );
+  assert.ok(refused instanceof EngineDead);
+  assert.deepEqual(refused.log, ["unreachable", "unreachable again"]);
+  assert.deepEqual(workers.started, ["one.md", "one.md"]);
+
+  // Another book is untouched by the book that died: the count is the
+  // book's, not the pool's.
+  await pool.client("two.md");
+  assert.deepEqual(workers.started, ["one.md", "one.md", "two.md"]);
+});
+
+test("a worker that fails after the pool stopped it costs the book no replay", async () => {
+  const workers = new Workers();
+  const pool = new Pool({ start: workers.start, clock: new Steps() });
+
+  await pool.client("one.md");
+  pool.stop("one.md");
+  workers.kill("one.md", "the engine stopped");
+  await pool.client("one.md");
+  workers.kill("one.md", "unreachable");
+
+  // Only the death of a running engine counted, so the book still has
+  // its replay.
+  await assert.doesNotReject(pool.client("one.md"));
 });
 
 // What this tier does not cover: the grace itself, because the test
