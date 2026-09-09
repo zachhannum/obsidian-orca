@@ -16,10 +16,10 @@ const FILE = "Chapter Twelve.md";
 /** The image the fixture book embeds. */
 const DEVICE = "images/device.png";
 
-/** Its own idea of its size, as the header has it. */
+/** The size in its header. */
 const SIZE: Intrinsic = { width: 220, height: 132, dpiX: 96, dpiY: 96 };
 
-/** One page with that image on it, as the engine would place it. */
+/** One page with that image on it, as the engine places it. */
 const PLACED: Page = {
   number: 1,
   side: "recto",

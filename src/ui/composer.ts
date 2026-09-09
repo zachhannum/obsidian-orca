@@ -113,8 +113,8 @@ export class Typeset {
     if (this.sent.get(note) === text) return;
     this.sent.set(note, text);
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
-    // An embed that will not read is one the engine warns about, the
-    // same as one the vault never had.
+    // An embed that will not read crosses no bytes, and the engine
+    // warns about the url.
     void this.embed(note, text).catch(() => undefined);
   }
 

@@ -135,7 +135,7 @@ test("a title page with no metadata falls back to its role's own name", async ()
   assert.equal(only(ops, "book").sources[0]?.text, "# Title page");
 });
 
-test("an embed crosses as bytes, under the url the manuscript wrote", async () => {
+test("an embed crosses as bytes, under the url the manuscript names it by", async () => {
   const { ops, images } = await sending(await fixture());
 
   assert.deepEqual(
@@ -163,12 +163,12 @@ test("layout reads the header for the size and decodes nothing", async () => {
     .filter((item) => item.kind === "image");
   assert.equal(placed.length, 1);
   assert.equal(placed[0]?.asset, 0);
-  // Points, off the header's own pixels and resolution.
+  // Points, from the header's own pixels and resolution.
   assert.equal(placed[0]?.w, 165);
   assert.equal(placed[0]?.h, 99);
 });
 
-test("an embed the vault cannot answer is a warning, and the book still sets", async () => {
+test("an embed with no file behind it is a warning, and the book still sets", async () => {
   const model = await fixture();
   const sources = await bookSources(
     model.book,

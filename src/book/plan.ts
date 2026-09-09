@@ -11,8 +11,8 @@
  * knows what the edit invalidated. Which stages the engine re-runs
  * from it is the engine's own business.
  *
- * The engine opens no file, so an embed is resolved through the vault
- * here and its bytes cross ahead of the sources that name it.
+ * The engine opens no file, so an embed resolves through the vault
+ * here, and its bytes cross ahead of the sources that name it.
  */
 
 import { styleOp, type Op, type Sheet, type Source } from "fleuron";
@@ -98,11 +98,11 @@ export async function sendBook(
 
 /**
  * Every image the sources embed, resolved through the vault, each url
- * once. An embed the vault cannot answer sends nothing and is left to
- * the engine, which warns about the url it was given no bytes for.
+ * once. An embed with no file behind it sends nothing, and the engine
+ * warns about the url it was given no bytes for.
  *
- * A note is not an image. An embed that resolves to one is a
- * transclusion, which orca does not set.
+ * An embed that resolves to a note is a transclusion, which orca does
+ * not set.
  */
 export async function bookImages(
   sources: readonly Source[],
@@ -121,8 +121,8 @@ export async function bookImages(
   }
   const read = await Promise.all(
     [...wanted].map(async ([url, path]) => {
-      // A file that will not read is an embed the engine warns about,
-      // the same as one the vault never had.
+      // A file that will not read crosses no bytes, the same as one
+      // the vault never had.
       const bytes = await take(path).catch(() => undefined);
       return bytes === undefined ? undefined : { url, ...bytes };
     }),

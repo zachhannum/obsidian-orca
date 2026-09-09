@@ -155,13 +155,13 @@ export class Registry implements Sent {
   }
 
   /**
-   * Keeps one image the manuscript names: the key its bytes went under,
-   * and the url a page draws them from. The engine is sent the same
-   * bytes under the same manuscript url, so a page and the layout it
-   * was set from cannot disagree about what an embed is.
+   * Keeps one image the manuscript names, under the key its bytes
+   * hashed to, and makes the url a page draws them from. The same bytes
+   * cross to the engine under the same manuscript url, so a page and
+   * the layout it was set from cannot disagree about what an embed is.
    *
-   * Two urls over one file share a key and therefore one url to draw
-   * from, the same way two chapters in one face share a crossing.
+   * Two urls over one file share a key, and therefore one url to draw
+   * from.
    */
   image(named: string, image: Hashed): void {
     this.named.set(named, image.key);

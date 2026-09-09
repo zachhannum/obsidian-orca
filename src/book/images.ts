@@ -1,24 +1,23 @@
 /**
- * The images a manuscript names, as the engine will ask for them.
+ * The images a manuscript names, as the urls the engine keys them by.
  *
- * The engine opens nothing, so an image reaches it as bytes under the
- * url the source wrote. That url is the key on both sides: layout
- * places the image by it, and a painter takes it back to its own
- * pixels.
+ * The engine opens no file, so an image reaches it as bytes under the
+ * url written in the source. Layout places the image by that url, and a
+ * painter draws the pixels from it.
  *
- * The scan is a reading of the text rather than a parse of it, so a url
- * in a code fence is fetched too. That costs one crossing the engine
- * never asks about and nothing else; an embed the scan misses is a
- * warning from the run that wanted it.
+ * The scan reads the text rather than parsing it, so a url in a code
+ * fence is fetched too. That costs one crossing and nothing else. An
+ * embed the scan misses crosses no bytes, and the engine warns about
+ * the url.
  */
 
 import { readFrontmatter } from "@/book/frontmatter";
 
 /** One image a source names. */
 export interface Embed {
-  /** The url as the source wrote it, which is what the engine keys the bytes on. */
+  /** The url as it is written in the source, which the engine keys the bytes on. */
   url: string;
-  /** The same as a link the vault resolves: a markdown url is percent-decoded. */
+  /** The same url as a link the vault resolves. A markdown url is percent-decoded. */
   link: string;
 }
 
@@ -28,13 +27,14 @@ const WIKI = /!\[\[([^\]]+)\]\]/g;
 /** `![alt](file)`, with a title after the url left off. */
 const INLINE = /!\[[^\]]*\]\(\s*(<[^>]*>|[^)\s]+)/g;
 
-/** A url that names somewhere other than the vault. */
+/** A url outside the vault. */
 const REMOTE = /^[a-z][a-z0-9+.-]*:/i;
 
 /**
  * Every image the body of a source names, in the order it names them,
- * each url once. A remote url is not one of them: orca reads the vault
- * and nothing else, so the engine is left to say what it was without.
+ * each url once. A url outside the vault is not one of them. Orca reads
+ * the vault and nothing else, so such a url crosses no bytes and the
+ * engine warns about it.
  */
 export function imagesIn(text: string): Embed[] {
   const { body } = readFrontmatter(text);
@@ -62,12 +62,12 @@ function* inlines(body: string): Generator<Embed> {
   }
 }
 
-/** A url a link resolver reads, for one written with the escapes a url takes. */
+/** The url with its percent escapes decoded, which is the path the vault resolves. */
 function decoded(url: string): string {
   try {
     return decodeURIComponent(url);
   } catch {
-    // A url that is not encoded at all resolves as it was written.
+    // A url with no escapes in it resolves as it was written.
     return url;
   }
 }

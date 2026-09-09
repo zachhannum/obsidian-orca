@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { imagesIn } from "@/book/images";
 
-test("an embed is read as the url the engine will name it by", () => {
+test("an embed is read as the url the engine names it by", () => {
   const found = imagesIn(
     [
       "# One",
@@ -26,7 +26,7 @@ test("an embed is read as the url the engine will name it by", () => {
   ]);
 });
 
-test("a url the vault cannot hold is not one of them, and a repeat is read once", () => {
+test("a url outside the vault is left out, and an embed named twice is read once", () => {
   const found = imagesIn(
     [
       "---",
@@ -48,8 +48,7 @@ test("a url the vault cannot hold is not one of them, and a repeat is read once"
   );
 });
 
-// What this tier does not cover: which of these urls the engine
-// actually names, since the scan is a reading of the text rather than a
-// parse of it. A url in a code fence is fetched and never asked for,
-// and the pipeline test in `plan.test.ts` is where the two are held
-// against each other.
+// What this tier does not cover: which of these urls the engine names,
+// since the scan reads the text rather than parsing it. A url in a code
+// fence is fetched and never asked for. The op planning tier is where
+// the scan and a real run are held against each other.

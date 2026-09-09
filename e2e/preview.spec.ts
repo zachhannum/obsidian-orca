@@ -331,7 +331,7 @@ test("an embed is painted from the bytes the engine set the page from", async ({
   await expect(book.warnings).toBeHidden();
 });
 
-test("an embed the vault cannot answer is a warning the author can see", async ({
+test("an embed with no file behind it is a warning the author can see", async ({
   book,
   vault,
 }) => {

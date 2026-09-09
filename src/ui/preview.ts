@@ -749,9 +749,9 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Names what the last run had to complain about: an embed the vault
-   * could not answer, a declaration the book cannot be set with. The
-   * engine's own wording is put on screen, never a rewrite of it.
+   * Counts what the last run had to complain about, and carries the
+   * engine's own wording as the label. A warning is routed, never
+   * re-worded.
    */
   private warns(session: Session): void {
     const chip = this.warnings;

@@ -326,8 +326,8 @@ test("an image a chapter picks up while it is drafted crosses on the next render
   composer.retype(BOOK, note, `${copyright}\n\n![[images/device.png]]\n`);
   await settled(clock);
 
-  // The words go first and the bytes follow: the engine reads the
-  // chapter, then is given the file the chapter now names.
+  // The words go first and the bytes follow, so the engine reads the
+  // chapter and is then given the file it now names.
   const sent = client.rendered.slice(renders).flat();
   assert.deepEqual(sent.map((op) => op.op), ["edit", "image"]);
   const image = sent.find((op) => op.op === "image");
@@ -336,7 +336,7 @@ test("an image a chapter picks up while it is drafted crosses on the next render
     image?.bytes,
     new Uint8Array(await vault.readBinary("images/device.png")),
   );
-  // One file, one set of pixels, whichever url a page draws it by.
+  // One file has one set of pixels, whichever url draws it.
   assert.equal(
     book.assets.imageUrl("images/device.png"),
     book.assets.imageUrl("device.png"),
@@ -353,8 +353,8 @@ test("an image a chapter picks up while it is drafted crosses on the next render
 
 /**
  * Runs the reads and the hashing an embed costs, and the ticks the
- * renders they plan wait on. Every turn here is a turn of the loop the
- * work is already queued on rather than a wait on a clock.
+ * renders they plan wait on. Each turn runs work already queued rather
+ * than waiting on a clock.
  */
 async function settled(clock: Steps): Promise<void> {
   for (let turn = 0; turn < 8; turn += 1) {

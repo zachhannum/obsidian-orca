@@ -51,9 +51,9 @@
   font-size: var(--font-ui-small);
 }
 
-/* What the last run had to complain about, beside the page it set. The
-   count is on the bar and the engine's own wording is the tooltip,
-   until the Issues pane has somewhere to put it. */
+/* The count of what the last run had to complain about, beside the
+   page it set. The engine's own wording is the tooltip, until the
+   Issues pane has somewhere to put it. */
 .orca-preview-warnings {
   display: inline-flex;
   align-items: center;
