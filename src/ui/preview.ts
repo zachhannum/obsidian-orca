@@ -730,9 +730,9 @@ export class PreviewView extends ItemView {
    * is dropped rather than painted behind the one they are on.
    */
   private async turn(at: number, led = false): Promise<void> {
-    // The book was dropped: its engine stopped to make room for another
-    // book, or its notes changed under it. The pane sets it again, and
-    // the reader comes back to the page they asked for.
+    // The book's engine stopped to make room for another book. The pane
+    // sets the book again, and the reader comes back to the page they
+    // asked for.
     if (this.composed?.dropped === true) {
       this.state = { ...this.state, folio: at + 1 };
       await this.compose();

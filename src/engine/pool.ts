@@ -14,7 +14,7 @@ import type { EngineClient } from "@/engine/session";
 /** Books on the engine at once, before opening one stops another. */
 export const CEILING = 2;
 
-/** Idle time before a book no view is open on is stopped, in milliseconds. */
+/** Time a book with no view on it keeps its engine, in milliseconds. */
 export const GRACE = 60_000;
 
 /** One worker, and the client on it. */
@@ -99,7 +99,7 @@ export class Pool implements Engines {
     return this.limit;
   }
 
-  /** Sets the ceiling, stopping the coldest books down to the new one. */
+  /** Sets the ceiling, and stops the coldest books over it. */
   set ceiling(books: number) {
     this.limit = capped(books);
     this.evict(0);
@@ -110,8 +110,8 @@ export class Pool implements Engines {
    * second call while the first is starting waits on that one, so an
    * effect that mounts twice starts one worker.
    *
-   * The client is the one running now. A caller that keeps it past the
-   * render it asked for asks again rather than holding it.
+   * The client answers for the engine running now, so a caller asks for
+   * it again on the next render rather than keeping the one it got.
    */
   client(book: string): Promise<EngineClient> {
     const running = this.live.get(book);

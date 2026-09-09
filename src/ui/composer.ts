@@ -192,7 +192,7 @@ export class Typeset {
     this.assets.close();
   }
 
-  /** Drops the book, for one whose engine has stopped. */
+  /** Drops the book, for an engine that has stopped. */
   drop(): void {
     this.gone = true;
     this.stop();
@@ -302,8 +302,8 @@ export class Composer {
 
   /**
    * Drops a book whose engine has stopped. The next open sets it on a
-   * new one, and the view reading it turns to it rather than going on
-   * with the pages it has.
+   * new engine, and the view reading it sets the book again rather than
+   * going on with the pages it has.
    */
   discard(path: string): void {
     this.release(path, (book) => {

@@ -914,10 +914,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (this.engines !== undefined) this.engines.ceiling = this.limits.books;
   }
 
-  /**
-   * Reads the engine module at load, so a plugin installed without it
-   * says so before a book is opened.
-   */
+  /** Reads the engine module at load, and reports an install with none. */
   private async warmed(): Promise<void> {
     try {
       await this.module();

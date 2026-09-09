@@ -1,8 +1,8 @@
 /**
  * The settings orca saves beside the plugin.
  *
- * A book's design is the book's, and lives in its note. What is here is
- * the machine's: how much of the engine orca keeps running.
+ * A book's design lives in the book's note. These are the machine's:
+ * how much of the engine orca keeps running on it.
  */
 
 import { CEILING } from "@/engine/pool";
@@ -28,7 +28,7 @@ export function readLimits(saved: unknown): Limits {
   };
 }
 
-/** A count of books inside what the setting offers, in whole books. */
+/** `books`, in whole books and inside the range the setting offers. */
 export function bookCount(books: number): number {
   if (!Number.isFinite(books)) return LIMITS.books;
   return Math.min(Math.max(Math.floor(books), 1), MOST_BOOKS);
