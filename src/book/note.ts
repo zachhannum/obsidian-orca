@@ -18,9 +18,6 @@ import {
 /** Frontmatter key that makes a note a book. Its value is the format. */
 export const BOOK_KEY = "orca-book";
 
-/** Frontmatter key that points at a shared design note. */
-export const SHARED_KEY = "design";
-
 /** The format orca writes. A note above it does not open. */
 export const FORMAT = 1;
 
@@ -48,10 +45,8 @@ export interface Book {
   /** The format the note is written in, which is below `FORMAT` for a note orca has migrated. */
   format: number;
   metadata: BookMetadata;
-  /** The design in this note's own frontmatter. */
+  /** The design, which is this note's own frontmatter. */
   design: Design;
-  /** The link to a shared design note, which this book's own design overrides. */
-  designNote?: string;
   /** The author's own properties, which orca keeps and does not read. */
   own: Properties;
 }
@@ -125,21 +120,13 @@ export function readBook(properties: Properties): Book {
   const migrated = migrate(properties, format);
   const metadata: BookMetadata = {};
   const own: Properties = {};
-  let designNote: string | undefined;
   for (const [key, value] of Object.entries(migrated)) {
     if (key === BOOK_KEY || DESIGN_KEYS.includes(key)) continue;
-    if (key === SHARED_KEY) {
-      const link = value === null ? "" : readValue(value, "text").trim();
-      if (link !== "") designNote = link;
-      continue;
-    }
     const field = FIELDS.find((named) => named.key === key);
     if (field === undefined) own[key] = value;
     else if (value !== null) metadata[field.key] = readValue(value, field.kind);
   }
-  const book: Book = { format, metadata, design: readDesign(migrated), own };
-  if (designNote !== undefined) book.designNote = designNote;
-  return book;
+  return { format, metadata, design: readDesign(migrated), own };
 }
 
 /**
@@ -153,7 +140,6 @@ export function writeBook(book: Book): Properties {
     const value = book.metadata[key];
     if (value !== undefined) properties[key] = value;
   }
-  if (book.designNote !== undefined) properties[SHARED_KEY] = book.designNote;
   return { ...properties, ...writeDesign(book.design), ...book.own };
 }
 
@@ -169,8 +155,6 @@ export function applyBook(properties: Properties, book: Book): void {
     if (value === undefined) delete properties[key];
     else properties[key] = value;
   }
-  if (book.designNote === undefined) delete properties[SHARED_KEY];
-  else properties[SHARED_KEY] = book.designNote;
   const design = writeDesign(book.design);
   for (const key of DESIGN_KEYS) {
     const value = design[key];

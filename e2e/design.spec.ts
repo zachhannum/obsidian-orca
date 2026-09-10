@@ -1,17 +1,11 @@
 import { expect, test } from "./harness/test";
+import type { Vault } from "./harness/vault";
 
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
 /** The face the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FACE = "Alegreya";
-
-/** The note `Extract design to a shared note` writes beside the book. */
-const SHARED = "Pride and Prejudice design.md";
-
-/** The commands that move a design between the book and a shared note. */
-const EXTRACT = "orca:extract-design";
-const ABSORB = "orca:absorb-design";
 
 /** A family no machine installs, so the filter matches nothing. */
 const NOWHERE = "Zzyzx Grotesque";
@@ -67,7 +61,9 @@ test("text matching nothing does not commit, so the book keeps the face it has",
 test("picking a family sets the book in it, and the styles are the cuts the engine registered", async ({
   book,
   panel,
+  vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   const painted = await book.painted();
   await panel.open();
@@ -94,12 +90,16 @@ test("picking a family sets the book in it, and the styles are the cuts the engi
 
   // The machine has the family, so there is no warning.
   await expect(panel.missing).toHaveCount(0);
+
+  await written(vault, own);
 });
 
 test("a face crosses once, so picking the same family again sends the sheet alone", async ({
   book,
   panel,
+  vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   await book.painted();
   await panel.open();
@@ -119,6 +119,8 @@ test("a face crosses once, so picking the same family again sends the sheet alon
   // the same ids.
   await expect(panel.face).toContainText(FIXTURE_FACE);
   expect(await panel.styles()).toEqual(cuts);
+
+  await written(vault, own);
 });
 
 test("a book note written while a pane reads it leaves the panel designing that book", async ({
@@ -126,6 +128,7 @@ test("a book note written while a pane reads it leaves the panel designing that 
   panel,
   vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   const painted = await book.painted();
   await panel.open();
@@ -147,13 +150,17 @@ test("a book note written while a pane reads it leaves the panel designing that 
   await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
   await expect(panel.face).toContainText(FIXTURE_FACE);
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await written(vault, own);
 });
 
 test("a second preview in a background tab is deferred, and the panel designs the drawn one", async ({
   book,
   obsidian,
   panel,
+  vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   await book.painted();
   // A second pane on the same book, so the first is a background tab.
@@ -177,102 +184,41 @@ test("a second preview in a background tab is deferred, and the panel designs th
   await panel.type("aleg");
   await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
   await expect(panel.face).toContainText(FIXTURE_FACE);
+
+  await written(vault, own);
 });
 
-test("`Extract design to a shared note` moves the design between the two notes", async ({
-  note,
-  obsidian,
-  vault,
-}) => {
-  await note.open(BOOK);
-  vault.touch(BOOK);
-  vault.touch(SHARED);
-
-  // With no `design` key the book's own frontmatter is the design, so
-  // there is a design to extract and none to bring back.
-  expect(await obsidian.offers(EXTRACT)).toBe(true);
-  expect(await obsidian.offers(ABSORB)).toBe(false);
-
-  await obsidian.command(EXTRACT);
-
-  await expect.poll(async () => vault.read(SHARED)).toContain("orca-design: 1");
-  const shared = await vault.read(SHARED);
-  expect(shared).toContain("leading: 14pt");
-  expect(shared).toContain("ornament: ⁂");
-
-  // The book keeps the link and none of the keys the note now holds.
-  await expect.poll(async () => vault.read(BOOK)).toContain(
-    "Pride and Prejudice design",
-  );
-  expect(await vault.read(BOOK)).not.toContain("leading:");
-
-  await expect.poll(async () => obsidian.offers(ABSORB)).toBe(true);
-  expect(await obsidian.offers(EXTRACT)).toBe(false);
-
-  await obsidian.command(ABSORB);
-
-  await expect.poll(async () => vault.read(BOOK)).toContain("leading: 14pt");
-  expect(await vault.read(BOOK)).not.toContain("Pride and Prejudice design");
-});
-
-test("a book that points at a design note is set in the face that note names", async ({
+test("a face picked is written into the book note, so the book opens in it", async ({
   book,
-  obsidian,
   panel,
   vault,
 }) => {
   const own = await vault.read(BOOK);
-  vault.touch(SHARED);
-  await vault.write(
-    SHARED,
-    `---\norca-design: 1\nface: ${FIXTURE_FACE}\n---\n`,
-  );
-  // The link is resolved through the cache, so the spec waits for the
-  // note to reach it rather than on a clock.
-  await obsidian.open(SHARED);
-  await vault.modify(
-    BOOK,
-    own.replace(
-      "orca-book: 1\n",
-      'orca-book: 1\ndesign: "[[Pride and Prejudice design]]"\n',
-    ),
-  );
-
+  vault.touch(BOOK);
   await book.open();
   await book.painted();
   await panel.open();
 
-  // The book sets nothing of its own, so the face is the shared note's.
-  expect(await panel.reading()).toContain(FIXTURE_FACE);
-
-  // The book note goes back through the vault, so the book is taken off
-  // the composer and the next spec sets it from the notes as they are.
-  await vault.modify(BOOK, own);
-});
-
-test("the panel designs a shared design note, and a pick is written to it", async ({
-  obsidian,
-  panel,
-  vault,
-}) => {
-  vault.touch(SHARED);
-  await vault.write(SHARED, "---\norca-design: 1\n---\n");
-  await obsidian.open(SHARED);
-  await panel.open();
-
-  // The note is the design, and it sets no face, so the panel reads the
-  // one the engine carries.
-  await expect(panel.panel).toBeVisible();
-  await expect(panel.face).toContainText(CARRIED);
-  // No book is under the note, so the engine registered no cuts for it.
-  await expect(panel.cuts).toHaveCount(0);
-
   await panel.pick();
   await panel.type("aleg");
   await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
-
   await expect(panel.face).toContainText(FIXTURE_FACE);
-  await expect.poll(async () => vault.read(SHARED)).toContain(
+
+  // The design is the book note's own frontmatter, so the pick is there
+  // rather than only on the engine.
+  await expect.poll(async () => vault.read(BOOK)).toContain(
     `face: ${FIXTURE_FACE}`,
   );
+
+  await written(vault, own);
 });
+
+/**
+ * Puts the book note back through the vault, so a pick written into it
+ * does not reach the next spec. The write takes the book off the
+ * composer, and the next open sets it from the notes as they now are.
+ */
+async function written(vault: Vault, own: string): Promise<void> {
+  vault.touch(BOOK);
+  await vault.modify(BOOK, own);
+}

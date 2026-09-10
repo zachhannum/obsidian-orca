@@ -21,17 +21,8 @@ import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
-import {
-  absorbed,
-  applyDesignNote,
-  designFormat,
-  extracted,
-  readDesignNote,
-} from "@/book/design";
-import type { Properties } from "@/book/frontmatter";
-import { SHARED_KEY } from "@/book/note";
 import { Edits } from "@/ui/edits";
-import { bookFromFolder, createDesignNote, emptyBook } from "@/ui/make";
+import { bookFromFolder, emptyBook } from "@/ui/make";
 import type { Face } from "@/book/plan";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
@@ -45,12 +36,7 @@ import {
 } from "@/ui/fonts";
 import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
-import {
-  PANEL_VIEW,
-  DesignPanelView,
-  type DesignedNote,
-  type Designing,
-} from "@/ui/panel";
+import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
 import {
@@ -103,8 +89,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private fonts: FontPlaces | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
-  /** The design note the reader is in, which the panel designs in place of a book. */
-  private designNote: string | undefined;
+  /**
+   * The book notes orca is writing a design into. The engine has the
+   * sheet already, so the write is not a reason to set the book again,
+   * and the render the pick asked for is not dropped under it.
+   */
+  private readonly designWrites = new Set<string>();
   private indexing: number | undefined;
   private unloaded = false;
   /** The status bar item the folio being read is written into. */
@@ -183,7 +173,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
       (leaf) => new DesignPanelView(leaf, this.designing()),
     );
     this.catchOpening();
-    this.followDesignNotes();
     this.addRibbonIcon("book", "Open the book", () => {
       void this.reveal();
     });
@@ -245,30 +234,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
       name: "New book",
       callback: () => {
         void this.newBook();
-      },
-    });
-    this.addCommand({
-      id: "extract-design",
-      name: "Extract design to a shared note",
-      checkCallback: (checking) => {
-        const book = this.onBook()?.book;
-        if (book === undefined || this.sharedDesign(book) !== undefined) {
-          return false;
-        }
-        if (!checking) void this.extractDesign(book);
-        return true;
-      },
-    });
-    this.addCommand({
-      id: "absorb-design",
-      name: "Bring the design into this book",
-      checkCallback: (checking) => {
-        const book = this.onBook()?.book;
-        if (book === undefined || this.sharedDesign(book) === undefined) {
-          return false;
-        }
-        if (!checking) void this.absorbDesign(book);
-        return true;
       },
     });
 
@@ -483,6 +448,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
     this.registerEvent(
       vault.on("modify", (file) => {
+        // The design orca just wrote is the one the engine holds.
+        if (this.designWrites.delete(file.path)) return;
         const member = this.members.get(file.path);
         // A chapter's words are an edit to a book already on the engine,
         // not a reason to set it again from nothing. A writer's own
@@ -1009,7 +976,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private composing(engines: Pool): Composing {
     return {
       model: (path) => this.edits.model(path),
-      design: (path) => this.edits.design(path),
       read: (path) => {
         const note = this.app.vault.getFileByPath(path);
         return note === null
@@ -1041,7 +1007,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private designing(): Designing {
     return {
       book: () => this.designed(),
-      note: () => Promise.resolve(this.designedNote()),
+      setFace: (book, family) => this.setFace(book, family),
       index: () => this.fontIndex(),
       faces: (family) => familyFaces(this.places(), family),
       watch: (again) => {
@@ -1052,14 +1018,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const on = [
           this.app.workspace.on("active-leaf-change", again),
           this.app.workspace.on("layout-change", again),
-          // A design note is read out of the cache, so the panel waits
-          // for the cache to hold what was written to it.
-          this.app.metadataCache.on("changed", (_file, _data, cache) => {
-            const properties = cache.frontmatter as Properties | undefined;
-            if (properties !== undefined && designFormat(properties) !== undefined) {
-              again();
-            }
-          }),
         ];
         return () => {
           for (const ref of on) this.app.workspace.offref(ref);
@@ -1184,112 +1142,25 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * The design note the reader is on, which the panel designs in place
-   * of a book.
+   * Writes the family into the book's own frontmatter, which is where
+   * the design lives. The engine has the sheet already, so this is what
+   * makes the pick outlast the session.
    */
-  private designedNote(): DesignedNote | undefined {
-    const path = this.designNote;
-    const file = path === undefined ? null : this.app.vault.getFileByPath(path);
-    const properties =
-      file === null
-        ? undefined
-        : (this.app.metadataCache.getFileCache(file)?.frontmatter as
-            | Properties
-            | undefined);
-    if (file === null || properties === undefined) return undefined;
-    return {
-      name: file.basename,
-      face: readDesignNote(properties).design.text.face,
-      reface: (family) => this.refaceNote(file.path, family),
-    };
-  }
-
-  /**
-   * Follows the reader between a design note and a book. A note or a
-   * book pane settles it, and every other leaf leaves it as it was: the
-   * panel taking focus is not the reader leaving the note.
-   */
-  private followDesignNotes(): void {
-    const settle = (leaf: WorkspaceLeaf | null): void => {
-      const view = leaf?.view;
-      if (view instanceof MarkdownView) {
-        const file = view.file;
-        this.designNote =
-          file !== null && this.isDesignNote(file) ? file.path : undefined;
-      } else if (view instanceof PreviewView || view instanceof BookView) {
-        this.designNote = undefined;
-      }
-    };
-    settle(this.app.workspace.getMostRecentLeaf());
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", (leaf) => {
-        settle(leaf);
-      }),
-    );
-  }
-
-  /** Whether a note carries the key that makes it a design. */
-  private isDesignNote(file: TFile): boolean {
-    const properties = this.app.metadataCache.getFileCache(file)?.frontmatter as
-      | Properties
-      | undefined;
-    return properties !== undefined && designFormat(properties) !== undefined;
-  }
-
-  /** Sets a design note in a family, through Obsidian's frontmatter API. */
-  private async refaceNote(path: string, family: string): Promise<void> {
-    const file = this.app.vault.getFileByPath(path);
-    if (file === null) return;
-    await this.app.fileManager.processFrontMatter(
-      file,
-      (properties: Properties) => {
-        const { design } = readDesignNote(properties);
-        design.text.face = family;
-        applyDesignNote(properties, design);
+  private async setFace(book: string, family: string): Promise<void> {
+    const model = await this.edits.model(book);
+    // The family the book already has writes nothing, so nothing waits
+    // to be let through either.
+    if (model === undefined || model.book.design.text.face === family) return;
+    this.designWrites.add(book);
+    await this.edits.edit(book, (current) => ({
+      ...current,
+      book: {
+        ...current.book,
+        design: {
+          ...current.book.design,
+          text: { ...current.book.design.text, face: family },
+        },
       },
-    );
-  }
-
-  /**
-   * The link to the shared design note a book points at. The command
-   * that moves the design is offered one way or the other, so the
-   * answer comes from the metadata cache rather than a read.
-   */
-  private sharedDesign(path: string): string | undefined {
-    const file = this.app.vault.getFileByPath(path);
-    if (file === null) return undefined;
-    const link = this.app.metadataCache.getFileCache(file)?.frontmatter?.[
-      SHARED_KEY
-    ] as unknown;
-    return typeof link === "string" && link.trim() !== ""
-      ? link.trim()
-      : undefined;
-  }
-
-  /**
-   * Moves a book's design into a note of its own and points the book at
-   * it. The book keeps nothing, so from here its own frontmatter holds
-   * only what it changes.
-   */
-  private async extractDesign(path: string): Promise<void> {
-    const model = await this.edits.model(path);
-    const file = this.app.vault.getFileByPath(path);
-    if (model === undefined || file === null) return;
-    const note = await createDesignNote(this.app, file, model.book.design);
-    const link = this.app.metadataCache.fileToLinktext(note, path, true);
-    await this.edits.edit(path, (current) => ({
-      ...current,
-      book: extracted(current.book, `[[${link}]]`),
-    }));
-    new Notice(`Orca: the design is in ${note.basename}.`);
-  }
-
-  /** Writes the shared design back into the book's own frontmatter. */
-  private async absorbDesign(path: string): Promise<void> {
-    const design = await this.edits.design(path);
-    await this.edits.edit(path, (current) => ({
-      ...current,
-      book: absorbed(current.book, design),
     }));
   }
 

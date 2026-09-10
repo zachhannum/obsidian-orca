@@ -58,6 +58,8 @@ export class Typeset {
   readonly name: string;
   /** Its pages, fetched a window at a time. */
   readonly session: Session;
+  /** The book note this was set from, which is where its design is written. */
+  readonly path: string;
   /** Its sections, in reading order. */
   readonly sections: Section[];
   /** The fonts and images this book has put on the wire, by content hash. */
@@ -76,6 +78,8 @@ export class Typeset {
   constructor(
     book: {
       name: string;
+      /** The book note this was set from. */
+      path: string;
       session: Session;
       sections: Section[];
       /** The sheets the book was set under, which the next plan reads. */
@@ -92,6 +96,7 @@ export class Typeset {
     clock: Clock,
   ) {
     this.name = book.name;
+    this.path = book.path;
     this.session = book.session;
     this.sections = book.sections;
     this.sent = book.sent;
@@ -270,8 +275,6 @@ export interface Progress {
 export interface Composing {
   /** The book at this path, or nothing for a note orca refuses. */
   model(path: string): Promise<Model | undefined>;
-  /** The design the book at this path is set under, the shared note's included. */
-  design(path: string): Promise<Design>;
   /** A note the book reads, by its vault path. */
   read(path: string): Promise<string>;
   /** A note's own name, which titles a book with no title of its own. */
@@ -444,7 +447,7 @@ export class Composer {
 
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
-    const design: Design = carried?.design ?? (await this.vault.design(path));
+    const design: Design = carried?.design ?? model.book.design;
     const sheets = [...(carried?.sheets ?? designSheets(design))];
     // The sheets name the family, and a new engine has none of its
     // cuts, so the cuts cross ahead of the sheets that ask for them.
@@ -454,6 +457,7 @@ export class Composer {
     return new Typeset(
       {
         name,
+        path,
         session,
         sections,
         sheets,

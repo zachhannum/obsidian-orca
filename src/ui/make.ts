@@ -7,11 +7,9 @@
 
 import { TFile, type App, type TFolder } from "obsidian";
 import { byName, newBook } from "@/book/create";
-import { designNoteText } from "@/book/design";
 import { under } from "@/book/folder";
 import { writeModel } from "@/book/model";
 import type { BookMetadata } from "@/book/note";
-import type { Design } from "@/style/design";
 
 /** The default chapter name. */
 export const CHAPTER = "New chapter";
@@ -59,17 +57,6 @@ async function createBook(
 ): Promise<TFile> {
   const path = free(app, folder, name);
   return app.vault.create(path, writeModel(newBook(metadata, links(path))));
-}
-
-/** Creates a design note beside a book, named after it. */
-export async function createDesignNote(
-  app: App,
-  book: TFile,
-  design: Design,
-): Promise<TFile> {
-  const folder = book.parent === null ? "" : pathOf(book.parent);
-  const path = free(app, folder, `${book.basename} design`);
-  return app.vault.create(path, designNoteText(design));
 }
 
 /** Creates a chapter note in the book's folder. */

@@ -11,25 +11,12 @@ export const PANEL_VIEW = "orca-design";
 /** The face the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
 
-/**
- * A design note the panel designs. There is no book under it, so
- * nothing is set and the engine registers no cuts.
- */
-export interface DesignedNote {
-  /** The note's own name, which the panel's header carries. */
-  name: string;
-  /** The family the note sets, or nothing for the theme's face. */
-  face: string | undefined;
-  /** Sets the note in a family. */
-  reface(family: string): Promise<void>;
-}
-
 /** The book the panel designs and the faces the machine has. */
 export interface Designing {
   /** The book the panel designs, which is the one being read. */
   book(): Promise<Typeset | undefined>;
-  /** The design note the reader is on, which the panel designs in place of a book. */
-  note(): Promise<DesignedNote | undefined>;
+  /** Writes the family into the book's own frontmatter, where the design lives. */
+  setFace(book: string, family: string): Promise<void>;
   /** The families the machine has. The scan runs once for the session. */
   index(): Promise<FontIndex>;
   /** One family's faces, as the bytes that cross and the keys they go under. */
@@ -103,9 +90,8 @@ export class DesignPanelView extends ItemView {
    * panel warns that the family asked for is missing.
    */
   private async pick(family: Family): Promise<void> {
-    const note = await this.designing.note();
-    const typeset = note === undefined ? await this.designing.book() : undefined;
-    if (note === undefined && typeset === undefined) return;
+    const typeset = await this.designing.book();
+    if (typeset === undefined) return;
     let faces: Face[] = [];
     try {
       faces = await this.designing.faces(family);
@@ -113,9 +99,11 @@ export class DesignPanelView extends ItemView {
     } catch {
       this.unread = family.name;
     }
-    if (note !== undefined) await note.reface(family.name);
-    else typeset?.reface(family.name, faces);
+    typeset.reface(family.name, faces);
     await this.repaint();
+    // The engine has the sheet, so the note is written after the pages
+    // are on their way rather than ahead of them.
+    await this.designing.setFace(typeset.path, family.name);
   }
 
   /**
@@ -131,26 +119,6 @@ export class DesignPanelView extends ItemView {
     const run = (this.painting += 1);
     const mounted = this.mounted;
     if (mounted === undefined) return;
-    // A design note the reader is on is designed in place of a book,
-    // because the note is the design and no book is under it.
-    const note = await this.designing.note();
-    if (run !== this.painting) return;
-    if (note !== undefined) {
-      mounted.paint({ kind: "reading" });
-      const found = await this.designing.index();
-      if (run !== this.painting) return;
-      this.watching?.();
-      this.watching = undefined;
-      mounted.paint({
-        kind: "book",
-        name: note.name,
-        index: found,
-        face: note.face,
-        cuts: [],
-        missing: this.warning(found, note.face),
-      });
-      return;
-    }
     const typeset = await this.designing.book();
     if (run !== this.painting) return;
     if (typeset === undefined) {
