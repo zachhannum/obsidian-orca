@@ -353,5 +353,9 @@ export function withKey(
   } else {
     properties[key] = value;
   }
-  return readDesign(properties);
+  const next = readDesign(properties);
+  if (value !== undefined && writeDesign(next)[key] === undefined) {
+    return design;
+  }
+  return next;
 }

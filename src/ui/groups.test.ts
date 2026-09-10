@@ -52,6 +52,15 @@ test("a control writes its own key and leaves the rest of the design alone", () 
   assert.deepEqual(writeDesign(cleared), { "chapter-drop-cap": 3 });
 });
 
+test("a length the schema cannot read leaves the design as it was", () => {
+  const design = withKey(emptyDesign(), "body-size", "10.5pt");
+  // `px` is not a unit the schema reads, so the field snaps back to the
+  // size the book already had rather than losing it.
+  assert.deepEqual(writeDesign(withKey(design, "body-size", "10.5px")), {
+    "body-size": "10.5pt",
+  });
+});
+
 // What this tier does not cover: the drawing itself. Which control a
 // row draws, and whether the glyphs or the word show for a mark, are
 // the panel's own, and the e2e suite reads them off the mounted panel.

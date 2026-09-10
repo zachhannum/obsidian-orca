@@ -192,11 +192,15 @@ function Beside({
         written={written}
         acting={acting}
       />
-      {control.said === undefined || control.kind === "flag" ? null : (
-        <span className="orca-panel-unit">{control.said}</span>
-      )}
-      {control.kind !== "flag" || control.said === undefined ? null : (
-        <span className="orca-panel-means">{control.said}</span>
+      {control.said === undefined ? null : (
+        // A switch is read by what it means, and a field by its unit.
+        <span
+          className={
+            control.kind === "flag" ? "orca-panel-means" : "orca-panel-unit"
+          }
+        >
+          {control.said}
+        </span>
       )}
     </>
   );
