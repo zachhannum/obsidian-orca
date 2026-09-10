@@ -88,8 +88,8 @@ test("the layer a design generates is not in the note the design is written in",
   const css = generatedCss(model.book.design, await setting(model));
   const note = writeNote(model.book, "# Body\n\n- [[Chapter Twelve]]\n");
 
-  // The design is in the note as the properties it was written as, and
-  // the CSS those properties generate is on the wire alone.
+  // The note carries the design as the properties it was written in.
+  // The CSS those properties generate is on the wire alone.
   assert.match(note, /^trim: 5\.5in 8\.5in$/m);
   for (const line of css.split("\n").filter((each) => each.trim() !== "")) {
     assert.ok(!note.includes(line.trim()), `the note carries \`${line.trim()}\``);
@@ -101,8 +101,8 @@ test("the generated layer sets the pages it describes, and the engine warns abou
   const { design } = model.book;
   const css = generatedCss(
     // The fixture names the book on a right-hand page. A chapter title
-    // is the slot that has to reach the engine as a string, so this is
-    // the design with that slot picked.
+    // is the one slot that must reach the engine as a string, so this
+    // design picks that slot.
     { ...design, headers: { ...design.headers, rightPage: "chapter-title" } },
     { roles: ROLES, title: "Pride and Prejudice", author: "Jane Austen" },
   );
@@ -127,13 +127,13 @@ test("the generated layer sets the pages it describes, and the engine warns abou
     assert.ok(output, "the render was overtaken");
     assert.deepEqual(output.warnings, []);
 
-    // The trim the design asked for, in points.
+    // The trim size the design sets, in points.
     assert.deepEqual(
       [...new Set(output.pages.map((page) => `${page.width}x${page.height}`))],
       ["396x612"],
     );
-    // A chapter opens on a recto, and the drop cap takes the first
-    // letter out of the paragraph that follows the title.
+    // A chapter opens on a recto, which is a right-hand page. The drop
+    // cap takes the first letter out of the paragraph after the title.
     const opening = output.pages.find((page) =>
       texts(page).includes("Chapter One"),
     );
@@ -142,8 +142,9 @@ test("the generated layer sets the pages it describes, and the engine warns abou
       texts(opening).some((text) => text.startsWith("t is a truth")),
       "the drop cap left no initial behind",
     );
-    // The running head names the author on a verso and the chapter on
-    // a recto, and neither on the page a chapter opens.
+    // The running head names the author on a verso, which is a
+    // left-hand page, and the chapter on a recto. The page a chapter
+    // opens on carries neither.
     assert.deepEqual(heads(opening), []);
     const running = output.pages.flatMap((page) =>
       page.side === "verso" ? heads(page) : [],
@@ -213,7 +214,7 @@ function texts(page: Page | undefined): string[] {
   );
 }
 
-/** The running head: what a page prints above its text block. */
+/** The running head, which a page prints above its text block. */
 function heads(page: Page | undefined): string[] {
   return (page?.items ?? []).flatMap((item) =>
     item.kind === "text" && item.y < TOP_MARGIN ? [item.text] : [],
@@ -229,5 +230,5 @@ async function moduleBytes(): Promise<Buffer> {
 }
 
 // What this tier does not cover: the author's own layer over this one,
-// which waits on the note's css fence, and the warning a control could
+// which waits on the note's css fence, and the warning a control can
 // raise, which the panel's own controls answer for.

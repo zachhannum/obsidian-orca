@@ -233,7 +233,7 @@ const WIDER: Sheet[] = [{ name: THEME_SHEET, css: "book { font-size: 13pt }" }];
 
 const NARROWER: Sheet[] = [{ name: THEME_SHEET, css: "page { margin: 30mm }" }];
 
-/** The sheets a reorder generates again, counting the order it moved to. */
+/** The sheets a reorder generates again, against the order it moved to. */
 const RECOUNTED: Sheet[] = [
   { name: THEME_SHEET, css: "section:nth-child(1) { page: chapter }" },
 ];

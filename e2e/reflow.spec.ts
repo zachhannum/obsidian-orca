@@ -30,7 +30,8 @@ const HEADING = 5;
 /**
  * The paragraphs the chapter is lengthened to, and the last of them.
  * The book is long enough that a font change moves the back matter by
- * a page, which the design's own page breaks otherwise round away.
+ * a page. A shorter book hides that move, because the design's own
+ * page breaks absorb it.
  */
 const PARAGRAPHS = 120;
 const DEEP = `Paragraph ${String(PARAGRAPHS)}.`;

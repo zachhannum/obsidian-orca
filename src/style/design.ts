@@ -468,7 +468,7 @@ function slot(key: string, side: "leftPage" | "rightPage"): Field {
   };
 }
 
-/** A length as the note writes it, which is also how CSS reads it. */
+/** A length in the form the note writes it, which CSS also accepts. */
 export function written(length: Length | undefined): string | undefined {
   return length === undefined ? undefined : `${trimmed(length.value)}${length.unit}`;
 }

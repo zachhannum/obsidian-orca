@@ -359,10 +359,10 @@ export class BookView extends FileView {
       );
       const { sections } = resolve(shown.model.order, links, file.path);
       const { title, author } = shown.model.book.metadata;
-      // The page reports the folios the preview paints, so it is set
-      // under the design the preview is set under. The faces the design
-      // names are the preview's to register; the engine falls back to
-      // the one it carries.
+      // The page reports the folios the preview paints, so both are set
+      // under the same design. Registering the faces the design names
+      // is the preview's job. Here the engine falls back to the face it
+      // carries.
       const output = await client.preview([
         ...ops,
         styleOp(

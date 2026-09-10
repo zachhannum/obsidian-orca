@@ -23,9 +23,9 @@ const TYPED = "The engine died halfway through this sentence.";
 
 /**
  * The chapter with the typed line under the paragraph it opens on, so
- * the page the chapter opens on is the page that carries it. The line
- * goes second because a drop cap takes the first letter of the
- * paragraph the chapter opens on.
+ * the page the chapter opens on carries the line. The line goes second
+ * because a drop cap takes the first letter of the opening
+ * paragraph.
  */
 function typed(chapter: string): string {
   const parts = chapter.split("\n\n");

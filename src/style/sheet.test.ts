@@ -25,7 +25,7 @@ test("the three layers cross in one order, and the last one to set a size wins",
     OWN_SHEET,
   ]);
   // The theme sets 11pt, the design 20pt and the author 30pt, so each
-  // layer is beaten by the one sent after it.
+  // layer beats the one sent before it.
   assert.equal(await bodySize(sheets), 30);
   assert.equal(await bodySize(designSheets(sized(20), SETTING)), 20);
   assert.equal(await bodySize(designSheets(emptyDesign(), SETTING)), 11);
@@ -51,7 +51,7 @@ test("a book set in a font the engine does not have still sets, and warns about 
   const output = await set(designSheets(design, SETTING));
 
   // The engine falls back to the font it carries without a warning,
-  // so a font the author has not got is orca's to report.
+  // so a font the author does not have is orca's to report.
   assert.deepEqual(output.warnings, []);
   assert.ok(output.pages.length > 0);
   assert.deepEqual([...new Set(output.fonts.map((font) => font.family))], [

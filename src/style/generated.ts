@@ -2,11 +2,11 @@
  * The layer a design generates: the settings as CSS, sent between the
  * theme and the author's own sheet.
  *
- * A role cannot travel as a class, because the engine's sections carry
- * neither a class nor an id. Orca counts the reading order instead, so
- * a role reaches the sheet as a page name and a set of `:nth-child()`
- * positions. Position is a sound handle because orca owns the order it
- * counts, and the layer is generated again whenever that order moves.
+ * A role cannot be written as a class, because the engine's sections
+ * carry neither a class nor an id. Orca counts the reading order
+ * instead, so a role reaches the sheet as a page name and a set of
+ * `:nth-child()` positions. Position works because orca owns the order
+ * it counts. The layer is generated again whenever that order moves.
  *
  * Nothing here is written to the vault.
  */
@@ -36,8 +36,8 @@ export interface Setting {
 
 /**
  * The design as CSS, counted against the order the book is in. Every
- * declaration comes from a field the design sets, apart from the page
- * names, which come from the roles.
+ * declaration comes from a field the design sets. The page names are
+ * the exception, and come from the roles.
  */
 export function generatedCss(design: Design, setting: Setting): string {
   return [
@@ -51,14 +51,14 @@ export function generatedCss(design: Design, setting: Setting): string {
     .join("\n");
 }
 
-/** The break each opening writes. */
+/** The CSS break for each opening. */
 const BREAKS: Readonly<Record<Begins, string>> = {
   "right-page": "recto",
   "next-page": "page",
   "same-page": "auto",
 };
 
-/** The number a folio counts in. */
+/** The CSS counter style for each folio format. */
 const COUNTERS: Readonly<Record<NumberFormat, string>> = {
   arabic: "decimal",
   roman: "lower-roman",
@@ -105,8 +105,8 @@ function pageRules(design: Design, setting: Setting): string[] {
   }
 
   // Orca owns the running heads and the folio as soon as the design
-  // says anything about them, so the boxes it does not use are cleared
-  // rather than left to the engine's own folio.
+  // sets anything about them. Orca clears the boxes it does not use
+  // rather than leave them to the engine's own folio.
   const rootBoxes = new Map<string, string>(
     owned(headers) ? BOXES.map((box) => [box, "none"]) : [],
   );
@@ -138,8 +138,8 @@ function pageRules(design: Design, setting: Setting): string[] {
 
 /**
  * The page each role opens on, which carries no running head. A head
- * names the section under it, and a section's first page falls under
- * the head of the one before it.
+ * names the section under it. A section's first page falls under the
+ * head of the section before it.
  */
 function openingPages(headers: HeaderDesign, setting: Setting): string[] {
   if (headers.leftPage === undefined && headers.rightPage === undefined) {
@@ -153,7 +153,7 @@ function openingPages(headers: HeaderDesign, setting: Setting): string[] {
   );
 }
 
-/** The margin boxes of one page rule, in the order a page reads them. */
+/** The margin boxes of one page rule, in the order the rule sets them. */
 function boxes(content: ReadonlyMap<string, string>): string[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
@@ -218,12 +218,13 @@ function sectionRules(design: Design, setting: Setting): string[] {
 
 /**
  * The chapter openings. The drop cap falls on the paragraph the
- * opening heading leads into, so a note that says something before its
- * heading does not take it.
+ * opening heading leads into, so a note with text before its heading
+ * takes no drop cap.
  *
- * A sink is written in lines of body text, so it is that many line
- * heights where the design sets one and that many heading ems where it
- * does not.
+ * A sink is the blank space above a chapter's title, written in lines
+ * of body text. Where the design sets a line height, a sink is that
+ * many line heights. Where it does not, a sink is that many heading
+ * ems.
  */
 function chapterRules(design: Design, setting: Setting): string[] {
   const chapters = positions(setting.roles, "chapter");
@@ -280,8 +281,8 @@ function folioContent(headers: HeaderDesign): string | undefined {
 
 /**
  * The text a running-head slot prints. The title and the author are
- * the book's own, so they cross as the strings they are; a chapter
- * title changes down the book, so it crosses as the string the engine
+ * the book's own, so they cross as plain strings. A chapter title
+ * changes down the book, so it crosses as the string the engine
  * keeps.
  */
 function slotContent(slot: HeaderSlot, setting: Setting): string {
@@ -326,7 +327,7 @@ function boxed(box: string, content: string): string {
   return `@${box} { ${declared("content", content)} }`;
 }
 
-/** One rule, or nothing at all when the design set none of its declarations. */
+/** One rule, or nothing at all when the design sets none of its declarations. */
 function block(selector: string, lines: readonly string[]): string {
   if (selector === "" || lines.length === 0) return "";
   return `${selector} {\n${lines.map((line) => `  ${line}`).join("\n")}\n}\n`;
@@ -337,9 +338,9 @@ function trimmed(value: number): string {
 }
 
 /**
- * A string as CSS. A font name comes from a font file's own name table
- * and an ornament from the author, so a quote or a backslash in one is
- * escaped.
+ * A string as CSS. A font name comes from a font file's own name
+ * table, and an ornament comes from the author. A quote or a backslash
+ * in either one is escaped.
  */
 function quoted(text: string): string {
   return `"${text.replace(/[\\"]/g, (char) => `\\${char}`)}"`;

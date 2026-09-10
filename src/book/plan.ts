@@ -164,7 +164,7 @@ function sendable(section: Section): section is Sendable {
 
 /**
  * The role of each section that crosses, in the order the engine
- * counts them. The generated layer reaches a role by counting, so it
+ * counts them. The generated layer reaches a role by counting. It
  * counts the sections that are sent rather than the ones the note
  * lists.
  */
@@ -212,7 +212,7 @@ export type Edit =
   /**
    * Reordered chapters, so every source crosses in its new place. The
    * sheets cross again with them, because the generated layer reaches
-   * a role by counting and the count has moved.
+   * a role by counting and the count moved.
    */
   | { did: "reordered"; sources: Source[]; sheets: Sheet[] }
   /** Picked a new family, and the cuts it is made of. */

@@ -1,8 +1,8 @@
 /**
  * The three layers a book is styled by: the theme orca bundles, the
  * layer a design generates, and the author's own sheet. They cross in
- * that order and source order decides, so a later layer wins without a
- * specificity trick.
+ * that order, and source order decides which one wins. A later layer
+ * beats an earlier one without a specificity trick.
  */
 
 import type { Sheet } from "fleuron";
