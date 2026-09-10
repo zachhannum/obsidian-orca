@@ -31,7 +31,8 @@ import {
 import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
-import { designSheets, type Design } from "@/style/design";
+import { emptyDesign, type Design } from "@/style/design";
+import { designSheets } from "@/style/sheet";
 import { bookName } from "@/ui/shelf";
 
 /** The book, as much of it as crosses from the engine that died onto its next one. */
@@ -164,7 +165,7 @@ export class Typeset {
 
   /** The family the book is set in, or nothing for the theme's face. */
   get face(): string | undefined {
-    return this.design.face;
+    return this.design.text.face;
   }
 
   /**
@@ -173,7 +174,10 @@ export class Typeset {
    * later pick sends the sheet alone.
    */
   reface(family: string, faces: readonly Face[]): void {
-    this.design = { ...this.design, face: family };
+    this.design = {
+      ...this.design,
+      text: { ...this.design.text, face: family },
+    };
     this.plan(`faced:${family}`, {
       did: "faced",
       faces,
@@ -438,11 +442,11 @@ export class Composer {
 
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
-    const design: Design = carried?.design ?? {};
+    const design: Design = carried?.design ?? emptyDesign();
     const sheets = [...(carried?.sheets ?? designSheets(design))];
     // The sheets name the family, and a new engine has none of its
     // cuts, so the cuts cross ahead of the sheets that ask for them.
-    const cuts = await this.cutsOf(design.face);
+    const cuts = await this.cutsOf(design.text.face);
     for (const cut of cuts) assets.crossed(cut.key);
     await session.open([...ops, ...sendFaces(cuts), styleOp(sheets)]);
     return new Typeset(

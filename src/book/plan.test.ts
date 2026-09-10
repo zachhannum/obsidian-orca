@@ -20,6 +20,7 @@ import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder } from "@/book/order";
+import { emptyDesign } from "@/style/design";
 import {
   GENERATED_ORIGIN,
   LOADED_NOTHING,
@@ -121,7 +122,12 @@ test("a generated section is synthetic markdown, under a name no note can have",
 });
 
 test("a title page with no metadata falls back to its role's own name", async () => {
-  const book: Book = { format: FORMAT, metadata: {}, own: {} };
+  const book: Book = {
+    format: FORMAT,
+    metadata: {},
+    design: emptyDesign(),
+    own: {},
+  };
   const order = readOrder("- `title-page`\n");
   const { ops } = await sendBook(
     book,
