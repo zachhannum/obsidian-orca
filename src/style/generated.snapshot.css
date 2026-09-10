@@ -112,7 +112,7 @@ section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-top: 98pt;
 }
 
-section:nth-child(6) > p:first-of-type::first-letter {
+section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter {
   initial-letter: 3;
 }
 

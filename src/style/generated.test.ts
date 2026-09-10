@@ -63,7 +63,7 @@ test("a role reaches the sheet as a page name and as the places it sits", async 
   );
   assert.match(
     css,
-    /section:nth-child\(6\) > p:first-of-type::first-letter \{\n {2}initial-letter: 3;\n\}/,
+    /section:nth-child\(6\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter \{\n {2}initial-letter: 3;\n\}/,
   );
 });
 

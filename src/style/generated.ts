@@ -217,9 +217,13 @@ function sectionRules(design: Design, setting: Setting): string[] {
 }
 
 /**
- * The chapter openings. A sink is written in lines of body text, so it
- * is that many line heights where the design sets one and that many
- * heading ems where it does not.
+ * The chapter openings. The drop cap falls on the paragraph the
+ * opening heading leads into, so a note that says something before its
+ * heading does not take it.
+ *
+ * A sink is written in lines of body text, so it is that many line
+ * heights where the design sets one and that many heading ems where it
+ * does not.
  */
 function chapterRules(design: Design, setting: Setting): string[] {
   const chapters = positions(setting.roles, "chapter");
@@ -229,7 +233,7 @@ function chapterRules(design: Design, setting: Setting): string[] {
     spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design);
   return [
     block(`${chapters} > ${OPENING}`, [...set("margin-top", sink)]),
-    block(`${chapters} > p:first-of-type::first-letter`, [
+    block(`${chapters} > ${OPENING} + p::first-letter`, [
       ...set(
         "initial-letter",
         dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),
