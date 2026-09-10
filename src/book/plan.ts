@@ -97,6 +97,15 @@ export async function sendBook(
 }
 
 /**
+ * The cuts of one family, as the ops that register them. A book set on
+ * a new engine sends them again. A face is registered for one session,
+ * and a session that stopped took its faces with it.
+ */
+export function sendFaces(faces: readonly Face[]): Op[] {
+  return faces.map((face) => ({ op: "font", bytes: face.bytes }));
+}
+
+/**
  * Every image the sources embed, resolved through the vault, each url
  * once. An embed with no file behind it sends nothing, and the engine
  * warns about the url it was given no bytes for.

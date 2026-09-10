@@ -18,7 +18,7 @@ import {
 } from "@/book/pages";
 import { nodesOn, type Nodes } from "@/book/place";
 import { isGenerated } from "@/book/plan";
-import { EngineError } from "@/engine/errors";
+import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { THEME_SHEET } from "@/style/theme";
 import { copiedText, type SelectionLine } from "@/ui/copy";
@@ -593,6 +593,12 @@ export class PreviewView extends ItemView {
       this.openedAt = this.state.folio;
     } catch (cause) {
       if (opening !== this.opening) return;
+      // The engine of this book died more times than orca sets it
+      // again, so the pages already painted are the ones there are.
+      if (cause instanceof EngineDead) {
+        this.held(cause);
+        return;
+      }
       this.report(
         cause instanceof EngineError || cause instanceof BookError
           ? cause.message
@@ -742,7 +748,14 @@ export class PreviewView extends ItemView {
     if (session === undefined) return;
     const span = spanAt(this.mode, at, this.screenful);
     const turn = (this.turning += 1);
-    const reading = await session.read(span.at, span.count);
+    let reading: Reading | undefined;
+    try {
+      reading = await session.read(span.at, span.count);
+    } catch {
+      // The engine stopped under the read. The pages already painted
+      // stay while the book is set again on a new engine.
+      return;
+    }
     if (turn !== this.turning || this.surface === undefined) return;
     if (reading === undefined) {
       this.report("The book set to no pages");
@@ -1075,19 +1088,66 @@ export class PreviewView extends ItemView {
     this.message?.remove();
     const banner = well.createDiv({ cls: "orca-preview-setting" });
     banner.dataset["testid"] = "orca-setting";
-    setIcon(banner.createDiv({ cls: "orca-preview-setting-icon" }), "book");
+    // A book being set for the first time has no pages yet. One being
+    // set again has the pages from before, and they stay under it.
+    if (progress.again) banner.addClass("mod-again");
+    setIcon(
+      banner.createDiv({ cls: "orca-preview-setting-icon" }),
+      progress.again ? "rotate-cw" : "book",
+    );
     const name = banner.createDiv({ cls: "orca-preview-setting-name" });
     name.append("Setting ", name.createEl("i", { text: progress.name }));
+    if (progress.again) name.append(" again");
     const bar = banner.createDiv({ cls: "orca-preview-progress" });
     const fill = bar.createDiv({ cls: "orca-preview-progress-fill" });
     const done = progress.of === 0 ? 0 : progress.read / progress.of;
     fill.style.width = `${String(Math.round(done * 100))}%`;
     const note = banner.createDiv({ cls: "orca-preview-setting-note" });
-    note.append(`${String(progress.read)} chapters of ${String(progress.of)}`);
-    if (progress.opening !== undefined) {
+    if (progress.again) {
+      note.append("nothing you wrote was lost");
       note.createEl("br");
-      note.append(`it will open at ${progress.opening}`);
+      note.append(`you will come back to page ${String(this.at + 1)}`);
+    } else {
+      note.append(`${String(progress.read)} chapters of ${String(progress.of)}`);
+      if (progress.opening !== undefined) {
+        note.createEl("br");
+        note.append(`it will open at ${progress.opening}`);
+      }
     }
+    well.prepend(banner);
+    this.message = banner;
+  }
+
+  /**
+   * The pages, held. The engine of this book died more times than orca
+   * sets the book again, so orca starts no third one. Opening the book
+   * again is the reader's own try. The report is what each death said,
+   * for an author who has one to send on.
+   */
+  private held(dead: EngineDead): void {
+    const well = this.well;
+    if (well === undefined) return;
+    this.message?.remove();
+    const banner = well.createDiv({ cls: "orca-preview-setting mod-held" });
+    banner.dataset["testid"] = "orca-held";
+    setIcon(
+      banner.createDiv({ cls: "orca-preview-setting-icon" }),
+      "alert-triangle",
+    );
+    const name = banner.createDiv({ cls: "orca-preview-setting-name" });
+    name.append("Orca could not set the book again");
+    const note = banner.createDiv({ cls: "orca-preview-setting-note" });
+    note.append("the pages here are the ones from before");
+    note.createEl("br");
+    note.append("open the book again to try once more");
+    const report = banner.createEl("button", {
+      cls: "orca-preview-report",
+      text: "Copy the report",
+    });
+    report.dataset["testid"] = "orca-report";
+    this.registerDomEvent(report, "click", () => {
+      void navigator.clipboard.writeText(dead.log.join("\n"));
+    });
     well.prepend(banner);
     this.message = banner;
   }

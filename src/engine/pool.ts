@@ -5,14 +5,28 @@
  * workers that run at once. If a reader opens a book past the ceiling,
  * orca stops the engine that went longest without a render. Orca sets
  * that book again the next time a reader opens it.
+ *
+ * A worker can also die on its own. Everything that book was made of
+ * is on this thread, so the pool starts another worker and orca sets
+ * the book again on it. A fault that comes back on the same book would
+ * replay for ever. The second death on one book starts no third
+ * worker.
  */
 
-import { EngineError } from "@/engine/errors";
+import { EngineDead, EngineError } from "@/engine/errors";
 import { timers, type Clock } from "@/engine/loop";
 import type { EngineClient } from "@/engine/session";
 
 /** The most books orca keeps on engines at once. */
 export const CEILING = 2;
+
+/** The name the worker of one book runs under, which is what names it in the tools. */
+export function engineName(book: string): string {
+  return `orca:${book}`;
+}
+
+/** The number of times orca sets one book again after its engine died. */
+export const REPLAYS = 1;
 
 /**
  * The grace: how long an engine runs after the last view on its book
@@ -23,9 +37,18 @@ export const GRACE = 60_000;
 /** One worker, and the client on it. */
 export interface Engine {
   readonly client: EngineClient;
+  /** Runs `told` once the worker dies. */
+  dies(told: (cause: EngineError) => void): void;
   /** Stops the worker. */
   stop(): void;
 }
+
+/** The reason a book's engine stopped. */
+export type Gone =
+  /** Orca stopped it: the ceiling, the grace, or an unload. */
+  | "stopped"
+  /** It died, and orca sets the book again. */
+  | "died";
 
 /** The part of the pool a view reaches. */
 export interface Engines {
@@ -33,6 +56,8 @@ export interface Engines {
   client(book: string): Promise<EngineClient>;
   /** Holds a book while a view on it is open. Call what it returns to drop the hold. */
   hold(book: string): () => void;
+  /** Forgets the deaths of a book, so orca starts a worker for it again. */
+  retry(book: string): void;
 }
 
 /** The workers a pool starts, and the clock it runs the grace on. */
@@ -40,9 +65,11 @@ export interface Pooling {
   /** Starts one worker with the engine module in it. */
   start(book: string): Promise<Engine>;
   /** The pool calls this after a book's engine stops, so the caller drops the book. */
-  gone?: ((book: string) => void) | undefined;
+  gone?: ((book: string, why: Gone) => void) | undefined;
   ceiling?: number | undefined;
   grace?: number | undefined;
+  /** The number of times one book is set again after a death. */
+  replays?: number | undefined;
   clock?: Clock | undefined;
 }
 
@@ -57,6 +84,7 @@ class Live {
     public used: number,
     stamp: () => number,
     starting: Promise<Engine>,
+    died: (cause: EngineError) => void,
   ) {
     this.client = starting.then((engine) => {
       // The pool dropped the book while its worker started, so the
@@ -66,6 +94,7 @@ class Live {
         throw new EngineError("the engine stopped while it was starting");
       }
       this.engine = engine;
+      engine.dies(died);
       return stamped(engine.client, () => {
         this.used = stamp();
       });
@@ -85,8 +114,11 @@ export class Pool implements Engines {
   private readonly held = new Map<string, number>();
   /** Cancels the grace of a book with no view on it, by the path of the book. */
   private readonly waiting = new Map<string, () => void>();
+  /** The message each death of a book carried, by the path of the book. */
+  private readonly deaths = new Map<string, string[]>();
   private readonly clock: Clock;
   private readonly grace: number;
+  private readonly replays: number;
   private limit: number;
   private used = 0;
   private closed = false;
@@ -94,6 +126,7 @@ export class Pool implements Engines {
   constructor(private readonly pooling: Pooling) {
     this.clock = pooling.clock ?? timers;
     this.grace = pooling.grace ?? GRACE;
+    this.replays = pooling.replays ?? REPLAYS;
     this.limit = capped(pooling.ceiling ?? CEILING);
   }
 
@@ -122,11 +155,20 @@ export class Pool implements Engines {
     if (this.closed) {
       return Promise.reject(new EngineError("orca is unloaded"));
     }
+    const log = this.deaths.get(book) ?? [];
+    if (log.length > this.replays) {
+      return Promise.reject(
+        new EngineDead("the engine stopped twice setting this book", log),
+      );
+    }
     this.evict(1);
     const live = new Live(
       this.stamp(),
       () => this.stamp(),
       this.pooling.start(book),
+      (cause) => {
+        this.died(book, cause);
+      },
     );
     this.live.set(book, live);
     // The pool drops a worker that fails to start. The next open starts
@@ -160,14 +202,37 @@ export class Pool implements Engines {
     };
   }
 
+  /**
+   * Forgets the deaths of this book. A reader who opens a book that
+   * stopped is asking for another try, and gets one.
+   */
+  retry(book: string): void {
+    this.deaths.delete(book);
+  }
+
+  /**
+   * The engine of this book died. Its worker stops, and orca sets the
+   * book again on a new one. The second death on a book starts no third
+   * worker: {@link Pool.client} refuses it with the log instead.
+   */
+  died(book: string, cause: EngineError): void {
+    // A worker that fails after the pool already stopped it is a book
+    // orca is no longer running, and costs it no replay.
+    if (!this.live.has(book)) return;
+    const log = this.deaths.get(book) ?? [];
+    log.push(cause.message);
+    this.deaths.set(book, log);
+    this.stop(book, "died");
+  }
+
   /** Stops the engine of this book, and reports the book as gone. */
-  stop(book: string): void {
+  stop(book: string, why: Gone = "stopped"): void {
     const live = this.live.get(book);
     if (live === undefined) return;
     this.live.delete(book);
     this.unwait(book);
     live.stop();
-    this.pooling.gone?.(book);
+    this.pooling.gone?.(book, why);
   }
 
   /** Stops every engine, when Obsidian unloads the plugin. */

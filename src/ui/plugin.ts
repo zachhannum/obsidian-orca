@@ -14,15 +14,16 @@ import {
 } from "obsidian";
 import type { FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
-import { startEngine } from "@/engine/bootstrap";
+import { browserHost, startEngine } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
 import { readModule } from "@/engine/module";
-import { Pool, type Engine } from "@/engine/pool";
+import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
+import type { Face } from "@/book/plan";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
 import {
@@ -108,11 +109,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const settings = this.saved();
     const warmed = this.warmed();
     const engines = new Pool({
-      start: () => this.startWorker(),
+      start: (book) => this.startWorker(book),
       // Orca drops the book on a stopped engine, so the pane sets the
-      // book again rather than reads a session that is gone.
-      gone: (book) => {
-        this.composer?.discard(book);
+      // book again rather than reads a session that is gone. A book
+      // whose engine died is set again now, on the page it was on.
+      gone: (book, why) => {
+        if (why === "died") this.composer?.died(book);
+        else this.composer?.discard(book);
       },
       ceiling: this.limits.books,
     });
@@ -892,16 +895,24 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /**
    * Starts one worker with the engine module in it. Each worker gets a
    * copy of the module, because the start transfers the bytes into the
-   * worker.
+   * worker, and runs under the name of the book it holds.
    */
-  private async startWorker(): Promise<Engine> {
+  private async startWorker(book: string): Promise<Engine> {
     try {
       const module = await this.module();
-      const handle = await startEngine(module.slice(0));
+      const handle = await startEngine(
+        module.slice(0),
+        browserHost,
+        engineName(book),
+      );
       // Every view of one book shares its client, so orca runs the
       // renders of the book one at a time. The engine holds one
       // document, and two renders at once race it.
-      return { client: serialized(handle.client), stop: handle.stop };
+      return {
+        client: serialized(handle.client),
+        dies: handle.dies,
+        stop: handle.stop,
+      };
     } catch (cause) {
       this.notice(cause);
       throw cause;
@@ -964,11 +975,24 @@ export default class OrcaPlugin extends Plugin implements Limited {
           : this.app.vault.cachedRead(note);
       },
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
+      cuts: (family) => this.familyCuts(family),
       files: this.files(),
       links: cacheLinks(this.app),
       engines,
       faces: documentFaces(document),
     };
+  }
+
+  /**
+   * Every cut of a family, by the name a design names it by. A book set
+   * again on a new engine sends them, because a face is registered for
+   * one session and that session is gone.
+   */
+  private async familyCuts(family: string): Promise<readonly Face[]> {
+    const want = family.trim().toLowerCase();
+    const { families } = await this.fontIndex();
+    const found = families.find((known) => known.name.toLowerCase() === want);
+    return found === undefined ? [] : familyFaces(this.places(), found);
   }
 
   /** The book being designed and the faces the machine has. */

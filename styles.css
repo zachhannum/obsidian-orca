@@ -173,6 +173,7 @@
 }
 
 .orca-preview-well {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
@@ -246,8 +247,10 @@
 }
 
 /* The book being set, or the reason it was not, stands in the well in
-   place of the pages. */
-.orca-preview-well:has(> .orca-preview-setting) > .orca-preview-sheets,
+   place of the pages. A book being set again has pages already, and
+   they stay under the notice. */
+.orca-preview-well:has(> .orca-preview-setting:not(.mod-again):not(.mod-held))
+  > .orca-preview-sheets,
 .orca-preview-well:has(> .orca-preview-message) > .orca-preview-sheets {
   display: none;
 }
@@ -294,6 +297,49 @@
   color: var(--text-faint);
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* A book being set again, and one orca stopped setting, float over the
+   pages already painted rather than stand in place of them. */
+.orca-preview-setting.mod-again,
+.orca-preview-setting.mod-held {
+  position: absolute;
+  z-index: 1;
+  top: var(--size-4-2);
+  right: var(--size-4-2);
+  left: var(--size-4-2);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  text-align: left;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-s);
+}
+
+.orca-preview-setting.mod-again .orca-preview-setting-icon,
+.orca-preview-setting.mod-held .orca-preview-setting-icon {
+  color: var(--color-orange);
+}
+
+.orca-preview-setting.mod-again .orca-preview-setting-icon .svg-icon,
+.orca-preview-setting.mod-held .orca-preview-setting-icon .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.orca-preview-setting.mod-again .orca-preview-progress {
+  margin-left: auto;
+}
+
+.orca-preview-setting.mod-again .orca-preview-progress-fill {
+  background: var(--color-orange);
+}
+
+.orca-preview-report {
+  margin-left: auto;
 }
 
 /* The React root mounts inside the view, one flex step below the
