@@ -8,10 +8,13 @@
  */
 
 import { Notice, type App, type TFile } from "obsidian";
+import { bookDesign } from "@/book/design";
 import { readFrontmatter, type Properties } from "@/book/frontmatter";
 import { readModel, withOrder, type Model } from "@/book/model";
 import { BookError, applyBook } from "@/book/note";
 import { add, writeOrder } from "@/book/order";
+import { cacheLinks } from "@/ui/notes";
+import { emptyDesign, type Design } from "@/style/design";
 
 /** A book open in a view, which is the note's only writer while it is. */
 export interface Open {
@@ -104,6 +107,23 @@ export class Edits {
       if (cause instanceof BookError) return undefined;
       throw cause;
     }
+  }
+
+  /**
+   * The design the book at this path is set under. A book that points
+   * at a shared design note is set under that note, with its own keys
+   * over it.
+   */
+  async design(path: string): Promise<Design> {
+    const model = await this.model(path);
+    if (model === undefined) return emptyDesign();
+    return bookDesign(model.book, path, cacheLinks(this.app), {
+      properties: async (note) => {
+        const file = this.app.vault.getFileByPath(note);
+        if (file === null) return undefined;
+        return readFrontmatter(await this.app.vault.cachedRead(file)).properties;
+      },
+    });
   }
 
   /** Tells the watchers a book changed. A view calls this as it paints. */

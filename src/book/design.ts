@@ -7,7 +7,16 @@
  */
 
 import { writeFrontmatter, type Properties } from "@/book/frontmatter";
-import { DESIGN_KEYS, readDesign, writeDesign, type Design } from "@/style/design";
+import { linksIn, target, type Links } from "@/book/links";
+import type { Book } from "@/book/note";
+import {
+  DESIGN_KEYS,
+  emptyDesign,
+  mergeDesign,
+  readDesign,
+  writeDesign,
+  type Design,
+} from "@/style/design";
 
 /** Frontmatter key that makes a note a design. Its value is the format. */
 export const DESIGN_KEY = "orca-design";
@@ -74,4 +83,39 @@ export function designNoteText(design: Design, body = "\n"): string {
     properties: writeDesignNote({ format: DESIGN_FORMAT, design, own: {} }),
     body,
   });
+}
+
+/** Reads a note's properties. `ui` implements this over the vault. */
+export interface Notes {
+  properties(path: string): Promise<Properties | undefined>;
+}
+
+/**
+ * The design a book is set under: the note it points at, with the
+ * book's own keys over it. A book that points at nothing, or at a note
+ * the vault has not got, is set under its own keys alone.
+ */
+export async function bookDesign(
+  book: Book,
+  from: string,
+  links: Links,
+  notes: Notes,
+): Promise<Design> {
+  const link = book.designNote;
+  if (link === undefined) return book.design;
+  const path = links.find(target(linksIn(link)[0] ?? link), from);
+  const properties = path === undefined ? undefined : await notes.properties(path);
+  if (properties === undefined) return book.design;
+  return mergeDesign(readDesignNote(properties).design, book.design);
+}
+
+/** The book with its design moved out to a shared note, and the link in its place. */
+export function extracted(book: Book, link: string): Book {
+  return { ...book, design: emptyDesign(), designNote: link };
+}
+
+/** The book with the shared design folded into its own keys, and the link gone. */
+export function absorbed(book: Book, shared: Design): Book {
+  const { designNote: _link, ...rest } = book;
+  return { ...rest, design: mergeDesign(shared, book.design) };
 }

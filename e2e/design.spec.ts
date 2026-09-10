@@ -6,6 +6,13 @@ const BOOK = "Pride and Prejudice.md";
 /** The face the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FACE = "Alegreya";
 
+/** The note `Extract design to a shared note` writes beside the book. */
+const SHARED = "Pride and Prejudice design.md";
+
+/** The commands that move a design between the book and a shared note. */
+const EXTRACT = "orca:extract-design";
+const ABSORB = "orca:absorb-design";
+
 /** A family no machine installs, so the filter matches nothing. */
 const NOWHERE = "Zzyzx Grotesque";
 
@@ -170,4 +177,75 @@ test("a second preview in a background tab is deferred, and the panel designs th
   await panel.type("aleg");
   await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
   await expect(panel.face).toContainText(FIXTURE_FACE);
+});
+
+test("`Extract design to a shared note` moves the design between the two notes", async ({
+  note,
+  obsidian,
+  vault,
+}) => {
+  await note.open(BOOK);
+  vault.touch(BOOK);
+  vault.touch(SHARED);
+
+  // With no `design` key the book's own frontmatter is the design, so
+  // there is a design to extract and none to bring back.
+  expect(await obsidian.offers(EXTRACT)).toBe(true);
+  expect(await obsidian.offers(ABSORB)).toBe(false);
+
+  await obsidian.command(EXTRACT);
+
+  await expect.poll(async () => vault.read(SHARED)).toContain("orca-design: 1");
+  const shared = await vault.read(SHARED);
+  expect(shared).toContain("leading: 14pt");
+  expect(shared).toContain("ornament: ⁂");
+
+  // The book keeps the link and none of the keys the note now holds.
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    "Pride and Prejudice design",
+  );
+  expect(await vault.read(BOOK)).not.toContain("leading:");
+
+  await expect.poll(async () => obsidian.offers(ABSORB)).toBe(true);
+  expect(await obsidian.offers(EXTRACT)).toBe(false);
+
+  await obsidian.command(ABSORB);
+
+  await expect.poll(async () => vault.read(BOOK)).toContain("leading: 14pt");
+  expect(await vault.read(BOOK)).not.toContain("Pride and Prejudice design");
+});
+
+test("a book that points at a design note is set in the face that note names", async ({
+  book,
+  obsidian,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(SHARED);
+  await vault.write(
+    SHARED,
+    `---\norca-design: 1\nface: ${FIXTURE_FACE}\n---\n`,
+  );
+  // The link is resolved through the cache, so the spec waits for the
+  // note to reach it rather than on a clock.
+  await obsidian.open(SHARED);
+  await vault.modify(
+    BOOK,
+    own.replace(
+      "orca-book: 1\n",
+      'orca-book: 1\ndesign: "[[Pride and Prejudice design]]"\n',
+    ),
+  );
+
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The book sets nothing of its own, so the face is the shared note's.
+  expect(await panel.reading()).toContain(FIXTURE_FACE);
+
+  // The book note goes back through the vault, so the book is taken off
+  // the composer and the next spec sets it from the notes as they are.
+  await vault.modify(BOOK, own);
 });

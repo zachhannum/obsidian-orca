@@ -31,7 +31,7 @@ import {
 import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
-import { emptyDesign, type Design } from "@/style/design";
+import type { Design } from "@/style/design";
 import { designSheets } from "@/style/sheet";
 import { bookName } from "@/ui/shelf";
 
@@ -270,6 +270,8 @@ export interface Progress {
 export interface Composing {
   /** The book at this path, or nothing for a note orca refuses. */
   model(path: string): Promise<Model | undefined>;
+  /** The design the book at this path is set under, the shared note's included. */
+  design(path: string): Promise<Design>;
   /** A note the book reads, by its vault path. */
   read(path: string): Promise<string>;
   /** A note's own name, which titles a book with no title of its own. */
@@ -442,7 +444,7 @@ export class Composer {
 
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
-    const design: Design = carried?.design ?? emptyDesign();
+    const design: Design = carried?.design ?? (await this.vault.design(path));
     const sheets = [...(carried?.sheets ?? designSheets(design))];
     // The sheets name the family, and a new engine has none of its
     // cuts, so the cuts cross ahead of the sheets that ask for them.

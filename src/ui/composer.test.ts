@@ -5,6 +5,8 @@ import { test } from "node:test";
 import type { Folios, LayoutOutput, Op, Page } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
+import { bookDesign } from "@/book/design";
+import { readFrontmatter } from "@/book/frontmatter";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Face } from "@/book/plan";
@@ -207,13 +209,19 @@ async function paths(folder = "/"): Promise<string[]> {
 
 async function setting(client: EngineClient): Promise<Composing> {
   const found = await paths();
+  const links = pathLinks(found);
   return {
     model: async (at) => readModel(await readText(vault, at)),
+    design: async (at) =>
+      bookDesign((await readModel(await readText(vault, at))).book, at, links, {
+        properties: async (note) =>
+          readFrontmatter(await readText(vault, note)).properties,
+      }),
     read: (at) => readText(vault, at),
     files: vault,
     name: (at) => path.basename(at, ".md"),
     cuts: () => Promise.resolve([]),
-    links: pathLinks(found),
+    links,
     engines: {
       client: () => Promise.resolve(client),
       hold: () => () => undefined,

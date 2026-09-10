@@ -21,8 +21,10 @@ import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
+import { absorbed, extracted } from "@/book/design";
+import { SHARED_KEY } from "@/book/note";
 import { Edits } from "@/ui/edits";
-import { bookFromFolder, emptyBook } from "@/ui/make";
+import { bookFromFolder, createDesignNote, emptyBook } from "@/ui/make";
 import type { Face } from "@/book/plan";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
@@ -228,6 +230,30 @@ export default class OrcaPlugin extends Plugin implements Limited {
       name: "New book",
       callback: () => {
         void this.newBook();
+      },
+    });
+    this.addCommand({
+      id: "extract-design",
+      name: "Extract design to a shared note",
+      checkCallback: (checking) => {
+        const book = this.onBook()?.book;
+        if (book === undefined || this.designNote(book) !== undefined) {
+          return false;
+        }
+        if (!checking) void this.extractDesign(book);
+        return true;
+      },
+    });
+    this.addCommand({
+      id: "absorb-design",
+      name: "Bring the design into this book",
+      checkCallback: (checking) => {
+        const book = this.onBook()?.book;
+        if (book === undefined || this.designNote(book) === undefined) {
+          return false;
+        }
+        if (!checking) void this.absorbDesign(book);
+        return true;
       },
     });
 
@@ -968,6 +994,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private composing(engines: Pool): Composing {
     return {
       model: (path) => this.edits.model(path),
+      design: (path) => this.edits.design(path),
       read: (path) => {
         const note = this.app.vault.getFileByPath(path);
         return note === null
@@ -1130,6 +1157,49 @@ export default class OrcaPlugin extends Plugin implements Limited {
         void this.openPreview({ book: book.path });
       },
     });
+  }
+
+  /**
+   * The link to the shared design note a book points at. The command
+   * that moves the design is offered one way or the other, so the
+   * answer comes from the metadata cache rather than a read.
+   */
+  private designNote(path: string): string | undefined {
+    const file = this.app.vault.getFileByPath(path);
+    if (file === null) return undefined;
+    const link = this.app.metadataCache.getFileCache(file)?.frontmatter?.[
+      SHARED_KEY
+    ] as unknown;
+    return typeof link === "string" && link.trim() !== ""
+      ? link.trim()
+      : undefined;
+  }
+
+  /**
+   * Moves a book's design into a note of its own and points the book at
+   * it. The book keeps nothing, so from here its own frontmatter holds
+   * only what it changes.
+   */
+  private async extractDesign(path: string): Promise<void> {
+    const model = await this.edits.model(path);
+    const file = this.app.vault.getFileByPath(path);
+    if (model === undefined || file === null) return;
+    const note = await createDesignNote(this.app, file, model.book.design);
+    const link = this.app.metadataCache.fileToLinktext(note, path, true);
+    await this.edits.edit(path, (current) => ({
+      ...current,
+      book: extracted(current.book, `[[${link}]]`),
+    }));
+    new Notice(`Orca: the design is in ${note.basename}.`);
+  }
+
+  /** Writes the shared design back into the book's own frontmatter. */
+  private async absorbDesign(path: string): Promise<void> {
+    const design = await this.edits.design(path);
+    await this.edits.edit(path, (current) => ({
+      ...current,
+      book: absorbed(current.book, design),
+    }));
   }
 
   /** The book the workspace is on, whether by one of its notes or its own. */
