@@ -249,3 +249,30 @@ test("a book that points at a design note is set in the face that note names", a
   // the composer and the next spec sets it from the notes as they are.
   await vault.modify(BOOK, own);
 });
+
+test("the panel designs a shared design note, and a pick is written to it", async ({
+  obsidian,
+  panel,
+  vault,
+}) => {
+  vault.touch(SHARED);
+  await vault.write(SHARED, "---\norca-design: 1\n---\n");
+  await obsidian.open(SHARED);
+  await panel.open();
+
+  // The note is the design, and it sets no face, so the panel reads the
+  // one the engine carries.
+  await expect(panel.panel).toBeVisible();
+  await expect(panel.face).toContainText(CARRIED);
+  // No book is under the note, so the engine registered no cuts for it.
+  await expect(panel.cuts).toHaveCount(0);
+
+  await panel.pick();
+  await panel.type("aleg");
+  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
+
+  await expect(panel.face).toContainText(FIXTURE_FACE);
+  await expect.poll(async () => vault.read(SHARED)).toContain(
+    `face: ${FIXTURE_FACE}`,
+  );
+});

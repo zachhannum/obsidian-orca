@@ -21,7 +21,14 @@ import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
-import { absorbed, extracted } from "@/book/design";
+import {
+  absorbed,
+  applyDesignNote,
+  designFormat,
+  extracted,
+  readDesignNote,
+} from "@/book/design";
+import type { Properties } from "@/book/frontmatter";
 import { SHARED_KEY } from "@/book/note";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, createDesignNote, emptyBook } from "@/ui/make";
@@ -38,7 +45,12 @@ import {
 } from "@/ui/fonts";
 import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
-import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
+import {
+  PANEL_VIEW,
+  DesignPanelView,
+  type DesignedNote,
+  type Designing,
+} from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
 import {
@@ -91,6 +103,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private fonts: FontPlaces | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
+  /** The design note the reader is in, which the panel designs in place of a book. */
+  private designNote: string | undefined;
   private indexing: number | undefined;
   private unloaded = false;
   /** The status bar item the folio being read is written into. */
@@ -169,6 +183,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       (leaf) => new DesignPanelView(leaf, this.designing()),
     );
     this.catchOpening();
+    this.followDesignNotes();
     this.addRibbonIcon("book", "Open the book", () => {
       void this.reveal();
     });
@@ -237,7 +252,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       name: "Extract design to a shared note",
       checkCallback: (checking) => {
         const book = this.onBook()?.book;
-        if (book === undefined || this.designNote(book) !== undefined) {
+        if (book === undefined || this.sharedDesign(book) !== undefined) {
           return false;
         }
         if (!checking) void this.extractDesign(book);
@@ -249,7 +264,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       name: "Bring the design into this book",
       checkCallback: (checking) => {
         const book = this.onBook()?.book;
-        if (book === undefined || this.designNote(book) === undefined) {
+        if (book === undefined || this.sharedDesign(book) === undefined) {
           return false;
         }
         if (!checking) void this.absorbDesign(book);
@@ -1026,6 +1041,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private designing(): Designing {
     return {
       book: () => this.designed(),
+      note: () => Promise.resolve(this.designedNote()),
       index: () => this.fontIndex(),
       faces: (family) => familyFaces(this.places(), family),
       watch: (again) => {
@@ -1036,6 +1052,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const on = [
           this.app.workspace.on("active-leaf-change", again),
           this.app.workspace.on("layout-change", again),
+          // A design note is read out of the cache, so the panel waits
+          // for the cache to hold what was written to it.
+          this.app.metadataCache.on("changed", (_file, _data, cache) => {
+            const properties = cache.frontmatter as Properties | undefined;
+            if (properties !== undefined && designFormat(properties) !== undefined) {
+              again();
+            }
+          }),
         ];
         return () => {
           for (const ref of on) this.app.workspace.offref(ref);
@@ -1160,11 +1184,78 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
+   * The design note the reader is on, which the panel designs in place
+   * of a book.
+   */
+  private designedNote(): DesignedNote | undefined {
+    const path = this.designNote;
+    const file = path === undefined ? null : this.app.vault.getFileByPath(path);
+    const properties =
+      file === null
+        ? undefined
+        : (this.app.metadataCache.getFileCache(file)?.frontmatter as
+            | Properties
+            | undefined);
+    if (file === null || properties === undefined) return undefined;
+    return {
+      name: file.basename,
+      face: readDesignNote(properties).design.text.face,
+      reface: (family) => this.refaceNote(file.path, family),
+    };
+  }
+
+  /**
+   * Follows the reader between a design note and a book. A note or a
+   * book pane settles it, and every other leaf leaves it as it was: the
+   * panel taking focus is not the reader leaving the note.
+   */
+  private followDesignNotes(): void {
+    const settle = (leaf: WorkspaceLeaf | null): void => {
+      const view = leaf?.view;
+      if (view instanceof MarkdownView) {
+        const file = view.file;
+        this.designNote =
+          file !== null && this.isDesignNote(file) ? file.path : undefined;
+      } else if (view instanceof PreviewView || view instanceof BookView) {
+        this.designNote = undefined;
+      }
+    };
+    settle(this.app.workspace.getMostRecentLeaf());
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", (leaf) => {
+        settle(leaf);
+      }),
+    );
+  }
+
+  /** Whether a note carries the key that makes it a design. */
+  private isDesignNote(file: TFile): boolean {
+    const properties = this.app.metadataCache.getFileCache(file)?.frontmatter as
+      | Properties
+      | undefined;
+    return properties !== undefined && designFormat(properties) !== undefined;
+  }
+
+  /** Sets a design note in a family, through Obsidian's frontmatter API. */
+  private async refaceNote(path: string, family: string): Promise<void> {
+    const file = this.app.vault.getFileByPath(path);
+    if (file === null) return;
+    await this.app.fileManager.processFrontMatter(
+      file,
+      (properties: Properties) => {
+        const { design } = readDesignNote(properties);
+        design.text.face = family;
+        applyDesignNote(properties, design);
+      },
+    );
+  }
+
+  /**
    * The link to the shared design note a book points at. The command
    * that moves the design is offered one way or the other, so the
    * answer comes from the metadata cache rather than a read.
    */
-  private designNote(path: string): string | undefined {
+  private sharedDesign(path: string): string | undefined {
     const file = this.app.vault.getFileByPath(path);
     if (file === null) return undefined;
     const link = this.app.metadataCache.getFileCache(file)?.frontmatter?.[
