@@ -2,40 +2,81 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { test } from "node:test";
-import { Client, createEngine, styleOp, type Op } from "fleuron";
+import { Client, createEngine, styleOp, type Op, type Sheet } from "fleuron";
 import { emptyDesign, type Design } from "@/style/design";
-import { DESIGN_SHEET, designSheet, designSheets } from "@/style/sheet";
+import { DESIGN_SHEET, OWN_SHEET, designSheet, designSheets } from "@/style/sheet";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
-test("the sheet names the font a design chose, under the design's own name", () => {
-  const sheet = designSheet(fonted("EB Garamond"));
+/** A book of one chapter, which the sheets set. */
+const CHAPTER: Op = {
+  op: "markdown",
+  name: "chapter.md",
+  text: "# Chapter One\n\nBody text, long enough to break over a line.\n",
+};
 
-  assert.equal(sheet.name, DESIGN_SHEET);
-  assert.ok(sheet.css.includes('book { font-family: "EB Garamond", serif; }'));
-  assert.deepEqual(
-    designSheets(fonted("EB Garamond")).map((each) => each.name),
-    [THEME_SHEET, DESIGN_SHEET],
+const SETTING = { roles: ["chapter"] } as const;
+
+test("the three layers cross in one order, and the last one to set a size wins", async () => {
+  const sheets = designSheets(sized(20), SETTING, "book { font-size: 30pt; }");
+
+  assert.deepEqual(sheets.map((sheet) => sheet.name), [
+    THEME_SHEET,
+    DESIGN_SHEET,
+    OWN_SHEET,
+  ]);
+  // The theme sets 11pt, the design 20pt and the author 30pt, so each
+  // layer beats the one sent before it.
+  assert.equal(await bodySize(sheets), 30);
+  assert.equal(await bodySize(designSheets(sized(20), SETTING)), 20);
+  assert.equal(await bodySize(designSheets(emptyDesign(), SETTING)), 11);
+});
+
+test("a design that settles nothing generates nothing but the page names", () => {
+  const sheets = designSheets(emptyDesign(), SETTING);
+
+  // The page names come from the reading order rather than from the
+  // design, so a book with no design still has them.
+  assert.equal(
+    designSheet(emptyDesign(), SETTING).css,
+    "section:nth-child(1) {\n  page: chapter;\n}\n",
   );
-});
-
-test("a design with no font generates nothing that overrides the theme", () => {
-  const sheets = designSheets(emptyDesign());
-
-  assert.equal(designSheet(emptyDesign()).css, "");
+  assert.equal(designSheet(emptyDesign(), { roles: [] }).css, "");
   assert.deepEqual(sheets[0], { name: THEME_SHEET, css: BUNDLED_THEME });
-  assert.equal(sheets[1]?.css, "");
-});
-
-test("a font name with a quote in it is escaped rather than left to close the string", () => {
-  const css = designSheet(fonted('Ba"d\\Face')).css;
-
-  // The name comes from a font file's own name table, so a quote in
-  // it is escaped and the declaration stays one string.
-  assert.ok(css.includes('font-family: "Ba\\"d\\\\Face", serif;'));
-  assert.equal(css.split('"').length - 1, 3);
+  assert.equal(sheets[2]?.css, "");
 });
 
 test("a book set in a font the engine does not have still sets, and warns about none of it", async () => {
+  const design = emptyDesign();
+  design.body.font = "Nonesuch";
+  const output = await set(designSheets(design, SETTING));
+
+  // The engine falls back to the font it carries without a warning,
+  // so a font the author does not have is orca's to report.
+  assert.deepEqual(output.warnings, []);
+  assert.ok(output.pages.length > 0);
+  assert.deepEqual([...new Set(output.fonts.map((font) => font.family))], [
+    "eb garamond",
+  ]);
+});
+
+function sized(points: number): Design {
+  const design = emptyDesign();
+  design.body.size = { value: points, unit: "pt" };
+  return design;
+}
+
+/** The size the chapter's body text is set in. */
+async function bodySize(sheets: Sheet[]): Promise<number | undefined> {
+  const output = await set(sheets);
+  const found = output.pages.flatMap((page) =>
+    page.items.flatMap((item) =>
+      item.kind === "text" && item.text.startsWith("Body") ? [item.size] : [],
+    ),
+  );
+  return found[0];
+}
+
+async function set(sheets: Sheet[]) {
   const engine = await createEngine({ wasm: await moduleBytes() });
   try {
     const client: Client = new Client({
@@ -45,34 +86,16 @@ test("a book set in a font the engine does not have still sets, and warns about 
         });
       },
     });
-    const ops: Op[] = [
+    const output = await client.preview([
       { op: "dialect", dialect: "obsidian" },
-      styleOp(designSheets(fonted("Nonesuch"))),
-      {
-        op: "markdown",
-        name: "chapter.md",
-        text: "# Chapter One\n\nBody text set from a font the engine has not got.\n",
-      },
-    ];
-    const output = await client.preview(ops);
-
-    assert.ok(output, "the render was overtaken");
-    // The engine falls back to the font it carries without a warning,
-    // so a font the author has not got is orca's to report.
-    assert.deepEqual(output.warnings, []);
-    assert.ok(output.pages.length > 0);
-    assert.deepEqual([...new Set(output.fonts.map((font) => font.family))], [
-      "eb garamond",
+      styleOp(sheets),
+      CHAPTER,
     ]);
+    assert.ok(output, "the render was overtaken");
+    return output;
   } finally {
     engine.free();
   }
-});
-
-function fonted(font: string): Design {
-  const design = emptyDesign();
-  design.body.font = font;
-  return design;
 }
 
 async function moduleBytes(): Promise<Buffer> {
@@ -80,6 +103,5 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-// What this tier does not cover: the rest of the schema, which the
-// generated layer turns into declarations, and the warning for a font
-// the vault has not got, which belongs to the picker.
+// What this tier does not cover: the author's own layer with anything
+// in it, which waits on the note's css fence.

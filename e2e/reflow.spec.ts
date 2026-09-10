@@ -27,8 +27,13 @@ const LAST_WORDS = "For the readers who took the chapters";
 /** The line the fixture chapter's own heading is on, counting from 0. */
 const HEADING = 5;
 
-/** The paragraphs the chapter is lengthened to, and the last of them. */
-const PARAGRAPHS = 60;
+/**
+ * The paragraphs the chapter is lengthened to, and the last of them.
+ * The book is long enough that a font change moves the back matter by
+ * a page. A shorter book hides that move, because the design's own
+ * page breaks absorb it.
+ */
+const PARAGRAPHS = 120;
 const DEEP = `Paragraph ${String(PARAGRAPHS)}.`;
 
 /**

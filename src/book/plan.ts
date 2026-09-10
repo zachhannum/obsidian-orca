@@ -28,6 +28,7 @@ import {
   type Order,
   type Section,
 } from "@/book/order";
+import type { Role } from "@/book/roles";
 
 /** Reads a section's note, by its vault path. `ui` implements this over the vault. */
 export interface Read {
@@ -161,6 +162,16 @@ function sendable(section: Section): section is Sendable {
   return section.kind !== "missing";
 }
 
+/**
+ * The role of each section that crosses, in the order the engine
+ * counts them. The generated layer reaches a role by counting. It
+ * counts the sections that are sent rather than the ones the note
+ * lists.
+ */
+export function sentRoles(sections: readonly Section[]): Role[] {
+  return sections.filter(sendable).map((section) => section.entry.role);
+}
+
 async function sourceOf(
   section: Sendable,
   at: number,
@@ -198,8 +209,12 @@ export type Edit =
    * break again.
    */
   | { did: "styled"; sheets: Sheet[] }
-  /** Reordered chapters, so every source crosses in its new place. */
-  | { did: "reordered"; sources: Source[] }
+  /**
+   * Reordered chapters, so every source crosses in its new place. The
+   * sheets cross again with them, because the generated layer reaches
+   * a role by counting and the count moved.
+   */
+  | { did: "reordered"; sources: Source[]; sheets: Sheet[] }
   /** Picked a new family, and the cuts it is made of. */
   | { did: "fonted"; faces: readonly Face[]; sheets: Sheet[] }
   /** Deleted a note, so the rest of the sources stand. */
@@ -235,10 +250,6 @@ export interface Planned {
  * session plans the same ops, so a plan can be compared rather than
  * run. What the ops put on the wire comes back as
  * {@link Planned.crossed}, for the caller that sends them to record.
- *
- * A reorder sends the sheets again unchanged. A positional selector
- * matches on where a source sits, so a sheet compiled against the
- * order before the move is stale even though its text is not.
  */
 export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
   switch (edit.did) {
@@ -262,8 +273,8 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
       };
     case "reordered":
       return {
-        ops: [{ op: "book", sources: edit.sources }, styling(loaded.sheets)],
-        loaded,
+        ops: [{ op: "book", sources: edit.sources }, styling(edit.sheets)],
+        loaded: { ...loaded, sheets: edit.sheets },
         crossed: [],
       };
     case "embedded":

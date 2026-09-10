@@ -11,10 +11,10 @@ import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { resolve } from "@/book/order";
 import { sectionRanges, type Range } from "@/book/pages";
-import { sendBook } from "@/book/plan";
+import { sendBook, sentRoles } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { Engines } from "@/engine/pool";
-import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
+import { designSheets } from "@/style/sheet";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
 import { cacheLinks } from "@/ui/notes";
@@ -357,12 +357,23 @@ export class BookView extends FileView {
         (path) => this.readNote(path),
         (path) => this.readFile(path),
       );
+      const { sections } = resolve(shown.model.order, links, file.path);
+      const { title, author } = shown.model.book.metadata;
+      // The page reports the folios the preview paints, so both are set
+      // under the same design. Registering the faces the design names
+      // is the preview's job. Here the engine falls back to the face it
+      // carries.
       const output = await client.preview([
         ...ops,
-        styleOp([{ name: THEME_SHEET, css: BUNDLED_THEME }]),
+        styleOp(
+          designSheets(shown.model.book.design, {
+            roles: sentRoles(sections),
+            title,
+            author,
+          }),
+        ),
       ]);
       if (output !== null) {
-        const { sections } = resolve(shown.model.order, links, file.path);
         folios = await sectionRanges(sections, output.pages, client);
       }
     } catch (cause) {

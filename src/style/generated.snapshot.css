@@ -1,0 +1,121 @@
+@page {
+  size: 5.5in 8.5in;
+  margin-top: 0.8in;
+  margin-bottom: 1in;
+  @top-left { content: none; }
+  @top-center { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-center { content: counter(page, decimal); }
+  @bottom-right { content: none; }
+}
+
+@page :left {
+  margin-left: 0.7in;
+  margin-right: 0.95in;
+  @top-left { content: "Jane Austen"; }
+}
+
+@page :right {
+  margin-left: 0.95in;
+  margin-right: 0.7in;
+  @top-right { content: "Pride and Prejudice"; }
+}
+
+@page title-page:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page copyright:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page epigraph:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page contents:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page part:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page chapter:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page back-matter:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+book {
+  font-size: 10.5pt;
+  line-height: 14pt;
+  text-align: justify;
+  text-indent: 1.2em;
+  hyphens: auto;
+  hanging-punctuation: none;
+  orphans: 2;
+  widows: 2;
+}
+
+h1 {
+  font-size: 17pt;
+  font-weight: 400;
+  text-align: center;
+}
+
+h2 {
+  font-size: 13pt;
+  font-weight: 700;
+}
+
+section:nth-child(1) {
+  page: title-page;
+}
+
+section:nth-child(2) {
+  page: copyright;
+}
+
+section:nth-child(3) {
+  page: epigraph;
+}
+
+section:nth-child(4) {
+  page: contents;
+}
+
+section:nth-child(5) {
+  page: part;
+}
+
+section:nth-child(6) {
+  page: chapter;
+  break-before: recto;
+}
+
+section:nth-child(7) {
+  page: back-matter;
+}
+
+section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 98pt;
+}
+
+section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter {
+  initial-letter: 3;
+}
+
+hr {
+  content: "⁂";
+}
