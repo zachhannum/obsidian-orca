@@ -1,5 +1,5 @@
 /**
- * A book set in another face repaginates all of it, and every surface
+ * A book set in another font repaginates all of it, and every surface
  * that names a page has to ask again. A reflow moves the folio, so the
  * assertions here are on the words a page carries.
  */
@@ -14,8 +14,8 @@ const BOOK = "Pride and Prejudice.md";
 const CHAPTER = "Chapter Twelve.md";
 const LAST_NOTE = "Acknowledgements.md";
 
-/** The face the fixture vault ships, which a pick sets the book in. */
-const FACE = "Alegreya";
+/** The font the fixture vault ships, which a pick sets the book in. */
+const FONT = "Alegreya";
 
 /** The chapters either side of the reflow, as the toolbar names them. */
 const CHAPTER_NAME = "Chapter Twelve";
@@ -34,9 +34,9 @@ const DEEP = `Paragraph ${String(PARAGRAPHS)}.`;
 /**
  * The chapter with paragraphs enough to run over several pages, each
  * one numbered so a spec can name the page it is set on. The prose is
- * the chapter's own, cycled: a face repaginates a book by breaking its
+ * the chapter's own, cycled: a font repaginates a book by breaking its
  * lines differently, and one sentence repeated breaks the same in every
- * face.
+ * font.
  */
 function lengthened(chapter: string): string {
   const parts = chapter.split("\n\n");
@@ -67,13 +67,13 @@ async function pagedOut(vault: Vault): Promise<string> {
   return text;
 }
 
-/** Sets the book in the fixture's own face, and waits for the pages it made. */
-async function reface(panel: Panel, book: Book, painted: number): Promise<void> {
+/** Sets the book in the fixture's own font, and waits for the pages it made. */
+async function refont(panel: Panel, book: Book, painted: number): Promise<void> {
   await panel.open();
   await panel.pick();
   await panel.type("aleg");
-  await panel.options.filter({ hasText: FACE }).first().click();
-  await expect(panel.face).toContainText(FACE);
+  await panel.options.filter({ hasText: FONT }).first().click();
+  await expect(panel.font).toContainText(FONT);
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 }
 
@@ -87,12 +87,12 @@ test("a reflow turns the pane to the page its content moved to", async ({
   const painted = await book.painted();
 
   // The back matter is at the end of the book, where every page a new
-  // face gains or loses has accumulated.
+  // font gains or loses has accumulated.
   await book.choose(LAST);
   await expect(book.page).toContainText(LAST_WORDS);
   const was = await book.reading();
 
-  await reface(panel, book, painted);
+  await refont(panel, book, painted);
 
   // Nothing turned the page, and the pane is on the words it was
   // reading rather than on the page number it was on.
@@ -113,7 +113,7 @@ test("a reflow that leaves the content where it was turns nothing", async ({
   // The title page opens the book, so nothing ahead of it can move it.
   await expect(book.surface).toHaveAttribute("data-first", "1");
 
-  await reface(panel, book, painted);
+  await refont(panel, book, painted);
 
   await expect(book.surface).toHaveAttribute("data-first", "1");
 });
@@ -130,13 +130,13 @@ test("a manuscript read after a reflow turns the pane to the page that line is n
   await manuscript.open(CHAPTER);
   await book.split();
   const painted = await book.painted();
-  // The back matter is where the pages a new face gains have all
+  // The back matter is where the pages a new font gains have all
   // accumulated, so it is the note whose page moves.
   await manuscript.moveTo(LAST_NOTE);
   await expect(book.page).toContainText(LAST_WORDS);
   const was = await book.reading();
 
-  await reface(panel, book, painted);
+  await refont(panel, book, painted);
 
   // The manuscript moves away and back. The folio that line is set on
   // is asked for after the reflow, so the pane lands on the words
@@ -162,7 +162,7 @@ test("a page turned after a reflow scrolls the manuscript to the line it now ope
   await book.split();
   const painted = await book.painted();
 
-  await reface(panel, book, painted);
+  await refont(panel, book, painted);
 
   await book.next.click();
   await expect(book.surface).toHaveAttribute("data-led", CHAPTER);
@@ -182,7 +182,7 @@ test("a chapter chosen after a reflow turns to the page it now opens on", async 
   await expect(book.page).toContainText(LAST_WORDS);
   const was = await book.reading();
 
-  await reface(panel, book, painted);
+  await refont(panel, book, painted);
 
   await book.choose(CHAPTER_NAME);
   await expect(book.page).toContainText(CHAPTER_NAME);

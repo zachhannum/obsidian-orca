@@ -282,7 +282,7 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
   {
     did: "picked a new family",
     edit: {
-      did: "faced",
+      did: "fonted",
       faces: SPECTRAL,
       sheets: FACED,
     },
@@ -372,7 +372,7 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   let fonts = 0;
   for (const face of picks) {
     const planned = sendEdit(
-      { did: "faced", faces: [face], sheets: FACED },
+      { did: "fonted", faces: [face], sheets: FACED },
       loaded,
       registry,
     );
@@ -391,7 +391,7 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   assert.ok(crossed, "the file was never read");
   const family = [crossed, ...SPECTRAL.slice(1)];
   const again = sendEdit(
-    { did: "faced", faces: family, sheets: FACED },
+    { did: "fonted", faces: family, sheets: FACED },
     loaded,
     registry,
   );

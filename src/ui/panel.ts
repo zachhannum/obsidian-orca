@@ -2,25 +2,25 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
 import type { Face } from "@/book/plan";
 import type { Typeset } from "@/ui/composer";
-import { cuts, missingFace } from "@/ui/face";
+import { missingFont, styles } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown } from "@/ui/panels";
 
 /** The type the design panel is registered under. */
 export const PANEL_VIEW = "orca-design";
 
-/** The face the engine carries, which a book is set in until one is picked. */
+/** The font the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
 
-/** The book the panel designs and the faces the machine has. */
+/** The book the panel designs and the fonts the machine has. */
 export interface Designing {
   /** The book the panel designs, which is the one being read. */
   book(): Promise<Typeset | undefined>;
-  /** Writes the family into the book's own frontmatter, where the design lives. */
-  setFace(book: string, family: string): Promise<void>;
-  /** The families the machine has. The scan runs once for the session. */
+  /** Writes the font into the book's own frontmatter, where the design lives. */
+  setFont(book: string, font: string): Promise<void>;
+  /** The fonts the machine has. The scan runs once for the session. */
   index(): Promise<FontIndex>;
-  /** One family's faces, as the bytes that cross and the keys they go under. */
-  faces(family: Family): Promise<Face[]>;
+  /** One font's styles, as the bytes that cross and the keys they go under. */
+  styles(font: Family): Promise<Face[]>;
   /** Told when the book being designed changes. */
   watch(again: () => void): () => void;
 }
@@ -81,29 +81,28 @@ export class DesignPanelView extends ItemView {
   }
 
   /**
-   * Sends the family's faces and sets the book in it. The registry
-   * keys faces by content, so picking the family again sends the sheet
-   * alone.
+   * Sends the font's styles and sets the book in it. The registry keys
+   * them by content, so picking the font again sends the sheet alone.
    *
-   * A file that has gone since the scan still names its family in the
-   * design. The engine sets the book in the face it carries, and the
-   * panel warns that the family asked for is missing.
+   * A file that has gone since the scan still names its font in the
+   * design. The engine sets the book in the one it carries, and the
+   * panel warns that the font asked for is missing.
    */
-  private async pick(family: Family): Promise<void> {
+  private async pick(font: Family): Promise<void> {
     const typeset = await this.designing.book();
     if (typeset === undefined) return;
     let faces: Face[] = [];
     try {
-      faces = await this.designing.faces(family);
+      faces = await this.designing.styles(font);
       this.unread = undefined;
     } catch {
-      this.unread = family.name;
+      this.unread = font.name;
     }
-    typeset.reface(family.name, faces);
+    typeset.refont(font.name, faces);
     await this.repaint();
     // The engine has the sheet, so the note is written after the pages
     // are on their way rather than ahead of them.
-    await this.designing.setFace(typeset.path, family.name);
+    await this.designing.setFont(typeset.path, font.name);
   }
 
   /**
@@ -135,7 +134,7 @@ export class DesignPanelView extends ItemView {
     mounted.paint(this.shownFor(typeset, index));
   }
 
-  /** Follows the book's renders, so the cuts appear as the engine returns them. */
+  /** Follows the book's renders, so the styles appear as the engine returns them. */
   private watch(typeset: Typeset): void {
     this.watching?.();
     this.watching = typeset.watch(() => {
@@ -151,27 +150,27 @@ export class DesignPanelView extends ItemView {
 
   /** The panel's state for one book, from the engine and the index. */
   private shownFor(typeset: Typeset, index: FontIndex): Shown {
-    const face = typeset.face;
+    const font = typeset.font;
     return {
       kind: "book",
       name: typeset.name,
       index,
-      face,
-      cuts: cuts(typeset.session.faces, face ?? CARRIED),
-      missing: this.warning(index, face),
+      font,
+      styles: styles(typeset.session.faces, font ?? CARRIED),
+      missing: this.warning(index, font),
     };
   }
 
-  /** The warning for the family a design asked for, if there is one. */
-  private warning(index: FontIndex, face: string | undefined): string | undefined {
-    return face !== undefined && face === this.unread
-      ? unreadable(face)
-      : missingFace(index, face);
+  /** The warning for the font a design asked for, if there is one. */
+  private warning(index: FontIndex, font: string | undefined): string | undefined {
+    return font !== undefined && font === this.unread
+      ? unreadable(font)
+      : missingFont(index, font);
   }
 }
 
-/** The warning for a family whose files would not read. */
-function unreadable(family: string): string {
-  return `${family} has no file this machine could read. The book is set in the one orca carries.`;
+/** The warning for a font whose files would not read. */
+function unreadable(font: string): string {
+  return `${font} has no file this machine could read. The book is set in the one orca carries.`;
 }
 

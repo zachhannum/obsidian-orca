@@ -11,12 +11,12 @@ import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 /** The sheet a design is sent under, which a warning names. */
 export const DESIGN_SHEET = "design.css";
 
-/** The design as one sheet. A design with no face generates an empty sheet. */
+/** The design as one sheet. A design with no font generates an empty sheet. */
 export function designSheet(design: Design): Sheet {
-  const face = design.text.face;
+  const font = design.body.font;
   return {
     name: DESIGN_SHEET,
-    css: face === undefined ? "" : `book { font-family: ${quoted(face)}, serif; }\n`,
+    css: font === undefined ? "" : `book { font-family: ${quoted(font)}, serif; }\n`,
   };
 }
 
@@ -26,9 +26,9 @@ export function designSheets(design: Design): Sheet[] {
 }
 
 /**
- * A family name as a CSS string. The name comes from a font file's own
+ * A font name as a CSS string. The name comes from a font file's own
  * name table, so a quote or a backslash in it is escaped.
  */
-function quoted(family: string): string {
-  return `"${family.replace(/[\\"]/g, (char) => `\\${char}`)}"`;
+function quoted(font: string): string {
+  return `"${font.replace(/[\\"]/g, (char) => `\\${char}`)}"`;
 }

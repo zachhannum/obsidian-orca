@@ -8,6 +8,7 @@ import { Client, createEngine, styleOp } from "fleuron";
 import {
   DESIGN_KEYS,
   DESIGN_PROPERTIES,
+  LEVELS,
   emptyDesign,
   mergeDesign,
   readDesign,
@@ -63,8 +64,9 @@ test("every field is one key and one scalar, so the properties panel shows a lin
       `\`${key}\` is not a scalar`,
     );
   }
-  assert.equal(properties["leading"], "14pt");
+  assert.equal(properties["body-line-spacing"], "14pt");
   assert.equal(properties["trim"], "5.5in 8.5in");
+  assert.equal(properties["heading-1-size"], "17pt");
 });
 
 test("a design read back from its own properties is the design that was written", () => {
@@ -75,83 +77,122 @@ test("a design read back from its own properties is the design that was written"
   assert.deepEqual(readDesign({}), emptyDesign());
 });
 
-test("a length written as a bare number is read in points, and junk is left unset", () => {
-  const design = readDesign({
-    leading: 14,
-    size: "10.5 PT",
-    indent: "1.2em",
-    orphans: "3",
-    hyphens: "yes",
-    align: "Justify",
-    trim: "5.5in",
-    "margin-inner": "0.95 furlongs",
-    widows: -1,
-    face: "   ",
-  });
+test("a heading level the design leaves alone writes no key of its own", () => {
+  const design = emptyDesign();
+  design.headings[2].weight = "bold";
 
-  assert.deepEqual(design.text.leading, { value: 14, unit: "pt" });
-  assert.deepEqual(design.text.size, { value: 10.5, unit: "pt" });
-  assert.deepEqual(design.text.indent, { value: 1.2, unit: "em" });
-  assert.equal(design.breaks.orphans, 3);
-  assert.equal(design.text.hyphens, true);
-  assert.equal(design.text.align, "justify");
-  // A field the schema cannot read is left to the layer under it.
-  assert.equal(design.page.trim, undefined);
-  assert.equal(design.page.margins.inner, undefined);
-  assert.equal(design.breaks.widows, undefined);
-  assert.equal(design.text.face, undefined);
+  const properties = writeDesign(design);
+
+  assert.deepEqual(properties, { "heading-2-weight": "bold" });
+  // Every level the schema knows is readable, and each is its own set
+  // of keys.
+  assert.deepEqual(
+    LEVELS.map((level) => `heading-${level}-font`).filter((key) =>
+      DESIGN_KEYS.includes(key),
+    ).length,
+    6,
+  );
 });
 
-test("a book's own keys win over the design note it points at, field by field", () => {
-  const shared = readDesign({ face: "EB Garamond", leading: 14, orphans: 3 });
-  const own = readDesign({ leading: "15pt" });
+test("a length written as a bare number is read in points, and junk is left unset", () => {
+  const design = readDesign({
+    "body-line-spacing": 14,
+    "body-size": "10.5 PT",
+    "body-first-line-indent": "1.2em",
+    "body-orphans": "3",
+    "body-hyphens": "yes",
+    "body-align": "Justify",
+    trim: "5.5in",
+    "margin-inside": "0.95 furlongs",
+    "body-widows": -1,
+    "body-font": "   ",
+  });
 
-  const merged = mergeDesign(shared, own);
+  assert.deepEqual(design.body.lineSpacing, { value: 14, unit: "pt" });
+  assert.deepEqual(design.body.size, { value: 10.5, unit: "pt" });
+  assert.deepEqual(design.body.indent, { value: 1.2, unit: "em" });
+  assert.equal(design.body.orphans, 3);
+  assert.equal(design.body.hyphens, true);
+  assert.equal(design.body.align, "justify");
+  // A field the schema cannot read is left to the layer under it.
+  assert.equal(design.page.trim, undefined);
+  assert.equal(design.page.margins.inside, undefined);
+  assert.equal(design.body.widows, undefined);
+  assert.equal(design.body.font, undefined);
+});
 
-  assert.equal(merged.text.face, "EB Garamond");
-  assert.deepEqual(merged.text.leading, { value: 15, unit: "pt" });
-  assert.equal(merged.breaks.orphans, 3);
+test("a book's own keys win over the design under it, field by field", () => {
+  const under = readDesign({
+    "body-font": "EB Garamond",
+    "body-line-spacing": 14,
+    "body-orphans": 3,
+    "heading-1-size": "17pt",
+    "heading-1-weight": "bold",
+  });
+  const over = readDesign({
+    "body-line-spacing": "15pt",
+    "heading-1-weight": "regular",
+  });
+
+  const merged = mergeDesign(under, over);
+
+  assert.equal(merged.body.font, "EB Garamond");
+  assert.deepEqual(merged.body.lineSpacing, { value: 15, unit: "pt" });
+  assert.equal(merged.body.orphans, 3);
+  // A level is merged field by field rather than replaced whole.
+  assert.deepEqual(merged.headings[1], {
+    size: { value: 17, unit: "pt" },
+    weight: "regular",
+  });
   // Merging leaves both designs as they were.
-  assert.deepEqual(own, readDesign({ leading: "15pt" }));
+  assert.deepEqual(over, readDesign({
+    "body-line-spacing": "15pt",
+    "heading-1-weight": "regular",
+  }));
 });
 
 function whole(): Design {
-  return {
+  const design: Design = {
     page: {
       trim: { width: len(5.5, "in"), height: len(8.5, "in") },
       margins: {
-        inner: len(0.95, "in"),
-        outer: len(0.7, "in"),
+        inside: len(0.95, "in"),
+        outside: len(0.7, "in"),
         top: len(0.8, "in"),
         bottom: len(1, "in"),
       },
       mirrored: true,
     },
-    text: {
-      face: "Alegreya",
+    body: {
+      font: "Alegreya",
       size: len(10.5, "pt"),
-      leading: len(14, "pt"),
+      lineSpacing: len(14, "pt"),
       align: "justify",
       indent: len(1.2, "em"),
       hyphens: true,
-      hanging: false,
+      hangingPunctuation: false,
+      orphans: 2,
+      widows: 2,
     },
-    breaks: { orphans: 2, widows: 2 },
-    chapter: {
-      opensOn: "recto",
-      sink: 7,
-      heading: {
-        face: "EB Garamond",
-        size: len(17, "pt"),
-        weight: "regular",
-        slope: "roman",
-        align: "center",
-      },
-      dropCap: 3,
+    headings: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} },
+    chapter: { begins: "right-page", spaceAbove: 7, dropCap: 3 },
+    scene: { ornament: "\u2042" },
+    headers: {
+      leftPage: "author",
+      rightPage: "book-title",
+      pageNumber: "bottom",
+      pageNumberFormat: "arabic",
     },
-    scene: { ornament: "⁂" },
-    running: { verso: "author", recto: "book", folio: "foot", numerals: "arabic" },
   };
+  for (const level of LEVELS) {
+    design.headings[level] = {
+      font: "EB Garamond",
+      size: len(18 - level, "pt"),
+      weight: "regular",
+      align: "center",
+    };
+  }
+  return design;
 }
 
 function len(value: number, unit: "in" | "pt" | "em") {

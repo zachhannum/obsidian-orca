@@ -213,7 +213,7 @@ async function setting(client: EngineClient): Promise<Composing> {
     read: (at) => readText(vault, at),
     files: vault,
     name: (at) => path.basename(at, ".md"),
-    cuts: () => Promise.resolve([]),
+    styles: () => Promise.resolve([]),
     links,
     engines: {
       client: () => Promise.resolve(client),
@@ -398,12 +398,12 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   const clients = new Clients();
   const cut: Face = { key: "spectral-regular", bytes: new Uint8Array([1, 2, 3]) };
   const composer = new Composer(
-    { ...(await setting(new FakeClient())), engines: clients.engines, cuts: () => Promise.resolve([cut]) },
+    { ...(await setting(new FakeClient())), engines: clients.engines, styles: () => Promise.resolve([cut]) },
     clock,
   );
 
   const book = await composer.open(BOOK);
-  book.reface("Spectral", [cut]);
+  book.refont("Spectral", [cut]);
   await crossed(book, clock);
   // The keystroke is on this thread and nowhere else: the wait has not
   // run, so the engine that dies never saw it.
@@ -442,7 +442,7 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
     opened.filter((op) => op.op === "font").map((op) => [...op.bytes]),
     [[1, 2, 3]],
   );
-  assert.equal(again.face, "Spectral");
+  assert.equal(again.font, "Spectral");
   const styled = opened.at(-1);
   assert.equal(styled?.op, "style");
 });

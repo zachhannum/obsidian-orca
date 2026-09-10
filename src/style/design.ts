@@ -3,11 +3,12 @@
  * one property the pinned engine supports.
  *
  * A field the design leaves unset is left to the layer under it, so a
- * book that points at a shared design note holds only what it changes.
+ * preset shows through wherever the book has settled nothing.
  *
- * The schema is serialised flat, one key per line, because a novelist
- * who opens Obsidian's properties panel finds `leading` there rather
- * than a nested object.
+ * The schema is written flat, one key per line, because a novelist who
+ * opens Obsidian's properties panel reads `body-line-spacing` there
+ * rather than a nested object. Every key names the thing it sets in
+ * the words a writer uses.
  */
 
 /** The units a length is written in. */
@@ -27,10 +28,10 @@ export interface Trim {
   height: Length;
 }
 
-/** A page's margins. Inner is the gutter side and outer the fore-edge. */
+/** A page's margins. Inside is the gutter side and outside the fore-edge. */
 export interface Margins {
-  inner?: Length;
-  outer?: Length;
+  inside?: Length;
+  outside?: Length;
   top?: Length;
   bottom?: Length;
 }
@@ -38,51 +39,54 @@ export interface Margins {
 export interface PageDesign {
   trim?: Trim;
   margins: Margins;
-  /** Inner and outer swap sides on a verso page. */
+  /** Inside and outside swap sides on a left-hand page. */
   mirrored?: boolean;
 }
 
 export type Align = "justify" | "left";
 
-export interface TextDesign {
-  /** The family the book is set in. */
-  face?: string;
+export interface BodyDesign {
+  /** The font the book is set in, by the name its file carries. */
+  font?: string;
   size?: Length;
-  leading?: Length;
+  lineSpacing?: Length;
   align?: Align;
-  /** The first-line indent. */
+  /** The indent on a paragraph's first line. */
   indent?: Length;
   hyphens?: boolean;
-  hanging?: boolean;
-}
-
-export interface BreaksDesign {
+  hangingPunctuation?: boolean;
+  /** The fewest lines of a paragraph left at the foot of a page. */
   orphans?: number;
+  /** The fewest lines of a paragraph carried to the top of a page. */
   widows?: number;
 }
 
 export type Weight = "regular" | "medium" | "semibold" | "bold";
 
-export type Slope = "roman" | "italic";
-
 export type Alignment = "left" | "center" | "right";
 
-/** The type a chapter title is set in. */
+/** The type a heading is set in. */
 export interface TypeSpec {
-  face?: string;
+  font?: string;
   size?: Length;
   weight?: Weight;
-  slope?: Slope;
   align?: Alignment;
 }
 
-export type OpensOn = "recto" | "next" | "same";
+/** The heading levels markdown writes, which are the ones a design sets. */
+export const LEVELS = [1, 2, 3, 4, 5, 6] as const;
+
+export type Level = (typeof LEVELS)[number];
+
+/** One type spec per heading level. A chapter's title is level 1. */
+export type Headings = Record<Level, TypeSpec>;
+
+export type Begins = "right-page" | "next-page" | "same-page";
 
 export interface ChapterDesign {
-  opensOn?: OpensOn;
-  /** The sink above a chapter title, in lines of body text. */
-  sink?: number;
-  heading: TypeSpec;
+  begins?: Begins;
+  /** The blank space above a chapter's title, in lines of body text. */
+  spaceAbove?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
 }
@@ -92,38 +96,38 @@ export interface SceneDesign {
   ornament?: string;
 }
 
-export type RunningSlot = "none" | "author" | "book" | "chapter";
+export type HeaderSlot = "none" | "author" | "book-title" | "chapter-title";
 
-export type Folio = "top" | "foot" | "outer";
+export type PageNumberPosition = "top" | "bottom" | "outside";
 
-export type Numerals = "arabic" | "roman";
+export type NumberFormat = "arabic" | "roman";
 
-export interface RunningDesign {
-  verso?: RunningSlot;
-  recto?: RunningSlot;
-  folio?: Folio;
-  numerals?: Numerals;
+export interface HeaderDesign {
+  leftPage?: HeaderSlot;
+  rightPage?: HeaderSlot;
+  pageNumber?: PageNumberPosition;
+  pageNumberFormat?: NumberFormat;
 }
 
 /** The whole design, group by group. Every field in a group is optional. */
 export interface Design {
   page: PageDesign;
-  text: TextDesign;
-  breaks: BreaksDesign;
+  body: BodyDesign;
+  headings: Headings;
   chapter: ChapterDesign;
   scene: SceneDesign;
-  running: RunningDesign;
+  headers: HeaderDesign;
 }
 
 /** A design that sets nothing. */
 export function emptyDesign(): Design {
   return {
     page: { margins: {} },
-    text: {},
-    breaks: {},
-    chapter: { heading: {} },
+    body: {},
+    headings: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} },
+    chapter: {},
     scene: {},
-    running: {},
+    headers: {},
   };
 }
 
@@ -138,8 +142,7 @@ interface Field {
   write(design: Design, value: unknown): void;
 }
 
-/** The design's fields, in the order the frontmatter writes them. */
-const FIELDS: readonly Field[] = [
+const PAGE: readonly Field[] = [
   {
     key: "trim",
     property: "size",
@@ -152,8 +155,8 @@ const FIELDS: readonly Field[] = [
       if (trim !== undefined) page.trim = trim;
     },
   },
-  margin("margin-inner", "inner", "margin-left"),
-  margin("margin-outer", "outer", "margin-right"),
+  margin("margin-inside", "inside", "margin-left"),
+  margin("margin-outside", "outside", "margin-right"),
   margin("margin-top", "top", "margin-top"),
   margin("margin-bottom", "bottom", "margin-bottom"),
   {
@@ -165,152 +168,113 @@ const FIELDS: readonly Field[] = [
       if (flag !== undefined) page.mirrored = flag;
     },
   },
+];
+
+const BODY: readonly Field[] = [
   {
-    key: "face",
+    key: "body-font",
     property: "font-family",
-    read: ({ text }) => text.face,
-    write: ({ text }, value) => {
-      const face = asText(value);
-      if (face !== undefined) text.face = face;
+    read: ({ body }) => body.font,
+    write: ({ body }, value) => {
+      const font = asText(value);
+      if (font !== undefined) body.font = font;
     },
   },
   {
-    key: "size",
+    key: "body-size",
     property: "font-size",
-    read: ({ text }) => written(text.size),
-    write: ({ text }, value) => {
+    read: ({ body }) => written(body.size),
+    write: ({ body }, value) => {
       const size = asLength(value);
-      if (size !== undefined) text.size = size;
+      if (size !== undefined) body.size = size;
     },
   },
   {
-    key: "leading",
+    key: "body-line-spacing",
     property: "line-height",
-    read: ({ text }) => written(text.leading),
-    write: ({ text }, value) => {
-      const leading = asLength(value);
-      if (leading !== undefined) text.leading = leading;
+    read: ({ body }) => written(body.lineSpacing),
+    write: ({ body }, value) => {
+      const spacing = asLength(value);
+      if (spacing !== undefined) body.lineSpacing = spacing;
     },
   },
   {
-    key: "align",
+    key: "body-align",
     property: "text-align",
-    read: ({ text }) => text.align,
-    write: ({ text }, value) => {
+    read: ({ body }) => body.align,
+    write: ({ body }, value) => {
       const align = asWord(value, ALIGNS);
-      if (align !== undefined) text.align = align;
+      if (align !== undefined) body.align = align;
     },
   },
   {
-    key: "indent",
+    key: "body-first-line-indent",
     property: "text-indent",
-    read: ({ text }) => written(text.indent),
-    write: ({ text }, value) => {
+    read: ({ body }) => written(body.indent),
+    write: ({ body }, value) => {
       const indent = asLength(value);
-      if (indent !== undefined) text.indent = indent;
+      if (indent !== undefined) body.indent = indent;
     },
   },
   {
-    key: "hyphens",
+    key: "body-hyphens",
     property: "hyphens",
-    read: ({ text }) => text.hyphens,
-    write: ({ text }, value) => {
+    read: ({ body }) => body.hyphens,
+    write: ({ body }, value) => {
       const hyphens = asFlag(value);
-      if (hyphens !== undefined) text.hyphens = hyphens;
+      if (hyphens !== undefined) body.hyphens = hyphens;
     },
   },
   {
-    key: "hanging",
+    key: "body-hanging-punctuation",
     property: "hanging-punctuation",
-    read: ({ text }) => text.hanging,
-    write: ({ text }, value) => {
+    read: ({ body }) => body.hangingPunctuation,
+    write: ({ body }, value) => {
       const hanging = asFlag(value);
-      if (hanging !== undefined) text.hanging = hanging;
+      if (hanging !== undefined) body.hangingPunctuation = hanging;
     },
   },
   {
-    key: "orphans",
+    key: "body-orphans",
     property: "orphans",
-    read: ({ breaks }) => breaks.orphans,
-    write: ({ breaks }, value) => {
+    read: ({ body }) => body.orphans,
+    write: ({ body }, value) => {
       const orphans = asCount(value);
-      if (orphans !== undefined) breaks.orphans = orphans;
+      if (orphans !== undefined) body.orphans = orphans;
     },
   },
   {
-    key: "widows",
+    key: "body-widows",
     property: "widows",
-    read: ({ breaks }) => breaks.widows,
-    write: ({ breaks }, value) => {
+    read: ({ body }) => body.widows,
+    write: ({ body }, value) => {
       const widows = asCount(value);
-      if (widows !== undefined) breaks.widows = widows;
+      if (widows !== undefined) body.widows = widows;
     },
   },
+];
+
+const CHAPTER: readonly Field[] = [
   {
-    key: "chapter-opens",
+    key: "chapter-begins",
     property: "break-before",
-    read: ({ chapter }) => chapter.opensOn,
+    read: ({ chapter }) => chapter.begins,
     write: ({ chapter }, value) => {
-      const opensOn = asWord(value, OPENS_ON);
-      if (opensOn !== undefined) chapter.opensOn = opensOn;
+      const begins = asWord(value, BEGINS);
+      if (begins !== undefined) chapter.begins = begins;
     },
   },
   {
-    key: "chapter-sink",
+    key: "chapter-space-above",
     property: "margin-top",
-    read: ({ chapter }) => chapter.sink,
+    read: ({ chapter }) => chapter.spaceAbove,
     write: ({ chapter }, value) => {
-      const sink = asCount(value);
-      if (sink !== undefined) chapter.sink = sink;
+      const lines = asCount(value);
+      if (lines !== undefined) chapter.spaceAbove = lines;
     },
   },
   {
-    key: "chapter-face",
-    property: "font-family",
-    read: ({ chapter }) => chapter.heading.face,
-    write: ({ chapter }, value) => {
-      const face = asText(value);
-      if (face !== undefined) chapter.heading.face = face;
-    },
-  },
-  {
-    key: "chapter-size",
-    property: "font-size",
-    read: ({ chapter }) => written(chapter.heading.size),
-    write: ({ chapter }, value) => {
-      const size = asLength(value);
-      if (size !== undefined) chapter.heading.size = size;
-    },
-  },
-  {
-    key: "chapter-weight",
-    property: "font-weight",
-    read: ({ chapter }) => chapter.heading.weight,
-    write: ({ chapter }, value) => {
-      const weight = asWord(value, WEIGHTS);
-      if (weight !== undefined) chapter.heading.weight = weight;
-    },
-  },
-  {
-    key: "chapter-slope",
-    property: "font-style",
-    read: ({ chapter }) => chapter.heading.slope,
-    write: ({ chapter }, value) => {
-      const slope = asWord(value, SLOPES);
-      if (slope !== undefined) chapter.heading.slope = slope;
-    },
-  },
-  {
-    key: "chapter-align",
-    property: "text-align",
-    read: ({ chapter }) => chapter.heading.align,
-    write: ({ chapter }, value) => {
-      const align = asWord(value, ALIGNMENTS);
-      if (align !== undefined) chapter.heading.align = align;
-    },
-  },
-  {
-    key: "drop-cap",
+    key: "chapter-drop-cap",
     property: "initial-letter",
     read: ({ chapter }) => chapter.dropCap,
     write: ({ chapter }, value) => {
@@ -318,8 +282,11 @@ const FIELDS: readonly Field[] = [
       if (lines !== undefined) chapter.dropCap = lines;
     },
   },
+];
+
+const SCENE: readonly Field[] = [
   {
-    key: "ornament",
+    key: "scene-break-ornament",
     property: "content",
     read: ({ scene }) => scene.ornament,
     write: ({ scene }, value) => {
@@ -327,42 +294,39 @@ const FIELDS: readonly Field[] = [
       if (ornament !== undefined) scene.ornament = ornament;
     },
   },
+];
+
+const HEADERS: readonly Field[] = [
+  slot("header-left-page", "leftPage"),
+  slot("header-right-page", "rightPage"),
   {
-    key: "verso",
-    property: "string-set",
-    read: ({ running }) => running.verso,
-    write: ({ running }, value) => {
-      const slot = asWord(value, SLOTS);
-      if (slot !== undefined) running.verso = slot;
-    },
-  },
-  {
-    key: "recto",
-    property: "string-set",
-    read: ({ running }) => running.recto,
-    write: ({ running }, value) => {
-      const slot = asWord(value, SLOTS);
-      if (slot !== undefined) running.recto = slot;
-    },
-  },
-  {
-    key: "folio",
+    key: "page-number-position",
     property: "content",
-    read: ({ running }) => running.folio,
-    write: ({ running }, value) => {
-      const folio = asWord(value, FOLIOS);
-      if (folio !== undefined) running.folio = folio;
+    read: ({ headers }) => headers.pageNumber,
+    write: ({ headers }, value) => {
+      const position = asWord(value, POSITIONS);
+      if (position !== undefined) headers.pageNumber = position;
     },
   },
   {
-    key: "folio-numerals",
+    key: "page-number-format",
     property: "content",
-    read: ({ running }) => running.numerals,
-    write: ({ running }, value) => {
-      const numerals = asWord(value, NUMERALS);
-      if (numerals !== undefined) running.numerals = numerals;
+    read: ({ headers }) => headers.pageNumberFormat,
+    write: ({ headers }, value) => {
+      const format = asWord(value, FORMATS);
+      if (format !== undefined) headers.pageNumberFormat = format;
     },
   },
+];
+
+/** The design's fields, in the order the frontmatter writes them. */
+const FIELDS: readonly Field[] = [
+  ...PAGE,
+  ...BODY,
+  ...LEVELS.flatMap(heading),
+  ...CHAPTER,
+  ...SCENE,
+  ...HEADERS,
 ];
 
 /** The design's frontmatter keys, in the order the format writes them. */
@@ -401,38 +365,84 @@ export function writeDesign(design: Design): Record<string, Written> {
 
 /**
  * The two designs as one, field by field. `over` wins wherever it sets
- * a field, which is how a book overrides the design note it points at.
+ * a field, which is how a book overrides the preset under it.
  */
 export function mergeDesign(under: Design, over: Design): Design {
+  const headings = emptyDesign().headings;
+  for (const level of LEVELS) {
+    headings[level] = { ...under.headings[level], ...over.headings[level] };
+  }
   return {
     page: {
       ...under.page,
       ...over.page,
       margins: { ...under.page.margins, ...over.page.margins },
     },
-    text: { ...under.text, ...over.text },
-    breaks: { ...under.breaks, ...over.breaks },
-    chapter: {
-      ...under.chapter,
-      ...over.chapter,
-      heading: { ...under.chapter.heading, ...over.chapter.heading },
-    },
+    body: { ...under.body, ...over.body },
+    headings,
+    chapter: { ...under.chapter, ...over.chapter },
     scene: { ...under.scene, ...over.scene },
-    running: { ...under.running, ...over.running },
+    headers: { ...under.headers, ...over.headers },
   };
 }
 
 const ALIGNS: readonly Align[] = ["justify", "left"];
 const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
 const WEIGHTS: readonly Weight[] = ["regular", "medium", "semibold", "bold"];
-const SLOPES: readonly Slope[] = ["roman", "italic"];
-const OPENS_ON: readonly OpensOn[] = ["recto", "next", "same"];
-const SLOTS: readonly RunningSlot[] = ["none", "author", "book", "chapter"];
-const FOLIOS: readonly Folio[] = ["top", "foot", "outer"];
-const NUMERALS: readonly Numerals[] = ["arabic", "roman"];
+const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
+const SLOTS: readonly HeaderSlot[] = [
+  "none",
+  "author",
+  "book-title",
+  "chapter-title",
+];
+const POSITIONS: readonly PageNumberPosition[] = ["top", "bottom", "outside"];
+const FORMATS: readonly NumberFormat[] = ["arabic", "roman"];
 
 /** The unit a length written as a bare number is given. */
 const UNIT: Unit = "pt";
+
+/** The fields that set one heading level's type. */
+function heading(level: Level): Field[] {
+  return [
+    {
+      key: `heading-${level}-font`,
+      property: "font-family",
+      read: ({ headings }) => headings[level].font,
+      write: ({ headings }, value) => {
+        const font = asText(value);
+        if (font !== undefined) headings[level].font = font;
+      },
+    },
+    {
+      key: `heading-${level}-size`,
+      property: "font-size",
+      read: ({ headings }) => written(headings[level].size),
+      write: ({ headings }, value) => {
+        const size = asLength(value);
+        if (size !== undefined) headings[level].size = size;
+      },
+    },
+    {
+      key: `heading-${level}-weight`,
+      property: "font-weight",
+      read: ({ headings }) => headings[level].weight,
+      write: ({ headings }, value) => {
+        const weight = asWord(value, WEIGHTS);
+        if (weight !== undefined) headings[level].weight = weight;
+      },
+    },
+    {
+      key: `heading-${level}-align`,
+      property: "text-align",
+      read: ({ headings }) => headings[level].align,
+      write: ({ headings }, value) => {
+        const align = asWord(value, ALIGNMENTS);
+        if (align !== undefined) headings[level].align = align;
+      },
+    },
+  ];
+}
 
 function margin(key: string, side: keyof Margins, property: string): Field {
   return {
@@ -442,6 +452,18 @@ function margin(key: string, side: keyof Margins, property: string): Field {
     write: ({ page }, value) => {
       const length = asLength(value);
       if (length !== undefined) page.margins[side] = length;
+    },
+  };
+}
+
+function slot(key: string, side: "leftPage" | "rightPage"): Field {
+  return {
+    key,
+    property: "string-set",
+    read: ({ headers }) => headers[side],
+    write: ({ headers }, value) => {
+      const found = asWord(value, SLOTS);
+      if (found !== undefined) headers[side] = found;
     },
   };
 }

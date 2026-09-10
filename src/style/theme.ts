@@ -1,6 +1,6 @@
 /**
  * The one theme orca bundles, until the design panel can generate a
- * stylesheet of its own. It sets a book in EB Garamond, the one face
+ * stylesheet of its own. It sets a book in EB Garamond, the one font
  * the engine carries today, at the size the reading order sets in and
  * the size its headings open on.
  */

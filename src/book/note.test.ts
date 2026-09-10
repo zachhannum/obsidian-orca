@@ -134,10 +134,10 @@ test("a book from a newer orca does not open, and the error names both formats",
 test("the book's own frontmatter is the design, one key per line", () => {
   const design = readDesign({
     trim: "5.5in 8.5in",
-    face: "Alegreya",
-    leading: "14pt",
-    hyphens: true,
-    orphans: 2,
+    "body-font": "Alegreya",
+    "body-line-spacing": "14pt",
+    "body-hyphens": true,
+    "body-orphans": 2,
   });
   const book: Book = {
     format: FORMAT,
@@ -157,10 +157,10 @@ test("the book's own frontmatter is the design, one key per line", () => {
       "orca-book: 1",
       "title: Pride and Prejudice",
       "trim: 5.5in 8.5in",
-      "face: Alegreya",
-      "leading: 14pt",
-      "hyphens: true",
-      "orphans: 2",
+      "body-font: Alegreya",
+      "body-line-spacing: 14pt",
+      "body-hyphens: true",
+      "body-orphans: 2",
       "---",
       "",
     ].join("\n"),
@@ -170,14 +170,20 @@ test("the book's own frontmatter is the design, one key per line", () => {
 test("a design key the book no longer sets is taken off the note", () => {
   const properties = {
     [BOOK_KEY]: FORMAT,
-    leading: "15pt",
-    orphans: 3,
+    "body-line-spacing": "15pt",
+    "body-orphans": 3,
   };
   const book = readBook(properties);
 
-  applyBook(properties, { ...book, design: readDesign({ leading: "15pt" }) });
+  applyBook(properties, {
+    ...book,
+    design: readDesign({ "body-line-spacing": "15pt" }),
+  });
 
-  assert.deepEqual(properties, { [BOOK_KEY]: FORMAT, leading: "15pt" });
+  assert.deepEqual(properties, {
+    [BOOK_KEY]: FORMAT,
+    "body-line-spacing": "15pt",
+  });
   // A design key is orca's own, so it is not kept a second time as the
   // author's.
   assert.deepEqual(book.own, {});

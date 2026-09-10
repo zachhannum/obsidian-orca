@@ -168,23 +168,23 @@ export class Typeset {
     this.plan(`embedded:${note}`, { did: "embedded", images: fresh });
   }
 
-  /** The family the book is set in, or nothing for the theme's face. */
-  get face(): string | undefined {
-    return this.design.text.face;
+  /** The font the book is set in, or nothing for the theme's own. */
+  get font(): string | undefined {
+    return this.design.body.font;
   }
 
   /**
-   * Sets the book in a family. Every face of it crosses the first time
-   * the family is picked and stays registered for the session, so a
-   * later pick sends the sheet alone.
+   * Sets the book in a font. Every style of it crosses the first time
+   * the font is picked and stays registered for the session, so a later
+   * pick sends the sheet alone.
    */
-  reface(family: string, faces: readonly Face[]): void {
+  refont(font: string, faces: readonly Face[]): void {
     this.design = {
       ...this.design,
-      text: { ...this.design.text, face: family },
+      body: { ...this.design.body, font },
     };
-    this.plan(`faced:${family}`, {
-      did: "faced",
+    this.plan(`fonted:${font}`, {
+      did: "fonted",
       faces,
       sheets: designSheets(this.design),
     });
@@ -279,8 +279,8 @@ export interface Composing {
   read(path: string): Promise<string>;
   /** A note's own name, which titles a book with no title of its own. */
   name(path: string): string;
-  /** Every cut of a family, for a book being set in the face it already had. */
-  cuts(family: string): Promise<readonly Face[]>;
+  /** Every style of a font, for a book being set in the one it already had. */
+  styles(font: string): Promise<readonly Face[]>;
   /** The vault's own files, which the asset registry reads and hashes. */
   files: VaultAdapter;
   links: Links;
@@ -449,11 +449,11 @@ export class Composer {
     const session = new Session(client, this.vault.faces);
     const design: Design = carried?.design ?? model.book.design;
     const sheets = [...(carried?.sheets ?? designSheets(design))];
-    // The sheets name the family, and a new engine has none of its
-    // cuts, so the cuts cross ahead of the sheets that ask for them.
-    const cuts = await this.cutsOf(design.text.face);
-    for (const cut of cuts) assets.crossed(cut.key);
-    await session.open([...ops, ...sendFaces(cuts), styleOp(sheets)]);
+    // The sheets name the font, and a new engine has none of its
+    // styles, so they cross ahead of the sheets that ask for them.
+    const faces = await this.facesOf(design.body.font);
+    for (const face of faces) assets.crossed(face.key);
+    await session.open([...ops, ...sendFaces(faces), styleOp(sheets)]);
     return new Typeset(
       {
         name,
@@ -471,14 +471,14 @@ export class Composer {
   }
 
   /**
-   * Every cut of the family a book is set in. A family the machine no
-   * longer has crosses nothing. The engine sets the book in the face it
+   * Every style of the font a book is set in. A font the machine no
+   * longer has crosses nothing. The engine sets the book in the one it
    * carries, and warns about the one it was asked for.
    */
-  private async cutsOf(family: string | undefined): Promise<readonly Face[]> {
-    if (family === undefined) return [];
+  private async facesOf(font: string | undefined): Promise<readonly Face[]> {
+    if (font === undefined) return [];
     try {
-      return await this.vault.cuts(family);
+      return await this.vault.styles(font);
     } catch {
       return [];
     }

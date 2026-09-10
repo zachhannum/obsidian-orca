@@ -22,7 +22,7 @@ interface Fixtures {
   manuscript: Manuscript;
   /** The navigator, which owns the structure of every book. */
   navigator: Navigator;
-  /** The design panel, where a book's face is picked. */
+  /** The design panel, where a book's font is picked. */
   panel: Panel;
   /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;

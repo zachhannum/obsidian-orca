@@ -201,7 +201,7 @@ export type Edit =
   /** Reordered chapters, so every source crosses in its new place. */
   | { did: "reordered"; sources: Source[] }
   /** Picked a new family, and the cuts it is made of. */
-  | { did: "faced"; faces: readonly Face[]; sheets: Sheet[] }
+  | { did: "fonted"; faces: readonly Face[]; sheets: Sheet[] }
   /** Deleted a note, so the rest of the sources stand. */
   | { did: "deleted"; name: string }
   /**
@@ -276,7 +276,7 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
         loaded,
         crossed: [],
       };
-    case "faced":
+    case "fonted":
       return faced(edit.faces, edit.sheets, loaded, assets);
   }
 }
