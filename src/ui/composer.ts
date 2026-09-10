@@ -24,6 +24,7 @@ import {
   sendBook,
   sendEdit,
   sendFaces,
+  sentRoles,
   type Edit,
   type Face,
   type Loaded,
@@ -32,6 +33,7 @@ import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
 import type { Design } from "@/style/design";
+import type { Setting } from "@/style/generated";
 import { designSheets } from "@/style/sheet";
 import { bookName } from "@/ui/shelf";
 
@@ -41,6 +43,8 @@ export interface Replay {
   sent: Map<string, string>;
   /** The design its sheets were generated from. */
   design: Design;
+  /** The order and the names those sheets were generated against. */
+  setting: Setting;
   /** The sheets it was styled with, in cascade order. */
   sheets: readonly Sheet[];
 }
@@ -69,6 +73,8 @@ export class Typeset {
   private readonly watchers = new Set<() => void>();
   private readonly sent: Map<string, string>;
   private readonly links: Links;
+  /** The order and the names the generated layer was counted against. */
+  private readonly setting: Setting;
   /** The embeds the retypes so far started, chained so they run in order. */
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
@@ -92,6 +98,8 @@ export class Typeset {
       links: Links;
       /** The design the sheets were generated from. */
       design: Design;
+      /** The order and the names the sheets were generated against. */
+      setting: Setting;
     },
     clock: Clock,
   ) {
@@ -104,6 +112,7 @@ export class Typeset {
     this.links = book.links;
     this.loaded = { sheets: book.sheets };
     this.design = book.design;
+    this.setting = book.setting;
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
 
@@ -186,7 +195,7 @@ export class Typeset {
     this.plan(`fonted:${font}`, {
       did: "fonted",
       faces,
-      sheets: designSheets(this.design),
+      sheets: designSheets(this.design, this.setting),
     });
   }
 
@@ -215,6 +224,7 @@ export class Typeset {
     return {
       sent: new Map(this.sent),
       design: this.design,
+      setting: this.setting,
       sheets: this.loaded.sheets,
     };
   }
@@ -448,7 +458,13 @@ export class Composer {
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
     const design: Design = carried?.design ?? model.book.design;
-    const sheets = [...(carried?.sheets ?? designSheets(design))];
+    const { title, author } = model.book.metadata;
+    const setting: Setting = carried?.setting ?? {
+      roles: sentRoles(sections),
+      title,
+      author,
+    };
+    const sheets = [...(carried?.sheets ?? designSheets(design, setting))];
     // The sheets name the font, and a new engine has none of its
     // styles, so they cross ahead of the sheets that ask for them.
     const faces = await this.facesOf(design.body.font);
@@ -465,6 +481,7 @@ export class Composer {
         assets,
         links: this.vault.links,
         design,
+        setting,
       },
       this.clock,
     );

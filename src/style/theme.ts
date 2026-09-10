@@ -1,8 +1,7 @@
 /**
- * The one theme orca bundles, until the design panel can generate a
- * stylesheet of its own. It sets a book in EB Garamond, the one font
- * the engine carries today, at the size the reading order sets in and
- * the size its headings open on.
+ * The theme orca bundles, which is the layer under the one a design
+ * generates. It sets a book in EB Garamond, the one font the engine
+ * carries today, so a book whose design settles nothing still sets.
  */
 
 /** The sheet orca sends its own styling under, which a warning names. */

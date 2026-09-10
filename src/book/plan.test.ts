@@ -233,6 +233,11 @@ const WIDER: Sheet[] = [{ name: THEME_SHEET, css: "book { font-size: 13pt }" }];
 
 const NARROWER: Sheet[] = [{ name: THEME_SHEET, css: "page { margin: 30mm }" }];
 
+/** The sheets a reorder generates again, counting the order it moved to. */
+const RECOUNTED: Sheet[] = [
+  { name: THEME_SHEET, css: "section:nth-child(1) { page: chapter }" },
+];
+
 const FACED: Sheet[] = [
   { name: THEME_SHEET, css: 'book { font-family: "Spectral" }' },
 ];
@@ -276,7 +281,11 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
   },
   {
     did: "reordered chapters",
-    edit: { did: "reordered", sources: [{ name: "A.md", text: "# A" }] },
+    edit: {
+      did: "reordered",
+      sources: [{ name: "A.md", text: "# A" }],
+      sheets: RECOUNTED,
+    },
     ops: ["book", "style"],
   },
   {
@@ -311,8 +320,11 @@ test("each edit sends the ops its row names, and nothing else", () => {
 
   const typed = sendEdit(row("typed in a chapter"), LOADED, REGISTERED).ops;
   assert.equal(only(typed, "edit").name, "Chapter Twelve.md");
-  const reordered = sendEdit(row("reordered chapters"), LOADED, REGISTERED).ops;
-  assert.deepEqual(only(reordered, "style").sheets, SET);
+  // A positional selector matches on where a source sits, so the
+  // sheets generated against the new order cross with it.
+  const reordered = sendEdit(row("reordered chapters"), LOADED, REGISTERED);
+  assert.deepEqual(only(reordered.ops, "style").sheets, RECOUNTED);
+  assert.deepEqual(reordered.loaded.sheets, RECOUNTED);
 
   // A family has several cuts, so each one crosses on a `font` op of
   // its own, in the order `faces` holds them.
@@ -441,7 +453,7 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
       (at) => readText(vault, at),
     );
     const reordered = sendEdit(
-      { did: "reordered", sources: [...sources].reverse() },
+      { did: "reordered", sources: [...sources].reverse(), sheets: SET },
       typed.loaded,
       SENT_NOTHING,
     );
