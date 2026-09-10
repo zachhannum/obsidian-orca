@@ -49,10 +49,13 @@ section {
 
 section > :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-top: 7em;
+  margin-bottom: 2em;
   font-family: "EB Garamond", serif;
   font-size: 17pt;
   font-weight: 400;
+  font-style: italic;
   text-align: center;
+  break-after: avoid;
 }
 
 section > p:first-of-type::first-letter {
@@ -61,4 +64,11 @@ section > p:first-of-type::first-letter {
 
 hr {
   content: "\2042";
+  text-align: center;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+hr + p {
+  text-indent: 0;
 }

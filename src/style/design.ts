@@ -28,6 +28,38 @@ export interface Trim {
   height: Length;
 }
 
+/** One trim the panel offers by name. */
+export interface BookSize {
+  name: string;
+  trim: Trim;
+}
+
+/**
+ * The trims a novel is printed at, in the order the panel offers them.
+ * A trim outside this list is written into the note by hand.
+ */
+export const BOOK_SIZES: readonly BookSize[] = [
+  size("Mass market", 4.25, 6.87, "in"),
+  size("Digest", 5.5, 8.5, "in"),
+  size("Novel", 5.25, 8, "in"),
+  size("US trade", 6, 9, "in"),
+  size("Demy", 129, 198, "mm"),
+  size("Royal", 156, 234, "mm"),
+  size("A5", 148, 210, "mm"),
+];
+
+function size(
+  name: string,
+  width: number,
+  height: number,
+  unit: Unit,
+): BookSize {
+  return {
+    name,
+    trim: { width: { value: width, unit }, height: { value: height, unit } },
+  };
+}
+
 /** A page's margins. Inside is the gutter side and outside the fore-edge. */
 export interface Margins {
   inside?: Length;
@@ -53,23 +85,30 @@ export interface BodyDesign {
   align?: Align;
   /** The indent on a paragraph's first line. */
   indent?: Length;
+  /** The indent on the first paragraph after a scene break. */
+  indentAfterBreak?: boolean;
   hyphens?: boolean;
   hangingPunctuation?: boolean;
   /** The fewest lines of a paragraph left at the foot of a page. */
   orphans?: number;
   /** The fewest lines of a paragraph carried to the top of a page. */
   widows?: number;
+  /** A heading keeps the text under it on the same page. */
+  keepHeadings?: boolean;
 }
 
 export type Weight = "regular" | "medium" | "semibold" | "bold";
 
 export type Alignment = "left" | "center" | "right";
 
+export type Slope = "roman" | "italic";
+
 /** The type a heading is set in. */
 export interface TypeSpec {
   font?: string;
   size?: Length;
   weight?: Weight;
+  slope?: Slope;
   align?: Alignment;
 }
 
@@ -87,13 +126,25 @@ export interface ChapterDesign {
   begins?: Begins;
   /** The blank space above a chapter's title, in lines of body text. */
   spaceAbove?: number;
+  /** The blank space below a chapter's title, in lines of body text. */
+  spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
 }
 
+export type SceneMark = "space" | "ornament" | "word";
+
 export interface SceneDesign {
+  /** The kind of mark between two scenes. A space leaves a blank line. */
+  mark?: SceneMark;
   /** The mark between two scenes, as the glyph itself. */
   ornament?: string;
+  /** The word between two scenes, as the author writes it. */
+  word?: string;
+  /** The blank space above a scene break, in lines of body text. */
+  spaceAbove?: number;
+  /** The blank space below a scene break, in lines of body text. */
+  spaceBelow?: number;
 }
 
 export type HeaderSlot = "none" | "author" | "book-title" | "chapter-title";
@@ -107,10 +158,14 @@ export interface HeaderDesign {
   rightPage?: HeaderSlot;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
+  /** The running head is left off a page a section opens on. */
+  suppressOnOpenings?: boolean;
 }
 
 /** The whole design, group by group. Every field in a group is optional. */
 export interface Design {
+  /** The preset under the design, by name. */
+  preset?: string;
   page: PageDesign;
   body: BodyDesign;
   headings: Headings;
@@ -136,11 +191,24 @@ export type Written = string | number | boolean;
 
 interface Field {
   key: string;
-  /** The CSS property this field sets. `subset.css` declares it. */
-  property: string;
+  /**
+   * The CSS property this field sets. `subset.css` declares it. A field
+   * that chooses the layer under the design sets none.
+   */
+  property?: string;
   read(design: Design): Written | undefined;
   write(design: Design, value: unknown): void;
 }
+
+/** The preset a design sits over. It sets no property; it picks a layer. */
+const PRESET: Field = {
+  key: "preset",
+  read: ({ preset }) => preset,
+  write: (design, value) => {
+    const name = asText(value);
+    if (name !== undefined) design.preset = name;
+  },
+};
 
 const PAGE: readonly Field[] = [
   {
@@ -217,6 +285,15 @@ const BODY: readonly Field[] = [
     },
   },
   {
+    key: "body-indent-after-break",
+    property: "text-indent",
+    read: ({ body }) => body.indentAfterBreak,
+    write: ({ body }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) body.indentAfterBreak = flag;
+    },
+  },
+  {
     key: "body-hyphens",
     property: "hyphens",
     read: ({ body }) => body.hyphens,
@@ -252,6 +329,15 @@ const BODY: readonly Field[] = [
       if (widows !== undefined) body.widows = widows;
     },
   },
+  {
+    key: "keep-heading-with-text",
+    property: "break-after",
+    read: ({ body }) => body.keepHeadings,
+    write: ({ body }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) body.keepHeadings = flag;
+    },
+  },
 ];
 
 const CHAPTER: readonly Field[] = [
@@ -274,6 +360,15 @@ const CHAPTER: readonly Field[] = [
     },
   },
   {
+    key: "chapter-space-below",
+    property: "margin-bottom",
+    read: ({ chapter }) => chapter.spaceBelow,
+    write: ({ chapter }, value) => {
+      const lines = asCount(value);
+      if (lines !== undefined) chapter.spaceBelow = lines;
+    },
+  },
+  {
     key: "chapter-drop-cap",
     property: "initial-letter",
     read: ({ chapter }) => chapter.dropCap,
@@ -286,12 +381,48 @@ const CHAPTER: readonly Field[] = [
 
 const SCENE: readonly Field[] = [
   {
+    key: "scene-break-mark",
+    property: "content",
+    read: ({ scene }) => scene.mark,
+    write: ({ scene }, value) => {
+      const mark = asWord(value, MARKS);
+      if (mark !== undefined) scene.mark = mark;
+    },
+  },
+  {
     key: "scene-break-ornament",
     property: "content",
     read: ({ scene }) => scene.ornament,
     write: ({ scene }, value) => {
       const ornament = asText(value);
       if (ornament !== undefined) scene.ornament = ornament;
+    },
+  },
+  {
+    key: "scene-break-word",
+    property: "content",
+    read: ({ scene }) => scene.word,
+    write: ({ scene }, value) => {
+      const word = asText(value);
+      if (word !== undefined) scene.word = word;
+    },
+  },
+  {
+    key: "scene-break-space-above",
+    property: "margin-top",
+    read: ({ scene }) => scene.spaceAbove,
+    write: ({ scene }, value) => {
+      const lines = asCount(value);
+      if (lines !== undefined) scene.spaceAbove = lines;
+    },
+  },
+  {
+    key: "scene-break-space-below",
+    property: "margin-bottom",
+    read: ({ scene }) => scene.spaceBelow,
+    write: ({ scene }, value) => {
+      const lines = asCount(value);
+      if (lines !== undefined) scene.spaceBelow = lines;
     },
   },
 ];
@@ -317,10 +448,20 @@ const HEADERS: readonly Field[] = [
       if (format !== undefined) headers.pageNumberFormat = format;
     },
   },
+  {
+    key: "suppress-head-on-openings",
+    property: "content",
+    read: ({ headers }) => headers.suppressOnOpenings,
+    write: ({ headers }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) headers.suppressOnOpenings = flag;
+    },
+  },
 ];
 
 /** The design's fields, in the order the frontmatter writes them. */
 const FIELDS: readonly Field[] = [
+  PRESET,
   ...PAGE,
   ...BODY,
   ...LEVELS.flatMap(heading),
@@ -334,7 +475,11 @@ export const DESIGN_KEYS: readonly string[] = FIELDS.map((field) => field.key);
 
 /** The CSS properties a design sets, each declared in `subset.css`. */
 export const DESIGN_PROPERTIES: readonly string[] = [
-  ...new Set(FIELDS.map((field) => field.property)),
+  ...new Set(
+    FIELDS.flatMap((field) =>
+      field.property === undefined ? [] : [field.property],
+    ),
+  ),
 ];
 
 /**
@@ -372,7 +517,9 @@ export function mergeDesign(under: Design, over: Design): Design {
   for (const level of LEVELS) {
     headings[level] = { ...under.headings[level], ...over.headings[level] };
   }
+  const preset = over.preset ?? under.preset;
   return {
+    ...(preset === undefined ? {} : { preset }),
     page: {
       ...under.page,
       ...over.page,
@@ -389,7 +536,9 @@ export function mergeDesign(under: Design, over: Design): Design {
 const ALIGNS: readonly Align[] = ["justify", "left"];
 const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
 const WEIGHTS: readonly Weight[] = ["regular", "medium", "semibold", "bold"];
+const SLOPES: readonly Slope[] = ["roman", "italic"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
+const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
   "author",
@@ -430,6 +579,15 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const weight = asWord(value, WEIGHTS);
         if (weight !== undefined) headings[level].weight = weight;
+      },
+    },
+    {
+      key: `heading-${level}-slope`,
+      property: "font-style",
+      read: ({ headings }) => headings[level].slope,
+      write: ({ headings }, value) => {
+        const slope = asWord(value, SLOPES);
+        if (slope !== undefined) headings[level].slope = slope;
       },
     },
     {

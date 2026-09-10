@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { Client, createEngine, styleOp, type Op, type Sheet } from "fleuron";
 import { emptyDesign, type Design } from "@/style/design";
 import { DESIGN_SHEET, OWN_SHEET, designSheet, designSheets } from "@/style/sheet";
-import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
+import { BUNDLED_THEME, PRESETS, THEME_SHEET, presetCss } from "@/style/theme";
 
 /** A book of one chapter, which the sheets set. */
 const CHAPTER: Op = {
@@ -57,6 +57,19 @@ test("a book set in a font the engine does not have still sets, and warns about 
   assert.deepEqual([...new Set(output.fonts.map((font) => font.family))], [
     "eb garamond",
   ]);
+});
+
+test("the preset a design names is the layer under it", () => {
+  const design = emptyDesign();
+  design.preset = PRESETS[0]?.name;
+
+  const named = designSheets(design, SETTING)[0];
+
+  assert.deepEqual(named, { name: THEME_SHEET, css: PRESETS[0]?.css });
+  // A name no preset carries falls to the first, so a book whose preset
+  // was renamed still sets.
+  assert.equal(presetCss("Nonesuch"), PRESETS[0]?.css);
+  assert.equal(presetCss(undefined), BUNDLED_THEME);
 });
 
 function sized(points: number): Design {

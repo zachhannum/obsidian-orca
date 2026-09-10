@@ -22,3 +22,20 @@ book {
   font-weight: 400;
 }
 `;
+
+/** One book design orca bundles, which a book names to sit over. */
+export interface Preset {
+  name: string;
+  css: string;
+}
+
+/** The presets the panel offers, in the order it offers them. */
+export const PRESETS: readonly Preset[] = [
+  { name: "Quarto", css: BUNDLED_THEME },
+];
+
+/** The named preset's CSS. A name no preset carries falls to the first. */
+export function presetCss(name: string | undefined): string {
+  const found = PRESETS.find((preset) => preset.name === name);
+  return (found ?? PRESETS[0])?.css ?? "";
+}

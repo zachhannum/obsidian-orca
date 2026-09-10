@@ -6,6 +6,7 @@ import process from "node:process";
 import { test } from "node:test";
 import { Client, createEngine, styleOp } from "fleuron";
 import {
+  BOOK_SIZES,
   DESIGN_KEYS,
   DESIGN_PROPERTIES,
   LEVELS,
@@ -151,8 +152,20 @@ test("a book's own keys win over the design under it, field by field", () => {
   }));
 });
 
+test("every trim the panel offers survives a trip through the note", () => {
+  for (const { name, trim } of BOOK_SIZES) {
+    const design = emptyDesign();
+    design.page.trim = trim;
+
+    const read = readDesign(writeDesign(design));
+
+    assert.deepEqual(read.page.trim, trim, `\`${name}\` did not come back`);
+  }
+});
+
 function whole(): Design {
   const design: Design = {
+    preset: "Quarto",
     page: {
       trim: { width: len(5.5, "in"), height: len(8.5, "in") },
       margins: {
@@ -169,19 +182,33 @@ function whole(): Design {
       lineSpacing: len(14, "pt"),
       align: "justify",
       indent: len(1.2, "em"),
+      indentAfterBreak: false,
       hyphens: true,
       hangingPunctuation: false,
       orphans: 2,
       widows: 2,
+      keepHeadings: true,
     },
     headings: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} },
-    chapter: { begins: "right-page", spaceAbove: 7, dropCap: 3 },
-    scene: { ornament: "\u2042" },
+    chapter: {
+      begins: "right-page",
+      spaceAbove: 7,
+      spaceBelow: 2,
+      dropCap: 3,
+    },
+    scene: {
+      mark: "ornament",
+      ornament: "\u2042",
+      word: "Later",
+      spaceAbove: 1,
+      spaceBelow: 1,
+    },
     headers: {
       leftPage: "author",
       rightPage: "book-title",
       pageNumber: "bottom",
       pageNumberFormat: "arabic",
+      suppressOnOpenings: true,
     },
   };
   for (const level of LEVELS) {
@@ -189,13 +216,14 @@ function whole(): Design {
       font: "EB Garamond",
       size: len(18 - level, "pt"),
       weight: "regular",
+      slope: "roman",
       align: "center",
     };
   }
   return design;
 }
 
-function len(value: number, unit: "in" | "pt" | "em") {
+function len(value: number, unit: "in" | "pt" | "em" | "mm") {
   return { value, unit };
 }
 

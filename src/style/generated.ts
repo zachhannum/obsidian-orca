@@ -20,6 +20,8 @@ import {
   type HeaderDesign,
   type HeaderSlot,
   type NumberFormat,
+  type SceneDesign,
+  type Slope,
   type TypeSpec,
   type Weight,
 } from "@/style/design";
@@ -64,6 +66,11 @@ const COUNTERS: Readonly<Record<NumberFormat, string>> = {
   roman: "lower-roman",
 };
 
+const FONT_STYLES: Readonly<Record<Slope, string>> = {
+  roman: "normal",
+  italic: "italic",
+};
+
 const FONT_WEIGHTS: Readonly<Record<Weight, string>> = {
   regular: "400",
   medium: "500",
@@ -81,8 +88,11 @@ const BOXES = [
   "bottom-right",
 ] as const;
 
+/** Every heading level, as one selector. */
+const HEADINGS = ":is(h1, h2, h3, h4, h5, h6)";
+
 /** The heading a section opens on, whichever level it is written at. */
-const OPENING = ":is(h1, h2, h3, h4, h5, h6):first-child";
+const OPENING = `${HEADINGS}:first-child`;
 
 function pageRules(design: Design, setting: Setting): string[] {
   const { page, headers } = design;
@@ -145,6 +155,7 @@ function openingPages(headers: HeaderDesign, setting: Setting): string[] {
   if (headers.leftPage === undefined && headers.rightPage === undefined) {
     return [];
   }
+  if (headers.suppressOnOpenings === false) return [];
   return used(setting.roles).map((role) =>
     block(`@page ${role}:first`, [
       boxed("top-left", "none"),
@@ -180,7 +191,23 @@ function bodyRules(design: Design): string[] {
   );
   lines.push(...set("orphans", counted(body.orphans)));
   lines.push(...set("widows", counted(body.widows)));
-  return [block("book", lines)];
+  return [
+    block("book", lines),
+    block("hr + p", [...set("text-indent", afterBreak(design))]),
+    block(HEADINGS, [
+      ...set("break-after", flagged(body.keepHeadings, "avoid", "auto")),
+    ]),
+  ];
+}
+
+/**
+ * The indent on the paragraph after a scene break. A design that turns
+ * the indent on leaves the paragraph to the body's own indent.
+ */
+function afterBreak(design: Design): string | undefined {
+  const { indentAfterBreak, indent } = design.body;
+  if (indentAfterBreak === undefined) return undefined;
+  return indentAfterBreak ? written(indent) : "0";
 }
 
 function headingRules(design: Design): string[] {
@@ -199,6 +226,12 @@ function typeLines(type: TypeSpec): string[] {
     ...set(
       "font-weight",
       type.weight === undefined ? undefined : FONT_WEIGHTS[type.weight],
+    ),
+  );
+  lines.push(
+    ...set(
+      "font-style",
+      type.slope === undefined ? undefined : FONT_STYLES[type.slope],
     ),
   );
   lines.push(...set("text-align", type.align));
@@ -229,11 +262,16 @@ function sectionRules(design: Design, setting: Setting): string[] {
 function chapterRules(design: Design, setting: Setting): string[] {
   const chapters = positions(setting.roles, "chapter");
   if (chapters === undefined) return [];
-  const { spaceAbove, dropCap } = design.chapter;
+  const { spaceAbove, spaceBelow, dropCap } = design.chapter;
   const sink =
     spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design);
+  const below =
+    spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design);
   return [
-    block(`${chapters} > ${OPENING}`, [...set("margin-top", sink)]),
+    block(`${chapters} > ${OPENING}`, [
+      ...set("margin-top", sink),
+      ...set("margin-bottom", below),
+    ]),
     block(`${chapters} > ${OPENING} + p::first-letter`, [
       ...set(
         "initial-letter",
@@ -244,12 +282,39 @@ function chapterRules(design: Design, setting: Setting): string[] {
 }
 
 function sceneRules(design: Design): string[] {
-  const { ornament } = design.scene;
-  return [
-    block("hr", [
-      ...set("content", ornament === undefined ? undefined : quoted(ornament)),
-    ]),
-  ];
+  const { scene } = design;
+  const lines = [...set("content", sceneContent(scene))];
+  if (scene.mark === "word" && scene.word !== undefined) {
+    lines.push(declared("text-align", "center"));
+  }
+  lines.push(
+    ...set(
+      "margin-top",
+      scene.spaceAbove === undefined
+        ? undefined
+        : bodyLines(scene.spaceAbove, design),
+    ),
+  );
+  lines.push(
+    ...set(
+      "margin-bottom",
+      scene.spaceBelow === undefined
+        ? undefined
+        : bodyLines(scene.spaceBelow, design),
+    ),
+  );
+  return [block("hr", lines)];
+}
+
+/**
+ * The text a scene break prints. A design that names no mark prints
+ * the ornament it sets.
+ */
+function sceneContent(scene: SceneDesign): string | undefined {
+  const { mark, ornament, word } = scene;
+  if (mark === "space") return "none";
+  if (mark === "word") return word === undefined ? undefined : quoted(word);
+  return ornament === undefined ? undefined : quoted(ornament);
 }
 
 /** The places a role sits, as one selector, or nothing when it sits nowhere. */

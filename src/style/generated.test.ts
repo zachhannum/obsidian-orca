@@ -20,7 +20,7 @@ import { writeNote } from "@/book/note";
 import { entries, move, resolve } from "@/book/order";
 import { sentRoles } from "@/book/plan";
 import type { Role } from "@/book/roles";
-import { emptyDesign } from "@/style/design";
+import { emptyDesign, type Design } from "@/style/design";
 import { generatedCss, type Setting } from "@/style/generated";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
@@ -160,6 +160,93 @@ test("the generated layer sets the pages it describes, and the engine warns abou
   }
 });
 
+
+test("a scene break sets as a blank line, an ornament or a word on its own line", () => {
+  const scene = (over: Design["scene"]): string => {
+    const design = emptyDesign();
+    design.scene = over;
+    return generatedCss(design, { roles: [] });
+  };
+
+  assert.equal(scene({ mark: "space", ornament: "\u2042" }), "hr {\n  content: none;\n}\n");
+  assert.equal(
+    scene({ mark: "word", word: "Later" }),
+    'hr {\n  content: "Later";\n  text-align: center;\n}\n',
+  );
+  assert.equal(
+    scene({ mark: "ornament", ornament: "\u2042" }),
+    'hr {\n  content: "\u2042";\n}\n',
+  );
+  // A design that names no mark keeps the ornament it sets.
+  assert.equal(scene({ ornament: "\u2042" }), 'hr {\n  content: "\u2042";\n}\n');
+});
+
+test("the panel's own controls generate their declarations, and the engine warns about none of them", async () => {
+  const design = whole();
+  const css = generatedCss(design, { roles: ROLES });
+
+  // A heading's slope, and the blank space under a chapter's title.
+  assert.match(css, /h1 \{\n(?: {2}.+\n)* {2}font-style: italic;\n/);
+  assert.match(
+    css,
+    /:is\(section:nth-child\(3\), section:nth-child\(4\)\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}margin-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
+  );
+  // A heading keeps the text under it, and the paragraph after a scene
+  // break takes no indent.
+  assert.match(css, /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/);
+  assert.match(css, /hr \+ p \{\n {2}text-indent: 0;\n\}/);
+  // The space around a scene break is counted in lines of body text.
+  assert.match(css, /hr \{\n(?: {2}.+\n)* {2}margin-top: 14pt;\n {2}margin-bottom: 14pt;\n\}/);
+
+  const output = await rendered(css);
+  assert.deepEqual(output.warnings, []);
+  assert.ok(output.pages.length > 0);
+});
+
+/** A design that sets every field the panel offers a control for. */
+function whole(): Design {
+  const design = emptyDesign();
+  design.body.lineSpacing = { value: 14, unit: "pt" };
+  design.body.indent = { value: 1.2, unit: "em" };
+  design.body.indentAfterBreak = false;
+  design.body.keepHeadings = true;
+  design.headings[1].slope = "italic";
+  design.chapter.spaceAbove = 2;
+  design.chapter.spaceBelow = 1;
+  design.scene.mark = "word";
+  design.scene.word = "Later";
+  design.scene.spaceAbove = 1;
+  design.scene.spaceBelow = 1;
+  design.headers.leftPage = "author";
+  design.headers.rightPage = "chapter-title";
+  design.headers.suppressOnOpenings = true;
+  return design;
+}
+
+/** One book of two chapters, set by the sheet handed in. */
+async function rendered(css: string) {
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const client: Client = new Client({
+      post: (request) => {
+        engine.submit(request, (response) => {
+          client.receive(response);
+        });
+      },
+    });
+    const output = await client.preview([
+      { op: "dialect", dialect: "obsidian" },
+      { op: "split", level: 0 },
+      styleOp([{ name: "generated.css", css }]),
+      { op: "book", sources: BROKEN },
+    ]);
+    assert.ok(output, "the render was overtaken");
+    return output;
+  } finally {
+    engine.free();
+  }
+}
+
 /** The roles of a book long enough to turn a page inside a chapter. */
 const ROLES: Role[] = ["title-page", "copyright", "chapter", "chapter"];
 
@@ -179,6 +266,13 @@ const SOURCES: Source[] = [
 function sentence(text: string): string {
   return `${text} `.repeat(60);
 }
+
+/** The sources of `ROLES`, with a scene break inside the last chapter. */
+const BROKEN: Source[] = SOURCES.map((source, index) =>
+  index === SOURCES.length - 1
+    ? { ...source, text: `${source.text}\n---\n\n${sentence("She said nothing more that evening.")}` }
+    : source,
+);
 
 async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
