@@ -6,6 +6,7 @@ import {
   normalizePath,
   type WorkspaceLeaf,
 } from "obsidian";
+import type { FontIndex } from "@/assets/fonts";
 import { contentKey, type Hashed } from "@/assets/registry";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
@@ -14,10 +15,14 @@ import { sectionRanges, type Range } from "@/book/pages";
 import { sendBook, sentRoles } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { Engines } from "@/engine/pool";
+import type { Written } from "@/style/design";
 import { designSheets } from "@/style/sheet";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
 import { cacheLinks } from "@/ui/notes";
+import { withKey } from "@/ui/groups";
+import type { Shown as Designed } from "@/ui/panels";
+import { missingFont } from "@/ui/picker";
 import { report, setField } from "@/ui/report";
 import { mountPage, type Mounted } from "@/ui/reports";
 import { Writer } from "@/ui/writer";
@@ -31,6 +36,8 @@ export interface Handoff {
   asMarkdown(view: BookView): void;
   /** Reveals the navigator and focuses one entry of a book there. */
   locate(book: string, at: number): void;
+  /** The fonts the machine has, for the design panel this page mounts. */
+  fonts(): Promise<FontIndex>;
 }
 
 /**
@@ -65,6 +72,8 @@ export class BookView extends FileView {
   private typesetting = 0;
   /** Drops this page's hold on its book, so the book's engine can stop. */
   private holding: (() => void) | undefined;
+  /** The fonts the machine has, once the scan behind the panel lands. */
+  private fonts: FontIndex | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -97,7 +106,19 @@ export class BookView extends FileView {
       asMarkdown: () => {
         this.handoff.asMarkdown(this);
       },
+      // The page has no session of its own, so a font picked here
+      // writes the design and the pages come back set in whatever the
+      // engine can register for it.
+      designing: {
+        pick: (font, key) => {
+          this.design(key, font.name);
+        },
+        set: (key, value) => {
+          this.design(key, value);
+        },
+      },
     });
+    void this.scan();
 
     const { vault, metadataCache } = this.app;
     this.registerEvent(
@@ -307,6 +328,40 @@ export class BookView extends FileView {
     void this.relay();
   }
 
+  /** Writes one design key into the book note, as the panel settled it. */
+  private design(key: string, value: Written | undefined): void {
+    this.edit((model) => ({
+      ...model,
+      book: { ...model.book, design: withKey(model.book.design, key, value) },
+    }));
+  }
+
+  /** The panel's state for the book this page shows. */
+  private designed(name: string, model: Model): Designed {
+    const index = this.fonts;
+    // The scan takes as long as the machine's font directories do, so
+    // the panel waits for it rather than offers an empty list.
+    if (index === undefined) return { kind: "reading" };
+    const font = model.book.design.body.font;
+    return {
+      kind: "book",
+      name: model.book.metadata.title ?? name,
+      design: model.book.design,
+      index,
+      language: model.book.metadata.language,
+      // The page registers no faces, so it names none of them. The
+      // preview is where a font reaches the engine.
+      styles: [],
+      missing: missingFont(index, font),
+    };
+  }
+
+  /** Reads the fonts the machine has, once, for the panel on this page. */
+  private async scan(): Promise<void> {
+    this.fonts = await this.handoff.fonts();
+    this.repaint();
+  }
+
   /** Paints the book page from a model at the generation it is at. */
   private show(model: Model, generation: number): void {
     this.shown = { model, generation };
@@ -324,6 +379,7 @@ export class BookView extends FileView {
     this.mounted?.paint({
       kind: "book",
       generation: this.shown.generation,
+      designed: this.designed(file.basename, this.shown.model),
       report: report(
         { path: file.path, name: file.basename, model: this.shown.model },
         { links: cacheLinks(this.app), words: (path) => this.words(path) },

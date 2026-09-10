@@ -803,9 +803,138 @@ button.orca-nav-action:hover {
 }
 
 .orca-panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.orca-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.orca-panel-name {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.orca-panel-line {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The faint line under a row: a unit, a language, or what a start on
+   the right-hand page costs. */
+.orca-panel-said,
+.orca-panel-unit,
+.orca-panel-means,
+.orca-panel-named {
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
-  letter-spacing: 0.06em;
+}
+
+.orca-panel-named,
+.orca-panel-means {
+  color: var(--text-muted);
+}
+
+.orca-panel-select {
+  flex: 1;
+  min-width: 0;
+  height: var(--input-height);
+  font-size: var(--font-ui-small);
+}
+
+/* The segment is the artboard's: one control, a word per choice, the
+   one in force lit. */
+.orca-panel-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+button.orca-panel-choice {
+  height: 24px;
+  padding: 0 var(--size-4-2);
+  border-radius: 3px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+button.orca-panel-choice.is-on {
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+}
+
+.orca-panel-switch {
+  flex: none;
+}
+
+input.orca-panel-measure,
+input.orca-panel-count {
+  width: 64px;
+  flex: none;
+  height: var(--input-height);
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+input.orca-panel-count {
+  width: 48px;
+}
+
+input.orca-panel-words {
+  flex: 1;
+  min-width: 0;
+  height: var(--input-height);
+  font-size: var(--font-ui-small);
+}
+
+.orca-panel-glyphs {
+  display: flex;
+  gap: var(--size-4-1);
+}
+
+/* An ornament is drawn in the book's own face where the machine has
+   it, because a glyph is picked by eye. */
+button.orca-panel-glyph {
+  width: 34px;
+  height: var(--input-height);
+  padding: 0;
+  border-radius: var(--input-radius);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  font-family: var(--font-text);
+  font-size: var(--font-ui-medium);
+  cursor: pointer;
+}
+
+button.orca-panel-glyph.is-on {
+  box-shadow: 0 0 0 1.5px var(--color-accent);
+}
+
+/* The panel on the book note's page is one column of the same rows. */
+.orca-book-design {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.orca-book-design .orca-panel {
+  padding: 0;
 }
 
 .orca-panel-row {

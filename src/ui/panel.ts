@@ -1,22 +1,21 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
 import type { Face } from "@/book/plan";
+import type { Design, Written } from "@/style/design";
 import type { Typeset } from "@/ui/composer";
+import { withKey } from "@/ui/groups";
 import { missingFont, styles } from "@/ui/picker";
-import { mountPanel, type Mounted, type Shown } from "@/ui/panels";
+import { CARRIED, mountPanel, type Mounted, type Shown } from "@/ui/panels";
 
 /** The type the design panel is registered under. */
 export const PANEL_VIEW = "orca-design";
-
-/** The font the engine carries, which a book is set in until one is picked. */
-const CARRIED = "EB Garamond";
 
 /** The book the panel designs and the fonts the machine has. */
 export interface Designing {
   /** The book the panel designs, which is the one being read. */
   book(): Promise<Typeset | undefined>;
-  /** Writes the font into the book's own frontmatter, where the design lives. */
-  setFont(book: string, font: string): Promise<void>;
+  /** Writes the design into the book's own frontmatter, where it lives. */
+  setDesign(book: string, design: Design): Promise<void>;
   /** The fonts the machine has. The scan runs once for the session. */
   index(): Promise<FontIndex>;
   /** One font's styles, as the bytes that cross and the keys they go under. */
@@ -26,7 +25,7 @@ export interface Designing {
 }
 
 /**
- * The design panel. It holds no settings of its own. A pick goes to
+ * The design panel. It holds no settings of its own. An edit goes to
  * the book the engine holds, and the panel is painted from what the
  * engine returned.
  */
@@ -59,8 +58,11 @@ export class DesignPanelView extends ItemView {
 
   override onOpen(): Promise<void> {
     this.mounted = mountPanel(this.contentEl, {
-      pick: (family) => {
-        void this.pick(family);
+      pick: (family, key) => {
+        void this.pick(family, key);
+      },
+      set: (key, value) => {
+        void this.set(key, value);
       },
     });
     this.register(
@@ -88,7 +90,7 @@ export class DesignPanelView extends ItemView {
    * design. The engine sets the book in the one it carries, and the
    * panel warns that the font asked for is missing.
    */
-  private async pick(font: Family): Promise<void> {
+  private async pick(font: Family, key: string): Promise<void> {
     const typeset = await this.designing.book();
     if (typeset === undefined) return;
     let faces: Face[] = [];
@@ -98,11 +100,34 @@ export class DesignPanelView extends ItemView {
     } catch {
       this.unread = font.name;
     }
-    typeset.refont(font.name, faces);
+    await this.settle(typeset, key, font.name, faces);
+  }
+
+  /** Writes one design key, and sets the book under the design it makes. */
+  private async set(key: string, value: Written | undefined): Promise<void> {
+    const typeset = await this.designing.book();
+    if (typeset === undefined) return;
+    await this.settle(typeset, key, value, []);
+  }
+
+  /**
+   * Sets the book under the design one key makes, and writes that key
+   * into the note. The design edited is the one the engine holds, so two
+   * edits in a row do not lose the first.
+   *
+   * The engine has the sheets before the note is written, so the pages
+   * are on their way rather than behind the save.
+   */
+  private async settle(
+    typeset: Typeset,
+    key: string,
+    value: Written | undefined,
+    faces: readonly Face[],
+  ): Promise<void> {
+    const design = withKey(typeset.design, key, value);
+    typeset.restyle(design, faces);
     await this.repaint();
-    // The engine has the sheet, so the note is written after the pages
-    // are on their way rather than ahead of them.
-    await this.designing.setFont(typeset.path, font.name);
+    await this.designing.setDesign(typeset.path, design);
   }
 
   /**
@@ -154,8 +179,9 @@ export class DesignPanelView extends ItemView {
     return {
       kind: "book",
       name: typeset.name,
+      design: typeset.design,
       index,
-      font,
+      language: typeset.language,
       styles: styles(typeset.session.faces, font ?? CARRIED),
       missing: this.warning(index, font),
     };
@@ -173,4 +199,3 @@ export class DesignPanelView extends ItemView {
 function unreadable(font: string): string {
   return `${font} has no file this machine could read. The book is set in the one orca carries.`;
 }
-

@@ -24,6 +24,7 @@ import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import type { Face } from "@/book/plan";
+import { writeDesign, type Design } from "@/style/design";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
 import {
@@ -162,6 +163,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
           locate: (book, at) => {
             void this.locate(book, at);
           },
+          fonts: () => this.fontIndex(),
         }),
     );
     this.registerView(
@@ -1007,7 +1009,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private designing(): Designing {
     return {
       book: () => this.designed(),
-      setFont: (book, font) => this.setFont(book, font),
+      setDesign: (book, design) => this.setDesign(book, design),
       index: () => this.fontIndex(),
       styles: (font) => familyFaces(this.places(), font),
       watch: (again) => {
@@ -1142,25 +1144,19 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Writes the font into the book's own frontmatter, which is where
-   * the design lives. The engine has the sheet already, so this is what
-   * makes the pick outlast the session.
+   * Writes the design into the book's own frontmatter, which is where
+   * it lives. The engine has the sheets already, so this is what makes
+   * an edit outlast the session.
    */
-  private async setFont(book: string, font: string): Promise<void> {
+  private async setDesign(book: string, design: Design): Promise<void> {
     const model = await this.edits.model(book);
-    // The font the book already has writes nothing, so nothing waits to
+    // A design the book already has writes nothing, so nothing waits to
     // be let through either.
-    if (model === undefined || model.book.design.body.font === font) return;
+    if (model === undefined || same(model.book.design, design)) return;
     this.designWrites.add(book);
     await this.edits.edit(book, (current) => ({
       ...current,
-      book: {
-        ...current.book,
-        design: {
-          ...current.book.design,
-          body: { ...current.book.design.body, font },
-        },
-      },
+      book: { ...current.book, design },
     }));
   }
 
@@ -1220,4 +1216,9 @@ function scrolledTo(view: MarkdownView): number | undefined {
   const text = editor.getValue();
   const at = { line: writtenAt(text, line), ch: 0 };
   return byteOf(text, editor.posToOffset(at));
+}
+
+/** Whether two designs write the same properties into a note. */
+function same(one: Design, two: Design): boolean {
+  return JSON.stringify(writeDesign(one)) === JSON.stringify(writeDesign(two));
 }

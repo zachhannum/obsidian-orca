@@ -12,6 +12,11 @@ import { useEffect, useRef, type JSX, type KeyboardEvent } from "react";
 import { BOOK_KEY, type BookMetadata } from "@/book/note";
 import { ROLES } from "@/book/roles";
 import { Icon } from "@/ui/icon";
+import {
+  Panel,
+  type Acting as Designing,
+  type Shown as Designed,
+} from "@/ui/panels";
 import { foliate, type Line, type Report } from "@/ui/report";
 
 /** The actions the page asks the view to perform. */
@@ -21,11 +26,19 @@ export interface Acting {
   /** Focuses an entry in the navigator, by its place in the reading order. */
   locate(at: number): void;
   asMarkdown(): void;
+  /** The design panel's own actions, which write the design instead. */
+  designing: Designing;
 }
 
 /** The state the page is drawn in. */
 export type Shown =
-  | { kind: "book"; report: Report; generation: number }
+  | {
+      kind: "book";
+      report: Report;
+      generation: number;
+      /** The design, drawn by the panel the sidebar draws. */
+      designed: Designed;
+    }
   | { kind: "refused"; said: string }
   | { kind: "none" };
 
@@ -78,7 +91,7 @@ export function Page({
   return (
     <div className="orca-book" data-testid="orca-book" ref={pane}>
       {shown.kind === "book" ? (
-        <Book report={shown.report} acting={acting} />
+        <Book report={shown.report} designed={shown.designed} acting={acting} />
       ) : shown.kind === "refused" ? (
         <Refused said={shown.said} acting={acting} />
       ) : null}
@@ -88,9 +101,11 @@ export function Page({
 
 function Book({
   report,
+  designed,
   acting,
 }: {
   report: Report;
+  designed: Designed;
   acting: Acting;
 }): JSX.Element {
   return (
@@ -125,6 +140,16 @@ function Book({
             />
           </label>
         ))}
+      </div>
+
+      <div className="orca-book-design" data-testid="orca-book-design">
+        <div className="orca-order-head">
+          <span className="orca-order-title">Design</span>
+          <span className="orca-order-hint">
+            kept in this note, and edited here or in the right sidebar
+          </span>
+        </div>
+        <Panel shown={designed} acting={acting.designing} />
       </div>
 
       <div className="orca-book-order">
