@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { FontRefEntry } from "fleuron";
 import type { Face, Family, FontIndex } from "@/assets/fonts";
-import { cuts, missingFace, picking } from "@/ui/face";
+import { missingFont, styles, picking } from "@/ui/picker";
 
 /** One face of a family, as the index found it. */
 function face(family: string, style: string): Face {
@@ -33,8 +33,8 @@ const INDEX: FontIndex = {
   refused: [],
 };
 
-/** One cut, as the engine returns it. */
-function cut(
+/** One style, as the engine returns it. */
+function entry(
   family: string,
   style: string,
   weight: number,
@@ -76,28 +76,28 @@ test("a row the keys ran past lands on the last row of a narrowed list", () => {
   assert.equal(picked.commits?.name, "Spectral");
 });
 
-test("the styles a family offers are the cuts the engine registered, by the ids it gave", () => {
+test("the styles a font offers are the ones the engine registered, by the ids it gave", () => {
   const registered = [
-    cut("eb garamond", "Regular", 400),
-    cut("alegreya", "Regular", 400),
-    cut("alegreya", "Medium", 500, [{ tag: "wght", value: 500 }]),
+    entry("eb garamond", "Regular", 400),
+    entry("alegreya", "Regular", 400),
+    entry("alegreya", "Medium", 500, [{ tag: "wght", value: 500 }]),
   ];
 
-  assert.deepEqual(cuts(registered, "Alegreya"), [
+  assert.deepEqual(styles(registered, "Alegreya"), [
     { id: 1, entry: registered[1] },
     { id: 2, entry: registered[2] },
   ]);
-  assert.deepEqual(cuts(registered, "Charter"), []);
+  assert.deepEqual(styles(registered, "Charter"), []);
 });
 
-test("a book naming a family the machine does not have is warned about by name", () => {
-  assert.equal(missingFace(INDEX, "Alegreya"), undefined);
-  assert.equal(missingFace(INDEX, undefined), undefined);
-  assert.match(missingFace(INDEX, "Charter Italic") ?? "", /Charter Italic/);
+test("a book naming a font the machine does not have is warned about by name", () => {
+  assert.equal(missingFont(INDEX, "Alegreya"), undefined);
+  assert.equal(missingFont(INDEX, undefined), undefined);
+  assert.match(missingFont(INDEX, "Charter Italic") ?? "", /Charter Italic/);
 });
 
 // What this tier does not cover: the panel's drawing, which is React
 // over these functions; the keys that move between rows, which the e2e
 // suite drives in the application the picker is mounted in; and a
-// family whose files have gone since the scan, which no fake here can
+// font whose files have gone since the scan, which no fake here can
 // take off a disk.

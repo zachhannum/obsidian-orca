@@ -1,8 +1,8 @@
 /**
- * Draws the design panel, where the book's face is picked out of the
- * families the machine has.
+ * Draws the design panel, where the book's font is picked out of the
+ * ones the machine has.
  *
- * The browser sets each row in the face it offers. Nothing crosses to
+ * The browser sets each row in the font it offers. Nothing crosses to
  * the engine to fill the list.
  */
 
@@ -16,13 +16,13 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { Family, FontIndex } from "@/assets/fonts";
-import { picking, type Cut } from "@/ui/face";
+import { picking, type FontStyle } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
 /** The actions the view performs for the panel. */
 export interface Acting {
-  /** Sets the book in a family. */
-  pick(family: Family): void;
+  /** Sets the book in a font. */
+  pick(font: Family): void;
 }
 
 /** The state the panel is drawn in. */
@@ -32,11 +32,11 @@ export type Shown =
       /** The book the panel is designing. */
       name: string;
       index: FontIndex;
-      /** The family the book is set in, or nothing for the theme's face. */
-      face: string | undefined;
-      /** The cuts the engine registered for it. */
-      cuts: Cut[];
-      /** The warning for a family the machine does not have. */
+      /** The font the book is set in, or nothing for the theme's own. */
+      font: string | undefined;
+      /** The styles the engine registered for it. */
+      styles: FontStyle[];
+      /** The warning for a font the machine does not have. */
       missing: string | undefined;
     }
   | { kind: "reading" }
@@ -86,22 +86,18 @@ export function Panel({
   if (shown.kind === "reading") {
     return (
       <div className="orca-panel-empty" data-testid="orca-panel-reading">
-        Reading the faces this machine has
+        Reading the fonts this machine has
       </div>
     );
   }
   return (
     <div className="orca-panel" data-testid="orca-panel">
-      <div className="orca-panel-group">TEXT</div>
+      <div className="orca-panel-group">BODY</div>
       <div className="orca-panel-row">
-        <span className="orca-panel-label">Face</span>
-        <Picker
-          index={shown.index}
-          face={shown.face}
-          acting={acting}
-        />
+        <span className="orca-panel-label">Font</span>
+        <Picker index={shown.index} font={shown.font} acting={acting} />
       </div>
-      <Cuts cuts={shown.cuts} />
+      <Styles styles={shown.styles} />
       {shown.missing === undefined ? null : (
         <div className="orca-panel-warning" data-testid="orca-panel-missing">
           <Icon name="alert-circle" className="orca-panel-icon" />
@@ -115,15 +111,15 @@ export function Panel({
 /**
  * The families in the index, filtered by what was typed. A commit
  * takes the selected row, so a string matching nothing leaves the book
- * in the face it already has.
+ * in the font it already has.
  */
 function Picker({
   index,
-  face,
+  font,
   acting,
 }: {
   index: FontIndex;
-  face: string | undefined;
+  font: string | undefined;
   acting: Acting;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -142,11 +138,11 @@ function Picker({
     setAt(0);
   };
 
-  const commit = (family: Family | undefined): void => {
+  const commit = (chosen: Family | undefined): void => {
     // Text matching nothing does not commit, because the picker offers
     // only families in the index.
-    if (family === undefined) return;
-    acting.pick(family);
+    if (chosen === undefined) return;
+    acting.pick(chosen);
     close();
   };
 
@@ -171,12 +167,12 @@ function Picker({
       <button
         type="button"
         className="orca-panel-field"
-        data-testid="orca-panel-face"
+        data-testid="orca-panel-font"
         onClick={() => {
           setOpen(!open);
         }}
       >
-        <span>{face ?? "EB Garamond"}</span>
+        <span>{font ?? "EB Garamond"}</span>
         <Icon name="chevron-down" className="orca-panel-icon" />
       </button>
       {!open ? null : (
@@ -200,28 +196,28 @@ function Picker({
             data-testid="orca-panel-rows"
             data-offered={picked.offered.length}
           >
-            {picked.offered.map((family, row) => (
+            {picked.offered.map((offer, row) => (
               <div
-                key={family.name}
+                key={offer.name}
                 className={
                   row === picked.at
                     ? "orca-panel-option is-on"
                     : "orca-panel-option"
                 }
                 data-testid="orca-panel-option"
-                data-family={family.name}
-                // The browser draws the row in its own face, from an
-                // installed family or a vault face registered with the
+                data-font={offer.name}
+                // The browser draws the row in its own font, from an
+                // installed one or a vault file registered with the
                 // document.
-                style={{ fontFamily: `"${family.name}", var(--font-text)` }}
+                style={{ fontFamily: `"${offer.name}", var(--font-text)` }}
                 // The filter keeps focus, so the blur that would close
                 // the menu never fires before the click lands.
                 onMouseDown={(event) => {
                   event.preventDefault();
-                  commit(family);
+                  commit(offer);
                 }}
               >
-                {family.name}
+                {offer.name}
               </div>
             ))}
             {picked.offered.length > 0 ? null : (
@@ -229,7 +225,7 @@ function Picker({
                 className="orca-panel-none"
                 data-testid="orca-panel-nothing"
               >
-                No face of that name
+                No font of that name
               </div>
             )}
           </div>
@@ -239,27 +235,27 @@ function Picker({
   );
 }
 
-/** The cuts the engine registered, which are a family's styles. */
-function Cuts({ cuts }: { cuts: Cut[] }): JSX.Element | null {
-  if (cuts.length === 0) return null;
+/** The styles of the font, as the engine registered them. */
+function Styles({ styles }: { styles: FontStyle[] }): JSX.Element | null {
+  if (styles.length === 0) return null;
   return (
     <div className="orca-panel-row">
       <span className="orca-panel-label">Styles</span>
       <div
-        className="orca-panel-cuts"
-        data-testid="orca-panel-cuts"
-        data-cuts={cuts.length}
+        className="orca-panel-styles"
+        data-testid="orca-panel-styles"
+        data-styles={styles.length}
       >
-        {cuts.map((cut) => (
+        {styles.map((style) => (
           <span
-            key={cut.id}
-            className="orca-panel-cut"
-            data-testid="orca-panel-cut"
-            data-weight={cut.entry.attributes.weight}
-            data-italic={String(cut.entry.attributes.italic)}
-            data-axes={cut.entry.variations.map((axis) => axis.tag).join(" ")}
+            key={style.id}
+            className="orca-panel-style"
+            data-testid="orca-panel-style"
+            data-weight={style.entry.attributes.weight}
+            data-italic={String(style.entry.attributes.italic)}
+            data-axes={style.entry.variations.map((axis) => axis.tag).join(" ")}
           >
-            {cut.entry.style}
+            {style.entry.style}
           </span>
         ))}
       </div>

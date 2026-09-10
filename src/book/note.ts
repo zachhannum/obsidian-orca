@@ -8,6 +8,12 @@ import {
   type Properties,
   type Value,
 } from "@/book/frontmatter";
+import {
+  DESIGN_KEYS,
+  readDesign,
+  writeDesign,
+  type Design,
+} from "@/style/design";
 
 /** Frontmatter key that makes a note a book. Its value is the format. */
 export const BOOK_KEY = "orca-book";
@@ -39,6 +45,8 @@ export interface Book {
   /** The format the note is written in, which is below `FORMAT` for a note orca has migrated. */
   format: number;
   metadata: BookMetadata;
+  /** The design, which is this note's own frontmatter. */
+  design: Design;
   /** The author's own properties, which orca keeps and does not read. */
   own: Properties;
 }
@@ -113,12 +121,12 @@ export function readBook(properties: Properties): Book {
   const metadata: BookMetadata = {};
   const own: Properties = {};
   for (const [key, value] of Object.entries(migrated)) {
-    if (key === BOOK_KEY) continue;
+    if (key === BOOK_KEY || DESIGN_KEYS.includes(key)) continue;
     const field = FIELDS.find((named) => named.key === key);
     if (field === undefined) own[key] = value;
     else if (value !== null) metadata[field.key] = readValue(value, field.kind);
   }
-  return { format, metadata, own };
+  return { format, metadata, design: readDesign(migrated), own };
 }
 
 /**
@@ -132,7 +140,7 @@ export function writeBook(book: Book): Properties {
     const value = book.metadata[key];
     if (value !== undefined) properties[key] = value;
   }
-  return { ...properties, ...book.own };
+  return { ...properties, ...writeDesign(book.design), ...book.own };
 }
 
 /**
@@ -144,6 +152,12 @@ export function applyBook(properties: Properties, book: Book): void {
   properties[BOOK_KEY] = FORMAT;
   for (const { key } of FIELDS) {
     const value = book.metadata[key];
+    if (value === undefined) delete properties[key];
+    else properties[key] = value;
+  }
+  const design = writeDesign(book.design);
+  for (const key of DESIGN_KEYS) {
+    const value = design[key];
     if (value === undefined) delete properties[key];
     else properties[key] = value;
   }

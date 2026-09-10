@@ -1,0 +1,64 @@
+/*
+ * Every property a design can set, in one sheet. The pinned engine
+ * warns about none of it, so a field the panel offers cannot become a
+ * warning the author has to read.
+ */
+
+@page {
+  size: 5.5in 8.5in;
+  margin-top: 0.8in;
+  margin-bottom: 1in;
+  margin-left: 0.95in;
+  margin-right: 0.7in;
+}
+
+@page :left {
+  margin-left: 0.7in;
+  margin-right: 0.95in;
+  @top-left { content: string(author); }
+  @bottom-left { content: counter(page, decimal); }
+}
+
+@page :right {
+  @top-right { content: string(chapter); }
+  @bottom-right { content: counter(page, lower-roman); }
+}
+
+@page chapter:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+book {
+  font-family: "EB Garamond", serif;
+  font-size: 10.5pt;
+  line-height: 14pt;
+  text-align: justify;
+  text-indent: 1.2em;
+  hyphens: auto;
+  hanging-punctuation: first allow-end last;
+  orphans: 2;
+  widows: 2;
+}
+
+section {
+  page: chapter;
+  break-before: recto;
+  string-set: chapter content();
+}
+
+section > :is(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 7em;
+  font-family: "EB Garamond", serif;
+  font-size: 17pt;
+  font-weight: 400;
+  text-align: center;
+}
+
+section > p:first-of-type::first-letter {
+  initial-letter: 3;
+}
+
+hr {
+  content: "\2042";
+}

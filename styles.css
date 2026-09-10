@@ -897,13 +897,13 @@ input.orca-panel-filter {
   font-size: var(--font-ui-small);
 }
 
-.orca-panel-cuts {
+.orca-panel-styles {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-4-1);
 }
 
-.orca-panel-cut {
+.orca-panel-style {
   padding: 0 6px;
   height: 18px;
   display: inline-flex;

@@ -1,9 +1,9 @@
 /**
  * The design panel, reached by the test ids in its own markup.
  *
- * The picker lists the families the scan found, so a spec types to
- * narrow that list rather than naming a face. Every wait here is on
- * the panel's own state rather than on a clock.
+ * The picker lists the fonts the scan found, so a spec types to narrow
+ * that list rather than naming one. Every wait here is on the panel's
+ * own state rather than on a clock.
  */
 
 import { expect, type Locator } from "@playwright/test";
@@ -18,29 +18,29 @@ export const PANEL = "orca-design";
 export class Panel {
   /** The panel itself, drawn when there is a book to design. */
   readonly panel: Locator;
-  /** The closed field, which shows the family the book is set in. */
-  readonly face: Locator;
-  /** The filter, which narrows the list rather than naming a family. */
+  /** The closed field, which shows the font the book is set in. */
+  readonly font: Locator;
+  /** The filter, which narrows the list rather than naming a font. */
   readonly filter: Locator;
-  /** The list of families, which carries the number of them shown. */
+  /** The list of fonts, which carries the number of them shown. */
   readonly rows: Locator;
   readonly options: Locator;
   /** The empty state, shown when nothing matches what was typed. */
   readonly nothing: Locator;
-  /** The cuts the engine registered for the family the book is set in. */
-  readonly cuts: Locator;
-  /** The warning for a family the machine does not have. */
+  /** The styles the engine registered for the font the book is set in. */
+  readonly styles: Locator;
+  /** The warning for a font the machine does not have. */
   readonly missing: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     const pane = obsidian.view(PANEL);
     this.panel = pane.getByTestId("orca-panel");
-    this.face = pane.getByTestId("orca-panel-face");
+    this.font = pane.getByTestId("orca-panel-font");
     this.filter = pane.getByTestId("orca-panel-filter");
     this.rows = pane.getByTestId("orca-panel-rows");
     this.options = pane.getByTestId("orca-panel-option");
     this.nothing = pane.getByTestId("orca-panel-nothing");
-    this.cuts = pane.getByTestId("orca-panel-cut");
+    this.styles = pane.getByTestId("orca-panel-style");
     this.missing = pane.getByTestId("orca-panel-missing");
   }
 
@@ -61,7 +61,7 @@ export class Panel {
 
   /** Opens the picker and waits for its filter. */
   async pick(): Promise<void> {
-    await this.face.click();
+    await this.font.click();
     await expect(this.filter).toBeVisible();
   }
 
@@ -75,25 +75,25 @@ export class Panel {
     return this.options.allTextContents();
   }
 
-  /** The number of families the list shows, which a filter changes. */
+  /** The number of fonts the list shows, which a filter changes. */
   async offering(): Promise<number> {
     return Number(await this.rows.getAttribute("data-offered"));
   }
 
-  /** The family the closed field shows. */
+  /** The font the closed field shows. */
   async reading(): Promise<string> {
-    return (await this.face.textContent()) ?? "";
+    return (await this.font.textContent()) ?? "";
   }
 
-  /** The styles the panel shows, which are the cuts the engine registered. */
-  async styles(): Promise<string[]> {
-    return this.cuts.allTextContents();
+  /** The names of the styles the panel shows, which the engine registered. */
+  async styleNames(): Promise<string[]> {
+    return this.styles.allTextContents();
   }
 
-  /** The axes a cut sits on, by the name of its style. */
+  /** The axes a style sits on, by its name. */
   async axes(style: string): Promise<string> {
     return (
-      (await this.cuts
+      (await this.styles
         .filter({ hasText: style })
         .first()
         .getAttribute("data-axes")) ?? ""

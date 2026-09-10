@@ -6,6 +6,7 @@
 import type { Model } from "@/book/model";
 import { FORMAT, type BookMetadata } from "@/book/note";
 import { readOrder } from "@/book/order";
+import { emptyDesign } from "@/style/design";
 
 /** The groups a new book is written with, in reading order. */
 export const MATTER: readonly string[] = [
@@ -43,7 +44,7 @@ export function newBook(
     lines.push("");
   }
   return {
-    book: { format: FORMAT, metadata, own: {} },
+    book: { format: FORMAT, metadata, design: emptyDesign(), own: {} },
     order: readOrder(lines.join("\n")),
   };
 }

@@ -16,7 +16,9 @@ import {
   readValue,
   writeBook,
   writeNote,
+  type Book,
 } from "@/book/note";
+import { DESIGN_KEYS, emptyDesign, readDesign } from "@/style/design";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -56,7 +58,7 @@ test("an enum is quoted on write and coerced on read, and a length keeps its uni
   assert.equal(readValue(1813, "text"), "1813");
 
   const written = writeNote(
-    { format: FORMAT, metadata: { language: "no" }, own: {} },
+    { format: FORMAT, metadata: { language: "no" }, design: emptyDesign(), own: {} },
     "\n",
   );
 
@@ -84,7 +86,10 @@ test("orca's own properties are set on the note, and the author's are left as th
   assert.equal(existing["status"], "drafting");
   assert.deepEqual(
     Object.keys(existing).filter(
-      (key) => key !== BOOK_KEY && !(FIELD_KEYS as readonly string[]).includes(key),
+      (key) =>
+        key !== BOOK_KEY &&
+        !(FIELD_KEYS as readonly string[]).includes(key) &&
+        !DESIGN_KEYS.includes(key),
     ),
     ["tags", "status"],
   );
@@ -126,6 +131,63 @@ test("a book from a newer orca does not open, and the error names both formats",
   );
 });
 
+test("the book's own frontmatter is the design, one key per line", () => {
+  const design = readDesign({
+    trim: "5.5in 8.5in",
+    "body-font": "Alegreya",
+    "body-line-spacing": "14pt",
+    "body-hyphens": true,
+    "body-orphans": 2,
+  });
+  const book: Book = {
+    format: FORMAT,
+    metadata: { title: "Pride and Prejudice" },
+    design,
+    own: {},
+  };
+
+  const text = writeNote(book, "\n");
+  const read = readBook(readFrontmatter(text).properties);
+
+  assert.deepEqual(read.design, design);
+  assert.equal(
+    text,
+    [
+      "---",
+      "orca-book: 1",
+      "title: Pride and Prejudice",
+      "trim: 5.5in 8.5in",
+      "body-font: Alegreya",
+      "body-line-spacing: 14pt",
+      "body-hyphens: true",
+      "body-orphans: 2",
+      "---",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("a design key the book no longer sets is taken off the note", () => {
+  const properties = {
+    [BOOK_KEY]: FORMAT,
+    "body-line-spacing": "15pt",
+    "body-orphans": 3,
+  };
+  const book = readBook(properties);
+
+  applyBook(properties, {
+    ...book,
+    design: readDesign({ "body-line-spacing": "15pt" }),
+  });
+
+  assert.deepEqual(properties, {
+    [BOOK_KEY]: FORMAT,
+    "body-line-spacing": "15pt",
+  });
+  // A design key is orca's own, so it is not kept a second time as the
+  // author's.
+  assert.deepEqual(book.own, {});
+});
+
 // What this tier does not cover: the view the note opens in and the way
-// back to markdown, which the e2e job drives, and the design properties,
-// which are the settings schema's to name.
+// back to markdown, which the e2e job drives.

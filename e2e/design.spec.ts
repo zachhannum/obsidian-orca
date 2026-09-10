@@ -1,18 +1,19 @@
 import { expect, test } from "./harness/test";
+import type { Vault } from "./harness/vault";
 
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
-/** The face the fixture vault ships, and the one the specs pick. */
-const FIXTURE_FACE = "Alegreya";
+/** The font the fixture vault ships, and the one the specs pick. */
+const FIXTURE_FONT = "Alegreya";
 
-/** A family no machine installs, so the filter matches nothing. */
+/** A font no machine installs, so the filter matches nothing. */
 const NOWHERE = "Zzyzx Grotesque";
 
-/** The face the engine carries, which a book is set in until one is picked. */
+/** The font the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
 
-test("the picker offers the families the scan found, and typing narrows them", async ({
+test("the picker offers the fonts the scan found, and typing narrows them", async ({
   book,
   panel,
 }) => {
@@ -27,17 +28,17 @@ test("the picker offers the families the scan found, and typing narrows them", a
   // Nothing crosses to fill the list, so the pages are still the ones
   // painted before the picker opened.
   expect(await book.painted()).toBe(painted);
-  // The vault's own face is in the list, alongside whatever the
+  // The vault's own font is in the list, alongside whatever the
   // machine installs.
   expect(all).toBeGreaterThan(0);
-  await expect(panel.options.filter({ hasText: FIXTURE_FACE })).toHaveCount(1);
+  await expect(panel.options.filter({ hasText: FIXTURE_FONT })).toHaveCount(1);
 
   await panel.type("aleg");
   expect(await panel.offering()).toBeLessThan(all);
-  expect(await panel.offered()).toContain(FIXTURE_FACE);
+  expect(await panel.offered()).toContain(FIXTURE_FONT);
 });
 
-test("text matching nothing does not commit, so the book keeps the face it has", async ({
+test("text matching nothing does not commit, so the book keeps the font it has", async ({
   book,
   panel,
 }) => {
@@ -51,25 +52,27 @@ test("text matching nothing does not commit, so the book keeps the face it has",
   expect(await panel.offering()).toBe(0);
 
   await panel.filter.press("Enter");
-  // The field still shows the face the book was set in, and no render
+  // The field still shows the font the book was set in, and no render
   // went out.
   expect(await panel.reading()).toContain(CARRIED);
   expect(await book.painted()).toBe(painted);
 });
 
-test("picking a family sets the book in it, and the styles are the cuts the engine registered", async ({
+test("picking a font sets the book in it, and the styles are the ones the engine registered", async ({
   book,
   panel,
+  vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   const painted = await book.painted();
   await panel.open();
   await panel.pick();
 
   await panel.type("aleg");
-  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
 
-  await expect(panel.face).toContainText(FIXTURE_FACE);
+  await expect(panel.font).toContainText(FIXTURE_FONT);
   // The pick is an edit, so the pages come back under a later
   // generation than the one they were painted at.
   await expect
@@ -78,40 +81,46 @@ test("picking a family sets the book in it, and the styles are the cuts the engi
 
   // Alegreya is one variable file, and the engine registers every
   // instance in it.
-  const styles = await panel.styles();
+  const styles = await panel.styleNames();
   expect(styles).toContain("Regular");
   expect(styles.length).toBeGreaterThan(1);
-  // A cut off a variable file sits somewhere on the file's axes, and
+  // A style off a variable file sits somewhere on the file's axes, and
   // the painter pins it there.
   expect(await panel.axes("Medium")).toContain("wght");
 
-  // The machine has the family, so there is no warning.
+  // The machine has the font, so there is no warning.
   await expect(panel.missing).toHaveCount(0);
+
+  await written(vault, own);
 });
 
-test("a face crosses once, so picking the same family again sends the sheet alone", async ({
+test("a font crosses once, so picking it again sends the sheet alone", async ({
   book,
   panel,
+  vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   await book.painted();
   await panel.open();
 
   await panel.pick();
   await panel.type("aleg");
-  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
-  await expect(panel.face).toContainText(FIXTURE_FACE);
-  const cuts = await panel.styles();
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
+  await expect(panel.font).toContainText(FIXTURE_FONT);
+  const registered = await panel.styleNames();
 
   await panel.pick();
   await panel.type("aleg");
-  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
 
   // The registry keys the bytes by content, so the second pick
-  // registers nothing new and the engine returns the same cuts under
+  // registers nothing new and the engine returns the same styles under
   // the same ids.
-  await expect(panel.face).toContainText(FIXTURE_FACE);
-  expect(await panel.styles()).toEqual(cuts);
+  await expect(panel.font).toContainText(FIXTURE_FONT);
+  expect(await panel.styleNames()).toEqual(registered);
+
+  await written(vault, own);
 });
 
 test("a book note written while a pane reads it leaves the panel designing that book", async ({
@@ -119,10 +128,11 @@ test("a book note written while a pane reads it leaves the panel designing that 
   panel,
   vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   const painted = await book.painted();
   await panel.open();
-  const face = (await panel.reading()).trim();
+  const font = (await panel.reading()).trim();
 
   // A note written from outside Obsidian takes the book off the
   // composer, so the next open sets it from the notes as they now are.
@@ -132,21 +142,25 @@ test("a book note written while a pane reads it leaves the panel designing that 
   await panel.focus();
 
   await expect(panel.panel).toBeVisible();
-  await expect(panel.face).toContainText(face);
+  await expect(panel.font).toContainText(font);
 
   // And a pick still reaches the book on screen.
   await panel.pick();
   await panel.type("aleg");
-  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
-  await expect(panel.face).toContainText(FIXTURE_FACE);
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
+  await expect(panel.font).toContainText(FIXTURE_FONT);
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await written(vault, own);
 });
 
 test("a second preview in a background tab is deferred, and the panel designs the drawn one", async ({
   book,
   obsidian,
   panel,
+  vault,
 }) => {
+  const own = await vault.read(BOOK);
   await book.open();
   await book.painted();
   // A second pane on the same book, so the first is a background tab.
@@ -168,6 +182,43 @@ test("a second preview in a background tab is deferred, and the panel designs th
   await expect(panel.panel).toBeVisible();
   await panel.pick();
   await panel.type("aleg");
-  await panel.options.filter({ hasText: FIXTURE_FACE }).first().click();
-  await expect(panel.face).toContainText(FIXTURE_FACE);
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
+  await expect(panel.font).toContainText(FIXTURE_FONT);
+
+  await written(vault, own);
 });
+
+test("a font picked is written into the book note, so the book opens in it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.pick();
+  await panel.type("aleg");
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
+  await expect(panel.font).toContainText(FIXTURE_FONT);
+
+  // The design is the book note's own frontmatter, so the pick is there
+  // rather than only on the engine.
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `body-font: ${FIXTURE_FONT}`,
+  );
+
+  await written(vault, own);
+});
+
+/**
+ * Puts the book note back through the vault, so a pick written into it
+ * does not reach the next spec. The write takes the book off the
+ * composer, and the next open sets it from the notes as they now are.
+ */
+async function written(vault: Vault, own: string): Promise<void> {
+  vault.touch(BOOK);
+  await vault.modify(BOOK, own);
+}

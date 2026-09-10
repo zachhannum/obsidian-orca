@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { Client, createEngine, styleOp, type Op } from "fleuron";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
-test("the bundled theme sets one face in two sizes, with nothing the engine warns about", async () => {
+test("the bundled theme sets one font in two sizes, with nothing the engine warns about", async () => {
   const engine = await createEngine({ wasm: await moduleBytes() });
   try {
     const client: Client = new Client({

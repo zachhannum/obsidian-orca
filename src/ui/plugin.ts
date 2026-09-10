@@ -89,6 +89,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private fonts: FontPlaces | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
+  /**
+   * The book notes orca is writing a design into. The engine has the
+   * sheet already, so the write is not a reason to set the book again,
+   * and the render the pick asked for is not dropped under it.
+   */
+  private readonly designWrites = new Set<string>();
   private indexing: number | undefined;
   private unloaded = false;
   /** The status bar item the folio being read is written into. */
@@ -442,6 +448,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
     this.registerEvent(
       vault.on("modify", (file) => {
+        // The design orca just wrote is the one the engine holds.
+        if (this.designWrites.delete(file.path)) return;
         const member = this.members.get(file.path);
         // A chapter's words are an edit to a book already on the engine,
         // not a reason to set it again from nothing. A writer's own
@@ -975,7 +983,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
           : this.app.vault.cachedRead(note);
       },
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
-      cuts: (family) => this.familyCuts(family),
+      styles: (font) => this.fontStyles(font),
       files: this.files(),
       links: cacheLinks(this.app),
       engines,
@@ -984,23 +992,24 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Every cut of a family, by the name a design names it by. A book set
+   * Every style of a font, by the name a design names it by. A book set
    * again on a new engine sends them, because a face is registered for
    * one session and that session is gone.
    */
-  private async familyCuts(family: string): Promise<readonly Face[]> {
-    const want = family.trim().toLowerCase();
+  private async fontStyles(font: string): Promise<readonly Face[]> {
+    const want = font.trim().toLowerCase();
     const { families } = await this.fontIndex();
     const found = families.find((known) => known.name.toLowerCase() === want);
     return found === undefined ? [] : familyFaces(this.places(), found);
   }
 
-  /** The book being designed and the faces the machine has. */
+  /** The book being designed and the fonts the machine has. */
   private designing(): Designing {
     return {
       book: () => this.designed(),
+      setFont: (book, font) => this.setFont(book, font),
       index: () => this.fontIndex(),
-      faces: (family) => familyFaces(this.places(), family),
+      styles: (font) => familyFaces(this.places(), font),
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the
@@ -1130,6 +1139,29 @@ export default class OrcaPlugin extends Plugin implements Limited {
         void this.openPreview({ book: book.path });
       },
     });
+  }
+
+  /**
+   * Writes the font into the book's own frontmatter, which is where
+   * the design lives. The engine has the sheet already, so this is what
+   * makes the pick outlast the session.
+   */
+  private async setFont(book: string, font: string): Promise<void> {
+    const model = await this.edits.model(book);
+    // The font the book already has writes nothing, so nothing waits to
+    // be let through either.
+    if (model === undefined || model.book.design.body.font === font) return;
+    this.designWrites.add(book);
+    await this.edits.edit(book, (current) => ({
+      ...current,
+      book: {
+        ...current.book,
+        design: {
+          ...current.book.design,
+          body: { ...current.book.design.body, font },
+        },
+      },
+    }));
   }
 
   /** The book the workspace is on, whether by one of its notes or its own. */

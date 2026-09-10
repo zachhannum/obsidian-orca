@@ -20,6 +20,7 @@ import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder } from "@/book/order";
+import { emptyDesign } from "@/style/design";
 import {
   GENERATED_ORIGIN,
   LOADED_NOTHING,
@@ -121,7 +122,12 @@ test("a generated section is synthetic markdown, under a name no note can have",
 });
 
 test("a title page with no metadata falls back to its role's own name", async () => {
-  const book: Book = { format: FORMAT, metadata: {}, own: {} };
+  const book: Book = {
+    format: FORMAT,
+    metadata: {},
+    design: emptyDesign(),
+    own: {},
+  };
   const order = readOrder("- `title-page`\n");
   const { ops } = await sendBook(
     book,
@@ -276,7 +282,7 @@ const TABLE: { did: string; edit: Edit; ops: Op["op"][] }[] = [
   {
     did: "picked a new family",
     edit: {
-      did: "faced",
+      did: "fonted",
       faces: SPECTRAL,
       sheets: FACED,
     },
@@ -366,7 +372,7 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   let fonts = 0;
   for (const face of picks) {
     const planned = sendEdit(
-      { did: "faced", faces: [face], sheets: FACED },
+      { did: "fonted", faces: [face], sheets: FACED },
       loaded,
       registry,
     );
@@ -385,7 +391,7 @@ test("a book with the same face on thirty-four chapters sends it once", async ()
   assert.ok(crossed, "the file was never read");
   const family = [crossed, ...SPECTRAL.slice(1)];
   const again = sendEdit(
-    { did: "faced", faces: family, sheets: FACED },
+    { did: "fonted", faces: family, sheets: FACED },
     loaded,
     registry,
   );
