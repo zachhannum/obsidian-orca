@@ -60,6 +60,9 @@ its editor around these files and returns a URL. The artboard list and
 - One ribbon icon, with the issues badge on it.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
+- The design panel is one component, mounted twice: the right sidebar
+  and the book note's own page. The sidebar leaf follows the book being
+  read rather than opens and closes with it.
 - A control the CSS has taken over dims where it sits and shows the
   line that took it, which is also the way to that line.
 - The Font control opens on the fonts the machine has, read out of the

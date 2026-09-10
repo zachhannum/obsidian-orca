@@ -32,14 +32,8 @@
         <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; color: var(--text-muted); font-size: 12.5px">isbn</span><div style="flex: 1; height: 28px; display: flex; align-items: center; padding: 0 8px; border-radius: var(--radius-s); color: var(--text-faint)">[YOUR ISBN]</div></div>
       </div>
 
-      <!-- design + css + export -->
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-        <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 12px 13px; display: flex; flex-direction: column; gap: 7px">
-          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">DESIGN</div>
-          <div style="font-size: 14px; font-weight: 500">Quarto</div>
-          <div style="font-size: 11.5px; color: var(--text-faint); line-height: 1.4">a plain trade novel, EB Garamond 10.5/14</div>
-          <div style="margin-top: 2px; font-size: 11.5px; color: var(--text-accent)">Open the panel</div>
-        </div>
+      <!-- css + export -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
         <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 12px 13px; display: flex; flex-direction: column; gap: 7px">
           <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">YOUR CSS</div>
           <div style="font-size: 14px; font-weight: 500">12 lines</div>
@@ -51,6 +45,34 @@
           <div style="font-size: 14px; font-weight: 500">337 pages</div>
           <div style="font-size: 11.5px; color: var(--text-faint); line-height: 1.4">24 chapters, set 5.5 × 8.5 in</div>
           <div style="margin-top: 2px; font-size: 11.5px; color: var(--text-accent)">Export a PDF</div>
+        </div>
+      </div>
+
+      <!-- The design panel, the same component the right sidebar mounts.
+           Drawn here at the width the page gives it, and shortened to
+           the first groups. -->
+      <div>
+        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">DESIGN</div>
+          <div style="font-size: 11.5px; color: var(--text-faint)">kept in this note, and edited here or in the right sidebar</div>
+        </div>
+
+        <div class="grp" style="gap: 14px">
+          <div class="grp">
+            <div class="grp-h">PRESET <span class="hint">a design opens on one, not on defaults</span></div>
+            <div class="field is-select" style="max-width: 320px"><span>Quarto</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+          </div>
+          <div class="grp">
+            <div class="grp-h">PAGE</div>
+            <div class="row"><span class="lab">Trim</span><div class="field is-select" style="max-width: 320px"><span>Digest — 5.5 × 8.5 in</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+            <div class="row"><span class="lab">Mirrored</span><div class="toggle is-on"><div class="knob"></div></div><span style="color: var(--text-faint); font-size: 11.5px">inside margin follows the gutter</span></div>
+          </div>
+          <div class="grp">
+            <div class="grp-h">TEXT</div>
+            <div class="row"><span class="lab">Font</span><div class="field is-select" style="max-width: 320px"><span>Alegreya</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+            <div class="row"><span class="lab">Size</span><div class="field num">10.5 pt</div><span style="color: var(--text-muted); font-size: 12.5px">Line spacing</span><div class="field num">14 pt</div></div>
+            <div class="row"><span class="lab">Hyphenate</span><div class="toggle is-on"><div class="knob"></div></div><span style="color: var(--text-faint); font-size: 11.5px">using English (en-GB)</span></div>
+          </div>
         </div>
       </div>
 

@@ -276,11 +276,11 @@ export const GROUPS: readonly Group[] = [
     name: "Heads & folios",
     rows: [
       {
-        label: "Left-page head",
+        label: "Left-page header",
         of: [{ kind: "select", key: "header-left-page", choices: SLOTS }],
       },
       {
-        label: "Right-page head",
+        label: "Right-page header",
         of: [{ kind: "select", key: "header-right-page", choices: SLOTS }],
       },
       {
