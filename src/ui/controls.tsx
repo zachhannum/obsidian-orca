@@ -28,10 +28,12 @@ export type Settle = (value: Written | undefined) => void;
 export function Row({
   label,
   said,
+  testid,
   children,
 }: {
   label: string;
   said?: string;
+  testid?: string;
   children: ReactNode;
 }): JSX.Element {
   return (
@@ -43,7 +45,9 @@ export function Row({
       {said === undefined ? null : (
         <div className="orca-panel-row">
           <span className="orca-panel-label" />
-          <span className="orca-panel-said">{said}</span>
+          <span className="orca-panel-said" data-testid={testid}>
+            {said}
+          </span>
         </div>
       )}
     </div>

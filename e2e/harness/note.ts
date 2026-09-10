@@ -8,6 +8,7 @@ import { expect, type Locator } from "@playwright/test";
 import type { TFile } from "obsidian";
 import type { Model } from "@/book/model";
 import type { Obsidian } from "./obsidian";
+import { Controls } from "./panel";
 
 /** The type the book note is registered under. */
 export const BOOK = "orca-book";
@@ -37,6 +38,8 @@ export class Note {
   readonly line: Locator;
   /** The reading order, drawn read-only. */
   readonly order: Locator;
+  /** The design panel, mounted on the page as well as in the sidebar. */
+  readonly design: Controls;
 
   constructor(private readonly obsidian: Obsidian) {
     this.page = obsidian.view(BOOK).getByTestId("orca-book");
@@ -45,6 +48,7 @@ export class Note {
     this.markdown = obsidian.view(MARKDOWN);
     this.line = this.page.getByTestId("orca-book-line");
     this.order = this.page.getByTestId("orca-order");
+    this.design = new Controls(this.page.getByTestId("orca-book-design"));
   }
 
   /** Returns the generation of the model the page shows. */

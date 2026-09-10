@@ -213,6 +213,103 @@ test("a font picked is written into the book note, so the book opens in it", asy
   await written(vault, own);
 });
 
+test("the panel offers every group a book designer works in", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  expect(await panel.grouped()).toEqual([
+    "Preset",
+    "Page",
+    "Text",
+    "Chapter openings",
+    "Scene breaks",
+    "Heads & folios",
+    "Discipline",
+  ]);
+});
+
+test("a control writes its key into the note, and the book is set again under it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture is set justified, so ragged right is a change the
+  // pages show.
+  await expect(panel.control("body-align")).toHaveAttribute(
+    "data-on",
+    "justify",
+  );
+  await panel.choice("body-align", "left").click();
+
+  await expect(panel.control("body-align")).toHaveAttribute("data-on", "left");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  await expect.poll(async () => vault.read(BOOK)).toContain("body-align: left");
+
+  await written(vault, own);
+});
+
+test("the hyphenation switch says which language the engine will hyphenate in", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The engine reads no language property, so the panel reports the
+  // book's own rather than anything the design sets.
+  await expect(panel.said("body-hyphens")).toContainText("en-GB");
+  await expect(panel.said("body-hyphens")).toContainText("English");
+});
+
+test("the book note's page mounts the same panel, and an edit there reaches the note", async ({
+  note,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await note.open(BOOK);
+  await note.painted();
+
+  await expect(note.design.panel).toBeVisible();
+  expect(await note.design.grouped()).toContain("Chapter openings");
+
+  await note.design.control("chapter-drop-cap").fill("4");
+  await note.design.control("chapter-drop-cap").press("Enter");
+
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    "chapter-drop-cap: 4",
+  );
+
+  await written(vault, own);
+});
+
+test("the panel is not a mode, so it stays when the book it designed closes", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await expect(panel.panel).toBeVisible();
+
+  await book.close();
+
+  // The leaf is still in the sidebar, holding no book rather than
+  // going away with the pane that had one.
+  await expect(panel.empty).toBeVisible();
+});
+
 /**
  * Puts the book note back through the vault, so a pick written into it
  * does not reach the next spec. The write takes the book off the

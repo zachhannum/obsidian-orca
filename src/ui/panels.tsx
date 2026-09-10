@@ -147,6 +147,7 @@ export function Panel({
                 key={`${group.name}-${at}`}
                 label={line.label}
                 said={said(line, shown)}
+                testid={saidId(line)}
               >
                 {line.of.map((control) => (
                   <Beside
@@ -359,6 +360,12 @@ function drawn(line: Line, written: Record<string, Written>): boolean {
   if (glyphs) return mark === undefined || mark === "ornament";
   if (word) return mark === "word";
   return true;
+}
+
+/** The test id of a row's own line, which names the row's first key. */
+function saidId(line: Line): string | undefined {
+  const key = line.of.find((control) => control.key !== undefined)?.key;
+  return key === undefined ? undefined : `orca-panel-said-${key}`;
 }
 
 /** The line under a row. The hyphenation switch names the language. */

@@ -1,6 +1,10 @@
 /**
  * The design panel, reached by the test ids in its own markup.
  *
+ * One component is mounted twice, so the controls are read off a root
+ * rather than off a view: the right sidebar for the panel, and the book
+ * note's page for the copy on it.
+ *
  * The picker lists the fonts the scan found, so a spec types to narrow
  * that list rather than naming one. Every wait here is on the panel's
  * own state rather than on a clock.
@@ -15,9 +19,14 @@ export const OPEN_PANEL = "orca:open-design";
 /** The type the panel is registered under. */
 export const PANEL = "orca-design";
 
-export class Panel {
+/** The controls, wherever the panel is mounted. */
+export class Controls {
   /** The panel itself, drawn when there is a book to design. */
   readonly panel: Locator;
+  /** The state the panel holds when no book is open. */
+  readonly empty: Locator;
+  /** The groups the panel offers, each carrying its name. */
+  readonly groups: Locator;
   /** The closed field, which shows the font the book is set in. */
   readonly font: Locator;
   /** The filter, which narrows the list rather than naming a font. */
@@ -32,31 +41,39 @@ export class Panel {
   /** The warning for a font the machine does not have. */
   readonly missing: Locator;
 
-  constructor(private readonly obsidian: Obsidian) {
-    const pane = obsidian.view(PANEL);
-    this.panel = pane.getByTestId("orca-panel");
-    this.font = pane.getByTestId("orca-panel-font");
-    this.filter = pane.getByTestId("orca-panel-filter");
-    this.rows = pane.getByTestId("orca-panel-rows");
-    this.options = pane.getByTestId("orca-panel-option");
-    this.nothing = pane.getByTestId("orca-panel-nothing");
-    this.styles = pane.getByTestId("orca-panel-style");
-    this.missing = pane.getByTestId("orca-panel-missing");
+  constructor(protected readonly root: Locator) {
+    this.panel = root.getByTestId("orca-panel");
+    this.empty = root.getByTestId("orca-panel-empty");
+    this.groups = root.getByTestId("orca-panel-group");
+    this.font = root.getByTestId("orca-panel-font");
+    this.filter = root.getByTestId("orca-panel-filter");
+    this.rows = root.getByTestId("orca-panel-rows");
+    this.options = root.getByTestId("orca-panel-option");
+    this.nothing = root.getByTestId("orca-panel-nothing");
+    this.styles = root.getByTestId("orca-panel-style");
+    this.missing = root.getByTestId("orca-panel-missing");
   }
 
-  /** Opens the panel and waits for it to be drawn. */
-  async open(): Promise<void> {
-    await this.obsidian.command(OPEN_PANEL);
-    await expect(this.panel).toBeVisible();
+  /** One control, by the design key it writes. */
+  control(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-${key}`);
   }
 
-  /**
-   * Clicks the panel's own tab, which makes it the active leaf. Every
-   * leaf change repaints the panel, so this is what an author does that
-   * asks it for the book again.
-   */
-  async focus(): Promise<void> {
-    await this.obsidian.tab("Design").first().click();
+  /** One word of a segment, by the value it writes. */
+  choice(key: string, value: string): Locator {
+    return this.root.getByTestId(`orca-panel-${key}-${value}`);
+  }
+
+  /** The line under a row, which is where a unit or a language is said. */
+  said(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-said-${key}`);
+  }
+
+  /** The names of the groups the panel offers, in the order it offers them. */
+  async grouped(): Promise<string[]> {
+    return this.groups.evaluateAll((groups) =>
+      groups.map((group) => group.getAttribute("data-group") ?? ""),
+    );
   }
 
   /** Opens the picker and waits for its filter. */
@@ -98,6 +115,28 @@ export class Panel {
         .first()
         .getAttribute("data-axes")) ?? ""
     );
+  }
+}
+
+/** The panel in the right sidebar, which follows the book being read. */
+export class Panel extends Controls {
+  constructor(private readonly obsidian: Obsidian) {
+    super(obsidian.view(PANEL));
+  }
+
+  /** Opens the panel and waits for it to be drawn. */
+  async open(): Promise<void> {
+    await this.obsidian.command(OPEN_PANEL);
+    await expect(this.panel).toBeVisible();
+  }
+
+  /**
+   * Clicks the panel's own tab, which makes it the active leaf. Every
+   * leaf change repaints the panel, so this is what an author does that
+   * asks it for the book again.
+   */
+  async focus(): Promise<void> {
+    await this.obsidian.tab("Design").first().click();
   }
 
   async close(): Promise<void> {
