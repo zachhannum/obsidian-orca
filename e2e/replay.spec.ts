@@ -22,12 +22,14 @@ const CHAPTER_NAME = "Chapter Twelve";
 const TYPED = "The engine died halfway through this sentence.";
 
 /**
- * The chapter with the typed line at the head of its prose, so the
- * page the chapter opens on is the page that carries it.
+ * The chapter with the typed line under the paragraph it opens on, so
+ * the page the chapter opens on is the page that carries it. The line
+ * goes second because a drop cap takes the first letter of the
+ * paragraph the chapter opens on.
  */
 function typed(chapter: string): string {
   const parts = chapter.split("\n\n");
-  return [...parts.slice(0, 2), TYPED, ...parts.slice(2)].join("\n\n");
+  return [...parts.slice(0, 3), TYPED, ...parts.slice(3)].join("\n\n");
 }
 
 /**
