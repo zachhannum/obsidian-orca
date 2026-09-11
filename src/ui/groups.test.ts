@@ -7,7 +7,6 @@ test("the panel offers every group a book designer works in", () => {
   assert.deepEqual(
     GROUPS.map((group) => group.name),
     [
-      "Preset",
       "Page",
       "Text",
       "Chapter openings",

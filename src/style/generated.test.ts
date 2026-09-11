@@ -22,6 +22,7 @@ import { sentRoles } from "@/book/plan";
 import type { Role } from "@/book/roles";
 import { emptyDesign, type Design } from "@/style/design";
 import { generatedCss, type Setting } from "@/style/generated";
+import { designSheet } from "@/style/sheet";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -34,7 +35,8 @@ const SNAPSHOT = "src/style/generated.snapshot.css";
 
 test("the fixture's design generates the sheet checked in beside this spec", async () => {
   const model = await fixture();
-  const css = generatedCss(model.book.design, await setting(model));
+  // The sheet as it is sent, with the defaults under the design.
+  const { css } = designSheet(model.book.design, await setting(model));
 
   assert.equal(css, await snapshot(css));
   assert.equal(generatedCss(emptyDesign(), { roles: [] }), "");
@@ -185,8 +187,8 @@ test("the panel's own controls generate their declarations, and the engine warns
   const design = whole();
   const css = generatedCss(design, { roles: ROLES });
 
-  // A heading's slope, and the blank space under a chapter's title.
-  assert.match(css, /h1 \{\n(?: {2}.+\n)* {2}font-style: italic;\n/);
+  // A heading's alignment, and the blank space around a chapter's title.
+  assert.match(css, /h1 \{\n {2}text-align: center;\n\}/);
   assert.match(
     css,
     /:is\(section:nth-child\(3\), section:nth-child\(4\)\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}margin-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
@@ -203,6 +205,35 @@ test("the panel's own controls generate their declarations, and the engine warns
   assert.ok(output.pages.length > 0);
 });
 
+test("the first-line indent lands on a paragraph that follows another, and not on the one after a heading", async () => {
+  const design = emptyDesign();
+  design.body.indent = { value: 2, unit: "em" };
+  const css = generatedCss(design, { roles: [] });
+
+  assert.equal(css, "p + p {\n  text-indent: 2em;\n}\n");
+
+  const output = await rendered(css, [INDENTED]);
+  const start = (prefix: string): number => {
+    const found = output.pages
+      .flatMap((page) => page.items)
+      .find((item) => item.kind === "text" && item.text.startsWith(prefix));
+    assert.ok(found?.kind === "text", `nothing starts with \`${prefix}\``);
+    return found.x;
+  };
+  const flush = start("Chapter");
+  assert.equal(start("First"), flush);
+  // The engine's body is 11pt, so 2em is 22pt.
+  for (const prefix of ["Second", "Third"]) {
+    assert.ok(Math.abs(start(prefix) - flush - 22) < 0.01, `\`${prefix}\` is not indented 2em`);
+  }
+});
+
+/** Three short paragraphs under a heading. */
+const INDENTED: Source = {
+  name: "indented.md",
+  text: "# Chapter One\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n",
+};
+
 /** A design that sets every field the panel offers a control for. */
 function whole(): Design {
   const design = emptyDesign();
@@ -210,7 +241,7 @@ function whole(): Design {
   design.body.indent = { value: 1.2, unit: "em" };
   design.body.indentAfterBreak = false;
   design.body.keepHeadings = true;
-  design.headings[1].slope = "italic";
+  design.headings[1].align = "center";
   design.chapter.spaceAbove = 2;
   design.chapter.spaceBelow = 1;
   design.scene.mark = "word";
@@ -223,8 +254,8 @@ function whole(): Design {
   return design;
 }
 
-/** One book of two chapters, set by the sheet handed in. */
-async function rendered(css: string) {
+/** A book set by the sheet handed in, two chapters unless it names its own sources. */
+async function rendered(css: string, sources: Source[] = BROKEN) {
   const engine = await createEngine({ wasm: await moduleBytes() });
   try {
     const client: Client = new Client({
@@ -238,7 +269,7 @@ async function rendered(css: string) {
       { op: "dialect", dialect: "obsidian" },
       { op: "split", level: 0 },
       styleOp([{ name: "generated.css", css }]),
-      { op: "book", sources: BROKEN },
+      { op: "book", sources },
     ]);
     assert.ok(output, "the render was overtaken");
     return output;

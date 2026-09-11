@@ -2,8 +2,8 @@
  * The design a book is set by: a closed schema whose every field sets
  * one property the pinned engine supports.
  *
- * A field the design leaves unset is left to the layer under it, so a
- * preset shows through wherever the book has settled nothing.
+ * A field the design leaves unset takes its default, which is what the
+ * engine and the bundled theme give a book that sets nothing.
  *
  * The schema is written flat, one key per line, because a novelist who
  * opens Obsidian's properties panel reads `body-line-spacing` there
@@ -97,18 +97,15 @@ export interface BodyDesign {
   keepHeadings?: boolean;
 }
 
-export type Weight = "regular" | "medium" | "semibold" | "bold";
-
 export type Alignment = "left" | "center" | "right";
 
-export type Slope = "roman" | "italic";
-
-/** The type a heading is set in. */
+/**
+ * The type a heading is set in. Bold and italic inside a heading come
+ * from the markdown, so a spec sets neither.
+ */
 export interface TypeSpec {
   font?: string;
   size?: Length;
-  weight?: Weight;
-  slope?: Slope;
   align?: Alignment;
 }
 
@@ -158,14 +155,12 @@ export interface HeaderDesign {
   rightPage?: HeaderSlot;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
-  /** The running head is left off a page a section opens on. */
+  /** The running head and the folio are left off a page a section opens on. */
   suppressOnOpenings?: boolean;
 }
 
 /** The whole design, group by group. Every field in a group is optional. */
 export interface Design {
-  /** The preset under the design, by name. */
-  preset?: string;
   page: PageDesign;
   body: BodyDesign;
   headings: Headings;
@@ -191,24 +186,11 @@ export type Written = string | number | boolean;
 
 interface Field {
   key: string;
-  /**
-   * The CSS property this field sets. `subset.css` declares it. A field
-   * that chooses the layer under the design sets none.
-   */
-  property?: string;
+  /** The CSS property this field sets. `subset.css` declares it. */
+  property: string;
   read(design: Design): Written | undefined;
   write(design: Design, value: unknown): void;
 }
-
-/** The preset a design sits over. It sets no property; it picks a layer. */
-const PRESET: Field = {
-  key: "preset",
-  read: ({ preset }) => preset,
-  write: (design, value) => {
-    const name = asText(value);
-    if (name !== undefined) design.preset = name;
-  },
-};
 
 const PAGE: readonly Field[] = [
   {
@@ -461,7 +443,6 @@ const HEADERS: readonly Field[] = [
 
 /** The design's fields, in the order the frontmatter writes them. */
 const FIELDS: readonly Field[] = [
-  PRESET,
   ...PAGE,
   ...BODY,
   ...LEVELS.flatMap(heading),
@@ -475,11 +456,7 @@ export const DESIGN_KEYS: readonly string[] = FIELDS.map((field) => field.key);
 
 /** The CSS properties a design sets, each declared in `subset.css`. */
 export const DESIGN_PROPERTIES: readonly string[] = [
-  ...new Set(
-    FIELDS.flatMap((field) =>
-      field.property === undefined ? [] : [field.property],
-    ),
-  ),
+  ...new Set(FIELDS.map((field) => field.property)),
 ];
 
 /**
@@ -510,16 +487,14 @@ export function writeDesign(design: Design): Record<string, Written> {
 
 /**
  * The two designs as one, field by field. `over` wins wherever it sets
- * a field, which is how a book overrides the preset under it.
+ * a field, which is how a book's own keys win over the defaults.
  */
 export function mergeDesign(under: Design, over: Design): Design {
   const headings = emptyDesign().headings;
   for (const level of LEVELS) {
     headings[level] = { ...under.headings[level], ...over.headings[level] };
   }
-  const preset = over.preset ?? under.preset;
   return {
-    ...(preset === undefined ? {} : { preset }),
     page: {
       ...under.page,
       ...over.page,
@@ -533,10 +508,77 @@ export function mergeDesign(under: Design, over: Design): Design {
   };
 }
 
+/** A value the panel cannot read. `kind` says why. */
+export class ValueError extends Error {
+  readonly kind: "number" | "unit" | "negative" | "whole";
+
+  constructor(kind: ValueError["kind"], text: string) {
+    super(`${JSON.stringify(text)} is ${REASONS[kind]}`);
+    this.name = "ValueError";
+    this.kind = kind;
+  }
+}
+
+const REASONS: Readonly<Record<ValueError["kind"], string>> = {
+  number: "not a number",
+  unit: `not in ${UNITS.join(", ")}`,
+  negative: "below zero",
+  whole: "not a whole number",
+};
+
+/**
+ * Reads a length as an author types it. A bare number is in points,
+ * and a space may sit between the number and its unit. Text it cannot
+ * read throws a `ValueError`.
+ */
+export function parseLength(text: string): Length {
+  const found = TYPED.exec(text.trim());
+  if (found === null) throw new ValueError("number", text);
+  const [, minus, digits = "", word = ""] = found;
+  const unit = word === "" ? UNIT : word.toLowerCase();
+  if (!isUnit(unit)) throw new ValueError("unit", text);
+  const value = Number(digits);
+  if (minus !== undefined && value > 0) throw new ValueError("negative", text);
+  return { value, unit };
+}
+
+/** Reads a count as an author types it. Text it cannot read throws a `ValueError`. */
+export function parseCount(text: string): number {
+  const found = TYPED.exec(text.trim());
+  const [, minus, digits = "", word = ""] = found ?? [];
+  if (found === null || word !== "") throw new ValueError("number", text);
+  const count = Number(digits);
+  if (minus !== undefined && count > 0) throw new ValueError("negative", text);
+  if (!Number.isInteger(count)) throw new ValueError("whole", text);
+  return count;
+}
+
+/** The distance one step moves a length, in the length's own unit. */
+export const STEPS: Readonly<Record<Unit, number>> = {
+  pt: 0.5,
+  pc: 0.5,
+  in: 0.05,
+  mm: 1,
+  cm: 0.1,
+  em: 0.1,
+};
+
+/**
+ * Moves a length by `times` steps of its unit. It stops at 0, and is
+ * rounded so a step of 0.1 leaves no float noise.
+ */
+export function stepLength(length: Length, by: 1 | -1, times = 1): Length {
+  const value = length.value + by * times * STEPS[length.unit];
+  return { value: rounded(Math.max(0, value)), unit: length.unit };
+}
+
+/** Moves a count by `times`. It stops at 0. */
+export function stepCount(count: number, by: 1 | -1, times = 1): number {
+  return Math.max(0, count + by * times);
+}
+
 const ALIGNS: readonly Align[] = ["justify", "left"];
 const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
-const WEIGHTS: readonly Weight[] = ["regular", "medium", "semibold", "bold"];
-const SLOPES: readonly Slope[] = ["roman", "italic"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
 const SLOTS: readonly HeaderSlot[] = [
@@ -550,6 +592,9 @@ const FORMATS: readonly NumberFormat[] = ["arabic", "roman"];
 
 /** The unit a length written as a bare number is given. */
 const UNIT: Unit = "pt";
+
+/** A number with its sign apart, then an optional unit. */
+const TYPED = /^(-)?(\d+(?:\.\d+)?|\.\d+)\s*([a-z]*)$/i;
 
 /** The fields that set one heading level's type. */
 function heading(level: Level): Field[] {
@@ -570,24 +615,6 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const size = asLength(value);
         if (size !== undefined) headings[level].size = size;
-      },
-    },
-    {
-      key: `heading-${level}-weight`,
-      property: "font-weight",
-      read: ({ headings }) => headings[level].weight,
-      write: ({ headings }, value) => {
-        const weight = asWord(value, WEIGHTS);
-        if (weight !== undefined) headings[level].weight = weight;
-      },
-    },
-    {
-      key: `heading-${level}-slope`,
-      property: "font-style",
-      read: ({ headings }) => headings[level].slope,
-      write: ({ headings }, value) => {
-        const slope = asWord(value, SLOPES);
-        if (slope !== undefined) headings[level].slope = slope;
       },
     },
     {
@@ -628,23 +655,22 @@ function slot(key: string, side: "leftPage" | "rightPage"): Field {
 
 /** A length in the form the note writes it, which CSS also accepts. */
 export function written(length: Length | undefined): string | undefined {
-  return length === undefined ? undefined : `${trimmed(length.value)}${length.unit}`;
+  return length === undefined ? undefined : `${rounded(length.value)}${length.unit}`;
 }
 
-function trimmed(value: number): string {
-  return String(Number(value.toFixed(4)));
+function rounded(value: number): number {
+  return Number(value.toFixed(4));
+}
+
+function isUnit(word: string): word is Unit {
+  return (UNITS as readonly string[]).includes(word);
 }
 
 function asLength(value: unknown): Length | undefined {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? { value, unit: UNIT } : undefined;
+    return Number.isFinite(value) && value >= 0 ? { value, unit: UNIT } : undefined;
   }
-  if (typeof value !== "string") return undefined;
-  const found = /^(-?\d+(?:\.\d+)?)\s*([a-z]+)?$/i.exec(value.trim());
-  if (found === null) return undefined;
-  const unit = (found[2] ?? UNIT).toLowerCase();
-  if (!UNITS.includes(unit as Unit)) return undefined;
-  return { value: Number(found[1]), unit: unit as Unit };
+  return typeof value === "string" ? readable(() => parseLength(value)) : undefined;
 }
 
 function asTrim(value: unknown): Trim | undefined {
@@ -657,11 +683,20 @@ function asTrim(value: unknown): Trim | undefined {
 }
 
 function asCount(value: unknown): number | undefined {
-  const count = typeof value === "string" ? Number(value.trim()) : value;
-  if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
-    return undefined;
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value >= 0 ? value : undefined;
   }
-  return count;
+  return typeof value === "string" ? readable(() => parseCount(value)) : undefined;
+}
+
+/** The value read, or nothing where the text is one the schema cannot read. */
+function readable<T>(read: () => T): T | undefined {
+  try {
+    return read();
+  } catch (error) {
+    if (error instanceof ValueError) return undefined;
+    throw error;
+  }
 }
 
 function asFlag(value: unknown): boolean | undefined {

@@ -21,9 +21,7 @@ import {
   type HeaderSlot,
   type NumberFormat,
   type SceneDesign,
-  type Slope,
   type TypeSpec,
-  type Weight,
 } from "@/style/design";
 
 /** The reading order and the names a generated layer is written against. */
@@ -66,18 +64,6 @@ const COUNTERS: Readonly<Record<NumberFormat, string>> = {
   roman: "lower-roman",
 };
 
-const FONT_STYLES: Readonly<Record<Slope, string>> = {
-  roman: "normal",
-  italic: "italic",
-};
-
-const FONT_WEIGHTS: Readonly<Record<Weight, string>> = {
-  regular: "400",
-  medium: "500",
-  semibold: "600",
-  bold: "700",
-};
-
 /** The margin boxes orca clears before it sets the ones it uses. */
 const BOXES = [
   "top-left",
@@ -87,6 +73,8 @@ const BOXES = [
   "bottom-center",
   "bottom-right",
 ] as const;
+
+type Box = (typeof BOXES)[number];
 
 /** Every heading level, as one selector. */
 const HEADINGS = ":is(h1, h2, h3, h4, h5, h6)";
@@ -131,10 +119,10 @@ function pageRules(design: Design, setting: Setting): string[] {
       rightBoxes.set("bottom-right", folio);
     }
   }
-  if (headers.leftPage !== undefined) {
+  if (headers.leftPage !== undefined && headers.leftPage !== "none") {
     leftBoxes.set("top-left", slotContent(headers.leftPage, setting));
   }
-  if (headers.rightPage !== undefined) {
+  if (headers.rightPage !== undefined && headers.rightPage !== "none") {
     rightBoxes.set("top-right", slotContent(headers.rightPage, setting));
   }
 
@@ -147,21 +135,38 @@ function pageRules(design: Design, setting: Setting): string[] {
 }
 
 /**
- * The page each role opens on, which carries no running head. A head
- * names the section under it. A section's first page falls under the
- * head of the section before it.
+ * The page each role opens on, which carries no running head and no
+ * folio. A head names the section under it. A section's first page
+ * falls under the head of the section before it.
  */
 function openingPages(headers: HeaderDesign, setting: Setting): string[] {
-  if (headers.leftPage === undefined && headers.rightPage === undefined) {
-    return [];
-  }
   if (headers.suppressOnOpenings === false) return [];
+  const cleared = printed(headers);
+  if (cleared.length === 0) return [];
   return used(setting.roles).map((role) =>
-    block(`@page ${role}:first`, [
-      boxed("top-left", "none"),
-      boxed("top-right", "none"),
-    ]),
+    block(
+      `@page ${role}:first`,
+      cleared.map((box) => boxed(box, "none")),
+    ),
   );
+}
+
+/** The margin boxes the design prints something in, in the order `BOXES` has them. */
+function printed(headers: HeaderDesign): Box[] {
+  const found = new Set<Box>();
+  if (headers.leftPage !== undefined && headers.leftPage !== "none") {
+    found.add("top-left");
+  }
+  if (headers.rightPage !== undefined && headers.rightPage !== "none") {
+    found.add("top-right");
+  }
+  if (headers.pageNumber === "top") found.add("top-center");
+  if (headers.pageNumber === "bottom") found.add("bottom-center");
+  if (headers.pageNumber === "outside") {
+    found.add("bottom-left");
+    found.add("bottom-right");
+  }
+  return BOXES.filter((box) => found.has(box));
 }
 
 /** The margin boxes of one page rule, in the order the rule sets them. */
@@ -172,6 +177,11 @@ function boxes(content: ReadonlyMap<string, string>): string[] {
   });
 }
 
+/**
+ * The body's rules. The first-line indent sits on a paragraph that
+ * follows another, because the engine declares its own indent there
+ * and an indent inherited from `book` would lose to it.
+ */
 function bodyRules(design: Design): string[] {
   const { body } = design;
   const lines: string[] = [];
@@ -181,7 +191,6 @@ function bodyRules(design: Design): string[] {
   lines.push(...set("font-size", written(body.size)));
   lines.push(...set("line-height", written(body.lineSpacing)));
   lines.push(...set("text-align", body.align));
-  lines.push(...set("text-indent", written(body.indent)));
   lines.push(...set("hyphens", flagged(body.hyphens, "auto", "manual")));
   lines.push(
     ...set(
@@ -193,6 +202,7 @@ function bodyRules(design: Design): string[] {
   lines.push(...set("widows", counted(body.widows)));
   return [
     block("book", lines),
+    block("p + p", [...set("text-indent", written(body.indent))]),
     block("hr + p", [...set("text-indent", afterBreak(design))]),
     block(HEADINGS, [
       ...set("break-after", flagged(body.keepHeadings, "avoid", "auto")),
@@ -202,7 +212,7 @@ function bodyRules(design: Design): string[] {
 
 /**
  * The indent on the paragraph after a scene break. A design that turns
- * the indent on leaves the paragraph to the body's own indent.
+ * the indent on gives it the body's first-line indent.
  */
 function afterBreak(design: Design): string | undefined {
   const { indentAfterBreak, indent } = design.body;
@@ -222,18 +232,6 @@ function typeLines(type: TypeSpec): string[] {
     lines.push(declared("font-family", `${quoted(type.font)}, serif`));
   }
   lines.push(...set("font-size", written(type.size)));
-  lines.push(
-    ...set(
-      "font-weight",
-      type.weight === undefined ? undefined : FONT_WEIGHTS[type.weight],
-    ),
-  );
-  lines.push(
-    ...set(
-      "font-style",
-      type.slope === undefined ? undefined : FONT_STYLES[type.slope],
-    ),
-  );
   lines.push(...set("text-align", type.align));
   return lines;
 }

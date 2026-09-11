@@ -222,7 +222,6 @@ test("the panel offers every group a book designer works in", async ({
   await panel.open();
 
   expect(await panel.grouped()).toEqual([
-    "Preset",
     "Page",
     "Text",
     "Chapter openings",

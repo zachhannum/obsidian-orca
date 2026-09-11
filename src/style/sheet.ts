@@ -6,9 +6,9 @@
  */
 
 import type { Sheet } from "fleuron";
-import type { Design } from "@/style/design";
+import { mergeDesign, type Design } from "@/style/design";
 import { generatedCss, type Setting } from "@/style/generated";
-import { THEME_SHEET, presetCss } from "@/style/theme";
+import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 
 /** The sheet the generated layer is sent under, which a warning names. */
 export const DESIGN_SHEET = "design.css";
@@ -17,18 +17,21 @@ export const DESIGN_SHEET = "design.css";
 export const OWN_SHEET = "your.css";
 
 /**
- * The generated layer as one sheet. The page names come from the
- * reading order, so a design that settles nothing still generates
- * them.
+ * The generated layer as one sheet, with the defaults under the design.
+ * The two are merged before the CSS is generated, since a generated
+ * rule reads other fields, such as the line spacing a sink is counted
+ * in.
  */
 export function designSheet(design: Design, setting: Setting): Sheet {
-  return { name: DESIGN_SHEET, css: generatedCss(design, setting) };
+  return {
+    name: DESIGN_SHEET,
+    css: generatedCss(mergeDesign(DEFAULTS, design), setting),
+  };
 }
 
 /**
- * The sheets a book is styled by, in cascade order. The preset the
- * design names is the layer under it. The author's own CSS is last, and
- * is empty until the note's css fence is read.
+ * The sheets a book is styled by, in cascade order. The author's own
+ * CSS is last, and is empty until the note's css fence is read.
  */
 export function designSheets(
   design: Design,
@@ -36,7 +39,7 @@ export function designSheets(
   own = "",
 ): Sheet[] {
   return [
-    { name: THEME_SHEET, css: presetCss(design.preset) },
+    { name: THEME_SHEET, css: BUNDLED_THEME },
     designSheet(design, setting),
     { name: OWN_SHEET, css: own },
   ];

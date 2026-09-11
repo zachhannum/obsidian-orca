@@ -34,11 +34,14 @@ book {
   font-size: 10.5pt;
   line-height: 14pt;
   text-align: justify;
-  text-indent: 1.2em;
   hyphens: auto;
   hanging-punctuation: first allow-end last;
   orphans: 2;
   widows: 2;
+}
+
+p + p {
+  text-indent: 1.2em;
 }
 
 section {
@@ -52,8 +55,6 @@ section > :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-bottom: 2em;
   font-family: "EB Garamond", serif;
   font-size: 17pt;
-  font-weight: 400;
-  font-style: italic;
   text-align: center;
   break-after: avoid;
 }

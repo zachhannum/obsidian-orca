@@ -25,58 +25,96 @@
 @page title-page:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 @page copyright:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 @page epigraph:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 @page contents:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 @page part:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 @page chapter:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 @page back-matter:first {
   @top-left { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 book {
+  font-family: "EB Garamond", serif;
   font-size: 10.5pt;
   line-height: 14pt;
   text-align: justify;
-  text-indent: 1.2em;
   hyphens: auto;
   hanging-punctuation: none;
   orphans: 2;
   widows: 2;
 }
 
+p + p {
+  text-indent: 1.2em;
+}
+
+hr + p {
+  text-indent: 0;
+}
+
+:is(h1, h2, h3, h4, h5, h6) {
+  break-after: avoid;
+}
+
 h1 {
   font-size: 17pt;
-  font-weight: 400;
   text-align: center;
 }
 
 h2 {
   font-size: 13pt;
-  font-weight: 700;
+  text-align: left;
+}
+
+h3 {
+  font-size: 19pt;
+  text-align: left;
+}
+
+h4 {
+  font-size: 19pt;
+  text-align: left;
+}
+
+h5 {
+  font-size: 19pt;
+  text-align: left;
+}
+
+h6 {
+  font-size: 19pt;
+  text-align: left;
 }
 
 section:nth-child(1) {
@@ -110,6 +148,7 @@ section:nth-child(7) {
 
 section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-top: 98pt;
+  margin-bottom: 0pt;
 }
 
 section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter {
@@ -118,4 +157,6 @@ section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter
 
 hr {
   content: "⁂";
+  margin-top: 14pt;
+  margin-bottom: 14pt;
 }

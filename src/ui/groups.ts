@@ -28,7 +28,6 @@ export interface Choice {
 
 /** The control kinds the panel draws. */
 export type Kind =
-  | "preset"
   | "trim"
   | "font"
   | "styles"
@@ -78,18 +77,6 @@ const BEGINS: readonly Choice[] = [
   { value: "same-page", label: "Same page" },
 ];
 
-const WEIGHTS: readonly Choice[] = [
-  { value: "regular", label: "Regular" },
-  { value: "medium", label: "Medium" },
-  { value: "semibold", label: "Semibold" },
-  { value: "bold", label: "Bold" },
-];
-
-const SLOPES: readonly Choice[] = [
-  { value: "roman", label: "Roman" },
-  { value: "italic", label: "Italic" },
-];
-
 const ALIGNMENTS: readonly Choice[] = [
   { value: "left", label: "Left" },
   { value: "center", label: "Centred" },
@@ -133,11 +120,6 @@ export const GLYPHS: readonly string[] = ["❧", "⁂", "§", "✦"];
 const TITLE = 1;
 
 export const GROUPS: readonly Group[] = [
-  {
-    name: "Preset",
-    hint: "a design opens on one, not on defaults",
-    rows: [{ label: "Preset", of: [{ kind: "preset", key: "preset" }] }],
-  },
   {
     name: "Page",
     rows: [
@@ -229,16 +211,6 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "length", key: `heading-${TITLE}-size` }],
       },
       {
-        label: "Title weight",
-        of: [
-          { kind: "select", key: `heading-${TITLE}-weight`, choices: WEIGHTS },
-        ],
-      },
-      {
-        label: "Title slope",
-        of: [{ kind: "segment", key: `heading-${TITLE}-slope`, choices: SLOPES }],
-      },
-      {
         label: "Title alignment",
         of: [
           { kind: "segment", key: `heading-${TITLE}-align`, choices: ALIGNMENTS },
@@ -299,7 +271,7 @@ export const GROUPS: readonly Group[] = [
           {
             kind: "flag",
             key: "suppress-head-on-openings",
-            said: "Suppress the running head on openings",
+            said: "Hide the running head and page number on openings",
           },
         ],
       },

@@ -22,7 +22,6 @@ import {
 } from "react";
 import type { Family, FontIndex } from "@/assets/fonts";
 import { writeDesign, type Design, type Written } from "@/style/design";
-import { PRESETS } from "@/style/theme";
 import {
   Count,
   Glyphs,
@@ -236,19 +235,6 @@ function Drawn({
         pick={(family) => {
           if (key !== undefined) acting.pick(family, key);
         }}
-      />
-    );
-  }
-  if (control.kind === "preset") {
-    return (
-      <Select
-        value={value === undefined ? undefined : String(value)}
-        choices={PRESETS.map((preset) => ({
-          value: preset.name,
-          label: preset.name,
-        }))}
-        testid={testid}
-        settle={settle}
       />
     );
   }
