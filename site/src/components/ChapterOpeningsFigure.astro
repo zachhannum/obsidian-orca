@@ -1,0 +1,108 @@
+---
+/** The Chapter openings group of the design panel, as the artboard crops it.
+    A screenshot of real Obsidian takes its place. */
+const caret =
+  'M6 9l6 6 6-6';
+const reset = 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8';
+---
+
+<figure class="not-content">
+  <div class="shot">
+    <div class="crop">
+      <div class="o-frag">
+        <div class="o-grp">
+          <div class="o-gh">Chapter openings</div>
+
+          <div class="o-row">
+            <span class="o-lab">Begins on</span>
+            <div class="o-field o-grow o-def">
+              <span>Next page</span>
+              <span class="caret">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={caret}></path></svg>
+              </span>
+            </div>
+            <span class="o-reset"></span>
+          </div>
+
+          <div class="o-row">
+            <span class="o-lab">Space above</span>
+            <div class="o-num">
+              <div class="o-field">7</div>
+              <div class="o-step">
+                <div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg></div>
+                <div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={caret}></path></svg></div>
+              </div>
+            </div>
+            <span class="o-unit">lines</span>
+            <span class="o-reset"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={reset}></path><path d="M3 3v5h5"></path></svg></span>
+          </div>
+
+          <div class="o-row">
+            <span class="o-lab">Space below</span>
+            <div class="o-num">
+              <div class="o-field o-def">0</div>
+              <div class="o-step">
+                <div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg></div>
+                <div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={caret}></path></svg></div>
+              </div>
+            </div>
+            <span class="o-unit">lines</span>
+            <span class="o-reset"></span>
+          </div>
+
+          <div class="o-row">
+            <span class="o-lab">Drop cap</span>
+            <div class="o-field o-grow">
+              <span>3 lines</span>
+              <span class="caret">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={caret}></path></svg>
+              </span>
+            </div>
+            <span class="o-reset"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={reset}></path><path d="M3 3v5h5"></path></svg></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <figcaption>The Chapter openings group in the design panel.</figcaption>
+</figure>
+
+<style>
+  figure {
+    margin: 0 0 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .shot {
+    padding: 26px;
+    background: var(--desk);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    display: flex;
+    justify-content: center;
+  }
+  .crop {
+    width: 364px;
+    height: 242px;
+    max-width: 100%;
+    position: relative;
+    flex: none;
+  }
+  .crop > :global(.o-frag) {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    transform: scale(1.3);
+    transform-origin: 0 0;
+  }
+  .caret {
+    margin-inline-start: auto;
+    display: flex;
+  }
+  figcaption {
+    font-family: var(--ui);
+    font-size: 13px;
+    color: var(--faint);
+  }
+</style>

@@ -1,0 +1,326 @@
+/* Starlight's variables read the tokens, and the surfaces the SiteDocs
+   artboards draw are set here. */
+
+:root {
+  --sl-font: var(--ui);
+  --sl-font-mono: var(--mono);
+
+  --sl-color-bg: var(--bg);
+  --sl-color-bg-nav: var(--bg);
+  --sl-color-bg-sidebar: var(--bg);
+  --sl-color-bg-inline-code: var(--code);
+  --sl-color-bg-accent: var(--pill);
+  --sl-color-text: var(--muted);
+  --sl-color-text-accent: var(--accent);
+  --sl-color-text-invert: var(--pilltext);
+  --sl-color-white: var(--text);
+  --sl-color-black: var(--bg);
+  --sl-color-gray-1: var(--text);
+  --sl-color-gray-2: var(--muted);
+  --sl-color-gray-3: var(--muted);
+  --sl-color-gray-4: var(--faint);
+  --sl-color-gray-5: var(--border);
+  --sl-color-gray-6: var(--surface);
+  --sl-color-gray-7: var(--surface);
+  --sl-color-accent: var(--accent);
+  --sl-color-accent-low: var(--surface);
+  --sl-color-accent-high: var(--accent);
+  --sl-color-hairline: var(--border);
+  --sl-color-hairline-light: var(--border);
+  --sl-color-hairline-shade: var(--border);
+
+  --sl-nav-height: 4rem;
+  --sl-nav-pad-x: 1.75rem;
+  --sl-sidebar-width: 17rem;
+  --sl-sidebar-pad-x: 1.25rem;
+  --sl-content-width: 42.5rem;
+  --sl-content-pad-x: 1.5rem;
+  /* The reading column's spacing is the margin on each block, as the
+     artboards draw it, rather than a gap between them. */
+  --sl-content-gap-y: 0rem;
+  --sl-line-height: 1.65;
+  --sl-line-height-headings: 1.2;
+  --sl-text-body: 16.5px;
+  --sl-text-h2: 27px;
+  --sl-text-h3: 22px;
+  --sl-text-h4: 19px;
+}
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* The header: the wordmark over the sidebar's width, then the search box,
+   then the links. */
+.header {
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 50rem) {
+  .header > .header {
+    grid-template-columns: 244px 1fr auto;
+  }
+}
+.header .right-group {
+  gap: 20px;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 14px;
+}
+.header .social-icons {
+  gap: 20px;
+}
+.header .social-icons::after {
+  content: none;
+}
+.header .social-icons a {
+  color: var(--muted);
+}
+.header .social-icons a:hover {
+  color: var(--text);
+}
+
+/* The search box, drawn as the artboard's field. */
+site-search button[data-open-modal] {
+  width: 340px;
+  height: 36px;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--faint);
+  font-family: var(--ui);
+  font-size: 14px;
+}
+site-search button[data-open-modal] > kbd {
+  margin-inline-start: auto;
+  background: none;
+  color: var(--faint);
+}
+site-search button[data-open-modal] > kbd kbd {
+  font-family: var(--mono), system-ui;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+/* The left sidebar: a group heading in small caps over its links, the
+   current page in a pill. */
+.sidebar-pane {
+  border-inline-end: 1px solid var(--border);
+}
+.sidebar-content {
+  padding: 1.75rem 20px 0 28px;
+  gap: 22px;
+  font-family: var(--ui);
+  font-size: 14px;
+}
+.sidebar-content ul {
+  --sl-sidebar-item-padding-inline: 10px;
+}
+.sidebar-content .top-level > li + li {
+  margin-top: 22px;
+}
+/* A group never collapses, so its caret and its hit area go. */
+.sidebar-content summary {
+  padding: 0;
+  margin-bottom: 8px;
+  line-height: 14px;
+  pointer-events: none;
+}
+.sidebar-content summary .caret {
+  display: none;
+}
+.sidebar-content .large {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.sidebar-content ul ul li {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+.sidebar-content ul ul li + li {
+  margin-top: 2px;
+}
+.sidebar-content a {
+  padding: 5px 10px;
+  border-radius: var(--r);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 15px;
+}
+.sidebar-content a:hover {
+  color: var(--text);
+}
+.sidebar-content a[aria-current='page'] {
+  background: var(--pill);
+  color: var(--pilltext);
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+/* The reading column. */
+.content-panel {
+  padding: 0 var(--sl-content-pad-x);
+}
+.content-panel:first-of-type {
+  padding-block-start: 44px;
+}
+.content-panel + .content-panel {
+  border-top: 0;
+}
+.sl-container > * + * {
+  margin-top: 0;
+}
+.sl-markdown-content :not(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 6px;
+}
+
+.sl-markdown-content {
+  font-family: var(--body);
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--text);
+}
+/* The first paragraph is the page's lead. */
+.sl-markdown-content > p:first-child {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-bottom: 26px;
+}
+/* Starlight wraps a heading with its anchor link, so the box the reading
+   column spaces is the wrapper. */
+.sl-markdown-content :is(h2, h3, h4) {
+  font-family: var(--display);
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--text);
+}
+.sl-markdown-content .sl-heading-wrapper {
+  margin: 6px 0 10px;
+}
+.sl-markdown-content :not(h1, h2, h3, h4, h5, h6, .sl-heading-wrapper) + .sl-heading-wrapper {
+  margin-top: 6px;
+}
+.sl-markdown-content p {
+  margin: 0 0 24px;
+}
+.sl-markdown-content a {
+  color: var(--accent);
+}
+.sl-markdown-content code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code);
+  color: var(--codetext);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.sl-markdown-content pre {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.75;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin: 0 0 24px;
+}
+.sl-markdown-content pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+/* Shiki writes both schemes onto every token, and the root picks one. */
+:root .astro-code,
+:root .astro-code span {
+  color: var(--shiki-dark);
+}
+:root[data-theme='light'] .astro-code,
+:root[data-theme='light'] .astro-code span {
+  color: var(--shiki-light);
+}
+
+/* A figure: the shot on the desk color, its caption under it. */
+.sl-markdown-content figure {
+  margin: 0 0 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sl-markdown-content figcaption {
+  font-family: var(--ui);
+  font-size: 13px;
+  color: var(--faint);
+}
+
+/* The right sidebar: what is on this page. Starlight gives the reading
+   column the space between the two rails; the artboards give the rails a
+   width and the column the rest. */
+@media (min-width: 72rem) {
+  .right-sidebar-container {
+    width: 264px;
+  }
+  [data-has-sidebar][data-has-toc] .main-pane {
+    width: calc(100% - 264px);
+  }
+  .content-panel .sl-container {
+    margin-inline: 48px 0;
+  }
+}
+.right-sidebar {
+  border-inline-start: 0;
+}
+.right-sidebar-panel {
+  padding: 0 0 0 28px;
+}
+.right-sidebar-panel .sl-container {
+  width: 236px;
+  max-width: none;
+}
+starlight-toc nav {
+  padding: 48px 0 0;
+  font-family: var(--ui);
+  font-size: 13.5px;
+}
+starlight-toc nav > h2 {
+  margin-top: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 3px;
+}
+starlight-toc nav ul {
+  margin-top: 9px;
+  padding-inline-start: 0;
+}
+starlight-toc a {
+  display: block;
+  padding: 4px 0;
+  border-inline-start: 0;
+  color: var(--muted);
+  text-decoration: none;
+}
+starlight-toc a[aria-current='true'] {
+  color: var(--text);
+}
+
+/* Nothing below the reading column in the artboards. */
+.pagination-links,
+footer .meta,
+footer .sl-flex > .pagination-links {
+  display: none;
+}
