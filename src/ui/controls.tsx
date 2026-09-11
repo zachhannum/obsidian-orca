@@ -18,7 +18,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import type { Written } from "@/style/design";
+import type { Unit, Written } from "@/style/design";
 import {
   stepSaid,
   stepped,
@@ -43,7 +43,12 @@ export interface Under {
   wrong?: boolean;
 }
 
-/** One row: the label, the controls beside it, its reset, and the lines under it. */
+/**
+ * One row: the label, the controls beside it, its reset, and the lines
+ * under it. The reset's slot is held whether or not the reset is drawn,
+ * so the controls do not move when the book starts or stops setting
+ * the row.
+ */
 export function Row({
   label,
   grid,
@@ -68,7 +73,7 @@ export function Row({
         >
           {children}
         </div>
-        {reset}
+        <div className="orca-panel-reset-slot">{reset}</div>
       </div>
       {under.map((line) => (
         <div
@@ -115,7 +120,11 @@ export function Reset({
   );
 }
 
-/** A word picked from a list, drawn as Obsidian's own dropdown. */
+/**
+ * A word picked from a list, drawn as Obsidian's own dropdown. A value
+ * the note holds that the list does not offer is offered too, so the
+ * dropdown never draws a choice the book is not set in.
+ */
 export function Select({
   value,
   faint,
@@ -129,6 +138,10 @@ export function Select({
   testid: string;
   settle: Settle;
 }): JSX.Element {
+  const offered =
+    value === undefined || choices.some((choice) => choice.value === value)
+      ? choices
+      : [...choices, { value, label: value }];
   return (
     <select
       className={classes("dropdown orca-panel-select", faint && "is-default")}
@@ -140,7 +153,7 @@ export function Select({
       }}
     >
       {value === undefined ? <option value="">—</option> : null}
-      {choices.map((choice) => (
+      {offered.map((choice) => (
         <option key={choice.value} value={choice.value}>
           {choice.label}
         </option>
@@ -196,6 +209,45 @@ export function Segment({
 }
 
 /**
+ * Tabs over the rows under them, which draw the same controls for the
+ * value the tab picks. A tab is a place in the panel, not a setting.
+ */
+export function Tabs({
+  value,
+  choices,
+  testid,
+  choose,
+}: {
+  value: string;
+  choices: readonly Choice[];
+  testid: string;
+  choose: (value: string) => void;
+}): JSX.Element {
+  return (
+    <div className="orca-panel-tabs" role="tablist" data-testid={testid} data-on={value}>
+      {choices.map((choice) => {
+        const on = choice.value === value;
+        return (
+          <button
+            key={choice.value}
+            type="button"
+            role="tab"
+            className={classes("orca-panel-tab", on && "is-on")}
+            data-testid={`${testid}-${choice.value}`}
+            aria-selected={on}
+            onClick={() => {
+              choose(choice.value);
+            }}
+          >
+            {choice.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * A switch, drawn as Obsidian's toggle. The container takes the click,
  * as Obsidian's own does, and the input inside it only carries the
  * state. A click on the input reaches the container once, by bubbling.
@@ -216,11 +268,7 @@ export function Switch({
   };
   return (
     <div
-      className={classes(
-        "checkbox-container orca-panel-switch",
-        on && "is-enabled",
-        faint && "is-default",
-      )}
+      className={classes("checkbox-container orca-panel-switch", on && "is-enabled")}
       role="switch"
       aria-checked={on}
       tabIndex={0}
@@ -247,10 +295,11 @@ export function Switch({
  * With a measure it is a number field. Its text is read before it is
  * written, and text it cannot read stays in the field with a line that
  * says what is wrong. A stepper and the arrow keys move it by a step
- * of its unit, from the value drawn.
+ * of its unit, from the value drawn. A bare number is read in `unit`.
  */
 export function Field({
   measure,
+  unit,
   value,
   faint,
   testid,
@@ -258,6 +307,7 @@ export function Field({
   settle,
 }: {
   measure?: Measure;
+  unit?: Unit | undefined;
   value: string;
   faint: boolean;
   testid: string;
@@ -303,7 +353,7 @@ export function Field({
       return;
     }
     const read: Typed =
-      measure === undefined ? { value: trimmed } : typed(measure, trimmed);
+      measure === undefined ? { value: trimmed } : typed(measure, trimmed, unit);
     if ("wrong" in read) {
       heard(read.wrong);
       return;
@@ -318,9 +368,9 @@ export function Field({
   const step = (by: 1 | -1, times: number): void => {
     if (measure === undefined) return;
     const next =
-      stepped(measure, text ?? value, by, times) ??
-      stepped(measure, value, by, times) ??
-      stepped(measure, "0", by, times);
+      stepped(measure, text ?? value, by, times, unit) ??
+      stepped(measure, value, by, times, unit) ??
+      stepped(measure, "0", by, times, unit);
     if (next === undefined) return;
     heard(undefined);
     setText(String(next));
@@ -378,7 +428,7 @@ export function Field({
             tabIndex={-1}
             className="orca-panel-step"
             data-testid={`${testid}-${by === 1 ? "up" : "down"}`}
-            aria-label={stepSaid(measure, from, by)}
+            aria-label={stepSaid(measure, from, by, unit)}
             // The field keeps the focus, so a step does not first commit
             // what was typed and then step from the value before it.
             onMouseDown={(event) => {

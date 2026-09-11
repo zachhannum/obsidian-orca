@@ -4,12 +4,8 @@
  * The picker offers only fonts in the index, so a font cannot be
  * misspelled into a book. Typing filters the list, and a string that
  * matches nothing commits nothing.
- *
- * The styles beside a chosen font come from the engine. A variable
- * file's styles are not in its name table.
  */
 
-import type { FontRefEntry } from "fleuron";
 import { has, matching, type Family, type FontIndex } from "@/assets/fonts";
 
 /** The picker's state. */
@@ -32,26 +28,6 @@ export function picking(index: FontIndex, typed: string, at: number): Picking {
   if (offered.length === 0) return { offered, at: -1, commits: undefined };
   const on = Math.min(Math.max(at, 0), offered.length - 1);
   return { offered, at: on, commits: offered[on] };
-}
-
-/** One style of a font, as the engine registered it. */
-export interface FontStyle {
-  /** The id the engine gave this style, which the painter draws by. */
-  id: number;
-  entry: FontRefEntry;
-}
-
-/**
- * The styles of a font, by the ids the engine gave them. A font the
- * engine registered nothing for has no styles.
- */
-export function styles(faces: readonly FontRefEntry[], font: string): FontStyle[] {
-  const named = font.toLowerCase();
-  const found: FontStyle[] = [];
-  for (const [id, entry] of faces.entries()) {
-    if (entry.family === named) found.push({ id, entry });
-  }
-  return found;
 }
 
 /**

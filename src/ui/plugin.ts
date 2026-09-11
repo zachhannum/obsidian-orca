@@ -163,7 +163,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
           locate: (book, at) => {
             void this.locate(book, at);
           },
-          fonts: () => this.fontIndex(),
+          openPanel: () => {
+            void this.openPanel();
+          },
+          unit: () => this.limits.unit,
         }),
     );
     this.registerView(
@@ -967,11 +970,22 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
   }
 
-  /** Saves the limits, and applies them to the engines that already run. */
+  /**
+   * Saves the limits, and applies them to the engines that already run.
+   * A new unit paints the panel and every book page again in it.
+   */
   limit(limits: Limits): void {
+    const remeasured = limits.unit !== this.limits.unit;
     this.limits = limits;
     if (this.engines !== undefined) this.engines.ceiling = limits.books;
     void this.saveData(limits);
+    if (!remeasured) return;
+    for (const leaf of this.app.workspace.getLeavesOfType(PANEL_VIEW)) {
+      if (leaf.view instanceof DesignPanelView) leaf.view.refresh();
+    }
+    for (const leaf of this.app.workspace.getLeavesOfType(BOOK_VIEW)) {
+      if (leaf.view instanceof BookView) leaf.view.refresh();
+    }
   }
 
   /** The vault and the engines, as the composer reaches them. */
@@ -1012,6 +1026,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       setDesign: (book, design) => this.setDesign(book, design),
       index: () => this.fontIndex(),
       styles: (font) => familyFaces(this.places(), font),
+      unit: () => this.limits.unit,
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the

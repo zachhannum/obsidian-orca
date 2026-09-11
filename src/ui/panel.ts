@@ -1,11 +1,11 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
 import type { Face } from "@/book/plan";
-import type { Design, Written } from "@/style/design";
+import type { Design, PageUnit, Written } from "@/style/design";
 import type { Typeset } from "@/ui/composer";
 import { withKey } from "@/ui/groups";
-import { missingFont, styles } from "@/ui/picker";
-import { CARRIED, mountPanel, type Mounted, type Shown } from "@/ui/panels";
+import { missingFont } from "@/ui/picker";
+import { mountPanel, type Mounted, type Shown } from "@/ui/panels";
 
 /** The type the design panel is registered under. */
 export const PANEL_VIEW = "orca-design";
@@ -20,6 +20,8 @@ export interface Designing {
   index(): Promise<FontIndex>;
   /** One font's styles, as the bytes that cross and the keys they go under. */
   styles(font: Family): Promise<Face[]>;
+  /** The unit the author measures pages in, from orca's settings. */
+  unit(): PageUnit;
   /** Told when the book being designed changes. */
   watch(again: () => void): () => void;
 }
@@ -36,6 +38,8 @@ export class DesignPanelView extends ItemView {
   private unread: string | undefined;
   /** Counts the paints, so a scan that lands late does not overwrite a later one. */
   private painting = 0;
+  /** The fonts the machine has, once the first scan lands. */
+  private index: FontIndex | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -151,9 +155,11 @@ export class DesignPanelView extends ItemView {
     }
     // The first scan takes as long as the machine's font directories
     // do, so the panel shows that it is reading rather than an empty
-    // list.
-    mounted.paint({ kind: "reading" });
+    // list. Only the first: a notice painted over the rows on every
+    // edit would take the author's scroll back to the top.
+    if (this.index === undefined) mounted.paint({ kind: "reading" });
     const index = await this.designing.index();
+    this.index = index;
     if (run !== this.painting) return;
     this.watch(typeset);
     mounted.paint(this.shownFor(typeset, index));
@@ -181,8 +187,8 @@ export class DesignPanelView extends ItemView {
       name: typeset.name,
       design: typeset.design,
       index,
+      unit: this.designing.unit(),
       language: typeset.language,
-      styles: styles(typeset.session.faces, font ?? CARRIED),
       missing: this.warning(index, font),
     };
   }

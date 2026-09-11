@@ -1,10 +1,7 @@
 /**
  * Draws the design panel: the groups a book designer works in, and the
- * controls in each of them.
- *
- * One component, mounted twice. The right sidebar mounts it against the
- * book being read, and the book note's own page mounts it against the
- * note it shows. Both hand it a design to draw and take back one key at
+ * controls in each of them. The right sidebar mounts it against the
+ * book being read, hands it a design to draw and takes back one key at
  * a time.
  *
  * Every control draws the value the book is set in. A key the note sets
@@ -25,7 +22,14 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { Family, FontIndex } from "@/assets/fonts";
-import { LEVELS, writeDesign, type Design, type Level, type Written } from "@/style/design";
+import {
+  LEVELS,
+  writeDesign,
+  type Design,
+  type Level,
+  type PageUnit,
+  type Written,
+} from "@/style/design";
 import { effective } from "@/style/theme";
 import {
   Field,
@@ -35,6 +39,7 @@ import {
   Segment,
   Select,
   Switch,
+  Tabs,
   Warning,
   type Settle,
   type Under,
@@ -43,15 +48,16 @@ import {
 import {
   GLYPHS,
   GROUPS,
-  TRIMS,
   atLevel,
   defaultSaid,
+  inUnit,
+  trims,
   withKey,
   type Control,
   type Row as Listed,
 } from "@/ui/groups";
 import { hyphenating } from "@/ui/language";
-import { picking, type FontStyle } from "@/ui/picker";
+import { picking } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
 /** The actions the view performs for the panel. */
@@ -71,8 +77,8 @@ export type Shown =
       /** The design as the book note holds it. */
       design: Design;
       index: FontIndex;
-      /** The styles the engine registered for the body font. */
-      styles: FontStyle[];
+      /** The unit the margins and a custom trim are drawn and stepped in. */
+      unit: PageUnit;
       /** The language the book sets, which chooses the hyphenation patterns. */
       language: string | undefined;
       /** The warning for a font the machine does not have. */
@@ -120,7 +126,6 @@ interface Drawing {
   /** Every key, with the defaults under the ones the note sets. */
   full: Readonly<Record<string, Written>>;
   level: Level;
-  choose: (level: Level) => void;
 }
 
 export function Panel({
@@ -152,7 +157,6 @@ export function Panel({
     own: writeDesign(shown.design),
     full: writeDesign(effective(shown.design)),
     level,
-    choose,
   };
   return (
     <div className="orca-panel" data-testid="orca-panel" data-book={shown.name}>
@@ -165,15 +169,27 @@ export function Panel({
         >
           <div className="orca-panel-heading">
             <span className="orca-panel-name">{group.name}</span>
-            {group.hint === undefined ? null : (
-              <span className="orca-panel-said">{group.hint}</span>
-            )}
           </div>
-          {group.rows.map((line, at) =>
-            drawn(line, drawing) ? (
+          {group.rows.map((line, at) => {
+            const levels = line.of.find((control) => control.kind === "level");
+            if (levels !== undefined) {
+              return (
+                <Tabs
+                  key={at}
+                  value={String(level)}
+                  choices={levels.choices ?? []}
+                  testid="orca-panel-heading-level"
+                  choose={(chosen) => {
+                    const found = LEVELS.find((each) => String(each) === chosen);
+                    if (found !== undefined) choose(found);
+                  }}
+                />
+              );
+            }
+            return drawn(line, drawing) ? (
               <Line key={at} line={line} drawing={drawing} />
-            ) : null,
-          )}
+            ) : null;
+          })}
         </div>
       ))}
       {shown.missing === undefined ? null : (
@@ -230,7 +246,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
     const cleared = writeDesign(
       effective(withKey(drawing.shown.design, key, undefined)),
     );
-    const value = defaultSaid(control, cleared[key]);
+    const value = defaultSaid(control, cleared[key], drawing.shown.unit);
     return keyed.length > 1 && control.said !== undefined
       ? `${control.said} ${value}`
       : value;
@@ -313,23 +329,6 @@ function Drawn({
   wrong: (id: string) => Wrong;
 }): JSX.Element | null {
   const { shown, own, full, level, acting } = drawing;
-  if (control.kind === "styles") {
-    return <Styles styles={shown.styles} />;
-  }
-  if (control.kind === "level") {
-    return (
-      <Segment
-        value={String(level)}
-        faint={false}
-        choices={control.choices ?? []}
-        testid="orca-panel-heading-level"
-        settle={(chosen) => {
-          const found = LEVELS.find((each) => String(each) === String(chosen));
-          if (found !== undefined) drawing.choose(found);
-        }}
-      />
-    );
-  }
   if (control.key === undefined) return null;
 
   const key = atLevel(control.key, level);
@@ -342,6 +341,8 @@ function Drawn({
   };
 
   switch (control.kind) {
+    case "level":
+      return null;
     case "font":
       return (
         <Picker
@@ -359,6 +360,7 @@ function Drawn({
         <Trim
           value={text ?? ""}
           faint={faint}
+          unit={shown.unit}
           testid={testid}
           settle={settle}
           wrong={wrong}
@@ -409,70 +411,92 @@ function Drawn({
         />
       );
     case "count":
-    case "length":
+    case "length": {
+      const unit = control.page === true ? shown.unit : undefined;
       return (
         <Field
           measure={control.kind}
-          value={text ?? ""}
+          unit={unit}
+          value={unit === undefined ? (text ?? "") : inUnit(text ?? "", unit)}
           faint={faint}
           testid={testid}
           wrong={wrong(key)}
           settle={settle}
         />
       );
+    }
   }
 }
 
-/** The trim, picked from the sizes a novel is printed at or typed out. */
+/**
+ * The trim, picked from the sizes a novel is printed at or typed out.
+ * Picking Custom shows the width and height of the trim the book is in,
+ * so a custom trim starts from it.
+ */
 function Trim({
   value,
   faint,
+  unit,
   testid,
   settle,
   wrong,
 }: {
   value: string;
   faint: boolean;
+  unit: PageUnit;
   testid: string;
   settle: Settle;
   wrong: (id: string) => Wrong;
 }): JSX.Element {
-  const named = TRIMS.some((choice) => choice.value === value);
-  const [width = "", height = ""] = value.split(/\s+/);
+  const [custom, setCustom] = useState(false);
+  const offered = trims(unit);
+  const named = !custom && offered.some((choice) => choice.value === value);
+  const [width = "", height = ""] = value
+    .split(/\s+/)
+    .map((side) => inUnit(side, unit));
   return (
     <>
       <Select
         value={named ? value : CUSTOM}
         faint={faint}
-        choices={[...TRIMS, { value: CUSTOM, label: "Custom" }]}
+        choices={[...offered, { value: CUSTOM, label: "Custom" }]}
         testid={testid}
         settle={(chosen) => {
+          setCustom(chosen === CUSTOM);
           if (chosen !== undefined && chosen !== CUSTOM) settle(chosen);
         }}
       />
       {named ? null : (
-        <>
-          <Field
-            measure="length"
-            value={width}
-            faint={faint}
-            testid={`${testid}-width`}
-            wrong={wrong("trim-width")}
-            settle={(settled) => {
-              settle(sized(settled, height));
-            }}
-          />
-          <Field
-            measure="length"
-            value={height}
-            faint={faint}
-            testid={`${testid}-height`}
-            wrong={wrong("trim-height")}
-            settle={(settled) => {
-              settle(sized(width, settled));
-            }}
-          />
-        </>
+        <div className="orca-panel-grid orca-panel-size">
+          <div className="orca-panel-cell">
+            <Field
+              measure="length"
+              unit={unit}
+              value={width}
+              faint={faint}
+              testid={`${testid}-width`}
+              wrong={wrong("trim-width")}
+              settle={(settled) => {
+                settle(sized(settled, height));
+              }}
+            />
+            <span className="orca-panel-said">width</span>
+          </div>
+          <div className="orca-panel-cell">
+            <Field
+              measure="length"
+              unit={unit}
+              value={height}
+              faint={faint}
+              testid={`${testid}-height`}
+              wrong={wrong("trim-height")}
+              settle={(settled) => {
+                settle(sized(width, settled));
+              }}
+            />
+            <span className="orca-panel-said">height</span>
+          </div>
+        </div>
       )}
     </>
   );
@@ -503,15 +527,14 @@ function drawn(line: Listed, drawing: Drawing): boolean {
   return true;
 }
 
-/** The line under a row. The hyphenation switch names the language. */
+/** The line under a row. Only the hyphenation switch has one, which names the language. */
 function saidUnder(
   line: Listed,
   shown: Shown & { kind: "book" },
 ): string | undefined {
-  if (line.of.some((control) => control.key === "body-hyphens")) {
-    return hyphenating(shown.language);
-  }
-  return line.said;
+  return line.of.some((control) => control.key === "body-hyphens")
+    ? hyphenating(shown.language)
+    : undefined;
 }
 
 /**
@@ -642,31 +665,6 @@ function Picker({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/** The styles of the font, as the engine registered them. */
-function Styles({ styles }: { styles: FontStyle[] }): JSX.Element | null {
-  if (styles.length === 0) return null;
-  return (
-    <div
-      className="orca-panel-styles"
-      data-testid="orca-panel-styles"
-      data-styles={styles.length}
-    >
-      {styles.map((style) => (
-        <span
-          key={style.id}
-          className="orca-panel-style"
-          data-testid="orca-panel-style"
-          data-weight={style.entry.attributes.weight}
-          data-italic={String(style.entry.attributes.italic)}
-          data-axes={style.entry.variations.map((axis) => axis.tag).join(" ")}
-        >
-          {style.entry.style}
-        </span>
-      ))}
     </div>
   );
 }

@@ -5,14 +5,26 @@ import { effective } from "@/style/theme";
 import {
   GROUPS,
   PANEL_KEYS,
-  TRIMS,
+  atLevel,
   defaultSaid,
+  inUnit,
   keysOf,
   stepSaid,
   stepped,
+  trims,
   typed,
   withKey,
+  type Control,
 } from "@/ui/groups";
+
+/** The control that writes `key`. */
+function control(key: string): Control {
+  const found = GROUPS.flatMap((group) => group.rows)
+    .flatMap((row) => row.of)
+    .find((each) => each.key === key);
+  assert.ok(found !== undefined, `no control writes \`${key}\``);
+  return found;
+}
 
 test("the panel offers every group a book designer works in", () => {
   assert.deepEqual(
@@ -53,13 +65,11 @@ test("the Headings group sets font, size and alignment at every level, and chapt
 
 test("every word the panel draws is spelled the American way", () => {
   const words = [
-    ...TRIMS.map((trim) => trim.label),
+    ...trims("in").map((trim) => trim.label),
     ...GROUPS.flatMap((group) => [
       group.name,
-      group.hint ?? "",
       ...group.rows.flatMap((row) => [
         row.label,
-        row.said ?? "",
         ...row.of.flatMap((control) => [
           control.said ?? "",
           ...(control.choices ?? []).map((choice) => choice.label),
@@ -82,14 +92,51 @@ test("every key the panel writes has a default, except the word a scene break is
 });
 
 test("a reset names the default in the words the control draws it with", () => {
-  const [page, text] = GROUPS;
-  const mirrored = page?.rows[2]?.of[0];
-  const setting = text?.rows[4]?.of[0];
-  assert.ok(mirrored !== undefined && setting !== undefined);
-  assert.equal(defaultSaid(mirrored, true), "on");
-  assert.equal(defaultSaid(setting, "justify"), "Justified");
-  assert.equal(defaultSaid({ kind: "length", key: "body-size" }, "11pt"), "11pt");
-  assert.equal(defaultSaid({ kind: "trim", key: "trim" }, "6in 9in"), "US trade — 6 × 9 in");
+  assert.equal(defaultSaid(control("mirrored"), true, "in"), "on");
+  assert.equal(defaultSaid(control("body-align"), "justify", "in"), "Justified");
+  assert.equal(defaultSaid(control("body-size"), "11pt", "in"), "11pt");
+  assert.equal(defaultSaid(control("trim"), "6in 9in", "in"), "US trade (6 × 9 in)");
+  assert.equal(defaultSaid(control("chapter-drop-cap"), 0, "in"), "None");
+  assert.equal(defaultSaid(control("page-number-format"), "roman", "in"), "i, ii, iii");
+  // A page length is named in the unit the author measures pages in.
+  assert.equal(defaultSaid(control("margin-top"), "54pt", "in"), "0.75in");
+  assert.equal(defaultSaid(control("trim"), "6in 9in", "mm"), "US trade (152.4 × 228.6 mm)");
+});
+
+test("a chapter begins on the next page unless the book says otherwise, and that choice is offered first", () => {
+  const begins = control("chapter-begins");
+  assert.equal(begins.choices?.[0]?.value, "next-page");
+  assert.equal(writeDesign(effective(emptyDesign()))["chapter-begins"], "next-page");
+});
+
+test("every word a select or a segment offers is a value the schema reads back", () => {
+  for (const each of GROUPS.flatMap((group) => group.rows).flatMap((row) => row.of)) {
+    if (each.key === undefined || each.kind === "level") continue;
+    const key = atLevel(each.key, 1);
+    for (const choice of each.choices ?? []) {
+      const design = withKey(emptyDesign(), key, choice.value);
+      assert.equal(
+        String(writeDesign(design)[key]),
+        choice.value,
+        `\`${key}\` does not read back \`${choice.value}\``,
+      );
+    }
+  }
+});
+
+test("a page length is drawn, typed and stepped in the unit the author measures pages in", () => {
+  assert.equal(inUnit("54pt", "in"), "0.75in");
+  assert.equal(inUnit("54pt", "mm"), "19.05mm");
+  assert.equal(inUnit("0.75in", "pt"), "54pt");
+  // A length in em has no page unit to go into, and text that is not a
+  // length is drawn as it is.
+  assert.equal(inUnit("1.2em", "in"), "1.2em");
+  assert.equal(inUnit("", "in"), "");
+  // A bare number is read in the unit, and a written unit still wins.
+  assert.deepEqual(typed("length", "0.8", "in"), { value: "0.8in" });
+  assert.deepEqual(typed("length", "20mm", "in"), { value: "20mm" });
+  assert.equal(stepped("length", "0.75", 1, 1, "in"), "0.8in");
+  assert.equal(stepSaid("length", "", 1, "mm"), "Increase by 1mm");
 });
 
 test("text a number field cannot read says what is wrong, and writes nothing", () => {
@@ -133,7 +180,7 @@ test("no control can produce a warning, because each one writes a design key", (
 });
 
 test("the trims on offer are the ones the schema reads back", () => {
-  for (const trim of TRIMS) {
+  for (const trim of trims("mm")) {
     const design = withKey(emptyDesign(), "trim", trim.value);
     assert.equal(writeDesign(design)["trim"], trim.value);
   }

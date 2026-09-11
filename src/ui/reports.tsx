@@ -1,10 +1,11 @@
 /**
  * Draws the book page: the book's metadata, edited here and written on
- * settle, and its reading order, drawn read-only with a word count
- * beside each entry.
+ * settle, its design, and its reading order, drawn read-only with a
+ * word count beside each entry.
  *
  * The reading order is edited in the navigator and nowhere else, so a
- * click on an entry here focuses it there.
+ * click on an entry here focuses it there. The design is edited in the
+ * panel in the right sidebar, which a button here opens.
  */
 
 import { createRoot } from "react-dom/client";
@@ -12,12 +13,8 @@ import { useEffect, useRef, type JSX, type KeyboardEvent } from "react";
 import { BOOK_KEY, type BookMetadata } from "@/book/note";
 import { ROLES } from "@/book/roles";
 import { Icon } from "@/ui/icon";
-import {
-  Panel,
-  type Acting as Designing,
-  type Shown as Designed,
-} from "@/ui/panels";
 import { foliate, type Line, type Report } from "@/ui/report";
+import type { Summed } from "@/ui/summary";
 
 /** The actions the page asks the view to perform. */
 export interface Acting {
@@ -26,8 +23,8 @@ export interface Acting {
   /** Focuses an entry in the navigator, by its place in the reading order. */
   locate(at: number): void;
   asMarkdown(): void;
-  /** The design panel's own actions, which write the design instead. */
-  designing: Designing;
+  /** Opens the design panel in the right sidebar. */
+  openPanel(): void;
 }
 
 /** The state the page is drawn in. */
@@ -36,8 +33,8 @@ export type Shown =
       kind: "book";
       report: Report;
       generation: number;
-      /** The design, drawn by the panel the sidebar draws. */
-      designed: Designed;
+      /** The design, read-only. */
+      designed: readonly Summed[];
     }
   | { kind: "refused"; said: string }
   | { kind: "none" };
@@ -105,7 +102,7 @@ function Book({
   acting,
 }: {
   report: Report;
-  designed: Designed;
+  designed: readonly Summed[];
   acting: Acting;
 }): JSX.Element {
   return (
@@ -145,11 +142,31 @@ function Book({
       <div className="orca-book-design" data-testid="orca-book-design">
         <div className="orca-order-head">
           <span className="orca-order-title">Design</span>
-          <span className="orca-order-hint">
-            kept in this note, and edited here or in the right sidebar
-          </span>
         </div>
-        <Panel shown={designed} acting={acting.designing} />
+        <div className="orca-book-summary">
+          {designed.map((line) => (
+            <div
+              key={line.label}
+              className="orca-book-row"
+              data-testid="orca-book-summed"
+              data-label={line.label}
+            >
+              <span className="orca-book-label">{line.label}</span>
+              <span className="orca-book-summed">{line.value}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="orca-book-open-design"
+          data-testid="orca-book-open-design"
+          onClick={() => {
+            acting.openPanel();
+          }}
+        >
+          <Icon name="sliders-horizontal" className="orca-book-icon" />
+          Open the design panel
+        </button>
       </div>
 
       <div className="orca-book-order">

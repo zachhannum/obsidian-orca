@@ -15,6 +15,7 @@ import {
   LEVELS,
   STEPS,
   ValueError,
+  convertLength,
   parseCount,
   parseLength,
   readDesign,
@@ -26,6 +27,8 @@ import {
   type Design,
   type Length,
   type Level,
+  type PageUnit,
+  type Unit,
   type Written,
 } from "@/style/design";
 
@@ -39,7 +42,6 @@ export interface Choice {
 export type Kind =
   | "trim"
   | "font"
-  | "styles"
   | "length"
   | "count"
   | "flag"
@@ -61,21 +63,20 @@ export interface Control {
   choices?: readonly Choice[];
   /** The word after the control: a unit, or what a switch means. */
   said?: string;
+  /** A length on the page, drawn in the unit the author measures pages in. */
+  page?: boolean;
 }
 
 /** One row of the panel: a label, and the controls beside it. */
 export interface Row {
   label: string;
   of: readonly Control[];
-  /** The line under the row, in the panel's faint type. */
-  said?: string;
   /** The controls sit two to a line, each with its word under it. */
   grid?: boolean;
 }
 
 export interface Group {
   name: string;
-  hint?: string;
   rows: readonly Row[];
 }
 
@@ -85,9 +86,16 @@ const ALIGN: readonly Choice[] = [
 ];
 
 const BEGINS: readonly Choice[] = [
-  { value: "right-page", label: "Right-hand page" },
   { value: "next-page", label: "Next page" },
+  { value: "right-page", label: "Right-hand page" },
   { value: "same-page", label: "Same page" },
+];
+
+const DROP_CAPS: readonly Choice[] = [
+  { value: "0", label: "None" },
+  { value: "2", label: "2 lines" },
+  { value: "3", label: "3 lines" },
+  { value: "4", label: "4 lines" },
 ];
 
 const ALIGNMENTS: readonly Choice[] = [
@@ -109,15 +117,21 @@ const SLOTS: readonly Choice[] = [
   { value: "chapter-title", label: "Chapter title" },
 ];
 
+const HEADS: readonly Choice[] = [
+  { value: "outside", label: "Outside" },
+  { value: "center", label: "Center" },
+];
+
 const POSITIONS: readonly Choice[] = [
   { value: "top", label: "Top" },
   { value: "bottom", label: "Bottom" },
   { value: "outside", label: "Outside" },
 ];
 
+/** A folio format is named by how its numbers look. */
 const FORMATS: readonly Choice[] = [
-  { value: "arabic", label: "Arabic" },
-  { value: "roman", label: "Roman" },
+  { value: "arabic", label: "1, 2, 3" },
+  { value: "roman", label: "i, ii, iii" },
 ];
 
 /** The heading levels, which the Headings group sets one at a time. */
@@ -126,11 +140,20 @@ export const LEVEL_CHOICES: readonly Choice[] = LEVELS.map((level) => ({
   label: `H${String(level)}`,
 }));
 
-/** The trims the panel offers by name, and the custom pair under them. */
-export const TRIMS: readonly Choice[] = BOOK_SIZES.map(({ name, trim }) => ({
-  value: `${written(trim.width)} ${written(trim.height)}`,
-  label: `${name} — ${measured(trim.width.value)} × ${measured(trim.height.value)} ${trim.width.unit}`,
-}));
+/**
+ * The trims the panel offers by name, each measured in the unit the
+ * author measures pages in. The value is the trim as the note writes it.
+ */
+export function trims(unit: PageUnit): Choice[] {
+  return BOOK_SIZES.map(({ name, trim }) => {
+    const width = convertLength(trim.width, unit);
+    const height = convertLength(trim.height, unit);
+    return {
+      value: `${written(trim.width)} ${written(trim.height)}`,
+      label: `${name} (${measured(width)} × ${measured(height)} ${unit})`,
+    };
+  });
+}
 
 /** The ornaments the glyph picker offers. */
 export const GLYPHS: readonly string[] = ["❧", "⁂", "§", "✦"];
@@ -142,24 +165,24 @@ export const GROUPS: readonly Group[] = [
   {
     name: "Page",
     rows: [
-      { label: "Trim", of: [{ kind: "trim", key: "trim" }] },
+      { label: "Trim", of: [{ kind: "trim", key: "trim", page: true }] },
       {
         label: "Margins",
         grid: true,
         of: [
-          { kind: "length", key: "margin-inside", said: "inside" },
-          { kind: "length", key: "margin-outside", said: "outside" },
-          { kind: "length", key: "margin-top", said: "top" },
-          { kind: "length", key: "margin-bottom", said: "bottom" },
+          { kind: "length", key: "margin-inside", said: "inside", page: true },
+          { kind: "length", key: "margin-outside", said: "outside", page: true },
+          { kind: "length", key: "margin-top", said: "top", page: true },
+          { kind: "length", key: "margin-bottom", said: "bottom", page: true },
         ],
       },
       {
-        label: "Mirrored",
+        label: "",
         of: [
           {
             kind: "flag",
             key: "mirrored",
-            said: "the inside margin follows the gutter",
+            said: "Mirror the margins on facing pages",
           },
         ],
       },
@@ -169,11 +192,6 @@ export const GROUPS: readonly Group[] = [
     name: "Text",
     rows: [
       { label: "Font", of: [{ kind: "font", key: "body-font" }] },
-      {
-        label: "Styles",
-        of: [{ kind: "styles" }],
-        said: "the styles the engine registered",
-      },
       { label: "Size", of: [{ kind: "length", key: "body-size" }] },
       {
         label: "Line spacing",
@@ -226,14 +244,12 @@ export const GROUPS: readonly Group[] = [
     name: "Chapter openings",
     rows: [
       {
-        label: "Begins",
-        of: [{ kind: "segment", key: "chapter-begins", choices: BEGINS }],
-        said: "a right-hand start leaves the odd blank page behind it",
+        label: "Begins on",
+        of: [{ kind: "select", key: "chapter-begins", choices: BEGINS }],
       },
       {
         label: "Space above",
         of: [{ kind: "count", key: "chapter-space-above", said: "lines" }],
-        said: "keeps the baselines below it",
       },
       {
         label: "Space below",
@@ -241,7 +257,7 @@ export const GROUPS: readonly Group[] = [
       },
       {
         label: "Drop cap",
-        of: [{ kind: "count", key: "chapter-drop-cap", said: "lines" }],
+        of: [{ kind: "select", key: "chapter-drop-cap", choices: DROP_CAPS }],
       },
     ],
   },
@@ -255,11 +271,12 @@ export const GROUPS: readonly Group[] = [
       { label: "Glyph", of: [{ kind: "glyph", key: "scene-break-ornament" }] },
       { label: "Word", of: [{ kind: "word", key: "scene-break-word" }] },
       {
-        label: "Space",
-        of: [
-          { kind: "count", key: "scene-break-space-above", said: "lines above" },
-          { kind: "count", key: "scene-break-space-below", said: "lines below" },
-        ],
+        label: "Space above",
+        of: [{ kind: "count", key: "scene-break-space-above", said: "lines" }],
+      },
+      {
+        label: "Space below",
+        of: [{ kind: "count", key: "scene-break-space-below", said: "lines" }],
       },
     ],
   },
@@ -275,6 +292,10 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "select", key: "header-right-page", choices: SLOTS }],
       },
       {
+        label: "Header position",
+        of: [{ kind: "segment", key: "header-position", choices: HEADS }],
+      },
+      {
         label: "Page number",
         of: [
           { kind: "segment", key: "page-number-position", choices: POSITIONS },
@@ -282,7 +303,7 @@ export const GROUPS: readonly Group[] = [
       },
       {
         label: "Number format",
-        of: [{ kind: "select", key: "page-number-format", choices: FORMATS }],
+        of: [{ kind: "segment", key: "page-number-format", choices: FORMATS }],
       },
       {
         label: "",
@@ -342,8 +363,9 @@ export function keysOf(group: Group): string[] {
 /** Every design key the panel writes, in the order the panel offers them. */
 export const PANEL_KEYS: readonly string[] = GROUPS.flatMap(keysOf);
 
-function measured(value: number): string {
-  return String(Number(value.toFixed(2)));
+/** A trim's side, to the hundredth of an inch or the tenth of a millimeter or point. */
+function measured(length: Length): string {
+  return String(Number(length.value.toFixed(length.unit === "in" ? 2 : 1)));
 }
 
 /**
@@ -376,12 +398,13 @@ export type Typed = { value: Written } | { wrong: string };
 
 /**
  * Reads a number field's text. A length is written back in the form the
- * note writes it, so `12` goes into the note as `12pt`.
+ * note writes it, so `12` goes into the note as `12pt`, or in whatever
+ * `unit` a bare number is read in.
  */
-export function typed(measure: Measure, text: string): Typed {
+export function typed(measure: Measure, text: string, unit: Unit = "pt"): Typed {
   try {
     return measure === "length"
-      ? { value: noted(parseLength(text)) }
+      ? { value: noted(parseLength(text, unit)) }
       : { value: parseCount(text) };
   } catch (error) {
     if (!(error instanceof ValueError)) throw error;
@@ -410,8 +433,9 @@ export function stepped(
   text: string,
   by: 1 | -1,
   times = 1,
+  unit: Unit = "pt",
 ): Written | undefined {
-  const read = typed(measure, text);
+  const read = typed(measure, text, unit);
   if ("wrong" in read) return undefined;
   return measure === "length"
     ? noted(stepLength(parseLength(String(read.value)), by, times))
@@ -419,19 +443,41 @@ export function stepped(
 }
 
 /** The tooltip on a stepper button, which names the step. */
-export function stepSaid(measure: Measure, text: string, by: 1 | -1): string {
+export function stepSaid(
+  measure: Measure,
+  text: string,
+  by: 1 | -1,
+  unit: Unit = "pt",
+): string {
   const verb = by === 1 ? "Increase" : "Decrease";
   if (measure === "count") return `${verb} by 1 line`;
-  const read = typed(measure, text);
-  const unit = "wrong" in read ? "pt" : parseLength(String(read.value)).unit;
-  return `${verb} by ${noted({ value: STEPS[unit], unit })}`;
+  const read = typed(measure, text, unit);
+  const stepUnit = "wrong" in read ? unit : parseLength(String(read.value)).unit;
+  return `${verb} by ${noted({ value: STEPS[stepUnit], unit: stepUnit })}`;
+}
+
+/**
+ * A length as a page control draws it, in the unit the author measures
+ * pages in. Text that is not a length is drawn as it is.
+ */
+export function inUnit(text: string, unit: PageUnit): string {
+  const read = typed("length", text);
+  if ("wrong" in read) return text;
+  return noted(convertLength(parseLength(String(read.value)), unit));
 }
 
 /** The default a control draws, in the words the reset names it by. */
-export function defaultSaid(control: Control, value: Written | undefined): string {
+export function defaultSaid(
+  control: Control,
+  value: Written | undefined,
+  unit: PageUnit,
+): string {
   if (value === undefined) return "none";
   if (control.kind === "flag") return value === true ? "on" : "off";
-  const choices = control.kind === "trim" ? TRIMS : (control.choices ?? []);
+  if (control.page === true && control.kind === "length") {
+    return inUnit(String(value), unit);
+  }
+  const choices = control.kind === "trim" ? trims(unit) : (control.choices ?? []);
   return choices.find((choice) => choice.value === String(value))?.label ?? String(value);
 }
 
