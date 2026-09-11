@@ -66,6 +66,8 @@ export class Typeset {
   readonly path: string;
   /** Its sections, in reading order. */
   readonly sections: Section[];
+  /** The language it sets. The engine hyphenates with the patterns for it. */
+  readonly language: string | undefined;
   /** The fonts and images this book has put on the wire, by content hash. */
   readonly assets: Registry;
 
@@ -78,7 +80,7 @@ export class Typeset {
   /** The embeds the retypes so far started, chained so they run in order. */
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
-  private design: Design;
+  private designed: Design;
   private gone = false;
 
   constructor(
@@ -88,6 +90,8 @@ export class Typeset {
       path: string;
       session: Session;
       sections: Section[];
+      /** The language the book sets, from its own properties. */
+      language: string | undefined;
       /** The sheets the book was set under, which the next plan reads. */
       sheets: Sheet[];
       /** The text each note crossed as, by its vault path. */
@@ -107,11 +111,12 @@ export class Typeset {
     this.path = book.path;
     this.session = book.session;
     this.sections = book.sections;
+    this.language = book.language;
     this.sent = book.sent;
     this.assets = book.assets;
     this.links = book.links;
     this.loaded = { sheets: book.sheets };
-    this.design = book.design;
+    this.designed = book.design;
     this.setting = book.setting;
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
@@ -179,23 +184,35 @@ export class Typeset {
 
   /** The font the book is set in, or nothing for the theme's own. */
   get font(): string | undefined {
-    return this.design.body.font;
+    return this.designed.body.font;
+  }
+
+  /** The design the book is set under, which the book note holds. */
+  get design(): Design {
+    return this.designed;
   }
 
   /**
-   * Sets the book in a font. Every style of it crosses the first time
-   * the font is picked and stays registered for the session, so a later
-   * pick sends the sheet alone.
+   * Sets the book under a design. It writes the generated layer again,
+   * which crosses with any face the design newly names. Every style of
+   * a font crosses the first time the author picks it and stays
+   * registered for the session, so picking it again sends the sheets
+   * alone.
+   *
+   * The plan keys an edit that carries faces by those faces. A later
+   * edit coalesces with it, so the faces still cross.
    */
-  refont(font: string, faces: readonly Face[]): void {
-    this.design = {
-      ...this.design,
-      body: { ...this.design.body, font },
-    };
-    this.plan(`fonted:${font}`, {
+  restyle(design: Design, faces: readonly Face[] = []): void {
+    this.designed = design;
+    const sheets = designSheets(this.designed, this.setting);
+    if (faces.length === 0) {
+      this.plan("styled", { did: "styled", sheets });
+      return;
+    }
+    this.plan(`fonted:${faces.map((face) => face.key).join(" ")}`, {
       did: "fonted",
       faces,
-      sheets: designSheets(this.design, this.setting),
+      sheets,
     });
   }
 
@@ -223,7 +240,7 @@ export class Typeset {
   get replay(): Replay {
     return {
       sent: new Map(this.sent),
-      design: this.design,
+      design: this.designed,
       setting: this.setting,
       sheets: this.loaded.sheets,
     };
@@ -458,7 +475,7 @@ export class Composer {
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
     const design: Design = carried?.design ?? model.book.design;
-    const { title, author } = model.book.metadata;
+    const { title, author, language } = model.book.metadata;
     const setting: Setting = carried?.setting ?? {
       roles: sentRoles(sections),
       title,
@@ -476,6 +493,7 @@ export class Composer {
         path,
         session,
         sections,
+        language,
         sheets,
         sent,
         assets,

@@ -32,14 +32,8 @@
         <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; color: var(--text-muted); font-size: 12.5px">isbn</span><div style="flex: 1; height: 28px; display: flex; align-items: center; padding: 0 8px; border-radius: var(--radius-s); color: var(--text-faint)">[YOUR ISBN]</div></div>
       </div>
 
-      <!-- design + css + export -->
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-        <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 12px 13px; display: flex; flex-direction: column; gap: 7px">
-          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">DESIGN</div>
-          <div style="font-size: 14px; font-weight: 500">Quarto</div>
-          <div style="font-size: 11.5px; color: var(--text-faint); line-height: 1.4">a plain trade novel, EB Garamond 10.5/14</div>
-          <div style="margin-top: 2px; font-size: 11.5px; color: var(--text-accent)">Open the panel</div>
-        </div>
+      <!-- css + export -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
         <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 12px 13px; display: flex; flex-direction: column; gap: 7px">
           <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">YOUR CSS</div>
           <div style="font-size: 14px; font-weight: 500">12 lines</div>
@@ -52,6 +46,21 @@
           <div style="font-size: 11.5px; color: var(--text-faint); line-height: 1.4">24 chapters, set 5.5 × 8.5 in</div>
           <div style="margin-top: 2px; font-size: 11.5px; color: var(--text-accent)">Export a PDF</div>
         </div>
+      </div>
+
+      <!-- The book's design, read-only here. The button opens the design panel in the right sidebar. -->
+      <div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint); margin-bottom: 10px">DESIGN</div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Trim</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Digest (5.5 × 8.5 in)</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Margins</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">0.95in inside, 0.7in outside, 0.8in top, 1in bottom</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Text</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Alegreya, 10.5pt on 14pt, justified</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Chapters begin on</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Next page</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Scene breaks</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px; font-family: 'EB Garamond', Georgia, serif">⁂</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Running heads</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">author on left pages, book title on right pages</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Page numbers</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Bottom (1, 2, 3)</div></div>
+        </div>
+        <div class="btn" style="margin-top: 12px"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg>Open the design panel</div>
       </div>
 
       <!-- reading order, read-only. The tinted row is the one under the pointer. -->

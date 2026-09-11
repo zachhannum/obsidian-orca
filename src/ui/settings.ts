@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting, type App, type Plugin } from "obsidian";
-import { MOST_BOOKS, type Limits } from "@/ui/limits";
+import { MOST_BOOKS, isPageUnit, type Limits } from "@/ui/limits";
 
 /** The plugin, narrowed to the settings this tab writes. */
 export interface Limited {
@@ -20,6 +20,17 @@ export class OrcaSettingTab extends PluginSettingTab {
   override display(): void {
     const { containerEl } = this;
     containerEl.empty();
+    new Setting(containerEl)
+      .setName("Page measurements")
+      .setDesc("The unit the design panel shows margins and a custom trim in.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({ in: "Inches", mm: "Millimeters", pt: "Points" })
+          .setValue(this.orca.limits.unit)
+          .onChange((unit) => {
+            if (isPageUnit(unit)) this.orca.limit({ ...this.orca.limits, unit });
+          }),
+      );
     new Setting(containerEl)
       .setName("Books kept on the engine")
       .setDesc(

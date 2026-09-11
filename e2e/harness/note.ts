@@ -37,6 +37,10 @@ export class Note {
   readonly line: Locator;
   /** The reading order, drawn read-only. */
   readonly order: Locator;
+  /** The design, read-only. The panel in the sidebar edits it. */
+  readonly design: Locator;
+  /** The button that opens or reveals the design panel in the right sidebar. */
+  readonly openDesign: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.page = obsidian.view(BOOK).getByTestId("orca-book");
@@ -45,6 +49,15 @@ export class Note {
     this.markdown = obsidian.view(MARKDOWN);
     this.line = this.page.getByTestId("orca-book-line");
     this.order = this.page.getByTestId("orca-order");
+    this.design = this.page.getByTestId("orca-book-design");
+    this.openDesign = this.page.getByTestId("orca-book-open-design");
+  }
+
+  /** One line of the design, by its label. */
+  summed(label: string): Locator {
+    return this.design.locator(
+      `[data-testid="orca-book-summed"][data-label="${label}"]`,
+    );
   }
 
   /** Returns the generation of the model the page shows. */

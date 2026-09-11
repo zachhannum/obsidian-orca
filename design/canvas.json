@@ -34,24 +34,24 @@
       "page": "page-1",
       "x": 2440,
       "y": 0,
-      "w": 380,
-      "h": 1460
+      "w": 300,
+      "h": 2320
     },
     {
       "file": "BookPage.dc.html",
       "title": "The book note's page",
       "page": "page-1",
       "x": 0,
-      "y": 1580,
+      "y": 1680,
       "w": 900,
-      "h": 960
+      "h": 1320
     },
     {
       "file": "PreviewViews.dc.html",
       "title": "Preview \u2014 single, spread, grid",
       "page": "page-1",
       "x": 1020,
-      "y": 1580,
+      "y": 1680,
       "w": 1180,
       "h": 1000
     },
@@ -59,8 +59,8 @@
       "file": "Issues.dc.html",
       "title": "Issues pane",
       "page": "page-1",
-      "x": 2320,
-      "y": 1580,
+      "x": 2860,
+      "y": 1680,
       "w": 380,
       "h": 620
     },
@@ -68,8 +68,8 @@
       "file": "Export.dc.html",
       "title": "Export preflight",
       "page": "page-1",
-      "x": 2820,
-      "y": 1580,
+      "x": 3360,
+      "y": 1680,
       "w": 720,
       "h": 620
     },
@@ -78,7 +78,7 @@
       "title": "Design panel \u2014 the CSS view",
       "page": "page-1",
       "x": 0,
-      "y": 2700,
+      "y": 3120,
       "w": 1440,
       "h": 900
     },
@@ -87,7 +87,7 @@
       "title": "Honest states",
       "page": "page-1",
       "x": 1560,
-      "y": 2700,
+      "y": 3120,
       "w": 1900,
       "h": 470
     },

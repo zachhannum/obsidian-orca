@@ -10,14 +10,23 @@ test("the ceiling is a setting, saved and read back in whole books", () => {
   assert.deepEqual(readLimits({}), LIMITS);
   assert.deepEqual(readLimits({ books: "four" }), LIMITS);
 
-  assert.deepEqual(readLimits({ books: 4 }), { books: 4 });
-  assert.deepEqual(readLimits({ books: 4.5 }), { books: 4 });
+  assert.deepEqual(readLimits({ books: 4 }), { books: 4, unit: "in" });
+  assert.deepEqual(readLimits({ books: 4.5 }), { books: 4, unit: "in" });
 
   // A reader with the memory for it raises the ceiling. Nobody sets the
   // ceiling to no books at all.
   assert.equal(bookCount(MOST_BOOKS + 1), MOST_BOOKS);
   assert.equal(bookCount(0), 1);
   assert.equal(bookCount(Number.NaN), CEILING);
+});
+
+test("pages are measured in inches until the author picks another unit", () => {
+  assert.equal(LIMITS.unit, "in");
+  assert.equal(readLimits({ books: 2 }).unit, "in");
+  assert.equal(readLimits({ books: 2, unit: "mm" }).unit, "mm");
+  assert.equal(readLimits({ books: 2, unit: "px" }).unit, "in");
+  // A unit saved without a ceiling reads back with the default ceiling.
+  assert.deepEqual(readLimits({ unit: "pt" }), { books: LIMITS.books, unit: "pt" });
 });
 
 // What this tier does not cover: the tab the ceiling sits in, which is

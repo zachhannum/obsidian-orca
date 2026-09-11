@@ -14,12 +14,14 @@ import { sectionRanges, type Range } from "@/book/pages";
 import { sendBook, sentRoles } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { Engines } from "@/engine/pool";
+import type { PageUnit } from "@/style/design";
 import { designSheets } from "@/style/sheet";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
 import { cacheLinks } from "@/ui/notes";
 import { report, setField } from "@/ui/report";
 import { mountPage, type Mounted } from "@/ui/reports";
+import { summary } from "@/ui/summary";
 import { Writer } from "@/ui/writer";
 
 /** The type the book note is registered under. */
@@ -31,6 +33,10 @@ export interface Handoff {
   asMarkdown(view: BookView): void;
   /** Reveals the navigator and focuses one entry of a book there. */
   locate(book: string, at: number): void;
+  /** Opens the design panel in the right sidebar, where the author edits the design. */
+  openPanel(): void;
+  /** The unit the author measures pages in, from orca's settings. */
+  unit(): PageUnit;
 }
 
 /**
@@ -96,6 +102,9 @@ export class BookView extends FileView {
       },
       asMarkdown: () => {
         this.handoff.asMarkdown(this);
+      },
+      openPanel: () => {
+        this.handoff.openPanel();
       },
     });
 
@@ -307,6 +316,11 @@ export class BookView extends FileView {
     void this.relay();
   }
 
+  /** Paints the page again with the settings as they are now. */
+  refresh(): void {
+    this.repaint();
+  }
+
   /** Paints the book page from a model at the generation it is at. */
   private show(model: Model, generation: number): void {
     this.shown = { model, generation };
@@ -324,6 +338,7 @@ export class BookView extends FileView {
     this.mounted?.paint({
       kind: "book",
       generation: this.shown.generation,
+      designed: summary(this.shown.model.book.design, this.handoff.unit()),
       report: report(
         { path: file.path, name: file.basename, model: this.shown.model },
         { links: cacheLinks(this.app), words: (path) => this.words(path) },

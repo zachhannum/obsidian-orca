@@ -6,9 +6,9 @@
  */
 
 import type { Sheet } from "fleuron";
-import type { Design } from "@/style/design";
+import { mergeDesign, type Design } from "@/style/design";
 import { generatedCss, type Setting } from "@/style/generated";
-import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
+import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 
 /** The sheet the generated layer is sent under, which a warning names. */
 export const DESIGN_SHEET = "design.css";
@@ -17,12 +17,16 @@ export const DESIGN_SHEET = "design.css";
 export const OWN_SHEET = "your.css";
 
 /**
- * The generated layer as one sheet. The page names come from the
- * reading order, so a design that settles nothing still generates
- * them.
+ * The generated layer as one sheet, with the defaults under the design.
+ * It merges the two before it generates the CSS, because a generated
+ * rule reads other fields. A sink, for example, is counted in lines of
+ * the line spacing.
  */
 export function designSheet(design: Design, setting: Setting): Sheet {
-  return { name: DESIGN_SHEET, css: generatedCss(design, setting) };
+  return {
+    name: DESIGN_SHEET,
+    css: generatedCss(mergeDesign(DEFAULTS, design), setting),
+  };
 }
 
 /**

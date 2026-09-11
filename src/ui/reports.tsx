@@ -1,10 +1,13 @@
 /**
- * Draws the book page: the book's metadata, edited here and written on
- * settle, and its reading order, drawn read-only with a word count
- * beside each entry.
+ * Draws the book page. The author edits the book's metadata here, and
+ * the page writes it on settle. The page draws the design and the
+ * reading order read-only, with a word count beside each entry of the
+ * reading order.
  *
- * The reading order is edited in the navigator and nowhere else, so a
- * click on an entry here focuses it there.
+ * The author edits the reading order in the navigator and nowhere else,
+ * so a click on an entry here focuses that entry in the navigator. The
+ * author edits the design in the design panel in the right sidebar. A
+ * button on this page opens the panel.
  */
 
 import { createRoot } from "react-dom/client";
@@ -13,6 +16,7 @@ import { BOOK_KEY, type BookMetadata } from "@/book/note";
 import { ROLES } from "@/book/roles";
 import { Icon } from "@/ui/icon";
 import { foliate, type Line, type Report } from "@/ui/report";
+import type { Summed } from "@/ui/summary";
 
 /** The actions the page asks the view to perform. */
 export interface Acting {
@@ -21,11 +25,19 @@ export interface Acting {
   /** Focuses an entry in the navigator, by its place in the reading order. */
   locate(at: number): void;
   asMarkdown(): void;
+  /** Opens the design panel in the right sidebar. */
+  openPanel(): void;
 }
 
 /** The state the page is drawn in. */
 export type Shown =
-  | { kind: "book"; report: Report; generation: number }
+  | {
+      kind: "book";
+      report: Report;
+      generation: number;
+      /** The design, read-only. */
+      designed: readonly Summed[];
+    }
   | { kind: "refused"; said: string }
   | { kind: "none" };
 
@@ -78,7 +90,7 @@ export function Page({
   return (
     <div className="orca-book" data-testid="orca-book" ref={pane}>
       {shown.kind === "book" ? (
-        <Book report={shown.report} acting={acting} />
+        <Book report={shown.report} designed={shown.designed} acting={acting} />
       ) : shown.kind === "refused" ? (
         <Refused said={shown.said} acting={acting} />
       ) : null}
@@ -88,9 +100,11 @@ export function Page({
 
 function Book({
   report,
+  designed,
   acting,
 }: {
   report: Report;
+  designed: readonly Summed[];
   acting: Acting;
 }): JSX.Element {
   return (
@@ -125,6 +139,36 @@ function Book({
             />
           </label>
         ))}
+      </div>
+
+      <div className="orca-book-design" data-testid="orca-book-design">
+        <div className="orca-order-head">
+          <span className="orca-order-title">Design</span>
+        </div>
+        <div className="orca-book-summary">
+          {designed.map((line) => (
+            <div
+              key={line.label}
+              className="orca-book-row"
+              data-testid="orca-book-summed"
+              data-label={line.label}
+            >
+              <span className="orca-book-label">{line.label}</span>
+              <span className="orca-book-summed">{line.value}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="orca-book-open-design"
+          data-testid="orca-book-open-design"
+          onClick={() => {
+            acting.openPanel();
+          }}
+        >
+          <Icon name="sliders-horizontal" className="orca-book-icon" />
+          Open the design panel
+        </button>
       </div>
 
       <div className="orca-book-order">

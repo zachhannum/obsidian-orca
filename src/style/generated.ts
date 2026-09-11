@@ -20,8 +20,8 @@ import {
   type HeaderDesign,
   type HeaderSlot,
   type NumberFormat,
+  type SceneDesign,
   type TypeSpec,
-  type Weight,
 } from "@/style/design";
 
 /** The reading order and the names a generated layer is written against. */
@@ -64,13 +64,6 @@ const COUNTERS: Readonly<Record<NumberFormat, string>> = {
   roman: "lower-roman",
 };
 
-const FONT_WEIGHTS: Readonly<Record<Weight, string>> = {
-  regular: "400",
-  medium: "500",
-  semibold: "600",
-  bold: "700",
-};
-
 /** The margin boxes orca clears before it sets the ones it uses. */
 const BOXES = [
   "top-left",
@@ -81,8 +74,13 @@ const BOXES = [
   "bottom-right",
 ] as const;
 
+type Box = (typeof BOXES)[number];
+
+/** Every heading level, as one selector. */
+const HEADINGS = ":is(h1, h2, h3, h4, h5, h6)";
+
 /** The heading a section opens on, whichever level it is written at. */
-const OPENING = ":is(h1, h2, h3, h4, h5, h6):first-child";
+const OPENING = `${HEADINGS}:first-child`;
 
 function pageRules(design: Design, setting: Setting): string[] {
   const { page, headers } = design;
@@ -107,60 +105,105 @@ function pageRules(design: Design, setting: Setting): string[] {
   // Orca owns the running heads and the folio as soon as the design
   // sets anything about them. Orca clears the boxes it does not use
   // rather than leave them to the engine's own folio.
-  const rootBoxes = new Map<string, string>(
+  const placed = placement(headers, setting);
+  const rootBoxes = new Map<Box, string>(
     owned(headers) ? BOXES.map((box) => [box, "none"]) : [],
   );
-  const leftBoxes = new Map<string, string>();
-  const rightBoxes = new Map<string, string>();
-  const folio = folioContent(headers);
-  if (folio !== undefined) {
-    if (headers.pageNumber === "top") rootBoxes.set("top-center", folio);
-    if (headers.pageNumber === "bottom") rootBoxes.set("bottom-center", folio);
-    if (headers.pageNumber === "outside") {
-      leftBoxes.set("bottom-left", folio);
-      rightBoxes.set("bottom-right", folio);
-    }
-  }
-  if (headers.leftPage !== undefined) {
-    leftBoxes.set("top-left", slotContent(headers.leftPage, setting));
-  }
-  if (headers.rightPage !== undefined) {
-    rightBoxes.set("top-right", slotContent(headers.rightPage, setting));
-  }
+  for (const [box, content] of placed.both) rootBoxes.set(box, content);
 
   return [
     block("@page", [...root, ...boxes(rootBoxes)]),
-    block("@page :left", [...left, ...boxes(leftBoxes)]),
-    block("@page :right", [...right, ...boxes(rightBoxes)]),
-    ...openingPages(headers, setting),
+    block("@page :left", [...left, ...boxes(placed.left)]),
+    block("@page :right", [...right, ...boxes(placed.right)]),
+    ...openingPages(headers, placed, setting),
   ];
 }
 
+/** The content of the margin boxes the design prints in, by the pages they print on. */
+interface Placement {
+  both: Map<Box, string>;
+  left: Map<Box, string>;
+  right: Map<Box, string>;
+}
+
 /**
- * The page each role opens on, which carries no running head. A head
- * names the section under it. A section's first page falls under the
- * head of the section before it.
+ * The margin boxes the running heads and the folio print in. A head
+ * sits at the outside corner or in the center. A folio at the top
+ * takes the center. When the heads are centered, it takes the outside
+ * corner, so a head and a folio never share a box.
  */
-function openingPages(headers: HeaderDesign, setting: Setting): string[] {
-  if (headers.leftPage === undefined && headers.rightPage === undefined) {
-    return [];
+function placement(headers: HeaderDesign, setting: Setting): Placement {
+  const placed: Placement = { both: new Map(), left: new Map(), right: new Map() };
+  const centered = headers.position === "center";
+  const folio = folioContent(headers);
+  if (folio !== undefined) {
+    if (headers.pageNumber === "top" && centered) {
+      placed.left.set("top-left", folio);
+      placed.right.set("top-right", folio);
+    }
+    if (headers.pageNumber === "top" && !centered) placed.both.set("top-center", folio);
+    if (headers.pageNumber === "bottom") placed.both.set("bottom-center", folio);
+    if (headers.pageNumber === "outside") {
+      placed.left.set("bottom-left", folio);
+      placed.right.set("bottom-right", folio);
+    }
   }
+  if (headers.leftPage !== undefined && headers.leftPage !== "none") {
+    placed.left.set(
+      centered ? "top-center" : "top-left",
+      slotContent(headers.leftPage, setting),
+    );
+  }
+  if (headers.rightPage !== undefined && headers.rightPage !== "none") {
+    placed.right.set(
+      centered ? "top-center" : "top-right",
+      slotContent(headers.rightPage, setting),
+    );
+  }
+  return placed;
+}
+
+/**
+ * The page each role opens on, which carries no running head and no
+ * folio. A head names the section under it. A section's first page
+ * falls under the head of the section before it.
+ */
+function openingPages(
+  headers: HeaderDesign,
+  placed: Placement,
+  setting: Setting,
+): string[] {
+  if (headers.suppressOnOpenings === false) return [];
+  const cleared = printed(placed);
+  if (cleared.length === 0) return [];
   return used(setting.roles).map((role) =>
-    block(`@page ${role}:first`, [
-      boxed("top-left", "none"),
-      boxed("top-right", "none"),
-    ]),
+    block(
+      `@page ${role}:first`,
+      cleared.map((box) => boxed(box, "none")),
+    ),
+  );
+}
+
+/** The margin boxes the design prints something in, in the order `BOXES` has them. */
+function printed(placed: Placement): Box[] {
+  return BOXES.filter(
+    (box) => placed.both.has(box) || placed.left.has(box) || placed.right.has(box),
   );
 }
 
 /** The margin boxes of one page rule, in the order the rule sets them. */
-function boxes(content: ReadonlyMap<string, string>): string[] {
+function boxes(content: ReadonlyMap<Box, string>): string[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
     return found === undefined ? [] : [boxed(box, found)];
   });
 }
 
+/**
+ * The first-line indent sits on a paragraph that follows another. The
+ * engine declares its own indent there, and an indent inherited from
+ * `book` loses to it.
+ */
 function bodyRules(design: Design): string[] {
   const { body } = design;
   const lines: string[] = [];
@@ -170,7 +213,6 @@ function bodyRules(design: Design): string[] {
   lines.push(...set("font-size", written(body.size)));
   lines.push(...set("line-height", written(body.lineSpacing)));
   lines.push(...set("text-align", body.align));
-  lines.push(...set("text-indent", written(body.indent)));
   lines.push(...set("hyphens", flagged(body.hyphens, "auto", "manual")));
   lines.push(
     ...set(
@@ -180,7 +222,24 @@ function bodyRules(design: Design): string[] {
   );
   lines.push(...set("orphans", counted(body.orphans)));
   lines.push(...set("widows", counted(body.widows)));
-  return [block("book", lines)];
+  return [
+    block("book", lines),
+    block("p + p", [...set("text-indent", written(body.indent))]),
+    block("hr + p", [...set("text-indent", afterBreak(design))]),
+    block(HEADINGS, [
+      ...set("break-after", flagged(body.keepHeadings, "avoid", "auto")),
+    ]),
+  ];
+}
+
+/**
+ * The indent on the paragraph after a scene break. A design that turns
+ * the indent on gives it the body's first-line indent.
+ */
+function afterBreak(design: Design): string | undefined {
+  const { indentAfterBreak, indent } = design.body;
+  if (indentAfterBreak === undefined) return undefined;
+  return indentAfterBreak ? written(indent) : "0";
 }
 
 function headingRules(design: Design): string[] {
@@ -195,12 +254,6 @@ function typeLines(type: TypeSpec): string[] {
     lines.push(declared("font-family", `${quoted(type.font)}, serif`));
   }
   lines.push(...set("font-size", written(type.size)));
-  lines.push(
-    ...set(
-      "font-weight",
-      type.weight === undefined ? undefined : FONT_WEIGHTS[type.weight],
-    ),
-  );
   lines.push(...set("text-align", type.align));
   return lines;
 }
@@ -224,16 +277,22 @@ function sectionRules(design: Design, setting: Setting): string[] {
  * A sink is the blank space above a chapter's title, written in lines
  * of body text. Where the design sets a line height, a sink is that
  * many line heights. Where it does not, a sink is that many heading
- * ems.
+ * ems. A sink is padding, since the engine drops the top margin of a
+ * box that starts a page.
  */
 function chapterRules(design: Design, setting: Setting): string[] {
   const chapters = positions(setting.roles, "chapter");
   if (chapters === undefined) return [];
-  const { spaceAbove, dropCap } = design.chapter;
+  const { spaceAbove, spaceBelow, dropCap } = design.chapter;
   const sink =
     spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design);
+  const below =
+    spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design);
   return [
-    block(`${chapters} > ${OPENING}`, [...set("margin-top", sink)]),
+    block(`${chapters} > ${OPENING}`, [
+      ...set("padding-top", sink),
+      ...set("margin-bottom", below),
+    ]),
     block(`${chapters} > ${OPENING} + p::first-letter`, [
       ...set(
         "initial-letter",
@@ -244,12 +303,39 @@ function chapterRules(design: Design, setting: Setting): string[] {
 }
 
 function sceneRules(design: Design): string[] {
-  const { ornament } = design.scene;
-  return [
-    block("hr", [
-      ...set("content", ornament === undefined ? undefined : quoted(ornament)),
-    ]),
-  ];
+  const { scene } = design;
+  const lines = [...set("content", sceneContent(scene))];
+  if (scene.mark === "word" && scene.word !== undefined) {
+    lines.push(declared("text-align", "center"));
+  }
+  lines.push(
+    ...set(
+      "margin-top",
+      scene.spaceAbove === undefined
+        ? undefined
+        : bodyLines(scene.spaceAbove, design),
+    ),
+  );
+  lines.push(
+    ...set(
+      "margin-bottom",
+      scene.spaceBelow === undefined
+        ? undefined
+        : bodyLines(scene.spaceBelow, design),
+    ),
+  );
+  return [block("hr", lines)];
+}
+
+/**
+ * The text a scene break prints. A design with no mark set prints its
+ * ornament.
+ */
+function sceneContent(scene: SceneDesign): string | undefined {
+  const { mark, ornament, word } = scene;
+  if (mark === "space") return "none";
+  if (mark === "word") return word === undefined ? undefined : quoted(word);
+  return ornament === undefined ? undefined : quoted(ornament);
 }
 
 /** The places a role sits, as one selector, or nothing when it sits nowhere. */

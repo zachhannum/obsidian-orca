@@ -54,6 +54,7 @@
   --divider-color: var(--color-base-30);
   --interactive-normal: var(--color-base-30);
   --interactive-hover: var(--color-base-35);
+  --text-error: var(--color-red);
 }
 .orca *, .orca *::before, .orca *::after { box-sizing: border-box; }
 .orca p, .orca h1, .orca h2, .orca h3, .orca h4, .orca ul, .orca ol { margin: 0; }
@@ -163,6 +164,44 @@
 .num { width: 58px; justify-content: center; }
 .pending { display: inline-flex; align-items: center; gap: 4px; height: 16px; padding: 0 6px; border-radius: 8px; border: 1px dashed var(--background-modifier-border); color: var(--text-faint); font-size: 10px; letter-spacing: 0.01em; }
 .dim { opacity: 0.42; }
+/* At sidebar width each label sits just above its control. A segmented
+   control fills its row with equal choices and never wraps. */
+.narrow .row { flex-wrap: wrap; row-gap: 4px; }
+.narrow .row > .lab { width: 100%; }
+.narrow .seg { display: flex; flex: 1; min-width: 0; }
+.narrow .seg > div { flex: 1 1 0; min-width: 0; justify-content: center; white-space: nowrap; }
+.note { font-size: 11.5px; color: var(--text-faint); }
+.note.mod-error { color: var(--text-error); }
+
+/* ---- the design panel, with a rule between groups ---- */
+.panel-grp { display: flex; flex-direction: column; gap: 12px; padding-block: 16px; }
+.panel-grp + .panel-grp { border-top: 1px solid var(--background-modifier-border); }
+.panel-grp-h { font-size: 12.5px; font-weight: var(--font-semibold); color: var(--text-normal); }
+.panel-grp > .note { margin-top: -8px; }
+/* A row keeps the reset's slot when it has no reset, so controls do not move. */
+.reset-slot { width: 24px; height: 24px; flex: none; margin-left: auto; display: flex; align-items: center; justify-content: center; }
+.reset-slot > .clickable-icon { padding: 5px; }
+.row > .lock + .reset-slot { margin-left: 0; }
+.tabstrip { display: flex; border-bottom: 1px solid var(--background-modifier-border); }
+.tabstrip > div { flex: 1 1 0; display: flex; justify-content: center; padding: 5px 0 6px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.tabstrip > div.is-active { color: var(--text-normal); font-weight: var(--font-semibold); border-bottom-color: var(--color-accent); }
+
+/* ---- a number field, with a stepper joined to its right end ---- */
+.numf { display: inline-flex; flex: none; }
+.numf > .field { width: 60px; border-radius: var(--input-radius) 0 0 var(--input-radius); }
+.stepper { display: flex; flex-direction: column; width: 18px; height: var(--input-height); border: 1px solid var(--background-modifier-border); border-left: none; border-radius: 0 var(--input-radius) var(--input-radius) 0; background: var(--interactive-normal); color: var(--text-muted); }
+.stepper > div { flex: 1; display: flex; align-items: center; justify-content: center; }
+.stepper > div + div { border-top: 1px solid var(--background-modifier-border); }
+
+/* ---- a default value, and a value orca cannot read ---- */
+.field.is-default, .seg > div.is-on.is-default { color: var(--text-faint); }
+.field.is-select.is-default > svg { color: var(--text-muted); }
+.field.is-invalid { border-color: var(--text-error); }
+
+/* ---- Obsidian's icon button, and its tooltip ---- */
+.clickable-icon { display: flex; align-items: center; justify-content: center; flex: none; padding: 4px 6px; border-radius: var(--radius-s); color: var(--text-muted); opacity: 0.85; }
+.row > .clickable-icon, .row > .lock { margin-left: auto; }
+.tooltip { position: absolute; z-index: 5; padding: 5px 9px; border-radius: var(--radius-s); background: rgba(0,0,0,0.9); color: #dadada; font-size: var(--font-ui-smaller); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 
 /* ---- panels that are explicitly not UI ---- */
 .behind { border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m); background: rgba(var(--mono-100), 0.02); }

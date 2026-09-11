@@ -22,10 +22,8 @@ body-hanging-punctuation: false
 body-orphans: 2
 body-widows: 2
 heading-1-size: 17pt
-heading-1-weight: regular
 heading-1-align: center
 heading-2-size: 13pt
-heading-2-weight: bold
 chapter-begins: right-page
 chapter-space-above: 7
 chapter-drop-cap: 3

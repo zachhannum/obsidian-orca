@@ -24,6 +24,7 @@ import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import type { Face } from "@/book/plan";
+import { writeDesign, type Design } from "@/style/design";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import { membership, type Member } from "@/ui/member";
 import {
@@ -162,6 +163,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
           locate: (book, at) => {
             void this.locate(book, at);
           },
+          openPanel: () => {
+            void this.openPanel();
+          },
+          unit: () => this.limits.unit,
         }),
     );
     this.registerView(
@@ -351,7 +356,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Turns the preview being read a chapter along. The command goes grey
+   * Turns the preview being read a chapter along. The command goes gray
    * at either end of the book, and where no preview is open.
    */
   private turnsChapter(checking: boolean, step: number): boolean {
@@ -703,8 +708,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
       this.leadsTo(leaf, opens.at, true);
     } else if (left?.at === path) {
       leaf.setEphemeralState(left.state);
-      // The caret is put back centred, which is a different line at the
-      // top of the pane, and the top line is what the book reads.
+      // Obsidian puts the caret back centered, which leaves a different
+      // line at the top of the pane. The book page follows the top line.
       if (left.line !== undefined && shown instanceof MarkdownView) {
         shown.currentMode.applyScroll(left.line);
       }
@@ -965,11 +970,23 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
   }
 
-  /** Saves the limits, and applies them to the engines that already run. */
+  /**
+   * Saves the limits, and applies them to the engines that already run.
+   * After a change of unit, it paints the panel and every book page
+   * again in the new unit.
+   */
   limit(limits: Limits): void {
+    const remeasured = limits.unit !== this.limits.unit;
     this.limits = limits;
     if (this.engines !== undefined) this.engines.ceiling = limits.books;
     void this.saveData(limits);
+    if (!remeasured) return;
+    for (const leaf of this.app.workspace.getLeavesOfType(PANEL_VIEW)) {
+      if (leaf.view instanceof DesignPanelView) leaf.view.refresh();
+    }
+    for (const leaf of this.app.workspace.getLeavesOfType(BOOK_VIEW)) {
+      if (leaf.view instanceof BookView) leaf.view.refresh();
+    }
   }
 
   /** The vault and the engines, as the composer reaches them. */
@@ -1007,9 +1024,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private designing(): Designing {
     return {
       book: () => this.designed(),
-      setFont: (book, font) => this.setFont(book, font),
+      setDesign: (book, design) => this.setDesign(book, design),
       index: () => this.fontIndex(),
       styles: (font) => familyFaces(this.places(), font),
+      unit: () => this.limits.unit,
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the
@@ -1142,25 +1160,19 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Writes the font into the book's own frontmatter, which is where
-   * the design lives. The engine has the sheet already, so this is what
-   * makes the pick outlast the session.
+   * Writes the design into the book's own frontmatter. The engine
+   * already has the sheets. This write keeps the edit after
+   * the session ends.
    */
-  private async setFont(book: string, font: string): Promise<void> {
+  private async setDesign(book: string, design: Design): Promise<void> {
     const model = await this.edits.model(book);
-    // The font the book already has writes nothing, so nothing waits to
-    // be let through either.
-    if (model === undefined || model.book.design.body.font === font) return;
+    // It skips a design the book already has, so no write waits to be
+    // let through.
+    if (model === undefined || same(model.book.design, design)) return;
     this.designWrites.add(book);
     await this.edits.edit(book, (current) => ({
       ...current,
-      book: {
-        ...current.book,
-        design: {
-          ...current.book.design,
-          body: { ...current.book.design.body, font },
-        },
-      },
+      book: { ...current.book, design },
     }));
   }
 
@@ -1220,4 +1232,9 @@ function scrolledTo(view: MarkdownView): number | undefined {
   const text = editor.getValue();
   const at = { line: writtenAt(text, line), ch: 0 };
   return byteOf(text, editor.posToOffset(at));
+}
+
+/** Compares two designs by the properties they write into a note. */
+function same(one: Design, two: Design): boolean {
+  return JSON.stringify(writeDesign(one)) === JSON.stringify(writeDesign(two));
 }

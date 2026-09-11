@@ -2,8 +2,8 @@
  * The design a book is set by: a closed schema whose every field sets
  * one property the pinned engine supports.
  *
- * A field the design leaves unset is left to the layer under it, so a
- * preset shows through wherever the book has settled nothing.
+ * A field the design leaves unset takes the default that the engine and
+ * the bundled theme give a book that sets nothing.
  *
  * The schema is written flat, one key per line, because a novelist who
  * opens Obsidian's properties panel reads `body-line-spacing` there
@@ -16,6 +16,11 @@ export const UNITS = ["pt", "in", "mm", "cm", "pc", "em"] as const;
 
 export type Unit = (typeof UNITS)[number];
 
+/** The units a person can prefer for a page's margins and trim. */
+export const PAGE_UNITS = ["in", "mm", "pt"] as const;
+
+export type PageUnit = (typeof PAGE_UNITS)[number];
+
 /** A length, as the note writes it. */
 export interface Length {
   value: number;
@@ -26,6 +31,38 @@ export interface Length {
 export interface Trim {
   width: Length;
   height: Length;
+}
+
+/** One trim the panel offers by name. */
+export interface BookSize {
+  name: string;
+  trim: Trim;
+}
+
+/**
+ * The trims a novel is printed at, in the order the panel offers them.
+ * An author writes a trim outside this list into the note by hand.
+ */
+export const BOOK_SIZES: readonly BookSize[] = [
+  size("Mass market", 4.25, 6.87, "in"),
+  size("Digest", 5.5, 8.5, "in"),
+  size("Novel", 5.25, 8, "in"),
+  size("US trade", 6, 9, "in"),
+  size("Demy", 129, 198, "mm"),
+  size("Royal", 156, 234, "mm"),
+  size("A5", 148, 210, "mm"),
+];
+
+function size(
+  name: string,
+  width: number,
+  height: number,
+  unit: Unit,
+): BookSize {
+  return {
+    name,
+    trim: { width: { value: width, unit }, height: { value: height, unit } },
+  };
 }
 
 /** A page's margins. Inside is the gutter side and outside the fore-edge. */
@@ -53,23 +90,27 @@ export interface BodyDesign {
   align?: Align;
   /** The indent on a paragraph's first line. */
   indent?: Length;
+  /** When true, the first paragraph after a scene break takes the first-line indent. */
+  indentAfterBreak?: boolean;
   hyphens?: boolean;
   hangingPunctuation?: boolean;
   /** The fewest lines of a paragraph left at the foot of a page. */
   orphans?: number;
   /** The fewest lines of a paragraph carried to the top of a page. */
   widows?: number;
+  /** A heading keeps the text under it on the same page. */
+  keepHeadings?: boolean;
 }
-
-export type Weight = "regular" | "medium" | "semibold" | "bold";
 
 export type Alignment = "left" | "center" | "right";
 
-/** The type a heading is set in. */
+/**
+ * The type a heading is set in. Bold and italic inside a heading come
+ * from the markdown, so a spec sets neither.
+ */
 export interface TypeSpec {
   font?: string;
   size?: Length;
-  weight?: Weight;
   align?: Alignment;
 }
 
@@ -87,13 +128,25 @@ export interface ChapterDesign {
   begins?: Begins;
   /** The blank space above a chapter's title, in lines of body text. */
   spaceAbove?: number;
+  /** The blank space below a chapter's title, in lines of body text. */
+  spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
 }
 
+export type SceneMark = "space" | "ornament" | "word";
+
 export interface SceneDesign {
+  /** The kind of mark between two scenes. A space leaves a blank line. */
+  mark?: SceneMark;
   /** The mark between two scenes, as the glyph itself. */
   ornament?: string;
+  /** The word between two scenes, as the author writes it. */
+  word?: string;
+  /** The blank space above a scene break, in lines of body text. */
+  spaceAbove?: number;
+  /** The blank space below a scene break, in lines of body text. */
+  spaceBelow?: number;
 }
 
 export type HeaderSlot = "none" | "author" | "book-title" | "chapter-title";
@@ -102,11 +155,20 @@ export type PageNumberPosition = "top" | "bottom" | "outside";
 
 export type NumberFormat = "arabic" | "roman";
 
+/**
+ * The position of a running head across the top of its page. A folio
+ * at the top moves to the outside corner when the heads are centered.
+ */
+export type HeaderPosition = "outside" | "center";
+
 export interface HeaderDesign {
   leftPage?: HeaderSlot;
   rightPage?: HeaderSlot;
+  position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
+  /** When true, the page a section opens on has no running head and no folio. */
+  suppressOnOpenings?: boolean;
 }
 
 /** The whole design, group by group. Every field in a group is optional. */
@@ -217,6 +279,15 @@ const BODY: readonly Field[] = [
     },
   },
   {
+    key: "body-indent-after-break",
+    property: "text-indent",
+    read: ({ body }) => body.indentAfterBreak,
+    write: ({ body }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) body.indentAfterBreak = flag;
+    },
+  },
+  {
     key: "body-hyphens",
     property: "hyphens",
     read: ({ body }) => body.hyphens,
@@ -252,6 +323,15 @@ const BODY: readonly Field[] = [
       if (widows !== undefined) body.widows = widows;
     },
   },
+  {
+    key: "keep-heading-with-text",
+    property: "break-after",
+    read: ({ body }) => body.keepHeadings,
+    write: ({ body }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) body.keepHeadings = flag;
+    },
+  },
 ];
 
 const CHAPTER: readonly Field[] = [
@@ -266,11 +346,20 @@ const CHAPTER: readonly Field[] = [
   },
   {
     key: "chapter-space-above",
-    property: "margin-top",
+    property: "padding-top",
     read: ({ chapter }) => chapter.spaceAbove,
     write: ({ chapter }, value) => {
       const lines = asCount(value);
       if (lines !== undefined) chapter.spaceAbove = lines;
+    },
+  },
+  {
+    key: "chapter-space-below",
+    property: "margin-bottom",
+    read: ({ chapter }) => chapter.spaceBelow,
+    write: ({ chapter }, value) => {
+      const lines = asCount(value);
+      if (lines !== undefined) chapter.spaceBelow = lines;
     },
   },
   {
@@ -286,6 +375,15 @@ const CHAPTER: readonly Field[] = [
 
 const SCENE: readonly Field[] = [
   {
+    key: "scene-break-mark",
+    property: "content",
+    read: ({ scene }) => scene.mark,
+    write: ({ scene }, value) => {
+      const mark = asWord(value, MARKS);
+      if (mark !== undefined) scene.mark = mark;
+    },
+  },
+  {
     key: "scene-break-ornament",
     property: "content",
     read: ({ scene }) => scene.ornament,
@@ -294,11 +392,47 @@ const SCENE: readonly Field[] = [
       if (ornament !== undefined) scene.ornament = ornament;
     },
   },
+  {
+    key: "scene-break-word",
+    property: "content",
+    read: ({ scene }) => scene.word,
+    write: ({ scene }, value) => {
+      const word = asText(value);
+      if (word !== undefined) scene.word = word;
+    },
+  },
+  {
+    key: "scene-break-space-above",
+    property: "margin-top",
+    read: ({ scene }) => scene.spaceAbove,
+    write: ({ scene }, value) => {
+      const lines = asCount(value);
+      if (lines !== undefined) scene.spaceAbove = lines;
+    },
+  },
+  {
+    key: "scene-break-space-below",
+    property: "margin-bottom",
+    read: ({ scene }) => scene.spaceBelow,
+    write: ({ scene }, value) => {
+      const lines = asCount(value);
+      if (lines !== undefined) scene.spaceBelow = lines;
+    },
+  },
 ];
 
 const HEADERS: readonly Field[] = [
   slot("header-left-page", "leftPage"),
   slot("header-right-page", "rightPage"),
+  {
+    key: "header-position",
+    property: "content",
+    read: ({ headers }) => headers.position,
+    write: ({ headers }, value) => {
+      const position = asWord(value, HEAD_POSITIONS);
+      if (position !== undefined) headers.position = position;
+    },
+  },
   {
     key: "page-number-position",
     property: "content",
@@ -315,6 +449,15 @@ const HEADERS: readonly Field[] = [
     write: ({ headers }, value) => {
       const format = asWord(value, FORMATS);
       if (format !== undefined) headers.pageNumberFormat = format;
+    },
+  },
+  {
+    key: "suppress-head-on-openings",
+    property: "content",
+    read: ({ headers }) => headers.suppressOnOpenings,
+    write: ({ headers }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) headers.suppressOnOpenings = flag;
     },
   },
 ];
@@ -364,8 +507,8 @@ export function writeDesign(design: Design): Record<string, Written> {
 }
 
 /**
- * The two designs as one, field by field. `over` wins wherever it sets
- * a field, which is how a book overrides the preset under it.
+ * Merges two designs field by field. `over` wins wherever it sets a
+ * field, so a book's own keys win over the defaults.
  */
 export function mergeDesign(under: Design, over: Design): Design {
   const headings = emptyDesign().headings;
@@ -386,21 +529,114 @@ export function mergeDesign(under: Design, over: Design): Design {
   };
 }
 
+/** A value the panel cannot read. `kind` is the reason. */
+export class ValueError extends Error {
+  readonly kind: "number" | "unit" | "negative" | "whole";
+
+  constructor(kind: ValueError["kind"], text: string) {
+    super(`${JSON.stringify(text)} is ${REASONS[kind]}`);
+    this.name = "ValueError";
+    this.kind = kind;
+  }
+}
+
+const REASONS: Readonly<Record<ValueError["kind"], string>> = {
+  number: "not a number",
+  unit: `not in ${UNITS.join(", ")}`,
+  negative: "below zero",
+  whole: "not a whole number",
+};
+
+/**
+ * Reads a length as an author types it. A bare number is in `bare`,
+ * which is points by default. A space can sit between the number and
+ * its unit. It throws a `ValueError` on text it cannot read.
+ */
+export function parseLength(text: string, bare: Unit = UNIT): Length {
+  const found = TYPED.exec(text.trim());
+  if (found === null) throw new ValueError("number", text);
+  const [, minus, digits = "", word = ""] = found;
+  const unit = word === "" ? bare : word.toLowerCase();
+  if (!isUnit(unit)) throw new ValueError("unit", text);
+  const value = Number(digits);
+  if (minus !== undefined && value > 0) throw new ValueError("negative", text);
+  return { value, unit };
+}
+
+/**
+ * Converts a length to another unit, rounded to three decimal places.
+ * An em depends on the font size, so a length in em, or a conversion
+ * to em, comes back unchanged.
+ */
+export function convertLength(length: Length, unit: Unit): Length {
+  if (length.unit === unit || length.unit === "em" || unit === "em") return length;
+  const inches = length.value / PER_INCH[length.unit];
+  return { value: Number((inches * PER_INCH[unit]).toFixed(3)), unit };
+}
+
+/** The count of each absolute unit in one inch. */
+const PER_INCH: Readonly<Record<Exclude<Unit, "em">, number>> = {
+  in: 1,
+  pt: 72,
+  pc: 6,
+  mm: 25.4,
+  cm: 2.54,
+};
+
+/** Reads a count as an author types it. It throws a `ValueError` on text it cannot read. */
+export function parseCount(text: string): number {
+  const found = TYPED.exec(text.trim());
+  const [, minus, digits = "", word = ""] = found ?? [];
+  if (found === null || word !== "") throw new ValueError("number", text);
+  const count = Number(digits);
+  if (minus !== undefined && count > 0) throw new ValueError("negative", text);
+  if (!Number.isInteger(count)) throw new ValueError("whole", text);
+  return count;
+}
+
+/** The distance one step moves a length, in the length's own unit. */
+export const STEPS: Readonly<Record<Unit, number>> = {
+  pt: 0.5,
+  pc: 0.5,
+  in: 0.05,
+  mm: 1,
+  cm: 0.1,
+  em: 0.1,
+};
+
+/**
+ * Moves a length by `times` steps of its unit. It stops at 0 and
+ * rounds the result, so a step of 0.1 leaves no float noise.
+ */
+export function stepLength(length: Length, by: 1 | -1, times = 1): Length {
+  const value = length.value + by * times * STEPS[length.unit];
+  return { value: rounded(Math.max(0, value)), unit: length.unit };
+}
+
+/** Moves a count by `times`. It stops at 0. */
+export function stepCount(count: number, by: 1 | -1, times = 1): number {
+  return Math.max(0, count + by * times);
+}
+
 const ALIGNS: readonly Align[] = ["justify", "left"];
 const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
-const WEIGHTS: readonly Weight[] = ["regular", "medium", "semibold", "bold"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
+const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
   "author",
   "book-title",
   "chapter-title",
 ];
+const HEAD_POSITIONS: readonly HeaderPosition[] = ["outside", "center"];
 const POSITIONS: readonly PageNumberPosition[] = ["top", "bottom", "outside"];
 const FORMATS: readonly NumberFormat[] = ["arabic", "roman"];
 
 /** The unit a length written as a bare number is given. */
 const UNIT: Unit = "pt";
+
+/** A number with its sign in a separate group, then an optional unit. */
+const TYPED = /^(-)?(\d+(?:\.\d+)?|\.\d+)\s*([a-z]*)$/i;
 
 /** The fields that set one heading level's type. */
 function heading(level: Level): Field[] {
@@ -421,15 +657,6 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const size = asLength(value);
         if (size !== undefined) headings[level].size = size;
-      },
-    },
-    {
-      key: `heading-${level}-weight`,
-      property: "font-weight",
-      read: ({ headings }) => headings[level].weight,
-      write: ({ headings }, value) => {
-        const weight = asWord(value, WEIGHTS);
-        if (weight !== undefined) headings[level].weight = weight;
       },
     },
     {
@@ -470,23 +697,22 @@ function slot(key: string, side: "leftPage" | "rightPage"): Field {
 
 /** A length in the form the note writes it, which CSS also accepts. */
 export function written(length: Length | undefined): string | undefined {
-  return length === undefined ? undefined : `${trimmed(length.value)}${length.unit}`;
+  return length === undefined ? undefined : `${rounded(length.value)}${length.unit}`;
 }
 
-function trimmed(value: number): string {
-  return String(Number(value.toFixed(4)));
+function rounded(value: number): number {
+  return Number(value.toFixed(4));
+}
+
+function isUnit(word: string): word is Unit {
+  return (UNITS as readonly string[]).includes(word);
 }
 
 function asLength(value: unknown): Length | undefined {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? { value, unit: UNIT } : undefined;
+    return Number.isFinite(value) && value >= 0 ? { value, unit: UNIT } : undefined;
   }
-  if (typeof value !== "string") return undefined;
-  const found = /^(-?\d+(?:\.\d+)?)\s*([a-z]+)?$/i.exec(value.trim());
-  if (found === null) return undefined;
-  const unit = (found[2] ?? UNIT).toLowerCase();
-  if (!UNITS.includes(unit as Unit)) return undefined;
-  return { value: Number(found[1]), unit: unit as Unit };
+  return typeof value === "string" ? readable(() => parseLength(value)) : undefined;
 }
 
 function asTrim(value: unknown): Trim | undefined {
@@ -499,11 +725,20 @@ function asTrim(value: unknown): Trim | undefined {
 }
 
 function asCount(value: unknown): number | undefined {
-  const count = typeof value === "string" ? Number(value.trim()) : value;
-  if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
-    return undefined;
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value >= 0 ? value : undefined;
   }
-  return count;
+  return typeof value === "string" ? readable(() => parseCount(value)) : undefined;
+}
+
+/** The value read, or nothing where the text is one the schema cannot read. */
+function readable<T>(read: () => T): T | undefined {
+  try {
+    return read();
+  } catch (error) {
+    if (error instanceof ValueError) return undefined;
+    throw error;
+  }
 }
 
 function asFlag(value: unknown): boolean | undefined {

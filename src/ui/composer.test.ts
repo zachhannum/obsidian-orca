@@ -8,6 +8,7 @@ import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Face } from "@/book/plan";
+import type { Design } from "@/style/design";
 import type { Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
@@ -403,7 +404,7 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   );
 
   const book = await composer.open(BOOK);
-  book.refont("Spectral", [cut]);
+  book.restyle(refonted(book.design, "Spectral"), [cut]);
   await crossed(book, clock);
   // The keystroke is on this thread and nowhere else: the wait has not
   // run, so the engine that dies never saw it.
@@ -446,6 +447,11 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   const styled = opened.at(-1);
   assert.equal(styled?.op, "style");
 });
+
+/** The design after a font pick, as the panel passes it to `restyle`. */
+function refonted(design: Design, font: string): Design {
+  return { ...design, body: { ...design.body, font } };
+}
 
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real

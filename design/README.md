@@ -60,19 +60,30 @@ its editor around these files and returns a URL. The artboard list and
 - One ribbon icon, with the issues badge on it.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
+- The design panel is in the right sidebar. It shows the book being
+  read, and it does not open or close with a book. The book note's own
+  page shows the design read-only, with a button that opens the panel.
+- The panel draws margins and a custom trim in the unit from orca's
+  settings. That unit is inches unless the author picks millimeters or
+  points.
 - A control the CSS has taken over dims where it sits and shows the
   line that took it, which is also the way to that line.
+- The control for a key the book does not set shows orca's default in
+  faint type. A key the book sets has a reset at the end of its row.
+  The reset returns the key to the default.
+- The stepper and the arrow keys change a number field by a step that
+  suits its unit. If orca cannot read the value in a field, a line
+  under the row shows the error.
 - The Font control opens on the fonts the machine has, read out of the
   platform's font directories and the vault's `fonts/`. Typing filters
-  that list rather than naming a font, and a row is set in the font it
-  offers. The styles under it are the ones the engine registered, since
-  a variable file's styles are not in its name table.
+  that list rather than naming a font. Each row is set in its own
+  font.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.
-- Chapter openings default to the right-hand page, which is what
-  leaves the odd blank verso. Next page and same page are both there.
+- Chapter openings default to the next page. The right-hand page and
+  the same page are the other choices.
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.

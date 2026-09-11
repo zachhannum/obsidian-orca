@@ -10,6 +10,8 @@
   margin-bottom: 1in;
   margin-left: 0.95in;
   margin-right: 0.7in;
+  @top-center { content: counter(page, decimal); }
+  @bottom-center { content: counter(page, decimal); }
 }
 
 @page :left {
@@ -20,13 +22,16 @@
 }
 
 @page :right {
+  @top-center { content: string(chapter); }
   @top-right { content: string(chapter); }
   @bottom-right { content: counter(page, lower-roman); }
 }
 
 @page chapter:first {
   @top-left { content: none; }
+  @top-center { content: none; }
   @top-right { content: none; }
+  @bottom-center { content: none; }
 }
 
 book {
@@ -34,11 +39,14 @@ book {
   font-size: 10.5pt;
   line-height: 14pt;
   text-align: justify;
-  text-indent: 1.2em;
   hyphens: auto;
   hanging-punctuation: first allow-end last;
   orphans: 2;
   widows: 2;
+}
+
+p + p {
+  text-indent: 1.2em;
 }
 
 section {
@@ -48,11 +56,12 @@ section {
 }
 
 section > :is(h1, h2, h3, h4, h5, h6):first-child {
-  margin-top: 7em;
+  padding-top: 7em;
+  margin-bottom: 2em;
   font-family: "EB Garamond", serif;
   font-size: 17pt;
-  font-weight: 400;
   text-align: center;
+  break-after: avoid;
 }
 
 section > p:first-of-type::first-letter {
@@ -61,4 +70,11 @@ section > p:first-of-type::first-letter {
 
 hr {
   content: "\2042";
+  text-align: center;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+hr + p {
+  text-indent: 0;
 }

@@ -2,6 +2,7 @@ node_modules/
 main.js
 main.js.map
 *.wasm
+/data.json
 .DS_Store
 test-results/
 playwright-report/
