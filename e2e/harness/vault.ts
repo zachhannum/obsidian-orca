@@ -113,7 +113,12 @@ export class Vault {
     );
   }
 
-  /** Puts back every file the spec touched. */
+  /**
+   * Puts back every file the spec touched, and returns once Obsidian
+   * has indexed each one. A write the vault sees late is a change the
+   * next spec gets: the book note parses as no book for a moment, and a
+   * chapter crosses to the engine as an edit.
+   */
   async restore(): Promise<void> {
     for (const file of this.touched) {
       const text = await readFile(path.join(this.fixture, file), "utf8").catch(
@@ -121,12 +126,27 @@ export class Vault {
       );
       await this.page.evaluate(
         async ({ at, text }) => {
-          const { adapter } = window.app.vault;
-          if (text === undefined) {
-            if (await adapter.exists(at)) await adapter.remove(at);
-          } else {
-            await adapter.write(at, text);
-          }
+          const { vault, metadataCache } = window.app;
+          const { adapter } = vault;
+          const had = (await adapter.exists(at)) ? await adapter.read(at) : undefined;
+          if (had === text) return;
+          const indexed = new Promise<void>((resolve) => {
+            const ref: EventRef =
+              text === undefined
+                ? vault.on("delete", (gone) => {
+                    if (gone.path !== at) return;
+                    vault.offref(ref);
+                    resolve();
+                  })
+                : metadataCache.on("changed", (note, data) => {
+                    if (note.path !== at || data !== text) return;
+                    metadataCache.offref(ref);
+                    resolve();
+                  });
+          });
+          if (text === undefined) await adapter.remove(at);
+          else await adapter.write(at, text);
+          await indexed;
         },
         { at: file, text },
       );
