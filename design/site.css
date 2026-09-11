@@ -149,7 +149,7 @@
 .pg-text p.first{text-indent:0}
 .pg-dc{float:left;font-size:35px;line-height:28px;padding:1px 3px 0 0;margin-top:1px}
 .pg-folio{position:absolute;left:0;right:0;bottom:17px;text-align:center;font-size:7px;color:#6a6355}
-.fluke{display:inline-block;flex:none;background:currentColor;-webkit-mask:url(./orca-fluke.png) center/contain no-repeat;mask:url(./orca-fluke.png) center/contain no-repeat}
+
 
 .row-h{margin:0;font-family:'Bodoni Moda',Didot,Georgia,serif;font-weight:700;font-size:46px;line-height:1.05;letter-spacing:-.015em;color:#eef0ec}
 .row-h i{font-weight:500}

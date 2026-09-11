@@ -176,7 +176,7 @@
       "x": 3120,
       "y": 1040,
       "w": 760,
-      "text": "The docs site, in the Deep water direction.\n\nDark is the default. On the landing page, the dark scheme has a light sky over a black sea, and the light scheme swaps the two.\n\nThe light and phone landing pages show the hero only. They get the sections below it before the landing page is built.\n\nThe tail mark is a mask cut from the icon's PNG, in orca-fluke.png."
+      "text": "The docs site, in the Deep water direction.\n\nDark is the default. On the landing page, the dark scheme has a light sky over a black sea, and the light scheme swaps the two.\n\nThe light and phone landing pages show the hero only. They get the sections below it before the landing page is built.\n\nThe tail mark is orca-tail.svg: the two lobes of the orca icon, in one flat color."
     },
     {
       "id": "invariants",

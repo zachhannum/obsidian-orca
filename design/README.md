@@ -23,7 +23,8 @@ The docs site does not use Obsidian's tokens. Its own are in
   or `.site-light`.
 - `parts/site-*.js`, the scripts that move the site's sea and run its
   demos.
-- `orca-fluke.png`, the tail mark, as a mask.
+- `orca-tail.svg`, the tail mark from the orca icon, as flat paths in
+  the current color. The site parts draw the same paths inline.
 - `sizes.json`, each artboard's frame in pixels. A site part also
   names its stylesheet, its script and its tweaks.
 - `canvas.json`, where the artboards sit, the pages, the sticky notes.
@@ -40,8 +41,7 @@ the parts.
 
 Publishing the canvas needs Claude Code's `design` skill, which seeds
 its editor around these files and returns a URL. The artboard list and
-`canvas.json` are what it takes. The site's artboards also take
-`orca-fluke.png`.
+`canvas.json` are what it takes.
 
 ## What the screens settle
 
