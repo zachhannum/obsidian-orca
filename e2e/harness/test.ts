@@ -35,10 +35,15 @@ interface Shared {
 
 export const test = base.extend<Fixtures, Shared>({
   obsidian: [
-    async ({}, use) => {
+    async ({}, use, worker) => {
       const endpoint = process.env[CDP];
       if (endpoint === undefined) throw new Error(`${CDP} is not set`);
-      await use(await Obsidian.attach(await chromium.connectOverCDP(endpoint)));
+      // A connection never sees a worker that started before it
+      // attached, and a Playwright worker after the first starts only
+      // because a spec failed. That one reloads the window, so every
+      // engine it looks for starts under its own connection.
+      const fresh = worker.workerIndex > 0;
+      await use(await Obsidian.attach(await chromium.connectOverCDP(endpoint), fresh));
     },
     { scope: "worker" },
   ],

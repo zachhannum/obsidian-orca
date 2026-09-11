@@ -86,11 +86,16 @@ const APPEARING = 60_000;
 export class Obsidian {
   private constructor(readonly page: Page) {}
 
-  /** Attaches to the window, sizes it and restores its workspace. */
-  static async attach(browser: Browser): Promise<Obsidian> {
+  /**
+   * Attaches to the window, sizes it and restores its workspace. A
+   * `fresh` attach reloads the window first, which stops every worker
+   * the window ran and loads orca again.
+   */
+  static async attach(browser: Browser, fresh = false): Promise<Obsidian> {
     const page = await renderer(browser);
     const session = await page.context().newCDPSession(page);
     await session.send("Emulation.setDeviceMetricsOverride", WINDOW);
+    if (fresh) await page.reload();
     await page.waitForFunction(
       () => window.app?.workspace.layoutReady === true,
       undefined,
