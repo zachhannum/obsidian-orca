@@ -108,7 +108,7 @@ test("picking the font the book is set in again keeps the book in it", async ({
   await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
 
   // The registry keys the bytes by content, so the second pick sends
-  // nothing new and the book stays in the font, with nothing to warn of.
+  // nothing new. The book stays in the font, and there is no warning.
   await expect(panel.font).toContainText(FIXTURE_FONT);
   await expect(panel.missing).toHaveCount(0);
 
@@ -281,7 +281,7 @@ test("a key the book does not set is drawn at its default, in faint type", async
   await expect(below).toHaveClass(/is-default/);
   await expect(panel.reset("chapter-space-below")).toHaveCount(0);
 
-  // A key it sets is drawn as it is, with a reset.
+  // A key the fixture sets shows its own value and a reset.
   await expect(panel.control("chapter-drop-cap")).toHaveAttribute(
     "data-default",
     "false",
@@ -358,13 +358,13 @@ test("text a number field cannot read says what is wrong and writes nothing", as
   await expect(panel.invalid("margin-top")).toHaveText(
     "Use one of these units: pt, pc, in, mm, cm, em.",
   );
-  // The text stays in the field, marked, rather than blanking out.
+  // The text stays in the field and is marked as not valid.
   await expect(top).toHaveValue("12px");
   await expect(top).toHaveAttribute("aria-invalid", "true");
-  // The field wrote nothing, so the note keeps the margin it had.
+  // Orca wrote nothing, so the note keeps the margin it had.
   expect(await vault.read(BOOK)).toContain("margin-top: 0.8in");
 
-  // Escape puts the field back.
+  // Escape restores the value the field had.
   await top.press("Escape");
   await expect(panel.invalid("margin-top")).toHaveCount(0);
   await expect(top).toHaveValue("0.8in");
@@ -451,8 +451,8 @@ test("the hyphenation switch says which language the engine will hyphenate in", 
   await book.painted();
   await panel.open();
 
-  // The engine reads no language property, so the panel reports the
-  // book's own rather than anything the design sets.
+  // The engine reads no language property, so the panel shows the
+  // book's own language and not one from the design.
   await expect(panel.said("body-hyphens")).toContainText("en-GB");
   await expect(panel.said("body-hyphens")).toContainText("English");
 });
@@ -468,7 +468,7 @@ test("the book note's page draws the design read-only, in the panel's words", as
   await expect(note.summed("Chapters begin on")).toContainText(
     "Right-hand page",
   );
-  // Nothing on the page edits the design; the button opens the panel.
+  // Nothing on the page edits the design. The button opens the panel.
   await expect(
     note.design.locator("input, select, [role='switch']"),
   ).toHaveCount(0);
@@ -489,8 +489,8 @@ test("the book page's button opens the design panel, and reveals it once open", 
   await note.openDesign.click();
   await expect(panel.leaf).toBeVisible();
 
-  // With the sidebar shut, the same click reveals the leaf it made
-  // rather than opening a second one.
+  // If the sidebar is collapsed, the same click reveals the leaf that
+  // is there and does not open a second one.
   await obsidian.collapse("right");
   expect(await obsidian.collapsed("right")).toEqual(true);
   await note.openDesign.click();
@@ -607,8 +607,8 @@ test("with pages measured in millimeters, a margin field reads in millimeters", 
   const top = panel.control("margin-top");
   await expect(top).toHaveValue("0.8in");
 
-  // The unit is orca's setting rather than the book's, so the spec puts
-  // it back to inches however it ends.
+  // The unit is an orca setting, not a book setting, so the spec sets it
+  // back to inches in every case.
   await panel.measure("mm");
   try {
     await expect(top).toHaveValue("20.32mm");
@@ -629,8 +629,8 @@ test("the panel is not a mode, so it stays when the book it designed closes", as
 
   await book.close();
 
-  // The leaf is still in the sidebar, holding no book rather than
-  // going away with the pane that had one.
+  // The leaf stays in the sidebar with no book. It does not close with
+  // the pane that had the book.
   await expect(panel.empty).toBeVisible();
 });
 

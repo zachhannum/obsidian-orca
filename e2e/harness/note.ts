@@ -37,7 +37,7 @@ export class Note {
   readonly line: Locator;
   /** The reading order, drawn read-only. */
   readonly order: Locator;
-  /** The design, drawn read-only. The panel in the sidebar edits it. */
+  /** The design, read-only. The panel in the sidebar edits it. */
   readonly design: Locator;
   /** The button that opens or reveals the design panel in the right sidebar. */
   readonly openDesign: Locator;
@@ -53,7 +53,7 @@ export class Note {
     this.openDesign = this.page.getByTestId("orca-book-open-design");
   }
 
-  /** One line of the design, by the label it is drawn under. */
+  /** One line of the design, by its label. */
   summed(label: string): Locator {
     return this.design.locator(
       `[data-testid="orca-book-summed"][data-label="${label}"]`,

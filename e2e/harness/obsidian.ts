@@ -25,7 +25,7 @@ interface Config {
   setConfig(key: string, value: unknown): void;
 }
 
-/** The plugins the app has loaded, by id, which the API does not declare. */
+/** The plugins the app loaded, by id. The API does not declare them. */
 interface Plugins {
   plugins: Record<string, unknown>;
 }
@@ -63,7 +63,6 @@ const CHROME = {
   status: ".status-bar",
 };
 
-/** One of the two sidebars. */
 export type Side = "left" | "right";
 
 /** The chrome that floats over a pane, which a photograph of one drops. */
@@ -213,8 +212,8 @@ export class Obsidian {
   }
 
   /**
-   * Collapses a sidebar. The navigator lives in the left one and the
-   * design panel in the right.
+   * Collapses a sidebar. The navigator is in the left one and the
+   * design panel is in the right one.
    */
   async collapse(side: Side = "left"): Promise<void> {
     await this.page.evaluate((on) => {

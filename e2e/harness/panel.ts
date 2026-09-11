@@ -1,6 +1,6 @@
 /**
- * The design panel in the right sidebar, reached by the test ids in its
- * own markup.
+ * The design panel in the right sidebar. The page objects here find it
+ * by the test ids in its own markup.
  *
  * The picker lists the fonts the scan found, so a spec types to narrow
  * that list rather than naming one. Every wait here is on the panel's
@@ -19,7 +19,7 @@ export const PANEL = "orca-design";
 /** The id in the plugin's manifest, which the app keys its plugins by. */
 const ORCA = "orca";
 
-/** A control's box, measured from the panel's own corner so a scroll does not move it. */
+/** A control's box, from the panel's own corner. A scroll does not change it. */
 export interface Placed {
   x: number;
   y: number;
@@ -27,19 +27,19 @@ export interface Placed {
   height: number;
 }
 
-/** The settings orca saves, as much of them as a spec changes. */
+/** The part of orca's saved settings that a spec changes. */
 interface Limited {
   limits: { unit: string };
   limit(limits: { unit: string }): void;
 }
 
-/** The controls, read off the leaf the panel is drawn in. */
+/** The panel's controls, found under the root it is given. */
 export class Controls {
   /** The panel itself, drawn when there is a book to design. */
   readonly panel: Locator;
-  /** The state the panel holds when no book is open. */
+  /** The panel's state when no book is open. */
   readonly empty: Locator;
-  /** The groups the panel offers, each carrying its name. */
+  /** The panel's groups. Each one carries its name. */
   readonly groups: Locator;
   /** The closed field, which shows the font the book is set in. */
   readonly font: Locator;
@@ -75,7 +75,7 @@ export class Controls {
     return this.root.getByTestId(`orca-panel-${key}-${value}`);
   }
 
-  /** The line under a row, which is where a unit or a language is said. */
+  /** The line under a row that shows a unit or a language. */
   said(key: string): Locator {
     return this.root.getByTestId(`orca-panel-said-${key}`);
   }
@@ -95,12 +95,15 @@ export class Controls {
     return this.root.getByTestId(`orca-panel-${key}-down`);
   }
 
-  /** The line under a row that says why a field's text writes nothing. */
+  /**
+   * The error line under a row whose field text orca cannot read. Orca
+   * writes nothing for that text.
+   */
   invalid(key: string): Locator {
     return this.root.getByTestId(`orca-panel-invalid-${key}`);
   }
 
-  /** The names of the groups the panel offers, in the order it offers them. */
+  /** The names of the panel's groups, in their order. */
   async grouped(): Promise<string[]> {
     return this.groups.evaluateAll((groups) =>
       groups.map((group) => group.getAttribute("data-group") ?? ""),
@@ -122,9 +125,9 @@ export class Controls {
   }
 
   /**
-   * The elements drawn past the panel's right edge, by test id or class.
-   * A group that clips its content passes `overflowing`, so this reads
-   * where each element lands instead.
+   * The elements past the panel's right edge, by test id or class. A
+   * group that clips its content passes `overflowing`, but this still
+   * finds the elements it clipped.
    */
   async beyond(): Promise<string[]> {
     return this.panel.evaluate((panel) => {
@@ -140,7 +143,7 @@ export class Controls {
     });
   }
 
-  /** The box one control is drawn in, from the panel's corner. */
+  /** One control's box, from the panel's corner. */
   async placed(key: string): Promise<Placed> {
     return this.control(key).evaluate((control) => {
       const box = control.getBoundingClientRect();
@@ -183,9 +186,9 @@ export class Controls {
   }
 }
 
-/** The panel in the right sidebar, which follows the book being read. */
+/** The panel in the right sidebar. It shows the book being read. */
 export class Panel extends Controls {
-  /** The leaf the panel is drawn in, whether or not it has a book. */
+  /** The panel's leaf, with or without a book. */
   readonly leaf: Locator;
   /** The element that scrolls the panel, which is the leaf's content. */
   readonly scroller: Locator;
@@ -226,7 +229,7 @@ export class Panel extends Controls {
   }
 
   /**
-   * Scrolls the panel until a control sits in the middle of it, and
+   * Scrolls the panel until a control is in the middle of it, and
    * returns how far the panel is then scrolled.
    */
   async scrollTo(control: Locator): Promise<number> {
@@ -237,8 +240,8 @@ export class Panel extends Controls {
   }
 
   /**
-   * Sets the unit orca's settings measure pages in, the way the settings
-   * tab saves it, and returns the unit it had.
+   * Sets the page unit in orca's settings with the call the settings tab
+   * uses, and returns the unit it had.
    */
   async measure(unit: string): Promise<string> {
     return this.obsidian.page.evaluate(
