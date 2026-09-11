@@ -32,11 +32,10 @@
   --muted: #a3acb4;
   --faint: #66707a;
   --accent: #86cfe0;
-  --sel: #eef0ec;
   --pill: #eef0ec;
   --pilltext: #0a0c0f;
   --desk: #07090b;
-  --display: 'Archivo',system-ui,sans-serif;
+  --display: 'Bodoni Moda',Didot,Georgia,serif;
   --body: 'Source Serif 4',Georgia,serif;
   --ui: 'Archivo',system-ui,sans-serif;
   --mono: 'DM Mono',ui-monospace,monospace;
@@ -72,11 +71,10 @@
   --muted: #4a535b;
   --faint: #7d868e;
   --accent: #1d6b7d;
-  --sel: #0a0c0f;
   --pill: #0a0c0f;
   --pilltext: #eef0ec;
   --desk: #dce1de;
-  --display: 'Archivo',system-ui,sans-serif;
+  --display: 'Bodoni Moda',Didot,Georgia,serif;
   --body: 'Source Serif 4',Georgia,serif;
   --ui: 'Archivo',system-ui,sans-serif;
   --mono: 'DM Mono',ui-monospace,monospace;
@@ -247,16 +245,16 @@
 .d-grp{display:flex;flex-direction:column;gap:2px}
 .d-gh{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
 .d-a{padding:5px 10px;border-radius:var(--r);color:var(--muted)}
-.d-a.on{color:var(--text);background:var(--sel)}
+.d-a.on{background:var(--pill);color:var(--pilltext);font-weight:600;border-radius:999px}
 .d-main{flex:1;min-width:0;padding:44px 64px 0 72px}
 .d-col{width:680px}
 .d-eye{font-family:var(--ui);font-size:13px;color:var(--accent);margin-bottom:10px}
-.d-h1{font-family:var(--display);font-weight:400;font-size:44px;line-height:1.1;margin:0 0 14px}
+.d-h1{font-family:var(--display);font-weight:700;font-size:50px;line-height:1.1;letter-spacing:-.015em;margin:0 0 14px}
 .d-lead{font-size:18px;line-height:1.6;color:var(--muted);margin:0 0 26px}
 .d-fig{margin:0 0 30px;display:flex;flex-direction:column;gap:10px}
-.d-shot{position:relative;padding:26px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);display:flex;justify-content:center}
+.d-shot{position:relative;padding:26px;background:var(--desk);border:1px solid var(--border);border-radius:var(--r);display:flex;justify-content:center}
 .d-cap{font-family:var(--ui);font-size:13px;color:var(--faint)}
-.d-h2{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:0 0 10px}
+.d-h2{font-family:var(--display);font-weight:500;font-style:italic;font-size:27px;line-height:1.2;letter-spacing:-.015em;margin:6px 0 10px}
 .d-p{font-size:16.5px;line-height:1.65;margin:0 0 24px}
 .d-c{font-family:var(--mono);font-size:.86em;background:var(--code);color:var(--codetext);padding:1px 5px;border-radius:3px}
 .d-pre{font-family:var(--mono);font-size:14px;line-height:1.75;background:var(--code);color:var(--codetext);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin:0;white-space:pre}
@@ -264,11 +262,4 @@
 .d-toc{width:236px;flex:none;padding:48px 28px 0 0;font-family:var(--ui);font-size:13.5px;display:flex;flex-direction:column;gap:9px}
 .d-toc-h{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
 .d-t{color:var(--muted)}
-.d-t.on{color:var(--accent)}
-
-.d-h1,.d-h2{font-family:'Bodoni Moda',Didot,Georgia,serif;font-weight:700;letter-spacing:-.015em}
-.d-h1{font-size:50px}
-.d-h2{font-size:27px;font-style:italic;font-weight:500;margin-top:6px}
-.d-a.on{background:var(--pill);color:var(--pilltext);font-weight:600;border-radius:999px}
 .d-t.on{color:var(--text)}
-.d-shot{background:var(--desk)}
