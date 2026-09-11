@@ -105,4 +105,17 @@ const reset = 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8';
     font-size: 13px;
     color: var(--faint);
   }
+  /* The panel is a fixed width, so a narrow page shows it unscaled. */
+  @media (max-width: 30rem) {
+    .shot {
+      padding: 14px;
+    }
+    .crop {
+      width: 280px;
+      height: 186px;
+    }
+    .crop > :global(.o-frag) {
+      transform: none;
+    }
+  }
 </style>

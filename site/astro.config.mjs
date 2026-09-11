@@ -43,11 +43,7 @@ export default defineConfig({
       expressiveCode: false,
       favicon: '/favicon.svg',
       customCss: [
-        '@fontsource-variable/archivo',
-        '@fontsource-variable/bodoni-moda',
-        '@fontsource-variable/source-serif-4',
-        '@fontsource/dm-mono/400.css',
-        '@fontsource/dm-mono/500.css',
+        './src/styles/fonts.css',
         './src/styles/tokens.css',
         './src/styles/theme.css',
         './src/styles/panel.css',

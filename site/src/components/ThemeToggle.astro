@@ -31,13 +31,6 @@
   </svg>
 </button>
 
-<script is:inline>
-  document.addEventListener('click', (event) => {
-    const button = event.target instanceof Element && event.target.closest('[data-theme-toggle]');
-    if (button) window.orcaTheme.set(window.orcaTheme.current() === 'light' ? 'dark' : 'light');
-  });
-</script>
-
 <style>
   .theme-toggle {
     display: flex;

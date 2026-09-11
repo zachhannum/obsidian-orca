@@ -28,4 +28,13 @@
     };
   })();
   window.StarlightThemeProvider = window.orcaTheme;
+
+  // One listener for every toggle on the page. A docs page draws one in the
+  // header and one in the mobile menu.
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('[data-theme-toggle]')) {
+      window.orcaTheme.set(window.orcaTheme.current() === 'light' ? 'dark' : 'light');
+    }
+  });
 </script>
