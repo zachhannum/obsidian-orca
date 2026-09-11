@@ -1,0 +1,132 @@
+---
+import '../styles/fonts.css';
+import '../styles/tokens.css';
+import Mark from '../components/Mark.astro';
+import ThemeBoot from '../components/ThemeBoot.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+
+const docs = '/start/install/';
+const repo = 'https://github.com/zachhannum/obsidian-orca';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>orca</title>
+    <meta name="description" content="A book designer that runs inside Obsidian." />
+    <link rel="icon" href="/favicon.svg" />
+    <ThemeBoot />
+  </head>
+  <body>
+    <header>
+      <a class="word" href="/">
+        <Mark />
+        <span>orca</span>
+      </a>
+      <nav>
+        <a href={docs}>Docs</a>
+        <a href={repo}>GitHub</a>
+        <ThemeToggle />
+      </nav>
+    </header>
+
+    <main>
+      <h1>A book designer<br /><i>inside Obsidian</i></h1>
+      <p>
+        The chapters stay notes in the vault, the book is a note beside them, and a preview
+        pane shows the set page while you write.
+      </p>
+      <a class="button" href={docs}>Read the docs</a>
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(*) {
+    box-sizing: border-box;
+  }
+  :global(body) {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    height: 64px;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .word {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .word span {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 25px;
+  }
+  nav {
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: var(--ui);
+    font-size: 14px;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+  nav a:hover {
+    color: var(--text);
+  }
+  main {
+    max-width: 44rem;
+    padding: 96px 28px;
+    margin: 0 auto;
+  }
+  h1 {
+    margin: 0 0 22px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 72px;
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+  }
+  h1 i {
+    font-weight: 500;
+  }
+  p {
+    margin: 0 0 32px;
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .button {
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 999px;
+    background: var(--pill);
+    color: var(--pilltext);
+    font-family: var(--ui);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  @media (max-width: 50rem) {
+    h1 {
+      font-size: 46px;
+    }
+    main {
+      padding-block: 56px;
+    }
+  }
+</style>

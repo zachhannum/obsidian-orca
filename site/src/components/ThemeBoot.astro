@@ -1,0 +1,40 @@
+{/* Inlined, so the scheme is on the root before the first paint. */}
+<script is:inline>
+  window.orcaTheme = (() => {
+    const key = 'starlight-theme';
+    const read = () => {
+      try {
+        const stored = localStorage.getItem(key);
+        return stored === 'light' || stored === 'dark' ? stored : null;
+      } catch {
+        return null;
+      }
+    };
+    // Dark is the site's default, so an unset preference is dark.
+    const apply = (theme) => {
+      document.documentElement.dataset.theme = theme;
+    };
+    apply(read() ?? 'dark');
+    return {
+      current: () => document.documentElement.dataset.theme ?? 'dark',
+      set(theme) {
+        apply(theme);
+        try {
+          localStorage.setItem(key, theme);
+        } catch {}
+      },
+      // Starlight's own picker calls this after it loads.
+      updatePickers() {},
+    };
+  })();
+  window.StarlightThemeProvider = window.orcaTheme;
+
+  // One listener for every toggle on the page. A docs page draws one in the
+  // header and one in the mobile menu.
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('[data-theme-toggle]')) {
+      window.orcaTheme.set(window.orcaTheme.current() === 'light' ? 'dark' : 'light');
+    }
+  });
+</script>

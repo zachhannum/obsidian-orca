@@ -1,0 +1,58 @@
+<button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch the scheme">
+  <svg
+    class="moon"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+  </svg>
+  <svg
+    class="sun"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+    ></path>
+  </svg>
+</button>
+
+<style>
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--r);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .theme-toggle:hover {
+    color: var(--text);
+  }
+  svg {
+    display: block;
+  }
+  :global(:root[data-theme='light']) .theme-toggle .moon,
+  :global(:root:not([data-theme='light'])) .theme-toggle .sun {
+    display: none;
+  }
+</style>

@@ -1,0 +1,18 @@
+/* The design panel, as the docs figures crop it. Copied from the artboards,
+   and replaced by a screenshot of Obsidian when the screenshot spec lands. */
+.o-win *,.o-frag *,.o-crop *{box-sizing:border-box}
+.o-frag{width:280px;background:var(--o-side);color:var(--o-text);font-family:var(--o-ui);font-size:13px;line-height:1.3;padding:14px 14px 12px;border:1px solid var(--o-border);border-radius:8px}
+.o-grp{display:flex;flex-direction:column;gap:7px}
+.o-gh{font-size:12.5px;font-weight:600;color:var(--o-text);padding-bottom:6px;border-bottom:1px solid var(--o-border);margin-bottom:1px}
+.o-row{display:flex;align-items:center;gap:8px;min-height:26px}
+.o-lab{width:84px;flex:none;color:var(--o-muted);font-size:12px}
+.o-field{height:26px;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--o-field);border:1px solid var(--o-border);border-radius:6px;color:var(--o-text);font-size:12px;white-space:nowrap;overflow:hidden}
+.o-field span{overflow:hidden;text-overflow:ellipsis}
+.o-field.o-def{color:var(--o-faint)}
+.o-grow{flex:1;min-width:0}
+.o-num{display:flex;align-items:center}
+.o-num .o-field{width:56px;border-radius:6px 0 0 6px}
+.o-step{height:26px;width:16px;display:flex;flex-direction:column;border:1px solid var(--o-border);border-left:0;border-radius:0 6px 6px 0;background:var(--o-field);color:var(--o-faint)}
+.o-step div{flex:1;display:flex;align-items:center;justify-content:center}
+.o-unit{color:var(--o-muted);font-size:12px}
+.o-reset{width:18px;flex:none;display:flex;justify-content:center;color:var(--o-faint);margin-left:auto}

@@ -1,0 +1,32 @@
+---
+// Starlight's own title carries this id, and its skip link points at it.
+const PAGE_TITLE_ID = '_top';
+const { entry } = Astro.locals.starlightRoute;
+const { eyebrow, title } = entry.data as { eyebrow?: string; title: string };
+---
+
+{eyebrow && <div class="eyebrow">{eyebrow}</div>}
+<h1 id={PAGE_TITLE_ID}>{title}</h1>
+
+<style>
+  .eyebrow {
+    font-family: var(--ui);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  h1 {
+    margin: 0 0 14px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 50px;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--text);
+  }
+  @media (max-width: 50rem) {
+    h1 {
+      font-size: 38px;
+    }
+  }
+</style>
