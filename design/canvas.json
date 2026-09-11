@@ -7,6 +7,10 @@
     {
       "id": "page-2",
       "name": "Flows"
+    },
+    {
+      "id": "page-3",
+      "name": "Docs site"
     }
   ],
   "artboards": [
@@ -117,9 +121,63 @@
       "y": 1460,
       "w": 1900,
       "h": 580
+    },
+    {
+      "file": "SiteLanding.dc.html",
+      "title": "Landing page, dark",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 6160,
+      "is_interactive": true
+    },
+    {
+      "file": "SiteLandingLight.dc.html",
+      "title": "Landing page, light",
+      "page": "page-3",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1400
+    },
+    {
+      "file": "SiteDocs.dc.html",
+      "title": "Docs page, dark",
+      "page": "page-3",
+      "x": 1560,
+      "y": 1540,
+      "w": 1440,
+      "h": 1060
+    },
+    {
+      "file": "SiteDocsLight.dc.html",
+      "title": "Docs page, light",
+      "page": "page-3",
+      "x": 1560,
+      "y": 2740,
+      "w": 1440,
+      "h": 1060
+    },
+    {
+      "file": "SiteLandingPhone.dc.html",
+      "title": "Landing page, phone",
+      "page": "page-3",
+      "x": 3120,
+      "y": 0,
+      "w": 390,
+      "h": 900
     }
   ],
   "annotations": [
+    {
+      "id": "site",
+      "page": "page-3",
+      "x": 3120,
+      "y": 1040,
+      "w": 760,
+      "text": "The docs site, in the Deep water direction.\n\nDark is the default. On the landing page, the dark scheme has a light sky over a black sea, and the light scheme swaps the two.\n\nThe light and phone landing pages show the hero only. They get the sections below it before the landing page is built.\n\nThe tail mark is orca-tail.svg: the two lobes of the orca icon, in one flat color."
+    },
     {
       "id": "invariants",
       "page": "page-1",

@@ -1,22 +1,33 @@
 # The v1 design
 
-Twelve artboards: nine screens and three flows, drawn as orca is meant
-to look and behave. They are HTML rather than pictures, so they can be
-edited and rebuilt instead of redrawn.
+Twelve artboards draw the plugin: nine screens and three flows. Five
+more draw the docs site. They show orca as it is meant to look and
+behave. They are HTML rather than pictures, so they can be edited and
+rebuilt instead of redrawn.
 
 Obsidian's own tokens are lifted from `app.css` in the installed
 build: its colour ramp, the 40px header, the 44px ribbon, 13px
 navigation type, its radii. They are in `chrome.css`. New surfaces
 extend that vocabulary rather than inventing one.
 
+The docs site does not use Obsidian's tokens. Its own are in
+`site.css`.
+
 ## What is here
 
 - `parts/*.html`, one file per artboard, the body only. The design
   lives here.
 - `chrome.css`, Obsidian's tokens and the shared component classes.
-- `sizes.json`, each artboard's frame in pixels.
-- `canvas.json`, where the artboards sit, the two pages, the sticky
-  notes.
+- `site.css`, the docs site's tokens for both schemes and its
+  component classes. A site part picks its scheme with `.site-dark`
+  or `.site-light`.
+- `parts/site-*.js`, the scripts that move the site's sea and run its
+  demos.
+- `orca-tail.svg`, the tail mark from the orca icon, as flat paths in
+  the current color. The site parts draw the same paths inline.
+- `sizes.json`, each artboard's frame in pixels. A site part also
+  names its stylesheet, its script and its tweaks.
+- `canvas.json`, where the artboards sit, the pages, the sticky notes.
 - `build.mjs`, which wraps each part into a `.dc.html`.
 
 ## Rebuilding
@@ -99,3 +110,28 @@ its editor around these files and returns a URL. The artboard list and
 - No implementation vocabulary reaches a surface. The per-stage counts
   stay as attributes for the tests, and the status line reads the page
   the author is on.
+
+## What the site settles
+
+- The site's look is Deep water: black `#0a0c0f`, white `#eef0ec`, and
+  glacier blue, `#86cfe0` on dark and `#1d6b7d` on light. Dark is the
+  default.
+- Titles are Bodoni Moda, and the second line of a title is italic.
+  Reading text is Source Serif 4, the interface is Archivo, and code is
+  DM Mono.
+- The mark is the tail from the orca icon, in one flat color. The site
+  does not use the colors of the icon.
+- On the landing page, the sea rises through the second line of the
+  title. The title is the light color with a difference blend, so its
+  letters invert below the waterline.
+- In the dark scheme, the landing page has a light sky over a black
+  sea, and most of the page is dark. The light scheme swaps the two.
+- The main button is black on the white sea and glacier on the black
+  sea.
+- The sea surface moves, and the sea gets darker toward the end of the
+  page. With reduced motion on, the sea holds still.
+- A screenshot of Obsidian takes the site's colors and fonts. At phone
+  width, the landing page shows the preview pane alone.
+- The site's sample book is Twenty Thousand Leagues Under the Sea.
+  Chapter I opens with a chapter-head image, which is an embed at the
+  top of the chapter note.
