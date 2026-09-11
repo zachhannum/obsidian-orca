@@ -48,30 +48,19 @@
         </div>
       </div>
 
-      <!-- The design panel, the same component the right sidebar mounts.
-           Drawn here at the width the page gives it, and shortened to
-           the first groups. -->
+      <!-- The book's design, read-only here. The button opens the design panel in the right sidebar. -->
       <div>
-        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px">
-          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint)">DESIGN</div>
-          <div style="font-size: 11.5px; color: var(--text-faint)">kept in this note, and edited here or in the right sidebar</div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.03em; color: var(--text-faint); margin-bottom: 10px">DESIGN</div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Trim</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Digest (5.5 × 8.5 in)</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Margins</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">0.95in inside, 0.7in outside, 0.8in top, 1in bottom</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Text</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Alegreya, 10.5pt on 14pt, justified</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Chapters begin on</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Next page</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Scene breaks</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px; font-family: 'EB Garamond', Georgia, serif">⁂</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Running heads</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">author on left pages, book title on right pages</div></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 110px; flex: none; color: var(--text-muted); font-size: 12.5px">Page numbers</span><div style="flex: 1; min-height: 28px; display: flex; align-items: center; padding: 0 8px">Bottom (1, 2, 3)</div></div>
         </div>
-
-        <div class="grp" style="gap: 14px">
-          <div class="grp">
-            <div class="grp-h">PAGE</div>
-            <div class="row"><span class="lab">Trim</span><div class="field is-select" style="flex: 1; max-width: 320px"><span>Digest — 5.5 × 8.5 in</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-            <div class="row"><span class="lab">Mirrored</span><div class="toggle is-on"><div class="knob"></div></div><span class="note">inside margin follows the gutter</span></div>
-          </div>
-          <div class="grp">
-            <div class="grp-h">TEXT</div>
-            <div class="row"><span class="lab">Font</span><div class="field is-select" style="flex: 1; max-width: 320px"><span>Alegreya</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-            <div class="row"><span class="lab">Size</span><div class="numf"><div class="field">10.5pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-            <div class="row"><span class="lab">Line spacing</span><div class="numf"><div class="field is-default">16.5pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div></div>
-            <div class="row"><span class="lab">Hyphenate</span><div class="toggle is-on"><div class="knob"></div></div></div>
-            <div class="row" style="min-height: 16px"><span class="lab"></span><span class="note">using British English (en-GB)</span></div>
-          </div>
-        </div>
+        <div class="btn" style="margin-top: 12px"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg>Open the design panel</div>
       </div>
 
       <!-- reading order, read-only. The tinted row is the one under the pointer. -->

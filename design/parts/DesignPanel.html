@@ -6,10 +6,11 @@
     <div class="side-tab"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div>
   </div>
 
-  <!-- The panel at sidebar width. Each label sits above its controls. A
-       faint value is the default for a key the book does not set. A key
-       the book sets has a reset at the end of its row. -->
-  <div class="narrow" style="flex: 1; min-height: 0; overflow: hidden; padding: 0 14px 14px; display: flex; flex-direction: column; gap: 18px">
+  <!-- The panel at sidebar width. Each label sits just above its control.
+       A faint value is the default for a key the book does not set. A key
+       the book sets has a reset at the end of its row. A row with no reset
+       keeps the space for one. -->
+  <div class="narrow" style="flex: 1; min-height: 0; overflow: hidden; padding: 0 14px 14px; display: flex; flex-direction: column">
 
     <div style="display: flex; align-items: center; gap: 7px">
       <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">DESIGN</span>
@@ -20,9 +21,9 @@
       </div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">PAGE</div>
-      <div class="row"><span class="lab">Trim</span><div class="field is-select" style="flex: 1; min-width: 0"><span>Digest — 5.5 × 8.5 in</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Page</div>
+      <div class="row"><span class="lab">Trim</span><div class="field is-select" style="flex: 1; min-width: 0"><span>Digest (5.5 × 8.5 in)</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
       <div class="row"><span class="lab">Margins</span>
         <div style="flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px">
           <div><div class="numf" style="width: 100%"><div class="field" style="flex: 1; width: auto; min-width: 0">0.95in</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="note" style="font-size: 10.5px; margin-top: 2px">inside</div></div>
@@ -30,14 +31,14 @@
           <div><div class="numf" style="width: 100%"><div class="field is-invalid" style="flex: 1; width: auto; min-width: 0">0.8px</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="note" style="font-size: 10.5px; margin-top: 2px">top</div></div>
           <div><div class="numf" style="width: 100%"><div class="field" style="flex: 1; width: auto; min-width: 0">1in</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="note" style="font-size: 10.5px; margin-top: 2px">bottom</div></div>
         </div>
-        <div class="clickable-icon" style="align-self: flex-start; margin-top: 3px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <div class="reset-slot" style="align-self: flex-start; margin-top: 3px"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
       </div>
       <div class="note mod-error">Use one of these units: pt, pc, in, mm, cm, em.</div>
-      <div class="row"><span class="lab">Mirrored</span><div class="toggle is-on"><div class="knob"></div></div><span class="note">inside margin follows the gutter</span></div>
+      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="flex: 1; min-width: 0; color: var(--text-muted); font-size: 12px">Mirror the margins on facing pages</span><div class="reset-slot"></div></div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">TEXT</div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Text</div>
       <div class="row"><span class="lab">Font</span>
         <div style="flex: 1; min-width: 0; position: relative">
           <div class="field is-select"><span>Alegreya</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
@@ -53,49 +54,39 @@
             <div style="padding: 0 9px 2px; color: var(--text-faint); font-size: 11px">3 of 214 families</div>
           </div>
         </div>
-        <div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
       </div>
-      <div class="row"><span class="lab">Styles</span>
-        <div style="display: flex; gap: 4px; flex-wrap: wrap">
-          <span class="pending" style="border-style: solid; color: var(--text-muted)">Regular</span>
-          <span class="pending" style="border-style: solid; color: var(--text-muted)">Medium</span>
-          <span class="pending" style="border-style: solid; color: var(--text-muted)">Bold</span>
-          <span class="pending" style="border-style: solid; color: var(--text-muted)">Italic</span>
-        </div>
-      </div>
-      <div class="note">the styles the engine registered</div>
-      <div class="row"><span class="lab">Size</span><div class="numf"><div class="field">10.5pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-      <div class="row"><span class="lab">Line spacing</span><div class="numf"><div class="field">14pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-      <div class="row"><span class="lab">Setting</span><div class="seg"><div class="is-on is-default">Justified</div><div>Ragged right</div></div></div>
-      <div class="row"><span class="lab dim">First-line indent</span><div class="numf dim"><div class="field">1.2em</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span class="lock"><svg class="icon-xs icon" viewBox="0 0 24 24" style="width: 11px; height: 11px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><b>line 7</b></span></div>
-      <div class="row"><span class="lab">Hyphenate</span><div class="toggle is-on"><div class="knob"></div></div></div>
+      <div class="row"><span class="lab">Size</span><div class="numf"><div class="field">10.5pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
+      <div class="row"><span class="lab">Line spacing</span><div class="numf"><div class="field">14pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
+      <div class="row"><span class="lab">Setting</span><div class="seg"><div class="is-on is-default">Justified</div><div>Ragged right</div></div><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab dim">First-line indent</span><div class="numf dim"><div class="field">1.2em</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span class="lock"><svg class="icon-xs icon" viewBox="0 0 24 24" style="width: 11px; height: 11px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><b>line 7</b></span><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Hyphenate</span><div class="toggle is-on"><div class="knob"></div></div><div class="reset-slot"></div></div>
       <div class="note">using British English (en-GB)</div>
-      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Indent again after a scene break</span><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-      <div class="row"><div class="toggle" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Hanging punctuation</span></div>
+      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="flex: 1; min-width: 0; color: var(--text-muted); font-size: 12px">Indent again after a scene break</span><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
+      <div class="row"><div class="toggle" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="flex: 1; min-width: 0; color: var(--text-muted); font-size: 12px">Hanging punctuation</span><div class="reset-slot"></div></div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">HEADINGS</div>
-      <div class="row"><div class="seg"><div class="is-on">H1</div><div>H2</div><div>H3</div><div>H4</div><div>H5</div><div>H6</div></div></div>
-      <div class="row"><span class="lab">Font</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Alegreya</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Headings</div>
+      <div class="tabstrip"><div class="is-active">H1</div><div>H2</div><div>H3</div><div>H4</div><div>H5</div><div>H6</div></div>
+      <div class="row"><span class="lab">Font</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Alegreya</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="reset-slot"></div></div>
       <!-- The reset, drawn under the pointer with its tooltip. -->
-      <div class="row"><span class="lab">Size</span><div class="numf"><div class="field">17pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="clickable-icon" style="position: relative; opacity: 1; color: var(--text-normal); background: var(--background-modifier-hover)"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><div class="tooltip" style="top: calc(100% + 6px); right: -2px">Reset to default (19pt)</div></div></div>
-      <div class="row"><span class="lab">Alignment</span><div class="seg"><div>Left</div><div class="is-on">Center</div><div>Right</div></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
+      <div class="row"><span class="lab">Size</span><div class="numf"><div class="field">17pt</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><div class="reset-slot"><div class="clickable-icon" style="position: relative; opacity: 1; color: var(--text-normal); background: var(--background-modifier-hover)"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><div class="tooltip" style="top: calc(100% + 6px); right: -2px">Reset to default (19pt)</div></div></div></div>
+      <div class="row"><span class="lab">Alignment</span><div class="seg"><div>Left</div><div class="is-on">Center</div><div>Right</div></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">CHAPTER OPENINGS</div>
-      <div class="row"><span class="lab">Begins</span><div class="seg"><div class="is-on is-default">Right-hand page</div><div>Next page</div><div>Same page</div></div></div>
-      <div class="note">a right-hand start leaves the odd blank page behind it</div>
-      <div class="row"><span class="lab">Space above</span><div class="numf"><div class="field">7</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-      <div class="note">keeps the baselines below it</div>
-      <div class="row"><span class="lab">Space below</span><div class="numf"><div class="field is-default">0</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span></div>
-      <div class="row"><span class="lab">Drop cap</span><div class="numf"><div class="field">3</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Chapter openings</div>
+      <div class="row"><span class="lab">Begins on</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Next page</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Space above</span><div class="numf"><div class="field">7</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
+      <div class="row"><span class="lab">Space below</span><div class="numf"><div class="field is-default">0</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="reset-slot"></div></div>
+      <!-- The drop cap choices are None, 2 lines, 3 lines and 4 lines. -->
+      <div class="row"><span class="lab">Drop cap</span><div class="field is-select" style="flex: 1; min-width: 0"><span>3 lines</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">SCENE BREAKS</div>
-      <div class="row"><span class="lab">Mark</span><div class="seg"><div>Space</div><div class="is-on">Ornament</div><div>Word</div></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Scene breaks</div>
+      <div class="row"><span class="lab">Mark</span><div class="seg"><div>Space</div><div class="is-on">Ornament</div><div>Word</div></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
       <div class="row"><span class="lab">Glyph</span>
         <div style="display: flex; gap: 5px">
           <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif">❧</div>
@@ -103,28 +94,27 @@
           <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif">§</div>
           <div class="field" style="width: 34px; justify-content: center; font-family: 'EB Garamond', Georgia, serif">✦</div>
         </div>
-        <div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
       </div>
-      <div class="row"><span class="lab">Space</span>
-        <div style="display: flex; align-items: center; gap: 8px"><div class="numf"><div class="field is-default">1</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines above</span></div>
-        <div style="display: flex; align-items: center; gap: 8px"><div class="numf"><div class="field is-default">1</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines below</span></div>
-      </div>
+      <div class="row"><span class="lab">Space above</span><div class="numf"><div class="field is-default">1</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Space below</span><div class="numf"><div class="field is-default">1</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="reset-slot"></div></div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">HEADS &amp; FOLIOS</div>
-      <div class="row"><span class="lab">Left-page header</span><div class="field is-select" style="flex: 1; min-width: 0"><span>Author</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-      <div class="row"><span class="lab">Right-page header</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Book title</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
-      <div class="row"><span class="lab">Page number</span><div class="seg"><div>Top</div><div class="is-on is-default">Bottom</div><div>Outside</div></div></div>
-      <div class="row"><span class="lab">Number format</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Arabic — roman in front matter</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
-      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Hide the running head and page number on openings</span></div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Heads &amp; folios</div>
+      <div class="row"><span class="lab">Left-page header</span><div class="field is-select" style="flex: 1; min-width: 0"><span>Author</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
+      <div class="row"><span class="lab">Right-page header</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Book title</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Header position</span><div class="seg"><div class="is-on is-default">Outside</div><div>Center</div></div><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Page number</span><div class="seg"><div>Top</div><div class="is-on is-default">Bottom</div><div>Outside</div></div><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Number format</span><div class="seg"><div class="is-on is-default">1, 2, 3</div><div>i, ii, iii</div></div><div class="reset-slot"></div></div>
+      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="flex: 1; min-width: 0; color: var(--text-muted); font-size: 12px">Hide the running head and page number on openings</span><div class="reset-slot"></div></div>
     </div>
 
-    <div class="grp">
-      <div class="grp-h">PAGE BREAKS</div>
-      <div class="row"><span class="lab">Orphans</span><div class="numf"><div class="field is-default">2</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span></div>
-      <div class="row"><span class="lab">Widows</span><div class="numf"><div class="field">3</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div>
-      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="color: var(--text-muted); font-size: 12px">Keep a heading with what follows it</span></div>
+    <div class="panel-grp">
+      <div class="panel-grp-h">Page breaks</div>
+      <div class="row"><span class="lab">Orphans</span><div class="numf"><div class="field is-default">2</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="reset-slot"></div></div>
+      <div class="row"><span class="lab">Widows</span><div class="numf"><div class="field">3</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span style="color: var(--text-muted); font-size: 12.5px">lines</span><div class="reset-slot"><div class="clickable-icon"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div></div></div>
+      <div class="row"><div class="toggle is-on" style="width: 34px; height: 20px"><div class="knob" style="width: 20px; height: 14px; top: 3px"></div></div><span style="flex: 1; min-width: 0; color: var(--text-muted); font-size: 12px">Keep a heading with what follows it</span><div class="reset-slot"></div></div>
     </div>
 
   </div>
