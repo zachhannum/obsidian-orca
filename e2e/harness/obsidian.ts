@@ -25,10 +25,15 @@ interface Config {
   setConfig(key: string, value: unknown): void;
 }
 
+/** The plugins the app has loaded, by id, which the API does not declare. */
+interface Plugins {
+  plugins: Record<string, unknown>;
+}
+
 declare global {
   interface Window {
     /** Undefined until Obsidian has opened the vault. */
-    app: App & { commands: Commands };
+    app: App & { commands: Commands; plugins: Plugins };
     /** The recorder a spec installs while `notices` runs. */
     orcaNotices?: { said: string[]; watch: MutationObserver } | undefined;
   }
@@ -47,6 +52,8 @@ interface Offered {
 const CHROME = {
   ribbon: (label: string) => `.side-dock-ribbon-action[aria-label="${label}"]`,
   leaf: (type: string) => `.workspace-leaf-content[data-type="${type}"]`,
+  content: (type: string) =>
+    `.workspace-leaf-content[data-type="${type}"] > .view-content`,
   action: (label: string) => `.view-action[aria-label="${label}"]`,
   tab: (label: string) => `.workspace-tab-header[aria-label="${label}"]`,
   menu: ".menu",
@@ -55,6 +62,9 @@ const CHROME = {
   notice: ".notice",
   status: ".status-bar",
 };
+
+/** One of the two sidebars. */
+export type Side = "left" | "right";
 
 /** The chrome that floats over a pane, which a photograph of one drops. */
 export const FLOATING = CHROME.status;
@@ -108,6 +118,11 @@ export class Obsidian {
   /** The pane a view of this type is drawn in. */
   view(type: string): Locator {
     return this.page.locator(CHROME.leaf(type));
+  }
+
+  /** The element under a view's header, which scrolls the view's content. */
+  content(type: string): Locator {
+    return this.page.locator(CHROME.content(type));
   }
 
   /** A view's own action, by the label the view gave it. */
@@ -197,16 +212,23 @@ export class Obsidian {
     );
   }
 
-  /** Collapses the left sidebar, which is where the navigator lives. */
-  async collapse(): Promise<void> {
-    await this.page.evaluate(() => {
-      window.app.workspace.leftSplit.collapse();
-    });
+  /**
+   * Collapses a sidebar. The navigator lives in the left one and the
+   * design panel in the right.
+   */
+  async collapse(side: Side = "left"): Promise<void> {
+    await this.page.evaluate((on) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      (on === "left" ? leftSplit : rightSplit).collapse();
+    }, side);
   }
 
   /** Whether that sidebar is collapsed. */
-  async collapsed(): Promise<boolean> {
-    return this.page.evaluate(() => window.app.workspace.leftSplit.collapsed);
+  async collapsed(side: Side = "left"): Promise<boolean> {
+    return this.page.evaluate((on) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      return (on === "left" ? leftSplit : rightSplit).collapsed;
+    }, side);
   }
 
   /**

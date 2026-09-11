@@ -1,9 +1,6 @@
 /**
- * The design panel, reached by the test ids in its own markup.
- *
- * One component is mounted twice, so the controls are read off a root
- * rather than off a view: the right sidebar for the panel, and the book
- * note's page for the copy on it.
+ * The design panel in the right sidebar, reached by the test ids in its
+ * own markup.
  *
  * The picker lists the fonts the scan found, so a spec types to narrow
  * that list rather than naming one. Every wait here is on the panel's
@@ -19,7 +16,24 @@ export const OPEN_PANEL = "orca:open-design";
 /** The type the panel is registered under. */
 export const PANEL = "orca-design";
 
-/** The controls, wherever the panel is mounted. */
+/** The id in the plugin's manifest, which the app keys its plugins by. */
+const ORCA = "orca";
+
+/** A control's box, measured from the panel's own corner so a scroll does not move it. */
+export interface Placed {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The settings orca saves, as much of them as a spec changes. */
+interface Limited {
+  limits: { unit: string };
+  limit(limits: { unit: string }): void;
+}
+
+/** The controls, read off the leaf the panel is drawn in. */
 export class Controls {
   /** The panel itself, drawn when there is a book to design. */
   readonly panel: Locator;
@@ -36,8 +50,6 @@ export class Controls {
   readonly options: Locator;
   /** The empty state, shown when nothing matches what was typed. */
   readonly nothing: Locator;
-  /** The styles the engine registered for the font the book is set in. */
-  readonly styles: Locator;
   /** The warning for a font the machine does not have. */
   readonly missing: Locator;
 
@@ -50,7 +62,6 @@ export class Controls {
     this.rows = root.getByTestId("orca-panel-rows");
     this.options = root.getByTestId("orca-panel-option");
     this.nothing = root.getByTestId("orca-panel-nothing");
-    this.styles = root.getByTestId("orca-panel-style");
     this.missing = root.getByTestId("orca-panel-missing");
   }
 
@@ -59,7 +70,7 @@ export class Controls {
     return this.root.getByTestId(`orca-panel-${key}`);
   }
 
-  /** One word of a segment, by the value it writes. */
+  /** One word of a segment, or one tab of a strip, by the value it writes. */
   choice(key: string, value: string): Locator {
     return this.root.getByTestId(`orca-panel-${key}-${value}`);
   }
@@ -129,6 +140,22 @@ export class Controls {
     });
   }
 
+  /** The box one control is drawn in, from the panel's corner. */
+  async placed(key: string): Promise<Placed> {
+    return this.control(key).evaluate((control) => {
+      const box = control.getBoundingClientRect();
+      const from = control
+        .closest("[data-testid='orca-panel']")
+        ?.getBoundingClientRect();
+      return {
+        x: box.left - (from?.left ?? 0),
+        y: box.top - (from?.top ?? 0),
+        width: box.width,
+        height: box.height,
+      };
+    });
+  }
+
   /** Opens the picker and waits for its filter. */
   async pick(): Promise<void> {
     await this.font.click();
@@ -154,27 +181,19 @@ export class Controls {
   async reading(): Promise<string> {
     return (await this.font.textContent()) ?? "";
   }
-
-  /** The names of the styles the panel shows, which the engine registered. */
-  async styleNames(): Promise<string[]> {
-    return this.styles.allTextContents();
-  }
-
-  /** The axes a style sits on, by its name. */
-  async axes(style: string): Promise<string> {
-    return (
-      (await this.styles
-        .filter({ hasText: style })
-        .first()
-        .getAttribute("data-axes")) ?? ""
-    );
-  }
 }
 
 /** The panel in the right sidebar, which follows the book being read. */
 export class Panel extends Controls {
+  /** The leaf the panel is drawn in, whether or not it has a book. */
+  readonly leaf: Locator;
+  /** The element that scrolls the panel, which is the leaf's content. */
+  readonly scroller: Locator;
+
   constructor(private readonly obsidian: Obsidian) {
     super(obsidian.view(PANEL));
+    this.leaf = obsidian.view(PANEL);
+    this.scroller = obsidian.content(PANEL);
   }
 
   /** Opens the panel and waits for it to be drawn. */
@@ -199,5 +218,38 @@ export class Panel extends Controls {
   /** Sets the sidebar the panel is in to a width, and returns the width it had. */
   async resize(width: number): Promise<number> {
     return this.obsidian.sidebar(width);
+  }
+
+  /** The distance the panel is scrolled, in pixels. */
+  async scrolled(): Promise<number> {
+    return this.scroller.evaluate((scroller) => scroller.scrollTop);
+  }
+
+  /**
+   * Scrolls the panel until a control sits in the middle of it, and
+   * returns how far the panel is then scrolled.
+   */
+  async scrollTo(control: Locator): Promise<number> {
+    await control.evaluate((element) => {
+      element.scrollIntoView({ block: "center" });
+    });
+    return this.scrolled();
+  }
+
+  /**
+   * Sets the unit orca's settings measure pages in, the way the settings
+   * tab saves it, and returns the unit it had.
+   */
+  async measure(unit: string): Promise<string> {
+    return this.obsidian.page.evaluate(
+      ({ id, to }) => {
+        const orca = window.app.plugins.plugins[id] as Limited | undefined;
+        if (orca === undefined) throw new Error(`no plugin called ${id}`);
+        const had = orca.limits.unit;
+        orca.limit({ ...orca.limits, unit: to });
+        return had;
+      },
+      { id: ORCA, to: unit },
+    );
   }
 }

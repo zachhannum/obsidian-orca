@@ -2,7 +2,7 @@ import { NEXT_CHAPTER, PREVIOUS_CHAPTER } from "./harness/book";
 import { expect, test } from "./harness/test";
 
 /** The pages the fixture book sets to. */
-const PAGES = 13;
+const PAGES = 15;
 
 /** The words the book opens on, which is its title page. */
 const OPENING = "Pride and Prejudice";
@@ -18,7 +18,10 @@ const FIRST = "Title page";
 const LAST = "Acknowledgements";
 
 /** The page the fixture's last section opens on. */
-const BACK = 13;
+const BACK = 15;
+
+/** A page late in the chapter, two turns before the last section. */
+const LATE = BACK - 2;
 
 /** The note that section is read from, and the image it embeds. */
 const LAST_NOTE = "Acknowledgements.md";
@@ -293,7 +296,7 @@ test("paging out of a chapter renames the control, in all three views", async ({
   await book.open();
   await book.painted();
 
-  await book.type(String(CHAPTER));
+  await book.type(String(LATE));
   await expect(book.chapterName).toHaveText(CHAPTER_NAME);
   await book.next.click();
   await book.next.click();
@@ -301,7 +304,7 @@ test("paging out of a chapter renames the control, in all three views", async ({
   await expect(book.chapterName).toHaveText(LAST);
 
   await book.show("Spread", "spread");
-  await book.type(String(CHAPTER));
+  await book.type(String(LATE));
   await expect(book.chapterName).toHaveText(CHAPTER_NAME);
   await book.next.click();
   await expect(book.chapterName).toHaveText(LAST);
