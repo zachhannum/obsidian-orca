@@ -65,6 +65,12 @@ its editor around these files and returns a URL. The artboard list and
   read rather than opens and closes with it.
 - A control the CSS has taken over dims where it sits and shows the
   line that took it, which is also the way to that line.
+- A key the book does not set shows orca's default in faint type. A key
+  the book sets has a reset at the end of its row, and the reset
+  returns the key to the default.
+- A number field steps by an amount that suits its unit, from its
+  stepper or the arrow keys. A value the field cannot read gets a line
+  under the row that says what is wrong.
 - The Font control opens on the fonts the machine has, read out of the
   platform's font directories and the vault's `fonts/`. Typing filters
   that list rather than naming a font, and a row is set in the font it

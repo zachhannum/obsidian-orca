@@ -54,6 +54,7 @@
   --divider-color: var(--color-base-30);
   --interactive-normal: var(--color-base-30);
   --interactive-hover: var(--color-base-35);
+  --text-error: var(--color-red);
 }
 .orca *, .orca *::before, .orca *::after { box-sizing: border-box; }
 .orca p, .orca h1, .orca h2, .orca h3, .orca h4, .orca ul, .orca ol { margin: 0; }
@@ -163,6 +164,29 @@
 .num { width: 58px; justify-content: center; }
 .pending { display: inline-flex; align-items: center; gap: 4px; height: 16px; padding: 0 6px; border-radius: 8px; border: 1px dashed var(--background-modifier-border); color: var(--text-faint); font-size: 10px; letter-spacing: 0.01em; }
 .dim { opacity: 0.42; }
+/* At sidebar width each label sits above its controls, and the controls wrap. */
+.narrow .row { flex-wrap: wrap; row-gap: 5px; }
+.narrow .row > .lab { width: 100%; }
+.narrow .seg { flex-wrap: wrap; max-width: 100%; }
+.note { font-size: 11.5px; color: var(--text-faint); }
+.note.mod-error { color: var(--text-error); }
+
+/* ---- a number field: the text, with a stepper joined to its right end ---- */
+.numf { display: inline-flex; flex: none; }
+.numf > .field { width: 60px; border-radius: var(--input-radius) 0 0 var(--input-radius); }
+.stepper { display: flex; flex-direction: column; width: 18px; height: var(--input-height); border: 1px solid var(--background-modifier-border); border-left: none; border-radius: 0 var(--input-radius) var(--input-radius) 0; background: var(--interactive-normal); color: var(--text-muted); }
+.stepper > div { flex: 1; display: flex; align-items: center; justify-content: center; }
+.stepper > div + div { border-top: 1px solid var(--background-modifier-border); }
+
+/* ---- a value the book does not set, and a value it cannot read ---- */
+.field.is-default, .seg > div.is-on.is-default { color: var(--text-faint); }
+.field.is-select.is-default > svg { color: var(--text-muted); }
+.field.is-invalid { border-color: var(--text-error); }
+
+/* ---- Obsidian's icon button, and its tooltip ---- */
+.clickable-icon { display: flex; align-items: center; justify-content: center; flex: none; padding: 4px 6px; border-radius: var(--radius-s); color: var(--text-muted); opacity: 0.85; }
+.row > .clickable-icon, .row > .lock { margin-left: auto; }
+.tooltip { position: absolute; z-index: 5; padding: 5px 9px; border-radius: var(--radius-s); background: rgba(0,0,0,0.9); color: #dadada; font-size: var(--font-ui-smaller); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 
 /* ---- panels that are explicitly not UI ---- */
 .behind { border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m); background: rgba(var(--mono-100), 0.02); }

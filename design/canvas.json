@@ -34,8 +34,8 @@
       "page": "page-1",
       "x": 2440,
       "y": 0,
-      "w": 380,
-      "h": 1560
+      "w": 300,
+      "h": 2200
     },
     {
       "file": "BookPage.dc.html",
@@ -59,7 +59,7 @@
       "file": "Issues.dc.html",
       "title": "Issues pane",
       "page": "page-1",
-      "x": 2320,
+      "x": 2860,
       "y": 1680,
       "w": 380,
       "h": 620
@@ -68,7 +68,7 @@
       "file": "Export.dc.html",
       "title": "Export preflight",
       "page": "page-1",
-      "x": 2820,
+      "x": 3360,
       "y": 1680,
       "w": 720,
       "h": 620
