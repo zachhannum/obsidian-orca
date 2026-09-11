@@ -324,7 +324,7 @@ export class NavigatorView extends ItemView {
     );
   }
 
-  /** A section is organisational, so its menu never mentions a role. */
+  /** A section is organizational, so its menu never mentions a role. */
   private groupMenu(event: MouseEvent, book: Shelved, heading: string): void {
     const menu = new Menu();
     this.offerAdding(menu, book, heading);

@@ -353,7 +353,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Turns the preview being read a chapter along. The command goes grey
+   * Turns the preview being read a chapter along. The command goes gray
    * at either end of the book, and where no preview is open.
    */
   private turnsChapter(checking: boolean, step: number): boolean {
@@ -705,7 +705,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       this.leadsTo(leaf, opens.at, true);
     } else if (left?.at === path) {
       leaf.setEphemeralState(left.state);
-      // The caret is put back centred, which is a different line at the
+      // The caret is put back centered, which is a different line at the
       // top of the pane, and the top line is what the book reads.
       if (left.line !== undefined && shown instanceof MarkdownView) {
         shown.currentMode.applyScroll(left.line);

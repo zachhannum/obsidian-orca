@@ -2,7 +2,7 @@
  * Draws the shelf: every book in the vault and the reading order of
  * each, group by group.
  *
- * A section is organisational. It can be made, renamed, moved and
+ * A section is organizational. It can be made, renamed, moved and
  * taken out, and none of that touches the roles of the entries under
  * it. A book's reading order is one flat sortable list, and there is
  * no overlay: the row under the pointer is the row that lands.

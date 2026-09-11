@@ -13,6 +13,9 @@ const NOWHERE = "Zzyzx Grotesque";
 /** The font the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
 
+/** A right sidebar narrower than the panel's artboard, in pixels. */
+const NARROW = 260;
+
 test("the picker offers the fonts the scan found, and typing narrows them", async ({
   book,
   panel,
@@ -224,11 +227,185 @@ test("the panel offers every group a book designer works in", async ({
   expect(await panel.grouped()).toEqual([
     "Page",
     "Text",
+    "Headings",
     "Chapter openings",
     "Scene breaks",
     "Heads & folios",
-    "Discipline",
+    "Page breaks",
   ]);
+});
+
+test("a click on a switch flips it, and the note is written", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The fixture hyphenates, so the switch starts on.
+  const hyphens = panel.control("body-hyphens");
+  await expect(hyphens).toHaveAttribute("aria-checked", "true");
+  await hyphens.click();
+
+  await expect(hyphens).toHaveAttribute("aria-checked", "false");
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    "body-hyphens: false",
+  );
+
+  await written(vault, own);
+});
+
+test("at the width of a narrow sidebar every control fits the panel", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  const had = await panel.resize(NARROW);
+  try {
+    await expect.poll(async () => panel.width()).toBeLessThanOrEqual(NARROW);
+    expect(await panel.overflowing()).toEqual([]);
+    expect(await panel.beyond()).toEqual([]);
+  } finally {
+    await panel.resize(had);
+  }
+});
+
+test("a key the book does not set is drawn at its default, in faint type", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The fixture sets no space below a chapter's title.
+  const below = panel.control("chapter-space-below");
+  await expect(below).toHaveValue("0");
+  await expect(below).toHaveAttribute("data-default", "true");
+  await expect(below).toHaveClass(/is-default/);
+  await expect(panel.reset("chapter-space-below")).toHaveCount(0);
+
+  // A key it sets is drawn as it is, with a reset.
+  await expect(panel.control("chapter-drop-cap")).toHaveAttribute(
+    "data-default",
+    "false",
+  );
+  await expect(panel.reset("chapter-drop-cap")).toBeVisible();
+});
+
+test("the reset takes a key out of the note, and the field shows the default", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  const size = panel.control("body-size");
+  await expect(size).toHaveValue("10.5pt");
+  await expect(panel.reset("body-size")).toHaveAttribute(
+    "aria-label",
+    "Reset to default (11pt)",
+  );
+  await panel.reset("body-size").click();
+
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("body-size:");
+  await expect(size).toHaveValue("11pt");
+  await expect(size).toHaveAttribute("data-default", "true");
+  await expect(panel.reset("body-size")).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("the stepper moves a count by one line, and the note is written", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await expect(panel.control("chapter-drop-cap")).toHaveValue("3");
+  await expect(panel.up("chapter-drop-cap")).toHaveAttribute(
+    "aria-label",
+    "Increase by 1 line",
+  );
+  await panel.up("chapter-drop-cap").click();
+
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    "chapter-drop-cap: 4",
+  );
+  await expect(panel.control("chapter-drop-cap")).toHaveValue("4");
+
+  await written(vault, own);
+});
+
+test("text a number field cannot read says what is wrong and writes nothing", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  const top = panel.control("margin-top");
+  await top.fill("12px");
+  await top.press("Enter");
+
+  await expect(panel.invalid("margin-top")).toHaveText(
+    "Use one of these units: pt, pc, in, mm, cm, em.",
+  );
+  // The text stays in the field, marked, rather than blanking out.
+  await expect(top).toHaveValue("12px");
+  await expect(top).toHaveAttribute("aria-invalid", "true");
+  // The field wrote nothing, so the note keeps the margin it had.
+  expect(await vault.read(BOOK)).toContain("margin-top: 0.8in");
+
+  // Escape puts the field back.
+  await top.press("Escape");
+  await expect(panel.invalid("margin-top")).toHaveCount(0);
+  await expect(top).toHaveValue("0.8in");
+});
+
+test("the Headings group sets the level it is on", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await expect(panel.control("heading-level")).toHaveAttribute("data-on", "1");
+  await panel.choice("heading-level", "2").click();
+  await expect(panel.control("heading-level")).toHaveAttribute("data-on", "2");
+
+  const size = panel.control("heading-2-size");
+  await expect(size).toHaveValue("13pt");
+  await size.fill("15pt");
+  await size.press("Enter");
+
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    "heading-2-size: 15pt",
+  );
+
+  await written(vault, own);
 });
 
 test("a control writes its key into the note, and the book is set again under it", async ({

@@ -209,6 +209,22 @@ export class Obsidian {
     return this.page.evaluate(() => window.app.workspace.leftSplit.collapsed);
   }
 
+  /**
+   * Sets the right sidebar's width in pixels, and returns the width it
+   * had. The API declares neither the width nor the setter.
+   */
+  async sidebar(width: number): Promise<number> {
+    return this.page.evaluate((size) => {
+      const split = window.app.workspace.rightSplit as unknown as {
+        size: number;
+        setSize(size: number): void;
+      };
+      const had = split.size;
+      split.setSize(size);
+      return had;
+    }, width);
+  }
+
   /** One row of a fuzzy pick's suggestions. */
   suggestion(): Locator {
     return this.page.locator(CHROME.suggestion);

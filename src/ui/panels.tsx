@@ -7,6 +7,10 @@
  * note it shows. Both hand it a design to draw and take back one key at
  * a time.
  *
+ * Every control draws the value the book is set in. A key the note sets
+ * is drawn as it is, with a reset at the end of its row, and a key it
+ * does not set is drawn at its default.
+ *
  * The browser sets each font row in the font it offers. Nothing crosses
  * to the engine to fill the list.
  */
@@ -21,25 +25,30 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { Family, FontIndex } from "@/assets/fonts";
-import { writeDesign, type Design, type Written } from "@/style/design";
+import { LEVELS, writeDesign, type Design, type Level, type Written } from "@/style/design";
+import { effective } from "@/style/theme";
 import {
-  Count,
+  Field,
   Glyphs,
-  Measure,
+  Reset,
   Row,
   Segment,
   Select,
   Switch,
   Warning,
-  Words,
   type Settle,
+  type Under,
+  type Wrong,
 } from "@/ui/controls";
 import {
   GLYPHS,
   GROUPS,
   TRIMS,
+  atLevel,
+  defaultSaid,
+  withKey,
   type Control,
-  type Row as Line,
+  type Row as Listed,
 } from "@/ui/groups";
 import { hyphenating } from "@/ui/language";
 import { picking, type FontStyle } from "@/ui/picker";
@@ -102,6 +111,18 @@ export function mountPanel(el: HTMLElement, acting: Acting): Mounted {
   };
 }
 
+/** The design a control is drawn from, and the level the Headings group is on. */
+interface Drawing {
+  shown: Shown & { kind: "book" };
+  acting: Acting;
+  /** The keys the book note sets. */
+  own: Readonly<Record<string, Written>>;
+  /** Every key, with the defaults under the ones the note sets. */
+  full: Readonly<Record<string, Written>>;
+  level: Level;
+  choose: (level: Level) => void;
+}
+
 export function Panel({
   shown,
   acting,
@@ -109,6 +130,8 @@ export function Panel({
   shown: Shown;
   acting: Acting;
 }): JSX.Element {
+  // The level is the panel's own, not the book's, so it starts on H1.
+  const [level, choose] = useState<Level>(1);
   if (shown.kind === "none") {
     return (
       <div className="orca-panel-empty" data-testid="orca-panel-empty">
@@ -123,7 +146,14 @@ export function Panel({
       </div>
     );
   }
-  const written = writeDesign(shown.design);
+  const drawing: Drawing = {
+    shown,
+    acting,
+    own: writeDesign(shown.design),
+    full: writeDesign(effective(shown.design)),
+    level,
+    choose,
+  };
   return (
     <div className="orca-panel" data-testid="orca-panel" data-book={shown.name}>
       {GROUPS.map((group) => (
@@ -139,26 +169,11 @@ export function Panel({
               <span className="orca-panel-said">{group.hint}</span>
             )}
           </div>
-          {group.rows
-            .filter((line) => drawn(line, written))
-            .map((line, at) => (
-              <Row
-                key={`${group.name}-${at}`}
-                label={line.label}
-                said={said(line, shown)}
-                testid={saidId(line)}
-              >
-                {line.of.map((control) => (
-                  <Beside
-                    key={control.key ?? control.kind}
-                    control={control}
-                    shown={shown}
-                    written={written}
-                    acting={acting}
-                  />
-                ))}
-              </Row>
-            ))}
+          {group.rows.map((line, at) =>
+            drawn(line, drawing) ? (
+              <Line key={at} line={line} drawing={drawing} />
+            ) : null,
+          )}
         </div>
       ))}
       {shown.missing === undefined ? null : (
@@ -168,155 +183,291 @@ export function Panel({
   );
 }
 
-/** One control, and the words drawn on either side of it. */
+/**
+ * One row, with the error line under each field whose text cannot be
+ * read, and a reset that clears every key in the row the book sets.
+ */
+function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Element {
+  const [wrongs, setWrongs] = useState<Readonly<Record<string, string>>>({});
+  const { own, level, acting } = drawing;
+  const keyed = line.of.flatMap((control) =>
+    control.key === undefined
+      ? []
+      : [{ control, key: atLevel(control.key, level) }],
+  );
+  const set = keyed.filter(({ key }) => own[key] !== undefined);
+  const first = keyed[0]?.key;
+
+  const wrong =
+    (id: string): Wrong =>
+    (said) => {
+      setWrongs((was) => {
+        const next = { ...was };
+        if (said === undefined) {
+          delete next[id];
+        } else {
+          next[id] = said;
+        }
+        return next;
+      });
+    };
+
+  const under: Under[] = [];
+  const said = saidUnder(line, drawing.shown);
+  if (said !== undefined) {
+    under.push({
+      said,
+      testid: first === undefined ? undefined : `orca-panel-said-${first}`,
+    });
+  }
+  for (const [id, text] of Object.entries(wrongs)) {
+    under.push({ said: text, testid: `orca-panel-invalid-${id}`, wrong: true });
+  }
+
+  // The default for a key the book sets is the value the book would be
+  // set in without it, so a heading level's font is still the body's.
+  const defaults = set.map(({ control, key }) => {
+    const cleared = writeDesign(
+      effective(withKey(drawing.shown.design, key, undefined)),
+    );
+    const value = defaultSaid(control, cleared[key]);
+    return keyed.length > 1 && control.said !== undefined
+      ? `${control.said} ${value}`
+      : value;
+  });
+  const reset =
+    first === undefined || set.length === 0 ? null : (
+      <Reset
+        said={`Reset to default (${defaults.join(", ")})`}
+        testid={`orca-panel-reset-${first}`}
+        reset={() => {
+          for (const { key } of set) acting.set(key, undefined);
+        }}
+      />
+    );
+
+  const grid = line.grid === true;
+  return (
+    <Row label={line.label} grid={grid} reset={reset} under={under}>
+      {line.of.map((control) => (
+        <Beside
+          key={control.key === undefined ? control.kind : atLevel(control.key, level)}
+          control={control}
+          grid={grid}
+          drawing={drawing}
+          wrong={wrong}
+        />
+      ))}
+    </Row>
+  );
+}
+
+/** One control, and the word drawn after it or, in a grid, under it. */
 function Beside({
   control,
-  shown,
-  written,
-  acting,
+  grid,
+  drawing,
+  wrong,
 }: {
   control: Control;
-  shown: Shown & { kind: "book" };
-  written: Record<string, Written>;
-  acting: Acting;
+  grid: boolean;
+  drawing: Drawing;
+  wrong: (id: string) => Wrong;
 }): JSX.Element {
-  return (
+  const drawn = <Drawn control={control} drawing={drawing} wrong={wrong} />;
+  const said =
+    control.said === undefined ? null : (
+      // A switch is read by what it means, and a field by its unit.
+      <span
+        className={
+          control.kind === "flag"
+            ? "orca-panel-means"
+            : grid
+              ? "orca-panel-said"
+              : "orca-panel-unit"
+        }
+      >
+        {control.said}
+      </span>
+    );
+  return grid ? (
+    <div className="orca-panel-cell">
+      {drawn}
+      {said}
+    </div>
+  ) : (
     <>
-      {control.named === undefined ? null : (
-        <span className="orca-panel-named">{control.named}</span>
-      )}
-      <Drawn
-        control={control}
-        shown={shown}
-        written={written}
-        acting={acting}
-      />
-      {control.said === undefined ? null : (
-        // A switch is read by what it means, and a field by its unit.
-        <span
-          className={
-            control.kind === "flag" ? "orca-panel-means" : "orca-panel-unit"
-          }
-        >
-          {control.said}
-        </span>
-      )}
+      {drawn}
+      {said}
     </>
   );
 }
 
 function Drawn({
   control,
-  shown,
-  written,
-  acting,
+  drawing,
+  wrong,
 }: {
   control: Control;
-  shown: Shown & { kind: "book" };
-  written: Record<string, Written>;
-  acting: Acting;
+  drawing: Drawing;
+  wrong: (id: string) => Wrong;
 }): JSX.Element | null {
-  const key = control.key;
-  const value = key === undefined ? undefined : written[key];
-  const testid = key === undefined ? "orca-panel-styles" : `orca-panel-${key}`;
-  const settle: Settle = (settled) => {
-    if (key !== undefined) acting.set(key, settled);
-  };
-
+  const { shown, own, full, level, acting } = drawing;
   if (control.kind === "styles") {
     return <Styles styles={shown.styles} />;
   }
-  if (control.kind === "font") {
+  if (control.kind === "level") {
     return (
-      <Picker
-        index={shown.index}
-        font={value === undefined ? undefined : String(value)}
-        testid={key === "body-font" ? "orca-panel-font" : testid}
-        pick={(family) => {
-          if (key !== undefined) acting.pick(family, key);
+      <Segment
+        value={String(level)}
+        faint={false}
+        choices={control.choices ?? []}
+        testid="orca-panel-heading-level"
+        settle={(chosen) => {
+          const found = LEVELS.find((each) => String(each) === String(chosen));
+          if (found !== undefined) drawing.choose(found);
         }}
       />
     );
   }
-  if (control.kind === "trim") {
-    return <Trim value={value} testid={testid} settle={settle} />;
+  if (control.key === undefined) return null;
+
+  const key = atLevel(control.key, level);
+  const value = own[key] ?? full[key];
+  const text = value === undefined ? undefined : String(value);
+  const faint = own[key] === undefined;
+  const testid = `orca-panel-${key}`;
+  const settle: Settle = (settled) => {
+    acting.set(key, settled);
+  };
+
+  switch (control.kind) {
+    case "font":
+      return (
+        <Picker
+          index={shown.index}
+          font={text ?? CARRIED}
+          faint={faint}
+          testid={key === "body-font" ? "orca-panel-font" : testid}
+          pick={(family) => {
+            acting.pick(family, key);
+          }}
+        />
+      );
+    case "trim":
+      return (
+        <Trim
+          value={text ?? ""}
+          faint={faint}
+          testid={testid}
+          settle={settle}
+          wrong={wrong}
+        />
+      );
+    case "select":
+      return (
+        <Select
+          value={text}
+          faint={faint}
+          choices={control.choices ?? []}
+          testid={testid}
+          settle={settle}
+        />
+      );
+    case "segment":
+      return (
+        <Segment
+          value={text}
+          faint={faint}
+          choices={control.choices ?? []}
+          testid={testid}
+          settle={settle}
+        />
+      );
+    case "flag":
+      return (
+        <Switch on={value === true} faint={faint} testid={testid} settle={settle} />
+      );
+    case "glyph":
+      return (
+        <Glyphs
+          value={text}
+          faint={faint}
+          glyphs={GLYPHS}
+          testid={testid}
+          settle={settle}
+        />
+      );
+    case "word":
+      return (
+        <Field
+          value={text ?? ""}
+          faint={faint}
+          testid={testid}
+          wrong={wrong(key)}
+          settle={settle}
+        />
+      );
+    case "count":
+    case "length":
+      return (
+        <Field
+          measure={control.kind}
+          value={text ?? ""}
+          faint={faint}
+          testid={testid}
+          wrong={wrong(key)}
+          settle={settle}
+        />
+      );
   }
-  if (control.kind === "select" || control.kind === "segment") {
-    const choices = control.choices ?? [];
-    return control.kind === "select" ? (
-      <Select
-        value={value === undefined ? undefined : String(value)}
-        choices={choices}
-        testid={testid}
-        settle={settle}
-      />
-    ) : (
-      <Segment
-        value={value === undefined ? undefined : String(value)}
-        choices={choices}
-        testid={testid}
-        settle={settle}
-      />
-    );
-  }
-  if (control.kind === "flag") {
-    return (
-      <Switch
-        on={typeof value === "boolean" ? value : undefined}
-        testid={testid}
-        settle={settle}
-      />
-    );
-  }
-  if (control.kind === "count") {
-    return <Count value={value} testid={testid} settle={settle} />;
-  }
-  if (control.kind === "glyph") {
-    return (
-      <Glyphs value={value} glyphs={GLYPHS} testid={testid} settle={settle} />
-    );
-  }
-  if (control.kind === "word") {
-    return <Words value={value} testid={testid} settle={settle} />;
-  }
-  return <Measure value={value} testid={testid} settle={settle} />;
 }
 
 /** The trim, picked from the sizes a novel is printed at or typed out. */
 function Trim({
   value,
+  faint,
   testid,
   settle,
+  wrong,
 }: {
-  value: Written | undefined;
+  value: string;
+  faint: boolean;
   testid: string;
   settle: Settle;
+  wrong: (id: string) => Wrong;
 }): JSX.Element {
-  const written = value === undefined ? "" : String(value);
-  const named = TRIMS.some((choice) => choice.value === written);
-  const [width = "", height = ""] = written.split(/\s+/);
+  const named = TRIMS.some((choice) => choice.value === value);
+  const [width = "", height = ""] = value.split(/\s+/);
   return (
     <>
       <Select
-        value={named ? written : CUSTOM}
+        value={named ? value : CUSTOM}
+        faint={faint}
         choices={[...TRIMS, { value: CUSTOM, label: "Custom" }]}
         testid={testid}
         settle={(chosen) => {
-          if (chosen !== CUSTOM) settle(chosen);
+          if (chosen !== undefined && chosen !== CUSTOM) settle(chosen);
         }}
       />
       {named ? null : (
         <>
-          <Measure
+          <Field
+            measure="length"
             value={width}
+            faint={faint}
             testid={`${testid}-width`}
+            wrong={wrong("trim-width")}
             settle={(settled) => {
               settle(sized(settled, height));
             }}
           />
-          <Measure
+          <Field
+            measure="length"
             value={height}
+            faint={faint}
             testid={`${testid}-height`}
+            wrong={wrong("trim-height")}
             settle={(settled) => {
               settle(sized(width, settled));
             }}
@@ -343,8 +494,8 @@ function sized(
  * Whether a row is drawn. The glyphs and the word both write the mark a
  * scene break carries, so the panel draws the one the mark is set to.
  */
-function drawn(line: Line, written: Record<string, Written>): boolean {
-  const mark = written["scene-break-mark"];
+function drawn(line: Listed, drawing: Drawing): boolean {
+  const mark = drawing.own["scene-break-mark"] ?? drawing.full["scene-break-mark"];
   const glyphs = line.of.some((control) => control.kind === "glyph");
   const word = line.of.some((control) => control.kind === "word");
   if (glyphs) return mark === undefined || mark === "ornament";
@@ -352,14 +503,11 @@ function drawn(line: Line, written: Record<string, Written>): boolean {
   return true;
 }
 
-/** The test id of a row's own line, which names the row's first key. */
-function saidId(line: Line): string | undefined {
-  const key = line.of.find((control) => control.key !== undefined)?.key;
-  return key === undefined ? undefined : `orca-panel-said-${key}`;
-}
-
 /** The line under a row. The hyphenation switch names the language. */
-function said(line: Line, shown: Shown & { kind: "book" }): string | undefined {
+function saidUnder(
+  line: Listed,
+  shown: Shown & { kind: "book" },
+): string | undefined {
   if (line.of.some((control) => control.key === "body-hyphens")) {
     return hyphenating(shown.language);
   }
@@ -374,11 +522,13 @@ function said(line: Line, shown: Shown & { kind: "book" }): string | undefined {
 function Picker({
   index,
   font,
+  faint,
   testid,
   pick,
 }: {
   index: FontIndex;
-  font: string | undefined;
+  font: string;
+  faint: boolean;
   testid: string;
   pick: (font: Family) => void;
 }): JSX.Element {
@@ -426,13 +576,14 @@ function Picker({
     <div className="orca-panel-picker">
       <button
         type="button"
-        className="orca-panel-field"
+        className={faint ? "orca-panel-field is-default" : "orca-panel-field"}
         data-testid={testid}
+        data-default={String(faint)}
         onClick={() => {
           setOpen(!open);
         }}
       >
-        <span>{font ?? CARRIED}</span>
+        <span className="orca-panel-family">{font}</span>
         <Icon name="chevron-down" className="orca-panel-icon" />
       </button>
       {!open ? null : (

@@ -783,16 +783,18 @@ button.orca-nav-action:hover {
   opacity: 1;
 }
 
-/* The design panel. The rows are the artboard's: a 96px label column,
-   a field that fills the rest, and a menu over it. */
+/* The design panel. A row is a 96px label and the controls beside it,
+   and at sidebar width the label sits above its controls. The panel is
+   the container its rows ask for their width. */
 .orca-panel-host {
   height: 100%;
 }
 
 .orca-panel {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: var(--size-4-2);
+  gap: var(--size-4-4);
   padding: var(--size-4-3);
 }
 
@@ -806,6 +808,7 @@ button.orca-nav-action:hover {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
+  min-width: 0;
 }
 
 .orca-panel-heading {
@@ -825,35 +828,123 @@ button.orca-nav-action:hover {
 .orca-panel-line {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-/* The faint line under a row: a unit, a language, or what a start on
-   the right-hand page costs. */
-.orca-panel-said,
-.orca-panel-unit,
-.orca-panel-means,
-.orca-panel-named {
+.orca-panel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-height: 26px;
+  min-width: 0;
+}
+
+.orca-panel-label {
+  width: 96px;
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.orca-panel-controls {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-width: 0;
+}
+
+/* The margins: two to a line, each field with its side under it. */
+.orca-panel-row.mod-grid {
+  align-items: flex-start;
+}
+
+.orca-panel-row.mod-grid > .orca-panel-label {
+  padding-top: 7px;
+}
+
+.orca-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px var(--size-4-2);
+  max-width: 320px;
+}
+
+.orca-panel-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* A line under a row sits under its controls rather than its label. */
+.orca-panel-under {
+  margin-left: calc(96px + var(--size-4-2));
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
 
-.orca-panel-named,
+.orca-panel-under.mod-wrong {
+  color: var(--text-error);
+}
+
+.orca-panel-said,
+.orca-panel-unit,
+.orca-panel-means {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-panel-unit,
 .orca-panel-means {
   color: var(--text-muted);
 }
 
-.orca-panel-select {
+.orca-panel-unit {
+  flex: none;
+}
+
+/* What a switch means wraps rather than widening its row. */
+.orca-panel-means {
+  flex: 1 1 8em;
+  min-width: 0;
+}
+
+.orca-panel-reset {
+  flex: none;
+  margin-left: auto;
+}
+
+.orca-panel-row.mod-grid > .orca-panel-reset {
+  margin-top: 3px;
+}
+
+select.orca-panel-select {
   flex: 1;
   min-width: 0;
+  max-width: 320px;
   height: var(--input-height);
   font-size: var(--font-ui-small);
+  text-overflow: ellipsis;
+}
+
+select.orca-panel-select.is-default {
+  color: var(--text-faint);
+}
+
+select.orca-panel-select option {
+  color: var(--text-normal);
 }
 
 /* The segment is the artboard's: one control, a word per choice, the
-   one in force lit. */
+   one in force lit. Its words wrap rather than run past the panel. */
 .orca-panel-segment {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 2px;
+  max-width: 100%;
   padding: 2px;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
@@ -869,6 +960,7 @@ button.orca-panel-choice {
   background: transparent;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -877,33 +969,123 @@ button.orca-panel-choice.is-on {
   color: var(--text-normal);
 }
 
+button.orca-panel-choice.is-on.is-default {
+  color: var(--text-faint);
+}
+
 .orca-panel-switch {
   flex: none;
 }
 
-input.orca-panel-measure,
-input.orca-panel-count {
-  width: 64px;
+/* A default switch is drawn in a paler accent. Dimming the whole
+   control is how a control the author's CSS has taken over is drawn. */
+.orca-panel-switch.is-default.is-enabled {
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 45%,
+    var(--background-modifier-border)
+  );
+}
+
+.orca-panel-switch.is-default::after {
+  opacity: 0.75;
+}
+
+/* A number field: the text, with a stepper joined to its right end. */
+.orca-panel-number {
+  display: inline-flex;
   flex: none;
+}
+
+.orca-panel-cell > .orca-panel-number {
+  display: flex;
+}
+
+input.orca-panel-text {
   height: var(--input-height);
-  text-align: center;
   font-size: var(--font-ui-small);
 }
 
-input.orca-panel-count {
-  width: 48px;
+.orca-panel-number > input.orca-panel-text {
+  width: 60px;
+  border-radius: var(--input-radius) 0 0 var(--input-radius);
+}
+
+.orca-panel-cell > .orca-panel-number > input.orca-panel-text {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+input.orca-panel-text.is-default {
+  color: var(--text-faint);
+}
+
+input.orca-panel-text.is-invalid,
+input.orca-panel-text.is-invalid:focus {
+  border-color: var(--text-error);
 }
 
 input.orca-panel-words {
   flex: 1;
   min-width: 0;
+  max-width: 320px;
+}
+
+.orca-panel-stepper {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 18px;
   height: var(--input-height);
-  font-size: var(--font-ui-small);
+  border: 1px solid var(--background-modifier-border);
+  border-left: none;
+  border-radius: 0 var(--input-radius) var(--input-radius) 0;
+  background: var(--interactive-normal);
+  color: var(--text-muted);
+}
+
+button.orca-panel-step {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.orca-panel-step:first-child {
+  border-top-right-radius: var(--input-radius);
+}
+
+button.orca-panel-step:last-child {
+  border-top: 1px solid var(--background-modifier-border);
+  border-bottom-right-radius: var(--input-radius);
+}
+
+button.orca-panel-step:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.orca-panel-step .orca-panel-icon {
+  display: flex;
+  --icon-size: 12px;
 }
 
 .orca-panel-glyphs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--size-4-1);
+  min-width: 0;
 }
 
 /* An ornament is drawn in the book's own face where the machine has
@@ -926,6 +1108,11 @@ button.orca-panel-glyph.is-on {
   box-shadow: 0 0 0 1.5px var(--color-accent);
 }
 
+button.orca-panel-glyph.is-on.is-default {
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  color: var(--text-muted);
+}
+
 /* The panel on the book note's page is one column of the same rows. */
 .orca-book-design {
   display: flex;
@@ -937,32 +1124,20 @@ button.orca-panel-glyph.is-on {
   padding: 0;
 }
 
-.orca-panel-row {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-  min-height: 26px;
-}
-
-.orca-panel-label {
-  width: 96px;
-  flex: none;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-}
-
 /* The picker is the field's positioning context, so the menu hangs
    from the field rather than from the pane. */
 .orca-panel-picker {
   position: relative;
   flex: 1;
   min-width: 0;
+  max-width: 320px;
 }
 
 button.orca-panel-field {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--size-4-1);
   width: 100%;
   height: var(--input-height);
   padding: 0 var(--size-4-2);
@@ -974,6 +1149,17 @@ button.orca-panel-field {
   font-size: var(--font-ui-small);
   text-align: left;
   cursor: pointer;
+}
+
+.orca-panel-family {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.orca-panel-field.is-default .orca-panel-family {
+  color: var(--text-faint);
 }
 
 .orca-panel-menu {
@@ -1030,6 +1216,7 @@ input.orca-panel-filter {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-4-1);
+  min-width: 0;
 }
 
 .orca-panel-style {
@@ -1058,4 +1245,37 @@ input.orca-panel-filter {
 .orca-panel-icon {
   flex: none;
   --icon-size: var(--icon-xs);
+}
+
+/* At sidebar width each label sits above its controls, and the
+   controls wrap. The book note's page is wider, so its labels keep
+   their column. */
+@container (max-width: 360px) {
+  .orca-panel-row {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+
+  .orca-panel-label {
+    width: 100%;
+  }
+
+  .orca-panel-label:empty {
+    display: none;
+  }
+
+  .orca-panel-row.mod-grid > .orca-panel-label {
+    padding-top: 0;
+  }
+
+  .orca-panel-under {
+    margin-left: 0;
+  }
+}
+
+/* Too narrow for two margins abreast, they stack. */
+@container (max-width: 200px) {
+  .orca-panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

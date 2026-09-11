@@ -69,11 +69,64 @@ export class Controls {
     return this.root.getByTestId(`orca-panel-said-${key}`);
   }
 
+  /** The reset at the end of a row the book sets, by the row's first key. */
+  reset(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-reset-${key}`);
+  }
+
+  /** A number field's stepper button that increases it. */
+  up(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-${key}-up`);
+  }
+
+  /** A number field's stepper button that decreases it. */
+  down(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-${key}-down`);
+  }
+
+  /** The line under a row that says why a field's text writes nothing. */
+  invalid(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-invalid-${key}`);
+  }
+
   /** The names of the groups the panel offers, in the order it offers them. */
   async grouped(): Promise<string[]> {
     return this.groups.evaluateAll((groups) =>
       groups.map((group) => group.getAttribute("data-group") ?? ""),
     );
+  }
+
+  /** The width of the panel's content, which the pane around it sets. */
+  async width(): Promise<number> {
+    return this.panel.evaluate((panel) => panel.clientWidth);
+  }
+
+  /** The groups whose content is wider than the group, by name. */
+  async overflowing(): Promise<string[]> {
+    return this.groups.evaluateAll((groups) =>
+      groups
+        .filter((group) => group.scrollWidth > group.clientWidth)
+        .map((group) => group.getAttribute("data-group") ?? ""),
+    );
+  }
+
+  /**
+   * The elements drawn past the panel's right edge, by test id or class.
+   * A group that clips its content passes `overflowing`, so this reads
+   * where each element lands instead.
+   */
+  async beyond(): Promise<string[]> {
+    return this.panel.evaluate((panel) => {
+      const edge = panel.getBoundingClientRect().right;
+      return [...panel.querySelectorAll("*")]
+        .filter((element) => element.getBoundingClientRect().right > edge + 0.5)
+        .map(
+          (element) =>
+            element.getAttribute("data-testid") ??
+            element.getAttribute("class") ??
+            element.tagName,
+        );
+    });
   }
 
   /** Opens the picker and waits for its filter. */
@@ -141,5 +194,10 @@ export class Panel extends Controls {
 
   async close(): Promise<void> {
     await this.obsidian.detach(PANEL);
+  }
+
+  /** Sets the sidebar the panel is in to a width, and returns the width it had. */
+  async resize(width: number): Promise<number> {
+    return this.obsidian.sidebar(width);
   }
 }
