@@ -28,8 +28,8 @@ export interface Designing {
 
 /**
  * The design panel. It holds no settings of its own. An edit goes to
- * the book the engine holds, and the panel is painted from what the
- * engine returned.
+ * the book the engine holds, and the panel paints from what the engine
+ * returned.
  */
 export class DesignPanelView extends ItemView {
   private mounted: Mounted | undefined;
@@ -107,7 +107,7 @@ export class DesignPanelView extends ItemView {
     await this.settle(typeset, key, font.name, faces);
   }
 
-  /** Writes one design key, and sets the book under the design it makes. */
+  /** Sets the book under the design with one key changed, and writes that design. */
   private async set(key: string, value: Written | undefined): Promise<void> {
     const typeset = await this.designing.book();
     if (typeset === undefined) return;
@@ -115,12 +115,12 @@ export class DesignPanelView extends ItemView {
   }
 
   /**
-   * Sets the book under the design one key makes, and writes that key
-   * into the note. The design edited is the one the engine holds, so two
-   * edits in a row do not lose the first.
+   * Sets the book under the design with one key changed, and writes
+   * that design into the note. It edits the design the engine holds, so
+   * two edits in a row keep the first.
    *
-   * The engine has the sheets before the note is written, so the pages
-   * are on their way rather than behind the save.
+   * The engine gets the sheets before orca writes the note, so the
+   * pages do not wait for the save.
    */
   private async settle(
     typeset: Typeset,
@@ -153,10 +153,10 @@ export class DesignPanelView extends ItemView {
       mounted.paint({ kind: "none" });
       return;
     }
-    // The first scan takes as long as the machine's font directories
-    // do, so the panel shows that it is reading rather than an empty
-    // list. Only the first: a notice painted over the rows on every
-    // edit would take the author's scroll back to the top.
+    // The first scan reads every font directory on the machine, so the
+    // panel shows a reading notice rather than an empty list. Only the
+    // first paint shows it. A notice over the rows on every edit takes
+    // the author's scroll back to the top.
     if (this.index === undefined) mounted.paint({ kind: "reading" });
     const index = await this.designing.index();
     this.index = index;

@@ -98,7 +98,7 @@ test("a reset names the default in the words the control draws it with", () => {
   assert.equal(defaultSaid(control("trim"), "6in 9in", "in"), "US trade (6 × 9 in)");
   assert.equal(defaultSaid(control("chapter-drop-cap"), 0, "in"), "None");
   assert.equal(defaultSaid(control("page-number-format"), "roman", "in"), "i, ii, iii");
-  // A page length is named in the unit the author measures pages in.
+  // A page length comes out in the unit the author measures pages in.
   assert.equal(defaultSaid(control("margin-top"), "54pt", "in"), "0.75in");
   assert.equal(defaultSaid(control("trim"), "6in 9in", "mm"), "US trade (152.4 × 228.6 mm)");
 });
@@ -128,11 +128,12 @@ test("a page length is drawn, typed and stepped in the unit the author measures 
   assert.equal(inUnit("54pt", "in"), "0.75in");
   assert.equal(inUnit("54pt", "mm"), "19.05mm");
   assert.equal(inUnit("0.75in", "pt"), "54pt");
-  // A length in em has no page unit to go into, and text that is not a
-  // length is drawn as it is.
+  // A length in em has no page unit to convert to. Text that is not a
+  // length comes back as it is.
   assert.equal(inUnit("1.2em", "in"), "1.2em");
   assert.equal(inUnit("", "in"), "");
-  // A bare number is read in the unit, and a written unit still wins.
+  // The field reads a bare number in the unit. A unit in the text still
+  // wins.
   assert.deepEqual(typed("length", "0.8", "in"), { value: "0.8in" });
   assert.deepEqual(typed("length", "20mm", "in"), { value: "20mm" });
   assert.equal(stepped("length", "0.75", 1, 1, "in"), "0.8in");
@@ -153,7 +154,7 @@ test("text a number field cannot read says what is wrong, and writes nothing", (
   assert.deepEqual(typed("count", "1.5"), {
     wrong: "Type a whole number of lines, such as 2.",
   });
-  // Text it can read is written the way the note writes it.
+  // Text it can read comes back as written in the note.
   assert.deepEqual(typed("length", "12"), { value: "12pt" });
   assert.deepEqual(typed("count", "3"), { value: 3 });
 });
@@ -175,7 +176,8 @@ test("no control can produce a warning, because each one writes a design key", (
     assert.ok(DESIGN_KEYS.includes(key), `the schema has no \`${key}\``);
   }
   // `design.test.ts` renders every property the schema sets and asserts
-  // the engine warns about none of it, so a key is the whole proof.
+  // that the engine warns about none of them. A key in the schema is
+  // enough here.
   assert.ok(PANEL_KEYS.length > 0);
 });
 
@@ -203,16 +205,16 @@ test("a control writes its own key and leaves the rest of the design alone", () 
 
 test("a length the schema cannot read leaves the design as it was", () => {
   const design = withKey(emptyDesign(), "body-size", "10.5pt");
-  // `px` is not a unit the schema reads, so the field snaps back to the
-  // size the book already had rather than losing it.
+  // The schema does not read `px`, so the field snaps back to the size
+  // the book already had.
   assert.deepEqual(writeDesign(withKey(design, "body-size", "10.5px")), {
     "body-size": "10.5pt",
   });
 });
 
-// What this tier does not cover: the drawing itself. Which control a
-// row draws, whether a default is drawn faint, whether a switch takes a
-// click, whether the glyphs or the word show for a mark, and whether a
-// row fits the sidebar are the panel's own, and the e2e suite reads
-// them off the mounted panel. The strings in `controls.tsx` and
-// `panels.tsx` are not read for British spelling here.
+// What this tier does not cover: the drawing itself. The e2e suite
+// reads it off the mounted panel. It checks which control a row draws
+// and whether a default is drawn faint. It checks whether a switch
+// takes a click, whether a mark shows the glyphs or the word, and
+// whether a row fits the sidebar. This file does not check the strings
+// in `controls.tsx` and `panels.tsx` for British spelling.

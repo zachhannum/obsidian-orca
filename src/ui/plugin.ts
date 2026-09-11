@@ -708,8 +708,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
       this.leadsTo(leaf, opens.at, true);
     } else if (left?.at === path) {
       leaf.setEphemeralState(left.state);
-      // The caret is put back centered, which is a different line at the
-      // top of the pane, and the top line is what the book reads.
+      // Obsidian puts the caret back centered, which leaves a different
+      // line at the top of the pane. The book page follows the top line.
       if (left.line !== undefined && shown instanceof MarkdownView) {
         shown.currentMode.applyScroll(left.line);
       }
@@ -972,7 +972,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
 
   /**
    * Saves the limits, and applies them to the engines that already run.
-   * A new unit paints the panel and every book page again in it.
+   * After a change of unit, it paints the panel and every book page
+   * again in the new unit.
    */
   limit(limits: Limits): void {
     const remeasured = limits.unit !== this.limits.unit;
@@ -1159,14 +1160,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Writes the design into the book's own frontmatter, which is where
-   * it lives. The engine has the sheets already, so this is what makes
-   * an edit outlast the session.
+   * Writes the design into the book's own frontmatter. The engine
+   * already has the sheets. This write keeps the edit after
+   * the session ends.
    */
   private async setDesign(book: string, design: Design): Promise<void> {
     const model = await this.edits.model(book);
-    // A design the book already has writes nothing, so nothing waits to
-    // be let through either.
+    // It skips a design the book already has, so no write waits to be
+    // let through.
     if (model === undefined || same(model.book.design, design)) return;
     this.designWrites.add(book);
     await this.edits.edit(book, (current) => ({
@@ -1233,7 +1234,7 @@ function scrolledTo(view: MarkdownView): number | undefined {
   return byteOf(text, editor.posToOffset(at));
 }
 
-/** Whether two designs write the same properties into a note. */
+/** Compares two designs by the properties they write into a note. */
 function same(one: Design, two: Design): boolean {
   return JSON.stringify(writeDesign(one)) === JSON.stringify(writeDesign(two));
 }

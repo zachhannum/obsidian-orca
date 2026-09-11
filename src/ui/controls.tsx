@@ -1,13 +1,13 @@
 /**
- * The controls the design panel is drawn from.
+ * The controls in the design panel.
  *
- * Each one takes the value it draws and reports the value the note is
- * to write. A control that reports `undefined` clears the key, so the
- * default shows through again. A key the book does not set is drawn at
- * its default, in faint type.
+ * Each control takes the value it draws and reports the value to write
+ * to the note. A control that reports `undefined` clears the key, so the
+ * default applies again. For a key that the book does not set, a control
+ * draws the default in faint type.
  *
- * A typed field commits on blur and on Enter rather than on the
- * keystroke, so a half-typed length never crosses to the engine.
+ * A typed field commits on blur and on Enter, not on each keystroke, so
+ * the engine never gets a half-typed length.
  */
 
 import {
@@ -29,25 +29,27 @@ import {
 } from "@/ui/groups";
 import { Icon } from "@/ui/icon";
 
-/** Told the value a control settled on. */
+/** A control calls it with the value it settles on. */
 export type Settle = (value: Written | undefined) => void;
 
-/** Told the line a field's text earns, or `undefined` once the text is fine. */
+/**
+ * A field calls it with the error line for its text, or with `undefined`
+ * once the text is correct.
+ */
 export type Wrong = (said: string | undefined) => void;
 
 /** One line under a row. */
 export interface Under {
   said: string;
   testid?: string | undefined;
-  /** The line says why a field's text writes nothing. */
+  /** True for a field's error line. */
   wrong?: boolean;
 }
 
 /**
- * One row: the label, the controls beside it, its reset, and the lines
- * under it. The reset's slot is held whether or not the reset is drawn,
- * so the controls do not move when the book starts or stops setting
- * the row.
+ * Draws one row of the panel. The row keeps the slot for the reset even
+ * when it has no reset, so the controls do not move when the book starts
+ * or stops setting the row.
  */
 export function Row({
   label,
@@ -90,7 +92,7 @@ export function Row({
   );
 }
 
-/** The reset at the end of a row the book sets, drawn as Obsidian's icon button. */
+/** Draws the reset at the end of a row that the book sets, as Obsidian's icon button. */
 export function Reset({
   said,
   testid,
@@ -121,9 +123,9 @@ export function Reset({
 }
 
 /**
- * A word picked from a list, drawn as Obsidian's own dropdown. A value
- * the note holds that the list does not offer is offered too, so the
- * dropdown never draws a choice the book is not set in.
+ * Draws a word picked from a list, as Obsidian's own dropdown. The
+ * dropdown also offers a value that the note holds and the list does not,
+ * so it never draws a choice that the book is not set in.
  */
 export function Select({
   value,
@@ -162,7 +164,7 @@ export function Select({
   );
 }
 
-/** A word picked from a few, drawn as one control. */
+/** Draws a word picked from a few choices, as one control. */
 export function Segment({
   value,
   faint,
@@ -209,8 +211,9 @@ export function Segment({
 }
 
 /**
- * Tabs over the rows under them, which draw the same controls for the
- * value the tab picks. A tab is a place in the panel, not a setting.
+ * Draws tabs over the rows under them. The rows draw the same controls
+ * for the value that the tab picks. Picking a tab writes nothing to the
+ * note.
  */
 export function Tabs({
   value,
@@ -248,9 +251,9 @@ export function Tabs({
 }
 
 /**
- * A switch, drawn as Obsidian's toggle. The container takes the click,
- * as Obsidian's own does, and the input inside it only carries the
- * state. A click on the input reaches the container once, by bubbling.
+ * Draws a switch as Obsidian's toggle. The container handles the click,
+ * as in Obsidian's own toggle, and the input inside it only holds the
+ * state. A click on the input bubbles up to the container once.
  */
 export function Switch({
   on,
@@ -288,14 +291,15 @@ export function Switch({
 }
 
 /**
- * A field typed into. The text shown is the drawn value until the
- * author types, and the drawn value again once the edit settles, so a
- * paint that lands mid-word does not take the caret away.
+ * Draws a text field. The field shows the drawn value until the author
+ * types, and shows it again once the edit settles. A paint that lands
+ * mid-word therefore does not move the caret.
  *
- * With a measure it is a number field. Its text is read before it is
- * written, and text it cannot read stays in the field with a line that
- * says what is wrong. A stepper and the arrow keys move it by a step
- * of its unit, from the value drawn. A bare number is read in `unit`.
+ * With a measure, it is a number field. The field reads its text before
+ * it writes it. Text that it cannot read stays in the field, with an
+ * error line under the row. The stepper and the arrow keys move the
+ * value by one step of its unit, from the value drawn. The field reads a
+ * bare number in `unit`.
  */
 export function Field({
   measure,
@@ -323,7 +327,7 @@ export function Field({
     told.current = { wrong, invalid };
   });
 
-  // A field that goes while its text is wrong takes its line with it.
+  // When the field unmounts with text it cannot read, it clears its error line.
   useEffect(
     () => () => {
       if (told.current.invalid) told.current.wrong(undefined);
@@ -340,7 +344,7 @@ export function Field({
     if (document.activeElement === field.current) return;
     setText(undefined);
     heard(undefined);
-    // Only a new value puts the field back.
+    // Only a new value resets the field to the drawn value.
   }, [value]);
 
   const commit = (): void => {
@@ -363,8 +367,8 @@ export function Field({
     if (faint || String(read.value) !== value) settle(read.value);
   };
 
-  // The stepped text is shown at once, so a second step before the
-  // paint starts from the first rather than from the value drawn.
+  // The field shows the stepped text at once, so a second step before
+  // the paint starts from the first step and not from the value drawn.
   const step = (by: 1 | -1, times: number): void => {
     if (measure === undefined) return;
     const next =
@@ -449,7 +453,7 @@ export function Field({
   );
 }
 
-/** The ornaments on offer, each drawn in the face the book is set in. */
+/** Draws the ornaments on offer. */
 export function Glyphs({
   value,
   faint,
@@ -497,7 +501,7 @@ export function Glyphs({
   );
 }
 
-/** The warning under a control, which comes from orca rather than the engine. */
+/** Draws a warning under a control. The warning comes from orca, not from the engine. */
 export function Warning({
   said,
   testid,

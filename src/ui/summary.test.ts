@@ -51,6 +51,6 @@ test("the summary follows the keys the book sets", () => {
   );
 });
 
-// What this tier does not cover: the page the summary is drawn on and
-// the button beside it that opens the panel, which the e2e suite reads
-// off the book note's page.
+// What this tier does not cover: the book note's page that shows the
+// summary, and the button beside it that opens the panel. The e2e suite
+// reads both off that page.

@@ -783,9 +783,9 @@ button.orca-nav-action:hover {
   opacity: 1;
 }
 
-/* The design panel. A row is a 96px label and the controls beside it,
-   and at sidebar width the label sits above its controls. The panel is
-   the container its rows ask for their width. */
+/* The design panel. A row is a 96px label with its controls beside it.
+   At sidebar width, the label is above its controls. The panel is the
+   container that the rows' container queries measure. */
 .orca-panel-host {
   height: 100%;
 }
@@ -803,9 +803,9 @@ button.orca-nav-action:hover {
   font-size: var(--font-ui-small);
 }
 
-/* A group is ruled off from the one above it, and its name is set in
-   the text color rather than the labels' muted one, so the group reads
-   before its rows do. */
+/* A rule separates a group from the one above it. The group name is
+   brighter than the muted row labels, so the reader sees the group
+   first. */
 .orca-panel-group {
   display: flex;
   flex-direction: column;
@@ -831,9 +831,8 @@ button.orca-nav-action:hover {
   font-weight: var(--font-semibold);
 }
 
-/* The heading levels are tabs over the rows under them, drawn the way a
-   tab strip is rather than as another segment, so they read as a place
-   in the group and not as a setting. */
+/* The heading levels are a tab strip over the rows under them, not a
+   segment. A level is a place in the group, not a setting. */
 .orca-panel-tabs {
   display: flex;
   border-bottom: 1px solid var(--background-modifier-border);
@@ -896,7 +895,7 @@ button.orca-panel-tab.is-on {
   min-width: 0;
 }
 
-/* The margins: two to a line, each field with its side under it. */
+/* The margins are two to a line, and each field has its side under it. */
 .orca-panel-row.mod-grid {
   align-items: flex-start;
 }
@@ -952,14 +951,14 @@ button.orca-panel-tab.is-on {
   flex: none;
 }
 
-/* What a switch means wraps rather than widening its row. */
+/* The text beside a switch wraps and does not widen its row. */
 .orca-panel-means {
   flex: 1 1 8em;
   min-width: 0;
 }
 
-/* Every row holds the reset's slot, so a control does not move when its
-   reset comes or goes. */
+/* Every row keeps the reset's slot, so a control does not move when its
+   reset appears or disappears. */
 .orca-panel-reset-slot {
   display: flex;
   flex: none;
@@ -967,8 +966,8 @@ button.orca-panel-tab.is-on {
   margin-left: auto;
 }
 
-/* The reset takes the slot's size rather than Obsidian's icon padding,
-   which would push it past the panel's edge. */
+/* The reset takes the slot's size, not Obsidian's icon padding. That
+   padding pushes it past the panel's edge. */
 .orca-panel-reset-slot > .orca-panel-reset {
   justify-content: center;
   width: 100%;
@@ -997,10 +996,10 @@ select.orca-panel-select option {
   color: var(--text-normal);
 }
 
-/* The segment is the artboard's: one control, a word per choice, the
-   one in force lit. Its words share the width and never wrap, so a
-   narrow sidebar shortens a word rather than breaking the control in
-   two. */
+/* A segment is one control with a word for each choice, and the choice
+   in force is lit. The words share the width and do not wrap. In a
+   narrow sidebar, a word ends in an ellipsis and the control stays on
+   one line. */
 .orca-panel-segment {
   display: flex;
   flex: 1 1 auto;
@@ -1043,7 +1042,7 @@ button.orca-panel-choice.is-on.is-default {
   flex: none;
 }
 
-/* A number field: the text, with a stepper joined to its right end. */
+/* A number field has a stepper joined to the right end of its text. */
 .orca-panel-number {
   display: inline-flex;
   flex: none;
@@ -1140,8 +1139,6 @@ button.orca-panel-step:hover {
   min-width: 0;
 }
 
-/* An ornament is drawn in the book's own face where the machine has
-   it, because a glyph is picked by eye. */
 button.orca-panel-glyph {
   width: 34px;
   height: var(--input-height);
@@ -1165,8 +1162,8 @@ button.orca-panel-glyph.is-on.is-default {
   color: var(--text-muted);
 }
 
-/* The design on the book note's page is read-only, a row a line, lined
-   up with the metadata above it. */
+/* The book note's page shows the design read-only, one row per line,
+   lined up with the metadata above it. */
 .orca-book-design {
   display: flex;
   flex-direction: column;
@@ -1305,9 +1302,10 @@ input.orca-panel-filter {
   --icon-size: var(--icon-xs);
 }
 
-/* At sidebar width each label sits above its controls, closer to them
-   than to the row above, so a label reads as its own control's. The
-   controls wrap. A wider panel keeps its labels in a column. */
+/* At sidebar width, each label is above its controls. It is closer to
+   them than to the row above, so the reader can see which control it
+   names. The controls wrap. In a wider panel, the labels stay in a
+   column. */
 @container (max-width: 360px) {
   .orca-panel-row {
     flex-wrap: wrap;
@@ -1331,7 +1329,7 @@ input.orca-panel-filter {
   }
 }
 
-/* Too narrow for two margins abreast, they stack. */
+/* In a panel too narrow for two margins side by side, the margins stack. */
 @container (max-width: 200px) {
   .orca-panel-grid {
     grid-template-columns: minmax(0, 1fr);

@@ -66,7 +66,7 @@ export class Typeset {
   readonly path: string;
   /** Its sections, in reading order. */
   readonly sections: Section[];
-  /** The language it sets, which chooses the hyphenation patterns. */
+  /** The language it sets. The engine hyphenates with the patterns for it. */
   readonly language: string | undefined;
   /** The fonts and images this book has put on the wire, by content hash. */
   readonly assets: Registry;
@@ -193,14 +193,14 @@ export class Typeset {
   }
 
   /**
-   * Sets the book under a design. The generated layer is written again
-   * and crosses with any face the design newly names. Every style of a
-   * font crosses the first time it is picked and stays registered for
-   * the session, so picking it again sends the sheets alone.
+   * Sets the book under a design. It writes the generated layer again,
+   * which crosses with any face the design newly names. Every style of
+   * a font crosses the first time the author picks it and stays
+   * registered for the session, so picking it again sends the sheets
+   * alone.
    *
-   * An edit that carries faces is keyed by them, so a later edit
-   * coalesces with it rather than takes its place and leaves the faces
-   * uncrossed.
+   * The plan keys an edit that carries faces by those faces. A later
+   * edit coalesces with it, so the faces still cross.
    */
   restyle(design: Design, faces: readonly Face[] = []): void {
     this.designed = design;

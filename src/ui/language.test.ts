@@ -18,6 +18,6 @@ test("a tag the platform cannot name is shown as the author wrote it", () => {
   assert.equal(hyphenating("zzz-nowhere"), "using zzz-nowhere");
 });
 
-// What this tier does not cover: the patterns themselves. That a
-// language reaches the engine at all is `book/metadata.test.ts`, which
+// What this tier does not cover: the patterns themselves.
+// `book/metadata.test.ts` checks that a language reaches the engine. It
 // reads the language back out of an exported PDF.

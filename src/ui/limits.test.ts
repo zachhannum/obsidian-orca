@@ -25,7 +25,7 @@ test("pages are measured in inches until the author picks another unit", () => {
   assert.equal(readLimits({ books: 2 }).unit, "in");
   assert.equal(readLimits({ books: 2, unit: "mm" }).unit, "mm");
   assert.equal(readLimits({ books: 2, unit: "px" }).unit, "in");
-  // A unit read back leaves the ceiling it was saved with.
+  // A unit saved without a ceiling reads back with the default ceiling.
   assert.deepEqual(readLimits({ unit: "pt" }), { books: LIMITS.books, unit: "pt" });
 });
 

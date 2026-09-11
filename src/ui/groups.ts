@@ -1,14 +1,13 @@
 /**
  * The controls the design panel offers, group by group.
  *
- * The panel is not the schema with friendlier labels. It is the short
- * list of decisions a book designer makes, grouped by what is on screen
- * when the decision is made, so the table is written here rather than
- * derived from the keys.
+ * The panel is the short list of decisions a book designer makes. Each
+ * group holds the decisions made with the same things on screen, so the
+ * table is written by hand here and not derived from the keys.
  *
  * Every control writes one design key, and every design key sets a
- * property the pinned engine reads. That is what keeps a control from
- * becoming a warning the author has to read.
+ * property the pinned engine reads. So no control can produce an engine
+ * warning.
  */
 
 import {
@@ -56,20 +55,21 @@ export interface Control {
   kind: Kind;
   /**
    * The design key, which `DESIGN_KEYS` holds. A key in the Headings
-   * group names its level `N`, and `atLevel` fills it in.
+   * group has `N` in place of its level, and `atLevel` fills it in.
    */
   key?: string;
   /** The words a select or a segment offers. */
   choices?: readonly Choice[];
-  /** The word after the control: a unit, or what a switch means. */
+  /** The word after the control, such as a unit or the meaning of a switch. */
   said?: string;
-  /** A length on the page, drawn in the unit the author measures pages in. */
+  /** When true, the value is a length on the page, drawn in the unit the author measures pages in. */
   page?: boolean;
 }
 
-/** One row of the panel: a label, and the controls beside it. */
+/** One row of the panel. */
 export interface Row {
   label: string;
+  /** The controls beside the label. */
   of: readonly Control[];
   /** The controls sit two to a line, each with its word under it. */
   grid?: boolean;
@@ -128,7 +128,7 @@ const POSITIONS: readonly Choice[] = [
   { value: "outside", label: "Outside" },
 ];
 
-/** A folio format is named by how its numbers look. */
+/** The label of a folio format shows how its numbers look. */
 const FORMATS: readonly Choice[] = [
   { value: "arabic", label: "1, 2, 3" },
   { value: "roman", label: "i, ii, iii" },
@@ -141,8 +141,9 @@ export const LEVEL_CHOICES: readonly Choice[] = LEVELS.map((level) => ({
 }));
 
 /**
- * The trims the panel offers by name, each measured in the unit the
- * author measures pages in. The value is the trim as the note writes it.
+ * The trims the panel offers by name. Each label measures the trim in
+ * the unit the author measures pages in. Each value is the trim as
+ * written in the note.
  */
 export function trims(unit: PageUnit): Choice[] {
   return BOOK_SIZES.map(({ name, trim }) => {
@@ -342,12 +343,12 @@ export const GROUPS: readonly Group[] = [
   },
 ];
 
-/** A control's key at one heading level. A key that names no level is its own. */
+/** Returns a control's key at one heading level. A key with no level comes back unchanged. */
 export function atLevel(key: string, level: Level): string {
   return key.replace(LEVELED, `heading-${String(level)}-`);
 }
 
-/** Every design key a group can write. A Headings key is written at every level. */
+/** Every design key a group can write, with a Headings key at every level. */
 export function keysOf(group: Group): string[] {
   return group.rows.flatMap((row) =>
     row.of.flatMap((control) => {
@@ -369,8 +370,9 @@ function measured(length: Length): string {
 }
 
 /**
- * The design with one key written into it, as the note writes that key.
- * A value the schema cannot read leaves the design as it was.
+ * Returns the design with one key set to a value as written in the
+ * note. If the schema cannot read the value, the design comes back
+ * unchanged.
  */
 export function withKey(
   design: Design,
@@ -393,13 +395,13 @@ export function withKey(
 /** A number field holds a length with its unit, or a whole number of lines. */
 export type Measure = "length" | "count";
 
-/** The value a number field's text writes, or the line that says why it writes none. */
+/** The value a number field writes, or the message shown when it writes nothing. */
 export type Typed = { value: Written } | { wrong: string };
 
 /**
- * Reads a number field's text. A length is written back in the form the
- * note writes it, so `12` goes into the note as `12pt`, or in whatever
- * `unit` a bare number is read in.
+ * Reads a number field's text. A length comes back as written in the
+ * note. A bare number takes `unit`, so `12` goes into the note as
+ * `12pt` by default.
  */
 export function typed(measure: Measure, text: string, unit: Unit = "pt"): Typed {
   try {
@@ -426,7 +428,7 @@ const WRONG: Readonly<Record<ValueError["kind"], string>> = {
 
 /**
  * Steps a number field's text by one step of its unit, or by `times`
- * steps. Text the field cannot read steps to nothing.
+ * steps. Text the field cannot read gives nothing.
  */
 export function stepped(
   measure: Measure,
@@ -457,8 +459,8 @@ export function stepSaid(
 }
 
 /**
- * A length as a page control draws it, in the unit the author measures
- * pages in. Text that is not a length is drawn as it is.
+ * Converts a length to the unit the author measures pages in, for a
+ * page control. Text that is not a length comes back unchanged.
  */
 export function inUnit(text: string, unit: PageUnit): string {
   const read = typed("length", text);
@@ -466,7 +468,7 @@ export function inUnit(text: string, unit: PageUnit): string {
   return noted(convertLength(parseLength(String(read.value)), unit));
 }
 
-/** The default a control draws, in the words the reset names it by. */
+/** Names a value in the words the control draws it with. The reset names its default this way. */
 export function defaultSaid(
   control: Control,
   value: Written | undefined,

@@ -1,15 +1,16 @@
 /**
- * Draws the design panel: the groups a book designer works in, and the
- * controls in each of them. The right sidebar mounts it against the
- * book being read, hands it a design to draw and takes back one key at
- * a time.
+ * Draws the design panel, with the groups a book designer works in and
+ * the controls in each group. The view in the right sidebar mounts the
+ * panel for the book being read. The panel draws the design that the
+ * view gives it and sends back one key at a time.
  *
- * Every control draws the value the book is set in. A key the note sets
- * is drawn as it is, with a reset at the end of its row, and a key it
- * does not set is drawn at its default.
+ * Every control draws the value that the book is set in. For a key that
+ * the note sets, the control draws the value as it is, and the row has a
+ * reset at its end. For a key that the note does not set, the control
+ * draws the default.
  *
- * The browser sets each font row in the font it offers. Nothing crosses
- * to the engine to fill the list.
+ * The browser draws each row of the font list in the font that the row
+ * names. Filling the list sends nothing to the engine.
  */
 
 import { createRoot } from "react-dom/client";
@@ -62,9 +63,9 @@ import { Icon } from "@/ui/icon";
 
 /** The actions the view performs for the panel. */
 export interface Acting {
-  /** Sets one design key in a font, whose faces cross with the sheet. */
+  /** Sets one design key to a font. The faces of the font go to the engine with the sheet. */
   pick(font: Family, key: string): void;
-  /** Writes one design key into the book note, where the design lives. */
+  /** Writes one design key into the book note, which holds the design. */
   set(key: string, value: Written | undefined): void;
 }
 
@@ -77,9 +78,9 @@ export type Shown =
       /** The design as the book note holds it. */
       design: Design;
       index: FontIndex;
-      /** The unit the margins and a custom trim are drawn and stepped in. */
+      /** The unit for drawing and stepping the margins and a custom trim. */
       unit: PageUnit;
-      /** The language the book sets, which chooses the hyphenation patterns. */
+      /** The language that the book sets. The hyphenation patterns depend on it. */
       language: string | undefined;
       /** The warning for a font the machine does not have. */
       missing: string | undefined;
@@ -93,7 +94,7 @@ export interface Mounted {
   unmount(): void;
 }
 
-/** The font the engine carries, which a book is set in until one is picked. */
+/** The font that the engine carries. A book is set in it until the author picks a font. */
 export const CARRIED = "EB Garamond";
 
 /**
@@ -117,13 +118,13 @@ export function mountPanel(el: HTMLElement, acting: Acting): Mounted {
   };
 }
 
-/** The design a control is drawn from, and the level the Headings group is on. */
+/** The design that a control draws from, and the level that the Headings group shows. */
 interface Drawing {
   shown: Shown & { kind: "book" };
   acting: Acting;
   /** The keys the book note sets. */
   own: Readonly<Record<string, Written>>;
-  /** Every key, with the defaults under the ones the note sets. */
+  /** Every key, with the value the note sets or else the default. */
   full: Readonly<Record<string, Written>>;
   level: Level;
 }
@@ -135,7 +136,7 @@ export function Panel({
   shown: Shown;
   acting: Acting;
 }): JSX.Element {
-  // The level is the panel's own, not the book's, so it starts on H1.
+  // The panel owns the level, not the book, so the level starts on H1.
   const [level, choose] = useState<Level>(1);
   if (shown.kind === "none") {
     return (
@@ -200,8 +201,9 @@ export function Panel({
 }
 
 /**
- * One row, with the error line under each field whose text cannot be
- * read, and a reset that clears every key in the row the book sets.
+ * Draws one row. Each field whose text the panel cannot read gets an
+ * error line under the row. The reset clears every key in the row that
+ * the book sets.
  */
 function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Element {
   const [wrongs, setWrongs] = useState<Readonly<Record<string, string>>>({});
@@ -240,8 +242,8 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
     under.push({ said: text, testid: `orca-panel-invalid-${id}`, wrong: true });
   }
 
-  // The default for a key the book sets is the value the book would be
-  // set in without it, so a heading level's font is still the body's.
+  // The default for a key that the book sets is the value the key takes
+  // once cleared. For a heading level's font, that is the body's font.
   const defaults = set.map(({ control, key }) => {
     const cleared = writeDesign(
       effective(withKey(drawing.shown.design, key, undefined)),
@@ -278,7 +280,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
   );
 }
 
-/** One control, and the word drawn after it or, in a grid, under it. */
+/** Draws one control and its word. The word goes after the control, or under it in a grid. */
 function Beside({
   control,
   grid,
@@ -293,7 +295,7 @@ function Beside({
   const drawn = <Drawn control={control} drawing={drawing} wrong={wrong} />;
   const said =
     control.said === undefined ? null : (
-      // A switch is read by what it means, and a field by its unit.
+      // The word after a switch is its meaning, and the word after a field is its unit.
       <span
         className={
           control.kind === "flag"
@@ -429,9 +431,9 @@ function Drawn({
 }
 
 /**
- * The trim, picked from the sizes a novel is printed at or typed out.
- * Picking Custom shows the width and height of the trim the book is in,
- * so a custom trim starts from it.
+ * Draws the trim, which the author picks from the sizes a novel is
+ * printed at or types out. Picking Custom shows the width and height of
+ * the trim that the book is in, so a custom trim starts from it.
  */
 function Trim({
   value,
@@ -502,7 +504,7 @@ function Trim({
   );
 }
 
-/** The word the trim select shows for a trim no book size carries. */
+/** The trim select's value for a trim that matches no book size. */
 const CUSTOM = "custom";
 
 function sized(
@@ -515,8 +517,9 @@ function sized(
 }
 
 /**
- * Whether a row is drawn. The glyphs and the word both write the mark a
- * scene break carries, so the panel draws the one the mark is set to.
+ * Decides if the panel draws a row. The glyphs and the word both write
+ * the scene break mark, so the panel draws only the one that the mark is
+ * set to.
  */
 function drawn(line: Listed, drawing: Drawing): boolean {
   const mark = drawing.own["scene-break-mark"] ?? drawing.full["scene-break-mark"];

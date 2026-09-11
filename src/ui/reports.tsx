@@ -1,11 +1,13 @@
 /**
- * Draws the book page: the book's metadata, edited here and written on
- * settle, its design, and its reading order, drawn read-only with a
- * word count beside each entry.
+ * Draws the book page. The author edits the book's metadata here, and
+ * the page writes it on settle. The page draws the design and the
+ * reading order read-only, with a word count beside each entry of the
+ * reading order.
  *
- * The reading order is edited in the navigator and nowhere else, so a
- * click on an entry here focuses it there. The design is edited in the
- * panel in the right sidebar, which a button here opens.
+ * The author edits the reading order in the navigator and nowhere else,
+ * so a click on an entry here focuses that entry in the navigator. The
+ * author edits the design in the design panel in the right sidebar. A
+ * button on this page opens the panel.
  */
 
 import { createRoot } from "react-dom/client";

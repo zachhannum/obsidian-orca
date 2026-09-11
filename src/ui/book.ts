@@ -33,7 +33,7 @@ export interface Handoff {
   asMarkdown(view: BookView): void;
   /** Reveals the navigator and focuses one entry of a book there. */
   locate(book: string, at: number): void;
-  /** Opens the design panel in the right sidebar, where the design is edited. */
+  /** Opens the design panel in the right sidebar, where the author edits the design. */
   openPanel(): void;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
@@ -316,7 +316,7 @@ export class BookView extends FileView {
     void this.relay();
   }
 
-  /** Paints the page again, as the settings it draws with now read. */
+  /** Paints the page again with the settings as they are now. */
   refresh(): void {
     this.repaint();
   }

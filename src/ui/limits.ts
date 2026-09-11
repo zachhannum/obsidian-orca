@@ -2,8 +2,7 @@
  * The settings orca saves beside the plugin.
  *
  * The design of a book lives in the note of the book. These settings
- * belong to the machine: how much of the engine orca runs on it, and
- * the unit its author measures a page in.
+ * belong to the machine.
  */
 
 import { CEILING } from "@/engine/pool";

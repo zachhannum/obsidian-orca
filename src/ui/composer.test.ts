@@ -448,7 +448,7 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   assert.equal(styled?.op, "style");
 });
 
-/** The design a font pick makes, which is what the panel hands over. */
+/** The design after a font pick, as the panel passes it to `restyle`. */
 function refonted(design: Design, font: string): Design {
   return { ...design, body: { ...design.body, font } };
 }

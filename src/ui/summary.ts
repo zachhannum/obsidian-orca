@@ -1,7 +1,7 @@
 /**
- * The design as the book note's page shows it: a few lines, read-only,
- * in the words the panel draws them with. The panel in the right
- * sidebar is where the design is edited.
+ * The read-only summary of the design on the book note's page. Its
+ * lines use the words the panel draws. The author edits the design in
+ * the panel in the right sidebar.
  */
 
 import { writeDesign, type Design, type PageUnit, type Written } from "@/style/design";
@@ -14,7 +14,7 @@ export interface Summed {
   value: string;
 }
 
-/** The design a book is set in, every default filled in, as a few lines. */
+/** Sums up the design a book is set in as a few lines, with every default filled in. */
 export function summary(design: Design, unit: PageUnit): Summed[] {
   const full = writeDesign(effective(design));
   const said = (key: string): string => {

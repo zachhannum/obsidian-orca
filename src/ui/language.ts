@@ -1,9 +1,11 @@
 /**
- * The language the engine hyphenates in, as the panel says it.
+ * The line the design panel shows for the language the engine
+ * hyphenates in.
  *
- * The patterns come from the book's own `language`, which crosses as
- * metadata rather than as CSS: the engine reads no language property.
- * A book that sets none is hyphenated as English.
+ * The engine takes its hyphenation patterns from the book's own
+ * `language`. That value crosses as metadata, because the engine reads
+ * no CSS language property. The engine hyphenates a book that sets no
+ * language as English.
  */
 
 /** The line the panel draws beside the hyphenation switch. */
@@ -17,7 +19,7 @@ export function hyphenating(language: string | undefined): string {
     : `using ${named} (${language})`;
 }
 
-/** The language's name in English, or nothing for a tag that names none. */
+/** The language's name in English, or nothing for a tag with no English name. */
 function languageName(language: string): string | undefined {
   try {
     const named = new Intl.DisplayNames(["en"], {
@@ -26,7 +28,7 @@ function languageName(language: string): string | undefined {
     }).of(language);
     return named === language ? undefined : named;
   } catch {
-    // A tag the platform cannot parse is shown as the author wrote it.
+    // The panel shows a tag the platform cannot parse as the author wrote it.
     return undefined;
   }
 }
