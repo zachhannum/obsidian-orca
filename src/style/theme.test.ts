@@ -86,6 +86,18 @@ test("a book's own keys win over the defaults, and a heading follows the body fo
   assert.equal(DEFAULTS.headings[1].font, undefined);
 });
 
+test("a book that sets nothing opens a chapter on the next page, inside margins in inches, with heads at the outside", () => {
+  const properties = writeDesign(DEFAULTS);
+
+  assert.equal(properties["chapter-begins"], "next-page");
+  assert.equal(properties["margin-inside"], "0.75in");
+  assert.equal(properties["margin-outside"], "0.6in");
+  assert.equal(properties["margin-top"], "0.75in");
+  assert.equal(properties["margin-bottom"], "0.75in");
+  assert.equal(properties["mirrored"], true);
+  assert.equal(properties["header-position"], "outside");
+});
+
 async function moduleBytes(): Promise<Buffer> {
   const require = createRequire(import.meta.url);
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));

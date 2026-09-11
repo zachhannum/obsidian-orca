@@ -16,6 +16,11 @@ export const UNITS = ["pt", "in", "mm", "cm", "pc", "em"] as const;
 
 export type Unit = (typeof UNITS)[number];
 
+/** The units a person can prefer for a page's margins and trim. */
+export const PAGE_UNITS = ["in", "mm", "pt"] as const;
+
+export type PageUnit = (typeof PAGE_UNITS)[number];
+
 /** A length, as the note writes it. */
 export interface Length {
   value: number;
@@ -150,9 +155,16 @@ export type PageNumberPosition = "top" | "bottom" | "outside";
 
 export type NumberFormat = "arabic" | "roman";
 
+/**
+ * The place a running head prints across the top of its page. A folio
+ * at the top moves to the outside corner when the heads are centered.
+ */
+export type HeaderPosition = "outside" | "center";
+
 export interface HeaderDesign {
   leftPage?: HeaderSlot;
   rightPage?: HeaderSlot;
+  position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
   /** The running head and the folio are left off a page a section opens on. */
@@ -334,7 +346,7 @@ const CHAPTER: readonly Field[] = [
   },
   {
     key: "chapter-space-above",
-    property: "margin-top",
+    property: "padding-top",
     read: ({ chapter }) => chapter.spaceAbove,
     write: ({ chapter }, value) => {
       const lines = asCount(value);
@@ -412,6 +424,15 @@ const SCENE: readonly Field[] = [
 const HEADERS: readonly Field[] = [
   slot("header-left-page", "leftPage"),
   slot("header-right-page", "rightPage"),
+  {
+    key: "header-position",
+    property: "content",
+    read: ({ headers }) => headers.position,
+    write: ({ headers }, value) => {
+      const position = asWord(value, HEAD_POSITIONS);
+      if (position !== undefined) headers.position = position;
+    },
+  },
   {
     key: "page-number-position",
     property: "content",
@@ -527,20 +548,40 @@ const REASONS: Readonly<Record<ValueError["kind"], string>> = {
 };
 
 /**
- * Reads a length as an author types it. A bare number is in points,
- * and a space may sit between the number and its unit. Text it cannot
- * read throws a `ValueError`.
+ * Reads a length as an author types it. A bare number is in `bare`,
+ * which is points unless given, and a space may sit between the number
+ * and its unit. Text it cannot read throws a `ValueError`.
  */
-export function parseLength(text: string): Length {
+export function parseLength(text: string, bare: Unit = UNIT): Length {
   const found = TYPED.exec(text.trim());
   if (found === null) throw new ValueError("number", text);
   const [, minus, digits = "", word = ""] = found;
-  const unit = word === "" ? UNIT : word.toLowerCase();
+  const unit = word === "" ? bare : word.toLowerCase();
   if (!isUnit(unit)) throw new ValueError("unit", text);
   const value = Number(digits);
   if (minus !== undefined && value > 0) throw new ValueError("negative", text);
   return { value, unit };
 }
+
+/**
+ * Converts a length to another unit, rounded to three decimal places.
+ * An em depends on the font size, so a length in em, or a conversion
+ * to em, comes back unchanged.
+ */
+export function convertLength(length: Length, unit: Unit): Length {
+  if (length.unit === unit || length.unit === "em" || unit === "em") return length;
+  const inches = length.value / PER_INCH[length.unit];
+  return { value: Number((inches * PER_INCH[unit]).toFixed(3)), unit };
+}
+
+/** The count of each absolute unit in one inch. */
+const PER_INCH: Readonly<Record<Exclude<Unit, "em">, number>> = {
+  in: 1,
+  pt: 72,
+  pc: 6,
+  mm: 25.4,
+  cm: 2.54,
+};
 
 /** Reads a count as an author types it. Text it cannot read throws a `ValueError`. */
 export function parseCount(text: string): number {
@@ -587,6 +628,7 @@ const SLOTS: readonly HeaderSlot[] = [
   "book-title",
   "chapter-title",
 ];
+const HEAD_POSITIONS: readonly HeaderPosition[] = ["outside", "center"];
 const POSITIONS: readonly PageNumberPosition[] = ["top", "bottom", "outside"];
 const FORMATS: readonly NumberFormat[] = ["arabic", "roman"];
 

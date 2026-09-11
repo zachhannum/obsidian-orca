@@ -20,7 +20,12 @@ import { writeNote } from "@/book/note";
 import { entries, move, resolve } from "@/book/order";
 import { sentRoles } from "@/book/plan";
 import type { Role } from "@/book/roles";
-import { emptyDesign, type Design } from "@/style/design";
+import {
+  emptyDesign,
+  type Design,
+  type HeaderPosition,
+  type PageNumberPosition,
+} from "@/style/design";
 import { generatedCss, type Setting } from "@/style/generated";
 import { designSheet } from "@/style/sheet";
 
@@ -191,7 +196,7 @@ test("the panel's own controls generate their declarations, and the engine warns
   assert.match(css, /h1 \{\n {2}text-align: center;\n\}/);
   assert.match(
     css,
-    /:is\(section:nth-child\(3\), section:nth-child\(4\)\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}margin-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
+    /:is\(section:nth-child\(3\), section:nth-child\(4\)\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}padding-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
   );
   // A heading keeps the text under it, and the paragraph after a scene
   // break takes no indent.
@@ -227,6 +232,128 @@ test("the first-line indent lands on a paragraph that follows another, and not o
     assert.ok(Math.abs(start(prefix) - flush - 22) < 0.01, `\`${prefix}\` is not indented 2em`);
   }
 });
+
+test("heads at the outside corners leave a folio at the top in the center, and an opening clears all three", () => {
+  const css = generatedCss(headed("outside", "top"), { roles: ["chapter"], author: "Jane Austen" });
+
+  assert.match(css, /@page \{\n(?: {2}.+\n)* {2}@top-center \{ content: counter\(page, decimal\); \}\n/);
+  assert.match(css, /@page :left \{\n {2}@top-left \{ content: "Jane Austen"; \}\n\}/);
+  assert.match(css, /@page :right \{\n {2}@top-right \{ content: string\(chapter\); \}\n\}/);
+  assert.match(
+    css,
+    /@page chapter:first \{\n {2}@top-left \{ content: none; \}\n {2}@top-center \{ content: none; \}\n {2}@top-right \{ content: none; \}\n\}/,
+  );
+});
+
+test("centered heads take the center box, and push a folio at the top to the outside corners", () => {
+  const css = generatedCss(headed("center", "top"), { roles: ["chapter"], author: "Jane Austen" });
+
+  assert.match(
+    css,
+    /@page :left \{\n {2}@top-left \{ content: counter\(page, decimal\); \}\n {2}@top-center \{ content: "Jane Austen"; \}\n\}/,
+  );
+  assert.match(
+    css,
+    /@page :right \{\n {2}@top-center \{ content: string\(chapter\); \}\n {2}@top-right \{ content: counter\(page, decimal\); \}\n\}/,
+  );
+  // The root clears every box, and prints the folio in none of them.
+  assert.doesNotMatch(css, /@page \{\n(?: {2}.+\n)* {2}@top-center \{ content: counter/);
+  assert.match(
+    css,
+    /@page chapter:first \{\n {2}@top-left \{ content: none; \}\n {2}@top-center \{ content: none; \}\n {2}@top-right \{ content: none; \}\n\}/,
+  );
+
+  // A folio at the foot stays in the center, and an opening clears it
+  // with the centered heads.
+  const footed = generatedCss(headed("center", "bottom"), { roles: ["chapter"], author: "Jane Austen" });
+  assert.match(footed, /@page :left \{\n {2}@top-center \{ content: "Jane Austen"; \}\n\}/);
+  assert.match(
+    footed,
+    /@page chapter:first \{\n {2}@top-center \{ content: none; \}\n {2}@bottom-center \{ content: none; \}\n\}/,
+  );
+});
+
+test("centered heads print in the middle of the page, with the folio at the outside corner and neither on an opening", async () => {
+  const design = headed("center", "top");
+  design.page.margins.top = { value: 0.8, unit: "in" };
+  const { css } = designSheet(design, { roles: ROLES, author: "Jane Austen" });
+  const output = await rendered(css, SOURCES);
+
+  assert.deepEqual(output.warnings, []);
+  const tops = (page: Page) =>
+    page.items.flatMap((item) =>
+      item.kind === "text" && item.y < TOP_MARGIN ? [item] : [],
+    );
+  const running = output.pages.filter((page) => tops(page).length === 2);
+  assert.ok(running.some((page) => page.side === "verso"), "no verso carries a head");
+  assert.ok(running.some((page) => page.side === "recto"), "no recto carries a head");
+  for (const page of running) {
+    const [head, folio] = partition(tops(page));
+    // A run carries its left edge alone. A short head centered on the
+    // page starts a little left of the middle.
+    const middle = page.width / 2;
+    assert.ok(head.x < middle && head.x > middle - 60, `the head on ${page.side} is off center`);
+    if (page.side === "verso") assert.ok(folio.x < head.x, "the folio is not at the verso's left");
+    else assert.ok(folio.x > middle, "the folio is not at the recto's right");
+  }
+  // An opening sets its title in the text block, under the top margin.
+  const openings = output.pages.filter((page) =>
+    page.items.some(
+      (item) =>
+        item.kind === "text" && item.y >= TOP_MARGIN && item.text.startsWith("Chapter"),
+    ),
+  );
+  assert.equal(openings.length, 2);
+  for (const page of openings) assert.deepEqual(heads(page), []);
+});
+
+test("the space above a chapter's title shows on the page, as padding over the title", async () => {
+  const sunk = (lines: number) => {
+    const design = emptyDesign();
+    design.body.lineSpacing = { value: 14, unit: "pt" };
+    design.chapter.spaceAbove = lines;
+    return generatedCss(design, { roles: ["chapter"], author: "Jane Austen" });
+  };
+  const top = async (css: string) => {
+    const output = await rendered(css, [INDENTED]);
+    const found = output.pages[0]?.items.find(
+      (item) => item.kind === "text" && item.text.startsWith("Chapter"),
+    );
+    assert.ok(found?.kind === "text", "the title did not set");
+    return found.y;
+  };
+
+  assert.match(sunk(4), /:first-child \{\n {2}padding-top: 56pt;\n/);
+  assert.doesNotMatch(sunk(4), /margin-top/);
+  // Four lines of 14pt sink the title 56pt.
+  assert.ok(Math.abs((await top(sunk(4))) - (await top(sunk(0))) - 56) < 0.01);
+});
+
+/** A design with a head on each side, placed as `position` says, and a folio. */
+function headed(
+  position: HeaderPosition,
+  pageNumber: PageNumberPosition,
+): Design {
+  const design = emptyDesign();
+  design.headers = {
+    leftPage: "author",
+    rightPage: "chapter-title",
+    position,
+    pageNumber,
+    suppressOnOpenings: true,
+  };
+  return design;
+}
+
+/** The two things a page prints above its text block: the head, then the folio. */
+function partition(
+  items: readonly { text: string; x: number }[],
+): [{ x: number }, { x: number }] {
+  const folio = items.find((item) => /^\d+$/.test(item.text));
+  const head = items.find((item) => !/^\d+$/.test(item.text));
+  assert.ok(folio !== undefined && head !== undefined, "the page has no head and folio");
+  return [head, folio];
+}
 
 /** Three short paragraphs under a heading. */
 const INDENTED: Source = {

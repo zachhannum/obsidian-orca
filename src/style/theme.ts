@@ -38,10 +38,10 @@ export const DEFAULTS: Design = frozen({
   page: {
     trim: { width: inches(6), height: inches(9) },
     margins: {
-      inside: points(54),
-      outside: points(42),
-      top: points(54),
-      bottom: points(54),
+      inside: inches(0.75),
+      outside: inches(0.6),
+      top: inches(0.75),
+      bottom: inches(0.75),
     },
     mirrored: true,
   },
@@ -66,11 +66,12 @@ export const DEFAULTS: Design = frozen({
     5: heading(),
     6: heading(),
   },
-  chapter: { begins: "right-page", spaceAbove: 0, spaceBelow: 0, dropCap: 0 },
+  chapter: { begins: "next-page", spaceAbove: 0, spaceBelow: 0, dropCap: 0 },
   scene: { mark: "ornament", ornament: "❧", spaceAbove: 1, spaceBelow: 1 },
   headers: {
     leftPage: "none",
     rightPage: "none",
+    position: "outside",
     pageNumber: "bottom",
     pageNumberFormat: "arabic",
     suppressOnOpenings: true,

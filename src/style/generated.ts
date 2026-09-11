@@ -105,33 +105,62 @@ function pageRules(design: Design, setting: Setting): string[] {
   // Orca owns the running heads and the folio as soon as the design
   // sets anything about them. Orca clears the boxes it does not use
   // rather than leave them to the engine's own folio.
-  const rootBoxes = new Map<string, string>(
+  const placed = placement(headers, setting);
+  const rootBoxes = new Map<Box, string>(
     owned(headers) ? BOXES.map((box) => [box, "none"]) : [],
   );
-  const leftBoxes = new Map<string, string>();
-  const rightBoxes = new Map<string, string>();
-  const folio = folioContent(headers);
-  if (folio !== undefined) {
-    if (headers.pageNumber === "top") rootBoxes.set("top-center", folio);
-    if (headers.pageNumber === "bottom") rootBoxes.set("bottom-center", folio);
-    if (headers.pageNumber === "outside") {
-      leftBoxes.set("bottom-left", folio);
-      rightBoxes.set("bottom-right", folio);
-    }
-  }
-  if (headers.leftPage !== undefined && headers.leftPage !== "none") {
-    leftBoxes.set("top-left", slotContent(headers.leftPage, setting));
-  }
-  if (headers.rightPage !== undefined && headers.rightPage !== "none") {
-    rightBoxes.set("top-right", slotContent(headers.rightPage, setting));
-  }
+  for (const [box, content] of placed.both) rootBoxes.set(box, content);
 
   return [
     block("@page", [...root, ...boxes(rootBoxes)]),
-    block("@page :left", [...left, ...boxes(leftBoxes)]),
-    block("@page :right", [...right, ...boxes(rightBoxes)]),
-    ...openingPages(headers, setting),
+    block("@page :left", [...left, ...boxes(placed.left)]),
+    block("@page :right", [...right, ...boxes(placed.right)]),
+    ...openingPages(headers, placed, setting),
   ];
+}
+
+/** The content of the margin boxes the design prints in, by the pages they print on. */
+interface Placement {
+  both: Map<Box, string>;
+  left: Map<Box, string>;
+  right: Map<Box, string>;
+}
+
+/**
+ * The margin boxes the running heads and the folio print in. A head
+ * sits at the outside corner or in the center. A folio at the top
+ * takes the center, or the outside corner when the heads are centered,
+ * so a head and a folio never share a box.
+ */
+function placement(headers: HeaderDesign, setting: Setting): Placement {
+  const placed: Placement = { both: new Map(), left: new Map(), right: new Map() };
+  const centered = headers.position === "center";
+  const folio = folioContent(headers);
+  if (folio !== undefined) {
+    if (headers.pageNumber === "top" && centered) {
+      placed.left.set("top-left", folio);
+      placed.right.set("top-right", folio);
+    }
+    if (headers.pageNumber === "top" && !centered) placed.both.set("top-center", folio);
+    if (headers.pageNumber === "bottom") placed.both.set("bottom-center", folio);
+    if (headers.pageNumber === "outside") {
+      placed.left.set("bottom-left", folio);
+      placed.right.set("bottom-right", folio);
+    }
+  }
+  if (headers.leftPage !== undefined && headers.leftPage !== "none") {
+    placed.left.set(
+      centered ? "top-center" : "top-left",
+      slotContent(headers.leftPage, setting),
+    );
+  }
+  if (headers.rightPage !== undefined && headers.rightPage !== "none") {
+    placed.right.set(
+      centered ? "top-center" : "top-right",
+      slotContent(headers.rightPage, setting),
+    );
+  }
+  return placed;
 }
 
 /**
@@ -139,9 +168,13 @@ function pageRules(design: Design, setting: Setting): string[] {
  * folio. A head names the section under it. A section's first page
  * falls under the head of the section before it.
  */
-function openingPages(headers: HeaderDesign, setting: Setting): string[] {
+function openingPages(
+  headers: HeaderDesign,
+  placed: Placement,
+  setting: Setting,
+): string[] {
   if (headers.suppressOnOpenings === false) return [];
-  const cleared = printed(headers);
+  const cleared = printed(placed);
   if (cleared.length === 0) return [];
   return used(setting.roles).map((role) =>
     block(
@@ -152,25 +185,14 @@ function openingPages(headers: HeaderDesign, setting: Setting): string[] {
 }
 
 /** The margin boxes the design prints something in, in the order `BOXES` has them. */
-function printed(headers: HeaderDesign): Box[] {
-  const found = new Set<Box>();
-  if (headers.leftPage !== undefined && headers.leftPage !== "none") {
-    found.add("top-left");
-  }
-  if (headers.rightPage !== undefined && headers.rightPage !== "none") {
-    found.add("top-right");
-  }
-  if (headers.pageNumber === "top") found.add("top-center");
-  if (headers.pageNumber === "bottom") found.add("bottom-center");
-  if (headers.pageNumber === "outside") {
-    found.add("bottom-left");
-    found.add("bottom-right");
-  }
-  return BOXES.filter((box) => found.has(box));
+function printed(placed: Placement): Box[] {
+  return BOXES.filter(
+    (box) => placed.both.has(box) || placed.left.has(box) || placed.right.has(box),
+  );
 }
 
 /** The margin boxes of one page rule, in the order the rule sets them. */
-function boxes(content: ReadonlyMap<string, string>): string[] {
+function boxes(content: ReadonlyMap<Box, string>): string[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
     return found === undefined ? [] : [boxed(box, found)];
@@ -255,7 +277,8 @@ function sectionRules(design: Design, setting: Setting): string[] {
  * A sink is the blank space above a chapter's title, written in lines
  * of body text. Where the design sets a line height, a sink is that
  * many line heights. Where it does not, a sink is that many heading
- * ems.
+ * ems. A sink is padding, since the engine drops the top margin of a
+ * box that starts a page.
  */
 function chapterRules(design: Design, setting: Setting): string[] {
   const chapters = positions(setting.roles, "chapter");
@@ -267,7 +290,7 @@ function chapterRules(design: Design, setting: Setting): string[] {
     spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design);
   return [
     block(`${chapters} > ${OPENING}`, [
-      ...set("margin-top", sink),
+      ...set("padding-top", sink),
       ...set("margin-bottom", below),
     ]),
     block(`${chapters} > ${OPENING} + p::first-letter`, [

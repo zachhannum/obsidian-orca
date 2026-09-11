@@ -10,9 +10,11 @@ import {
   DESIGN_KEYS,
   DESIGN_PROPERTIES,
   LEVELS,
+  PAGE_UNITS,
   STEPS,
   UNITS,
   ValueError,
+  convertLength,
   emptyDesign,
   mergeDesign,
   parseCount,
@@ -183,6 +185,44 @@ test("a value the panel cannot read throws a ValueError that says why", () => {
   }
 });
 
+test("a bare number is read in the unit handed in, and a written unit wins over it", () => {
+  assert.deepEqual(parseLength("0.75", "in"), { value: 0.75, unit: "in" });
+  assert.deepEqual(parseLength(" 19 ", "mm"), { value: 19, unit: "mm" });
+  assert.deepEqual(parseLength("12pt", "in"), { value: 12, unit: "pt" });
+  assert.deepEqual(parseLength("3"), { value: 3, unit: "pt" });
+  assert.throws(
+    () => parseLength("-1", "in"),
+    (error) => error instanceof ValueError && error.kind === "negative",
+  );
+});
+
+test("a length converts between the page units, to three places, and an em stays as it is", () => {
+  assert.deepEqual(PAGE_UNITS, ["in", "mm", "pt"]);
+  assert.deepEqual(convertLength(len(54, "pt"), "in"), len(0.75, "in"));
+  assert.deepEqual(convertLength(len(0.75, "in"), "mm"), len(19.05, "mm"));
+  assert.deepEqual(convertLength(len(0.6, "in"), "pt"), len(43.2, "pt"));
+  assert.deepEqual(convertLength(len(10, "mm"), "in"), len(0.394, "in"));
+  assert.deepEqual(convertLength({ value: 1, unit: "in" }, "pc"), { value: 6, unit: "pc" });
+  assert.deepEqual(convertLength({ value: 2.54, unit: "cm" }, "mm"), len(25.4, "mm"));
+  // An em is relative to a font size, so it has no length in inches.
+  assert.deepEqual(convertLength(len(1.2, "em"), "pt"), len(1.2, "em"));
+  assert.deepEqual(convertLength(len(12, "pt"), "em"), len(12, "pt"));
+  // A margin shown in each page unit and back comes to the margin it was.
+  for (const unit of PAGE_UNITS) {
+    const shown = convertLength(len(0.75, "in"), unit);
+    assert.deepEqual(convertLength(shown, "in"), len(0.75, "in"), unit);
+  }
+});
+
+test("a running head's position reads as outside or center, and nothing else", () => {
+  assert.equal(readDesign({ "header-position": "Center" }).headers.position, "center");
+  assert.equal(readDesign({ "header-position": "outside" }).headers.position, "outside");
+  assert.equal(readDesign({ "header-position": "left" }).headers.position, undefined);
+  // The key sits beside the two slots it places.
+  const at = DESIGN_KEYS.indexOf("header-position");
+  assert.equal(DESIGN_KEYS[at - 1], "header-right-page");
+});
+
 test("a step moves a length by its unit's step and a count by one, and stops at zero", () => {
   assert.deepEqual(STEPS, { pt: 0.5, pc: 0.5, in: 0.05, mm: 1, cm: 0.1, em: 0.1 });
   for (const unit of UNITS) {
@@ -286,6 +326,7 @@ function whole(): Design {
     headers: {
       leftPage: "author",
       rightPage: "book-title",
+      position: "center",
       pageNumber: "bottom",
       pageNumberFormat: "arabic",
       suppressOnOpenings: true,

@@ -52,17 +52,17 @@ test("a book that sets nothing gets every default in design.css", () => {
   const { css } = designSheet(emptyDesign(), SETTING);
 
   const expected: RegExp[] = [
-    /@page \{\n {2}size: 6in 9in;\n {2}margin-top: 54pt;\n {2}margin-bottom: 54pt;\n/,
-    /@page :left \{\n {2}margin-left: 42pt;\n {2}margin-right: 54pt;\n\}/,
-    /@page :right \{\n {2}margin-left: 54pt;\n {2}margin-right: 42pt;\n\}/,
+    /@page \{\n {2}size: 6in 9in;\n {2}margin-top: 0\.75in;\n {2}margin-bottom: 0\.75in;\n/,
+    /@page :left \{\n {2}margin-left: 0\.6in;\n {2}margin-right: 0\.75in;\n\}/,
+    /@page :right \{\n {2}margin-left: 0\.75in;\n {2}margin-right: 0\.6in;\n\}/,
     /@bottom-center \{ content: counter\(page, decimal\); \}/,
     /@page chapter:first \{\n {2}@bottom-center \{ content: none; \}\n\}/,
     /book \{\n {2}font-family: "EB Garamond", serif;\n {2}font-size: 11pt;\n {2}line-height: 16\.5pt;\n {2}text-align: justify;\n {2}hyphens: auto;\n {2}hanging-punctuation: none;\n {2}orphans: 2;\n {2}widows: 2;\n\}/,
     /p \+ p \{\n {2}text-indent: 1\.2em;\n\}/,
     /hr \+ p \{\n {2}text-indent: 0;\n\}/,
     /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/,
-    /section:nth-child\(1\) \{\n {2}page: chapter;\n {2}break-before: recto;\n\}/,
-    /:first-child \{\n {2}margin-top: 0pt;\n {2}margin-bottom: 0pt;\n\}/,
+    /section:nth-child\(1\) \{\n {2}page: chapter;\n {2}break-before: page;\n\}/,
+    /:first-child \{\n {2}padding-top: 0pt;\n {2}margin-bottom: 0pt;\n\}/,
     /hr \{\n {2}content: "❧";\n {2}margin-top: 16\.5pt;\n {2}margin-bottom: 16\.5pt;\n\}/,
   ];
   for (const pattern of expected) assert.match(css, pattern);
@@ -73,18 +73,20 @@ test("a book that sets nothing gets every default in design.css", () => {
   assert.doesNotMatch(css, /initial-letter|@top-left \{ content: "|string\(/);
 });
 
-test("a book that sets nothing keeps the engine's pages, and its openings carry no folio", async () => {
+test("a book that sets nothing sets its text inside the default margins, and its openings carry no folio", async () => {
   const engine = await book([]);
   const orca = await book(designSheets(emptyDesign(), { roles: ["chapter", "chapter"] }));
 
   assert.deepEqual(orca.warnings, []);
   assert.deepEqual(sides(orca.pages), sides(engine.pages));
-  // The text block starts where the engine's own margins put it, on
-  // both sides of the spread.
-  assert.deepEqual(orca.pages.map(firstX), engine.pages.map(firstX));
-  // The folio sits where the engine puts it, and leaves the page a
-  // chapter opens on.
-  assert.deepEqual(orca.pages.map(folio), engine.pages.map(folio));
+  // The text block starts 0.75in from the gutter on a recto and 0.6in
+  // from the fore-edge on a verso.
+  for (const page of orca.pages) {
+    const x = firstX(page) ?? Number.NaN;
+    const margin = page.side === "recto" ? 54 : 43.2;
+    assert.ok(Math.abs(x - margin) < 0.01, `a ${page.side} starts at ${x}`);
+  }
+  // The folio leaves the page a chapter opens on.
   const openings = orca.pages.filter((page) =>
     texts(page).some((text) => text.startsWith("Chapter")),
   );
@@ -192,7 +194,7 @@ function folio(page: Page): string | undefined {
   return found?.kind === "text" ? `${found.text} at ${found.x.toFixed(1)}` : undefined;
 }
 
-/** The engine's bottom margin, in points. Anything below it is a margin box. */
+/** The default bottom margin, in points. Anything below it is a margin box. */
 const BOTTOM_MARGIN = 54;
 
 async function moduleBytes(): Promise<Buffer> {
