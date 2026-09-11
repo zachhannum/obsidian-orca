@@ -2,9 +2,8 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-// The site is served from the repository's GitHub Pages path.
-const site = 'https://zachhannum.github.io';
-const base = '/obsidian-orca';
+// GitHub Pages serves the site at its own domain, which public/CNAME holds.
+const site = 'https://orca.typeworks.dev';
 
 // The artboards set code in two colors: the key in glacier, the rest in the
 // reading color. Shiki takes a TextMate theme, so this is the whole of it.
@@ -24,7 +23,6 @@ const codeTheme = (name, key, text) => ({
 
 export default defineConfig({
   site,
-  base,
   trailingSlash: 'always',
   markdown: {
     shikiConfig: {

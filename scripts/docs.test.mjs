@@ -7,7 +7,7 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, workflow, claude] =
+const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, claude] =
   await Promise.all([
     read("package.json"),
     read("site/package.json"),
@@ -15,6 +15,8 @@ const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, workflow, claud
     read("site/src/styles/tokens.css"),
     read("site/src/styles/theme.css"),
     read("site/src/styles/fonts.css"),
+    read("site/astro.config.mjs"),
+    read("site/public/CNAME"),
     read(".github/workflows/docs.yml"),
     read("CLAUDE.md"),
   ]);
@@ -94,6 +96,13 @@ test("the fonts come from the site, and each one has a fallback", () => {
   for (const sheet of [tokens, theme, fonts]) {
     assert.doesNotMatch(sheet, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
   }
+});
+
+test("the site's own domain is the one Pages keeps", () => {
+  const host = cname.trim();
+  assert.match(config, new RegExp(`const site = 'https://${host}';`));
+  // A page at the domain root takes no base path.
+  assert.doesNotMatch(config, /^\s*base:/m);
 });
 
 test("a PR that touches the site builds it, and main goes to GitHub Pages", () => {
