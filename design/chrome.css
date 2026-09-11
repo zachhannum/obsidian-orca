@@ -173,12 +173,12 @@
 .note { font-size: 11.5px; color: var(--text-faint); }
 .note.mod-error { color: var(--text-error); }
 
-/* ---- the design panel: groups ruled off from each other ---- */
+/* ---- the design panel, with a rule between groups ---- */
 .panel-grp { display: flex; flex-direction: column; gap: 12px; padding-block: 16px; }
 .panel-grp + .panel-grp { border-top: 1px solid var(--background-modifier-border); }
 .panel-grp-h { font-size: 12.5px; font-weight: var(--font-semibold); color: var(--text-normal); }
 .panel-grp > .note { margin-top: -8px; }
-/* A row keeps the reset's slot when no reset is drawn, so controls never shift. */
+/* A row keeps the reset's slot when it has no reset, so controls do not move. */
 .reset-slot { width: 24px; height: 24px; flex: none; margin-left: auto; display: flex; align-items: center; justify-content: center; }
 .reset-slot > .clickable-icon { padding: 5px; }
 .row > .lock + .reset-slot { margin-left: 0; }
@@ -186,14 +186,14 @@
 .tabstrip > div { flex: 1 1 0; display: flex; justify-content: center; padding: 5px 0 6px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .tabstrip > div.is-active { color: var(--text-normal); font-weight: var(--font-semibold); border-bottom-color: var(--color-accent); }
 
-/* ---- a number field: the text, with a stepper joined to its right end ---- */
+/* ---- a number field, with a stepper joined to its right end ---- */
 .numf { display: inline-flex; flex: none; }
 .numf > .field { width: 60px; border-radius: var(--input-radius) 0 0 var(--input-radius); }
 .stepper { display: flex; flex-direction: column; width: 18px; height: var(--input-height); border: 1px solid var(--background-modifier-border); border-left: none; border-radius: 0 var(--input-radius) var(--input-radius) 0; background: var(--interactive-normal); color: var(--text-muted); }
 .stepper > div { flex: 1; display: flex; align-items: center; justify-content: center; }
 .stepper > div + div { border-top: 1px solid var(--background-modifier-border); }
 
-/* ---- a value the book does not set, and a value it cannot read ---- */
+/* ---- a default value, and a value orca cannot read ---- */
 .field.is-default, .seg > div.is-on.is-default { color: var(--text-faint); }
 .field.is-select.is-default > svg { color: var(--text-muted); }
 .field.is-invalid { border-color: var(--text-error); }
