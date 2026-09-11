@@ -1,8 +1,8 @@
 /**
- * The theme orca bundles and the defaults a design sits over. Together
- * they are what a book that sets nothing gets: the engine's own page
- * and break rules, with the book set in EB Garamond, the one font the
- * engine carries today.
+ * The theme orca bundles and the defaults a design sits over. A book
+ * that sets nothing gets both. That book has the engine's own page and
+ * break rules, with its text in EB Garamond, the one font the engine
+ * carries today.
  */
 
 import {
@@ -18,9 +18,9 @@ export const THEME_SHEET = "orca.css";
 
 /**
  * The bundled theme's CSS, sent as one `style` op. It holds only what
- * the schema cannot say. A heading takes a line height of its own,
- * since the body's line spacing is a length a larger heading would
- * inherit.
+ * the schema has no field for. A heading takes a line height of its
+ * own, because otherwise a larger heading inherits the body's line
+ * spacing as a fixed length.
  */
 export const BUNDLED_THEME = `
 :is(h1, h2, h3, h4, h5, h6) {
@@ -31,7 +31,7 @@ export const BUNDLED_THEME = `
 
 /**
  * The design a book that sets nothing gets. A heading level sets no
- * font, so it is set in the body font. It is frozen, since every
+ * font, so it takes the body font. The object is frozen, because every
  * design merged over it shares its lengths.
  */
 export const DEFAULTS: Design = frozen({
@@ -79,8 +79,8 @@ export const DEFAULTS: Design = frozen({
 });
 
 /**
- * The design a book is set in, with every default filled in. A heading
- * level with no font of its own takes the body font.
+ * Fills in every default under a design. A heading level with no font
+ * of its own takes the body font.
  */
 export function effective(design: Design): Design {
   const merged = mergeDesign(structuredClone(DEFAULTS), design);

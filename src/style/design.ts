@@ -2,8 +2,8 @@
  * The design a book is set by: a closed schema whose every field sets
  * one property the pinned engine supports.
  *
- * A field the design leaves unset takes its default, which is what the
- * engine and the bundled theme give a book that sets nothing.
+ * A field the design leaves unset takes the default that the engine and
+ * the bundled theme give a book that sets nothing.
  *
  * The schema is written flat, one key per line, because a novelist who
  * opens Obsidian's properties panel reads `body-line-spacing` there
@@ -41,7 +41,7 @@ export interface BookSize {
 
 /**
  * The trims a novel is printed at, in the order the panel offers them.
- * A trim outside this list is written into the note by hand.
+ * An author writes a trim outside this list into the note by hand.
  */
 export const BOOK_SIZES: readonly BookSize[] = [
   size("Mass market", 4.25, 6.87, "in"),
@@ -90,7 +90,7 @@ export interface BodyDesign {
   align?: Align;
   /** The indent on a paragraph's first line. */
   indent?: Length;
-  /** The indent on the first paragraph after a scene break. */
+  /** When true, the first paragraph after a scene break takes the first-line indent. */
   indentAfterBreak?: boolean;
   hyphens?: boolean;
   hangingPunctuation?: boolean;
@@ -156,7 +156,7 @@ export type PageNumberPosition = "top" | "bottom" | "outside";
 export type NumberFormat = "arabic" | "roman";
 
 /**
- * The place a running head prints across the top of its page. A folio
+ * The position of a running head across the top of its page. A folio
  * at the top moves to the outside corner when the heads are centered.
  */
 export type HeaderPosition = "outside" | "center";
@@ -167,7 +167,7 @@ export interface HeaderDesign {
   position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
-  /** The running head and the folio are left off a page a section opens on. */
+  /** When true, the page a section opens on has no running head and no folio. */
   suppressOnOpenings?: boolean;
 }
 
@@ -507,8 +507,8 @@ export function writeDesign(design: Design): Record<string, Written> {
 }
 
 /**
- * The two designs as one, field by field. `over` wins wherever it sets
- * a field, which is how a book's own keys win over the defaults.
+ * Merges two designs field by field. `over` wins wherever it sets a
+ * field, so a book's own keys win over the defaults.
  */
 export function mergeDesign(under: Design, over: Design): Design {
   const headings = emptyDesign().headings;
@@ -529,7 +529,7 @@ export function mergeDesign(under: Design, over: Design): Design {
   };
 }
 
-/** A value the panel cannot read. `kind` says why. */
+/** A value the panel cannot read. `kind` is the reason. */
 export class ValueError extends Error {
   readonly kind: "number" | "unit" | "negative" | "whole";
 
@@ -549,8 +549,8 @@ const REASONS: Readonly<Record<ValueError["kind"], string>> = {
 
 /**
  * Reads a length as an author types it. A bare number is in `bare`,
- * which is points unless given, and a space may sit between the number
- * and its unit. Text it cannot read throws a `ValueError`.
+ * which is points by default. A space can sit between the number and
+ * its unit. It throws a `ValueError` on text it cannot read.
  */
 export function parseLength(text: string, bare: Unit = UNIT): Length {
   const found = TYPED.exec(text.trim());
@@ -583,7 +583,7 @@ const PER_INCH: Readonly<Record<Exclude<Unit, "em">, number>> = {
   cm: 2.54,
 };
 
-/** Reads a count as an author types it. Text it cannot read throws a `ValueError`. */
+/** Reads a count as an author types it. It throws a `ValueError` on text it cannot read. */
 export function parseCount(text: string): number {
   const found = TYPED.exec(text.trim());
   const [, minus, digits = "", word = ""] = found ?? [];
@@ -605,8 +605,8 @@ export const STEPS: Readonly<Record<Unit, number>> = {
 };
 
 /**
- * Moves a length by `times` steps of its unit. It stops at 0, and is
- * rounded so a step of 0.1 leaves no float noise.
+ * Moves a length by `times` steps of its unit. It stops at 0 and
+ * rounds the result, so a step of 0.1 leaves no float noise.
  */
 export function stepLength(length: Length, by: 1 | -1, times = 1): Length {
   const value = length.value + by * times * STEPS[length.unit];
@@ -635,7 +635,7 @@ const FORMATS: readonly NumberFormat[] = ["arabic", "roman"];
 /** The unit a length written as a bare number is given. */
 const UNIT: Unit = "pt";
 
-/** A number with its sign apart, then an optional unit. */
+/** A number with its sign in a separate group, then an optional unit. */
 const TYPED = /^(-)?(\d+(?:\.\d+)?|\.\d+)\s*([a-z]*)$/i;
 
 /** The fields that set one heading level's type. */

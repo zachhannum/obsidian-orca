@@ -184,7 +184,7 @@ test("a scene break sets as a blank line, an ornament or a word on its own line"
     scene({ mark: "ornament", ornament: "\u2042" }),
     'hr {\n  content: "\u2042";\n}\n',
   );
-  // A design that names no mark keeps the ornament it sets.
+  // A design with no mark set keeps its ornament.
   assert.equal(scene({ ornament: "\u2042" }), 'hr {\n  content: "\u2042";\n}\n');
 });
 
@@ -202,7 +202,7 @@ test("the panel's own controls generate their declarations, and the engine warns
   // break takes no indent.
   assert.match(css, /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/);
   assert.match(css, /hr \+ p \{\n {2}text-indent: 0;\n\}/);
-  // The space around a scene break is counted in lines of body text.
+  // The space around a scene break is in lines of body text.
   assert.match(css, /hr \{\n(?: {2}.+\n)* {2}margin-top: 14pt;\n {2}margin-bottom: 14pt;\n\}/);
 
   const output = await rendered(css);
@@ -289,7 +289,7 @@ test("centered heads print in the middle of the page, with the folio at the outs
   assert.ok(running.some((page) => page.side === "recto"), "no recto carries a head");
   for (const page of running) {
     const [head, folio] = partition(tops(page));
-    // A run carries its left edge alone. A short head centered on the
+    // A text run has only its left edge. A short head centered on the
     // page starts a little left of the middle.
     const middle = page.width / 2;
     assert.ok(head.x < middle && head.x > middle - 60, `the head on ${page.side} is off center`);
@@ -329,7 +329,7 @@ test("the space above a chapter's title shows on the page, as padding over the t
   assert.ok(Math.abs((await top(sunk(4))) - (await top(sunk(0))) - 56) < 0.01);
 });
 
-/** A design with a head on each side, placed as `position` says, and a folio. */
+/** A design with a head on each side at `position`, and a folio at `pageNumber`. */
 function headed(
   position: HeaderPosition,
   pageNumber: PageNumberPosition,
@@ -345,7 +345,7 @@ function headed(
   return design;
 }
 
-/** The two things a page prints above its text block: the head, then the folio. */
+/** The head and the folio a page prints above its text block, in that order. */
 function partition(
   items: readonly { text: string; x: number }[],
 ): [{ x: number }, { x: number }] {
@@ -381,7 +381,10 @@ function whole(): Design {
   return design;
 }
 
-/** A book set by the sheet handed in, two chapters unless it names its own sources. */
+/**
+ * Sets a book with the sheet handed in. The book is two chapters unless
+ * the caller passes its own sources.
+ */
 async function rendered(css: string, sources: Source[] = BROKEN) {
   const engine = await createEngine({ wasm: await moduleBytes() });
   try {

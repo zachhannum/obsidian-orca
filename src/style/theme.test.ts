@@ -81,7 +81,7 @@ test("a book's own keys win over the defaults, and a heading follows the body fo
   assert.deepEqual(design.body.lineSpacing, DEFAULTS.body.lineSpacing);
   assert.equal(design.headings[1].font, "Alegreya");
   assert.equal(design.headings[2].font, "Spectral");
-  // The defaults are left as they were.
+  // `effective` leaves the defaults as they were.
   assert.equal(DEFAULTS.body.font, "EB Garamond");
   assert.equal(DEFAULTS.headings[1].font, undefined);
 });

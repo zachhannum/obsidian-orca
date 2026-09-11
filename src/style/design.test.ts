@@ -147,8 +147,8 @@ test("a length written as a bare number is read in points, and junk is left unse
   assert.equal(design.body.orphans, 3);
   assert.equal(design.body.hyphens, true);
   assert.equal(design.body.align, "justify");
-  // A field the schema cannot read is left to the layer under it. A
-  // negative length is one of these.
+  // The schema leaves a field it cannot read to the layer under it. It
+  // cannot read a negative length either.
   assert.equal(design.page.trim, undefined);
   assert.equal(design.page.margins.inside, undefined);
   assert.equal(design.page.margins.top, undefined);
@@ -207,7 +207,7 @@ test("a length converts between the page units, to three places, and an em stays
   // An em is relative to a font size, so it has no length in inches.
   assert.deepEqual(convertLength(len(1.2, "em"), "pt"), len(1.2, "em"));
   assert.deepEqual(convertLength(len(12, "pt"), "em"), len(12, "pt"));
-  // A margin shown in each page unit and back comes to the margin it was.
+  // A margin converted to each page unit and back is unchanged.
   for (const unit of PAGE_UNITS) {
     const shown = convertLength(len(0.75, "in"), unit);
     assert.deepEqual(convertLength(shown, "in"), len(0.75, "in"), unit);
@@ -356,6 +356,6 @@ async function moduleBytes(): Promise<Buffer> {
 }
 
 // What this tier does not cover: the declarations a design turns into,
-// which belong to the generated layer, the defaults a book that sets
-// nothing gets, which the theme's tier covers, and the words the panel
-// shows for each kind of `ValueError`, which belong to `ui`.
+// which belong to the generated layer. The theme's tier covers the
+// defaults a book that sets nothing gets. The words the panel shows for
+// each kind of `ValueError` belong to `ui`.

@@ -129,8 +129,8 @@ interface Placement {
 /**
  * The margin boxes the running heads and the folio print in. A head
  * sits at the outside corner or in the center. A folio at the top
- * takes the center, or the outside corner when the heads are centered,
- * so a head and a folio never share a box.
+ * takes the center. When the heads are centered, it takes the outside
+ * corner, so a head and a folio never share a box.
  */
 function placement(headers: HeaderDesign, setting: Setting): Placement {
   const placed: Placement = { both: new Map(), left: new Map(), right: new Map() };
@@ -200,9 +200,9 @@ function boxes(content: ReadonlyMap<Box, string>): string[] {
 }
 
 /**
- * The body's rules. The first-line indent sits on a paragraph that
- * follows another, because the engine declares its own indent there
- * and an indent inherited from `book` would lose to it.
+ * The first-line indent sits on a paragraph that follows another. The
+ * engine declares its own indent there, and an indent inherited from
+ * `book` loses to it.
  */
 function bodyRules(design: Design): string[] {
   const { body } = design;
@@ -328,8 +328,8 @@ function sceneRules(design: Design): string[] {
 }
 
 /**
- * The text a scene break prints. A design that names no mark prints
- * the ornament it sets.
+ * The text a scene break prints. A design with no mark set prints its
+ * ornament.
  */
 function sceneContent(scene: SceneDesign): string | undefined {
   const { mark, ornament, word } = scene;

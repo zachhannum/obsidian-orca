@@ -86,7 +86,7 @@ test("a book that sets nothing sets its text inside the default margins, and its
     const margin = page.side === "recto" ? 54 : 43.2;
     assert.ok(Math.abs(x - margin) < 0.01, `a ${page.side} starts at ${x}`);
   }
-  // The folio leaves the page a chapter opens on.
+  // The page a chapter opens on carries no folio.
   const openings = orca.pages.filter((page) =>
     texts(page).some((text) => text.startsWith("Chapter")),
   );
@@ -203,5 +203,6 @@ async function moduleBytes(): Promise<Buffer> {
 }
 
 // What this tier does not cover: the author's own layer with anything
-// in it, which waits on the note's css fence, and a folio at the top
-// or the outside edge, whose openings are cleared the same way.
+// in it, which waits on the note's css fence. It also does not cover a
+// folio at the top or the outside edge. Orca clears the openings for
+// those the same way.

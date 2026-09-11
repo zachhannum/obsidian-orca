@@ -18,9 +18,9 @@ export const OWN_SHEET = "your.css";
 
 /**
  * The generated layer as one sheet, with the defaults under the design.
- * The two are merged before the CSS is generated, since a generated
- * rule reads other fields, such as the line spacing a sink is counted
- * in.
+ * It merges the two before it generates the CSS, because a generated
+ * rule reads other fields. A sink, for example, is counted in lines of
+ * the line spacing.
  */
 export function designSheet(design: Design, setting: Setting): Sheet {
   return {
