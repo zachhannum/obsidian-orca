@@ -259,16 +259,11 @@ test("the vault picture is the file tree and the book note's own Markdown", asyn
   await site.obsidian.still();
   await site.obsidian.asSource();
   // The tree draws nothing while its sidebar has no room, and an
-  // earlier picture may have put that sidebar away. Asking for the tree
-  // builds it, and a tree asked for while the sidebar is still moving
-  // comes up empty, so the ask is repeated until one holds rows.
+  // earlier picture may have put that sidebar away. The sidebar is
+  // opened and given its room first, then the tree is asked for.
   await site.obsidian.sidebar(TREE_WIDTH, "left");
-  await expect(async () => {
-    await site.obsidian.command(SHOW_TREE);
-    await expect(site.obsidian.view(EXPLORER)).toContainText(FOLDER, {
-      timeout: 2000,
-    });
-  }).toPass({ timeout: 30_000 });
+  await site.obsidian.command(SHOW_TREE);
+  await expect(site.obsidian.view(EXPLORER)).toContainText(FOLDER);
   // The book note is opened as Markdown so the picture is of the text
   // on disk. Opening it also tells the tree which folder to unfold.
   await site.obsidian.open(BOOK);

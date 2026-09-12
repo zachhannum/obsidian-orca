@@ -424,6 +424,7 @@ export class Obsidian {
         // The app styles its own scrollbars, so this has to outrank it.
         style.textContent =
           `${what.floating}, ${what.hovered} { visibility: hidden }` +
+          "* { scrollbar-width: none !important }" +
           "*::-webkit-scrollbar { display: none !important }";
         document.head.append(style);
       },
@@ -481,7 +482,7 @@ export class Obsidian {
    * it had. The API declares neither the width nor the setter.
    */
   async sidebar(width: number, side: Side = "right"): Promise<number> {
-    return this.page.evaluate((want) => {
+    const had = await this.page.evaluate((want) => {
       const { leftSplit, rightSplit } = window.app.workspace;
       const split = (want.side === "left" ? leftSplit : rightSplit) as unknown as {
         size: number;
@@ -493,6 +494,13 @@ export class Obsidian {
       split.setSize(want.width);
       return had;
     }, { width, side });
+    // A view in a sidebar builds nothing while the sidebar is still
+    // away, so the width is not set until the sidebar is open.
+    await this.page.waitForFunction((on) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      return !(on === "left" ? leftSplit : rightSplit).collapsed;
+    }, side);
+    return had;
   }
 
   /** One row of a fuzzy pick's suggestions. */
