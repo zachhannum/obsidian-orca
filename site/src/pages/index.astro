@@ -540,7 +540,9 @@ const swap = {
       var(--sea-3)
     );
   }
-  /* The light the surface lets through, over the window in the hero. */
+  /* The light the surface lets through, over the window in the hero. It
+     is brightest at its top, so it fades in there rather than starting
+     on a hard edge under the waves. */
   .sea .glow {
     position: absolute;
     inset-inline: 0;
@@ -551,6 +553,7 @@ const swap = {
       color-mix(in srgb, var(--accent) 8%, transparent),
       transparent 70%
     );
+    mask-image: linear-gradient(to bottom, transparent, #000 240px);
   }
   .sea .snow {
     /* The specks drift in the water, not over the sky. */
