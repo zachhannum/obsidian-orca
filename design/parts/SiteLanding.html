@@ -175,8 +175,20 @@
   <div style="position:relative;margin-top:220px;padding:0 64px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:72px;align-items:center">
     <div style="display:flex;flex-direction:column;gap:20px;"><h2 class="row-h">Design <i>in the panel</i></h2><p class="sec-p" style="max-width:460px">Trim, type, headings, chapter openings and scene breaks each have a control, and the page resets as you change them.</p></div>
     <div style="display:flex;gap:44px;align-items:center">
-    <div style="display:flex;flex-direction:column;gap:12px"><div style="width:364px;height:442px;position:relative;flex:none"><div style="position:absolute;left:0;top:0;transform:scale(1.3);transform-origin:0 0"><div class="o-frag">
-    <div class="o-grp"><div class="o-gh">Text</div>
+    <div style="display:flex;flex-direction:column;gap:12px"><div style="width:280px;height:538px;overflow:hidden;flex:none;border-radius:8px"><div class="o-frag">
+    <div class="o-grp"><div class="o-gh">Page</div>
+      <div class="o-row"><span class="o-lab">Trim</span><div class="o-field o-grow"><span>Digest (5.5 × 8.5 in)</span></div><span class="o-reset"></span></div>
+      <div class="o-row" style="display:grid;grid-template-columns:84px 1fr 1fr 18px;align-items:start;gap:8px">
+        <span class="o-lab" style="grid-column:1;grid-row:1">Margins</span>
+        <div style="grid-column:2;display:flex;flex-direction:column;gap:3px"><div class="o-field">0.95in</div><span class="o-unit" style="font-size:11px;color:var(--o-faint)">inside</span></div>
+        <div style="grid-column:3;display:flex;flex-direction:column;gap:3px"><div class="o-field">0.7in</div><span class="o-unit" style="font-size:11px;color:var(--o-faint)">outside</span></div>
+        <div style="grid-column:2;display:flex;flex-direction:column;gap:3px"><div class="o-field">0.8in</div><span class="o-unit" style="font-size:11px;color:var(--o-faint)">top</span></div>
+        <div style="grid-column:3;display:flex;flex-direction:column;gap:3px"><div class="o-field">1in</div><span class="o-unit" style="font-size:11px;color:var(--o-faint)">bottom</span></div>
+        <span class="o-reset" style="grid-column:4;grid-row:1"></span>
+      </div>
+      <div class="o-row"><div class="o-tog"></div><span class="o-said">Mirror the margins on facing pages</span><span class="o-reset"></span></div>
+    </div>
+    <div class="o-grp" style="margin-top:18px"><div class="o-gh">Text</div>
       <div class="o-row"><span class="o-lab">Font</span><div class="o-field o-grow o-def"><span>EB Garamond</span><span style="margin-left:auto;display:flex"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div><span class="o-reset"></span></div>
       <div class="o-row"><span class="o-lab">Size</span><div class="o-num"><div class="o-field">10.5pt</div><div class="o-step"><div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></div><div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span class="o-reset"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span></div>
       <div class="o-row"><span class="o-lab">Setting</span><div class="o-seg"><div class="{{justOn}}" onClick="{{setJust}}" style="cursor:pointer">Justified</div><div class="{{raggedOn}}" onClick="{{setRagged}}" style="cursor:pointer">Ragged right</div></div><span class="o-reset"></span></div>
@@ -186,7 +198,7 @@
       <div class="o-row"><span class="o-lab">Mark</span><div class="o-seg"><div class="{{mSpace}}" onClick="{{setSpace}}" style="cursor:pointer">Space</div><div class="{{mOrn}}" onClick="{{setOrn}}" style="cursor:pointer">Ornament</div><div class="{{mWord}}" onClick="{{setWord}}" style="cursor:pointer">Word</div></div><span class="o-reset"></span></div>
       <div class="o-row"><span class="o-lab">Glyph</span><div style="display:flex;gap:5px"><sc-for list="{{glyphs}}" as="g" hint-placeholder-count="4"><div class="o-field" onClick="{{g.pick}}" style="width:34px;justify-content:center;cursor:pointer;font-family:'EB Garamond',Georgia,serif;font-size:14px;{{g.ring}}">{{g.ch}}</div></sc-for></div><span class="o-reset"></span></div>
     </div>
-  </div></div></div><span style="font-family:'DM Mono',monospace;font-size:12px;color:#66707a">These controls work. Try them.</span></div>
+  </div></div><span style="font-family:'DM Mono',monospace;font-size:12px;color:#66707a">These controls work. Try them.</span></div>
     <div style="width:348px;height:538px;position:relative;flex:none"><div style="position:absolute;left:0;top:0;transform:scale(1.3);transform-origin:0 0"><div style="box-shadow:0 30px 60px -20px rgba(0,0,0,.85)"><div class="pg r" lang="en">
     <div class="pg-run">A Shifting Reef</div>
     <div class="pg-text" style="height:330px;text-align:{{align}};hyphens:{{hyph}};-webkit-hyphens:{{hyph}}">
