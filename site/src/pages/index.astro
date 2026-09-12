@@ -1,12 +1,107 @@
 ---
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
+import '../styles/panel.css';
+import '../styles/landing.css';
+import Icon from '../components/Icon.astro';
 import Mark from '../components/Mark.astro';
 import ThemeBoot from '../components/ThemeBoot.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import { GLYPHS, OPENS, page as setPage } from '../scripts/demo';
+import { FIRST, folio } from '../scripts/flip';
+import { LIP, REST } from '../scripts/sea';
+
+import landingDark1440 from '../shots/landing-dark-1440.png';
+import landingDark1200 from '../shots/landing-dark-1200.png';
+import landingDark960 from '../shots/landing-dark-960.png';
+import landingLight1440 from '../shots/landing-light-1440.png';
+import landingLight1200 from '../shots/landing-light-1200.png';
+import landingLight960 from '../shots/landing-light-960.png';
+import phoneDark from '../shots/phone-dark.png';
+import phoneLight from '../shots/phone-light.png';
 
 const docs = '/start/install/';
 const repo = 'https://github.com/zachhannum/obsidian-orca';
+
+/** One picture the page shows: where it is served, and the box it fills. */
+interface Shot {
+  src: string;
+  width: number;
+  height: number;
+}
+const shot = async (source: ImageMetadata): Promise<Shot> => {
+  const drawn = await getImage({ src: source, format: 'webp' });
+  return { src: drawn.src, width: source.width, height: source.height };
+};
+
+/** The pages the flip-through turns, in the order the spec rasterized them. */
+const rasterized = import.meta.glob<{ default: ImageMetadata }>('../shots/pages/page-*.png', {
+  eager: true,
+});
+const pages: Shot[] = await Promise.all(
+  Object.keys(rasterized)
+    .sort()
+    .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
+);
+const [plate, chapter] = pages;
+
+/**
+ * A leaf carries the recto before it on its front and the verso after
+ * it on its back, so the pages under the stack are the first and last.
+ */
+const leaves = pages
+  .slice(1, -1)
+  .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 2] as Shot }] : []));
+
+/** The window picture, at the width the page is being read at. */
+const window_ = {
+  dark: {
+    phone: await shot(phoneDark),
+    w960: await shot(landingDark960),
+    w1200: await shot(landingDark1200),
+    w1440: await shot(landingDark1440),
+  },
+  light: {
+    phone: await shot(phoneLight),
+    w960: await shot(landingLight960),
+    w1200: await shot(landingLight1200),
+    w1440: await shot(landingLight1440),
+  },
+};
+
+/**
+ * The specks drifting in the water. The positions are drawn from a
+ * seeded generator, so a rebuild moves nothing.
+ */
+let seed = 20000;
+const random = () => {
+  seed = (seed * 1103515245 + 12345) % 2147483648;
+  return seed / 2147483648;
+};
+const specks = Array.from({ length: 70 }, () => {
+  const size = 1.4 + random() * 1.1;
+  return {
+    left: random() * 100,
+    top: random() * 100,
+    size,
+    opacity: 0.05 + random() * 0.18,
+    duration: 11 + random() * 9,
+    delay: -random() * 20,
+  };
+});
+
+/** The surface, as three paths the script moves. The markup is its resting shape. */
+const waves = [
+  { off: -48, lag: 1.4, kind: 'line', width: 1.2, opacity: 0.16 },
+  { off: -24, lag: 0.7, kind: 'line', width: 1.4, opacity: 0.32 },
+  { off: 0, lag: 0, kind: 'body', width: 0, opacity: 1 },
+];
+const rest = (off: number, kind: string) =>
+  kind === 'line' ? `M0 ${String(REST + off)}H1440` : `M0 ${String(REST + off)}H1440V${String(LIP)}H0Z`;
+
+const opening = setPage(OPENS);
 ---
 
 <html lang="en">
@@ -19,26 +114,524 @@ const repo = 'https://github.com/zachhannum/obsidian-orca';
     <ThemeBoot />
   </head>
   <body>
-    <header>
-      <a class="word" href="/">
-        <Mark />
-        <span>orca</span>
-      </a>
-      <nav>
-        <a href={docs}>Docs</a>
-        <a href={repo}>GitHub</a>
-        <ThemeToggle />
-      </nav>
-    </header>
+    <div class="page">
+      <div class="sea" aria-hidden="true">
+        <svg
+          class="lip"
+          data-sea
+          viewBox={`0 0 1440 ${String(LIP)}`}
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {
+            waves.map((wave) => (
+              <path
+                d={rest(wave.off, wave.kind)}
+                data-kind={wave.kind}
+                data-off={wave.off}
+                data-lag={wave.lag}
+                fill={wave.kind === 'line' ? 'none' : 'var(--sea-0)'}
+                stroke={wave.kind === 'line' ? 'var(--sky-text)' : 'none'}
+                stroke-width={wave.width}
+                opacity={wave.opacity}
+              />
+            ))
+          }
+        </svg>
+        <div class="body"></div>
+        <div class="glow"></div>
+        {
+          specks.map((speck) => (
+            <span
+              class="snow"
+              style={`left:${String(speck.left)}%;top:${String(speck.top)}%;width:${String(speck.size)}px;height:${String(speck.size)}px;opacity:${String(speck.opacity)};animation-duration:${String(speck.duration)}s;animation-delay:${String(speck.delay)}s`}
+            />
+          ))
+        }
+      </div>
 
-    <main>
-      <h1>A book designer<br /><i>inside Obsidian</i></h1>
-      <p>
-        The chapters stay notes in the vault, the book is a note beside them, and a preview
-        pane shows the set page while you write.
-      </p>
-      <a class="button" href={docs}>Read the docs</a>
-    </main>
+      <header>
+        <a class="word" href="/">
+          <Mark width={40} height={25} />
+          <span>orca</span>
+        </a>
+        <nav>
+          <a href={docs}>Docs</a>
+          <a href={repo}>GitHub</a>
+          <ThemeToggle />
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <h1>A book designer<br /><i>inside Obsidian.</i></h1>
+          <p class="lede">
+            The chapters stay notes in your vault. The book is a note beside them, and the
+            preview shows the set page while you write.
+          </p>
+          <div class="actions">
+            <a class="install" href={docs}>Install in Obsidian</a>
+            <a class="quiet" href={docs}>Read the docs</a>
+            <span class="aside">Desktop only</span>
+          </div>
+
+          <figure class="window">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <picture class={`shot on-${scheme}`}>
+                  <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
+                  <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
+                  <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
+                  <img
+                    src={window_[scheme].w1440.src}
+                    width={window_[scheme].w1440.width}
+                    height={window_[scheme].w1440.height}
+                    alt="Orca in Obsidian: the navigator, a spread of the set book, and the design panel."
+                  />
+                </picture>
+              ))
+            }
+            <figcaption>
+              Jules Verne, Twenty Thousand Leagues Under the Sea. Chapter I, A Shifting Reef.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="row">
+          <div class="said">
+            <h2 class="row-h">Your chapters <i>stay notes</i></h2>
+            <p class="sec-p">
+              A book is one more note in your vault. It lists your chapters in reading order,
+              as links. Adding a chapter never moves or copies it, and removing one never
+              deletes it. If you uninstall orca, every word is still where you wrote it.
+            </p>
+          </div>
+          <div class="shown vault">
+            <div class="src tree">
+              <div class="src-h"><Icon name="folder" size={13} /><span>Vault</span></div>
+              <div class="rows">
+                <div class="tr" style="padding-left:14px">
+                  <Icon name="down" /><span>Twenty Thousand Leagues</span>
+                </div>
+                <div class="tr" style="padding-left:32px">
+                  <Icon name="book" /><span>Twenty Thousand Leagues Under the Sea.md</span>
+                  <span class="chip">book</span>
+                </div>
+                {
+                  [
+                    'Copyright.md',
+                    'Part One.md',
+                    'A Shifting Reef.md',
+                    'Pro and Con.md',
+                    'I Form My Resolution.md',
+                    'Ned Land.md',
+                    'At a Venture.md',
+                  ].map((note) => (
+                    <div class="tr" style="padding-left:32px">
+                      <Icon name="note" />
+                      <span>{note}</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+            <div class="src note">
+              <div class="src-h">
+                <Icon name="book" size={13} /><span>Twenty Thousand Leagues Under the Sea.md</span>
+              </div>
+              <div class="src-b">
+                <div class="f">---</div>
+                <div><span class="k">orca-book</span>: 1</div>
+                <div><span class="k">title</span>: Twenty Thousand Leagues Under the Sea</div>
+                <div><span class="k">author</span>: Jules Verne</div>
+                <div><span class="k">language</span>: <span class="v">"en"</span></div>
+                <div class="f">---</div>
+                <div class="sp"></div>
+                <div class="n"># Front matter</div>
+                <div>- [[Copyright]]</div>
+                <div class="sp"></div>
+                <div class="n"># Body</div>
+                <div>- [[Part One]]</div>
+                <div>- [[A Shifting Reef]]</div>
+                <div>- [[Pro and Con]]</div>
+                <div>- [[I Form My Resolution]]</div>
+                <div>- [[Ned Land]]</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Write, then <i>see the page</i></h2>
+            <p class="sec-p">
+              Write the chapter in Markdown, as you always do. One icon in the note header
+              swaps the pane to the set book, open at the page you were writing, with the
+              design panel beside it.
+            </p>
+          </div>
+          <div class="swap">
+            <div class="x-win">
+              <div class="x-pane">
+                <div class="x-tab">
+                  <Icon name="note" size={13} /><span>A Shifting Reef</span>
+                  <div class="spacer"></div>
+                  <div class="sw-ic">
+                    <span class="sw-i1"><Icon name="book" size={15} /></span>
+                    <span class="sw-i2"><Icon name="pencil" size={15} /></span>
+                  </div>
+                  <Icon name="more" size={15} />
+                </div>
+                <div class="layers">
+                  <div class="sw-layer sw-ms">
+                    <div class="x-doc">
+                      <div class="x-title">A Shifting Reef</div>
+                      <p class="x-p">
+                        The year 1866 was signalised by a remarkable incident, a mysterious and
+                        puzzling phenomenon, which doubtless no one has yet forgotten. Not to
+                        mention rumours which agitated the maritime population and excited the
+                        public mind, even in the interior of continents, seafaring men were
+                        particularly excited.
+                      </p>
+                      <p class="x-p">
+                        For some time past vessels had been met by “an enormous thing,” a long
+                        object, spindle-shaped, occasionally phosphorescent, and infinitely
+                        larger and more rapid in its movements than a whale.
+                      </p>
+                      <p class="x-p">
+                        The facts relating to this apparition (entered in various log-books)
+                        agreed in most respects as to the shape of the object or creature in
+                        question, the untiring rapidity of its movements, its surprising power
+                        of locomotion, and the peculiar life with which it seemed endowed.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="sw-layer sw-bk">
+                    <div class="o-tool">
+                      <div class="o-seg">
+                        <div><Icon name="page" size={13} /></div>
+                        <div class="on"><Icon name="spread" size={13} /></div>
+                        <div><Icon name="grid" size={13} /></div>
+                      </div>
+                      <div class="spacer"></div>
+                      <div class="o-field chapter">
+                        <span>A Shifting Reef</span><Icon name="down" size={12} />
+                      </div>
+                      <div class="o-vr"></div>
+                      <Icon name="left" /><div class="o-field folio">{FIRST + 1}</div>
+                      <Icon name="right" />
+                      <div class="o-vr"></div>
+                      <Icon name="download" size={15} />
+                    </div>
+                    <div class="o-desk">
+                      <div class="o-spread">
+                        <img src={plate?.src} width={plate?.width} height={plate?.height} alt="" />
+                        <img
+                          src={chapter?.src}
+                          width={chapter?.width}
+                          height={chapter?.height}
+                          alt=""
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="o-side r">
+                <div class="o-tabs">
+                  <div class="o-tab"><Icon name="outline" size={15} /></div>
+                  <div class="o-tab on"><Icon name="sliders" size={15} /></div>
+                </div>
+                <div class="o-panel">
+                  <div class="o-ph"><span>DESIGN</span><span>Twenty Thousand Leagues</span></div>
+                  <div class="o-grp">
+                    <div class="o-gh">Page</div>
+                    <div class="o-row">
+                      <span class="o-lab">Trim</span>
+                      <div class="o-field o-grow">
+                        <span>Digest (5.5 × 8.5 in)</span><Icon name="down" size={12} />
+                      </div>
+                      <span class="o-reset"><Icon name="reset" size={12} /></span>
+                    </div>
+                    <div class="o-row">
+                      <div class="o-tog"></div>
+                      <span class="o-said">Mirror the margins on facing pages</span>
+                    </div>
+                  </div>
+                  <div class="o-grp">
+                    <div class="o-gh">Text</div>
+                    <div class="o-row">
+                      <span class="o-lab">Font</span>
+                      <div class="o-field o-grow o-def">
+                        <span>EB Garamond</span><Icon name="down" size={12} />
+                      </div>
+                      <span class="o-reset"></span>
+                    </div>
+                    <div class="o-row">
+                      <span class="o-lab">Size</span>
+                      <div class="o-num">
+                        <div class="o-field">10.5pt</div>
+                        <div class="o-step">
+                          <div><Icon name="up" size={9} /></div>
+                          <div><Icon name="down" size={9} /></div>
+                        </div>
+                      </div>
+                      <span class="o-reset"><Icon name="reset" size={12} /></span>
+                    </div>
+                    <div class="o-row">
+                      <span class="o-lab">Line spacing</span>
+                      <div class="o-num">
+                        <div class="o-field">14pt</div>
+                        <div class="o-step">
+                          <div><Icon name="up" size={9} /></div>
+                          <div><Icon name="down" size={9} /></div>
+                        </div>
+                      </div>
+                      <span class="o-reset"><Icon name="reset" size={12} /></span>
+                    </div>
+                    <div class="o-row">
+                      <span class="o-lab">Setting</span>
+                      <div class="o-seg"><div class="on">Justified</div><div>Ragged right</div></div>
+                      <span class="o-reset"></span>
+                    </div>
+                    <div class="o-row">
+                      <span class="o-lab">Hyphenate</span>
+                      <div class="o-tog"></div>
+                      <span class="o-reset"></span>
+                    </div>
+                  </div>
+                  <div class="o-grp">
+                    <div class="o-gh">Chapter openings</div>
+                    <div class="o-row">
+                      <span class="o-lab">Begins on</span>
+                      <div class="o-field o-grow o-def">
+                        <span>Next page</span><Icon name="down" size={12} />
+                      </div>
+                      <span class="o-reset"></span>
+                    </div>
+                    <div class="o-row">
+                      <span class="o-lab">Space above</span>
+                      <div class="o-num">
+                        <div class="o-field">7</div>
+                        <div class="o-step">
+                          <div><Icon name="up" size={9} /></div>
+                          <div><Icon name="down" size={9} /></div>
+                        </div>
+                      </div>
+                      <span class="o-unit">lines</span>
+                      <span class="o-reset"><Icon name="reset" size={12} /></span>
+                    </div>
+                    <div class="o-row">
+                      <span class="o-lab">Drop cap</span>
+                      <div class="o-field o-grow">
+                        <span>3 lines</span><Icon name="down" size={12} />
+                      </div>
+                      <span class="o-reset"><Icon name="reset" size={12} /></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="row" data-demo>
+          <div class="said">
+            <h2 class="row-h">Design <i>in the panel</i></h2>
+            <p class="sec-p">
+              Trim, type, headings, chapter openings and scene breaks each have a control, and
+              the page resets as you change them.
+            </p>
+          </div>
+          <div class="shown demo">
+            <div class="controls">
+              <div class="frag-box"><div class="o-frag">
+                <div class="o-grp">
+                  <div class="o-gh">Text</div>
+                  <div class="o-row">
+                    <span class="o-lab">Font</span>
+                    <div class="o-field o-grow o-def">
+                      <span>EB Garamond</span><Icon name="down" size={12} />
+                    </div>
+                    <span class="o-reset"></span>
+                  </div>
+                  <div class="o-row">
+                    <span class="o-lab">Setting</span>
+                    <div class="o-seg">
+                      <button type="button" data-set="align=justify">Justified</button>
+                      <button type="button" data-set="align=left">Ragged right</button>
+                    </div>
+                    <span class="o-reset"></span>
+                  </div>
+                  <div class="o-row">
+                    <span class="o-lab">Hyphenate</span>
+                    <button
+                      type="button"
+                      class="o-tog"
+                      data-set="hyphens"
+                      aria-label="Hyphenate"></button>
+                    <span class="o-reset"></span>
+                  </div>
+                </div>
+                <div class="o-grp breaks">
+                  <div class="o-gh">Scene breaks</div>
+                  <div class="o-row">
+                    <span class="o-lab">Mark</span>
+                    <div class="o-seg">
+                      <button type="button" data-set="mark=space">Space</button>
+                      <button type="button" data-set="mark=ornament">Ornament</button>
+                      <button type="button" data-set="mark=word">Word</button>
+                    </div>
+                    <span class="o-reset"></span>
+                  </div>
+                  <div class="o-row">
+                    <span class="o-lab">Glyph</span>
+                    <div class="glyphs">
+                      {
+                        GLYPHS.map((glyph, at) => (
+                          <button
+                            type="button"
+                            class="o-field glyph"
+                            data-set={`glyph=${String(at)}`}
+                            aria-label={`Ornament ${glyph}`}
+                          >
+                            {glyph}
+                          </button>
+                        ))
+                      }
+                    </div>
+                    <span class="o-reset"></span>
+                  </div>
+                </div>
+              </div></div>
+              <span class="aside">These controls work. Try them.</span>
+            </div>
+            <div class="demo-page"><div class="pg r" lang="en">
+                <div class="pg-run">A Shifting Reef</div>
+                <div class="pg-text" data-demo-text>
+                  <p class="first">
+                    On the 20th of July, 1866, the steamer Governor Higginson, of the Calcutta
+                    and Burnach Steam Navigation Company, had met this moving mass five miles
+                    off the east coast of Australia. Captain Baker thought at first that he was
+                    in the presence of an unknown sandbank; he even prepared to determine its
+                    exact position when two columns of water, projected by the mysterious
+                    object, shot with a hissing noise a hundred and fifty feet up into the air.
+                  </p>
+                  <div
+                    class="pg-break"
+                    data-demo-mark
+                    style={`height:${opening.mark.height};line-height:${opening.mark.height};font-size:${opening.mark.size};letter-spacing:${opening.mark.spacing}`}
+                  >
+                    {opening.mark.text}
+                  </div>
+                  <p class="first">
+                    Similar facts were observed on the 23rd of July in the same year, in the
+                    Pacific Ocean, by the Columbus, of the West India and Pacific Steam
+                    Navigation Company. But this extraordinary creature could transport itself
+                    from one place to another with surprising velocity; as, in an interval of
+                    three days, the Governor Higginson and the Columbus had observed it at two
+                    different points of the chart, separated by a distance of more than seven
+                    hundred nautical leagues.
+                  </p>
+                  <p>
+                    Fifteen days later, two thousand miles farther off, the Helvetia, of the
+                    Compagnie-Nationale, and the Shannon, of the Royal Mail Steamship Company,
+                    sailing to windward in that portion of the Atlantic lying between the United
+                    States and Europe, respectively signalled the monster to each other in 42°
+                    15′ N. lat. and 60° 35′ W. long.
+                  </p>
+                </div>
+                <div class="pg-folio">{FIRST + 1}</div>
+              </div></div>
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Turn <i>the pages</i></h2>
+            <p class="sec-p">
+              Twenty Thousand Leagues Under the Sea, set with orca. Click a page to turn it.
+            </p>
+          </div>
+          <div
+            class="flip"
+            data-flip
+            data-at="0"
+            tabindex="0"
+            role="group"
+            aria-label="The sample book, a spread at a time"
+          >
+            <div class="book">
+              <img
+                class="under verso"
+                src={plate?.src}
+                width={plate?.width}
+                height={plate?.height}
+                alt={`Page ${String(FIRST)} of the sample book`}
+              />
+              <img
+                class="under recto"
+                src={pages.at(-1)?.src}
+                width={pages.at(-1)?.width}
+                height={pages.at(-1)?.height}
+                alt={`Page ${String(FIRST + pages.length - 1)} of the sample book`}
+              />
+              {
+                leaves.map((leaf, at) => (
+                  <div class="leaf" data-leaf={at}>
+                    <img class="face front" src={leaf.front.src} loading="lazy" alt="" />
+                    <img class="face back" src={leaf.back.src} loading="lazy" alt="" />
+                  </div>
+                ))
+              }
+            </div>
+            <div class="turn">
+              <button type="button" data-turn="-1" aria-label="The spread before">
+                <Icon name="left" size={16} />
+              </button>
+              <span class="folio" data-folio aria-live="polite">{folio(0)}</span>
+              <button type="button" data-turn="1" aria-label="The spread after">
+                <Icon name="right" size={16} />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="deep">
+          <Mark width={64} height={40} />
+          <h2 class="sec-h">Make your <i>first book</i></h2>
+          <div class="actions middle">
+            <a class="install" href={docs}>Install in Obsidian</a>
+            <a class="quiet" href={docs}>Read the docs</a>
+          </div>
+          <span class="aside">Desktop only</span>
+        </section>
+      </main>
+
+      <footer>
+        <a class="word small" href="/">
+          <Mark width={26} height={16} />
+          <span>orca</span>
+        </a>
+        <nav>
+          <a href={docs}>Docs</a>
+          <a href={repo}>GitHub</a>
+        </nav>
+      </footer>
+    </div>
+
+    <script>
+      import { startDemo } from '../scripts/demo';
+      import { startFlip } from '../scripts/flip';
+      import { startSea } from '../scripts/sea';
+
+      const sea = document.querySelector<SVGSVGElement>('[data-sea]');
+      if (sea !== null) startSea(sea);
+      const flip = document.querySelector<HTMLElement>('[data-flip]');
+      if (flip !== null) startFlip(flip);
+      const demo = document.querySelector<HTMLElement>('[data-demo]');
+      if (demo !== null) startDemo(demo);
+    </script>
   </body>
 </html>
 
@@ -48,85 +641,619 @@ const repo = 'https://github.com/zachhannum/obsidian-orca';
   }
   :global(body) {
     margin: 0;
-    background: var(--bg);
+    background: var(--sky);
     color: var(--text);
     font-family: var(--body);
+    overflow-x: hidden;
   }
+
+  /* The metrics the waterline is found from. The surface has to cross
+     the second line of the title, so it is placed from the title's own
+     size rather than from a number of its own. */
+  .page {
+    --header-h: 92px;
+    --hero-pad: 64px;
+    --title-size: clamp(42px, 7.6vw, 110px);
+    --title-leading: 0.98;
+    --title-dip: 1.46;
+    --gutter: 64px;
+    --step: 220px;
+    --sea-lip: 140px;
+    --sea-top: calc(
+      var(--header-h) + var(--hero-pad) + var(--title-size) * var(--title-leading) *
+        var(--title-dip) - 63px
+    );
+    /* The title is the light colour in both schemes. A difference blend
+       then turns its letters over where the sea runs through them. */
+    --title-ink: #eef0ec;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sea {
+    position: absolute;
+    inset-inline: 0;
+    top: var(--sea-top);
+    bottom: 0;
+    pointer-events: none;
+  }
+  .sea .lip {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    width: 100%;
+    height: var(--sea-lip);
+    overflow: visible;
+  }
+  .sea .body {
+    position: absolute;
+    inset-inline: 0;
+    top: var(--sea-lip);
+    bottom: 0;
+    background: linear-gradient(
+      to bottom,
+      var(--sea-0),
+      var(--sea-1) 30%,
+      var(--sea-2) 70%,
+      var(--sea-3)
+    );
+  }
+  /* The light the surface lets through, over the window in the hero. */
+  .sea .glow {
+    position: absolute;
+    inset-inline: 0;
+    top: 80px;
+    height: 1100px;
+    background: radial-gradient(
+      ellipse 70% 60% at 50% 0%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 70%
+    );
+  }
+  .sea .snow {
+    /* The specks drift in the water, not over the sky. */
+    margin-top: var(--sea-lip);
+  }
+
   header {
+    position: relative;
     display: flex;
     align-items: center;
-    height: 64px;
-    padding: 0 28px;
-    border-bottom: 1px solid var(--border);
+    gap: 28px;
+    height: var(--header-h);
+    padding-inline: var(--gutter);
+    color: var(--sky-text);
   }
   .word {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--text);
+    color: inherit;
     text-decoration: none;
   }
   .word span {
     font-family: var(--display);
     font-weight: 600;
-    font-size: 25px;
+    font-size: 30px;
   }
-  nav {
+  .word.small span {
+    font-size: 18px;
+  }
+  header nav {
     margin-inline-start: auto;
     display: flex;
     align-items: center;
     gap: 20px;
     font-family: var(--ui);
     font-size: 14px;
+    color: var(--sky-muted);
   }
-  nav a {
-    color: var(--muted);
+  header nav a,
+  footer nav a {
+    color: inherit;
     text-decoration: none;
   }
-  nav a:hover {
-    color: var(--text);
+  header nav a:hover,
+  footer nav a:hover {
+    color: var(--sky-text);
   }
+  header :global(.theme-toggle) {
+    color: var(--sky-muted);
+  }
+  header :global(.theme-toggle:hover) {
+    color: var(--sky-text);
+  }
+
   main {
-    max-width: 44rem;
-    padding: 96px 28px;
-    margin: 0 auto;
+    position: relative;
+  }
+
+  .hero {
+    position: relative;
+    padding: var(--hero-pad) var(--gutter) 0;
   }
   h1 {
-    margin: 0 0 22px;
+    margin: 0;
     font-family: var(--display);
+    font-size: var(--title-size);
+    line-height: var(--title-leading);
+    letter-spacing: -0.02em;
     font-weight: 700;
-    font-size: 72px;
-    line-height: 1.05;
-    letter-spacing: -0.015em;
+    color: var(--title-ink);
+    mix-blend-mode: difference;
   }
   h1 i {
+    font-style: italic;
     font-weight: 500;
   }
-  p {
-    margin: 0 0 32px;
-    font-size: 19px;
+  .lede {
+    margin: 34px 0 0;
+    max-width: 35rem;
+    font-size: 20px;
     line-height: 1.6;
     color: var(--muted);
   }
-  .button {
-    display: inline-flex;
+  .actions {
+    display: flex;
     align-items: center;
-    height: 44px;
-    padding: 0 22px;
-    border-radius: 999px;
-    background: var(--pill);
-    color: var(--pilltext);
+    flex-wrap: wrap;
+    gap: 26px;
+    margin-top: 32px;
     font-family: var(--ui);
+  }
+  .actions.middle {
+    justify-content: center;
+  }
+  .install {
     font-size: 15px;
     font-weight: 600;
+    padding: 13px 22px;
+    border-radius: 6px;
+    background: var(--button);
+    color: var(--button-text);
     text-decoration: none;
   }
-  @media (max-width: 50rem) {
-    h1 {
-      font-size: 46px;
+  .quiet {
+    font-size: 15px;
+    font-weight: 500;
+    padding-bottom: 2px;
+    color: var(--text);
+    border-bottom: 1px solid var(--text);
+    text-decoration: none;
+  }
+  .aside {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  .window {
+    position: relative;
+    margin: 64px auto 0;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: var(--o-win-shadow);
+  }
+  .on-light {
+    display: none;
+  }
+  :global(:root[data-theme='light']) .on-dark {
+    display: none;
+  }
+  :global(:root[data-theme='light']) .on-light {
+    display: block;
+  }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--faint);
+    text-align: center;
+  }
+
+  section {
+    position: relative;
+  }
+  section + section {
+    margin-top: var(--step);
+  }
+  .row {
+    padding-inline: var(--gutter);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 72px;
+    align-items: center;
+  }
+  .said {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 29rem;
+  }
+  .said.middle {
+    align-items: center;
+    text-align: center;
+  }
+  .said.middle .sec-p {
+    max-width: 40rem;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 56px;
+    padding-inline: var(--gutter);
+  }
+
+  /* The mocked surfaces are drawn at the size the artboards give them,
+     then scaled to the room the page has. */
+  .shown,
+  .swap {
+    --scale: 1;
+    display: flex;
+    justify-content: center;
+  }
+  .vault {
+    gap: 22px;
+    align-items: flex-start;
+  }
+  .tree {
+    width: 280px;
+  }
+  .tree .rows {
+    padding: 10px 0;
+  }
+  .note {
+    width: 430px;
+    margin-top: 48px;
+  }
+  .src :global(.k) {
+    color: var(--key);
+  }
+  .src :global(.v) {
+    color: #9fd8a8;
+  }
+
+  .swap .x-win {
+    width: 1140px;
+    height: 560px;
+    transform: scale(var(--scale));
+    transform-origin: top center;
+  }
+  .swap {
+    height: calc(560px * var(--scale));
+  }
+  .x-tab .spacer,
+  .o-tool .spacer {
+    flex: 1;
+  }
+  .layers {
+    position: relative;
+    flex: 1;
+  }
+  .o-field.chapter {
+    width: 128px;
+  }
+  .o-field.folio {
+    width: 40px;
+    justify-content: center;
+  }
+  .o-said {
+    flex: 1;
+    font-size: 12px;
+    opacity: 0.8;
+  }
+  .o-spread :global(img) {
+    display: block;
+    width: 268px;
+    height: 414px;
+  }
+
+  .demo {
+    gap: 44px;
+    align-items: center;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .frag-box .o-frag {
+    zoom: 1.3;
+  }
+  .breaks {
+    margin-top: 18px;
+  }
+  .o-seg button,
+  .glyph {
+    font: inherit;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .o-seg button {
+    height: 21px;
+    min-width: 26px;
+    padding: 0 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    color: var(--o-muted);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .o-seg button.on {
+    background: var(--o-seg-on);
+    color: var(--o-text);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+  }
+  .o-tog {
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+  }
+  .glyphs {
+    display: flex;
+    gap: 5px;
+  }
+  .glyph {
+    width: 34px;
+    justify-content: center;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14px;
+  }
+  .glyph.on {
+    box-shadow: 0 0 0 1.5px var(--o-accent);
+  }
+  .demo-page {
+    width: 348px;
+    height: 538px;
+    max-width: 100%;
+    position: relative;
+    flex: none;
+  }
+  .demo-page .pg {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    transform: scale(1.3);
+    transform-origin: 0 0;
+    box-shadow: var(--o-page-shadow);
+  }
+  .pg-text {
+    height: 330px;
+  }
+  .pg-break {
+    text-align: center;
+    text-indent: 0;
+  }
+
+  /* The flip-through. A leaf turns about its inner edge, and carries a
+     page on each face. */
+  .flip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    outline: none;
+  }
+  .flip:focus-visible .book {
+    outline: 2px solid var(--accent);
+    outline-offset: 8px;
+  }
+  .book {
+    --leaf-w: min(348px, 42vw);
+    --leaf-h: calc(var(--leaf-w) * 850 / 550);
+    position: relative;
+    width: calc(var(--leaf-w) * 2);
+    height: var(--leaf-h);
+    perspective: 2600px;
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95);
+  }
+  .book::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--leaf-w) - 22px);
+    width: 44px;
+    z-index: 60;
+    pointer-events: none;
+    background: linear-gradient(
+      to right,
+      rgba(40, 30, 10, 0),
+      rgba(40, 30, 10, 0.1) 50%,
+      rgba(40, 30, 10, 0)
+    );
+  }
+  .under,
+  .leaf {
+    position: absolute;
+    top: 0;
+    width: var(--leaf-w);
+    height: var(--leaf-h);
+  }
+  .under {
+    inset-inline-start: 0;
+  }
+  .under.recto {
+    inset-inline-start: var(--leaf-w);
+  }
+  .leaf {
+    inset-inline-start: var(--leaf-w);
+    transform-style: preserve-3d;
+    transform-origin: left center;
+    transition: transform 0.9s cubic-bezier(0.3, 0.1, 0.2, 1);
+    cursor: pointer;
+  }
+  .leaf.turned {
+    transform: rotateY(-180deg);
+  }
+  .face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+  }
+  .face.back {
+    transform: rotateY(180deg);
+  }
+  .turn {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .turn button {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+    background: none;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .turn button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .folio {
+    min-width: 14rem;
+    text-align: center;
+  }
+
+  .deep {
+    margin-top: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 28px;
+    padding-inline: var(--gutter);
+  }
+
+  footer {
+    position: relative;
+    margin: 130px var(--gutter) 0;
+    height: 88px;
+    border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-family: var(--ui);
+    font-size: 13.5px;
+    color: var(--faint);
+  }
+  footer nav {
+    margin-inline-start: auto;
+    display: flex;
+    gap: 24px;
+  }
+
+  @media (max-width: 80rem) {
+    .swap {
+      --scale: 0.8;
     }
-    main {
-      padding-block: 56px;
+  }
+  @media (max-width: 64rem) {
+    .page {
+      --gutter: 40px;
+      --step: 160px;
+    }
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 44px;
+    }
+    .said {
+      max-width: none;
+    }
+    .swap {
+      --scale: 0.62;
+    }
+  }
+  @media (max-width: 48rem) {
+    .vault {
+      flex-direction: column;
+      align-items: center;
+    }
+    .note {
+      margin-top: 0;
+      max-width: 100%;
+    }
+    .demo {
+      flex-direction: column;
+      align-items: center;
+    }
+    .swap {
+      --scale: 0.46;
+    }
+  }
+  @media (max-width: 40rem) {
+    .page {
+      --header-h: 80px;
+      --hero-pad: 34px;
+      --title-dip: 1.2;
+      --gutter: 20px;
+      --step: 120px;
+    }
+    .lede {
+      font-size: 17px;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 18px;
+    }
+    .install {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: center;
+      padding-block: 15px;
+    }
+    .quiet {
+      justify-self: end;
+    }
+    .aside {
+      justify-self: start;
+      align-self: center;
+    }
+    .swap {
+      --scale: 0.3;
+    }
+    .tree,
+    .note {
+      width: 100%;
+    }
+    .turn {
+      gap: 12px;
+    }
+    .folio {
+      min-width: 9rem;
+    }
+    footer {
+      margin-top: 80px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      height: auto;
+      padding-block: 24px;
+    }
+    footer nav {
+      margin-inline-start: 0;
     }
   }
 </style>
