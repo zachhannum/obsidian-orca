@@ -9,8 +9,11 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
+/** The folder the sample book keeps its notes in, inside the sample vault. */
+const SAMPLE_DIR = "site/sample/Twenty Thousand Leagues";
+
 /** The sample vault's book note, which the landing page sets its pages from. */
-const SAMPLE_BOOK = "site/sample/Twenty Thousand Leagues Under the Sea.md";
+const SAMPLE_BOOK = `${SAMPLE_DIR}/Twenty Thousand Leagues Under the Sea.md`;
 
 /** Every file in a vault, by its path inside it, keyed on its bytes. */
 async function vaultFiles(vault) {
@@ -183,7 +186,7 @@ test("each chapter is a note of its own, under one heading that is its title", a
   const headings = new Map();
   for (const { link, role } of body) {
     if (role !== undefined) continue;
-    const chapter = await read(`site/sample/${link}.md`);
+    const chapter = await read(`${SAMPLE_DIR}/${link}.md`);
     headings.set(link, [...chapter.matchAll(/^#+ (.+)$/gm)].map((found) => found[1]));
   }
   // Every entry in the body is a chapter but the plate, which carries
@@ -206,13 +209,13 @@ test("a plate from the 1871 edition takes the page facing Chapter I", async () =
 
   // The note holds the embed and nothing else, so the section takes a
   // page of its own and the chapter keeps its opening.
-  const note = await read(`site/sample/${plate.link}.md`);
+  const note = await read(`${SAMPLE_DIR}/${plate.link}.md`);
   const embed = /^!\[\[(.+)\]\]\n$/.exec(note);
   assert.ok(embed, `${plate.link} is not one embed on its own`);
   await readFile(path.join(root, "site/sample/images", embed[1]));
-  assert.doesNotMatch(await read("site/sample/A Shifting Reef.md"), /^!\[\[/);
+  assert.doesNotMatch(await read(`${SAMPLE_DIR}/A Shifting Reef.md`), /^!\[\[/);
 
-  const copyright = await read("site/sample/Copyright.md");
+  const copyright = await read(`${SAMPLE_DIR}/Copyright.md`);
   assert.match(copyright, /Alphonse de Neuville/);
   assert.match(copyright, /edition of 1871/);
   assert.match(copyright, /public domain/);
@@ -297,6 +300,7 @@ async function moduleOf(file, globals = {}) {
     format: "cjs",
     platform: "node",
     target: "node22",
+    alias: { "@": path.join(root, "src") },
   });
   const holder = { exports: {} };
   vm.runInNewContext(built.outputFiles[0].text, {
@@ -387,8 +391,8 @@ test("with reduced motion on, the sea, the specks and the pane swap hold still",
   const still = "@media (prefers-reduced-motion:reduce)";
   const rules = landingCss.split(still).slice(1).join(" ");
   assert.match(rules, /\.snow\{animation:none\}/);
-  assert.match(rules, /\.sw-ms,\.sw-i1\{animation:none/);
-  assert.match(rules, /\.sw-bk,\.sw-i2,\.sw-ic\{animation:none/);
+  assert.match(rules, /\.sw-ms\{animation:none/);
+  assert.match(rules, /\.sw-bk\{animation:none/);
 
   const drawn = [];
   let frames = 0;
@@ -416,33 +420,67 @@ test("with reduced motion on, the sea, the specks and the pane swap hold still",
   assert.equal(drawn.length, 1, "the sea drew more than the one still surface");
 });
 
-test("the design demo sets the page from Setting, Hyphenate, Mark and Glyph", async () => {
+test("the design demo is drawn from the panel's own table, and sets the page", async () => {
   const demo = await moduleOf("site/src/scripts/demo.ts");
-  const opens = demo.page(demo.OPENS);
-  assert.equal(opens.align, "justify");
-  assert.equal(opens.hyphens, "auto");
-  assert.equal(opens.mark.text, demo.GLYPHS[demo.OPENS.glyph]);
+  const { GLYPHS, GROUPS } = await moduleOf("src/ui/groups.ts");
+  const opens = { align: "justify", hyphens: true, mark: "ornament", glyph: 1 };
 
-  assert.equal(demo.page({ ...demo.OPENS, align: "left" }).align, "left");
-  assert.equal(demo.page({ ...demo.OPENS, hyphens: false }).hyphens, "manual");
-  assert.equal(demo.page({ ...demo.OPENS, mark: "space" }).mark.text, "");
-  assert.equal(demo.page({ ...demo.OPENS, mark: "word" }).mark.text, demo.WORD);
-  assert.equal(demo.page({ ...demo.OPENS, glyph: 3 }).mark.text, demo.GLYPHS[3]);
+  assert.equal(demo.page(opens, GLYPHS).align, "justify");
+  assert.equal(demo.page(opens, GLYPHS).hyphens, "auto");
+  assert.equal(demo.page(opens, GLYPHS).mark.text, GLYPHS[1]);
+  assert.equal(demo.page({ ...opens, align: "left" }, GLYPHS).align, "left");
+  assert.equal(demo.page({ ...opens, hyphens: false }, GLYPHS).hyphens, "manual");
+  assert.equal(demo.page({ ...opens, mark: "space" }, GLYPHS).mark.text, "");
+  assert.equal(demo.page({ ...opens, mark: "word" }, GLYPHS).mark.text, demo.WORD);
+  assert.equal(demo.page({ ...opens, glyph: 3 }, GLYPHS).mark.text, GLYPHS[3]);
 
-  // The page carries a control for each, and every one writes the key
-  // the design panel writes.
-  for (const control of ["align=justify", "align=left", "hyphens", "mark=space", "mark=word"]) {
-    assert.ok(landing.includes(`data-set="${control}"`), `the demo has no ${control}`);
-  }
-  assert.match(landing, /data-set=\{`glyph=\$\{String\(at\)\}`\}/);
-  const panel = await read("src/ui/groups.ts");
+  // The page names the groups and hands them to the component whole. No
+  // row, label or choice is written out here, so none can fall behind
+  // the panel's.
+  assert.match(landing, /\['Text', 'Scene breaks'\]\.map\(/);
+  assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} driven=\{driven\} \/>/);
   for (const key of ["body-align", "body-hyphens", "scene-break-mark", "scene-break-ornament"]) {
-    assert.ok(panel.includes(`"${key}"`), `the panel does not write ${key}`);
+    assert.match(landing, new RegExp(`'${key}': '`), `the demo drives no ${key}`);
   }
-  const offered = [...panel.matchAll(/GLYPHS[^=]*= \[([^\]]+)\]/g)][0][1]
+
+  // Every control those two groups hold is one the component draws, and
+  // a kind it cannot draw stops the site's build rather than going out
+  // as a panel the plugin does not have.
+  const component = await read("site/src/components/PanelGroup.astro");
+  const drawn = /const DRAWN = new Set\(\[([^\]]+)\]\)/
+    .exec(component)[1]
     .split(",")
-    .map((glyph) => glyph.trim().replace(/"/g, ""));
-  assert.deepEqual([...demo.GLYPHS], offered);
+    .map((kind) => kind.trim().replace(/'/g, ""));
+  for (const name of ["Text", "Scene breaks"]) {
+    const group = GROUPS.find((one) => one.name === name);
+    assert.ok(group, `the panel has no ${name} group`);
+    for (const row of group.rows) {
+      assert.notEqual(row.grid, true, `${name} lays ${row.label} out in a grid`);
+      for (const control of row.of) {
+        assert.ok(drawn.includes(control.kind), `the page cannot draw a ${control.kind}`);
+      }
+    }
+  }
+  assert.match(component, /throw new Error\(`the \$\{group\.name\} group has a/);
+});
+
+test("the sections that show orca's own surfaces show photographs of them", async () => {
+  // A hand-built copy of a surface goes stale the moment the surface
+  // moves, so every one the page shows is a picture the spec took.
+  for (const section of ["vault-shots", "sw-win"]) {
+    assert.match(landing, new RegExp(`<div class="${section}">`), `the page has no ${section}`);
+  }
+  for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc"]) {
+    assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
+  }
+  for (const shot of ["vault-tree", "vault-note", "write", "read"]) {
+    for (const scheme of ["dark", "light"]) {
+      assert.ok(
+        landing.includes(`../shots/${shot}-${scheme}.png`),
+        `the page does not show ${shot}-${scheme}`,
+      );
+    }
+  }
 });
 
 test("the pages turn on a click, on the arrow buttons and from the keyboard", async () => {

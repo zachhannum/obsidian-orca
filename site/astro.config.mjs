@@ -1,6 +1,12 @@
 // @ts-check
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+
+// The landing page draws the design panel from the same table the plugin
+// draws it from, so the panel on the page cannot fall behind the plugin's.
+// The table is read at build time only; none of it reaches the browser.
+const plugin = fileURLToPath(new URL('../src', import.meta.url));
 
 // GitHub Pages serves the site at its own domain, which public/CNAME holds.
 const site = 'https://orca.typeworks.dev';
@@ -24,6 +30,7 @@ const codeTheme = (name, key, text) => ({
 export default defineConfig({
   site,
   trailingSlash: 'always',
+  vite: { resolve: { alias: { '@': plugin } } },
   markdown: {
     shikiConfig: {
       themes: {
