@@ -1,12 +1,187 @@
 ---
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { readModel } from '@/book/model';
+import { writeDesign } from '@/style/design';
+import { effective } from '@/style/theme';
+import { GROUPS, atLevel, type Group } from '@/ui/groups';
+// The book note is read at build time, so the panel below shows what the
+// plugin would show for the very book the pictures are of.
+import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
+import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
+import '../styles/panel.css';
+import '../styles/landing.css';
+import Icon from '../components/Icon.astro';
 import Mark from '../components/Mark.astro';
 import ThemeBoot from '../components/ThemeBoot.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import PanelGroup from '../components/PanelGroup.astro';
+import { WORKS } from '../scripts/demo';
+import { FIRST, folio } from '../scripts/flip';
+import { LIP, REST } from '../scripts/sea';
+
+import landingDark1440 from '../shots/landing-dark-1440.png';
+import landingDark1200 from '../shots/landing-dark-1200.png';
+import landingDark960 from '../shots/landing-dark-960.png';
+import landingLight1440 from '../shots/landing-light-1440.png';
+import landingLight1200 from '../shots/landing-light-1200.png';
+import landingLight960 from '../shots/landing-light-960.png';
+import phoneDark from '../shots/phone-dark.png';
+import phoneLight from '../shots/phone-light.png';
+import treeDark from '../shots/vault-tree-dark.png';
+import treeLight from '../shots/vault-tree-light.png';
+import noteDark from '../shots/vault-note-dark.png';
+import noteLight from '../shots/vault-note-light.png';
+import writeDark from '../shots/write-dark.png';
+import writeLight from '../shots/write-light.png';
+import readDark from '../shots/read-dark.png';
+import readLight from '../shots/read-light.png';
 
 const docs = '/start/install/';
 const repo = 'https://github.com/zachhannum/obsidian-orca';
+
+/** One picture the page shows: where it is served, and the box it fills. */
+interface Shot {
+  src: string;
+  width: number;
+  height: number;
+}
+const shot = async (source: ImageMetadata): Promise<Shot> => {
+  const drawn = await getImage({ src: source, format: 'webp' });
+  return { src: drawn.src, width: source.width, height: source.height };
+};
+
+/** The pages the flip-through turns, in the order the spec rasterized them. */
+const rasterized = import.meta.glob<{ default: ImageMetadata }>('../shots/pages/page-*.png', {
+  eager: true,
+});
+const pages: Shot[] = await Promise.all(
+  Object.keys(rasterized)
+    .sort()
+    .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
+);
+const [plate, chapterPage] = pages;
+
+/**
+ * A leaf carries the recto before it on its front and the verso after
+ * it on its back, so the pages under the stack are the first and last.
+ */
+const leaves = pages
+  .slice(1, -1)
+  .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 2] as Shot }] : []));
+
+/** The window picture, at the width the page is being read at. */
+const window_ = {
+  dark: {
+    phone: await shot(phoneDark),
+    w960: await shot(landingDark960),
+    w1200: await shot(landingDark1200),
+    w1440: await shot(landingDark1440),
+  },
+  light: {
+    phone: await shot(phoneLight),
+    w960: await shot(landingLight960),
+    w1200: await shot(landingLight1200),
+    w1440: await shot(landingLight1440),
+  },
+};
+
+/**
+ * The specks drifting in the water. The positions are drawn from a
+ * seeded generator, so a rebuild moves nothing.
+ */
+let seed = 20000;
+const random = () => {
+  seed = (seed * 1103515245 + 12345) % 2147483648;
+  return seed / 2147483648;
+};
+const specks = Array.from({ length: 70 }, () => {
+  const size = 1.4 + random() * 1.1;
+  return {
+    left: random() * 100,
+    top: random() * 100,
+    size,
+    opacity: 0.05 + random() * 0.18,
+    duration: 11 + random() * 9,
+    delay: -random() * 20,
+  };
+});
+
+/** The surface, as three paths the script moves. The markup is its resting shape. */
+const waves = [
+  { off: -48, lag: 1.4, kind: 'line', width: 1.2, opacity: 0.16 },
+  { off: -24, lag: 0.7, kind: 'line', width: 1.4, opacity: 0.32 },
+  { off: 0, lag: 0, kind: 'body', width: 0, opacity: 1 },
+];
+const rest = (off: number, kind: string) =>
+  kind === 'line' ? `M0 ${String(REST + off)}H1440` : `M0 ${String(REST + off)}H1440V${String(LIP)}H0Z`;
+
+/** The chapter the demo sets, which is the one the pictures above open on. */
+const CHAPTER = 'A Shifting Reef';
+
+/** The sample book's own note, which the panel and the page come from. */
+const { design, metadata } = readModel(sampleNote).book;
+
+/** What the panel shows for every key, with the defaults filled in. */
+const shown: Record<string, string> = Object.fromEntries(
+  Object.entries(writeDesign(effective(design))).map(([key, value]) => [key, String(value)])
+);
+
+/** The keys the note sets itself, which are the ones the panel offers a reset on. */
+const own = Object.keys(writeDesign(design));
+
+/** The faces the engine carries, which are the ones the demo can set in. */
+const FACES = ['EB Garamond'];
+
+/**
+ * The groups the demo draws, from the plugin's own table, holding the
+ * rows whose controls change the page it shows. A key that leaves the
+ * table stops the build here rather than leaving the page offering a
+ * control the panel no longer has.
+ */
+const offered = (control: { key?: string }): boolean =>
+  control.key !== undefined && WORKS.includes(atLevel(control.key, 1));
+
+const keys = GROUPS.flatMap((group: Group) =>
+  group.rows.flatMap((row) =>
+    row.of.map((control) => (control.key === undefined ? '' : atLevel(control.key, 1)))
+  )
+);
+for (const key of WORKS) {
+  if (!keys.includes(key)) throw new Error(`the design panel has no ${key}`);
+}
+
+const groups = GROUPS.map((group: Group) => ({
+  ...group,
+  rows: group.rows.filter((row) => row.of.some(offered)),
+})).filter((group) => group.rows.length > 0);
+
+/**
+ * What the demo hands the engine: the book's own design, the section
+ * the page belongs to, and the chapter itself. The engine sets the page
+ * from these, so nothing about it is drawn by the browser.
+ */
+const demo = {
+  design: writeDesign(effective(design)),
+  setting: {
+    roles: ['chapter'] as const,
+    title: metadata.title,
+    author: metadata.author,
+  },
+  source: { name: `${CHAPTER}.md`, text: chapterNote },
+};
+
+/** The vault pictures, and the two the pane swaps between. */
+const vault = {
+  dark: { tree: await shot(treeDark), note: await shot(noteDark) },
+  light: { tree: await shot(treeLight), note: await shot(noteLight) },
+};
+const swap = {
+  dark: { write: await shot(writeDark), read: await shot(readDark) },
+  light: { write: await shot(writeLight), read: await shot(readLight) },
+};
 ---
 
 <html lang="en">
@@ -19,26 +194,284 @@ const repo = 'https://github.com/zachhannum/obsidian-orca';
     <ThemeBoot />
   </head>
   <body>
-    <header>
-      <a class="word" href="/">
-        <Mark />
-        <span>orca</span>
-      </a>
-      <nav>
-        <a href={docs}>Docs</a>
-        <a href={repo}>GitHub</a>
-        <ThemeToggle />
-      </nav>
-    </header>
+    <div class="page">
+      <div class="sea" aria-hidden="true">
+        <svg
+          class="lip"
+          data-sea
+          viewBox={`0 0 1440 ${String(LIP)}`}
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {
+            waves.map((wave) => (
+              <path
+                d={rest(wave.off, wave.kind)}
+                data-kind={wave.kind}
+                data-off={wave.off}
+                data-lag={wave.lag}
+                fill={wave.kind === 'line' ? 'none' : 'var(--sea-0)'}
+                stroke={wave.kind === 'line' ? 'var(--sky-text)' : 'none'}
+                stroke-width={wave.width}
+                opacity={wave.opacity}
+              />
+            ))
+          }
+        </svg>
+        <div class="body"></div>
+        <div class="glow"></div>
+        {
+          specks.map((speck) => (
+            <span
+              class="snow"
+              style={`left:${String(speck.left)}%;top:${String(speck.top)}%;width:${String(speck.size)}px;height:${String(speck.size)}px;opacity:${String(speck.opacity)};animation-duration:${String(speck.duration)}s;animation-delay:${String(speck.delay)}s`}
+            />
+          ))
+        }
+      </div>
 
-    <main>
-      <h1>A book designer<br /><i>inside Obsidian</i></h1>
-      <p>
-        The chapters stay notes in the vault, the book is a note beside them, and a preview
-        pane shows the set page while you write.
-      </p>
-      <a class="button" href={docs}>Read the docs</a>
-    </main>
+      <header>
+        <a class="word" href="/">
+          <Mark width={40} height={25} />
+          <span>orca</span>
+        </a>
+        <nav>
+          <a href={docs}>Docs</a>
+          <a href={repo}>GitHub</a>
+          <ThemeToggle />
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <h1>A book designer<br /><i>inside Obsidian.</i></h1>
+          <p class="lede">
+            The chapters stay notes in your vault. The book is a note beside them, and the
+            preview shows the set page while you write.
+          </p>
+          <div class="actions">
+            <a class="install" href={docs}>Install in Obsidian</a>
+            <a class="quiet" href={docs}>Read the docs</a>
+            <span class="aside">Desktop only</span>
+          </div>
+
+          <figure class="window">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <picture class={`shot on-${scheme}`}>
+                  <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
+                  <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
+                  <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
+                  <img
+                    src={window_[scheme].w1440.src}
+                    width={window_[scheme].w1440.width}
+                    height={window_[scheme].w1440.height}
+                    alt="Orca in Obsidian: the navigator, a spread of the set book, and the design panel."
+                  />
+                </picture>
+              ))
+            }
+            <figcaption>
+              Jules Verne, Twenty Thousand Leagues Under the Sea. Chapter I, A Shifting Reef.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="row">
+          <div class="said">
+            <h2 class="row-h">Your chapters <i>stay notes</i></h2>
+            <p class="sec-p">
+              A book is one more note in your vault. It lists your chapters in reading order,
+              as links. Adding a chapter never moves or copies it, and removing one never
+              deletes it. If you uninstall orca, every word is still where you wrote it.
+            </p>
+          </div>
+          <div class="shown vault">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <div class={`on-${scheme}`}>
+                  <div class="vault-shots">
+                  <img
+                    class="tree"
+                    src={vault[scheme].tree.src}
+                    width={vault[scheme].tree.width}
+                    height={vault[scheme].tree.height}
+                    alt="Obsidian's file tree: a folder holding the book note and the chapter notes it lists."
+                  />
+                  <img
+                    class="note"
+                    src={vault[scheme].note.src}
+                    width={vault[scheme].note.width}
+                    height={vault[scheme].note.height}
+                    alt="The book note as Markdown: its properties, then the chapters under Front matter and Body."
+                  />
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Write, then <i>see the page</i></h2>
+            <p class="sec-p">
+              Write the chapter in Markdown, as you always do. One icon in the note header
+              swaps the pane to the set book, open at the page you were writing.
+            </p>
+          </div>
+          <div class="swap">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <div class={`on-${scheme}`}>
+                  <div class="sw-win">
+                  <img
+                    class="sw-layer sw-ms"
+                    src={swap[scheme].write.src}
+                    width={swap[scheme].write.width}
+                    height={swap[scheme].write.height}
+                    alt="The chapter in Obsidian's editor, with the design panel beside it."
+                  />
+                  <img
+                    class="sw-layer sw-bk"
+                    src={swap[scheme].read.src}
+                    width={swap[scheme].read.width}
+                    height={swap[scheme].read.height}
+                    alt="The same pane showing the set book, open at the page being written."
+                  />
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </section>
+
+        <section class="row" data-demo>
+          <div class="said">
+            <h2 class="row-h">Design <i>in the panel</i></h2>
+            <p class="sec-p">
+              Trim, margins, type, headings and chapter openings each have a control, and the
+              page resets as you change them.
+            </p>
+          </div>
+          <div class="shown demo">
+            <div class="controls">
+              <div class="frag-box">
+                <div class="o-frag">
+                  {
+                    groups.map((group) => (
+                      <PanelGroup group={group} values={shown} own={own} faces={FACES} />
+                    ))
+                  }
+                </div>
+              </div>
+              <span class="aside">These controls work. Try them.</span>
+              <script is:inline type="application/json" data-demo-book set:html={JSON.stringify(demo)} />
+            </div>
+            <div class="demo-page">
+              <img
+                class="standing"
+                src={chapterPage?.src}
+                width={chapterPage?.width}
+                height={chapterPage?.height}
+                alt="The opening of Chapter I, set by orca."
+              />
+              <div class="set" data-demo-page></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Turn <i>the pages</i></h2>
+            <p class="sec-p">
+              Twenty Thousand Leagues Under the Sea, set with orca. Click a page to turn it.
+            </p>
+          </div>
+          <div
+            class="flip"
+            data-flip
+            data-at="0"
+            tabindex="0"
+            role="group"
+            aria-label="The sample book, a spread at a time"
+          >
+            <div class="book">
+              <img
+                class="under verso"
+                src={plate?.src}
+                width={plate?.width}
+                height={plate?.height}
+                alt={`Page ${String(FIRST)} of the sample book`}
+              />
+              <img
+                class="under recto"
+                src={pages.at(-1)?.src}
+                width={pages.at(-1)?.width}
+                height={pages.at(-1)?.height}
+                alt={`Page ${String(FIRST + pages.length - 1)} of the sample book`}
+              />
+              {
+                leaves.map((leaf, at) => (
+                  <div class="leaf" data-leaf={at}>
+                    <img class="face front" src={leaf.front.src} loading="lazy" alt="" />
+                    <img class="face back" src={leaf.back.src} loading="lazy" alt="" />
+                  </div>
+                ))
+              }
+            </div>
+            <div class="turn">
+              <button type="button" data-turn="-1" aria-label="The spread before">
+                <Icon name="left" size={16} />
+              </button>
+              <span class="folio" data-folio aria-live="polite">{folio(0)}</span>
+              <button type="button" data-turn="1" aria-label="The spread after">
+                <Icon name="right" size={16} />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="deep">
+          <Mark width={64} height={40} />
+          <h2 class="sec-h">Make your <i>first book</i></h2>
+          <div class="actions middle">
+            <a class="install" href={docs}>Install in Obsidian</a>
+            <a class="quiet" href={docs}>Read the docs</a>
+          </div>
+          <span class="aside">Desktop only</span>
+        </section>
+      </main>
+
+      <footer>
+        <a class="word small" href="/">
+          <Mark width={26} height={16} />
+          <span>orca</span>
+        </a>
+        <nav>
+          <a href={docs}>Docs</a>
+          <a href={repo}>GitHub</a>
+        </nav>
+      </footer>
+    </div>
+
+    <script>
+      import { startDemo, whenSeen, type Demo } from '../scripts/demo';
+      import { startFlip } from '../scripts/flip';
+      import { startSea } from '../scripts/sea';
+
+      const sea = document.querySelector<SVGSVGElement>('[data-sea]');
+      if (sea !== null) startSea(sea);
+      const flip = document.querySelector<HTMLElement>('[data-flip]');
+      if (flip !== null) startFlip(flip);
+      // The book the demo sets is written into the page as JSON, so the
+      // script reads the same design the panel above was drawn from.
+      const panel = document.querySelector<HTMLElement>('[data-demo]');
+      const said = document.querySelector<HTMLElement>('[data-demo-book]');
+      if (panel !== null && said !== null) {
+        startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
+      }
+    </script>
   </body>
 </html>
 
@@ -48,85 +481,570 @@ const repo = 'https://github.com/zachhannum/obsidian-orca';
   }
   :global(body) {
     margin: 0;
-    background: var(--bg);
+    background: var(--sky);
     color: var(--text);
     font-family: var(--body);
+    overflow-x: hidden;
   }
+
+  /* The metrics the waterline is found from. The surface has to cross
+     the second line of the title, so it is placed from the title's own
+     size rather than from a number of its own. */
+  .page {
+    --header-h: 92px;
+    --hero-pad: 64px;
+    --title-size: clamp(42px, 7.6vw, 110px);
+    --title-leading: 0.98;
+    --title-dip: 1.46;
+    --gutter: 64px;
+    --step: 220px;
+    --sea-lip: 140px;
+    --sea-top: calc(
+      var(--header-h) + var(--hero-pad) + var(--title-size) * var(--title-leading) *
+        var(--title-dip) - 63px
+    );
+    /* The title is the light colour in both schemes. A difference blend
+       then turns its letters over where the sea runs through them. */
+    --title-ink: #eef0ec;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sea {
+    position: absolute;
+    inset-inline: 0;
+    top: var(--sea-top);
+    bottom: 0;
+    pointer-events: none;
+  }
+  .sea .lip {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    width: 100%;
+    height: var(--sea-lip);
+    overflow: visible;
+  }
+  .sea .body {
+    position: absolute;
+    inset-inline: 0;
+    top: var(--sea-lip);
+    bottom: 0;
+    background: linear-gradient(
+      to bottom,
+      var(--sea-0),
+      var(--sea-1) 30%,
+      var(--sea-2) 70%,
+      var(--sea-3)
+    );
+  }
+  /* The light the surface lets through, over the window in the hero. */
+  .sea .glow {
+    position: absolute;
+    inset-inline: 0;
+    top: 80px;
+    height: 1100px;
+    background: radial-gradient(
+      ellipse 70% 60% at 50% 0%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 70%
+    );
+  }
+  .sea .snow {
+    /* The specks drift in the water, not over the sky. */
+    margin-top: var(--sea-lip);
+  }
+
   header {
+    position: relative;
     display: flex;
     align-items: center;
-    height: 64px;
-    padding: 0 28px;
-    border-bottom: 1px solid var(--border);
+    gap: 28px;
+    height: var(--header-h);
+    padding-inline: var(--gutter);
+    color: var(--sky-text);
   }
   .word {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--text);
+    color: inherit;
     text-decoration: none;
   }
   .word span {
     font-family: var(--display);
     font-weight: 600;
-    font-size: 25px;
+    font-size: 30px;
   }
-  nav {
+  /* The footer's mark is the reading colour, so it is one flat white on
+     the dark scheme and one flat black on the light one. */
+  .word.small {
+    color: var(--text);
+  }
+  .word.small span {
+    font-size: 18px;
+  }
+  header nav {
     margin-inline-start: auto;
     display: flex;
     align-items: center;
     gap: 20px;
     font-family: var(--ui);
     font-size: 14px;
+    color: var(--sky-muted);
   }
-  nav a {
-    color: var(--muted);
+  header nav a,
+  footer nav a {
+    color: inherit;
     text-decoration: none;
   }
-  nav a:hover {
-    color: var(--text);
+  header nav a:hover,
+  footer nav a:hover {
+    color: var(--sky-text);
   }
+  header :global(.theme-toggle) {
+    color: var(--sky-muted);
+  }
+  header :global(.theme-toggle:hover) {
+    color: var(--sky-text);
+  }
+
   main {
-    max-width: 44rem;
-    padding: 96px 28px;
-    margin: 0 auto;
+    position: relative;
+  }
+
+  .hero {
+    position: relative;
+    padding: var(--hero-pad) var(--gutter) 0;
   }
   h1 {
-    margin: 0 0 22px;
+    margin: 0;
     font-family: var(--display);
+    font-size: var(--title-size);
+    line-height: var(--title-leading);
+    letter-spacing: -0.02em;
     font-weight: 700;
-    font-size: 72px;
-    line-height: 1.05;
-    letter-spacing: -0.015em;
+    color: var(--title-ink);
+    mix-blend-mode: difference;
   }
   h1 i {
+    font-style: italic;
     font-weight: 500;
   }
-  p {
-    margin: 0 0 32px;
-    font-size: 19px;
+  .lede {
+    margin: 34px 0 0;
+    max-width: 35rem;
+    font-size: 20px;
     line-height: 1.6;
     color: var(--muted);
   }
-  .button {
-    display: inline-flex;
+  .actions {
+    display: flex;
     align-items: center;
-    height: 44px;
-    padding: 0 22px;
-    border-radius: 999px;
-    background: var(--pill);
-    color: var(--pilltext);
+    flex-wrap: wrap;
+    gap: 26px;
+    margin-top: 32px;
     font-family: var(--ui);
+  }
+  .actions.middle {
+    justify-content: center;
+  }
+  .install {
     font-size: 15px;
     font-weight: 600;
+    padding: 13px 22px;
+    border-radius: 6px;
+    background: var(--button);
+    color: var(--button-text);
     text-decoration: none;
   }
-  @media (max-width: 50rem) {
-    h1 {
-      font-size: 46px;
+  .quiet {
+    font-size: 15px;
+    font-weight: 500;
+    padding-bottom: 2px;
+    color: var(--text);
+    border-bottom: 1px solid var(--text);
+    text-decoration: none;
+  }
+  .aside {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  .window {
+    position: relative;
+    margin: 64px auto 0;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: var(--o-win-shadow);
+  }
+  .on-light {
+    display: none;
+  }
+  :global(:root[data-theme='light']) .on-dark {
+    display: none;
+  }
+  :global(:root[data-theme='light']) .on-light {
+    display: block;
+  }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--faint);
+    text-align: center;
+  }
+
+  section {
+    position: relative;
+  }
+  section + section {
+    margin-top: var(--step);
+  }
+  .row {
+    padding-inline: var(--gutter);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 72px;
+    align-items: center;
+  }
+  .said {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 29rem;
+  }
+  .said.middle {
+    align-items: center;
+    text-align: center;
+  }
+  .said.middle .sec-p {
+    max-width: 40rem;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 56px;
+    padding-inline: var(--gutter);
+  }
+
+  .shown {
+    display: flex;
+    justify-content: center;
+  }
+  .swap {
+    display: flex;
+    justify-content: center;
+  }
+  .vault-shots {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+  }
+  .vault-shots img {
+    display: block;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.8);
+  }
+  .tree {
+    width: 280px;
+  }
+  .note {
+    width: 430px;
+    margin-top: 48px;
+  }
+
+  /* The two pictures are the one pane, so they stack and cross-fade. */
+  .sw-win {
+    position: relative;
+    width: 100%;
+    max-width: 936px;
+  }
+  .sw-layer {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 1px var(--o-border),
+      0 40px 80px -24px rgba(0, 0, 0, 0.85);
+  }
+  .sw-bk {
+    position: absolute;
+    top: 0;
+    inset-inline-start: 0;
+  }
+  .o-said {
+    flex: 1;
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  .demo {
+    gap: 44px;
+    align-items: center;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  /* The panel is the whole panel, and the whole panel scrolls in
+     Obsidian too. It stands as tall as the page beside it. */
+  .frag-box {
+    max-height: 538px;
+    overflow-y: auto;
+    border-radius: 8px;
+  }
+  .frag-box :global(.o-frag) {
+    border: 0;
+    border-radius: 0;
+  }
+  .o-frag :global(.o-grp + .o-grp) {
+    margin-top: 18px;
+  }
+  .demo-page {
+    width: 348px;
+    max-width: 100%;
+    position: relative;
+    flex: none;
+  }
+  /* The page the spec rasterized stands here until the engine has set
+     one of its own, so the section never shows a page orca did not. */
+  .demo-page .standing,
+  .demo-page .set :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    box-shadow: var(--o-page-shadow);
+  }
+  .demo-page .set {
+    position: absolute;
+    inset: 0;
+  }
+  .demo-page .set:empty {
+    display: none;
+  }
+  /* Once the engine has set a page, the one that stood in its place
+     steps aside. */
+  .demo-page:has(.set[data-set]) .standing {
+    visibility: hidden;
+  }
+
+  /* The flip-through. A leaf turns about its inner edge, and carries a
+     page on each face. */
+  .flip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    outline: none;
+  }
+  .flip:focus-visible .book {
+    outline: 2px solid var(--accent);
+    outline-offset: 8px;
+  }
+  .book {
+    --leaf-w: min(348px, 42vw);
+    --leaf-h: calc(var(--leaf-w) * 850 / 550);
+    position: relative;
+    width: calc(var(--leaf-w) * 2);
+    height: var(--leaf-h);
+    perspective: 2600px;
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95);
+  }
+  .book::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--leaf-w) - 22px);
+    width: 44px;
+    z-index: 60;
+    pointer-events: none;
+    background: linear-gradient(
+      to right,
+      rgba(40, 30, 10, 0),
+      rgba(40, 30, 10, 0.1) 50%,
+      rgba(40, 30, 10, 0)
+    );
+  }
+  .under,
+  .leaf {
+    position: absolute;
+    top: 0;
+    width: var(--leaf-w);
+    height: var(--leaf-h);
+  }
+  .under {
+    inset-inline-start: 0;
+  }
+  .under.recto {
+    inset-inline-start: var(--leaf-w);
+  }
+  .leaf {
+    inset-inline-start: var(--leaf-w);
+    transform-style: preserve-3d;
+    transform-origin: left center;
+    transition: transform 0.9s cubic-bezier(0.3, 0.1, 0.2, 1);
+    cursor: pointer;
+  }
+  .leaf.turned {
+    transform: rotateY(-180deg);
+  }
+  .face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+  }
+  .face.back {
+    transform: rotateY(180deg);
+  }
+  .turn {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .turn button {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+    background: none;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .turn button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .folio {
+    min-width: 14rem;
+    text-align: center;
+  }
+
+  .deep {
+    margin-top: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 28px;
+    padding-inline: var(--gutter);
+  }
+
+  footer {
+    position: relative;
+    margin: 130px var(--gutter) 0;
+    height: 88px;
+    border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-family: var(--ui);
+    font-size: 13.5px;
+    color: var(--faint);
+  }
+  footer nav {
+    margin-inline-start: auto;
+    display: flex;
+    gap: 24px;
+  }
+
+  @media (max-width: 64rem) {
+    .page {
+      --gutter: 40px;
+      --step: 160px;
     }
-    main {
-      padding-block: 56px;
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 44px;
+    }
+    .said {
+      max-width: none;
+    }
+  }
+  @media (max-width: 48rem) {
+    .vault-shots {
+      flex-direction: column;
+      align-items: center;
+    }
+    .note {
+      margin-top: 0;
+      max-width: 100%;
+    }
+    .demo {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  @media (max-width: 40rem) {
+    .page {
+      --header-h: 80px;
+      --hero-pad: 34px;
+      --title-dip: 1.2;
+      --gutter: 20px;
+      --step: 120px;
+    }
+    .lede {
+      font-size: 17px;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 18px;
+    }
+    .install {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: center;
+      padding-block: 15px;
+    }
+    .quiet {
+      justify-self: end;
+    }
+    .aside {
+      justify-self: start;
+      align-self: center;
+    }
+    .tree,
+    .note {
+      width: 100%;
+    }
+    .turn {
+      gap: 12px;
+    }
+    .folio {
+      min-width: 9rem;
+    }
+    footer {
+      margin-top: 80px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      height: auto;
+      padding-block: 24px;
+    }
+    footer nav {
+      margin-inline-start: 0;
     }
   }
 </style>

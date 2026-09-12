@@ -1,0 +1,50 @@
+/* The landing page's components, copied from design/site.css. The check
+   the site's build runs first holds the two to the same text. */
+.o-side{width:240px;flex:none;background:var(--o-side);border-right:1px solid var(--o-border);display:flex;flex-direction:column}
+.o-side.r{width:280px;border-right:0;border-left:1px solid var(--o-border)}
+.o-tabs{height:40px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;border-bottom:1px solid var(--o-border)}
+.o-tab{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--o-faint);border-radius:6px}
+.o-tab.on{color:var(--o-text);background:var(--o-hover)}
+.o-tool{height:42px;flex:none;display:flex;align-items:center;gap:9px;padding:0 14px;border-bottom:1px solid var(--o-border);background:var(--o-bar);color:var(--o-muted);font-size:12px}
+.o-seg{display:flex;background:var(--o-field);border:1px solid var(--o-border);border-radius:6px;padding:2px;gap:2px}
+.o-seg>div{height:21px;min-width:26px;padding:0 7px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--o-muted);font-size:11.5px;white-space:nowrap}
+.o-seg>div.on{background:var(--o-seg-on);color:var(--o-text);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.o-vr{width:1px;height:18px;background:var(--o-border)}
+.o-desk{flex:1;display:flex;align-items:center;justify-content:center;background:var(--o-desk)}
+
+.o-spread{display:flex;box-shadow:var(--o-page-shadow);transform:scale(1.09)}
+.o-panel{padding:10px 14px;display:flex;flex-direction:column;gap:16px}
+.o-ph{display:flex;gap:8px;font-size:10.5px;color:var(--o-faint);letter-spacing:.06em;font-weight:600;padding-top:2px}
+.o-ph span+span{font-weight:400;letter-spacing:0}
+.o-tog{width:32px;height:18px;flex:none;border-radius:9px;background:var(--o-accent);position:relative}
+.o-tog::after{content:"";position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:7px;background:var(--o-knob)}
+.o-tog.off{background:var(--o-border)}
+.o-tog.off::after{right:auto;left:2px;background:var(--o-muted)}
+
+.pg{width:268px;height:414px;background:#fdfcf9;color:#1a1712;position:relative;overflow:hidden;font-family:'EB Garamond',Georgia,serif}
+.pg.v{padding:30px 32px 0 26px;background-image:linear-gradient(to left,rgba(40,30,10,.10),rgba(40,30,10,0) 22px)}
+.pg.r{padding:26px 26px 0 32px;background-image:linear-gradient(to right,rgba(40,30,10,.10),rgba(40,30,10,0) 22px)}
+.pg-title{text-align:center;font-style:italic;font-size:15px;line-height:17px;margin-bottom:10px}
+.pg-run{text-align:center;font-size:5.6px;letter-spacing:.24em;text-transform:uppercase;color:#6a6355;height:8px;margin-bottom:10px}
+.pg-text{font-size:7.4px;line-height:10px;text-align:justify;hyphens:auto;overflow:hidden}
+.pg-text p{margin:0;text-indent:1.3em}
+.pg-text p.first{text-indent:0}
+.pg-dc{float:left;font-size:35px;line-height:28px;padding:1px 3px 0 0;margin-top:1px}
+.pg-folio{position:absolute;left:0;right:0;bottom:17px;text-align:center;font-size:7px;color:#6a6355}
+
+.row-h{margin:0;font-family:var(--display);font-weight:700;font-size:46px;line-height:1.05;letter-spacing:-.015em;color:var(--text)}
+.row-h i{font-weight:500}
+.sec-h{margin:0;font-family:var(--display);font-weight:700;font-size:64px;line-height:1.02;letter-spacing:-.02em;color:var(--text)}
+.sec-h i{font-weight:500}
+.sec-p{margin:0;font-size:19px;line-height:1.6;color:var(--muted)}
+.snow{position:absolute;border-radius:50%;background:var(--speck);animation:drift ease-in-out infinite alternate;pointer-events:none}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(6px,-48px)}}
+
+.sw-ms{animation:show-ms 10s infinite}
+.sw-bk{animation:show-bk 10s infinite}
+@keyframes show-ms{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
+@keyframes show-bk{0%,42%{opacity:0}50%,92%{opacity:1}100%{opacity:0}}
+
+@media (prefers-reduced-motion:reduce){.snow{animation:none}}
+
+@media (prefers-reduced-motion:reduce){.sw-ms{animation:none;opacity:0}.sw-bk{animation:none;opacity:1}}

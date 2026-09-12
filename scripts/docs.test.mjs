@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { glob, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
+import esbuild from "esbuild";
+import { decodeDisplayList, initWasm, render } from "fleuron";
 import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
+/** The folder the sample book keeps its notes in, inside the sample vault. */
+const SAMPLE_DIR = "site/sample/Twenty Thousand Leagues";
+
 /** The sample vault's book note, which the landing page sets its pages from. */
-const SAMPLE_BOOK = "site/sample/Twenty Thousand Leagues Under the Sea.md";
+const SAMPLE_BOOK = `${SAMPLE_DIR}/Twenty Thousand Leagues Under the Sea.md`;
 
 /** Every file in a vault, by its path inside it, keyed on its bytes. */
 async function vaultFiles(vault) {
@@ -182,7 +188,7 @@ test("each chapter is a note of its own, under one heading that is its title", a
   const headings = new Map();
   for (const { link, role } of body) {
     if (role !== undefined) continue;
-    const chapter = await read(`site/sample/${link}.md`);
+    const chapter = await read(`${SAMPLE_DIR}/${link}.md`);
     headings.set(link, [...chapter.matchAll(/^#+ (.+)$/gm)].map((found) => found[1]));
   }
   // Every entry in the body is a chapter but the plate, which carries
@@ -205,13 +211,13 @@ test("a plate from the 1871 edition takes the page facing Chapter I", async () =
 
   // The note holds the embed and nothing else, so the section takes a
   // page of its own and the chapter keeps its opening.
-  const note = await read(`site/sample/${plate.link}.md`);
+  const note = await read(`${SAMPLE_DIR}/${plate.link}.md`);
   const embed = /^!\[\[(.+)\]\]\n$/.exec(note);
   assert.ok(embed, `${plate.link} is not one embed on its own`);
   await readFile(path.join(root, "site/sample/images", embed[1]));
-  assert.doesNotMatch(await read("site/sample/A Shifting Reef.md"), /^!\[\[/);
+  assert.doesNotMatch(await read(`${SAMPLE_DIR}/A Shifting Reef.md`), /^!\[\[/);
 
-  const copyright = await read("site/sample/Copyright.md");
+  const copyright = await read(`${SAMPLE_DIR}/Copyright.md`);
   assert.match(copyright, /Alphonse de Neuville/);
   assert.match(copyright, /edition of 1871/);
   assert.match(copyright, /public domain/);
@@ -244,7 +250,429 @@ test("the book note carries the design the landing page shows", async () => {
   ]);
 });
 
+/** The landing page, its scripts, and the artboards that draw it. */
+const LANDING = "site/src/pages/index.astro";
+
+const [landing, landingCss, siteLanding, siteLandingLight, siteLandingPhone, plugin, playwright] =
+  await Promise.all([
+    read(LANDING),
+    read("site/src/styles/landing.css"),
+    read("design/parts/SiteLanding.html"),
+    read("design/parts/SiteLandingLight.html"),
+    read("design/parts/SiteLandingPhone.html"),
+    read("src/ui/plugin.ts"),
+    read("playwright.config.ts"),
+  ]);
+
+/** The page's own stylesheet, which its `<style>` block holds. */
+const landingStyle = /<style>([\s\S]*)<\/style>/.exec(landing)[1];
+
+/** The words of a fragment of markup, with the tags taken out. */
+function words(html) {
+  return html
+    .replace(/<br\s*\/?>/g, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Every title of a part or a page, in the order it draws them. */
+function titles(html) {
+  return [...html.matchAll(/<h([12])\b[^>]*>([\s\S]*?)<\/h\1>/g)].map((found) => words(found[2]));
+}
+
+/** The prose under each title, which the parts mark with `sec-p`. */
+function prose(html) {
+  return [...html.matchAll(/<p class="sec-p"[^>]*>([\s\S]*?)<\/p>/g)].map((found) =>
+    words(found[1]),
+  );
+}
+
+/** The line under the title, which every artboard opens with. */
+function lede(html) {
+  return words(/<\/h1>\s*<p[^>]*>([\s\S]*?)<\/p>/.exec(html)[1]);
+}
+
+/** A site module, built and run over the globals a browser would give it. */
+async function moduleOf(file, globals = {}) {
+  const built = await esbuild.build({
+    entryPoints: [path.join(root, file)],
+    bundle: true,
+    write: false,
+    format: "cjs",
+    platform: "node",
+    target: "node22",
+    alias: { "@": path.join(root, "src") },
+  });
+  const holder = { exports: {} };
+  vm.runInNewContext(built.outputFiles[0].text, {
+    module: holder,
+    exports: holder.exports,
+    structuredClone,
+    ...globals,
+  });
+  return holder.exports;
+}
+
+/** A colour's relative luminance, which says which of two is the darker. */
+function luminance(hex) {
+  const parts = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16) / 255);
+  const linear = parts.map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+/** One length the page declares on `.page`, in pixels. */
+function metric(name) {
+  const found = new RegExp(`--${name}:\\s*([^;]+);`).exec(landingStyle);
+  assert.ok(found, `the page declares no --${name}`);
+  const clamped = /clamp\([^,]+,[^,]+,\s*([\d.]+)px\)/.exec(found[1]);
+  return Number(clamped ? clamped[1] : /([\d.]+)/.exec(found[1])[1]);
+}
+
+test("the page draws the sections its three artboards draw, in their words", () => {
+  assert.deepEqual(titles(landing), titles(siteLanding));
+  assert.deepEqual(prose(landing), prose(siteLanding));
+  assert.equal(lede(landing), lede(siteLanding));
+
+  // The light and the phone artboards draw the hero alone, and the page
+  // opens on the same words in both.
+  for (const part of [siteLandingLight, siteLandingPhone]) {
+    assert.deepEqual(titles(part), titles(landing).slice(0, 1));
+    assert.equal(lede(part), lede(landing));
+  }
+  for (const label of ["Install in Obsidian", "Read the docs", "Desktop only"]) {
+    assert.ok(landing.includes(label), `the page does not offer ${label}`);
+    assert.ok(siteLandingPhone.includes(label), `the phone artboard does not offer ${label}`);
+  }
+});
+
+test("the surface moves, runs through the second line of the title, and the title inverts", async () => {
+  const { seaPath, REST } = await moduleOf("site/src/scripts/sea.ts");
+  const wave = { off: 0, lag: 0, kind: "body" };
+  assert.notEqual(seaPath(wave, 1440, 0), seaPath(wave, 1440, 2));
+
+  // The band the surface moves inside, measured down the page: the rest
+  // line, less the deepest the middle dips, plus the tallest swell.
+  const calc = /--sea-top:\s*calc\(([\s\S]*?)\);/.exec(landingStyle)[1];
+  const seaTop = Number(
+    new Function(
+      `return (${calc.replace(/var\(--([\w-]+)\)/g, (whole, name) => String(metric(name))).replace(/px/g, "")})`,
+    )(),
+  );
+  const leading = metric("title-size") * metric("title-leading");
+  const title = metric("header-h") + metric("hero-pad");
+  const band = [seaTop + REST - 30 - 13, seaTop + REST + 13];
+  assert.ok(band[0] > title + leading, `the surface runs above the second line at ${band[0]}`);
+  assert.ok(band[1] < title + leading * 2, `the surface runs under the second line at ${band[1]}`);
+
+  // One ink for the title in both schemes, and a difference blend, so
+  // the letters turn over where the surface crosses them.
+  assert.match(landingStyle, /mix-blend-mode: difference/);
+  assert.match(landingStyle, /color: var\(--title-ink\)/);
+  assert.equal(landingStyle.match(/--title-ink:/g).length, 1);
+});
+
+test("the sea darkens from the surface to the end of the page", () => {
+  const body = /\.sea \.body \{([\s\S]*?)\}/.exec(landingStyle)[1];
+  assert.match(body, /bottom: 0/);
+  assert.match(
+    body.replace(/\s+/g, " "),
+    /linear-gradient\( to bottom, var\(--sea-0\), var\(--sea-1\) 30%, var\(--sea-2\) 70%, var\(--sea-3\) \)/,
+  );
+
+  for (const scheme of [":root", ":root[data-theme='light']"]) {
+    const ramp = block(tokens, scheme);
+    const deep = [0, 1, 2, 3].map((at) => luminance(ramp[`--sea-${at}`]));
+    for (const [at, light] of deep.entries()) {
+      if (at === 0) continue;
+      assert.ok(light < deep[at - 1], `${scheme} --sea-${at} is no darker than the one above it`);
+    }
+  }
+});
+
+test("with reduced motion on, the sea, the specks and the pane swap hold still", async () => {
+  const still = "@media (prefers-reduced-motion:reduce)";
+  const rules = landingCss.split(still).slice(1).join(" ");
+  assert.match(rules, /\.snow\{animation:none\}/);
+  assert.match(rules, /\.sw-ms\{animation:none/);
+  assert.match(rules, /\.sw-bk\{animation:none/);
+
+  const drawn = [];
+  let frames = 0;
+  const { startSea } = await moduleOf("site/src/scripts/sea.ts", {
+    window: {
+      matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    requestAnimationFrame: () => (frames += 1),
+    cancelAnimationFrame() {},
+    performance: { now: () => 0 },
+  });
+  const path = {
+    dataset: { kind: "body", off: "0", lag: "0" },
+    setAttribute: (name, value) => drawn.push(value),
+  };
+  const svg = {
+    querySelectorAll: () => [path],
+    getBoundingClientRect: () => ({ width: 1440 }),
+    setAttribute() {},
+  };
+  startSea(svg);
+  assert.equal(frames, 0, "the sea asked for a frame");
+  assert.equal(drawn.length, 1, "the sea drew more than the one still surface");
+});
+
+test("the design demo is the plugin's own panel over the plugin's own engine", async () => {
+  const { GLYPHS, GROUPS, trims } = await moduleOf("src/ui/groups.ts");
+  const demo = await moduleOf("site/src/scripts/demo.ts");
+
+  // A choice writes the value it stands for. A switch writes the
+  // opposite of the one the design holds, which is what a switch is.
+  const design = demo.opens({ design: { "body-hyphens": true } });
+  assert.equal(demo.clicked(design, "body-align", "left"), "left");
+  assert.equal(demo.clicked(design, "body-hyphens", undefined), false);
+  assert.equal(demo.clicked(demo.opens({ design: {} }), "body-hyphens", undefined), true);
+
+  // The page the demo sets is the engine's, not the browser's. The
+  // sheets it sends are the ones the plugin generates.
+  const typeset = await read("site/src/scripts/typeset.ts");
+  assert.match(typeset, /import \{ designSheets \} from '@\/style\/sheet'/);
+  assert.match(typeset, /new Session\(serialized\(/);
+  assert.match(typeset, /styleOp\(designSheets\(/);
+  assert.match(typeset, /paintPage\(page, \{ fonts: reading\.fonts/);
+  // Nothing about the page is drawn by CSS: the old fake page is gone.
+  assert.doesNotMatch(landing, /class="pg-text"|class="pg r"|data-demo-text|data-demo-mark/);
+
+  // The site sets its pages with the engine the plugin is pinned to.
+  const plugin = JSON.parse(await read("package.json"));
+  const site = JSON.parse(await read("site/package.json"));
+  assert.equal(
+    site.dependencies.fleuron,
+    plugin.dependencies.fleuron,
+    "the site and the plugin are pinned to different fleurons",
+  );
+
+  // The page names the groups and hands them to the component whole. No
+  // row, label or choice is written out here, so none can fall behind
+  // the panel's.
+  assert.match(landing, /GROUPS\.map\(\(group: Group\) => \(\{/);
+  assert.match(landing, /rows: group\.rows\.filter\(\(row\) => row\.of\.some\(offered\)\)/);
+  assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} faces=\{FACES\} \/>/);
+
+  // Every control those groups hold is one the component draws, and a
+  // kind it cannot draw stops the site's build rather than going out as
+  // a panel the plugin does not have.
+  const component = await read("site/src/components/PanelGroup.astro");
+  const drawn = /const DRAWN = new Set\(\[([^\]]+)\]\)/
+    .exec(component)[1]
+    .split(",")
+    .map((kind) => kind.trim().replace(/'/g, ""))
+    .filter(Boolean);
+  // Every group, so every control the panel offers is one a reader can
+  // work rather than a picture of one.
+  for (const group of GROUPS) {
+    for (const row of group.rows) {
+      for (const control of row.of) {
+        assert.ok(
+          drawn.includes(control.kind),
+          `the page cannot draw the ${control.kind} in ${group.name}`,
+        );
+      }
+    }
+  }
+  assert.match(component, /throw new Error\(\s*`the \$\{group\.name\} group has a/);
+
+  // Every control carries the key it writes, so the script works them
+  // all rather than the few it knows by name.
+  assert.match(component, /data-key=\{keyOf\(control\)\}/);
+  assert.ok(GLYPHS.length > 0 && trims("in").length > 0);
+});
+
+test("the sections that show orca's own surfaces show photographs of them", async () => {
+  // A hand-built copy of a surface goes stale the moment the surface
+  // moves, so every one the page shows is a picture the spec took.
+  for (const section of ["vault-shots", "sw-win"]) {
+    assert.match(landing, new RegExp(`<div class="${section}">`), `the page has no ${section}`);
+  }
+  for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc"]) {
+    assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
+  }
+  for (const shot of ["vault-tree", "vault-note", "write", "read"]) {
+    for (const scheme of ["dark", "light"]) {
+      assert.ok(
+        landing.includes(`../shots/${shot}-${scheme}.png`),
+        `the page does not show ${shot}-${scheme}`,
+      );
+    }
+  }
+});
+
+test("the pages turn on a click, on the arrow buttons and from the keyboard", async () => {
+  const flip = await moduleOf("site/src/scripts/flip.ts");
+
+  // Five leaves stand between the first page and the last, so the book
+  // reads as six spreads.
+  const leaves = 5;
+  assert.deepEqual([...flip.spread(0)], [flip.FIRST, flip.FIRST + 1]);
+  assert.equal(flip.folio(0), `Pages ${flip.FIRST}–${flip.FIRST + 1}`);
+  assert.equal(flip.folio(leaves), `Pages ${flip.FIRST + 10}–${flip.FIRST + 11}`);
+
+  const turned = (at) => flip.layout(leaves, at).filter((leaf) => leaf.turned).length;
+  assert.equal(turned(0), 0);
+  assert.equal(turned(3), 3);
+  assert.equal(turned(leaves), leaves);
+
+  // The leaf in the air stands over the stack on both sides of it.
+  const moving = [...flip.layout(leaves, 2, 1)];
+  assert.ok(moving[1].z > Math.max(...moving.filter((leaf, at) => at !== 1).map((leaf) => leaf.z)));
+
+  const source = await read("site/src/scripts/flip.ts");
+  assert.match(source, /leaf\.addEventListener\('click'/);
+  assert.match(source, /'ArrowLeft'/);
+  assert.match(source, /'ArrowRight'/);
+  // The arrows are buttons, so a keyboard reaches them with no help.
+  for (const step of ["-1", "1"]) {
+    assert.match(landing, new RegExp(`<button\\s+type="button"\\s+data-turn="${step}"`));
+  }
+});
+
+test("every picture on the page is one the screenshot spec takes", async () => {
+  const sources = [...landing.matchAll(/from '(\.\.\/[^']+\.(?:png|jpe?g|webp|svg))'/g)].map(
+    (found) => found[1],
+  );
+  const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map(
+    (found) => found[1],
+  );
+  assert.ok(sources.length > 0, "the page shows no picture");
+  for (const source of [...sources, ...globbed]) {
+    assert.match(source, /^\.\.\/shots\//, `${source} is not a picture the spec takes`);
+  }
+  // Nothing else is fetched: a picture named in the markup would be one
+  // the spec never took.
+  assert.doesNotMatch(landing, /<img[^>]+src="(?!\{)/);
+
+  // The directory the page reads from is the shots project's snapshots.
+  assert.match(playwright, /name: "shots"/);
+  assert.match(playwright, /snapshotPathTemplate: "site\/src\/shots\/\{arg\}\{ext\}"/);
+  const taken = [];
+  for await (const file of glob("site/src/shots/**/*.png", { cwd: root })) taken.push(file);
+  assert.ok(taken.length >= 12, "the spec has taken no pages");
+});
+
+test("the copy claims no feature the plugin has yet to grow", async () => {
+  const said = [
+    ...titles(landing),
+    ...prose(landing),
+    lede(landing),
+    ...[...landing.matchAll(/<figcaption>([\s\S]*?)<\/figcaption>/g)].map((f) => words(f[1])),
+  ].join(" ");
+
+  // Each claim, with the line in `src` that would make it true. A claim
+  // whose line is not there yet may not be on the page.
+  const claims = [
+    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, /"orca:export/, "export"],
+    [/your own CSS|takes over a setting/i, /overridden|overrides layer/, "an overridden control"],
+  ];
+  for (const [claimed, built, what] of claims) {
+    if (built.test(plugin)) continue;
+    assert.doesNotMatch(said, claimed, `the page claims ${what}, which orca has not built`);
+  }
+});
+
+test("the footer carries the tail mark in one flat colour", async () => {
+  const mark = await read("site/src/components/Mark.astro");
+  assert.match(mark, /fill="currentColor"/);
+  assert.doesNotMatch(mark, /fill="(?!currentColor)[^"]+"/);
+
+  const footer = /\.word\.small \{([\s\S]*?)\}/.exec(landingStyle)[1];
+  assert.match(footer, /color: var\(--text\)/);
+  assert.equal(block(tokens, ":root")["--text"], "#eef0ec");
+  assert.equal(block(tokens, ":root[data-theme='light']")["--text"], "#0a0c0f");
+});
+
 // What this tier does not cover: whether a docs page matches the SiteDocs
 // artboards, which only a render in a browser shows, and whether the
 // sample's chapter opening matches the SiteLanding artboard, which the
-// pages themselves answer.
+// pages themselves answer. Nor how the landing page looks: the tier
+// reads its source, and a browser is what shows the sea running through
+// the title.
+
+/** The chapter the demo sets, and the note that designs it. */
+const DEMO_CHAPTER = `${SAMPLE_DIR}/A Shifting Reef.md`;
+
+/**
+ * Sets the demo's first page under a design and hands back what the
+ * engine put on it. Two designs that lay out the same page give the
+ * same string.
+ */
+function pageUnder(engine, design) {
+  const css = engine
+    .designSheets(design, engine.setting)
+    .map((sheet) => sheet.css)
+    .join("\n");
+  return JSON.stringify(decodeDisplayList(render(engine.text, css)).pages[0]);
+}
+
+test("every control the demo offers changes the page the demo shows", async () => {
+  const { GROUPS, atLevel, trims, GLYPHS, withKey } = await moduleOf("src/ui/groups.ts");
+  const { readDesign, writeDesign } = await moduleOf("src/style/design.ts");
+  const { effective } = await moduleOf("src/style/theme.ts");
+  const { designSheets } = await moduleOf("src/style/sheet.ts");
+  const { readModel } = await moduleOf("src/book/model.ts");
+  const { WORKS } = await moduleOf("site/src/scripts/demo.ts");
+
+  const require = createRequire(import.meta.url);
+  const wasm = path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
+  await initWasm({ module_or_path: await readFile(path.join(wasm, "fleuron_bg.wasm")) });
+
+  const { design, metadata } = readModel(await read(SAMPLE_BOOK)).book;
+  const engine = {
+    designSheets,
+    text: await read(DEMO_CHAPTER),
+    setting: { roles: ["chapter"], title: metadata.title, author: metadata.author },
+  };
+  // The demo opens on the design the panel shows, defaults filled in.
+  const opens = readDesign(writeDesign(effective(design)));
+  const first = pageUnder(engine, opens);
+
+  /** A value for a key other than the one the design holds. */
+  const other = (key, control) => {
+    const held = String(writeDesign(opens)[key] ?? "");
+    if (control.kind === "flag") return writeDesign(opens)[key] !== true;
+    if (control.kind === "trim") return trims("in").find((c) => c.value !== held)?.value;
+    if (control.kind === "glyph") return GLYPHS.find((glyph) => glyph !== held);
+    if (control.choices?.length) return control.choices.find((c) => c.value !== held)?.value;
+    if (control.kind === "length") return held.endsWith("em") ? "3em" : "22pt";
+    if (control.kind === "count") return String(Number(held || "0") + 5);
+    return undefined;
+  };
+
+  const controls = new Map();
+  for (const group of GROUPS) {
+    for (const row of group.rows) {
+      for (const control of row.of) {
+        if (control.key === undefined) continue;
+        controls.set(atLevel(control.key, 1), control);
+      }
+    }
+  }
+
+  assert.ok(WORKS.length > 0, "the demo offers no controls");
+  for (const key of WORKS) {
+    const control = controls.get(key);
+    assert.ok(control, `the design panel has no ${key}`);
+    const value = other(key, control);
+    assert.notEqual(value, undefined, `no other value to set ${key} to`);
+    assert.notEqual(
+      pageUnder(engine, withKey(opens, key, value)),
+      first,
+      `${key} is offered by the demo but changes nothing on the page it shows`,
+    );
+  }
+});
+
+// What this file does not cover: the pictures themselves, which the
+// screenshot spec takes and compares; and whether a control the demo
+// leaves out would change the page, since a book with a scene break or
+// a facing page would answer differently.
