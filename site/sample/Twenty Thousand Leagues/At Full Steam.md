@@ -1,4 +1,6 @@
-# At Full Steam
+## CHAPTER VI
+
+# *At Full Steam*
 
 At this cry the whole ship’s crew hurried towards the
 harpooner—commander, officers, masters, sailors, cabin boys; even the

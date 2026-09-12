@@ -1,4 +1,6 @@
-# Want of Air
+## CHAPTER XVI
+
+# *Want of Air*
 
 Thus around the Nautilus, above and below, was an impenetrable wall of
 ice. We were prisoners to the iceberg. I watched the Captain. His

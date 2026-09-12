@@ -1,4 +1,6 @@
-# The Poulps
+## CHAPTER XVIII
+
+# *The Poulps*
 
 For several days the Nautilus kept off from the American coast.
 Evidently it did not wish to risk the tides of the Gulf of Mexico or of

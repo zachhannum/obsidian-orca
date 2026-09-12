@@ -6,7 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import esbuild from "esbuild";
-import { decodeDisplayList, initWasm, render } from "fleuron";
+import { Session, decodeDisplayList, initWasm } from "fleuron";
 import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
@@ -177,7 +177,7 @@ test("the sample vault holds one book, and shares no file with the fixture", asy
   assert.ok(sample.has("images/a-squid-of-colossal-dimensions.jpg"));
 });
 
-test("each chapter is a note of its own, under one heading that is its title", async () => {
+test("each chapter is a note of its own, under its number and a heading that is its title", async () => {
   const note = await read(SAMPLE_BOOK);
   const body = entries(note, "Body");
 
@@ -195,11 +195,19 @@ test("each chapter is a note of its own, under one heading that is its title", a
   // no words of its own.
   const chapters = [...headings].filter(([, found]) => found.length > 0);
   assert.equal(chapters.length, 46);
+  // The count starts again in each part, and the title is set in italic.
+  const parts = [23, 23];
+  let at = 0;
   for (const [link, found] of chapters) {
-    assert.equal(found.length, 1, `${link} has ${found.length} headings`);
+    const part = at < parts[0] ? 0 : 1;
+    const number = at - (part === 0 ? 0 : parts[0]) + 1;
+    at += 1;
+    assert.equal(found.length, 2, `${link} has ${found.length} headings`);
+    assert.equal(found[0], `CHAPTER ${roman(number)}`, `${link} is not chapter ${number}`);
     // A title with a question mark or a quotation mark in it keeps them
     // in the heading, because a note's name cannot hold them.
-    assert.equal(found[0].replace(/[?\u201c\u201d]/g, ""), link);
+    assert.equal(found[1].replace(/^\*(.+)\*$/, "$1").replace(/[?\u201c\u201d]/g, ""), link);
+    assert.match(found[1], /^\*.+\*$/, `${link} is not in italic`);
   }
 });
 
@@ -278,6 +286,16 @@ function titles(html) {
 }
 
 /** The prose under each title, which the parts mark with `sec-p`. */
+/** A count below forty, in capital roman numerals. */
+function roman(count) {
+  let left = count;
+  let written = "";
+  for (const [value, numeral] of [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]) {
+    for (; left >= value; left -= value) written += numeral;
+  }
+  return written;
+}
+
 function prose(html) {
   return [...html.matchAll(/<p class="sec-p"[^>]*>([\s\S]*?)<\/p>/g)].map((found) =>
     words(found[1]),
@@ -419,6 +437,8 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
   assert.match(typeset, /import \{ designSheets \} from '@\/style\/sheet'/);
   assert.match(typeset, /new Session\(serialized\(/);
   assert.match(typeset, /styleOp\(designSheets\(/);
+  // A chapter is one section, so a label over its title stays with it.
+  assert.match(typeset, /\{ op: 'split', level: 0 \}/);
   assert.match(typeset, /paintPage\(page, \{ fonts: reading\.fonts/);
   // Nothing about the page is drawn by CSS: the old fake page is gone.
   assert.doesNotMatch(landing, /class="pg-text"|class="pg r"|data-demo-text|data-demo-mark/);
@@ -618,7 +638,17 @@ function pageUnder(engine, design) {
     .designSheets(design, engine.setting)
     .map((sheet) => sheet.css)
     .join("\n");
-  return JSON.stringify(decodeDisplayList(render(engine.text, css)).pages[0]);
+  // The chapter is one section, as the demo and the plugin send it.
+  const session = new Session();
+  try {
+    session.setDialect("obsidian");
+    session.setSplit(0);
+    session.setMarkdown(DEMO_CHAPTER, engine.text);
+    session.setStyle(["generated.css"], [css]);
+    return JSON.stringify(decodeDisplayList(session.preview(0, 1)).pages[0]);
+  } finally {
+    session.free();
+  }
 }
 
 test("every control the demo offers changes the page the demo shows", async () => {

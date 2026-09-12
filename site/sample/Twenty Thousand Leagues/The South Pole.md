@@ -1,4 +1,6 @@
-# The South Pole
+## CHAPTER XIV
+
+# *The South Pole*
 
 I rushed on to the platform. Yes! the open sea, with but a few scattered
 pieces of ice and moving icebergs—a long stretch of sea; a world of

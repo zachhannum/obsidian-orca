@@ -1,4 +1,6 @@
-# Captain Nemo’s Thunderbolt
+## CHAPTER XXI
+
+# *Captain Nemo’s Thunderbolt*
 
 We looked at the edge of the forest without rising, my hand stopping in
 the action of putting it to my mouth, Ned Land’s completing its office.

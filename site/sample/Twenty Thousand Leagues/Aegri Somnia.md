@@ -1,4 +1,6 @@
-# “Aegri Somnia”
+## CHAPTER XXII
+
+# *“Aegri Somnia”*
 
 The following day 10th January, the Nautilus continued her course
 between two seas, but with such remarkable speed that I could not

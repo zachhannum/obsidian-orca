@@ -1,4 +1,6 @@
-# A Walk on the Bottom of the Sea
+## CHAPTER XV
+
+# *A Walk on the Bottom of the Sea*
 
 This cell was, to speak correctly, the arsenal and wardrobe of the
 Nautilus. A dozen diving apparatuses hung from the partition waiting our

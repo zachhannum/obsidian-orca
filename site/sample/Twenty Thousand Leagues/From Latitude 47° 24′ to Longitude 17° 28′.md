@@ -1,4 +1,6 @@
-# From Latitude 47° 24′ to Longitude 17° 28′
+## CHAPTER XX
+
+# *From Latitude 47° 24′ to Longitude 17° 28′*
 
 In consequence of the storm, we had been thrown eastward once more. All
 hope of escape on the shores of New York or St. Lawrence had faded away;

@@ -1,4 +1,6 @@
-# The Gulf Stream
+## CHAPTER XIX
+
+# *The Gulf Stream*
 
 This terrible scene of the 20th of April none of us can ever forget. I
 have written it under the influence of violent emotion. Since then I

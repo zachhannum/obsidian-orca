@@ -1,4 +1,6 @@
-# Ned Land
+## CHAPTER IV
+
+# *Ned Land*
 
 Captain Farragut was a good seaman, worthy of the frigate he commanded.
 His vessel and he were one. He was the soul of it. On the question of

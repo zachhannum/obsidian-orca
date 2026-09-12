@@ -1,4 +1,6 @@
-# Some Figures
+## CHAPTER XII
+
+# *Some Figures*
 
 A moment after we were seated on a divan in the saloon smoking. The
 Captain showed me a sketch that gave the plan, section, and elevation of

@@ -1,4 +1,6 @@
-# A Shifting Reef
+## CHAPTER I
+
+# *A Shifting Reef*
 
 The year 1866 was signalised by a remarkable incident, a mysterious and
 puzzling phenomenon, which doubtless no one has yet forgotten. Not to

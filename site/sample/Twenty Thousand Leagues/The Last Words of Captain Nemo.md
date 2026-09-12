@@ -1,4 +1,6 @@
-# The Last Words of Captain Nemo
+## CHAPTER XXII
+
+# *The Last Words of Captain Nemo*
 
 The panels had closed on this dreadful vision, but light had not
 returned to the saloon: all was silence and darkness within the

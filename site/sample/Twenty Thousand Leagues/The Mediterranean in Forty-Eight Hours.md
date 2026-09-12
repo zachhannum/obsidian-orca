@@ -1,4 +1,6 @@
-# The Mediterranean in Forty-Eight Hours
+## CHAPTER VII
+
+# *The Mediterranean in Forty-Eight Hours*
 
 The Mediterranean, the blue sea par excellence, “the great sea” of the
 Hebrews, “the sea” of the Greeks, the “mare nostrum” of the Romans,

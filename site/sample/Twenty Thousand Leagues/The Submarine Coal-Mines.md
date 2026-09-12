@@ -1,4 +1,6 @@
-# The Submarine Coal-Mines
+## CHAPTER X
+
+# *The Submarine Coal-Mines*
 
 The next day, the 20th of February, I awoke very late: the fatigues of
 the previous night had prolonged my sleep until eleven o’clock. I

@@ -1,4 +1,6 @@
-# The Coral Kingdom
+## CHAPTER XXIII
+
+# *The Coral Kingdom*
 
 The next day I woke with my head singularly clear. To my great surprise,
 I was in my own room. My companions, no doubt, had been reinstated in

@@ -1,4 +1,6 @@
-# Accident or Incident?
+## CHAPTER XV
+
+# *Accident or Incident?*
 
 The next day, the 22nd of March, at six in the morning, preparations for
 departure were begun. The last gleams of twilight were melting into

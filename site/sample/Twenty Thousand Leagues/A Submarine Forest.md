@@ -1,4 +1,6 @@
-# A Submarine Forest
+## CHAPTER XVI
+
+# *A Submarine Forest*
 
 We had at last arrived on the borders of this forest, doubtless one of
 the finest of Captain Nemo’s immense domains. He looked upon it as his

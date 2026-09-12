@@ -18,6 +18,8 @@ body-first-line-indent: 1.2em
 body-hyphens: true
 heading-1-size: 16pt
 heading-1-align: center
+heading-2-size: 9pt
+heading-2-align: center
 chapter-begins: next-page
 chapter-space-above: 7
 chapter-drop-cap: 3

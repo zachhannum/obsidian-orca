@@ -1,4 +1,6 @@
-# A Pearl of Ten Millions
+## CHAPTER III
+
+# *A Pearl of Ten Millions*
 
 The next morning at four o’clock I was awakened by the steward whom
 Captain Nemo had placed at my service. I rose hurriedly, dressed, and

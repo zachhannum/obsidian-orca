@@ -1,4 +1,6 @@
-# The Indian Ocean
+## CHAPTER I
+
+# *The Indian Ocean*
 
 We now come to the second part of our journey under the sea. The first
 ended with the moving scene in the coral cemetery which left such a deep

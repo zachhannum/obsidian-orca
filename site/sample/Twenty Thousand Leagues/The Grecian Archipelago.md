@@ -1,4 +1,6 @@
-# The Grecian Archipelago
+## CHAPTER VI
+
+# *The Grecian Archipelago*
 
 The next day, the 12th of February, at the dawn of day, the Nautilus
 rose to the surface. I hastened on to the platform. Three miles to the

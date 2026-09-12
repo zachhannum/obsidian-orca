@@ -1,4 +1,6 @@
-# Cachalots and Whales
+## CHAPTER XII
+
+# *Cachalots and Whales*
 
 During the nights of the 13th and 14th of March, the Nautilus returned
 to its southerly course. I fancied that, when on a level with Cape Horn,

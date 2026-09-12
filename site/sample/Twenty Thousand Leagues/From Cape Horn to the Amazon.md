@@ -1,4 +1,6 @@
-# From Cape Horn to the Amazon
+## CHAPTER XVII
+
+# *From Cape Horn to the Amazon*
 
 How I got on to the platform, I have no idea; perhaps the Canadian had
 carried me there. But I breathed, I inhaled the vivifying sea-air. My

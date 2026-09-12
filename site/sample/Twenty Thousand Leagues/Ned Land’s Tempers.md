@@ -1,4 +1,6 @@
-# Ned Land’s Tempers
+## CHAPTER IX
+
+# *Ned Land’s Tempers*
 
 How long we slept I do not know; but our sleep must have lasted long,
 for it rested us completely from our fatigues. I woke first. My

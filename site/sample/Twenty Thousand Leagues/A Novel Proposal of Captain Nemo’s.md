@@ -1,4 +1,6 @@
-# A Novel Proposal of Captain Nemo’s
+## CHAPTER II
+
+# *A Novel Proposal of Captain Nemo’s*
 
 On the 28th of February, when at noon the Nautilus came to the surface
 of the sea, in 9° 4′ N. lat., there was land in sight about eight miles

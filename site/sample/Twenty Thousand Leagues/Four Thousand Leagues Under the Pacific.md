@@ -1,4 +1,6 @@
-# Four Thousand Leagues Under the Pacific
+## CHAPTER XVII
+
+# *Four Thousand Leagues Under the Pacific*
 
 The next morning, the 18th of November, I had quite recovered from my
 fatigues of the day before, and I went up on to the platform, just as

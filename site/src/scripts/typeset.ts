@@ -53,9 +53,13 @@ export async function startTypeset(
   // measured in.
   const session = new Session(serialized(client as EngineClient), documentFaces(document));
 
-  /** The book, as the three ops one chapter takes. */
+  /**
+   * The book, as the ops one chapter takes. The chapter is one section,
+   * as the plugin sends it, so a heading over its title stays with it.
+   */
   const opened = (sets: Design): Op[] => [
     { op: 'dialect', dialect: 'obsidian' },
+    { op: 'split', level: 0 },
     { op: 'markdown', name: source.name, text: source.text },
     styleOp(designSheets(sets, setting)),
   ];

@@ -1,4 +1,6 @@
-# A Vanished Continent
+## CHAPTER IX
+
+# *A Vanished Continent*
 
 The next morning, the 19th of February, I saw the Canadian enter my
 room. I expected this visit. He looked very disappointed.

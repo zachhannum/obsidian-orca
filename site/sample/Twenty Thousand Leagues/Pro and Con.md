@@ -1,4 +1,6 @@
-# Pro and Con
+## CHAPTER II
+
+# *Pro and Con*
 
 At the period when these events took place, I had just returned from a
 scientific research in the disagreeable territory of Nebraska, in the

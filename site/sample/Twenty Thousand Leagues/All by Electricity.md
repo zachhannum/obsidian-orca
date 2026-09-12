@@ -1,4 +1,6 @@
-# All by Electricity
+## CHAPTER XI
+
+# *All by Electricity*
 
 “Sir,” said Captain Nemo, showing me the instruments hanging on the
 walls of his room, “here are the contrivances required for the

@@ -1,4 +1,6 @@
-# I Form My Resolution
+## CHAPTER III
+
+# *I Form My Resolution*
 
 Three seconds before the arrival of J. B. Hobson’s letter I no more
 thought of pursuing the unicorn than of attempting the passage of the

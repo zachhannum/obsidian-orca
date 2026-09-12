@@ -1,4 +1,6 @@
-# Vanikoro
+## CHAPTER XVIII
+
+# *Vanikoro*
 
 This terrible spectacle was the forerunner of the series of maritime
 catastrophes that the Nautilus was destined to meet with in its route.

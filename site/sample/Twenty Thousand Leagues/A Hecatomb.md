@@ -1,4 +1,6 @@
-# A Hecatomb
+## CHAPTER XXI
+
+# *A Hecatomb*
 
 The way of describing this unlooked-for scene, the history of the
 patriot ship, told at first so coldly, and the emotion with which this

@@ -1,4 +1,6 @@
-# The Red Sea
+## CHAPTER IV
+
+# *The Red Sea*
 
 In the course of the day of the 29th of January, the island of Ceylon
 disappeared under the horizon, and the Nautilus, at a speed of twenty

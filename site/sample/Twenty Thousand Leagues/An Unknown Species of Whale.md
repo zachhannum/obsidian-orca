@@ -1,4 +1,6 @@
-# An Unknown Species of Whale
+## CHAPTER VII
+
+# *An Unknown Species of Whale*
 
 This unexpected fall so stunned me that I have no clear recollection of
 my sensations at the time. I was at first drawn down to a depth of about

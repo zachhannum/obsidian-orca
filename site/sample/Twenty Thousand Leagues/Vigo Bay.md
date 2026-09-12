@@ -1,4 +1,6 @@
-# Vigo Bay
+## CHAPTER VIII
+
+# *Vigo Bay*
 
 The Atlantic! a vast sheet of water whose superficial area covers
 twenty-five millions of square miles, the length of which is nine

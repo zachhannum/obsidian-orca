@@ -1,4 +1,6 @@
-# The Black River
+## CHAPTER XIII
+
+# *The Black River*
 
 The portion of the terrestrial globe which is covered by water is
 estimated at upwards of eighty millions of acres. This fluid mass

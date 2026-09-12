@@ -1,4 +1,6 @@
-# Torres Straits
+## CHAPTER XIX
+
+# *Torres Straits*
 
 During the night of the 27th or 28th of December, the Nautilus left the
 shores of Vanikoro with great speed. Her course was south-westerly, and

@@ -1,4 +1,6 @@
-# Conclusion
+## CHAPTER XXIII
+
+# *Conclusion*
 
 Thus ends the voyage under the seas. What passed during that night—how
 the boat escaped from the eddies of the maelstrom—how Ned Land, Conseil,

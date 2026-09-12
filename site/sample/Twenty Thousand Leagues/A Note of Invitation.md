@@ -1,4 +1,6 @@
-# A Note of Invitation
+## CHAPTER XIV
+
+# *A Note of Invitation*
 
 The next day was the 9th of November. I awoke after a long sleep of
 twelve hours. Conseil came, according to custom, to know “how I passed

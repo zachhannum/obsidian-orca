@@ -1,4 +1,6 @@
-# The Man of the Seas
+## CHAPTER X
+
+# *The Man of the Seas*
 
 It was the commander of the vessel who thus spoke.
 
