@@ -1,0 +1,93 @@
+name: shots
+
+# The pictures on the docs site are photographs of real Obsidian, so a
+# change to a surface, to the site's colors or to the sample book takes
+# new ones.
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "styles.css"
+      - "e2e/**"
+      - "site/sample/**"
+      - "site/src/styles/tokens.css"
+      - ".github/workflows/shots.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "styles.css"
+      - "e2e/**"
+      - "site/sample/**"
+      - "site/src/styles/tokens.css"
+      - ".github/workflows/shots.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shots:
+    name: photograph the sample book
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --prefer-offline --no-audit --no-fund
+
+      # The site's faces go inside Obsidian, so the spec reads them out
+      # of the site's own packages.
+      - run: npm ci --prefer-offline --no-audit --no-fund
+        working-directory: site
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.obsidian-cache
+          key: obsidian-${{ runner.os }}-${{ hashFiles('e2e/harness/launch.ts') }}
+
+      - name: system libraries
+        run: |
+          sudo apt-get update
+          npx playwright install-deps chromium
+          sudo apt-get install -y xvfb poppler-utils
+
+      - run: xvfb-run -a npm run shots
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: shots
+          path: site/src/shots/
+          retention-days: 7
+
+      # A picture is rasterized by the machine that took it, so the ones
+      # in the repo are the ones this job takes. On main it opens a pull
+      # request with whatever changed rather than writing to the branch.
+      - name: open a pull request with the new pictures
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain site/src/shots)" ]; then
+            echo "the pictures are unchanged"
+            exit 0
+          fi
+          branch="shots/${GITHUB_SHA::7}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add site/src/shots
+          git commit -m "Take the site's pictures again"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Take the site's pictures again" \
+            --body "The screenshot spec took new pictures of ${GITHUB_SHA::7}."

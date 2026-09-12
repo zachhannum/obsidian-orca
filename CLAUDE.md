@@ -223,6 +223,13 @@ the site's own lockfile and runs `npm run build` in `site/`, which
 checks the tokens against `design/site.css` before it builds. On main
 the `deploy` job puts the result on GitHub Pages.
 
+`.github/workflows/shots.yml` runs on a PR that touches a surface, the
+site's tokens or the sample book. It runs on the same paths on main. The
+job runs `npm run shots`, which photographs real Obsidian on the sample
+vault and writes the pictures to `site/src/shots`. A picture is
+rasterized by the machine that took it, so this job is the one that
+takes them. On main it opens a PR with the pictures that changed.
+
 ## Documentation rules
 
 Applies to code comments and all documentation — internal (CLAUDE.md,

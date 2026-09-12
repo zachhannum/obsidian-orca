@@ -22,7 +22,14 @@ export default defineConfig({
   // snapshots, so they are written where the site reads them rather
   // than beside the spec.
   projects: [
-    { name: "orca", testIgnore: "**/shots.spec.ts" },
+    {
+      name: "orca",
+      testIgnore: "**/shots.spec.ts",
+      // A project of its own would otherwise put its name in the path,
+      // and the snapshots beside the specs were taken without one.
+      snapshotPathTemplate:
+        "{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}-{platform}{ext}",
+    },
     {
       name: "shots",
       testMatch: "**/shots.spec.ts",
