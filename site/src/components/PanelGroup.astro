@@ -106,17 +106,38 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                 ))}
               </select>
             )}
-            {(control.kind === 'word' ||
-              control.kind === 'length' ||
-              control.kind === 'count') && (
+            {control.kind === 'word' && (
               <input
-                class={control.kind === 'word' ? 'o-field o-grow' : 'o-field o-small'}
+                class="o-field o-grow"
                 type="text"
                 aria-label={row.label}
-                data-key={keyOf(control)} data-level={leveled(control)}
+                data-key={keyOf(control)}
+                data-level={leveled(control)}
                 data-kind={control.kind}
                 value={set(control)}
               />
+            )}
+            {(control.kind === 'length' || control.kind === 'count') && (
+              <div class="o-num">
+                <input
+                  class="o-field"
+                  type="text"
+                  aria-label={row.label}
+                  data-key={keyOf(control)}
+                  data-level={leveled(control)}
+                  data-kind={control.kind}
+                  data-page={control.page === true ? 'in' : undefined}
+                  value={set(control)}
+                />
+                <div class="o-step">
+                  <button type="button" data-step="1" aria-label={`Increase ${row.label}`}>
+                    <Icon name="up" size={9} />
+                  </button>
+                  <button type="button" data-step="-1" aria-label={`Decrease ${row.label}`}>
+                    <Icon name="down" size={9} />
+                  </button>
+                </div>
+              </div>
             )}
             {control.kind === 'flag' && (
               <button
@@ -238,9 +259,21 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
     cursor: pointer;
     appearance: none;
   }
-  .o-small {
-    width: 76px;
-    flex: none;
+  /* The stepper beside a number, which is the shape the panel's own
+     number field takes. */
+  .o-step button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .o-step button:hover {
+    color: var(--o-text);
   }
   /* A cell is nothing on an ordinary row. On a grid row it stacks the
      control over the word that names it, which is the shape the margins

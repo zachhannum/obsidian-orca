@@ -486,6 +486,17 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
   // Every control carries the key it writes, so the script works them
   // all rather than the few it knows by name.
   assert.match(component, /data-key=\{keyOf\(control\)\}/);
+
+  // A number is a field with a stepper beside it, the way the panel
+  // draws one, and it steps by the plugin's own step.
+  assert.match(component, /<div class="o-step">/);
+  assert.match(component, /data-step="1"/);
+  assert.match(component, /data-step="-1"/);
+  const script = await read("site/src/scripts/demo.ts");
+  assert.match(script, /import \{[^}]*stepped[^}]*\} from '@\/ui\/groups'/);
+  assert.match(script, /stepped\(held, field\.value, by, times, unit\)/);
+  // The arrow keys move it too, which is what the panel's field does.
+  assert.match(script, /event\.key === 'ArrowUp'/);
   assert.ok(GLYPHS.length > 0 && trims("in").length > 0);
 });
 

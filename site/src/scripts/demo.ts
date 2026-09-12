@@ -7,7 +7,7 @@
  * generates. So a control here does to the page what the same control
  * does in Obsidian.
  */
-import { atLevel, withKey } from '@/ui/groups';
+import { atLevel, stepped, typed, withKey } from '@/ui/groups';
 import {
   readDesign,
   writeDesign,
@@ -134,21 +134,72 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
     void typeset?.set(design);
   };
 
+  /** The measure a number field holds, or nothing for a word. */
+  const measure = (field: HTMLInputElement): 'length' | 'count' | undefined => {
+    const kind = field.dataset['kind'];
+    return kind === 'length' || kind === 'count' ? kind : undefined;
+  };
+
+  /** Steps a number field by one step of its unit, or ten with shift. */
+  const step = (field: HTMLInputElement, by: 1 | -1, times: number): void => {
+    const held = measure(field);
+    if (held === undefined) return;
+    const unit = field.dataset['page'] === 'in' ? 'in' : 'pt';
+    const next = stepped(held, field.value, by, times, unit);
+    if (next === undefined) return;
+    write(field.dataset['key'] ?? '', next);
+  };
+
   for (const control of controls) {
     const key = control.dataset['key'] ?? '';
-    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) {
-      const said = control instanceof HTMLSelectElement ? 'change' : 'input';
-      control.addEventListener(said, () => {
+    if (control instanceof HTMLSelectElement) {
+      control.addEventListener('change', () => {
         // The key a heading control writes follows the level on screen,
         // so it is read now rather than when the control was found.
-        const at = control.dataset['key'] ?? key;
-        write(at, control.value === '' ? undefined : control.value);
+        write(control.dataset['key'] ?? key, control.value);
       });
       continue;
     }
+    if (control instanceof HTMLInputElement) {
+      // A field settles when it is left or the reader presses enter,
+      // which is where the panel settles one too. Half-typed text is
+      // not a value.
+      control.addEventListener('change', () => {
+        const at = control.dataset['key'] ?? key;
+        const said = control.value.trim();
+        if (said === '') {
+          write(at, undefined);
+          return;
+        }
+        const held = measure(control);
+        const read = held === undefined ? { value: said } : typed(held, said);
+        if ('wrong' in read) {
+          control.setAttribute('aria-invalid', 'true');
+          return;
+        }
+        control.removeAttribute('aria-invalid');
+        write(at, read.value);
+      });
+      control.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        step(control, event.key === 'ArrowUp' ? 1 : -1, event.shiftKey ? 10 : 1);
+      });
+      continue;
+    }
+    if (control.dataset['step'] !== undefined) continue;
     control.addEventListener('click', () => {
       const at = control.dataset['key'] ?? key;
       write(at, clicked(design, at, control.dataset['value']));
+    });
+  }
+
+  // A stepper moves the field it stands beside.
+  for (const button of root.querySelectorAll<HTMLElement>('[data-step]')) {
+    const field = button.closest('.o-num')?.querySelector('input');
+    if (field === null || field === undefined) continue;
+    button.addEventListener('click', (event) => {
+      step(field, button.dataset['step'] === '1' ? 1 : -1, event.shiftKey ? 10 : 1);
     });
   }
 
