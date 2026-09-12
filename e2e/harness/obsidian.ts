@@ -4,13 +4,17 @@
  * is reached by those instead.
  */
 
+import path from "node:path";
+import process from "node:process";
 import {
   expect,
   type Browser,
+  type CDPSession,
   type Locator,
   type Page,
 } from "@playwright/test";
 import type { App } from "obsidian";
+import { COPY, OPENED } from "./launch";
 
 /** The two pieces of the app the API does not declare. */
 interface Commands {
@@ -25,15 +29,43 @@ interface Config {
   setConfig(key: string, value: unknown): void;
 }
 
+/** The scheme Obsidian is painted in, and the theme name it goes by. */
+export type Scheme = "dark" | "light";
+const THEMES: Record<Scheme, string> = {
+  dark: "obsidian",
+  light: "moonstone",
+};
+
+/** The two calls the app makes that its API does not declare. */
+interface Painted {
+  changeTheme(theme: string): void;
+}
+
+/** Electron's own bridge, which the renderer reaches through `require`. */
+interface Bridge {
+  ipcRenderer: { sendSync(channel: string, ...args: unknown[]): unknown };
+}
+
 /** The plugins the app loaded, by id. The API does not declare them. */
 interface Plugins {
   plugins: Record<string, unknown>;
 }
 
+/** Obsidian's own plugins, which the API does not declare either. */
+interface Internal {
+  getPluginById(id: string): { disable(): void } | null;
+}
+
 declare global {
   interface Window {
     /** Undefined until Obsidian has opened the vault. */
-    app: App & { commands: Commands; plugins: Plugins };
+    app: App & {
+      commands: Commands;
+      plugins: Plugins;
+      internalPlugins: Internal;
+    } & Painted;
+    /** Obsidian runs its renderer with node integration on. */
+    require(id: string): unknown;
     /** The recorder a spec installs while `notices` runs. */
     orcaNotices?: { said: string[]; watch: MutationObserver } | undefined;
   }
@@ -84,15 +116,22 @@ const WINDOW = {
 const APPEARING = 60_000;
 
 export class Obsidian {
-  private constructor(readonly page: Page) {}
+  private constructor(
+    readonly page: Page,
+    private readonly session: CDPSession,
+  ) {}
 
   /**
-   * Attaches to the window, sizes it and restores its workspace. A
-   * `fresh` attach reloads the window first, which stops every worker
-   * the window ran and loads orca again.
+   * Attaches to the window the named vault is open in, sizes it and
+   * restores its workspace. A `fresh` attach reloads the window first,
+   * which stops every worker the window ran and loads orca again.
    */
-  static async attach(browser: Browser, fresh = false): Promise<Obsidian> {
-    const page = await renderer(browser);
+  static async attach(
+    browser: Browser,
+    fresh = false,
+    vault = process.env[OPENED],
+  ): Promise<Obsidian> {
+    const page = await renderer(browser, vault);
     const session = await page.context().newCDPSession(page);
     await session.send("Emulation.setDeviceMetricsOverride", WINDOW);
     if (fresh) await page.reload();
@@ -111,7 +150,99 @@ export class Obsidian {
       // keeps one inside the vault it opened.
       vault.setConfig("trashOption", "local");
     });
-    return new Obsidian(page);
+    return new Obsidian(page, session);
+  }
+
+  /**
+   * Opens a second vault in a window of its own and attaches to it. It
+   * is the same Obsidian: the app holds a window per vault, so a spec
+   * that needs another vault costs no second process.
+   */
+  static async open(from: Obsidian, vault: string): Promise<Obsidian> {
+    const browser = from.page.context().browser();
+    if (browser === null) throw new Error("the attachment has no browser");
+    await from.page.evaluate((at) => {
+      const { ipcRenderer } = window.require("electron") as Bridge;
+      ipcRenderer.sendSync("vault-open", at, false);
+    }, vault);
+    return Obsidian.attach(browser, false, path.basename(vault));
+  }
+
+  /** The sample vault's copy, which the launcher made for the run. */
+  static sample(): string {
+    const copy = process.env[COPY];
+    if (copy === undefined) throw new Error(`${COPY} is not set`);
+    return copy;
+  }
+
+  /**
+   * Sizes the window. The pictures are taken at several widths, and the
+   * renderer is given the metrics rather than the window resized, so a
+   * runner's own display does not reach the shot.
+   */
+  async size(width: number, height: number): Promise<void> {
+    await this.session.send("Emulation.setDeviceMetricsOverride", {
+      ...WINDOW,
+      width,
+      height,
+    });
+  }
+
+  /** Paints the app in one of the two schemes. */
+  async paint(scheme: Scheme): Promise<void> {
+    await this.page.evaluate((theme) => {
+      window.app.changeTheme(theme);
+    }, THEMES[scheme]);
+    await expect(this.page.locator("body")).toHaveClass(
+      new RegExp(`\\btheme-${scheme}\\b`),
+    );
+  }
+
+  /**
+   * Trusts this vault, so its plugins load. Obsidian asks the question
+   * in a dialog the first time a vault is opened, and keeps the answer
+   * in the renderer's own storage under the vault's id. The answer is
+   * written here instead: a dialog nobody answers takes every click
+   * meant for the window under it, and waiting for one to appear is a
+   * race the window can win.
+   */
+  async trust(plugin: string): Promise<void> {
+    await this.page.evaluate(() => {
+      const { appId } = window.app as unknown as { appId: string };
+      window.localStorage.setItem(`enable-plugin-${appId}`, "true");
+    });
+    await this.page.reload();
+    await this.page.waitForFunction(
+      (id) =>
+        window.app?.workspace.layoutReady === true &&
+        window.app.plugins.plugins[id] !== undefined,
+      plugin,
+      { timeout: APPEARING },
+    );
+  }
+
+  /**
+   * Turns off some of Obsidian's own plugins and waits for the status
+   * bar to lose the items they put there.
+   */
+  async quieten(plugins: string[]): Promise<void> {
+    await this.page.evaluate((ids) => {
+      for (const id of ids) {
+        window.app.internalPlugins.getPluginById(id)?.disable();
+      }
+    }, plugins);
+    for (const id of plugins) {
+      await expect(
+        this.page.locator(`${CHROME.status} .plugin-${id}`),
+      ).toHaveCount(0);
+    }
+  }
+
+  /** Shuts this window, which leaves the app running on the vaults still open. */
+  async shut(): Promise<void> {
+    await this.page.evaluate(() => {
+      window.close();
+    });
   }
 
   /** A ribbon action, by the label the plugin gave it. */
@@ -391,23 +522,26 @@ export class Obsidian {
 }
 
 /**
- * Finds the renderer page the vault is open in. The window appears some
+ * Finds the renderer page a vault is open in. The window appears some
  * time after the process starts, so the harness reads the target list
- * until a page has an app on it.
+ * until a page has that vault on it. A run holds a window per vault, so
+ * the name is what tells them apart.
  */
-async function renderer(browser: Browser): Promise<Page> {
+async function renderer(browser: Browser, vault?: string): Promise<Page> {
   const deadline = Date.now() + APPEARING;
   for (;;) {
     for (const context of browser.contexts()) {
       for (const page of context.pages()) {
-        const opened = await page
-          .evaluate(() => window.app?.vault.getName() !== undefined)
-          .catch(() => false);
-        if (opened) return page;
+        const name = await page
+          .evaluate(() => window.app?.vault.getName())
+          .catch(() => undefined);
+        if (name !== undefined && (vault === undefined || name === vault)) {
+          return page;
+        }
       }
     }
     if (Date.now() > deadline) {
-      throw new Error(`no Obsidian window in ${APPEARING}ms`);
+      throw new Error(`no Obsidian window on ${vault ?? "a vault"} in ${APPEARING}ms`);
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }

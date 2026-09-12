@@ -12,6 +12,7 @@ import { Navigator } from "./navigator";
 import { Note } from "./note";
 import { Obsidian } from "./obsidian";
 import { Panel } from "./panel";
+import { Site } from "./site";
 import { Vault } from "./vault";
 
 interface Fixtures {
@@ -31,6 +32,12 @@ interface Fixtures {
 
 interface Shared {
   obsidian: Obsidian;
+  /**
+   * The sample vault, in the site's colors, for the pictures on the
+   * site. One window serves the whole run: opening it typesets a book
+   * of forty-six chapters.
+   */
+  site: Site;
 }
 
 export const test = base.extend<Fixtures, Shared>({
@@ -81,6 +88,15 @@ export const test = base.extend<Fixtures, Shared>({
     await use(vault);
     await vault.restore();
   },
+
+  site: [
+    async ({ obsidian }, use) => {
+      const site = await Site.open(obsidian);
+      await use(site);
+      await site.close();
+    },
+    { scope: "worker" },
+  ],
 
   /**
    * Keeps a screenshot of the window and the trace a retry recorded
