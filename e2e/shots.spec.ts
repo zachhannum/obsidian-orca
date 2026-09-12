@@ -27,6 +27,14 @@ const SCHEMES: Scheme[] = ["dark", "light"];
  */
 const WIDTHS = [1440, 1200, 960];
 
+/**
+ * The narrowest of them, where the navigator and the design panel
+ * together leave the spread too little room to read. The navigator
+ * comes off the picture there, the way an author narrowing a window
+ * puts it away.
+ */
+const NARROW = Math.min(...WIDTHS);
+
 /** The shape of the window, which is what turns a width into a height. */
 const SHAPE = 5 / 8;
 
@@ -156,12 +164,16 @@ test("the landing picture is the whole window, in both schemes, at three widths"
     await site.paint(scheme);
     for (const width of WIDTHS) {
       await sized(site, width, Math.round(width * SHAPE));
+      const shelf = width > NARROW;
+      if (shelf) await site.navigator.reveal();
+      else await site.obsidian.collapse("left");
       await settled(site.book);
 
       // The navigator on the left, the spread in the middle and the
       // design panel on the right, which is the window the artboard
-      // draws.
-      await expect(site.navigator.pane).toBeVisible();
+      // draws. The narrowest window gives the navigator's room to the
+      // spread.
+      await expect(site.navigator.pane).toBeVisible({ visible: shelf });
       await expect(site.panel.panel).toBeVisible();
       await expect(site.book.sheets).toHaveCount(2);
 
