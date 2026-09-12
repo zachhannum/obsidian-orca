@@ -168,37 +168,51 @@ test("the sample vault holds one book, and shares no file with the fixture", asy
   for (const [inside, bytes] of sample) {
     assert.equal(shared.has(bytes), false, `${inside} is the fixture's file too`);
   }
-  assert.ok(sample.has("images/the-scotia-in-dry-dock.jpg"));
+  assert.ok(sample.has("images/a-squid-of-colossal-dimensions.jpg"));
 });
 
 test("each chapter is a note of its own, under one heading that is its title", async () => {
   const note = await read(SAMPLE_BOOK);
   const body = entries(note, "Body");
-  const chapters = body.filter((entry) => entry.role === undefined);
 
-  assert.equal(chapters.length, 46);
   assert.deepEqual(
     body.filter((entry) => entry.role !== undefined).map((entry) => entry.link),
     ["Part One", "Part Two"],
   );
-  for (const { link } of chapters) {
+  const headings = new Map();
+  for (const { link, role } of body) {
+    if (role !== undefined) continue;
     const chapter = await read(`site/sample/${link}.md`);
-    const headings = [...chapter.matchAll(/^#+ (.+)$/gm)].map((found) => found[1]);
-    assert.deepEqual(headings.length, 1, `${link} has ${headings.length} headings`);
+    headings.set(link, [...chapter.matchAll(/^#+ (.+)$/gm)].map((found) => found[1]));
+  }
+  // Every entry in the body is a chapter but the plate, which carries
+  // no words of its own.
+  const chapters = [...headings].filter(([, found]) => found.length > 0);
+  assert.equal(chapters.length, 46);
+  for (const [link, found] of chapters) {
+    assert.equal(found.length, 1, `${link} has ${found.length} headings`);
     // A title with a question mark or a quotation mark in it keeps them
     // in the heading, because a note's name cannot hold them.
-    assert.equal(headings[0].replace(/[?\u201c\u201d]/g, ""), link);
+    assert.equal(found[0].replace(/[?\u201c\u201d]/g, ""), link);
   }
 });
 
-test("Chapter I opens on an engraving the copyright page credits", async () => {
-  const chapter = await read("site/sample/A Shifting Reef.md");
-  const embed = /^!\[\[(.+)\]\]\n\n# A Shifting Reef\n/.exec(chapter);
-  assert.ok(embed, "the note does not open on an embed above its heading");
+test("a plate from the 1871 edition takes the page facing Chapter I", async () => {
+  const body = entries(await read(SAMPLE_BOOK), "Body");
+  const at = body.findIndex((entry) => entry.link === "A Shifting Reef");
+  const plate = body[at - 1];
+  assert.ok(plate?.link, "nothing stands before Chapter I");
+
+  // The note holds the embed and nothing else, so the section takes a
+  // page of its own and the chapter keeps its opening.
+  const note = await read(`site/sample/${plate.link}.md`);
+  const embed = /^!\[\[(.+)\]\]\n$/.exec(note);
+  assert.ok(embed, `${plate.link} is not one embed on its own`);
   await readFile(path.join(root, "site/sample/images", embed[1]));
+  assert.doesNotMatch(await read("site/sample/A Shifting Reef.md"), /^!\[\[/);
 
   const copyright = await read("site/sample/Copyright.md");
-  assert.match(copyright, /\u00c9douard Riou/);
+  assert.match(copyright, /Alphonse de Neuville/);
   assert.match(copyright, /edition of 1871/);
   assert.match(copyright, /public domain/);
 });

@@ -36,6 +36,7 @@ suppress-head-on-openings: true
 # Body
 
 - [[Part One]] `part`
+- [[A squid of colossal dimensions]]
 - [[A Shifting Reef]]
 - [[Pro and Con]]
 - [[I Form My Resolution]]

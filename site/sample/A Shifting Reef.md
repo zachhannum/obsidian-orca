@@ -1,5 +1,3 @@
-![[the-scotia-in-dry-dock.jpg]]
-
 # A Shifting Reef
 
 The year 1866 was signalised by a remarkable incident, a mysterious and
