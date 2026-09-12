@@ -2,14 +2,17 @@ import { execFileSync } from "node:child_process";
 import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { Book } from "./harness/book";
+import { PREVIEW, type Book } from "./harness/book";
 import { SAMPLE } from "./harness/launch";
 import type { Scheme } from "./harness/obsidian";
 import type { Site } from "./harness/site";
 import { expect, test } from "./harness/test";
 
+/** The folder the sample book keeps its notes in. */
+const FOLDER = "Twenty Thousand Leagues";
+
 /** The book the site is set from, and the chapter every picture opens on. */
-const BOOK = "Twenty Thousand Leagues Under the Sea.md";
+const BOOK = `${FOLDER}/Twenty Thousand Leagues Under the Sea.md`;
 const CHAPTER = "A Shifting Reef";
 
 /** The face the sample book is set in, which the vault carries. */
@@ -47,6 +50,49 @@ const PHONE = { width: 660, height: 600 };
 
 /** The window every test starts from, which the widths above depart from. */
 const WINDOW = { width: 1280, height: 800 };
+
+/**
+ * The window the swap pictures are taken in. Both are of the one leaf,
+ * which is the same box in both, so the page can fade one into the
+ * other.
+ */
+const SWAP = { width: 980, height: 620 };
+
+/** The ribbon down the side of the window, which is beside the pane. */
+const RIBBON = 44;
+
+/** The window's own bars above and below the pane. */
+const BARS = 40;
+
+/** Obsidian's own file tree, which the vault picture is of. */
+const EXPLORER = "file-explorer";
+
+/**
+ * The commands that show the tree and open it on the note being read.
+ * The tree is Obsidian's own view, so it is asked for the way the app
+ * asks for it: a leaf made by hand carries none of its contents.
+ */
+const SHOW_TREE = "file-explorer:open";
+
+/** The room the tree is given, which is the width the artboard draws it at. */
+const TREE_WIDTH = 300;
+
+/** The heading the book note's reading order opens with. */
+const ORDER = "# Front matter";
+
+/** The chapter the swap pictures are written from. */
+const WRITING = `${FOLDER}/${CHAPTER}.md`;
+const REVEAL = "file-explorer:reveal-active-file";
+
+/** The editor's own view type, which a chapter is written in. */
+const EDITOR = "markdown";
+
+/** The view orca draws a book note in, which the way back is an action on. */
+const NOTE = "orca-book";
+
+/** The actions in a note's header that hand the leaf between the two views. */
+const AS_BOOK = "Open as book";
+const AS_MARKDOWN = "Open as markdown";
 
 /** The pages the flip-through turns, counted from the spread it opens on. */
 const FLIP = 12;
@@ -203,6 +249,97 @@ test("at phone width the picture is the preview pane alone", async ({
   }
 });
 
+test("the vault picture is the file tree and the book note's own Markdown", async ({
+  site,
+}) => {
+  await arrange(site);
+  // One app runs the whole suite, so the leaves this test opens and the
+  // settings it changes are put back before the next picture is taken.
+  const layout = await site.obsidian.layout();
+  await site.obsidian.still();
+  await site.obsidian.asSource();
+  // The tree draws nothing while its sidebar has no room, and an
+  // earlier picture may have put that sidebar away. Asking for the tree
+  // builds it, and a tree asked for while the sidebar is still moving
+  // comes up empty, so the ask is repeated until one holds rows.
+  await site.obsidian.sidebar(TREE_WIDTH, "left");
+  await expect(async () => {
+    await site.obsidian.command(SHOW_TREE);
+    await expect(site.obsidian.view(EXPLORER)).toContainText(FOLDER, {
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 30_000 });
+  // The book note is opened as Markdown so the picture is of the text
+  // on disk. Opening it also tells the tree which folder to unfold.
+  await site.obsidian.open(BOOK);
+  // Both the book note and the preview offer the way to the Markdown,
+  // so the click is on the book note's own header.
+  await site.obsidian.actionIn(NOTE, AS_MARKDOWN).click();
+  await site.obsidian.command(REVEAL);
+
+  // The note opens on its properties, and the reading order is what the
+  // picture is of, so the note is scrolled to where the two meet.
+  await site.obsidian.scrollTo(ORDER);
+
+  const tree = site.obsidian.view(EXPLORER);
+  const note = site.obsidian.view(EDITOR);
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    // The folder holds the book note beside the chapters it lists, and
+    // the note itself is the Markdown, not a form drawn over it.
+    await expect(tree).toContainText(FOLDER);
+    await expect(note).toContainText("orca-book: 1");
+
+    await expect(tree).toHaveScreenshot(`vault-tree-${scheme}.png`);
+    await expect(note).toHaveScreenshot(`vault-note-${scheme}.png`);
+  }
+
+  await site.obsidian.moving();
+  await site.obsidian.asRendered();
+  await site.obsidian.reopen(layout);
+});
+
+test("the swap pictures are one window, written and then set", async ({
+  site,
+}) => {
+  await arrange(site);
+  const layout = await site.obsidian.layout();
+  // The note is read the way a vault is read by default, whatever an
+  // earlier picture left behind.
+  await site.obsidian.asRendered();
+  await site.obsidian.still();
+  await sized(site, SWAP.width, SWAP.height);
+  // Both sidebars come off: the picture is the pane alone, which is
+  // what swaps. The design panel empties while a chapter is being
+  // written, so it has no place in a picture of the two states.
+  await site.obsidian.put("left");
+  await site.obsidian.put("right");
+  // The pane is the picture, so its size is the picture's size. A pane
+  // still holding room for a sidebar makes a picture of another shape.
+  const pane = { width: SWAP.width - RIBBON, height: SWAP.height - BARS };
+  await expect.poll(async () => site.book.panes.boundingBox()).toMatchObject(pane);
+
+  const editor = site.obsidian.view(EDITOR);
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await expect(site.book.panes).toHaveScreenshot(`read-${scheme}.png`);
+
+    // The one leaf, handed to the editor and back by the actions in the
+    // headers. The leaf lands on the note behind the page on screen,
+    // which is the plate, so the chapter is opened in it.
+    await site.obsidian.actionIn(PREVIEW, AS_MARKDOWN).click();
+    await expect(editor).toBeVisible();
+    await site.obsidian.open(WRITING);
+    await expect(editor).toContainText(CHAPTER);
+    await expect(editor).toHaveScreenshot(`write-${scheme}.png`);
+    await site.obsidian.actionIn(EDITOR, AS_BOOK).click();
+  }
+
+  await site.obsidian.moving();
+  await site.obsidian.reopen(layout);
+});
+
 test("a docs picture crops to one group of the design panel", async ({
   site,
 }) => {
@@ -260,5 +397,7 @@ test("the flip-through's pages come from the book's own PDF", async ({
 // What this spec does not cover: the pictures on any platform but the
 // one CI takes them on, since a run elsewhere sets the same pages and
 // rasterizes them differently; the export dialog, which orca has not
-// built, so the bytes come off the session the preview is reading; and
-// whether the landing page uses the pictures, which the page answers.
+// built, so the bytes come off the session the preview is reading;
+// whether the landing page uses the pictures, which the page answers;
+// and what the design panel holds while a chapter rather than a book is
+// being read, which is why the swap pictures are of the pane alone.

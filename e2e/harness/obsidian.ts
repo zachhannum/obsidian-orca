@@ -29,6 +29,17 @@ interface Config {
   setConfig(key: string, value: unknown): void;
 }
 
+/** The editor a markdown view holds, which the API does not declare on a leaf. */
+interface Editing {
+  editor: {
+    getValue(): string;
+    scrollIntoView(
+      range: { from: { line: number; ch: number }; to: { line: number; ch: number } },
+      center: boolean,
+    ): void;
+  };
+}
+
 /** The scheme Obsidian is painted in, and the theme name it goes by. */
 export type Scheme = "dark" | "light";
 const THEMES: Record<Scheme, string> = {
@@ -93,12 +104,19 @@ const CHROME = {
   suggestion: ".suggestion-item",
   notice: ".notice",
   status: ".status-bar",
+  tooltip: ".tooltip",
 };
 
 export type Side = "left" | "right";
 
 /** The chrome that floats over a pane, which a photograph of one drops. */
 export const FLOATING = CHROME.status;
+
+/** The chrome that appears under the pointer, which a picture drops too. */
+const HOVERED = CHROME.tooltip;
+
+/** The id of the style tag that holds a window still for a picture. */
+const STILL = "orca-still";
 
 /**
  * The size every page is typeset and photographed at. Obsidian opens
@@ -265,6 +283,15 @@ export class Obsidian {
     return this.page.locator(CHROME.action(label));
   }
 
+  /**
+   * The same action, inside the pane a view of this type is drawn in.
+   * Two views can offer an action under one label, so a click that must
+   * land on one of them names the view it belongs to.
+   */
+  actionIn(type: string, label: string): Locator {
+    return this.view(type).locator(CHROME.action(label));
+  }
+
   /** A leaf's own tab, by the name the view is displayed under. */
   tab(label: string): Locator {
     return this.page.locator(CHROME.tab(label));
@@ -348,6 +375,80 @@ export class Obsidian {
   }
 
   /**
+   * Shows a note as the text on disk: the editor in source mode, with
+   * the properties written out rather than drawn as a table. A picture
+   * of a note's own Markdown is of the file, not of a form over it.
+   */
+  async asSource(): Promise<void> {
+    await this.page.evaluate(() => {
+      const vault = window.app.vault as unknown as Config;
+      vault.setConfig("livePreview", false);
+      vault.setConfig("propertiesInDocument", "source");
+      // The app reads its editor settings once, on being told to.
+      window.app.workspace.updateOptions();
+    });
+  }
+
+  /**
+   * Scrolls the open editor to the line that begins with this text, and
+   * puts it in the middle of the pane.
+   */
+  async scrollTo(said: string): Promise<void> {
+    await this.page.evaluate((text) => {
+      const [leaf] = window.app.workspace.getLeavesOfType("markdown");
+      const editor = (leaf?.view as unknown as Editing | undefined)?.editor;
+      if (editor === undefined) throw new Error("no editor is open");
+      const at = editor
+        .getValue()
+        .split("\n")
+        .findIndex((line) => line.startsWith(text));
+      if (at < 0) throw new Error(`the note has no line starting ${text}`);
+      const place = { line: at, ch: 0 };
+      editor.scrollIntoView({ from: place, to: place }, true);
+    }, said);
+  }
+
+  /**
+   * Hides the chrome that comes and goes: the status bar, which reads
+   * from whichever pane is under it, the tooltip the pointer raises,
+   * and the scrollbars, which fade. A picture of any of them is a
+   * picture that differs from one run to the next. The pointer goes to
+   * the corner as well, so nothing under it is drawn as hovered.
+   */
+  async still(): Promise<void> {
+    await this.page.mouse.move(0, 0);
+    await this.page.evaluate(
+      (what) => {
+        const style = document.createElement("style");
+        style.id = what.id;
+        // The app styles its own scrollbars, so this has to outrank it.
+        style.textContent =
+          `${what.floating}, ${what.hovered} { visibility: hidden }` +
+          "*::-webkit-scrollbar { display: none !important }";
+        document.head.append(style);
+      },
+      { id: STILL, floating: FLOATING, hovered: HOVERED },
+    );
+  }
+
+  /** Puts that chrome back. */
+  async moving(): Promise<void> {
+    await this.page.evaluate((id) => {
+      document.getElementById(id)?.remove();
+    }, STILL);
+  }
+
+  /** Puts the editor back the way a vault is read by default. */
+  async asRendered(): Promise<void> {
+    await this.page.evaluate(() => {
+      const vault = window.app.vault as unknown as Config;
+      vault.setConfig("livePreview", true);
+      vault.setConfig("propertiesInDocument", "visible");
+      window.app.workspace.updateOptions();
+    });
+  }
+
+  /**
    * Collapses a sidebar. The navigator is in the left one and the
    * design panel is in the right one.
    */
@@ -355,6 +456,15 @@ export class Obsidian {
     await this.page.evaluate((on) => {
       const { leftSplit, rightSplit } = window.app.workspace;
       (on === "left" ? leftSplit : rightSplit).collapse();
+    }, side);
+  }
+
+  /** Collapses a sidebar and waits for it to be out of the way. */
+  async put(side: Side): Promise<void> {
+    await this.collapse(side);
+    await this.page.waitForFunction((on) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      return (on === "left" ? leftSplit : rightSplit).collapsed;
     }, side);
   }
 
@@ -367,19 +477,22 @@ export class Obsidian {
   }
 
   /**
-   * Sets the right sidebar's width in pixels, and returns the width it
-   * had. The API declares neither the width nor the setter.
+   * Opens a sidebar and sets its width in pixels, and returns the width
+   * it had. The API declares neither the width nor the setter.
    */
-  async sidebar(width: number): Promise<number> {
-    return this.page.evaluate((size) => {
-      const split = window.app.workspace.rightSplit as unknown as {
+  async sidebar(width: number, side: Side = "right"): Promise<number> {
+    return this.page.evaluate((want) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      const split = (want.side === "left" ? leftSplit : rightSplit) as unknown as {
         size: number;
         setSize(size: number): void;
+        expand(): void;
       };
       const had = split.size;
-      split.setSize(size);
+      split.expand();
+      split.setSize(want.width);
       return had;
-    }, width);
+    }, { width, side });
   }
 
   /** One row of a fuzzy pick's suggestions. */
