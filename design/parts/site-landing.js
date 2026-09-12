@@ -42,8 +42,7 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state || {};
     const n = s.n ?? 0, anim = s.anim ?? -1;
-    const align = s.align ?? "justify", hyph = s.hyph ?? true, mark = s.mark ?? "ornament", glyph = s.glyph ?? 1;
-    const G = ["❧", "⁂", "§", "✦"];
+    const align = s.align ?? "justify", hyph = s.hyph ?? true;
     const go = (d) => () => {
       const m = Math.max(0, Math.min(3, n + d));
       if (m !== n) this.setState({ n: m, anim: d > 0 ? n : m });
@@ -51,7 +50,6 @@ class Component extends DCLogic {
     const next = go(1), prev = go(-1);
     const leaf = (k) => ({ t: k < n ? "rotateY(-180deg)" : "rotateY(0deg)", z: k === anim ? 40 : k < n ? 20 + k : 10 + (3 - k), click: k < n ? prev : next });
     const [l0, l1, l2] = [0, 1, 2].map(leaf);
-    const br = mark === "space" ? { h: "10px", t: "", s: "8px", ls: "0" } : mark === "word" ? { h: "20px", t: "* * *", s: "7px", ls: ".3em" } : { h: "20px", t: G[glyph], s: "10px", ls: "0" };
     return {
       next, prev,
       folio: ["Title page · pages 2–3", "Contents · pages 4–5", "Chapter one · pages 6–7", "Running heads · pages 8–9"][n],
@@ -62,10 +60,6 @@ class Component extends DCLogic {
       justOn: align === "justify" ? "on" : "", raggedOn: align === "left" ? "on" : "",
       setJust: () => this.setState({ align: "justify" }), setRagged: () => this.setState({ align: "left" }),
       hyphOff: hyph ? "" : "off", toggleHyph: () => this.setState({ hyph: !hyph }),
-      mSpace: mark === "space" ? "on" : "", mOrn: mark === "ornament" ? "on" : "", mWord: mark === "word" ? "on" : "",
-      setSpace: () => this.setState({ mark: "space" }), setOrn: () => this.setState({ mark: "ornament" }), setWord: () => this.setState({ mark: "word" }),
-      glyphs: G.map((ch, i) => ({ ch, ring: i === glyph && mark === "ornament" ? "box-shadow:0 0 0 1.5px #86cfe0" : "", pick: () => this.setState({ glyph: i, mark: "ornament" }) })),
-      brH: br.h, brText: br.t, brSize: br.s, brLs: br.ls,
     };
   }
 }

@@ -173,7 +173,7 @@
 </div>
   </div>
   <div style="position:relative;margin-top:220px;padding:0 64px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:72px;align-items:center">
-    <div style="display:flex;flex-direction:column;gap:20px;"><h2 class="row-h">Design <i>in the panel</i></h2><p class="sec-p" style="max-width:460px">Trim, type, headings, chapter openings and scene breaks each have a control, and the page resets as you change them.</p></div>
+    <div style="display:flex;flex-direction:column;gap:20px;"><h2 class="row-h">Design <i>in the panel</i></h2><p class="sec-p" style="max-width:460px">Trim, margins, type, headings and chapter openings each have a control, and the page resets as you change them.</p></div>
     <div style="display:flex;gap:44px;align-items:center">
     <div style="display:flex;flex-direction:column;gap:12px"><div style="width:280px;height:538px;overflow:hidden;flex:none;border-radius:8px"><div class="o-frag">
     <div class="o-grp"><div class="o-gh">Page</div>
@@ -186,24 +186,23 @@
         <div style="grid-column:3;display:flex;flex-direction:column;gap:3px"><div class="o-field">1in</div><span class="o-unit" style="font-size:11px;color:var(--o-faint)">bottom</span></div>
         <span class="o-reset" style="grid-column:4;grid-row:1"></span>
       </div>
-      <div class="o-row"><div class="o-tog"></div><span class="o-said">Mirror the margins on facing pages</span><span class="o-reset"></span></div>
     </div>
     <div class="o-grp" style="margin-top:18px"><div class="o-gh">Text</div>
-      <div class="o-row"><span class="o-lab">Font</span><div class="o-field o-grow o-def"><span>EB Garamond</span><span style="margin-left:auto;display:flex"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div><span class="o-reset"></span></div>
-      <div class="o-row"><span class="o-lab">Size</span><div class="o-num"><div class="o-field">10.5pt</div><div class="o-step"><div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></div><div><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div></div></div><span class="o-reset"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span></div>
+      <div class="o-row"><span class="o-lab">Size</span><div class="o-field">10.5pt</div><span class="o-reset"></span></div>
+      <div class="o-row"><span class="o-lab">Line spacing</span><div class="o-field">14pt</div><span class="o-reset"></span></div>
       <div class="o-row"><span class="o-lab">Setting</span><div class="o-seg"><div class="{{justOn}}" onClick="{{setJust}}" style="cursor:pointer">Justified</div><div class="{{raggedOn}}" onClick="{{setRagged}}" style="cursor:pointer">Ragged right</div></div><span class="o-reset"></span></div>
+      <div class="o-row"><span class="o-lab">First-line indent</span><div class="o-field">1.2em</div><span class="o-reset"></span></div>
       <div class="o-row"><span class="o-lab">Hyphenate</span><div class="o-tog {{hyphOff}}" onClick="{{toggleHyph}}" style="cursor:pointer"></div><span class="o-reset"></span></div>
     </div>
-    <div class="o-grp" style="margin-top:18px"><div class="o-gh">Scene breaks</div>
-      <div class="o-row"><span class="o-lab">Mark</span><div class="o-seg"><div class="{{mSpace}}" onClick="{{setSpace}}" style="cursor:pointer">Space</div><div class="{{mOrn}}" onClick="{{setOrn}}" style="cursor:pointer">Ornament</div><div class="{{mWord}}" onClick="{{setWord}}" style="cursor:pointer">Word</div></div><span class="o-reset"></span></div>
-      <div class="o-row"><span class="o-lab">Glyph</span><div style="display:flex;gap:5px"><sc-for list="{{glyphs}}" as="g" hint-placeholder-count="4"><div class="o-field" onClick="{{g.pick}}" style="width:34px;justify-content:center;cursor:pointer;font-family:'EB Garamond',Georgia,serif;font-size:14px;{{g.ring}}">{{g.ch}}</div></sc-for></div><span class="o-reset"></span></div>
+    <div class="o-grp" style="margin-top:18px"><div class="o-gh">Headings</div>
+      <div class="o-row"><span class="o-lab">Size</span><div class="o-field">16pt</div><span class="o-reset"></span></div>
+      <div class="o-row"><span class="o-lab">Alignment</span><div class="o-seg"><div>Left</div><div class="on">Center</div><div>Right</div></div><span class="o-reset"></span></div>
     </div>
   </div></div><span style="font-family:'DM Mono',monospace;font-size:12px;color:#66707a">These controls work. Try them.</span></div>
     <div style="width:348px;height:538px;position:relative;flex:none"><div style="position:absolute;left:0;top:0;transform:scale(1.3);transform-origin:0 0"><div style="box-shadow:0 30px 60px -20px rgba(0,0,0,.85)"><div class="pg r" lang="en">
     <div class="pg-run">A Shifting Reef</div>
     <div class="pg-text" style="height:330px;text-align:{{align}};hyphens:{{hyph}};-webkit-hyphens:{{hyph}}">
       <p class="first">On the 20th of July, 1866, the steamer Governor Higginson, of the Calcutta and Burnach Steam Navigation Company, had met this moving mass five miles off the east coast of Australia. Captain Baker thought at first that he was in the presence of an unknown sandbank; he even prepared to determine its exact position when two columns of water, projected by the mysterious object, shot with a hissing noise a hundred and fifty feet up into the air. Now, unless the sandbank had been submitted to the intermittent eruption of a geyser, the Governor Higginson had to do neither more nor less than with an aquatic mammal, unknown till then, which threw up from its blow-holes columns of water mixed with air and vapour.</p>
-      <div style="text-align:center;text-indent:0;height:{{brH}};line-height:{{brH}};font-size:{{brSize}};letter-spacing:{{brLs}}">{{brText}}</div>
       <p class="first">Similar facts were observed on the 23rd of July in the same year, in the Pacific Ocean, by the Columbus, of the West India and Pacific Steam Navigation Company. But this extraordinary creature could transport itself from one place to another with surprising velocity; as, in an interval of three days, the Governor Higginson and the Columbus had observed it at two different points of the chart, separated by a distance of more than seven hundred nautical leagues.</p>
       <p>Fifteen days later, two thousand miles farther off, the Helvetia, of the Compagnie-Nationale, and the Shannon, of the Royal Mail Steamship Company, sailing to windward in that portion of the Atlantic lying between the United States and Europe, respectively signalled the monster to each other in 42° 15′ N. lat. and 60° 35′ W. long.</p>
     </div>

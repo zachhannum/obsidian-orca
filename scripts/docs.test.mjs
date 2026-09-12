@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { glob, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import esbuild from "esbuild";
+import { decodeDisplayList, initWasm, render } from "fleuron";
 import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
@@ -306,6 +308,7 @@ async function moduleOf(file, globals = {}) {
   vm.runInNewContext(built.outputFiles[0].text, {
     module: holder,
     exports: holder.exports,
+    structuredClone,
     ...globals,
   });
   return holder.exports;
@@ -453,7 +456,8 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
   // The page names the groups and hands them to the component whole. No
   // row, label or choice is written out here, so none can fall behind
   // the panel's.
-  assert.match(landing, /GROUPS\.map\(\(one: Group\) => one\.name\)/);
+  assert.match(landing, /GROUPS\.map\(\(group: Group\) => \(\{/);
+  assert.match(landing, /rows: group\.rows\.filter\(\(row\) => row\.of\.some\(offered\)\)/);
   assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} faces=\{FACES\} \/>/);
 
   // Every control those groups hold is one the component draws, and a
@@ -593,3 +597,82 @@ test("the footer carries the tail mark in one flat colour", async () => {
 // pages themselves answer. Nor how the landing page looks: the tier
 // reads its source, and a browser is what shows the sea running through
 // the title.
+
+/** The chapter the demo sets, and the note that designs it. */
+const DEMO_CHAPTER = `${SAMPLE_DIR}/A Shifting Reef.md`;
+
+/**
+ * Sets the demo's first page under a design and hands back what the
+ * engine put on it. Two designs that lay out the same page give the
+ * same string.
+ */
+function pageUnder(engine, design) {
+  const css = engine
+    .designSheets(design, engine.setting)
+    .map((sheet) => sheet.css)
+    .join("\n");
+  return JSON.stringify(decodeDisplayList(render(engine.text, css)).pages[0]);
+}
+
+test("every control the demo offers changes the page the demo shows", async () => {
+  const { GROUPS, atLevel, trims, GLYPHS, withKey } = await moduleOf("src/ui/groups.ts");
+  const { readDesign, writeDesign } = await moduleOf("src/style/design.ts");
+  const { effective } = await moduleOf("src/style/theme.ts");
+  const { designSheets } = await moduleOf("src/style/sheet.ts");
+  const { readModel } = await moduleOf("src/book/model.ts");
+  const { WORKS } = await moduleOf("site/src/scripts/demo.ts");
+
+  const require = createRequire(import.meta.url);
+  const wasm = path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
+  await initWasm({ module_or_path: await readFile(path.join(wasm, "fleuron_bg.wasm")) });
+
+  const { design, metadata } = readModel(await read(SAMPLE_BOOK)).book;
+  const engine = {
+    designSheets,
+    text: await read(DEMO_CHAPTER),
+    setting: { roles: ["chapter"], title: metadata.title, author: metadata.author },
+  };
+  // The demo opens on the design the panel shows, defaults filled in.
+  const opens = readDesign(writeDesign(effective(design)));
+  const first = pageUnder(engine, opens);
+
+  /** A value for a key other than the one the design holds. */
+  const other = (key, control) => {
+    const held = String(writeDesign(opens)[key] ?? "");
+    if (control.kind === "flag") return writeDesign(opens)[key] !== true;
+    if (control.kind === "trim") return trims("in").find((c) => c.value !== held)?.value;
+    if (control.kind === "glyph") return GLYPHS.find((glyph) => glyph !== held);
+    if (control.choices?.length) return control.choices.find((c) => c.value !== held)?.value;
+    if (control.kind === "length") return held.endsWith("em") ? "3em" : "22pt";
+    if (control.kind === "count") return String(Number(held || "0") + 5);
+    return undefined;
+  };
+
+  const controls = new Map();
+  for (const group of GROUPS) {
+    for (const row of group.rows) {
+      for (const control of row.of) {
+        if (control.key === undefined) continue;
+        controls.set(atLevel(control.key, 1), control);
+      }
+    }
+  }
+
+  assert.ok(WORKS.length > 0, "the demo offers no controls");
+  for (const key of WORKS) {
+    const control = controls.get(key);
+    assert.ok(control, `the design panel has no ${key}`);
+    const value = other(key, control);
+    assert.notEqual(value, undefined, `no other value to set ${key} to`);
+    assert.notEqual(
+      pageUnder(engine, withKey(opens, key, value)),
+      first,
+      `${key} is offered by the demo but changes nothing on the page it shows`,
+    );
+  }
+});
+
+// What this file does not cover: the pictures themselves, which the
+// screenshot spec takes and compares; and whether a control the demo
+// leaves out would change the page, since a book with a scene break or
+// a facing page would answer differently.

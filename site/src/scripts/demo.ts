@@ -28,6 +28,34 @@ export interface Demo {
   source: Source;
 }
 
+/**
+ * The controls the demo offers: the ones that change the page it shows.
+ *
+ * The panel offers more, and the rest are no use here. A scene break
+ * needs a scene break in the chapter, mirrored margins and a running
+ * head need the facing page, and a chapter that begins on the right
+ * needs a chapter before it. A test sets the page with each of these
+ * changed and fails on one the page does not answer.
+ */
+export const WORKS: readonly string[] = [
+  'trim',
+  'margin-inside',
+  'margin-outside',
+  'margin-top',
+  'margin-bottom',
+  'body-size',
+  'body-line-spacing',
+  'body-align',
+  'body-first-line-indent',
+  'body-hyphens',
+  'heading-1-size',
+  'heading-1-align',
+  'chapter-space-above',
+  'chapter-space-below',
+  'chapter-drop-cap',
+  'suppress-head-on-openings',
+];
+
 /** Calls `load` when the demo is worth the several megabytes it costs. */
 export type Mount = (load: () => void) => void;
 
