@@ -420,37 +420,51 @@ test("with reduced motion on, the sea, the specks and the pane swap hold still",
   assert.equal(drawn.length, 1, "the sea drew more than the one still surface");
 });
 
-test("the design demo is drawn from the panel's own table, and sets the page", async () => {
+test("the design demo is the plugin's own panel over the plugin's own engine", async () => {
+  const { GLYPHS, GROUPS, trims } = await moduleOf("src/ui/groups.ts");
   const demo = await moduleOf("site/src/scripts/demo.ts");
-  const { GLYPHS, GROUPS } = await moduleOf("src/ui/groups.ts");
-  const opens = { align: "justify", hyphens: true, mark: "ornament", glyph: 1 };
 
-  assert.equal(demo.page(opens, GLYPHS).align, "justify");
-  assert.equal(demo.page(opens, GLYPHS).hyphens, "auto");
-  assert.equal(demo.page(opens, GLYPHS).mark.text, GLYPHS[1]);
-  assert.equal(demo.page({ ...opens, align: "left" }, GLYPHS).align, "left");
-  assert.equal(demo.page({ ...opens, hyphens: false }, GLYPHS).hyphens, "manual");
-  assert.equal(demo.page({ ...opens, mark: "space" }, GLYPHS).mark.text, "");
-  assert.equal(demo.page({ ...opens, mark: "word" }, GLYPHS).mark.text, demo.WORD);
-  assert.equal(demo.page({ ...opens, glyph: 3 }, GLYPHS).mark.text, GLYPHS[3]);
+  // A choice writes the value it stands for. A switch writes the
+  // opposite of the one the design holds, which is what a switch is.
+  const design = demo.opens({ design: { "body-hyphens": true } });
+  assert.equal(demo.clicked(design, "body-align", "left"), "left");
+  assert.equal(demo.clicked(design, "body-hyphens", undefined), false);
+  assert.equal(demo.clicked(demo.opens({ design: {} }), "body-hyphens", undefined), true);
+
+  // The page the demo sets is the engine's, not the browser's. The
+  // sheets it sends are the ones the plugin generates.
+  const typeset = await read("site/src/scripts/typeset.ts");
+  assert.match(typeset, /import \{ designSheets \} from '@\/style\/sheet'/);
+  assert.match(typeset, /new Session\(serialized\(/);
+  assert.match(typeset, /styleOp\(designSheets\(/);
+  assert.match(typeset, /paintPage\(page, \{ fonts: reading\.fonts/);
+  // Nothing about the page is drawn by CSS: the old fake page is gone.
+  assert.doesNotMatch(landing, /class="pg-text"|class="pg r"|data-demo-text|data-demo-mark/);
+
+  // The site sets its pages with the engine the plugin is pinned to.
+  const plugin = JSON.parse(await read("package.json"));
+  const site = JSON.parse(await read("site/package.json"));
+  assert.equal(
+    site.dependencies.fleuron,
+    plugin.dependencies.fleuron,
+    "the site and the plugin are pinned to different fleurons",
+  );
 
   // The page names the groups and hands them to the component whole. No
   // row, label or choice is written out here, so none can fall behind
   // the panel's.
   assert.match(landing, /\['Text', 'Scene breaks'\]\.map\(/);
-  assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} driven=\{driven\} \/>/);
-  for (const key of ["body-align", "body-hyphens", "scene-break-mark", "scene-break-ornament"]) {
-    assert.match(landing, new RegExp(`'${key}': '`), `the demo drives no ${key}`);
-  }
+  assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} faces=\{FACES\} \/>/);
 
-  // Every control those two groups hold is one the component draws, and
-  // a kind it cannot draw stops the site's build rather than going out
-  // as a panel the plugin does not have.
+  // Every control those groups hold is one the component draws, and a
+  // kind it cannot draw stops the site's build rather than going out as
+  // a panel the plugin does not have.
   const component = await read("site/src/components/PanelGroup.astro");
   const drawn = /const DRAWN = new Set\(\[([^\]]+)\]\)/
     .exec(component)[1]
     .split(",")
-    .map((kind) => kind.trim().replace(/'/g, ""));
+    .map((kind) => kind.trim().replace(/'/g, ""))
+    .filter(Boolean);
   for (const name of ["Text", "Scene breaks"]) {
     const group = GROUPS.find((one) => one.name === name);
     assert.ok(group, `the panel has no ${name} group`);
@@ -461,7 +475,12 @@ test("the design demo is drawn from the panel's own table, and sets the page", a
       }
     }
   }
-  assert.match(component, /throw new Error\(`the \$\{group\.name\} group has a/);
+  assert.match(component, /throw new Error\(\s*`the \$\{group\.name\} group has a/);
+
+  // Every control carries the key it writes, so the script works them
+  // all rather than the few it knows by name.
+  assert.match(component, /data-key=\{control\.key\}/);
+  assert.ok(GLYPHS.length > 0 && trims("in").length > 0);
 });
 
 test("the sections that show orca's own surfaces show photographs of them", async () => {

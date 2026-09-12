@@ -1,128 +1,125 @@
 /**
- * The working part of the design panel, and the page it sets. The
- * controls are drawn from the plugin's own table, so this file names no
- * control of its own: it reads the design the page opens on, and the
- * ornaments on offer, off the markup.
+ * The working part of the design panel, and the page the engine sets
+ * from it.
+ *
+ * Every control writes one design key, the key the plugin's panel
+ * writes, and the design reaches the engine as the sheets the plugin
+ * generates. So a control here does to the page what the same control
+ * does in Obsidian.
  */
+import { withKey } from '@/ui/groups';
+import { readDesign, writeDesign, type Design, type Written } from '@/style/design';
+import type { Setting } from '@/style/generated';
+import type { Source, Typeset } from './typeset';
 
-/** The marks a scene break prints, as the panel names them. */
-export type Mark = 'space' | 'ornament' | 'word';
-
-/** The word the demo's book sets a scene break in. */
-export const WORD = '* * *';
-
-/** The four keys the demo writes. */
-export interface Design {
-  /** `body-align`. */
-  align: 'justify' | 'left';
-  /** `body-hyphens`. */
-  hyphens: boolean;
-  /** `scene-break-mark`. */
-  mark: Mark;
-  /** `scene-break-ornament`, as an index into the ornaments on offer. */
-  glyph: number;
+/** What the demo needs to set a page, which the page hands it. */
+export interface Demo {
+  /** The design the book note sets, as its properties. */
+  design: Record<string, Written>;
+  /** The sections the book crosses, which a running head names. */
+  setting: Setting;
+  /** The chapter the page is set from. */
+  source: Source;
 }
 
-/** The page a design sets, as the properties the page is drawn with. */
-export interface Page {
-  align: string;
-  hyphens: 'auto' | 'manual';
-  /** The scene break: what it prints, and the band it prints inside. */
-  mark: { text: string; height: string; size: string; spacing: string };
+/** Calls `load` when the demo is worth the several megabytes it costs. */
+export type Mount = (load: () => void) => void;
+
+/** The design the demo opens on, which is the book note's own. */
+export function opens(demo: Demo): Design {
+  return readDesign(demo.design);
 }
 
-/** Sets the page from a design, with the ornaments the panel offers. */
-export function page(design: Design, ornaments: readonly string[]): Page {
-  const mark =
-    design.mark === 'space'
-      ? { text: '', height: '10px', size: '8px', spacing: '0' }
-      : design.mark === 'word'
-        ? { text: WORD, height: '20px', size: '7px', spacing: '.3em' }
-        : {
-            text: ornaments[design.glyph] ?? ornaments[0] ?? '',
-            height: '20px',
-            size: '10px',
-            spacing: '0',
-          };
-  return {
-    align: design.align === 'justify' ? 'justify' : 'left',
-    hyphens: design.hyphens ? 'auto' : 'manual',
-    mark,
-  };
+/**
+ * The value a control writes when it is clicked. A choice writes the
+ * value it stands for, and a switch writes the opposite of the one the
+ * design holds.
+ */
+export function clicked(
+  design: Design,
+  key: string,
+  value: string | undefined
+): Written | undefined {
+  if (value !== undefined) return value;
+  return writeDesign(design)[key] === true ? false : true;
 }
 
-/** The design the markup says the page opens on, which the book note sets. */
-export function opens(root: HTMLElement): Design {
-  const said = root.dataset;
-  return {
-    align: said['align'] === 'left' ? 'left' : 'justify',
-    hyphens: said['hyphens'] === 'true',
-    mark: said['mark'] === 'space' || said['mark'] === 'word' ? said['mark'] : 'ornament',
-    glyph: Number(said['glyph'] ?? 0),
-  };
-}
+/** Runs the controls over a page the engine sets. */
+export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
+  let design = opens(demo);
+  let typeset: Typeset | undefined;
+  const controls = [...root.querySelectorAll<HTMLElement>('[data-key]')];
 
-/** The ornaments the glyph control offers, in the order it draws them. */
-export function ornamentsOf(root: HTMLElement): string[] {
-  return [...root.querySelectorAll<HTMLElement>('[data-set^="glyph="]')].map((control) =>
-    (control.textContent ?? '').trim()
-  );
-}
-
-/** Runs the controls, and sets the page from them. */
-export function startDemo(root: HTMLElement): void {
-  const design = opens(root);
-  const ornaments = ornamentsOf(root);
-  const text = root.querySelector<HTMLElement>('[data-demo-text]');
-  const mark = root.querySelector<HTMLElement>('[data-demo-mark]');
-
-  const paint = () => {
-    const set = page(design, ornaments);
-    if (text !== null) {
-      text.style.setProperty('text-align', set.align);
-      text.style.setProperty('hyphens', set.hyphens);
-      text.style.setProperty('-webkit-hyphens', set.hyphens);
-    }
-    if (mark !== null) {
-      mark.textContent = set.mark.text;
-      mark.style.height = set.mark.height;
-      mark.style.lineHeight = set.mark.height;
-      mark.style.fontSize = set.mark.size;
-      mark.style.letterSpacing = set.mark.spacing;
-    }
-    for (const control of root.querySelectorAll<HTMLElement>('[data-set]')) {
-      const [key, value] = (control.dataset['set'] ?? '').split('=');
-      const on =
-        key === 'hyphens'
-          ? design.hyphens
-          : key === 'align'
-            ? design.align === value
-            : key === 'mark'
-              ? design.mark === value
-              : design.mark === 'ornament' && String(design.glyph) === value;
+  /** Draws every control in the state the design holds. */
+  const shown = (): void => {
+    const properties = writeDesign(design);
+    for (const control of controls) {
+      const key = control.dataset['key'] ?? '';
+      const value = control.dataset['value'];
+      const held = properties[key];
+      const on = value === undefined ? held === true : String(held) === value;
       control.classList.toggle('on', on);
-      // A toggle shows its state the other way round: it is a switch,
-      // not a choice among several.
-      if (key === 'hyphens') control.classList.toggle('off', !on);
-      if (control instanceof HTMLButtonElement) control.setAttribute('aria-pressed', String(on));
+      // A switch shows its state the other way round: it is not a
+      // choice among several.
+      if (control.dataset['kind'] === 'flag') control.classList.toggle('off', !on);
+      if (control instanceof HTMLButtonElement) {
+        control.setAttribute('aria-pressed', String(on));
+      }
+      const said = held === undefined ? '' : String(held);
+      if (control instanceof HTMLInputElement && control.value !== said) {
+        control.value = said;
+      }
     }
   };
 
-  for (const control of root.querySelectorAll<HTMLElement>('[data-set]')) {
+  const write = (key: string, value: Written | undefined): void => {
+    const next = withKey(design, key, value);
+    if (next === design) return;
+    design = next;
+    shown();
+    void typeset?.set(design);
+  };
+
+  for (const control of controls) {
+    const key = control.dataset['key'] ?? '';
+    if (control instanceof HTMLInputElement) {
+      control.addEventListener('input', () => {
+        write(key, control.value === '' ? undefined : control.value);
+      });
+      continue;
+    }
     control.addEventListener('click', () => {
-      const [key, value = ''] = (control.dataset['set'] ?? '').split('=');
-      if (key === 'align') design.align = value === 'left' ? 'left' : 'justify';
-      if (key === 'hyphens') design.hyphens = !design.hyphens;
-      if (key === 'mark' && (value === 'space' || value === 'ornament' || value === 'word')) {
-        design.mark = value;
-      }
-      if (key === 'glyph') {
-        design.glyph = Number(value);
-        design.mark = 'ornament';
-      }
-      paint();
+      write(key, clicked(design, key, control.dataset['value']));
     });
   }
 
-  paint();
+  shown();
+
+  const into = root.querySelector<HTMLElement>('[data-demo-page]');
+  if (into === null) return;
+  mount(() => {
+    void import('./typeset').then(async ({ startTypeset }) => {
+      typeset = await startTypeset(into, demo.source, demo.setting, design);
+    });
+  });
+}
+
+/**
+ * Loads the demo when it comes into view, and straight away where the
+ * browser cannot say. The module is several megabytes, and a reader who
+ * never reaches the demo should not pay for it.
+ */
+export function whenSeen(root: HTMLElement): Mount {
+  return (load) => {
+    if (typeof IntersectionObserver !== 'function') {
+      load();
+      return;
+    }
+    const watch = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      watch.disconnect();
+      load();
+    });
+    watch.observe(root);
+  };
 }

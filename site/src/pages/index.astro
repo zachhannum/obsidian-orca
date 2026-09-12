@@ -4,10 +4,11 @@ import type { ImageMetadata } from 'astro';
 import { readModel } from '@/book/model';
 import { writeDesign } from '@/style/design';
 import { effective } from '@/style/theme';
-import { GLYPHS, GROUPS, type Group } from '@/ui/groups';
+import { GROUPS, type Group } from '@/ui/groups';
 // The book note is read at build time, so the panel below shows what the
 // plugin would show for the very book the pictures are of.
 import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
+import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/panel.css';
@@ -17,7 +18,6 @@ import Mark from '../components/Mark.astro';
 import ThemeBoot from '../components/ThemeBoot.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import PanelGroup from '../components/PanelGroup.astro';
-import { page as setPage, type Design as Sets } from '../scripts/demo';
 import { FIRST, folio } from '../scripts/flip';
 import { LIP, REST } from '../scripts/sea';
 
@@ -61,7 +61,7 @@ const pages: Shot[] = await Promise.all(
     .sort()
     .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
 );
-const [plate] = pages;
+const [plate, chapterPage] = pages;
 
 /**
  * A leaf carries the recto before it on its front and the verso after
@@ -117,8 +117,11 @@ const waves = [
 const rest = (off: number, kind: string) =>
   kind === 'line' ? `M0 ${String(REST + off)}H1440` : `M0 ${String(REST + off)}H1440V${String(LIP)}H0Z`;
 
-/** The design the sample book's own note sets, which the panel below shows. */
-const { design } = readModel(sampleNote).book;
+/** The chapter the demo sets, which is the one the pictures above open on. */
+const CHAPTER = 'A Shifting Reef';
+
+/** The sample book's own note, which the panel and the page come from. */
+const { design, metadata } = readModel(sampleNote).book;
 
 /** What the panel shows for every key, with the defaults filled in. */
 const shown: Record<string, string> = Object.fromEntries(
@@ -128,32 +131,34 @@ const shown: Record<string, string> = Object.fromEntries(
 /** The keys the note sets itself, which are the ones the panel offers a reset on. */
 const own = Object.keys(writeDesign(design));
 
+/** The faces the engine carries, which are the ones the demo can set in. */
+const FACES = ['EB Garamond'];
+
 /**
- * The groups the demo draws, from the plugin's own table, and the keys
- * it drives. A group renamed in the plugin stops the build here rather
- * than leaving the page drawing one the panel no longer has.
+ * The groups the demo draws, from the plugin's own table. A group
+ * renamed in the plugin stops the build here rather than leaving the
+ * page drawing one the panel no longer has.
  */
-const driven: Record<string, string> = {
-  'body-align': 'align',
-  'body-hyphens': 'hyphens',
-  'scene-break-mark': 'mark',
-  'scene-break-ornament': 'glyph',
-};
 const groups = ['Text', 'Scene breaks'].map((name) => {
   const group = GROUPS.find((one: Group) => one.name === name);
   if (group === undefined) throw new Error(`the design panel has no ${name} group`);
   return group;
 });
 
-/** The design the demo opens on, which is the one the panel above shows. */
-const mark = shown['scene-break-mark'];
-const opens: Sets = {
-  align: shown['body-align'] === 'left' ? 'left' : 'justify',
-  hyphens: shown['body-hyphens'] === 'true',
-  mark: mark === 'space' || mark === 'word' ? mark : 'ornament',
-  glyph: Math.max(0, GLYPHS.indexOf(shown['scene-break-ornament'] ?? '')),
+/**
+ * What the demo hands the engine: the book's own design, the section
+ * the page belongs to, and the chapter itself. The engine sets the page
+ * from these, so nothing about it is drawn by the browser.
+ */
+const demo = {
+  design: writeDesign(effective(design)),
+  setting: {
+    roles: ['chapter'] as const,
+    title: metadata.title,
+    author: metadata.author,
+  },
+  source: { name: `${CHAPTER}.md`, text: chapterNote },
 };
-const opening = setPage(opens, GLYPHS);
 
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
@@ -328,14 +333,7 @@ const swap = {
           </div>
         </section>
 
-        <section
-          class="row"
-          data-demo
-          data-align={opens.align}
-          data-hyphens={String(opens.hyphens)}
-          data-mark={opens.mark}
-          data-glyph={String(opens.glyph)}
-        >
+        <section class="row" data-demo>
           <div class="said">
             <h2 class="row-h">Design <i>in the panel</i></h2>
             <p class="sec-p">
@@ -347,48 +345,26 @@ const swap = {
             <div class="controls">
               <div class="frag-box">
                 <div class="o-frag">
-                  {groups.map((group) => <PanelGroup group={group} values={shown} own={own} driven={driven} />)}
+                  {
+                    groups.map((group) => (
+                      <PanelGroup group={group} values={shown} own={own} faces={FACES} />
+                    ))
+                  }
                 </div>
               </div>
               <span class="aside">These controls work. Try them.</span>
+              <script type="application/json" data-demo-book set:html={JSON.stringify(demo)} />
             </div>
-            <div class="demo-page"><div class="pg r" lang="en">
-                <div class="pg-run">A Shifting Reef</div>
-                <div class="pg-text" data-demo-text>
-                  <p class="first">
-                    On the 20th of July, 1866, the steamer Governor Higginson, of the Calcutta
-                    and Burnach Steam Navigation Company, had met this moving mass five miles
-                    off the east coast of Australia. Captain Baker thought at first that he was
-                    in the presence of an unknown sandbank; he even prepared to determine its
-                    exact position when two columns of water, projected by the mysterious
-                    object, shot with a hissing noise a hundred and fifty feet up into the air.
-                  </p>
-                  <div
-                    class="pg-break"
-                    data-demo-mark
-                    style={`height:${opening.mark.height};line-height:${opening.mark.height};font-size:${opening.mark.size};letter-spacing:${opening.mark.spacing}`}
-                  >
-                    {opening.mark.text}
-                  </div>
-                  <p class="first">
-                    Similar facts were observed on the 23rd of July in the same year, in the
-                    Pacific Ocean, by the Columbus, of the West India and Pacific Steam
-                    Navigation Company. But this extraordinary creature could transport itself
-                    from one place to another with surprising velocity; as, in an interval of
-                    three days, the Governor Higginson and the Columbus had observed it at two
-                    different points of the chart, separated by a distance of more than seven
-                    hundred nautical leagues.
-                  </p>
-                  <p>
-                    Fifteen days later, two thousand miles farther off, the Helvetia, of the
-                    Compagnie-Nationale, and the Shannon, of the Royal Mail Steamship Company,
-                    sailing to windward in that portion of the Atlantic lying between the United
-                    States and Europe, respectively signalled the monster to each other in 42°
-                    15′ N. lat. and 60° 35′ W. long.
-                  </p>
-                </div>
-                <div class="pg-folio">{FIRST + 1}</div>
-              </div></div>
+            <div class="demo-page">
+              <img
+                class="standing"
+                src={chapterPage?.src}
+                width={chapterPage?.width}
+                height={chapterPage?.height}
+                alt="The opening of Chapter I, set by orca."
+              />
+              <div class="set" data-demo-page></div>
+            </div>
           </div>
         </section>
 
@@ -467,7 +443,7 @@ const swap = {
     </div>
 
     <script>
-      import { startDemo } from '../scripts/demo';
+      import { startDemo, whenSeen, type Demo } from '../scripts/demo';
       import { startFlip } from '../scripts/flip';
       import { startSea } from '../scripts/sea';
 
@@ -475,8 +451,13 @@ const swap = {
       if (sea !== null) startSea(sea);
       const flip = document.querySelector<HTMLElement>('[data-flip]');
       if (flip !== null) startFlip(flip);
-      const demo = document.querySelector<HTMLElement>('[data-demo]');
-      if (demo !== null) startDemo(demo);
+      // The book the demo sets is written into the page as JSON, so the
+      // script reads the same design the panel above was drawn from.
+      const panel = document.querySelector<HTMLElement>('[data-demo]');
+      const said = document.querySelector<HTMLElement>('[data-demo-book]');
+      if (panel !== null && said !== null) {
+        startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
+      }
     </script>
   </body>
 </html>
@@ -814,25 +795,30 @@ const swap = {
   }
   .demo-page {
     width: 348px;
-    height: 538px;
     max-width: 100%;
     position: relative;
     flex: none;
   }
-  .demo-page .pg {
-    position: absolute;
-    inset-inline-start: 0;
-    top: 0;
-    transform: scale(1.3);
-    transform-origin: 0 0;
+  /* The page the spec rasterized stands here until the engine has set
+     one of its own, so the section never shows a page orca did not. */
+  .demo-page .standing,
+  .demo-page .set :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
     box-shadow: var(--o-page-shadow);
   }
-  .pg-text {
-    height: 330px;
+  .demo-page .set {
+    position: absolute;
+    inset: 0;
   }
-  .pg-break {
-    text-align: center;
-    text-indent: 0;
+  .demo-page .set:empty {
+    display: none;
+  }
+  /* Once the engine has set a page, the one that stood in its place
+     steps aside. */
+  .demo-page:has(.set[data-set]) .standing {
+    visibility: hidden;
   }
 
   /* The flip-through. A leaf turns about its inner edge, and carries a

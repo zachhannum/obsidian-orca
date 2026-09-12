@@ -4,8 +4,11 @@
  * draws the panel from. A row renamed, added or re-ordered in the
  * plugin moves here with no edit, and a control kind this file cannot
  * draw stops the build.
+ *
+ * Every control carries the design key it writes, so the script that
+ * works them keeps no table of its own.
  */
-import { GLYPHS, type Control, type Group } from '@/ui/groups';
+import { GLYPHS, trims, type Control, type Group } from '@/ui/groups';
 import Icon from './Icon.astro';
 
 interface Props {
@@ -14,38 +17,61 @@ interface Props {
   values: Record<string, string>;
   /** The keys the book note sets itself, which are the ones with a reset. */
   own: readonly string[];
-  /** The keys the demo drives, each with the name its buttons write. */
-  driven?: Record<string, string>;
+  /**
+   * The faces the page can be set in. The plugin offers the vault's
+   * fonts; the demo offers the ones the engine carries.
+   */
+  faces: readonly string[];
 }
 
-const { group, values, own, driven = {} } = Astro.props;
+const { group, values, own, faces } = Astro.props;
 
 /** The kinds this file draws. Every other one stops the build. */
-const DRAWN = new Set(['font', 'length', 'count', 'flag', 'segment', 'glyph', 'word', 'select']);
+const DRAWN = new Set([
+  'font',
+  'length',
+  'count',
+  'flag',
+  'segment',
+  'glyph',
+  'word',
+  'select',
+  'trim',
+]);
 
 for (const row of group.rows) {
   if (row.grid === true) {
-    throw new Error(`the ${group.name} group lays ${row.label} out in a grid, which the page cannot draw`);
+    throw new Error(
+      `the ${group.name} group lays ${row.label} out in a grid, which the page cannot draw`
+    );
   }
   for (const control of row.of) {
     if (!DRAWN.has(control.kind)) {
-      throw new Error(`the ${group.name} group has a ${control.kind} control, which the page cannot draw`);
+      throw new Error(
+        `the ${group.name} group has a ${control.kind} control, which the page cannot draw`
+      );
     }
   }
 }
 
-/** The word the panel shows for a control, the default filled in. */
-const set = (control: Control): string => {
-  const value = values[control.key ?? ''] ?? '';
-  if (control.kind !== 'select') return value;
-  return (control.choices ?? []).find((choice) => choice.value === value)?.label ?? value;
-};
+/** The value the design holds for a control, the default filled in. */
+const set = (control: Control): string => values[control.key ?? ''] ?? '';
 
 /** Whether the book note sets this control itself, rather than taking the default. */
 const sets = (control: Control): boolean => own.includes(control.key ?? '');
 
-/** The name the demo's buttons write for a control, when it drives one. */
-const drives = (control: Control): string | undefined => driven[control.key ?? ''];
+/**
+ * The trims a book is set at, which the panel offers by name. The
+ * sample book is measured in inches, so the demo offers them in inches.
+ */
+const TRIMS = trims('in');
+
+/** The words a control offers. A trim and a font name their own. */
+const choicesOf = (control: Control): readonly { value: string; label: string }[] => {
+  if (control.kind === 'trim') return TRIMS;
+  if (control.kind === 'font') return faces.map((face) => ({ value: face, label: face }));
+  return control.choices ?? [];
+};
 ---
 
 <div class="o-grp">
@@ -56,80 +82,79 @@ const drives = (control: Control): string | undefined => driven[control.key ?? '
         {row.label !== '' && <span class="o-lab">{row.label}</span>}
         {row.of.map((control) => (
           <Fragment>
-            {control.kind === 'font' && (
-              <div class={`o-field o-grow${sets(control) ? '' : ' o-def'}`}>
-                <span>{set(control)}</span>
-                <Icon name="down" size={12} />
-              </div>
+            {(control.kind === 'select' ||
+              control.kind === 'trim' ||
+              control.kind === 'font') && (
+              <select
+                class="o-field o-grow o-pick"
+                aria-label={row.label}
+                data-key={control.key}
+                data-kind={control.kind}
+              >
+                {choicesOf(control).map((choice) => (
+                  <option value={choice.value} selected={choice.value === set(control)}>
+                    {choice.label}
+                  </option>
+                ))}
+              </select>
             )}
-            {control.kind === 'select' && (
-              <div class={`o-field o-grow${sets(control) ? '' : ' o-def'}`}>
-                <span>{set(control)}</span>
-                <Icon name="down" size={12} />
-              </div>
+            {(control.kind === 'word' ||
+              control.kind === 'length' ||
+              control.kind === 'count') && (
+              <input
+                class={control.kind === 'word' ? 'o-field o-grow' : 'o-field o-small'}
+                type="text"
+                aria-label={row.label}
+                data-key={control.key}
+                data-kind={control.kind}
+                value={set(control)}
+              />
             )}
-            {control.kind === 'word' && (
-              <div class="o-field o-grow">
-                <span>{set(control)}</span>
-              </div>
+            {control.kind === 'flag' && (
+              <button
+                type="button"
+                class="o-tog"
+                data-key={control.key}
+                data-kind={control.kind}
+                aria-label={row.label === '' ? control.said : row.label}
+              />
             )}
-            {(control.kind === 'length' || control.kind === 'count') && (
-              <div class="o-num">
-                <div class="o-field">{set(control)}</div>
-                <div class="o-step">
-                  <div>
-                    <Icon name="up" size={9} />
-                  </div>
-                  <div>
-                    <Icon name="down" size={9} />
-                  </div>
-                </div>
-              </div>
-            )}
-            {control.kind === 'flag' &&
-              (drives(control) === undefined ? (
-                <div class={`o-tog${set(control) === 'true' ? '' : ' off'}`} />
-              ) : (
-                <button
-                  type="button"
-                  class="o-tog"
-                  data-set={drives(control)}
-                  aria-label={row.label === '' ? control.said : row.label}
-                />
-              ))}
             {control.kind === 'segment' && (
               <div class="o-seg">
-                {(control.choices ?? []).map((choice) =>
-                  drives(control) === undefined ? (
-                    <div class={set(control) === choice.value ? 'on' : undefined}>{choice.label}</div>
-                  ) : (
-                    <button type="button" data-set={`${drives(control)}=${choice.value}`}>
-                      {choice.label}
-                    </button>
-                  )
-                )}
+                {choicesOf(control).map((choice) => (
+                  <button
+                    type="button"
+                    data-key={control.key}
+                    data-kind={control.kind}
+                    data-value={choice.value}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
               </div>
             )}
             {control.kind === 'glyph' && (
               <div class="glyphs">
-                {GLYPHS.map((glyph, at) =>
-                  drives(control) === undefined ? (
-                    <div class={`o-field glyph${set(control) === glyph ? ' on' : ''}`}>{glyph}</div>
-                  ) : (
-                    <button
-                      type="button"
-                      class="o-field glyph"
-                      data-set={`${drives(control)}=${String(at)}`}
-                      aria-label={`Ornament ${glyph}`}
-                    >
-                      {glyph}
-                    </button>
-                  )
-                )}
+                {GLYPHS.map((glyph) => (
+                  <button
+                    type="button"
+                    class="o-field glyph"
+                    data-key={control.key}
+                    data-kind={control.kind}
+                    data-value={glyph}
+                    aria-label={`Ornament ${glyph}`}
+                  >
+                    {glyph}
+                  </button>
+                ))}
               </div>
             )}
-            {control.said !== undefined && row.label === '' && <span class="o-said">{control.said}</span>}
-            {control.said !== undefined && row.label !== '' && <span class="o-unit">{control.said}</span>}
+            {control.said !== undefined && row.label === '' && (
+              <span class="o-said">{control.said}</span>
+            )}
+            {control.said !== undefined && row.label !== '' && (
+              <span class="o-unit">{control.said}</span>
+            )}
           </Fragment>
         ))}
         <span class="o-reset">{row.of.some(sets) && <Icon name="reset" size={12} />}</span>
@@ -139,8 +164,8 @@ const drives = (control: Control): string | undefined => driven[control.key ?? '
 </div>
 
 <style>
-  /* The controls the demo drives are buttons, which a segment and the
-     glyph picker draw as the panel's own fields. */
+  /* The controls are the panel's own fields, drawn as things a reader
+     can work rather than as a picture of them. */
   .o-seg button,
   .glyph {
     font: inherit;
@@ -182,5 +207,18 @@ const drives = (control: Control): string | undefined => driven[control.key ?? '
   }
   .glyph.on {
     box-shadow: 0 0 0 1.5px var(--o-accent);
+  }
+  input.o-field,
+  .o-pick {
+    font: inherit;
+    font-size: 12px;
+  }
+  .o-pick {
+    cursor: pointer;
+    appearance: none;
+  }
+  .o-small {
+    width: 76px;
+    flex: none;
   }
 </style>
