@@ -466,6 +466,23 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
   // all rather than the few it knows by name.
   assert.match(component, /data-key=\{keyOf\(control\)\}/);
 
+  // A reset clears the keys its row sets, so each takes its default, as
+  // the panel's does. It is a button, not a picture of one.
+  const { effective } = await moduleOf("src/style/theme.ts");
+  const { writeDesign: written } = await moduleOf("src/style/design.ts");
+  const set = demo.opens({ design: { "body-size": "13pt", "body-align": "left" } });
+  const back = demo.cleared(set, ["body-size"]);
+  assert.equal(written(back)["body-size"], undefined);
+  assert.equal(written(back)["body-align"], "left");
+  assert.equal(
+    written(effective(back))["body-size"],
+    written(effective(demo.opens({ design: {} })))["body-size"],
+  );
+  assert.match(component, /<button\s+type="button"\s+class="o-reset"/);
+  assert.match(component, /data-reset=/);
+  // The page hands the demo the note's own keys, so there is a key to clear.
+  assert.match(landing, /design: writeDesign\(design\),/);
+
   // A number is a field with a stepper beside it, the way the panel
   // draws one, and it steps by the plugin's own step.
   assert.match(component, /<div class="o-step">/);

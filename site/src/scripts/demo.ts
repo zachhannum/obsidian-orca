@@ -8,6 +8,7 @@
  * does in Obsidian.
  */
 import { atLevel, stepped, typed, withKey } from '@/ui/groups';
+import { effective } from '@/style/theme';
 import {
   readDesign,
   writeDesign,
@@ -78,6 +79,11 @@ export function clicked(
   return writeDesign(design)[key] === true ? false : true;
 }
 
+/** The design with every key in `keys` cleared, so each takes its default. */
+export function cleared(design: Design, keys: readonly string[]): Design {
+  return keys.reduce((held, key) => withKey(held, key, undefined), design);
+}
+
 /** Runs the controls over a page the engine sets. */
 export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
   let design = opens(demo);
@@ -101,8 +107,22 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
   };
 
   /** Draws every control in the state the design holds. */
+  const resets = [...root.querySelectorAll<HTMLButtonElement>('[data-reset]')];
+
   const shown = (): void => {
-    const properties = writeDesign(design);
+    // A control shows the value the page is set with, the default where
+    // the book sets nothing.
+    const properties = writeDesign(effective(design));
+    const own = writeDesign(design);
+    for (const reset of resets) {
+      const keys = (reset.dataset['reset'] ?? '').split(' ').filter(Boolean);
+      const set = keys.filter((key) => own[key] !== undefined);
+      reset.style.visibility = set.length > 0 ? '' : 'hidden';
+      const defaults = set.map((key) =>
+        String(writeDesign(effective(withKey(design, key, undefined)))[key] ?? '')
+      );
+      reset.setAttribute('aria-label', `Reset to default (${defaults.join(', ')})`);
+    }
     for (const control of controls) {
       const key = control.dataset['key'] ?? '';
       const value = control.dataset['value'];
@@ -190,7 +210,18 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
     if (control.dataset['step'] !== undefined) continue;
     control.addEventListener('click', () => {
       const at = control.dataset['key'] ?? key;
-      write(at, clicked(design, at, control.dataset['value']));
+      write(at, clicked(effective(design), at, control.dataset['value']));
+    });
+  }
+
+  for (const reset of resets) {
+    reset.addEventListener('click', () => {
+      const keys = (reset.dataset['reset'] ?? '').split(' ').filter(Boolean);
+      const next = cleared(design, keys);
+      if (next === design) return;
+      design = next;
+      shown();
+      void typeset?.set(design);
     });
   }
 

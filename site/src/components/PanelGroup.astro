@@ -199,7 +199,15 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
             )}
           </div>
         ))}
-        <span class="o-reset">{row.of.some(sets) && <Icon name="reset" size={12} />}</span>
+        <button
+          type="button"
+          class="o-reset"
+          aria-label="Reset to default"
+          data-reset={row.of.map(keyOf).filter((key) => key !== undefined).join(' ')}
+          style={row.of.some(sets) ? undefined : 'visibility:hidden'}
+        >
+          <Icon name="reset" size={12} />
+        </button>
       </div>
     ))
   }
@@ -236,6 +244,16 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
     padding: 0;
     border: 0;
     cursor: pointer;
+  }
+  /* A reset shows on a row the book sets, and clears it to the default. */
+  .o-reset {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .o-reset:hover {
+    color: var(--o-text);
   }
   .glyphs {
     display: flex;
