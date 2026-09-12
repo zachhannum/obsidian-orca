@@ -8,6 +8,11 @@ import starlight from '@astrojs/starlight';
 // The table is read at build time only; none of it reaches the browser.
 const plugin = fileURLToPath(new URL('../src', import.meta.url));
 
+// The plugin's own source imports `fleuron` by name, and it sits outside
+// this package, so it would look for the engine in the plugin's
+// `node_modules` rather than in the site's. The site installs its own.
+const fleuron = fileURLToPath(import.meta.resolve('fleuron'));
+
 // GitHub Pages serves the site at its own domain, which public/CNAME holds.
 const site = 'https://orca.typeworks.dev';
 
@@ -30,7 +35,7 @@ const codeTheme = (name, key, text) => ({
 export default defineConfig({
   site,
   trailingSlash: 'always',
-  vite: { resolve: { alias: { '@': plugin } } },
+  vite: { resolve: { alias: { '@': plugin, fleuron } } },
   markdown: {
     shikiConfig: {
       themes: {
