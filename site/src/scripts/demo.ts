@@ -7,8 +7,14 @@
  * generates. So a control here does to the page what the same control
  * does in Obsidian.
  */
-import { withKey } from '@/ui/groups';
-import { readDesign, writeDesign, type Design, type Written } from '@/style/design';
+import { atLevel, withKey } from '@/ui/groups';
+import {
+  readDesign,
+  writeDesign,
+  type Design,
+  type Level,
+  type Written,
+} from '@/style/design';
 import type { Setting } from '@/style/generated';
 import type { Source, Typeset } from './typeset';
 
@@ -49,6 +55,22 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
   let design = opens(demo);
   let typeset: Typeset | undefined;
   const controls = [...root.querySelectorAll<HTMLElement>('[data-key]')];
+  const levels = [...root.querySelectorAll<HTMLElement>('[data-levels]')];
+
+  /**
+   * Points the heading controls at one level. Their keys name the level
+   * they are for, so the rows edit H2 once H2 is the one chosen.
+   */
+  const editing = (level: Level): void => {
+    for (const control of controls) {
+      const template = control.dataset['level'];
+      if (template === undefined) continue;
+      control.dataset['key'] = atLevel(template, level);
+    }
+    for (const choice of levels) {
+      choice.classList.toggle('on', choice.dataset['levels'] === String(level));
+    }
+  };
 
   /** Draws every control in the state the design holds. */
   const shown = (): void => {
@@ -56,6 +78,7 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
     for (const control of controls) {
       const key = control.dataset['key'] ?? '';
       const value = control.dataset['value'];
+      // A select shows its value through the option that is chosen.
       const held = properties[key];
       const on = value === undefined ? held === true : String(held) === value;
       control.classList.toggle('on', on);
@@ -66,7 +89,10 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
         control.setAttribute('aria-pressed', String(on));
       }
       const said = held === undefined ? '' : String(held);
-      if (control instanceof HTMLInputElement && control.value !== said) {
+      if (
+        (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) &&
+        control.value !== said
+      ) {
         control.value = said;
       }
     }
@@ -82,14 +108,26 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
 
   for (const control of controls) {
     const key = control.dataset['key'] ?? '';
-    if (control instanceof HTMLInputElement) {
-      control.addEventListener('input', () => {
-        write(key, control.value === '' ? undefined : control.value);
+    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) {
+      const said = control instanceof HTMLSelectElement ? 'change' : 'input';
+      control.addEventListener(said, () => {
+        // The key a heading control writes follows the level on screen,
+        // so it is read now rather than when the control was found.
+        const at = control.dataset['key'] ?? key;
+        write(at, control.value === '' ? undefined : control.value);
       });
       continue;
     }
     control.addEventListener('click', () => {
-      write(key, clicked(design, key, control.dataset['value']));
+      const at = control.dataset['key'] ?? key;
+      write(at, clicked(design, at, control.dataset['value']));
+    });
+  }
+
+  for (const choice of levels) {
+    choice.addEventListener('click', () => {
+      editing(Number(choice.dataset['levels']) as Level);
+      shown();
     });
   }
 

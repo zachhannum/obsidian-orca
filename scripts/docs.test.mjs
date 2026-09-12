@@ -453,7 +453,7 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
   // The page names the groups and hands them to the component whole. No
   // row, label or choice is written out here, so none can fall behind
   // the panel's.
-  assert.match(landing, /\['Text', 'Scene breaks'\]\.map\(/);
+  assert.match(landing, /GROUPS\.map\(\(one: Group\) => one\.name\)/);
   assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} faces=\{FACES\} \/>/);
 
   // Every control those groups hold is one the component draws, and a
@@ -465,13 +465,15 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
     .split(",")
     .map((kind) => kind.trim().replace(/'/g, ""))
     .filter(Boolean);
-  for (const name of ["Text", "Scene breaks"]) {
-    const group = GROUPS.find((one) => one.name === name);
-    assert.ok(group, `the panel has no ${name} group`);
+  // Every group, so every control the panel offers is one a reader can
+  // work rather than a picture of one.
+  for (const group of GROUPS) {
     for (const row of group.rows) {
-      assert.notEqual(row.grid, true, `${name} lays ${row.label} out in a grid`);
       for (const control of row.of) {
-        assert.ok(drawn.includes(control.kind), `the page cannot draw a ${control.kind}`);
+        assert.ok(
+          drawn.includes(control.kind),
+          `the page cannot draw the ${control.kind} in ${group.name}`,
+        );
       }
     }
   }
@@ -479,7 +481,7 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
 
   // Every control carries the key it writes, so the script works them
   // all rather than the few it knows by name.
-  assert.match(component, /data-key=\{control\.key\}/);
+  assert.match(component, /data-key=\{keyOf\(control\)\}/);
   assert.ok(GLYPHS.length > 0 && trims("in").length > 0);
 });
 

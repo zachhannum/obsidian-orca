@@ -139,7 +139,7 @@ const FACES = ['EB Garamond'];
  * renamed in the plugin stops the build here rather than leaving the
  * page drawing one the panel no longer has.
  */
-const groups = ['Text', 'Scene breaks'].map((name) => {
+const groups = GROUPS.map((one: Group) => one.name).map((name) => {
   const group = GROUPS.find((one: Group) => one.name === name);
   if (group === undefined) throw new Error(`the design panel has no ${name} group`);
   return group;
@@ -787,8 +787,16 @@ const swap = {
     flex-direction: column;
     gap: 12px;
   }
+  /* The panel is the whole panel, and the whole panel scrolls in
+     Obsidian too. It stands as tall as the page beside it. */
+  .frag-box {
+    max-height: 538px;
+    overflow-y: auto;
+    border-radius: 8px;
+  }
   .frag-box :global(.o-frag) {
-    zoom: 1.1;
+    border: 0;
+    border-radius: 0;
   }
   .o-frag :global(.o-grp + .o-grp) {
     margin-top: 18px;

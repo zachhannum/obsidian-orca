@@ -8,7 +8,7 @@
  * Every control carries the design key it writes, so the script that
  * works them keeps no table of its own.
  */
-import { GLYPHS, trims, type Control, type Group } from '@/ui/groups';
+import { GLYPHS, atLevel, trims, type Control, type Group } from '@/ui/groups';
 import Icon from './Icon.astro';
 
 interface Props {
@@ -37,14 +37,10 @@ const DRAWN = new Set([
   'word',
   'select',
   'trim',
+  'level',
 ]);
 
 for (const row of group.rows) {
-  if (row.grid === true) {
-    throw new Error(
-      `the ${group.name} group lays ${row.label} out in a grid, which the page cannot draw`
-    );
-  }
   for (const control of row.of) {
     if (!DRAWN.has(control.kind)) {
       throw new Error(
@@ -54,11 +50,23 @@ for (const row of group.rows) {
   }
 }
 
+/**
+ * The key a control writes. A heading's key names the level it is for,
+ * and the panel opens on the first level.
+ */
+const OPENS_AT = 1;
+const keyOf = (control: Control): string | undefined =>
+  control.key === undefined ? undefined : atLevel(control.key, OPENS_AT);
+
+/** Set on a control whose key follows the level being edited. */
+const leveled = (control: Control): string | undefined =>
+  control.key !== undefined && control.key !== keyOf(control) ? control.key : undefined;
+
 /** The value the design holds for a control, the default filled in. */
-const set = (control: Control): string => values[control.key ?? ''] ?? '';
+const set = (control: Control): string => values[keyOf(control) ?? ''] ?? '';
 
 /** Whether the book note sets this control itself, rather than taking the default. */
-const sets = (control: Control): boolean => own.includes(control.key ?? '');
+const sets = (control: Control): boolean => own.includes(keyOf(control) ?? '');
 
 /**
  * The trims a book is set at, which the panel offers by name. The
@@ -78,17 +86,17 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
   <div class="o-gh">{group.name}</div>
   {
     group.rows.map((row) => (
-      <div class="o-row">
+      <div class={row.grid === true ? 'o-row o-grid' : 'o-row'}>
         {row.label !== '' && <span class="o-lab">{row.label}</span>}
         {row.of.map((control) => (
-          <Fragment>
+          <div class="o-cell">
             {(control.kind === 'select' ||
               control.kind === 'trim' ||
               control.kind === 'font') && (
               <select
                 class="o-field o-grow o-pick"
                 aria-label={row.label}
-                data-key={control.key}
+                data-key={keyOf(control)} data-level={leveled(control)}
                 data-kind={control.kind}
               >
                 {choicesOf(control).map((choice) => (
@@ -105,7 +113,7 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                 class={control.kind === 'word' ? 'o-field o-grow' : 'o-field o-small'}
                 type="text"
                 aria-label={row.label}
-                data-key={control.key}
+                data-key={keyOf(control)} data-level={leveled(control)}
                 data-kind={control.kind}
                 value={set(control)}
               />
@@ -114,17 +122,30 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
               <button
                 type="button"
                 class="o-tog"
-                data-key={control.key}
+                data-key={keyOf(control)} data-level={leveled(control)}
                 data-kind={control.kind}
                 aria-label={row.label === '' ? control.said : row.label}
               />
+            )}
+            {control.kind === 'level' && (
+              <div class="o-seg">
+                {(control.choices ?? []).map((choice, at) => (
+                  <button
+                    type="button"
+                    class={at === 0 ? 'on' : undefined}
+                    data-levels={choice.value}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
             )}
             {control.kind === 'segment' && (
               <div class="o-seg">
                 {choicesOf(control).map((choice) => (
                   <button
                     type="button"
-                    data-key={control.key}
+                    data-key={keyOf(control)} data-level={leveled(control)}
                     data-kind={control.kind}
                     data-value={choice.value}
                   >
@@ -139,7 +160,7 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                   <button
                     type="button"
                     class="o-field glyph"
-                    data-key={control.key}
+                    data-key={keyOf(control)} data-level={leveled(control)}
                     data-kind={control.kind}
                     data-value={glyph}
                     aria-label={`Ornament ${glyph}`}
@@ -155,7 +176,7 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
             {control.said !== undefined && row.label !== '' && (
               <span class="o-unit">{control.said}</span>
             )}
-          </Fragment>
+          </div>
         ))}
         <span class="o-reset">{row.of.some(sets) && <Icon name="reset" size={12} />}</span>
       </div>
@@ -220,5 +241,45 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
   .o-small {
     width: 76px;
     flex: none;
+  }
+  /* A cell is nothing on an ordinary row. On a grid row it stacks the
+     control over the word that names it, which is the shape the margins
+     take. */
+  .o-cell {
+    display: contents;
+  }
+  .o-grid {
+    display: grid;
+    grid-template-columns: 84px 1fr 1fr 18px;
+    align-items: start;
+    gap: 8px;
+  }
+  .o-grid .o-lab {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  /* The cells sit two to a line, in the two columns beside the label,
+     rather than flowing back under it. */
+  .o-grid .o-cell:nth-of-type(odd) {
+    grid-column: 2;
+  }
+  .o-grid .o-cell:nth-of-type(even) {
+    grid-column: 3;
+  }
+  .o-grid .o-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .o-grid .o-reset {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .o-grid .o-unit {
+    font-size: 11px;
+    color: var(--o-faint);
+  }
+  .o-grid input.o-field {
+    width: 100%;
   }
 </style>
