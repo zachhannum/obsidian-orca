@@ -1,5 +1,4 @@
-/* The landing page's components, copied from design/site.css. The check
-   the site's build runs first holds the two to the same text. */
+/* The landing page's components. */
 .o-side{width:240px;flex:none;background:var(--o-side);border-right:1px solid var(--o-border);display:flex;flex-direction:column}
 .o-side.r{width:280px;border-right:0;border-left:1px solid var(--o-border)}
 .o-tabs{height:40px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px;border-bottom:1px solid var(--o-border)}

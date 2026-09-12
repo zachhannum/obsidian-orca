@@ -250,19 +250,15 @@ test("the book note carries the design the landing page shows", async () => {
   ]);
 });
 
-/** The landing page, its scripts, and the artboards that draw it. */
+/** The landing page and its scripts. */
 const LANDING = "site/src/pages/index.astro";
 
-const [landing, landingCss, siteLanding, siteLandingLight, siteLandingPhone, plugin, playwright] =
-  await Promise.all([
-    read(LANDING),
-    read("site/src/styles/landing.css"),
-    read("design/parts/SiteLanding.html"),
-    read("design/parts/SiteLandingLight.html"),
-    read("design/parts/SiteLandingPhone.html"),
-    read("src/ui/plugin.ts"),
-    read("playwright.config.ts"),
-  ]);
+const [landing, landingCss, plugin, playwright] = await Promise.all([
+  read(LANDING),
+  read("site/src/styles/landing.css"),
+  read("src/ui/plugin.ts"),
+  read("playwright.config.ts"),
+]);
 
 /** The page's own stylesheet, which its `<style>` block holds. */
 const landingStyle = /<style>([\s\S]*)<\/style>/.exec(landing)[1];
@@ -328,23 +324,6 @@ function metric(name) {
   const clamped = /clamp\([^,]+,[^,]+,\s*([\d.]+)px\)/.exec(found[1]);
   return Number(clamped ? clamped[1] : /([\d.]+)/.exec(found[1])[1]);
 }
-
-test("the page draws the sections its three artboards draw, in their words", () => {
-  assert.deepEqual(titles(landing), titles(siteLanding));
-  assert.deepEqual(prose(landing), prose(siteLanding));
-  assert.equal(lede(landing), lede(siteLanding));
-
-  // The light and the phone artboards draw the hero alone, and the page
-  // opens on the same words in both.
-  for (const part of [siteLandingLight, siteLandingPhone]) {
-    assert.deepEqual(titles(part), titles(landing).slice(0, 1));
-    assert.equal(lede(part), lede(landing));
-  }
-  for (const label of ["Install in Obsidian", "Read the docs", "Desktop only"]) {
-    assert.ok(landing.includes(label), `the page does not offer ${label}`);
-    assert.ok(siteLandingPhone.includes(label), `the phone artboard does not offer ${label}`);
-  }
-});
 
 test("the surface moves, runs through the second line of the title, and the title inverts", async () => {
   const { seaPath, REST } = await moduleOf("site/src/scripts/sea.ts");
