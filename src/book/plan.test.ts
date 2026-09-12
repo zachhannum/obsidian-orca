@@ -49,7 +49,8 @@ const BOOK = "Pride and Prejudice.md";
 const DEVICE = "device.png";
 
 /** The book note in the vault the docs site sets its pages from. */
-const SAMPLE_BOOK = "Twenty Thousand Leagues Under the Sea.md";
+const SAMPLE_BOOK =
+  "Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md";
 
 async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
