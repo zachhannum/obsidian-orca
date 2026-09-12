@@ -898,9 +898,12 @@ const opening = setPage(OPENS);
     padding-inline: var(--gutter);
   }
 
-  /* The mocked surfaces are drawn at the size the artboards give them,
-     then scaled to the room the page has. */
-  .shown,
+  .shown {
+    display: flex;
+    justify-content: center;
+  }
+  /* The window is drawn at the size the artboard gives it, then scaled
+     to the room the page has. */
   .swap {
     --scale: 1;
     display: flex;
