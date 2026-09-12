@@ -151,7 +151,9 @@ section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-bottom: 0pt;
 }
 
-section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter {
+section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter,
+section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + p::first-letter,
+section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) + p::first-letter {
   initial-letter: 3;
 }
 
