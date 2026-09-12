@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import path from "node:path";
+import process from "node:process";
 import { test } from "node:test";
+import { directoryVault } from "@/assets/directory";
 import {
   fontDirectories,
   fontIndex,
@@ -11,7 +14,8 @@ import {
   type FontIndex,
   type Found,
 } from "@/assets/fonts";
-import type { Listing } from "@/assets/vault";
+import { readText, type Listing } from "@/assets/vault";
+import { readModel } from "@/book/model";
 
 function utf16(text: string): Uint8Array {
   const bytes = new Uint8Array(text.length * 2);
@@ -214,6 +218,35 @@ test("the faces of a family are in style order, whatever order the files were li
   assert.deepEqual(
     index.families.at(0)?.faces.map((one) => one.style),
     ["Bold", "Italic"],
+  );
+});
+
+test("the sample book's own faces are in its vault, under the family its note names", async () => {
+  const sample = directoryVault(
+    path.join(process.env["ORCA_ROOT"] ?? process.cwd(), "site/sample"),
+  );
+  const files: FontFiles = {
+    list: (directory) => sample.list(directory),
+    read: async (at, from, length) =>
+      new Uint8Array(await sample.readBinary(at)).subarray(from, from + length),
+  };
+  const { book } = readModel(
+    await readText(sample, "Twenty Thousand Leagues Under the Sea.md"),
+  );
+
+  const found = await scanFonts(files, [VAULT_FONTS], "vault");
+  const index = fontIndex({ faces: [], refused: [] }, found);
+
+  assert.deepEqual(index.refused, []);
+  assert.equal(book.design.body.font, "EB Garamond");
+  assert.ok(has(index, "EB Garamond"));
+  const family = index.families.find((known) => known.name === "EB Garamond");
+  assert.equal(family?.where, "vault");
+  // The text is set in the upright, and the note italicises a word here
+  // and there, so the book uses both cuts and the vault holds both.
+  assert.deepEqual(
+    family?.faces.map((face) => face.style),
+    ["Italic", "Regular"],
   );
 });
 

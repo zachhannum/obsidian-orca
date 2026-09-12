@@ -132,6 +132,7 @@ its editor around these files and returns a URL. The artboard list and
   page. With reduced motion on, the sea holds still.
 - A screenshot of Obsidian takes the site's colors and fonts. At phone
   width, the landing page shows the preview pane alone.
-- The site's sample book is Twenty Thousand Leagues Under the Sea.
-  Chapter I opens with a chapter-head image, which is an embed at the
-  top of the chapter note.
+- The site's sample book is Twenty Thousand Leagues Under the Sea. A
+  plate from the illustrated edition of 1871 takes the page facing
+  Chapter I. The plate is a note that holds the embed and nothing else,
+  so it takes a page of its own and the chapter keeps its opening.

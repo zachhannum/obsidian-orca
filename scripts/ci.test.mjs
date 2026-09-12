@@ -23,6 +23,7 @@ test("the `checks` job runs the type check, the lint pass and the Node tier on e
 
   assert.match(checks, /- run: npm run typecheck\n/);
   assert.match(checks, /- run: npm run lint\n/);
+  assert.match(checks, /apt-get install -y qpdf\n/);
   assert.match(checks, /- run: npm test\n/);
   assert.match(checks, /- run: npm run build\n/);
   assert.match(workflow, /^on:\n {2}pull_request:\n {2}push:\n/m);

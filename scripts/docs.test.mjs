@@ -1,11 +1,45 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
+
+/** The sample vault's book note, which the landing page sets its pages from. */
+const SAMPLE_BOOK = "site/sample/Twenty Thousand Leagues Under the Sea.md";
+
+/** Every file in a vault, by its path inside it, keyed on its bytes. */
+async function vaultFiles(vault) {
+  const found = new Map();
+  for await (const inside of glob("**/*", { cwd: path.join(root, vault) })) {
+    const bytes = await readFile(path.join(root, vault, inside)).catch(() => undefined);
+    if (bytes !== undefined) found.set(inside, createHash("sha256").update(bytes).digest("hex"));
+  }
+  return found;
+}
+
+/** A note's frontmatter, as a key to value map. */
+function properties(note) {
+  const end = note.indexOf("\n---\n", 4);
+  return Object.fromEntries(
+    [...note.slice(4, end).matchAll(/^([\w-]+): (.+)$/gm)].map((m) => [m[1], m[2]]),
+  );
+}
+
+/** The entries of one group of the reading order, link and role. */
+function entries(note, heading) {
+  const from = note.indexOf(`\n# ${heading}\n`);
+  assert.notEqual(from, -1, `no ${heading} group`);
+  const next = note.indexOf("\n# ", from + 1);
+  const group = note.slice(from, next === -1 ? undefined : next);
+  return [...group.matchAll(/^- (?:\[\[(.+?)\]\])?(?: ?`(\S+)`)?$/gm)].map((m) => ({
+    link: m[1],
+    role: m[2],
+  }));
+}
 
 const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, claude] =
   await Promise.all([
@@ -123,5 +157,94 @@ test("CLAUDE.md's CI section lists the docs workflow", () => {
   assert.match(section, /GitHub Pages/);
 });
 
+test("the sample vault holds one book, and shares no file with the fixture", async () => {
+  assert.match(await read(SAMPLE_BOOK), /^---\norca-book: 1\n/);
+
+  const [sample, fixture] = await Promise.all([
+    vaultFiles("site/sample"),
+    vaultFiles("fixture"),
+  ]);
+  const shared = new Set(fixture.values());
+  for (const [inside, bytes] of sample) {
+    assert.equal(shared.has(bytes), false, `${inside} is the fixture's file too`);
+  }
+  assert.ok(sample.has("images/a-squid-of-colossal-dimensions.jpg"));
+});
+
+test("each chapter is a note of its own, under one heading that is its title", async () => {
+  const note = await read(SAMPLE_BOOK);
+  const body = entries(note, "Body");
+
+  assert.deepEqual(
+    body.filter((entry) => entry.role !== undefined).map((entry) => entry.link),
+    ["Part One", "Part Two"],
+  );
+  const headings = new Map();
+  for (const { link, role } of body) {
+    if (role !== undefined) continue;
+    const chapter = await read(`site/sample/${link}.md`);
+    headings.set(link, [...chapter.matchAll(/^#+ (.+)$/gm)].map((found) => found[1]));
+  }
+  // Every entry in the body is a chapter but the plate, which carries
+  // no words of its own.
+  const chapters = [...headings].filter(([, found]) => found.length > 0);
+  assert.equal(chapters.length, 46);
+  for (const [link, found] of chapters) {
+    assert.equal(found.length, 1, `${link} has ${found.length} headings`);
+    // A title with a question mark or a quotation mark in it keeps them
+    // in the heading, because a note's name cannot hold them.
+    assert.equal(found[0].replace(/[?\u201c\u201d]/g, ""), link);
+  }
+});
+
+test("a plate from the 1871 edition takes the page facing Chapter I", async () => {
+  const body = entries(await read(SAMPLE_BOOK), "Body");
+  const at = body.findIndex((entry) => entry.link === "A Shifting Reef");
+  const plate = body[at - 1];
+  assert.ok(plate?.link, "nothing stands before Chapter I");
+
+  // The note holds the embed and nothing else, so the section takes a
+  // page of its own and the chapter keeps its opening.
+  const note = await read(`site/sample/${plate.link}.md`);
+  const embed = /^!\[\[(.+)\]\]\n$/.exec(note);
+  assert.ok(embed, `${plate.link} is not one embed on its own`);
+  await readFile(path.join(root, "site/sample/images", embed[1]));
+  assert.doesNotMatch(await read("site/sample/A Shifting Reef.md"), /^!\[\[/);
+
+  const copyright = await read("site/sample/Copyright.md");
+  assert.match(copyright, /Alphonse de Neuville/);
+  assert.match(copyright, /edition of 1871/);
+  assert.match(copyright, /public domain/);
+});
+
+test("the book note carries the design the landing page shows", async () => {
+  const design = properties(await read(SAMPLE_BOOK));
+
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(design).filter(([key]) => key.startsWith("body-") || key.startsWith("chapter-")),
+    ),
+    {
+      "body-font": "EB Garamond",
+      "body-size": "10.5pt",
+      "body-line-spacing": "14pt",
+      "body-align": "justify",
+      "body-first-line-indent": "1.2em",
+      "body-hyphens": "true",
+      "chapter-begins": "next-page",
+      "chapter-space-above": "7",
+      "chapter-drop-cap": "3",
+    },
+  );
+  assert.equal(design.trim, "5.5in 8.5in");
+  assert.deepEqual(entries(await read(SAMPLE_BOOK), "Front matter"), [
+    { link: undefined, role: "title-page" },
+    { link: "Copyright", role: "copyright" },
+    { link: undefined, role: "contents" },
+  ]);
+});
+
 // What this tier does not cover: whether a docs page matches the SiteDocs
-// artboards, which only a render in a browser shows.
+// artboards, which only a render in a browser shows, and whether the
+// sample's chapter opening matches the SiteLanding artboard, which the
+// pages themselves answer.

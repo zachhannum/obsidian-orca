@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
@@ -15,11 +17,11 @@ import {
 } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { Registry, SENT_NOTHING, type Sent } from "@/assets/registry";
-import { readText } from "@/assets/vault";
+import { readText, type VaultAdapter } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
 import { FORMAT, type Book } from "@/book/note";
-import { readOrder } from "@/book/order";
+import { readOrder, resolve } from "@/book/order";
 import { emptyDesign } from "@/style/design";
 import {
   GENERATED_ORIGIN,
@@ -27,11 +29,14 @@ import {
   bookSources,
   sendBook,
   sendEdit,
+  sendFaces,
+  sentRoles,
   type Edit,
   type Face,
   type Loaded,
   type Sending,
 } from "@/book/plan";
+import { designSheets } from "@/style/sheet";
 import { BUNDLED_THEME, THEME_SHEET } from "@/style/theme";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
@@ -43,15 +48,23 @@ const BOOK = "Pride and Prejudice.md";
 /** The image the fixture book embeds, as its acknowledgements name it. */
 const DEVICE = "device.png";
 
+/** The book note in the vault the docs site sets its pages from. */
+const SAMPLE_BOOK = "Twenty Thousand Leagues Under the Sea.md";
+
 async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
 }
 
 /** Every file in the fixture vault, the way Obsidian sees one. */
 async function paths(folder = "/"): Promise<string[]> {
-  const { files, folders } = await vault.list(folder);
-  const under = await Promise.all(folders.map((at) => paths(at)));
-  return [...files, ...under.flat()];
+  return under(vault, folder);
+}
+
+/** Every file in a vault, the way Obsidian sees one. */
+async function under(from: VaultAdapter, folder = "/"): Promise<string[]> {
+  const { files, folders } = await from.list(folder);
+  const inside = await Promise.all(folders.map((at) => under(from, at)));
+  return [...files, ...inside.flat()];
 }
 
 /** The book's ops, resolved against the fixture vault. */
@@ -526,6 +539,53 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
+test("the site's sample book sets to a PDF that qpdf reads", async () => {
+  const sample = directoryVault(path.join(root, "site/sample"));
+  const model = readModel(await readText(sample, SAMPLE_BOOK));
+  const links = pathLinks(await under(sample));
+  const registry = new Registry(sample);
+  const { ops } = await sendBook(
+    model.book,
+    model.order,
+    links,
+    SAMPLE_BOOK,
+    (at) => readText(sample, at),
+    (at) => registry.take(at),
+  );
+  const { sections } = resolve(model.order, links, SAMPLE_BOOK);
+  const { title, author } = model.book.metadata;
+  const faces = await Promise.all(
+    (await sample.list("fonts")).files
+      .filter((file) => file.endsWith(".ttf"))
+      .map((file) => registry.take(file)),
+  );
+
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  let pdf: Uint8Array | null;
+  try {
+    pdf = await connected(engine).exportPdf([
+      ...ops,
+      ...sendFaces(faces),
+      styleOp(
+        designSheets(model.book.design, {
+          roles: sentRoles(sections),
+          title,
+          author,
+        }),
+      ),
+    ]);
+  } finally {
+    engine.free();
+  }
+  assert.ok(pdf, "the export was overtaken");
+
+  const written = path.join(await mkdtemp(path.join(tmpdir(), "orca-")), "sample.pdf");
+  await writeFile(written, pdf);
+  const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });
+  assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+});
+
 // What this tier does not cover: the face bytes of a `font` op reaching
-// the engine, which the session tier tests, and the cuts a family is
-// made of, which belong to the font index.
+// the engine, which the session tier tests, the cuts a family is made
+// of, which belong to the font index, and what the sample's pages look
+// like, which the PDF shows and no assertion here reads.
