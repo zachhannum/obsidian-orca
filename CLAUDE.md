@@ -39,7 +39,8 @@ wins and the quick fix waits for its own PR.
 - `site/` holds the docs site: Astro and Starlight, its own npm package
   with its own lockfile, so the plugin's build and CI do not install it.
   `site/src/styles/tokens.css` is the site's tokens, and the build stops
-  when it and `design/site.css` disagree.
+  when it and `design/site.css` disagree. `site/sample/` is the vault
+  the site's pages are set from, and it shares no file with `fixture/`.
 - Work is tracked in GitHub issues, grouped by the v1 epic (#1) and
   built in milestone order, M0 through M4. An issue's acceptance
   checkboxes are its definition of done.
@@ -196,7 +197,8 @@ underneath them.
 `checks` job runs the type check, the lint pass, the Node tier and the
 production bundle, and the `e2e` job runs the suite on both platforms.
 
-1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier. The
+1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier, which
+   exports the sample book and needs `qpdf` on the runner. The
    lint pass is `scripts/lint.mjs`, and it holds six rules: nothing
    outside `ui` imports `ui`, only `ui` imports Obsidian, an import
    inside `src` uses the `@/` alias, a doc comment opens with a name
