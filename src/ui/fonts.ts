@@ -14,17 +14,23 @@ import process from "node:process";
 import { AssetError } from "@/assets/errors";
 import {
   VAULT_FONTS,
+  familyNamed,
   fontDirectories,
   fontIndex,
   scanFonts,
-  type Face,
+  type Face as IndexedFace,
   type Family,
   type FontFiles,
   type FontIndex,
 } from "@/assets/fonts";
 import { faceBytes } from "@/assets/sfnt";
-import { contentKey, type Hashed } from "@/assets/registry";
+import { contentKey, fontUrl, type Hashed } from "@/assets/registry";
+import { usedVariant, variantFamily } from "@/assets/variants";
 import { readBytes, type Listing, type VaultAdapter } from "@/assets/vault";
+import type { Face } from "@/book/plan";
+import type { FontUse } from "@/style/design";
+import type { Registered } from "@/style/faces";
+import { previewFace, previewFamily } from "@/ui/picker";
 
 /**
  * Font files, read a range at a time for the index and whole for a
@@ -116,16 +122,60 @@ export async function readFontIndex(places: FontPlaces): Promise<FontIndex> {
   return fontIndex(platform, vault);
 }
 
+/** A font and variant a design sets, as the faces that cross and the rules that register them. */
+export interface ResolvedUse {
+  use: FontUse;
+  /**
+   * Absent for a font the machine does not have and for one whose
+   * files would not read. The engine then sets that text in the face it
+   * carries.
+   */
+  registered: Registered | undefined;
+  /** Each face of the variant in use, under the url its rule names. */
+  faces: Face[];
+  /** True when the design names a variant the family lacks, so the default is used. */
+  fellBack: boolean;
+  /** True when a face of the variant would not read. */
+  unread: boolean;
+}
+
 /**
- * One family's faces, as the bytes that cross and the key they go
- * under. A face is split out of a collection first, because the engine
- * does not read a collection and a family is rarely every face in one.
+ * The faces of the one variant a use sets, and the `@font-face` rules
+ * for them. Only that variant crosses, so the engine cannot match a
+ * face of another variant of the family.
+ *
+ * A face is split out of a collection first, because the engine does
+ * not read a collection and a family is rarely every face in one.
  */
-export async function familyFaces(
+export async function resolveUse(
   places: FontPlaces,
-  family: Family,
-): Promise<Hashed[]> {
-  return Promise.all(family.faces.map((face) => crossing(places, face)));
+  index: FontIndex,
+  use: FontUse,
+): Promise<ResolvedUse> {
+  const family = familyNamed(index, use.font);
+  if (family === undefined || family.variants.length === 0) {
+    return { use, registered: undefined, faces: [], fellBack: false, unread: false };
+  }
+  const { variant, fellBack } = usedVariant(family, use.variant);
+  let crossed: Hashed[];
+  try {
+    crossed = await Promise.all(variant.faces.map((face) => crossing(places, face)));
+  } catch {
+    return { use, registered: undefined, faces: [], fellBack, unread: true };
+  }
+  const faces = crossed.map((hashed) => ({ ...hashed, url: fontUrl(hashed.key) }));
+  const registered: Registered = {
+    font: use.font,
+    variant: use.variant,
+    family: variantFamily(family, variant),
+    faces: variant.faces.map((face, at) => {
+      const url = faces[at]?.url ?? "";
+      // A variable face declares no weight or slope, so the file
+      // registers every instance it names.
+      return face.variable ? { url } : { url, weight: face.weight, italic: face.italic };
+    }),
+  };
+  return { use, registered, faces, fellBack, unread: false };
 }
 
 /** Registers a face with the document, so a picker row previews in it. */
@@ -133,22 +183,31 @@ export interface Previews {
   add(family: string, bytes: Uint8Array): Promise<void>;
 }
 
+/** The document's faces. A family registered once is not registered again. */
 export function documentPreviews(document: Document): Previews {
+  const added = new Map<string, Promise<void>>();
   return {
-    add: async (family, bytes) => {
-      const face = new FontFace(family, new Uint8Array(bytes));
-      await face.load();
-      document.fonts.add(face);
+    add: (family, bytes) => {
+      const known = added.get(family);
+      if (known !== undefined) return known;
+      const adding = (async () => {
+        const face = new FontFace(family, new Uint8Array(bytes));
+        await face.load();
+        document.fonts.add(face);
+      })();
+      added.set(family, adding);
+      adding.catch(() => added.delete(family));
+      return adding;
     },
   };
 }
 
 /**
- * Registers the vault's own faces with the document. The browser
- * resolves an installed family by name but not one the vault carries,
- * so a row offering it would draw in the interface face instead.
- * Nothing crosses to the engine, because the browser draws a picker
- * row.
+ * Registers the vault's own faces with the document, each family in
+ * its default variant. The browser resolves an installed family by name
+ * but not one the vault carries, so a row offering it would draw in the
+ * interface face instead. Nothing crosses to the engine, because the
+ * browser draws a picker row.
  */
 export async function previewFaces(
   places: FontPlaces,
@@ -159,28 +218,49 @@ export async function previewFaces(
     index.families
       .filter((family) => family.where === "vault")
       .map(async (family) => {
-        const face = regular(family);
+        const variant = family.variants.find((each) => each.isDefault);
+        const face = variant === undefined ? undefined : previewFace(variant);
         if (face === undefined) return;
-        try {
-          const { bytes } = await crossing(places, face);
-          await previews.add(family.name, bytes);
-        } catch {
-          // A face that will not load leaves its row in the interface
-          // face, which still reads.
-        }
+        await preview(places, previewFamily(family.name), face, previews);
       }),
   );
 }
 
-/** The cut a family previews in, its regular one where it has one. */
-function regular(family: Family): Face | undefined {
-  return (
-    family.faces.find((face) => face.style.toLowerCase() === "regular") ??
-    family.faces[0]
+/**
+ * Registers one face of each variant of a family with the document,
+ * under the variant's own preview family, so each row of the Variant
+ * menu draws in its own face.
+ */
+export async function previewVariants(
+  places: FontPlaces,
+  family: Family,
+  previews: Previews,
+): Promise<void> {
+  await Promise.all(
+    family.variants.map(async (variant) => {
+      const face = previewFace(variant);
+      if (face === undefined) return;
+      await preview(places, previewFamily(variantFamily(family, variant)), face, previews);
+    }),
   );
 }
 
-async function crossing(places: FontPlaces, face: Face): Promise<Hashed> {
+async function preview(
+  places: FontPlaces,
+  family: string,
+  face: IndexedFace,
+  previews: Previews,
+): Promise<void> {
+  try {
+    const { bytes } = await crossing(places, face);
+    await previews.add(family, bytes);
+  } catch {
+    // A face that will not load leaves its row in the interface face,
+    // which still reads.
+  }
+}
+
+async function crossing(places: FontPlaces, face: IndexedFace): Promise<Hashed> {
   const source = face.where === "vault" ? places.vault : places.platform;
   const file = await read(source, face.path);
   const bytes = faceBytes(file, face.face);

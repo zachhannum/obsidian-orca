@@ -9,7 +9,17 @@
 import { expect, type Locator, type Worker } from "@playwright/test";
 import { engineName } from "@/engine/pool";
 import type { Stages } from "@/engine/session";
+import { PLUGIN } from "./launch";
 import { FLOATING, type Obsidian } from "./obsidian";
+
+/** The part of the plugin a spec reads a book's session through. */
+interface Holding {
+  composer?: {
+    opened(at: string):
+      | Promise<{ session: { faces: { name: string }[]; pdf(): Promise<Uint8Array> } }>
+      | undefined;
+  };
+}
 
 /** The command that splits the pane and ties the two. */
 export const TO_THE_RIGHT = "orca:preview-to-the-right";
@@ -364,6 +374,52 @@ export class Book {
   async painted(): Promise<number> {
     await expect(this.surface).toHaveAttribute("data-generation", /\d+/);
     return Number(await this.surface.getAttribute("data-generation"));
+  }
+
+  /**
+   * The face each painted run matching the words is set in, by the name
+   * the engine's font table gives it. A run names its face by font id, so
+   * the id is looked up in the table of the session the pane reads.
+   */
+  async facesOf(book: string, words: string | RegExp): Promise<string[]> {
+    const ids = await this.surface
+      .locator("text")
+      .filter({ hasText: words })
+      .evaluateAll((runs) =>
+        runs.flatMap((run) => {
+          const id = /fleuron-face-(\d+)/.exec(run.getAttribute("font-family") ?? "")?.[1];
+          return id === undefined ? [] : [Number(id)];
+        }),
+      );
+    const table = await this.obsidian.page.evaluate(
+      async ({ id, at }) => {
+        const orca = window.app.plugins.plugins[id] as Holding | undefined;
+        const typeset = await orca?.composer?.opened(at);
+        if (typeset === undefined) throw new Error(`no book is open at ${at}`);
+        return typeset.session.faces.map((face) => face.name);
+      },
+      { id: PLUGIN, at: book },
+    );
+    return ids.map((id) => table[id] ?? "");
+  }
+
+  /** The book at this path as a PDF, exported off the session the preview reads. */
+  async pdf(at: string): Promise<Buffer> {
+    const encoded = await this.obsidian.page.evaluate(
+      async ({ id, book }) => {
+        const orca = window.app.plugins.plugins[id] as Holding | undefined;
+        const typeset = await orca?.composer?.opened(book);
+        if (typeset === undefined) throw new Error(`no book is open at ${book}`);
+        const bytes = await typeset.session.pdf();
+        let said = "";
+        for (let from = 0; from < bytes.length; from += 0x8000) {
+          said += String.fromCharCode(...bytes.subarray(from, from + 0x8000));
+        }
+        return btoa(said);
+      },
+      { id: PLUGIN, book: at },
+    );
+    return Buffer.from(encoded, "base64");
   }
 
   async stages(): Promise<Stages> {

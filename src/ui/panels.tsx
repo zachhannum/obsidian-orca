@@ -23,6 +23,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { Family, FontIndex } from "@/assets/fonts";
+import { usedVariant, variantFamily, type Variant } from "@/assets/variants";
 import {
   LEVELS,
   writeDesign,
@@ -58,7 +59,7 @@ import {
   type Row as Listed,
 } from "@/ui/groups";
 import { hyphenating } from "@/ui/language";
-import { picking } from "@/ui/picker";
+import { offeredVariants, picking, previewFamily } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
 /** The actions the view performs for the panel. */
@@ -67,6 +68,10 @@ export interface Acting {
   pick(font: Family, key: string): void;
   /** Writes one design key into the book note, which holds the design. */
   set(key: string, value: Written | undefined): void;
+  /** Sets a font's variant key. The faces of the variant go to the engine with the sheet. */
+  variant(key: string, variant: Variant): void;
+  /** Registers a face of each variant of a family with the document, so each variant row draws in its own face. */
+  preview(family: Family): void;
   /** Switches the panel between its controls and the author's own CSS. */
   view(viewing: Viewing): void;
   /** Switches the CSS view between wrapping long lines and scrolling them sideways. */
@@ -322,7 +327,10 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
     const cleared = writeDesign(
       effective(withKey(drawing.shown.design, key, undefined)),
     );
-    const value = defaultSaid(control, cleared[key], drawing.shown.unit);
+    const value =
+      control.kind === "variant"
+        ? String(cleared[key] ?? defaultVariant(drawing.shown.index, cleared[fontKeyOf(key)]) ?? "none")
+        : defaultSaid(control, cleared[key], drawing.shown.unit);
     return keyed.length > 1 && control.said !== undefined
       ? `${control.said} ${value}`
       : value;
@@ -431,6 +439,24 @@ function Drawn({
           }}
         />
       );
+    case "variant": {
+      const family = offeredVariants(shown.index, stringOf(full[fontKeyOf(key)]));
+      if (family === undefined) return null;
+      return (
+        <VariantPicker
+          family={family}
+          value={text}
+          faint={faint}
+          testid={testid}
+          pick={(variant) => {
+            acting.variant(key, variant);
+          }}
+          preview={() => {
+            acting.preview(family);
+          }}
+        />
+      );
+    }
     case "trim":
       return (
         <Trim
@@ -596,6 +622,13 @@ function sized(
  * set to.
  */
 function drawn(line: Listed, drawing: Drawing): boolean {
+  // A Variant row shows only for a family with more than one variant. A
+  // heading level with no font of its own asks of the body's family.
+  const variant = line.of.find((control) => control.kind === "variant");
+  if (variant?.key !== undefined) {
+    const font = drawing.full[fontKeyOf(atLevel(variant.key, drawing.level))];
+    return offeredVariants(drawing.shown.index, stringOf(font)) !== undefined;
+  }
   const mark = drawing.own["scene-break-mark"] ?? drawing.full["scene-break-mark"];
   const glyphs = line.of.some((control) => control.kind === "glyph");
   const word = line.of.some((control) => control.kind === "word");
@@ -717,10 +750,12 @@ function Picker({
                 }
                 data-testid="orca-panel-option"
                 data-font={offer.name}
-                // The browser draws the row in its own font, from an
-                // installed one or a vault file registered with the
-                // document.
-                style={{ fontFamily: `"${offer.name}", var(--font-text)` }}
+                // The browser draws the row in its own font, from a
+                // vault file registered with the document in its default
+                // variant, or else from an installed one.
+                style={{
+                  fontFamily: `"${previewFamily(offer.name)}", "${offer.name}", var(--font-text)`,
+                }}
                 // The filter keeps focus, so the blur that would close
                 // the menu never fires before the click lands.
                 onMouseDown={(event) => {
@@ -744,4 +779,127 @@ function Picker({
       )}
     </div>
   );
+}
+
+/**
+ * The variants of the family a font row sets, each row drawn in its own
+ * face. The faces are registered with the document the first time the
+ * menu opens, and a row draws in the interface face until then.
+ */
+function VariantPicker({
+  family,
+  value,
+  faint,
+  testid,
+  pick,
+  preview,
+}: {
+  family: Family;
+  /** The variant the design names, or nothing for the default. */
+  value: string | undefined;
+  faint: boolean;
+  testid: string;
+  pick: (variant: Variant) => void;
+  preview: () => void;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const { variant: current } = usedVariant(family, value);
+  const [at, setAt] = useState(0);
+  const menu = useRef<HTMLDivElement>(null);
+  const variants = family.variants;
+
+  useEffect(() => {
+    if (open) menu.current?.focus();
+  }, [open]);
+
+  const commit = (chosen: Variant | undefined): void => {
+    if (chosen === undefined) return;
+    pick(chosen);
+    setOpen(false);
+  };
+
+  const keyed = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setAt(Math.min(at + 1, variants.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setAt(Math.max(at - 1, 0));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      commit(variants[at]);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="orca-panel-picker">
+      <button
+        type="button"
+        className={faint ? "orca-panel-field is-default" : "orca-panel-field"}
+        data-testid={testid}
+        data-default={String(faint)}
+        onClick={() => {
+          if (!open) {
+            preview();
+            setAt(Math.max(variants.indexOf(current), 0));
+          }
+          setOpen(!open);
+        }}
+      >
+        <span className="orca-panel-family">{value ?? current.name}</span>
+        <Icon name="chevron-down" className="orca-panel-icon" />
+      </button>
+      {!open ? null : (
+        <div
+          ref={menu}
+          tabIndex={-1}
+          className="orca-panel-menu"
+          data-testid="orca-panel-variants"
+          onKeyDown={keyed}
+          onBlur={() => {
+            setOpen(false);
+          }}
+        >
+          <div className="orca-panel-rows" data-offered={variants.length}>
+            {variants.map((variant, row) => (
+              <div
+                key={variant.name}
+                className={row === at ? "orca-panel-option is-on" : "orca-panel-option"}
+                data-testid="orca-panel-variant"
+                data-variant={variant.name}
+                style={{
+                  fontFamily: `"${previewFamily(variantFamily(family, variant))}", var(--font-text)`,
+                }}
+                // The menu keeps focus, so the blur that would close it
+                // never fires before the click lands.
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  commit(variant);
+                }}
+              >
+                {variant.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The font key a variant key sits beside. */
+function fontKeyOf(key: string): string {
+  return key.replace(/-variant$/, "");
+}
+
+function stringOf(value: Written | undefined): string | undefined {
+  return value === undefined ? undefined : String(value);
+}
+
+/** The name of a font's default variant, for a family with more than one. */
+function defaultVariant(index: FontIndex, font: Written | undefined): string | undefined {
+  return offeredVariants(index, stringOf(font))?.variants.find((each) => each.isDefault)?.name;
 }

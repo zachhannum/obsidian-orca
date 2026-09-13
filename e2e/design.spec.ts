@@ -1,5 +1,23 @@
+import { execFileSync } from "node:child_process";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { expect, test } from "./harness/test";
 import type { Vault } from "./harness/vault";
+
+/** The fixture family whose faces come in more than one variant. */
+const VARIED = "Junicode";
+
+/** Junicode's default variant, and its condensed one. */
+const DEFAULT_VARIANT = "Regular";
+const CONDENSED = "Cond";
+
+/** The name the engine's font table gives a face of the condensed variant. */
+const CONDENSED_FACE = /^Junicode[ -]?Cond/;
+
+/** A word of the fixture chapter's heading, and words of its body. */
+const HEADING_WORD = "Twelve";
+const BODY_WORDS = /\b(the|and|of)\b/;
 
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
@@ -247,6 +265,190 @@ test("a heading font picked in the panel is still the headings' font after Obsid
   await panel.open();
   await expect(panel.control("heading-1-font")).toContainText(FIXTURE_FONT);
   await expect(panel.missing).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("the Variant row shows under the Font row for a family with more than one variant, and lists the variants the index found", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.chooseFont("body-font", VARIED);
+  const variant = panel.control("body-font-variant");
+  await expect(variant).toBeVisible();
+  // No variant is picked, so the row names the default in faint type.
+  await expect(variant).toHaveText(DEFAULT_VARIANT);
+  await expect(variant).toHaveAttribute("data-default", "true");
+  // The row sits directly under the Font row.
+  expect((await panel.placed("body-font-variant")).y).toBeGreaterThan(
+    (await panel.placed("font")).y,
+  );
+
+  await variant.click();
+  expect(await panel.variants()).toEqual([DEFAULT_VARIANT, CONDENSED, "Exp"]);
+
+  await written(vault, own);
+});
+
+test("a family with one variant shows no Variant row", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.chooseFont("body-font", VARIED);
+  await expect(panel.control("body-font-variant")).toBeVisible();
+
+  await panel.chooseFont("body-font", FIXTURE_FONT);
+  await expect(panel.control("body-font-variant")).toHaveCount(0);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `body-font: ${FIXTURE_FONT}`,
+  );
+  expect(await vault.read(BOOK)).not.toContain("body-font-variant:");
+
+  await written(vault, own);
+});
+
+test("a picked variant is stored with its family, and the book reads it back after it opens again", async ({
+  obsidian,
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.chooseFont("body-font", VARIED);
+  await panel.chooseVariant("body-font", CONDENSED);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `body-font-variant: ${CONDENSED}`,
+  );
+  expect(await vault.read(BOOK)).toContain(`body-font: ${VARIED}`);
+
+  // A reload stops the engine, so the book is set from its note again.
+  await obsidian.reload();
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await expect(panel.font).toContainText(VARIED);
+  await expect(panel.control("body-font-variant")).toHaveText(CONDENSED);
+  await expect(panel.control("body-font-variant")).toHaveAttribute("data-default", "false");
+  await expect(panel.missing).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("the body and a heading set in two variants of one family in the same book", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.chooseFont("body-font", VARIED);
+  await panel.chooseFont("heading-1-font", VARIED);
+  await panel.chooseVariant("heading-1-font", CONDENSED);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `heading-1-font-variant: ${CONDENSED}`,
+  );
+  await book.choose(CHAPTER_NAME);
+
+  // The heading is set in the condensed cut and the body in the regular one.
+  await expect
+    .poll(async () => book.facesOf(BOOK, HEADING_WORD))
+    .toContainEqual(expect.stringMatching(CONDENSED_FACE));
+  await expect
+    .poll(async () => book.facesOf(BOOK, BODY_WORDS))
+    .toContainEqual(expect.stringMatching(/^Junicode[ -](Regular|Bold|Italic)$/));
+  const body = await book.facesOf(BOOK, BODY_WORDS);
+  expect(body.filter((name) => /Cond|Exp/.test(name))).toEqual([]);
+
+  await written(vault, own);
+});
+
+test("the preview and the PDF set the picked variant, and the preview draws the face the PDF embeds", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.chooseFont("body-font", VARIED);
+  await panel.chooseVariant("body-font", CONDENSED);
+  await book.choose(CHAPTER_NAME);
+
+  await expect
+    .poll(async () => book.facesOf(BOOK, BODY_WORDS))
+    .toContainEqual(expect.stringMatching(CONDENSED_FACE));
+  const painted = new Set(await book.facesOf(BOOK, BODY_WORDS));
+  expect([...painted].filter((name) => /^Junicode/.test(name) && !/Cond/.test(name))).toEqual([]);
+
+  const pdfPath = path.join(await mkdtemp(path.join(tmpdir(), "orca-variant-")), "book.pdf");
+  await writeFile(pdfPath, await book.pdf(BOOK));
+  const embedded = execFileSync("pdffonts", [pdfPath], { encoding: "utf8" });
+  // The font table names a face with spaces and the PDF with hyphens, so
+  // both are compared with neither.
+  const squashed = embedded.replace(/[\s-]/g, "");
+  for (const name of painted) {
+    if (name.startsWith("Junicode")) expect(squashed).toContain(name.replace(/[\s-]/g, ""));
+  }
+  expect(embedded).not.toMatch(/Junicode-(Regular|Bold|Italic|Exp)/);
+
+  await written(vault, own);
+});
+
+test("a picker row and a variant row preview in their own faces", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.pick();
+  await panel.type(VARIED);
+  const row = panel.option(VARIED);
+  await expect
+    .poll(async () => panel.drawnIn(row))
+    .toEqual({ family: `orca-preview ${VARIED}`, loaded: true });
+  await row.click();
+  await expect(panel.font).toContainText(VARIED);
+
+  await panel.control("body-font-variant").click();
+  const condensed = panel.variant(CONDENSED);
+  await expect
+    .poll(async () => panel.drawnIn(condensed))
+    .toEqual({ family: `orca-preview ${VARIED} ${CONDENSED}`, loaded: true });
+  await expect
+    .poll(async () => panel.drawnIn(panel.variant(DEFAULT_VARIANT)))
+    .toEqual({ family: `orca-preview ${VARIED}`, loaded: true });
 
   await written(vault, own);
 });

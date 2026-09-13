@@ -6,8 +6,16 @@
  * matches nothing commits nothing.
  */
 
-import { has, matching, type Family, type FontIndex } from "@/assets/fonts";
-import { designFonts, type Design } from "@/style/design";
+import {
+  familyNamed,
+  has,
+  matching,
+  type Face,
+  type Family,
+  type FontIndex,
+} from "@/assets/fonts";
+import { usedVariant, type Variant } from "@/assets/variants";
+import { designFonts, designUses, type Design, type FontUse } from "@/style/design";
 
 /** The picker's state. */
 export interface Picking {
@@ -50,4 +58,47 @@ export function missingFont(
  */
 export function missingFonts(index: FontIndex, design: Design): string[] {
   return designFonts(design).flatMap((font) => missingFont(index, font) ?? []);
+}
+
+/**
+ * The warning for a stored variant the family on this machine does not
+ * have. The book sets in the family's default variant. A font the
+ * machine lacks gets the missing-font warning instead.
+ */
+export function missingVariant(index: FontIndex, use: FontUse): string | undefined {
+  if (use.variant === undefined) return undefined;
+  const family = familyNamed(index, use.font);
+  if (family === undefined || family.variants.length === 0) return undefined;
+  const { variant, fellBack } = usedVariant(family, use.variant);
+  if (!fellBack) return undefined;
+  return `${use.variant} is not a variant of ${family.name} this machine has. The book is set in ${family.name} ${variant.name}.`;
+}
+
+/** The warnings for every variant a design sets that its family lacks, one per font and variant. */
+export function missingVariants(index: FontIndex, design: Design): string[] {
+  return designUses(design).flatMap((use) => missingVariant(index, use) ?? []);
+}
+
+/** The family a row of the picker registers its preview face under, apart from any family the book sets in. */
+export function previewFamily(family: string): string {
+  return `orca-preview ${family}`;
+}
+
+/** The face a variant previews in: its upright face nearest weight 400, or its first face when none is upright. */
+export function previewFace(variant: Variant): Face | undefined {
+  let best: Face | undefined;
+  for (const face of variant.faces) {
+    if (face.italic) continue;
+    if (best === undefined || Math.abs(face.weight - 400) < Math.abs(best.weight - 400)) {
+      best = face;
+    }
+  }
+  return best ?? variant.faces[0];
+}
+
+/** The family a Variant row offers the variants of. None when the family has one variant or is not on this machine, and then the row is hidden. */
+export function offeredVariants(index: FontIndex, font: string | undefined): Family | undefined {
+  if (font === undefined) return undefined;
+  const family = familyNamed(index, font);
+  return family !== undefined && family.variants.length > 1 ? family : undefined;
 }

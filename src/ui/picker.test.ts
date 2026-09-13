@@ -1,8 +1,22 @@
 import assert from "node:assert/strict";
+import path from "node:path";
+import process from "node:process";
 import { test } from "node:test";
-import type { Face, Family, FontIndex } from "@/assets/fonts";
+import { directoryVault } from "@/assets/directory";
+import { VAULT_FONTS, familyNamed, type Face, type Family, type FontIndex } from "@/assets/fonts";
+import { familyVariants } from "@/assets/variants";
 import { emptyDesign } from "@/style/design";
-import { missingFont, missingFonts, picking } from "@/ui/picker";
+import { readFontIndex, resolveUse, vaultFonts } from "@/ui/fonts";
+import {
+  missingFont,
+  missingFonts,
+  missingVariant,
+  missingVariants,
+  picking,
+} from "@/ui/picker";
+
+const root = process.env["ORCA_ROOT"] ?? process.cwd();
+const vault = directoryVault(path.join(root, "fixture"));
 
 /** One face of a family, as the index found it. */
 function face(family: string, style: string): Face {
@@ -80,6 +94,44 @@ test("a heading font the machine does not have is warned about as a missing body
   ]);
   design.body.font = "Helvetica Neue";
   assert.equal(missingFonts(INDEX, design).length, 2);
+});
+
+test("a stored variant the machine does not have warns and sets in the family's default variant", async () => {
+  const faces = [face("Junicode", "Regular"), face("Junicode", "Cond")];
+  const junicode: Family = {
+    name: "Junicode",
+    where: "platform",
+    faces,
+    variants: familyVariants(faces),
+  };
+  const index: FontIndex = { families: [junicode, ...INDEX.families], refused: [] };
+  assert.equal(missingVariant(index, { font: "Junicode", variant: "cond" }), undefined);
+  assert.equal(missingVariant(index, { font: "Junicode", variant: undefined }), undefined);
+  assert.equal(
+    missingVariant(index, { font: "Junicode", variant: "SmExp" }),
+    "SmExp is not a variant of Junicode this machine has. The book is set in Junicode Regular.",
+  );
+  // A font the machine lacks is warned about as a missing font, not a missing variant.
+  assert.equal(missingVariant(index, { font: "Zzyzx Grotesque", variant: "Cond" }), undefined);
+  const design = emptyDesign();
+  design.body.font = "Junicode";
+  design.body.fontVariant = "SmExp";
+  assert.equal(missingVariants(index, design).length, 1);
+
+  // The book sets in the default variant: its faces cross and its family is registered.
+  const places = {
+    platform: vaultFonts(vault),
+    vault: vaultFonts(vault),
+    directories: [],
+    folder: VAULT_FONTS,
+  };
+  const fixture = await readFontIndex(places);
+  const resolved = await resolveUse(places, fixture, { font: "Junicode", variant: "SmExp" });
+  assert.equal(resolved.fellBack, true);
+  assert.equal(resolved.registered?.family, "Junicode");
+  const regular = familyNamed(fixture, "Junicode")?.variants.find((each) => each.isDefault);
+  assert.equal(regular?.name, "Regular");
+  assert.equal(resolved.faces.length, regular.faces.length);
 });
 
 // What this tier does not cover: the panel's drawing, which is React
