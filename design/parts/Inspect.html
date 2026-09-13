@@ -1,0 +1,388 @@
+<div style="height: 100%; background: var(--background-secondary); padding: 20px; display: flex; flex-direction: column; gap: 16px">
+
+  <div class="title-block">
+    <h2>Inspect mode: the names of what is on the page</h2>
+    <div class="sub">An action in the book's header turns the pointer into a picker. The box under it is outlined on the page, and a click pins it. The pane at the top of the CSS view names the box, the rules that set it and where each one came from, so an author writes a selector the engine will match without opening the docs.</div>
+  </div>
+
+  <!-- 1. The whole workspace, with a paragraph pinned. -->
+  <div class="step" style="height: 900px">
+    <div class="step-n"><b>3</b>A box pinned. The pane opens at the top of the design panel's CSS view, above the editor it writes into.</div>
+    <div class="step-frame" style="flex: 1; min-height: 0">
+      <div class="win">
+        <div class="win-body">
+
+          <div class="ribbon">
+            <div class="ribbon-btn is-active"><svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+          </div>
+
+          <div class="workspace">
+            <div class="pane">
+              <div class="tabbar">
+                <div class="tab is-active">
+                  <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h6"/></svg>
+                  <span>Chapter Twelve</span>
+                </div>
+                <div class="tab-actions">
+                  <div class="view-action is-active"><svg class="icon-s icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div>
+                  <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+                  <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div>
+                </div>
+              </div>
+              <div class="pane-body" style="display: flex; flex-direction: column">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--divider-color); background: var(--orca-bar)">
+                  <div class="seg">
+                    <div class="is-on"><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1"/></svg></div>
+                    <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/></svg></div>
+                    <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="3" y="13" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/></svg></div>
+                  </div>
+                  <div style="flex: 1"></div>
+                  <div class="field is-select" style="height: 26px; max-width: 150px"><span>Chapter Twelve</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+                  <div style="width: 1px; height: 18px; background: var(--divider-color); margin: 0 4px"></div>
+                  <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m15 18-6-6 6-6"/></svg>
+                  <div class="field" style="width: 58px; height: 26px; justify-content: center">147</div>
+                  <span style="color: var(--text-faint)">of 337</span>
+                  <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m9 18 6-6-6-6"/></svg>
+                  <div style="width: 1px; height: 18px; background: var(--divider-color); margin: 0 4px"></div>
+                  <div style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; color: var(--text-muted)"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></div>
+                </div>
+
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; cursor: crosshair">
+                  <div class="paper" style="width: 404px; height: 624px; padding: 82px 58px 70px">
+                    <div class="chaphead" style="margin-top: 60px"><div class="chapnum" style="font-size: 11px">Chapter Twelve</div></div>
+                    <div class="body" style="margin-top: 44px; font-size: 13px">
+                      <p class="first"><span class="dropcap" style="font-size: 50px">I</span>n consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them in the course of the day.</p>
+                      <p style="position: relative">
+                        <span class="insp insp-content insp-edge is-pinned" style="inset: 0"></span>
+                        <span class="insp-tag" style="top: -21px; left: -2px; text-indent: 0"><b>p</b><i>chapter</i><i>3.54 × 1.04in</i></span>
+                        But Mrs. Bennet, who had calculated on her daughters remaining at Netherfield till the following Tuesday, which would exactly finish Jane's week, could not bring herself to receive them with pleasure before.</p>
+                      <p>Her answer, therefore, was not propitious, at least not to Elizabeth's wishes, for she was impatient to get home. Mrs. Bennet sent them word that they could not possibly have the carriage before Tuesday.</p>
+                    </div>
+                    <div class="folio" style="font-size: 11px">147</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- the design panel, in its CSS view, with the inspect pane on top -->
+          <div class="side mod-right" style="width: 430px">
+            <div class="side-tabs">
+              <div class="side-tab"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M4 6h10"/><path d="M4 18h7"/></svg></div>
+              <div class="side-tab is-active"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg></div>
+              <div style="flex: 1"></div>
+            </div>
+
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px">
+              <div style="display: flex; align-items: center; gap: 7px; padding: 2px 0 0">
+                <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">YOUR CSS</span>
+                <span style="font-size: 11px; color: var(--text-faint)">— Pride and Prejudice</span>
+                <div style="flex: 1"></div>
+                <div style="display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--radius-s); color: var(--text-muted)">
+                  <svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>
+                </div>
+              </div>
+
+              <!-- the inspect pane -->
+              <div data-testid="inspect-pane" style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 7px">
+                <div style="display: flex; align-items: center; gap: 6px">
+                  <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-accent)"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg>
+                  <div class="crumbs" style="flex: 1; min-width: 0">
+                    <span class="crumb">book</span>›<span class="crumb">section:nth-child(16)<i>chapter</i></span>›<span class="crumb is-active">p</span>
+                  </div>
+                  <div class="clickable-icon" style="padding: 3px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+                </div>
+                <div class="note" style="margin: -2px 0 0 19px">page 147 · Chapter Twelve.md, paragraph 2</div>
+
+                <div class="origin">Your CSS</div>
+                <div class="rule" style="background: hsla(258, 88%, 66%, 0.09)">
+                  <div class="rule-h"><span class="sel">p</span><span class="src">line 6</span></div>
+                  <div class="decl"><span class="p">text-indent</span>: <span class="v">1.35em</span>;</div>
+                  <div class="decl is-skipped"><span class="p">text-wrap</span>: <span class="v">balance</span>;</div>
+                </div>
+
+                <div class="origin">Design panel</div>
+                <div class="rule">
+                  <div class="rule-h"><span class="sel">p + p</span><span class="src">First-line indent</span></div>
+                  <div class="decl is-lost"><span class="p">text-indent</span>: <span class="v">1.2em</span>;</div>
+                </div>
+                <div class="rule">
+                  <div class="rule-h"><span class="sel">book</span><span style="font-family: var(--font-interface); font-size: 10.5px; color: var(--text-faint)">inherited</span><span class="src">Text</span></div>
+                  <div class="decl"><span class="p">font-family</span>: <span class="v">"Alegreya"</span>;</div>
+                  <div class="decl"><span class="p">font-size</span>: <span class="v">10.5pt</span>; <span class="p">line-height</span>: <span class="v">14pt</span>;</div>
+                  <div class="decl"><span class="p">text-align</span>: <span class="v">justify</span>; <span class="p">hyphens</span>: <span class="v">auto</span>;</div>
+                </div>
+
+                <div class="origin">Computed</div>
+                <div class="computed">
+                  <span>Font</span><span>Alegreya 10.5pt</span>
+                  <span>Leading</span><span>14pt</span>
+                  <span>Indent</span><span>1.35em (14.2pt)</span>
+                  <span>Margins</span><span>0 above, 0 below</span>
+                  <span>Box</span><span>3.54 × 1.04in</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px">
+                  <div class="btn" style="height: 26px; padding: 0 10px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for <span class="mono" style="font-weight: 400">p</span></div>
+                  <span class="note">at the cursor, line 13</span>
+                </div>
+              </div>
+
+              <!-- the editor, under the pane -->
+              <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); overflow: hidden">
+                <div style="padding: 8px 0; font-family: var(--font-monospace); font-size: 12px; line-height: 1.7">
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">1</div><div><span style="color: var(--text-faint)">/* my own CSS */</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">2</div><div><span style="color: var(--color-orange)">@page</span> <span style="color: var(--text-muted)">{</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">3</div><div>&nbsp;&nbsp;<span style="color: var(--color-cyan)">margin-inside</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">0.95in</span><span style="color: var(--text-muted)">;</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">4</div><div><span style="color: var(--text-muted)">}</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">5</div><div></div></div>
+                  <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">6</div><div><span style="color: var(--color-red)">p</span> <span style="color: var(--text-muted)">{</span></div></div>
+                  <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">7</div><div>&nbsp;&nbsp;<span style="color: var(--color-cyan)">text-indent</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">1.35em</span><span style="color: var(--text-muted)">;</span></div></div>
+                  <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--color-orange)">8</div><div>&nbsp;&nbsp;<span style="color: var(--color-cyan); text-decoration: underline wavy var(--color-orange); text-underline-offset: 3px; text-decoration-thickness: 1px">text-wrap</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple); text-decoration: underline wavy var(--color-orange); text-underline-offset: 3px; text-decoration-thickness: 1px">balance</span><span style="color: var(--text-muted)">;</span></div></div>
+                  <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">9</div><div><span style="color: var(--text-muted)">}</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">10</div><div></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">11</div><div><span style="color: var(--color-red)">h1</span> <span style="color: var(--text-muted)">{</span> <span style="color: var(--color-cyan)">font-variant</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">small-caps</span><span style="color: var(--text-muted)">; }</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">12</div><div><span style="color: var(--color-red)">hr</span> <span style="color: var(--text-muted)">{</span> <span style="color: var(--color-cyan)">margin-block</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">1lh</span><span style="color: var(--text-muted)">; }</span></div></div>
+                  <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">13</div><div style="display: flex; align-items: center"><span style="width: 1px; height: 14px; background: var(--text-accent)"></span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status">
+          <span style="color: var(--text-faint)">Inspecting. Click a box to pin it. <span class="kbd">Esc</span> to leave.</span>
+          <span style="flex: 1"></span>
+          <span>page 147 of 337</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. The toggle, hovering, and a box split across two pages. -->
+  <div style="display: flex; gap: 16px; height: 500px">
+
+    <div class="step" style="width: 330px">
+      <div class="step-n"><b>1</b>The toggle, off and on</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--background-secondary)">
+        <div class="tabbar">
+          <div class="tab is-active"><span>Chapter Twelve</span></div>
+          <div class="tab-actions">
+            <div class="view-action" style="color: var(--text-normal); background: var(--background-modifier-hover)"><svg class="icon-s icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg><div class="tooltip" style="top: calc(100% + 6px); right: -40px">Inspect the page</div></div>
+            <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+            <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div>
+          </div>
+        </div>
+        <div class="pane-body" style="flex: none; height: 150px; display: flex; align-items: center; justify-content: center; border-radius: 0">
+          <div class="paper" style="width: 84px; height: 130px; padding: 18px 12px"><div class="body" style="font-size: 3.8px; line-height: 1.6"><p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin by the alteration, for the chief of the time between breakfast and dinner was now passed by him.</p><p>Between him and Darcy there was a very steady friendship.</p></div></div>
+        </div>
+        <div class="tabbar" style="margin-top: 10px">
+          <div class="tab is-active"><span>Chapter Twelve</span></div>
+          <div class="tab-actions">
+            <div class="view-action is-active"><svg class="icon-s icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div>
+            <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+            <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div>
+          </div>
+        </div>
+        <div class="pane-body" style="display: flex; align-items: center; justify-content: center; border-radius: 0; cursor: crosshair">
+          <div class="paper" style="width: 84px; height: 130px; padding: 18px 12px"><div class="body" style="font-size: 3.8px; line-height: 1.6"><p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin by the alteration, for the chief of the time between breakfast and dinner was now passed by him.</p><p>Between him and Darcy there was a very steady friendship.</p></div></div>
+        </div>
+      </div>
+      <div class="step-note">An action in the view header, beside the swap to the manuscript. On, it takes the accent. The pages look the same until the pointer is over one. <span style="color: var(--text-muted)">Inspect the page</span> is also a command, so a key can be bound to it.</div>
+    </div>
+
+    <div class="step" style="width: 420px">
+      <div class="step-n"><b>2</b>Hovering: the box under the pointer</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; cursor: crosshair">
+        <div class="paper" style="width: 270px; height: 417px; padding: 55px 39px 47px">
+          <!-- h1, with its sink drawn as padding -->
+          <div style="position: relative; padding-top: 48px; text-align: center">
+            <span class="insp insp-padding" style="left: 0; right: 0; top: 0; height: 48px"></span>
+            <span class="insp insp-content" style="left: 0; right: 0; top: 48px; bottom: 0"></span>
+            <span class="insp insp-edge" style="inset: 0"></span>
+            <span class="insp-tag" style="top: -21px; left: -2px"><b>h1</b><i>chapter</i><i>3.21 × 1.02in</i></span>
+            <div class="chapnum" style="font-size: 8px; padding: 2px 0">Chapter Twelve</div>
+          </div>
+          <div class="body" style="margin-top: 26px; font-size: 8.6px">
+            <p class="first"><span class="dropcap" style="font-size: 33px">I</span>n consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them in the course of the day.</p>
+            <p>But Mrs. Bennet, who had calculated on her daughters remaining at Netherfield till the following Tuesday, could not bring herself to receive them with pleasure before.</p>
+          </div>
+          <div class="folio" style="font-size: 7.5px; bottom: 18px">147</div>
+        </div>
+      </div>
+      <div class="step-note">Content is the accent, padding green, margin yellow, each a light tint so the words stay readable. The tag names the element, the role of its section, and the box in the unit from orca's settings. The space above a chapter title is padding, so it shows green.</div>
+    </div>
+
+    <div class="step" style="flex: 1; min-width: 0">
+      <div class="step-n"><b>4</b>A box split across two pages</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 2px; cursor: crosshair">
+        <div class="paper" style="width: 232px; height: 358px; padding: 42px 26px 40px 40px">
+          <div class="runhead">Jane Austen</div>
+          <div class="body">
+            <p class="first">and she was at leisure to feel a great deal of curiosity as to the truth of it. Elizabeth said as little to either as civility would allow, and sat down again to her work, determined to hear nothing more of the matter that evening.</p>
+            <p>The evening passed quietly, unmarked by anything extraordinary, and the household went on much as it always had.</p>
+            <p style="position: relative">
+              <span class="insp insp-content insp-edge cut-bottom" style="inset: 0 0 -2px 0"></span>
+              <span class="insp-tag" style="top: -21px; left: -2px; text-indent: 0"><b>p</b><i>chapter</i><i>1 of 2</i></span>
+              The rest of the party had now entered, and Elizabeth found herself observed with an attention she could not account for. She was glad when the carriage was called, and</p>
+          </div>
+          <div class="folio">158</div>
+        </div>
+        <div class="paper" style="width: 232px; height: 358px; padding: 42px 40px 40px 26px">
+          <div class="runhead">Pride and Prejudice</div>
+          <div class="body">
+            <p class="first" style="position: relative">
+              <span class="insp insp-content insp-edge cut-top" style="inset: -2px 0 0 0"></span>
+              <span class="insp-tag" style="top: calc(100% + 4px); left: -2px; text-indent: 0"><b>p</b><i>2 of 2</i></span>
+              gladder still when they were once more at Longbourn, where nobody observed her at all.</p>
+            <p>She had not been long at home before she heard the whole of it, and could think of nothing else through the greater part of the following morning.</p>
+            <p>Mrs. Bennet was the first to speak of it, and spoke of little else.</p>
+          </div>
+          <div class="folio">159</div>
+        </div>
+      </div>
+      <div class="step-note">One paragraph, two fragments. Both are outlined, and each is left open on the side the page cut. The tag counts the fragments. The pane shows the box once, with <span class="mono">pages 158–159</span> in place of one page. In the grid view, a fragment on a page that is not painted is not drawn.</div>
+    </div>
+  </div>
+
+  <!-- 3. Generated matter: the title page and a running head. -->
+  <div style="display: flex; gap: 16px; height: 470px">
+
+    <div class="step" style="flex: 1; min-width: 0">
+      <div class="step-n"><b>5</b>Generated matter: the title page</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 24px; padding: 0 20px">
+        <div class="paper" style="width: 232px; height: 358px; padding: 42px 30px 40px; text-align: center">
+          <div style="padding-top: 58px; font-size: 7.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6355">The Novels of Jane Austen</div>
+          <div style="position: relative; margin-top: 28px; padding-top: 10px">
+            <span class="insp insp-padding" style="left: 0; right: 0; top: 0; height: 10px"></span>
+            <span class="insp insp-content insp-edge is-pinned" style="inset: 0"></span>
+            <span class="insp-tag" style="top: -21px; left: -2px"><b>h1</b><i>title page</i></span>
+            <div style="font-size: 18px; line-height: 1.5">Pride and Prejudice</div>
+          </div>
+          <div style="padding-top: 10px; font-size: 10px">Jane Austen</div>
+          <div style="padding-top: 86px; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: #6a6355">Longbourn Press</div>
+        </div>
+        <div style="width: 330px; flex: none; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 10px; display: flex; flex-direction: column; gap: 7px">
+          <div class="crumbs"><span class="crumb">book</span>›<span class="crumb">section:nth-child(1)<i>title page</i></span>›<span class="crumb is-active">h1</span></div>
+          <div class="note">Orca writes this page from the book's properties. No note has a line for it.</div>
+          <div class="origin">Design panel</div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">section:nth-child(1) &gt; p + h1</span><span class="src is-faint">title page</span></div>
+            <div class="decl"><span class="p">padding-top</span>: <span class="v">14pt</span>;</div>
+          </div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">section:nth-child(1) &gt; *</span><span class="src is-faint">title page</span></div>
+            <div class="decl"><span class="p">text-align</span>: <span class="v">center</span>; <span class="p">text-indent</span>: <span class="v">0</span>;</div>
+          </div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">h1</span><span class="src">Headings, H1</span></div>
+            <div class="decl"><span class="p">font-size</span>: <span class="v">17pt</span>;</div>
+            <div class="decl is-lost"><span class="p">text-align</span>: <span class="v">center</span>;</div>
+          </div>
+          <div class="origin">Orca's theme</div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">:is(h1, h2, h3, h4, h5, h6)</span></div>
+            <div class="decl"><span class="p">font-weight</span>: <span class="v">400</span>; <span class="p">line-height</span>: <span class="v">1.5</span>;</div>
+          </div>
+        </div>
+      </div>
+      <div class="step-note">A rule orca lays out with no control behind it names its page in faint type and goes nowhere. A rule a control wrote names the control, and a click turns the panel to its controls view at that row. The theme's rules name nothing.</div>
+    </div>
+
+    <div class="step" style="flex: 1; min-width: 0">
+      <div class="step-n"><b>6</b>Generated matter: a running head</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 24px; padding: 0 20px">
+        <div class="paper" style="width: 232px; height: 358px; padding: 42px 26px 40px 40px">
+          <div style="position: absolute; top: 12px; left: 40px; width: 166px; height: 26px">
+            <span class="insp insp-content insp-edge is-pinned" style="inset: 0"></span>
+            <span class="insp-tag" style="top: 30px; left: -2px"><b>@top-left</b><i>@page :left</i></span>
+          </div>
+          <div class="runhead" style="text-align: left; left: 40px; top: 21px">Jane Austen</div>
+          <div class="body" style="margin-top: 14px">
+            <p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin by the alteration, for the chief of the time between breakfast and dinner was now passed by him either at work in the garden, or in reading and writing.</p>
+            <p>Between him and Darcy there was a very steady friendship, in spite of a great opposition of character.</p>
+          </div>
+          <div class="folio">146</div>
+        </div>
+        <div style="width: 330px; flex: none; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 10px; display: flex; flex-direction: column; gap: 7px">
+          <div class="crumbs"><span class="crumb">@page :left</span>›<span class="crumb is-active">@top-left</span></div>
+          <div class="note">A running head belongs to the page, not to the book, so a rule for it is written inside <span class="mono">@page</span>.</div>
+          <div class="origin">Design panel</div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">@page :left › @top-left</span><span class="src">Left-page header</span></div>
+            <div class="decl"><span class="p">content</span>: <span class="v">"Jane Austen"</span>;</div>
+          </div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">@page › @top-left</span><span class="src">Heads &amp; folios</span></div>
+            <div class="decl is-lost"><span class="p">content</span>: <span class="v">none</span>;</div>
+          </div>
+          <div class="origin">Computed</div>
+          <div class="computed">
+            <span>Font</span><span>Alegreya 8.5pt</span>
+            <span>Box</span><span>3.35 × 0.36in</span>
+          </div>
+          <div style="margin-top: 2px"><div class="btn" style="height: 26px; padding: 0 10px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for <span class="mono" style="font-weight: 400">@top-left</span></div></div>
+        </div>
+      </div>
+      <div class="step-note">The pointer finds the margin boxes as well as the book's own elements. A page that opens a chapter prints no head, so there is nothing to pick there.</div>
+    </div>
+  </div>
+
+  <!-- 4. Adding the rule, and leaving. -->
+  <div style="display: flex; gap: 16px; height: 330px">
+
+    <div class="step" style="width: 470px">
+      <div class="step-n"><b>7</b>Add a rule</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px">
+        <div class="crumbs"><span class="crumb">book</span>›<span class="crumb is-active">section:nth-child(16)<i>chapter</i></span>›<span class="crumb is-active">p</span></div>
+        <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); overflow: hidden">
+          <div style="padding: 8px 0; font-family: var(--font-monospace); font-size: 12px; line-height: 1.7">
+            <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">11</div><div><span style="color: var(--color-red)">h1</span> <span style="color: var(--text-muted)">{</span> <span style="color: var(--color-cyan)">font-variant</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">small-caps</span><span style="color: var(--text-muted)">; }</span></div></div>
+            <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">12</div><div><span style="color: var(--color-red)">hr</span> <span style="color: var(--text-muted)">{</span> <span style="color: var(--color-cyan)">margin-block</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">1lh</span><span style="color: var(--text-muted)">; }</span></div></div>
+            <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">13</div><div><span style="color: var(--color-red)">section:nth-child(16) &gt; p</span> <span style="color: var(--text-muted)">{</span></div></div>
+            <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">14</div><div style="display: flex; align-items: center">&nbsp;&nbsp;<span style="width: 1px; height: 14px; background: var(--text-accent)"></span></div></div>
+            <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">15</div><div><span style="color: var(--text-muted)">}</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-note">The rule goes in at the cursor, and the cursor lands inside it. With no crumb picked, the selector is the box's element alone. Each crumb the author picks is added to the selector. A position counts the reading order, so <span class="mono">section:nth-child(16)</span> names a different section when the order moves.</div>
+    </div>
+
+    <div class="step" style="flex: 1; min-width: 0">
+      <div class="step-n"><b>8</b>Leaving inspect mode</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; align-items: center">
+          <div style="align-self: stretch; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)">Pointer leaves the pages</div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center">
+            <div class="paper" style="width: 110px; height: 170px; padding: 22px 15px"><div class="body" style="font-size: 4.8px; line-height: 1.6"><p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin.</p><p style="position: relative"><span class="insp insp-content insp-edge is-pinned" style="inset: 0"></span>Between him and Darcy there was a very steady friendship, in spite of a great opposition of character.</p><p>On the strength of that regard she was persuaded to stay.</p></div></div>
+          </div>
+          <div class="note" style="text-align: center">The hover outline goes. The pinned box and its pane stay.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; align-items: center; border-left: 1px solid var(--divider-color)">
+          <div style="align-self: stretch; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)"><span class="kbd">Esc</span> once</div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center">
+            <div class="paper" style="width: 110px; height: 170px; padding: 22px 15px; cursor: crosshair"><div class="body" style="font-size: 4.8px; line-height: 1.6"><p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin.</p><p>Between him and Darcy there was a very steady friendship, in spite of a great opposition of character.</p><p>On the strength of that regard she was persuaded to stay.</p></div></div>
+          </div>
+          <div class="note" style="text-align: center">The pin comes off and the pane closes. The picker stays on.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; align-items: center; border-left: 1px solid var(--divider-color)">
+          <div style="align-self: stretch; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)"><span class="kbd">Esc</span> again, or the action
+            <span style="flex: 1"></span>
+            <div class="view-action"><svg class="icon-s icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div>
+          </div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center">
+            <div class="paper" style="width: 110px; height: 170px; padding: 22px 15px"><div class="body" style="font-size: 4.8px; line-height: 1.6"><p class="first">not think of quitting it in a hurry. Elizabeth was thankful to find that they did not see more of her cousin.</p><p>Between him and Darcy there was a very steady friendship, in spite of a great opposition of character.</p><p>On the strength of that regard she was persuaded to stay.</p></div></div>
+          </div>
+          <div class="note" style="text-align: center">Inspect mode is off. A swap to the manuscript turns it off too.</div>
+        </div>
+      </div>
+      <div class="step-note">A pinned box outlives an edit to the CSS, so the author sees the rule they just wrote join its list. An edit to the manuscript can remove the box, and then the pin comes off.</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+    <div class="callout"><div><span class="k">The engine's names.</span> A section carries no class and no id, so the crumbs and the rules show the selectors the engine matches: an element, and a section by its place in the reading order. The role in faint type beside a section is orca's, and is not a selector.</div></div>
+    <div class="callout"><div><span class="k">Where a rule came from.</span> Your CSS comes first and names its line, and a click puts the cursor on it. The design panel's rules name the control that wrote them. A declaration a later rule beat is struck through, and one the engine skipped keeps the warning's squiggle.</div></div>
+    <div class="callout"><div><span class="k">Waiting on the engine.</span> The box under a point, its fragments, the rules that matched it with their sheet and line, and its computed values all come from fleuron. Orca draws the answers and computes none of them.</div></div>
+  </div>
+</div>

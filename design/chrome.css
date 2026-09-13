@@ -210,3 +210,43 @@
 /* ---- a control your own CSS has taken over ---- */
 .lock { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 10.5px; color: var(--text-faint); white-space: nowrap; }
 .lock b { font-family: var(--font-monospace); font-weight: var(--font-normal); color: var(--text-accent); }
+
+/* ---- inspect mode ---- */
+/* A header action that is switched on. */
+.view-action { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-s); color: var(--text-muted); position: relative; }
+.view-action.is-active { color: var(--text-accent); background: var(--background-modifier-hover); }
+/* The box under the pointer, drawn over the page. The paper is light in
+   both themes, so the tints are mixed from the ramp rather than themed. */
+.insp { position: absolute; pointer-events: none; }
+.insp-margin { background: color-mix(in srgb, var(--color-yellow) 26%, transparent); }
+.insp-padding { background: color-mix(in srgb, var(--color-green) 22%, transparent); }
+.insp-content { background: hsla(258, 88%, 66%, 0.16); }
+.insp-edge { outline: 1px dashed hsla(258, 88%, 60%, 0.9); }
+.insp-edge.is-pinned { outline: 1.5px solid hsl(258, 88%, 60%); }
+/* A fragment is open on the side the page cut. */
+.insp-edge.cut-bottom { outline: none; border: 1.5px solid hsl(258, 88%, 60%); border-bottom: 1.5px dashed transparent; }
+.insp-edge.cut-top { outline: none; border: 1.5px solid hsl(258, 88%, 60%); border-top: 1.5px dashed transparent; }
+.insp-tag { position: absolute; z-index: 4; display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 6px; border-radius: 3px; background: rgba(0,0,0,0.88); color: #dadada; font-family: var(--font-monospace); font-size: 10.5px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.insp-tag b { font-weight: var(--font-normal); color: #b89cff; }
+.insp-tag i { font-style: normal; color: #8a8a8a; }
+/* The pane, at the top of the panel's CSS view. */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-family: var(--font-monospace); font-size: 11px; color: var(--text-faint); }
+.crumb { display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 5px; border-radius: var(--radius-s); color: var(--text-muted); }
+.crumb i { font-style: normal; font-family: var(--font-interface); font-size: 10px; color: var(--text-faint); }
+.crumb.is-active { background: hsla(258, 88%, 66%, 0.15); color: var(--text-normal); }
+.origin { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 10px; font-weight: var(--font-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.origin::after { content: ""; flex: 1; height: 1px; background: var(--divider-color); }
+.rule { font-family: var(--font-monospace); font-size: 11px; line-height: 1.6; padding: 4px 8px; border-radius: var(--radius-s); background: rgba(var(--mono-100), 0.03); }
+.rule-h { display: flex; align-items: baseline; gap: 6px; }
+.rule-h .sel { color: var(--color-red); }
+.rule-h .src { margin-left: auto; font-family: var(--font-interface); font-size: 10.5px; color: var(--text-accent); white-space: nowrap; }
+.rule-h .src.is-faint { color: var(--text-faint); }
+.decl { padding-left: 12px; }
+.decl .p { color: var(--color-cyan); }
+.decl .v { color: var(--color-purple); }
+.decl.is-lost { text-decoration: line-through; text-decoration-color: var(--text-faint); opacity: 0.55; }
+.decl.is-skipped .p, .decl.is-skipped .v { text-decoration: underline wavy var(--color-orange); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.computed { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 11.5px; }
+.computed > span:nth-child(odd) { color: var(--text-faint); }
+.computed > span:nth-child(even) { font-family: var(--font-monospace); font-size: 11px; color: var(--text-normal); }
+.kbd { display: inline-flex; align-items: center; height: 17px; padding: 0 5px; border-radius: 3px; border: 1px solid var(--background-modifier-border); border-bottom-width: 2px; font-family: var(--font-monospace); font-size: 10px; color: var(--text-muted); }

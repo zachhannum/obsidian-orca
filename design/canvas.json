@@ -52,7 +52,7 @@
     },
     {
       "file": "PreviewViews.dc.html",
-      "title": "Preview \u2014 single, spread, grid",
+      "title": "Preview — single, spread, grid",
       "page": "page-1",
       "x": 1020,
       "y": 1680,
@@ -79,7 +79,7 @@
     },
     {
       "file": "Advanced.dc.html",
-      "title": "Design panel \u2014 the CSS view",
+      "title": "Design panel — the CSS view",
       "page": "page-1",
       "x": 0,
       "y": 3120,
@@ -96,8 +96,17 @@
       "h": 470
     },
     {
+      "file": "Inspect.dc.html",
+      "title": "Inspect mode",
+      "page": "page-1",
+      "x": 1560,
+      "y": 3720,
+      "w": 1440,
+      "h": 2500
+    },
+    {
       "file": "FlowMakeABook.dc.html",
-      "title": "Flow 1 \u2014 make a book",
+      "title": "Flow 1 — make a book",
       "page": "page-2",
       "x": 0,
       "y": 0,
@@ -106,7 +115,7 @@
     },
     {
       "file": "FlowDraftLoop.dc.html",
-      "title": "Flow 2 \u2014 the drafting loop",
+      "title": "Flow 2 — the drafting loop",
       "page": "page-2",
       "x": 0,
       "y": 700,
@@ -115,7 +124,7 @@
     },
     {
       "file": "FlowDesignExport.dc.html",
-      "title": "Flow 3 \u2014 design and export",
+      "title": "Flow 3 — design and export",
       "page": "page-2",
       "x": 0,
       "y": 1460,
@@ -192,7 +201,7 @@
       "x": 760,
       "y": -390,
       "w": 700,
-      "text": "Drawn as planned, waiting on the engine:\n\n- a page saying which section it came from \u2014 the toggle, the page ranges on the book page, the contents pass\n- letter-spacing, small caps, all caps, colour, a rule under a chapter title \u2014 greyed out in the design panel here\n- hyphenation reading the book's language\n- the painter's selection overlay \u2014 selectable text on a page made of paths"
+      "text": "Drawn as planned, waiting on the engine:\n\n- a page saying which section it came from — the toggle, the page ranges on the book page, the contents pass\n- letter-spacing, small caps, all caps, colour, a rule under a chapter title — greyed out in the design panel here\n- hyphenation reading the book's language\n- inspect mode: the box under a point, the rules that matched it and its computed values\n- the painter's selection overlay — selectable text on a page made of paths"
     },
     {
       "id": "how-to-read",
@@ -200,7 +209,7 @@
       "x": 0,
       "y": -230,
       "w": 900,
-      "text": "Three flows, left to right. Every frame is the real surface at the moment that step happens, not a diagram of it \u2014 so the step notes carry the reasoning and the frames carry the design."
+      "text": "Three flows, left to right. Every frame is the real surface at the moment that step happens, not a diagram of it — so the step notes carry the reasoning and the frames carry the design."
     },
     {
       "id": "open-questions",
@@ -208,7 +217,7 @@
       "x": 1551,
       "y": -713,
       "w": 700,
-      "text": "Settled in this round:\n\n- Manuscript and book are one pane, swapped by a single icon action in the note's header \u2014 which is what the plugin API gives free. MarkdownView inherits addAction from ItemView, and the swap is leaf.setViewState. A segmented control would mean hand-built DOM in a view we do not own.\n\n- Your CSS is the design panel's other view, reached by an icon action in the panel header, to match. The editor gets the whole column, and the book stays in the pane either way.\n\n- A control your CSS has taken over goes grey where it sits, in the controls view, carrying the line that took it \u2014 which is also the way to that line. The CSS view itself is just the editor.\n\n- Export sits in the book preview's toolbar and on the book note's page.\n\nStill open:\n\n- Chapter openings default to the right-hand page, which is what leaves the odd blank verso. Next page and Same page are both there if that is the wrong default.\n\n- The status line no longer shows the per-stage counts; they stay as attributes for the tests, so the epic's issue wants amending.\n\nWorth knowing for the build: the header icon has to be applied on active-leaf-change rather than once at startup, because a background leaf holds a DeferredView; and returning to the manuscript where the writer left it means capturing the leaf's ephemeral state before the swap and putting it back after \u2014 nothing does that for us."
+      "text": "Settled in this round:\n\n- Manuscript and book are one pane, swapped by a single icon action in the note's header — which is what the plugin API gives free. MarkdownView inherits addAction from ItemView, and the swap is leaf.setViewState. A segmented control would mean hand-built DOM in a view we do not own.\n\n- Your CSS is the design panel's other view, reached by an icon action in the panel header, to match. The editor gets the whole column, and the book stays in the pane either way.\n\n- A control your CSS has taken over goes grey where it sits, in the controls view, carrying the line that took it — which is also the way to that line. The CSS view itself is just the editor.\n\n- Export sits in the book preview's toolbar and on the book note's page.\n\nStill open:\n\n- Chapter openings default to the right-hand page, which is what leaves the odd blank verso. Next page and Same page are both there if that is the wrong default.\n\n- The status line no longer shows the per-stage counts; they stay as attributes for the tests, so the epic's issue wants amending.\n\nWorth knowing for the build: the header icon has to be applied on active-leaf-change rather than once at startup, because a background leaf holds a DeferredView; and returning to the manuscript where the writer left it means capturing the leaf's ephemeral state before the swap and putting it back after — nothing does that for us."
     }
   ],
   "launch": {
