@@ -126,11 +126,14 @@ test("a note's text crosses as it is on disk, and the section with no note is dr
   assert.ok(!sources.some((source) => source.name.includes("Chapter Four")));
 });
 
-test("a generated section is synthetic markdown, under a name no note can have", async () => {
+test("the contents links each part and chapter in reading order, under a name no note can have", async () => {
   const ops = await planned(await fixture());
   const sources = only(ops, "book").sources;
 
-  assert.equal(sources[3]?.text, "# Contents");
+  assert.equal(
+    sources[3]?.text,
+    "# Contents\n\n[Volume the First](Volume%20the%20First.md#Volume%20the%20First)\n\n[Chapter Twelve](Chapter%20Twelve.md#Chapter%20Twelve)",
+  );
   assert.ok(!(await paths()).includes(sources[0]?.name ?? ""));
 });
 
