@@ -347,6 +347,7 @@ test("an embed is painted from the bytes the engine set the page from", async ({
 
 test("an embed with no file behind it is a warning the author can see", async ({
   book,
+  manuscript,
   vault,
 }) => {
   vault.touch(LAST_NOTE);
@@ -363,13 +364,16 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await expect(book.issues).toHaveCount(1);
   await expect(book.issues.first()).toBeHidden();
 
-  // Opened, each one is the engine's own line and the place it named.
+  // Opened, each one is the engine's own line and the line it named,
+  // under the note it is in.
   await book.warnings.click();
   await expect(book.issues.first()).toBeVisible();
   await expect(book.issues.first()).toContainText(
     "image nothing here.png: no image was supplied for it; it is skipped",
   );
-  await expect(book.issues.first()).toContainText("Acknowledgements.md:6:1");
+  await expect(book.issues.first()).toContainText("line 6");
+  await expect(book.issueGroups).toHaveCount(1);
+  await expect(book.issueGroups.first()).toContainText(LAST);
 
   // The panel hangs under the count rather than off the end of the bar.
   const count = await book.warnings.boundingBox();
@@ -404,6 +408,14 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await expect(book.surface).toHaveAttribute("data-first", String(BACK));
   await expect(book.page).toContainText(LAST);
   await expect(book.images).toHaveCount(0);
+
+  // The line opens the note beside the book, with the caret on it.
+  await book.warnings.click();
+  await book.issueOpens.first().click();
+  await expect.poll(async () => manuscript.showing()).toEqual([LAST_NOTE]);
+  await expect.poll(async () => manuscript.caret()).toEqual({ line: 5, ch: 0 });
+  await expect(book.surface).toBeVisible();
+  await manuscript.close();
 });
 
 test("an embed added while drafting crosses without the book being opened again", async ({

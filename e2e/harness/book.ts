@@ -75,6 +75,10 @@ export class Book {
   readonly warnings: Locator;
   /** The warnings themselves, as the count opens them. */
   readonly issues: Locator;
+  /** The warnings of one note, or of the author's CSS, under its name. */
+  readonly issueGroups: Locator;
+  /** The link on each warning that opens the place it named. */
+  readonly issueOpens: Locator;
   /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
@@ -101,6 +105,8 @@ export class Book {
     this.images = this.surface.locator("image");
     this.warnings = pane.getByTestId("orca-warnings");
     this.issues = pane.getByTestId("orca-issues").locator(".orca-preview-issue");
+    this.issueGroups = pane.getByTestId("orca-issue-group");
+    this.issueOpens = pane.getByTestId("orca-issue-open");
     this.folio = pane.getByTestId("orca-folio");
     this.chapter = pane.getByTestId("orca-chapter");
     this.chapterName = this.chapter.locator("option:checked");

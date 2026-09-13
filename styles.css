@@ -120,6 +120,32 @@
   box-shadow: var(--shadow-s);
 }
 
+.orca-preview-issue-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+
+.orca-preview-issue-group + .orca-preview-issue-group {
+  margin-top: var(--size-4-2);
+}
+
+.orca-preview-issue-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-4-2);
+  padding: 0 2px var(--size-2-1);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+}
+
+.orca-preview-issue-count {
+  margin-left: auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
 .orca-preview-issue {
   border-left: 2px solid var(--color-orange);
   border-radius: 0 var(--radius-s) var(--radius-s) 0;
@@ -135,9 +161,26 @@
 
 .orca-preview-issue-at {
   margin-top: 3px;
-  font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
+}
+
+/* A link in the words of the line, so none of a button's own chrome. */
+.orca-preview-issue-open {
+  display: inline;
+  height: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  color: var(--text-accent);
+  cursor: var(--cursor-link);
+}
+
+.orca-preview-issue-open:hover {
+  background: none;
+  text-decoration: underline;
 }
 
 .orca-preview-divider {

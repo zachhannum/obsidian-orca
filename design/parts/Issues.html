@@ -1,14 +1,5 @@
 <div style="height: 100%; background: var(--background-secondary); display: flex; flex-direction: column">
-  <div class="side-tabs">
-    <div class="side-tab"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
-    <div class="side-tab is-active" style="position: relative">
-      <svg class="icon-s icon" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-      <div class="ribbon-badge" style="top: -1px; right: -2px">3</div>
-    </div>
-    <div style="flex: 1"></div>
-  </div>
-
-  <div style="flex: 1; min-height: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 14px">
+  <div style="flex: 1; min-height: 0; padding: 12px; display: flex; flex-direction: column; gap: 14px">
     <div>
       <div style="display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px">
         <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">ISSUES</span>
@@ -21,7 +12,6 @@
 
       <div>
         <div style="display: flex; align-items: center; gap: 6px; padding: 0 2px 6px; font-size: 12px; font-weight: 500; color: var(--text-muted)">
-          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
           <span>Chapter Eleven</span>
           <span style="margin-left: auto; color: var(--text-faint); font-size: 11px">2</span>
         </div>
@@ -39,7 +29,6 @@
 
       <div>
         <div style="display: flex; align-items: center; gap: 6px; padding: 0 2px 6px; font-size: 12px; font-weight: 500; color: var(--text-muted)">
-          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
           <span>A note on the text</span>
           <span style="margin-left: auto; color: var(--text-faint); font-size: 11px">1</span>
         </div>
@@ -52,6 +41,6 @@
 
     <div style="flex: 1"></div>
 
-    <div class="callout"><div><span class="k">Content warnings and warnings in the author's CSS live here.</span> A warning in the author's CSS is also underlined on its line in the CSS view. Warnings against a synthesized section or a stylesheet orca writes are orca's own defects and go to the console, because an author has nothing to do about either.</div></div>
+    <div class="callout"><div><span class="k">Content warnings and warnings in the author's CSS live here.</span> The list is the one the warning count on the preview bar opens, so it has no pane of its own. It groups the warnings by note, and each line opens the note at that line. A warning in the author's CSS is also underlined on its line in the CSS view, and its line opens the CSS view there. Warnings against a synthesized section or a stylesheet orca writes are orca's own defects and go to the console, because an author has nothing to do about either.</div></div>
   </div>
 </div>
