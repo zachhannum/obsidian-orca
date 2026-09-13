@@ -111,7 +111,7 @@ test("a book set in a font the engine does not have still sets, and warns about 
 });
 
 test("a declaration the engine cannot set in book.css is reported at its own line and column in that sheet", async () => {
-  const own = "/* mine */\np {\n  position: absolute;\n}\n";
+  const own = "/* mine */\np {\n  float: left;\n}\n";
   const output = await set(designSheets(emptyDesign(), SETTING, own));
 
   const places = output.warnings.flatMap((warning) =>

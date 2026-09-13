@@ -235,7 +235,7 @@ test("an embed with no file behind it is a warning, and the book still sets", as
   assert.deepEqual(output.assets, []);
   assert.deepEqual(
     output.warnings.map((warning) => warning.message),
-    ["image nothing here.png: no image was supplied for it; it is skipped"],
+    ["No image was supplied for nothing here.png. The image is skipped."],
   );
 });
 

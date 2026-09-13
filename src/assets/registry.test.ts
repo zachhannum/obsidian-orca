@@ -26,7 +26,7 @@ const PLACED: Page = {
   width: 396,
   height: 612,
   sections: [],
-  items: [{ kind: "image", x: 54, y: 54, w: 165, h: 99, asset: 0 }],
+  items: [{ kind: "image", x: 54, y: 54, w: 165, h: 99, asset: 0, layer: 0 }],
 };
 
 /** The same file, named the other way a vault path is written. */
