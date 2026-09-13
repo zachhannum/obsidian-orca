@@ -195,6 +195,14 @@ section:nth-child(1) > p:last-child {
   padding-top: 140pt;
 }
 
+section:nth-child(4) > p {
+  text-indent: 0;
+}
+
+section:nth-child(4) a::after {
+  content: " " target-counter(attr(href url), page, decimal);
+}
+
 hr {
   content: "⁂";
   margin-top: 14pt;

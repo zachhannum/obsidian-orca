@@ -431,6 +431,22 @@ test("the page count starts again at the first part or chapter, and not when the
   assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["title-page", "copyright"] }), reset);
 });
 
+test("the contents sets its entries flush left, with each entry's page in the body's folio format", () => {
+  const roles: Role[] = ["title-page", "contents", "chapter"];
+  const css = generatedCss(emptyDesign(), { roles });
+
+  assert.match(css, /section:nth-child\(2\) > p \{\n {2}text-indent: 0;\n\}/);
+  assert.match(
+    css,
+    /section:nth-child\(2\) a::after \{\n {2}content: " " target-counter\(attr\(href url\), page, decimal\);\n\}/,
+  );
+
+  const roman = emptyDesign();
+  roman.headers.pageNumberFormat = "roman";
+  assert.match(generatedCss(roman, { roles }), /target-counter\(attr\(href url\), page, lower-roman\)/);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["chapter"] }), /target-counter/);
+});
+
 /** A design with a head on each side at `position`, and a folio at `pageNumber`. */
 function headed(
   position: HeaderPosition,

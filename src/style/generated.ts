@@ -40,8 +40,8 @@ export interface Setting {
  * The design as CSS, counted against the order the book is in. Every
  * declaration comes from a field the design sets, with some exceptions.
  * The page names, and the page where the count starts again at 1, come
- * from the roles. The title page is laid out the same way in every
- * design.
+ * from the roles. The title page and the contents are laid out the same
+ * way in every design.
  */
 export function generatedCss(design: Design, setting: Setting): string {
   return [
@@ -50,6 +50,7 @@ export function generatedCss(design: Design, setting: Setting): string {
     ...headingRules(design),
     ...sectionRules(design, setting),
     ...titlePageRules(design, setting),
+    ...contentsRules(design, setting),
     ...sceneRules(design),
   ]
     .filter((rule) => rule !== "")
@@ -388,6 +389,23 @@ function titlePageRules(design: Design, setting: Setting): string[] {
     );
   }
   return rules;
+}
+
+/**
+ * The contents, which orca writes as one paragraph per entry, each a
+ * link to a heading. An entry sets flush left, and prints the page its
+ * link lands on in the body's folio format.
+ */
+function contentsRules(design: Design, setting: Setting): string[] {
+  const contents = positions(setting.roles, "contents");
+  if (contents === undefined) return [];
+  const format = COUNTERS[design.headers.pageNumberFormat ?? "arabic"];
+  return [
+    block(`${contents} > p`, [declared("text-indent", "0")]),
+    block(`${contents} a::after`, [
+      declared("content", `" " target-counter(attr(href url), page, ${format})`),
+    ]),
+  ];
 }
 
 function sceneRules(design: Design): string[] {
