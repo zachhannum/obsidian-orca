@@ -3,7 +3,7 @@ import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PREVIEW, type Book } from "./harness/book";
-import { SAMPLE } from "./harness/launch";
+import { DENSITY as DISPLAY, SAMPLE } from "./harness/launch";
 import type { Scheme } from "./harness/obsidian";
 import type { Site } from "./harness/site";
 import { expect, test } from "./harness/test";
@@ -170,6 +170,9 @@ test("the pictures are set in a copy of the sample vault", async ({ site }) => {
   );
   expect(opened).not.toEqual(SAMPLE);
   expect(path.basename(opened)).toEqual(path.basename(SAMPLE));
+  // The app was launched on a display of the pictures' density, so a
+  // run on a plain display does not take them at half the pixels.
+  expect(process.env[DISPLAY]).toEqual(String(DENSITY));
 
   await arrange(site);
 
