@@ -91,6 +91,46 @@ test("a chapter that stacks headings over its text still takes a drop cap", asyn
   }
 });
 
+test("the title page is set centered and down the page, with the publisher apart from the author", async () => {
+  const model = await fixture();
+  const css = generatedCss(model.book.design, {
+    roles: ["title-page"],
+    publisher: "Whitehall Press",
+  });
+  const output = await rendered(css, [
+    {
+      name: "orca-generated:0",
+      text: "The Bennet Novels\n\n# Pride and Prejudice\n\nJane Austen\n\nWhitehall Press",
+    },
+  ]);
+  assert.deepEqual(output.warnings, []);
+
+  const runs = (output.pages[0]?.items ?? []).flatMap((item) =>
+    item.kind === "text" ? [item] : [],
+  );
+  const run = (start: string) => {
+    const found = runs.find((each) => each.text.startsWith(start));
+    assert.ok(found, `the title page printed no \`${start}\``);
+    return found;
+  };
+  const [series, title, author, publisher] = [
+    run("The Bennet Novels"),
+    run("Pride and Prejudice"),
+    run("Jane Austen"),
+    run("Whitehall Press"),
+  ];
+
+  // The fixture sets its body on 14pt, and its narrowest margin is the
+  // outside one. A block set flush left starts at a margin.
+  const line = 14;
+  const outside = 0.7 * 72;
+  assert.ok(series.y > TOP_MARGIN + 6 * line, `the series sits at ${String(series.y)}`);
+  assert.ok(publisher.y - author.y > 10 * line, "the publisher sits under the author");
+  for (const each of [series, title, author, publisher]) {
+    assert.ok(each.x > outside + 2 * line, `\`${each.text}\` starts at ${String(each.x)}`);
+  }
+});
+
 test("a book reordered generates the sheet again, and the sheet counts the new order", async () => {
   const model = await fixture();
   const at = entries(model.order).findIndex((entry) => entry.role === "chapter");
@@ -459,8 +499,8 @@ async function fixture(): Promise<Model> {
 /** The fixture book's reading order, as the generated layer counts it. */
 async function setting(model: Model): Promise<Setting> {
   const { sections } = resolve(model.order, pathLinks(await paths()), BOOK);
-  const { title, author } = model.book.metadata;
-  return { roles: sentRoles(sections), title, author };
+  const { title, author, publisher } = model.book.metadata;
+  return { roles: sentRoles(sections), title, author, publisher };
 }
 
 async function paths(folder = "/"): Promise<string[]> {

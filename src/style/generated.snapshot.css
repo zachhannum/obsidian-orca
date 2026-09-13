@@ -157,6 +157,24 @@ section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3,
   initial-letter: 3;
 }
 
+section:nth-child(1) > * {
+  text-align: center;
+  text-indent: 0;
+}
+
+section:nth-child(1) > :first-child {
+  padding-top: 84pt;
+}
+
+section:nth-child(1) > p + h1,
+section:nth-child(1) > h1 + p {
+  padding-top: 14pt;
+}
+
+section:nth-child(1) > p:last-child {
+  padding-top: 140pt;
+}
+
 hr {
   content: "⁂";
   margin-top: 14pt;
