@@ -47,6 +47,8 @@ export interface CssEditor {
   wrap(on: boolean): void;
   /** Puts a render's warnings on the text. See {@link flagged}. */
   flag(flags: readonly Flag[], against: string): void;
+  /** Puts the caret at a line and column, scrolled into view. See {@link revealed}. */
+  reveal(line: number, column: number): void;
   destroy(): void;
 }
 
@@ -159,6 +161,25 @@ export function flagged(
     return [mark.range(range.from, range.to)];
   });
   return { effects: reflag.of(Decoration.set(marks, true)) };
+}
+
+/**
+ * The transaction that puts the caret where a warning named, both
+ * counted from 1. A column past the end of its line stops at the end,
+ * and a line the text does not have moves nothing.
+ */
+export function revealed(
+  state: EditorState,
+  line: number,
+  column: number,
+): TransactionSpec | undefined {
+  if (line < 1 || line > state.doc.lines) return undefined;
+  const at = state.doc.line(line);
+  const pos = Math.min(at.from + Math.max(column - 1, 0), at.to);
+  return {
+    selection: { anchor: pos },
+    effects: EditorView.scrollIntoView(pos, { y: "center" }),
+  };
 }
 
 /** The flags on the text, in document order. */
@@ -278,6 +299,12 @@ export function mountEditor(
     flag(warned, against) {
       const spec = flagged(view.state, warned, against);
       if (spec !== undefined) view.dispatch(spec);
+    },
+    reveal(line, column) {
+      const spec = revealed(view.state, line, column);
+      if (spec === undefined) return;
+      view.dispatch(spec);
+      view.focus();
     },
     destroy() {
       view.destroy();

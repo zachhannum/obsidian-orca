@@ -2,6 +2,7 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
 import type { Face } from "@/book/plan";
 import type { Design, PageUnit, Written } from "@/style/design";
+import type { Place } from "@/style/origin";
 import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
 import { Settled } from "@/ui/settled";
@@ -206,6 +207,13 @@ export class DesignPanelView extends ItemView {
     typeset.restyle(design, faces);
     await this.repaint();
     await this.designing.setDesign(typeset.path, design);
+  }
+
+  /** Opens the author's CSS with the caret at the place a warning named. */
+  async reveal(place: Place): Promise<void> {
+    this.viewing = "css";
+    await this.repaint();
+    this.editor?.reveal(place.line, place.column);
   }
 
   /**

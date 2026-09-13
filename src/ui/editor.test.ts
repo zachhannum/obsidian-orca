@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { language } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { OWN_SHEET } from "@/style/sheet";
-import { cssExtensions, flagged, flagsAt, flagsIn, type Flag } from "@/ui/editor";
+import { cssExtensions, flagged, flagsAt, flagsIn, revealed, type Flag } from "@/ui/editor";
 
 const CSS = "p {\n  text-indent: 2em;\n  text-wrap: balance;\n}";
 
@@ -22,6 +22,18 @@ function flag(state: EditorState, flags: readonly Flag[], against: string): Edit
   const spec = flagged(state, flags, against);
   return spec === undefined ? state : state.update(spec).state;
 }
+
+test("a warning opened from the preview puts the caret at the line and column it named", () => {
+  const state = editing();
+  const reveal = (line: number, column: number): number | undefined => {
+    const spec = revealed(state, line, column);
+    return spec === undefined ? undefined : state.update(spec).state.selection.main.head;
+  };
+  assert.equal(reveal(3, 3), CSS.indexOf("text-wrap"));
+  // A column past its line stops at the end of that line.
+  assert.equal(reveal(1, 40), CSS.indexOf("\n"));
+  assert.equal(reveal(9, 1), undefined);
+});
 
 test("the editor sets its text in the CSS grammar", () => {
   assert.equal(editing().facet(language)?.name, "css");

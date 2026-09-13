@@ -34,7 +34,8 @@ import {
   type Viewing,
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
-import { routeOf } from "@/ui/warnings";
+import type { Place } from "@/style/origin";
+import { groupTitle, issueGroups, routeOf, type IssueGroup } from "@/ui/warnings";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -81,6 +82,11 @@ export interface PreviewHandoff {
    * at, `at` bytes into the note.
    */
   follows(view: PreviewView, note: string, at: number): void;
+  /**
+   * Opens the place a warning named with the caret on it: a note in a
+   * manuscript pane, or the author's CSS in the design panel.
+   */
+  opens(view: PreviewView, route: IssueGroup["route"], place: Place): void;
 }
 
 /**
@@ -809,9 +815,9 @@ export class PreviewView extends ItemView {
 
   /**
    * Draws what the last run had to complain about: a count on the bar,
-   * and the warnings themselves under it. A warning is routed, never
-   * re-worded, so each card carries the engine's own line and the
-   * place it named.
+   * and the warnings themselves under it, one group per note. A warning
+   * is routed, never re-worded, so each card carries the engine's own
+   * line, and the place it named is a link that opens the note there.
    *
    * A warning against matter orca generated, or against a sheet orca
    * wrote, is orca's own defect. The author has nothing to do about
@@ -842,11 +848,31 @@ export class PreviewView extends ItemView {
     chip.createSpan({ text: count });
     setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
     chip.setAttribute("aria-label", count);
-    for (const warning of said) {
-      const card = issues.createDiv({ cls: "orca-preview-issue" });
-      card.createDiv({ cls: "orca-preview-issue-said", text: warning.message });
-      if (warning.origin !== null) {
-        card.createDiv({ cls: "orca-preview-issue-at", text: warning.origin });
+    for (const group of issueGroups(said)) {
+      const set = issues.createDiv({ cls: "orca-preview-issue-group" });
+      set.dataset["testid"] = "orca-issue-group";
+      const head = set.createDiv({ cls: "orca-preview-issue-head" });
+      head.createSpan({ cls: "orca-preview-issue-title", text: groupTitle(group) });
+      head.createSpan({
+        cls: "orca-preview-issue-count",
+        text: String(group.issues.length),
+      });
+      for (const issue of group.issues) {
+        const card = set.createDiv({ cls: "orca-preview-issue" });
+        card.createDiv({ cls: "orca-preview-issue-said", text: issue.message });
+        const place = issue.place;
+        if (place === undefined) continue;
+        const at = card.createDiv({ cls: "orca-preview-issue-at" });
+        const open = at.createEl("button", {
+          cls: "orca-preview-issue-open",
+          text: `${place.sheet}:${String(place.line)}:${String(place.column)}`,
+        });
+        open.dataset["testid"] = "orca-issue-open";
+        // The cards are drawn again on every run, so the listener goes
+        // with the card rather than onto the view.
+        open.addEventListener("click", () => {
+          this.handoff.opens(this, group.route, place);
+        });
       }
     }
     this.showsIssues();

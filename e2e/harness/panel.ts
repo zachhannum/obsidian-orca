@@ -25,6 +25,9 @@ const CODEMIRROR_SCROLLER = ".cm-scroller";
 /** CodeMirror's own class for one line number. */
 const CODEMIRROR_LINE_NUMBER = ".cm-lineNumbers .cm-gutterElement";
 
+/** CodeMirror's own class for the gutter of the line the caret is on. */
+const CODEMIRROR_CARET_LINE = ".cm-activeLineGutter";
+
 /** The id in the plugin's manifest, which the app keys its plugins by. */
 const ORCA = "orca";
 
@@ -77,6 +80,8 @@ export class Controls {
   readonly lineNumbers: Locator;
   /** The line numbers a squiggle colours. */
   readonly flaggedLines: Locator;
+  /** The number of the line the caret is on. */
+  readonly caretLine: Locator;
   /** The count of warnings in the CSS view's header. */
   readonly warned: Locator;
   /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
@@ -100,6 +105,7 @@ export class Controls {
     this.flags = this.editor.getByTestId("orca-editor-flag");
     this.lineNumbers = this.editor.locator(CODEMIRROR_LINE_NUMBER).filter({ hasText: /\d/ });
     this.flaggedLines = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}.orca-editor-flagged`);
+    this.caretLine = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}${CODEMIRROR_CARET_LINE}`);
     this.warned = root.getByTestId("orca-panel-warned");
     this.card = root.page().getByTestId("orca-editor-card");
   }

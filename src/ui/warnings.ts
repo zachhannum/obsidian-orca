@@ -1,6 +1,6 @@
 import type { Warning } from "fleuron";
 import { isGenerated } from "@/book/plan";
-import { readOrigin } from "@/style/origin";
+import { readOrigin, type Place } from "@/style/origin";
 import { DESIGN_SHEET, OWN_SHEET } from "@/style/sheet";
 import { THEME_SHEET } from "@/style/theme";
 import type { Flag } from "@/ui/editor";
@@ -22,6 +22,52 @@ export function routeOf(warning: Warning): Route {
   if (sheet === THEME_SHEET || sheet === DESIGN_SHEET) return "orca";
   if (sheet === OWN_SHEET) return "css";
   return "note";
+}
+
+/** A warning an author can act on, at the place it named if it named one. */
+export interface Issue {
+  message: string;
+  place: Place | undefined;
+}
+
+/**
+ * The warnings in one note, or in the author's CSS. `source` is null
+ * for the warnings that name no place.
+ */
+export interface IssueGroup {
+  route: Exclude<Route, "orca">;
+  source: string | null;
+  issues: Issue[];
+}
+
+/**
+ * The author's warnings, one group per note or sheet. The groups come
+ * in the order the run first named each one, and a group keeps the
+ * order of its warnings.
+ */
+export function issueGroups(warnings: readonly Warning[]): IssueGroup[] {
+  const groups = new Map<string | null, IssueGroup>();
+  for (const warning of warnings) {
+    const route = routeOf(warning);
+    if (route === "orca") continue;
+    const place = warning.origin === null ? undefined : readOrigin(warning.origin);
+    const source = place?.sheet ?? warning.origin;
+    let group = groups.get(source);
+    if (group === undefined) {
+      group = { route, source, issues: [] };
+      groups.set(source, group);
+    }
+    group.issues.push({ message: warning.message, place });
+  }
+  return [...groups.values()];
+}
+
+/** The name a group is listed under: a note by its title. */
+export function groupTitle(group: IssueGroup): string {
+  if (group.route === "css") return "The book's CSS";
+  if (group.source === null) return "No place named";
+  const name = group.source.slice(group.source.lastIndexOf("/") + 1);
+  return name.endsWith(".md") ? name.slice(0, -".md".length) : name;
 }
 
 /** The warnings against the author's CSS, each at the line and column it named. */

@@ -27,6 +27,7 @@ import { bookCss, withCss } from "@/book/css";
 import type { Face } from "@/book/plan";
 import { writeDesign, type Design } from "@/style/design";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
+import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
 import {
   documentPreviews,
@@ -144,6 +145,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
             },
             follows: (view, note, at) => {
               void this.follows(view, note, at);
+            },
+            opens: (view, route, place) => {
+              void (route === "css" ? this.opensCss(place) : this.opensNote(view, place));
             },
           },
           (text) => {
@@ -888,6 +892,45 @@ export default class OrcaPlugin extends Plugin implements Limited {
       this.leadsTo(leaf, at, false);
       return;
     }
+  }
+
+  /**
+   * Opens a note with the caret at the place a warning named. The pane
+   * is one already showing the note, then one already reading the
+   * book, and otherwise a split beside the preview, so the book stays
+   * on screen while the author fixes the note.
+   */
+  private async opensNote(view: PreviewView, place: Warned): Promise<void> {
+    const file = this.app.vault.getFileByPath(place.sheet);
+    if (file === null) return;
+    const { workspace } = this.app;
+    const book = view.book;
+    const panes = workspace
+      .getLeavesOfType(MARKDOWN_VIEW)
+      .filter((leaf) => leaf.view instanceof MarkdownView && leaf.view.file !== null);
+    const pathOf = (leaf: WorkspaceLeaf): string | undefined =>
+      leaf.view instanceof MarkdownView ? leaf.view.file?.path : undefined;
+    const showing = panes.find((leaf) => pathOf(leaf) === place.sheet);
+    const reading = panes.find((leaf) => {
+      const path = pathOf(leaf);
+      return book !== undefined && path !== undefined && this.members.get(path)?.book === book;
+    });
+    const leaf = showing ?? reading ?? workspace.getLeaf("split", "vertical");
+    if (leaf !== showing) await leaf.openFile(file);
+    await workspace.revealLeaf(leaf);
+    workspace.setActiveLeaf(leaf, { focus: true });
+    const shown = leaf.view;
+    if (!(shown instanceof MarkdownView)) return;
+    const pos = { line: place.line - 1, ch: Math.max(place.column - 1, 0) };
+    shown.editor.setCursor(pos);
+    shown.editor.scrollIntoView({ from: pos, to: pos }, true);
+  }
+
+  /** Opens the design panel on the author's CSS with the caret at the place a warning named. */
+  private async opensCss(place: Warned): Promise<void> {
+    await this.openPanel();
+    const panel = this.app.workspace.getLeavesOfType(PANEL_VIEW)[0]?.view;
+    if (panel instanceof DesignPanelView) await panel.reveal(place);
   }
 
   /**
