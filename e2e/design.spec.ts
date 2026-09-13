@@ -314,7 +314,7 @@ test("a long line in the CSS view scrolls sideways until the author wraps it", a
   await written(vault, own);
 });
 
-test("a declaration the engine cannot set is flagged on its line in the CSS view, and not in the preview", async ({
+test("a declaration the engine cannot set is flagged on its line in the CSS view, and listed in the preview", async ({
   book,
   panel,
   vault,
@@ -337,13 +337,26 @@ test("a declaration the engine cannot set is flagged on its line in the CSS view
   // the last line, which is where it was typed.
   await expect(panel.flags).toHaveCount(1);
   await expect(panel.flags).toHaveText(/^position: absolute;?$/);
-  await expect(panel.flags).toHaveAttribute("title", /position/);
   await expect(panel.flaggedLines).toHaveCount(1);
-  await expect(panel.flaggedLines).toHaveText(
-    (await panel.lineNumbers.last().textContent()) ?? "",
-  );
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+  await expect(panel.flaggedLines).toHaveText(line);
   await expect(panel.warned).toHaveText("1 warning");
-  await expect(book.warnings).toBeHidden();
+
+  // The squiggle opens a card with the engine's own words and the
+  // place they name, drawn by orca rather than the browser.
+  await expect(panel.flags).not.toHaveAttribute("title", /./);
+  await expect(panel.card).toBeHidden();
+  await panel.flags.hover();
+  await expect(panel.card).toBeVisible();
+  await expect(panel.card).toContainText("position");
+  await expect(panel.card).toContainText(`book.css:${line}:`);
+
+  // The same warning is one of the preview's, with the same place.
+  await expect(book.warnings).toHaveText("1 warning");
+  await book.warnings.click();
+  await expect(book.issues.first()).toContainText("position");
+  await expect(book.issues.first()).toContainText(`book.css:${line}:`);
+  await book.warnings.click();
 
   await panel.toControls.click();
   await written(vault, own);

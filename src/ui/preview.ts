@@ -816,7 +816,7 @@ export class PreviewView extends ItemView {
    * A warning against matter orca generated, or against a sheet orca
    * wrote, is orca's own defect. The author has nothing to do about
    * either, so those go to the console. One against the author's CSS
-   * is drawn on its line in the panel's editor instead.
+   * is listed here and also drawn on its line in the panel's editor.
    */
   private warns(session: Session): void {
     const chip = this.warnings;
@@ -826,7 +826,7 @@ export class PreviewView extends ItemView {
     for (const warning of session.warnings) {
       const route = routeOf(warning);
       if (route === "orca") console.warn(`Orca: ${warning.message}`, warning.origin);
-      else if (route === "note") said.push(warning);
+      else said.push(warning);
     }
 
     chip.toggleVisibility(said.length > 0);

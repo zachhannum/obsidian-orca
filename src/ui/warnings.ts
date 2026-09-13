@@ -8,9 +8,9 @@ import type { Flag } from "@/ui/editor";
 /**
  * The reader a warning goes to. The generated matter and the sheets orca writes
  * are orca's, and an author has no file to open for either, so a
- * warning against them is orca's defect and goes to the console. One
- * against the author's CSS goes to the editor over it, and anything
- * else to the preview.
+ * warning against them is orca's defect and goes to the console. Any
+ * other warning goes to the preview, and one against the author's CSS
+ * also goes to the editor over it.
  */
 export type Route = "orca" | "css" | "note";
 
