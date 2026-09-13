@@ -16,6 +16,9 @@ export const OPEN_PANEL = "orca:open-design";
 /** The type the panel is registered under. */
 export const PANEL = "orca-design";
 
+/** CodeMirror's own class for its editable text. */
+const CODEMIRROR_CONTENT = ".cm-content";
+
 /** The id in the plugin's manifest, which the app keys its plugins by. */
 const ORCA = "orca";
 
@@ -52,6 +55,14 @@ export class Controls {
   readonly nothing: Locator;
   /** The warning for a font the machine does not have. */
   readonly missing: Locator;
+  /** The header icon that opens the author's own CSS. */
+  readonly toCss: Locator;
+  /** The header icon that goes back to the controls. */
+  readonly toControls: Locator;
+  /** The element CodeMirror draws the author's CSS in. */
+  readonly editor: Locator;
+  /** The editable text of that editor. */
+  readonly code: Locator;
 
   constructor(protected readonly root: Locator) {
     this.panel = root.getByTestId("orca-panel");
@@ -63,6 +74,24 @@ export class Controls {
     this.options = root.getByTestId("orca-panel-option");
     this.nothing = root.getByTestId("orca-panel-nothing");
     this.missing = root.getByTestId("orca-panel-missing");
+    this.toCss = root.getByTestId("orca-panel-css");
+    this.toControls = root.getByTestId("orca-panel-controls");
+    this.editor = root.getByTestId("orca-editor");
+    this.code = this.editor.locator(CODEMIRROR_CONTENT);
+  }
+
+  /** Types at the end of the author's CSS, as the author would. */
+  async typeCss(typed: string): Promise<void> {
+    await this.code.click();
+    await this.code.press("ControlOrMeta+End");
+    await this.code.pressSequentially(typed);
+  }
+
+  /** Whether the editor sits under the panel's React root, which it must not. */
+  async editorInReact(): Promise<boolean> {
+    return this.editor.evaluate(
+      (editor) => editor.closest(".orca-panel-host") !== null,
+    );
   }
 
   /** One control, by the design key it writes. */

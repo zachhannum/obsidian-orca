@@ -3,9 +3,10 @@ import type { Family, FontIndex } from "@/assets/fonts";
 import type { Face } from "@/book/plan";
 import type { Design, PageUnit, Written } from "@/style/design";
 import type { Typeset } from "@/ui/composer";
+import { mountEditor, type CssEditor } from "@/ui/editor";
 import { withKey } from "@/ui/groups";
 import { missingFont } from "@/ui/picker";
-import { mountPanel, type Mounted, type Shown } from "@/ui/panels";
+import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 
 /** The type the design panel is registered under. */
 export const PANEL_VIEW = "orca-design";
@@ -16,6 +17,8 @@ export interface Designing {
   book(): Promise<Typeset | undefined>;
   /** Writes the design into the book's own frontmatter, where it lives. */
   setDesign(book: string, design: Design): Promise<void>;
+  /** Writes the author's own CSS into the book note's css fence. */
+  setCss(book: string, css: string): Promise<void>;
   /** The fonts the machine has. The scan runs once for the session. */
   index(): Promise<FontIndex>;
   /** One font's styles, as the bytes that cross and the keys they go under. */
@@ -40,6 +43,13 @@ export class DesignPanelView extends ItemView {
   private painting = 0;
   /** The fonts the machine has, once the first scan lands. */
   private index: FontIndex | undefined;
+  /** The view the panel shows: the controls, or the author's own CSS. */
+  private viewing: Viewing = "controls";
+  /** The book last painted, which an edit in the CSS view goes to. */
+  private showing: Typeset | undefined;
+  /** The element CodeMirror draws in, beside the React root and never under it. */
+  private editorHost: HTMLElement | undefined;
+  private editor: CssEditor | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -68,7 +78,16 @@ export class DesignPanelView extends ItemView {
       set: (key, value) => {
         void this.set(key, value);
       },
+      view: (viewing) => {
+        this.view(viewing);
+      },
     });
+    this.contentEl.addClass("orca-design");
+    this.editorHost = this.contentEl.createDiv({
+      cls: "orca-editor-host",
+      attr: { "data-testid": "orca-editor" },
+    });
+    this.editorHost.hidden = true;
     this.register(
       this.designing.watch(() => {
         this.refresh();
@@ -83,7 +102,45 @@ export class DesignPanelView extends ItemView {
     this.watching = undefined;
     this.mounted?.unmount();
     this.mounted = undefined;
+    this.editor?.destroy();
+    this.editor = undefined;
+    this.editorHost?.remove();
+    this.editorHost = undefined;
+    this.showing = undefined;
     return Promise.resolve();
+  }
+
+  /** Switches between the controls and the author's own CSS. The book stays in the pane. */
+  private view(viewing: Viewing): void {
+    this.viewing = viewing;
+    this.refresh();
+  }
+
+  /**
+   * Sets the book under the author's CSS and writes it into the fence.
+   * The engine gets the sheet at once, and the note's write settles.
+   */
+  private recss(css: string): void {
+    const typeset = this.showing;
+    if (typeset === undefined) return;
+    typeset.recss(css);
+    void this.designing.setCss(typeset.path, css);
+  }
+
+  /** Shows the editor in the CSS view with the CSS of the book painted, and hides it otherwise. */
+  private edit(typeset: Typeset | undefined): void {
+    this.showing = typeset;
+    const host = this.editorHost;
+    if (host === undefined) return;
+    const shown = typeset !== undefined && this.viewing === "css";
+    this.contentEl.toggleClass("is-css", shown);
+    host.hidden = !shown;
+    if (!shown) return;
+    if (this.editor === undefined) {
+      this.editor = mountEditor(host, typeset.css, (css) => {
+        this.recss(css);
+      });
+    } else this.editor.show(typeset.css);
   }
 
   /**
@@ -150,6 +207,7 @@ export class DesignPanelView extends ItemView {
     const typeset = await this.designing.book();
     if (run !== this.painting) return;
     if (typeset === undefined) {
+      this.edit(undefined);
       mounted.paint({ kind: "none" });
       return;
     }
@@ -163,6 +221,7 @@ export class DesignPanelView extends ItemView {
     if (run !== this.painting) return;
     this.watch(typeset);
     mounted.paint(this.shownFor(typeset, index));
+    this.edit(typeset);
   }
 
   /** Follows the book's renders, so the styles appear as the engine returns them. */
@@ -177,6 +236,7 @@ export class DesignPanelView extends ItemView {
     const mounted = this.mounted;
     if (mounted === undefined) return;
     mounted.paint(this.shownFor(typeset, await this.designing.index()));
+    this.edit(typeset);
   }
 
   /** The panel's state for one book, from the engine and the index. */
@@ -184,6 +244,7 @@ export class DesignPanelView extends ItemView {
     const font = typeset.font;
     return {
       kind: "book",
+      viewing: this.viewing,
       name: typeset.name,
       design: typeset.design,
       index,

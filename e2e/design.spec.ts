@@ -248,6 +248,38 @@ test("a click on a switch flips it, and the note is written", async ({
   await written(vault, own);
 });
 
+test("the CSS view edits the book's own fence, and the edit reaches the pages and the note", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const before = await book.painted();
+  await panel.open();
+
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await expect(panel.code).toContainText("letter-spacing: 0.02em;");
+  // CodeMirror owns its DOM, so the editor is not under the React root.
+  expect(await panel.editorInReact()).toBe(false);
+
+  const typed = "\nh1 { letter-spacing: 0.1em; }";
+  await panel.typeCss(typed);
+
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+  // The edit is inside the fence, and every other line is as it was.
+  expect((await vault.read(BOOK)).replace(typed, "")).toBe(own);
+
+  await panel.toControls.click();
+  await expect(panel.editor).toBeHidden();
+  await expect(panel.groups.first()).toBeVisible();
+
+  await written(vault, own);
+});
+
 test("at the width of a narrow sidebar every control fits the panel", async ({
   book,
   panel,

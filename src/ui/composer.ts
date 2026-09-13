@@ -13,6 +13,7 @@
 import { styleOp, type Op, type Sheet } from "fleuron";
 import { Registry } from "@/assets/registry";
 import type { VaultAdapter } from "@/assets/vault";
+import { bookCss } from "@/book/css";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { BookError } from "@/book/note";
@@ -43,6 +44,8 @@ export interface Replay {
   sent: Map<string, string>;
   /** The design its sheets were generated from. */
   design: Design;
+  /** The author's own CSS, which may be newer than the note's fence. */
+  css: string;
   /** The order and the names those sheets were generated against. */
   setting: Setting;
   /** The sheets it was styled with, in cascade order. */
@@ -81,6 +84,7 @@ export class Typeset {
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private designed: Design;
+  private own: string;
   private gone = false;
 
   constructor(
@@ -102,11 +106,14 @@ export class Typeset {
       links: Links;
       /** The design the sheets were generated from. */
       design: Design;
+      /** The author's own CSS, the last of the sheets. */
+      css: string;
       /** The order and the names the sheets were generated against. */
       setting: Setting;
     },
     clock: Clock,
   ) {
+    this.own = book.css;
     this.name = book.name;
     this.path = book.path;
     this.session = book.session;
@@ -204,7 +211,7 @@ export class Typeset {
    */
   restyle(design: Design, faces: readonly Face[] = []): void {
     this.designed = design;
-    const sheets = designSheets(this.designed, this.setting);
+    const sheets = designSheets(this.designed, this.setting, this.own);
     if (faces.length === 0) {
       this.plan("styled", { did: "styled", sheets });
       return;
@@ -214,6 +221,18 @@ export class Typeset {
       faces,
       sheets,
     });
+  }
+
+  /** The author's own CSS the book is set under, which the note's fence holds. */
+  get css(): string {
+    return this.own;
+  }
+
+  /** Sets the book under the author's own CSS, which crosses last of the sheets. */
+  recss(css: string): void {
+    if (css === this.own) return;
+    this.own = css;
+    this.restyle(this.designed);
   }
 
   /** Told once a render has landed, so a view repaints where it left off. */
@@ -241,6 +260,7 @@ export class Typeset {
     return {
       sent: new Map(this.sent),
       design: this.designed,
+      css: this.own,
       setting: this.setting,
       sheets: this.loaded.sheets,
     };
@@ -482,7 +502,8 @@ export class Composer {
       author,
       publisher,
     };
-    const sheets = [...(carried?.sheets ?? designSheets(design, setting))];
+    const css = carried?.css ?? bookCss(model.order);
+    const sheets = [...(carried?.sheets ?? designSheets(design, setting, css))];
     // The sheets name the font, and a new engine has none of its
     // styles, so they cross ahead of the sheets that ask for them.
     const faces = await this.facesOf(design.body.font);
@@ -500,6 +521,7 @@ export class Composer {
         assets,
         links: this.vault.links,
         design,
+        css,
         setting,
       },
       this.clock,

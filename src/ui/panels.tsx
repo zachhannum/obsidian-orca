@@ -67,12 +67,18 @@ export interface Acting {
   pick(font: Family, key: string): void;
   /** Writes one design key into the book note, which holds the design. */
   set(key: string, value: Written | undefined): void;
+  /** Switches the panel between its controls and the author's own CSS. */
+  view(viewing: Viewing): void;
 }
+
+/** The panel's two views. In the CSS view the panel draws its header, and the editor under it is not React's. */
+export type Viewing = "controls" | "css";
 
 /** The state the panel is drawn in. */
 export type Shown =
   | {
       kind: "book";
+      viewing: Viewing;
       /** The book the panel is designing. */
       name: string;
       /** The design as the book note holds it. */
@@ -152,6 +158,36 @@ export function Panel({
       </div>
     );
   }
+  const css = shown.viewing === "css";
+  const header = (
+    <div className="orca-panel-header">
+      <span className="orca-panel-title">{css ? "Your CSS" : "Design"}</span>
+      <span className="orca-panel-book">— {shown.name}</span>
+      <button
+        type="button"
+        className="clickable-icon"
+        data-testid={css ? "orca-panel-controls" : "orca-panel-css"}
+        aria-label={css ? "Controls" : "Your CSS"}
+        onClick={() => {
+          acting.view(css ? "controls" : "css");
+        }}
+      >
+        <Icon name={css ? "sliders-horizontal" : "code"} />
+      </button>
+    </div>
+  );
+  if (css) {
+    return (
+      <div
+        className="orca-panel"
+        data-testid="orca-panel"
+        data-book={shown.name}
+        data-viewing="css"
+      >
+        {header}
+      </div>
+    );
+  }
   const drawing: Drawing = {
     shown,
     acting,
@@ -160,7 +196,13 @@ export function Panel({
     level,
   };
   return (
-    <div className="orca-panel" data-testid="orca-panel" data-book={shown.name}>
+    <div
+      className="orca-panel"
+      data-testid="orca-panel"
+      data-book={shown.name}
+      data-viewing="controls"
+    >
+      {header}
       {GROUPS.map((group) => (
         <div
           key={group.name}
