@@ -84,7 +84,8 @@ class FakeClient implements EngineClient {
     const at = this.sent.findIndex((sent) => sent.name === source);
     const text = this.sent[at]?.text;
     if (text === undefined) return Promise.resolve(null);
-    const written = new TextEncoder().encode(text).indexOf(0x23);
+    const frontmatter = /^---\n[\s\S]*?\n---\n/.exec(text)?.[0] ?? "";
+    const written = new TextEncoder().encode(frontmatter).length;
     return Promise.resolve(byte < written ? null : at * 10 + 5);
   }
 

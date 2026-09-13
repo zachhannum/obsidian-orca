@@ -475,11 +475,12 @@ export class Composer {
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
     const design: Design = carried?.design ?? model.book.design;
-    const { title, author, language } = model.book.metadata;
+    const { title, author, publisher, language } = model.book.metadata;
     const setting: Setting = carried?.setting ?? {
       roles: sentRoles(sections),
       title,
       author,
+      publisher,
     };
     const sheets = [...(carried?.sheets ?? designSheets(design, setting))];
     // The sheets name the font, and a new engine has none of its

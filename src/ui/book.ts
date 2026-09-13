@@ -373,7 +373,7 @@ export class BookView extends FileView {
         (path) => this.readFile(path),
       );
       const { sections } = resolve(shown.model.order, links, file.path);
-      const { title, author } = shown.model.book.metadata;
+      const { title, author, publisher } = shown.model.book.metadata;
       // The page reports the folios the preview paints, so both are set
       // under the same design. Registering the faces the design names
       // is the preview's job. Here the engine falls back to the face it
@@ -385,6 +385,7 @@ export class BookView extends FileView {
             roles: sentRoles(sections),
             title,
             author,
+            publisher,
           }),
         ),
       ]);

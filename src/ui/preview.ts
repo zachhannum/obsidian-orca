@@ -20,7 +20,6 @@ import { nodesOn, type Nodes } from "@/book/place";
 import { isGenerated } from "@/book/plan";
 import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
-import { THEME_SHEET } from "@/style/theme";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import {
   fits,
@@ -35,6 +34,7 @@ import {
   type Viewing,
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
+import { isOrcas } from "@/ui/warnings";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -823,7 +823,7 @@ export class PreviewView extends ItemView {
     if (chip === undefined || issues === undefined) return;
     const said: Warning[] = [];
     for (const warning of session.warnings) {
-      if (ours(warning)) console.warn(`Orca: ${warning.message}`, warning.origin);
+      if (isOrcas(warning)) console.warn(`Orca: ${warning.message}`, warning.origin);
       else said.push(warning);
     }
 
@@ -1162,18 +1162,6 @@ export class PreviewView extends ItemView {
     if (message !== undefined) this.well?.prepend(message);
     this.message = message;
   }
-}
-
-/**
- * A warning orca raised against its own work rather than the author's.
- * The generated matter and the generated sheet are both orca's, and an
- * author has nothing to do about either.
- */
-function ours(warning: Warning): boolean {
-  const origin = warning.origin;
-  return (
-    origin !== null && (isGenerated(origin) || origin.startsWith(THEME_SHEET))
-  );
 }
 
 /** The state a leaf was opened with, as much of it as a preview reads. */
