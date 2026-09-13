@@ -60,8 +60,6 @@ jobs:
           npx playwright install-deps chromium
           sudo apt-get install -y xvfb poppler-utils
 
-      # The spec writes every picture, and git is what says which ones
-      # moved. A compare inside the spec lets a small change pass.
       - run: xvfb-run -a npm run shots
 
       - name: list the pictures that moved

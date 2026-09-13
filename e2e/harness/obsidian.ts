@@ -420,18 +420,35 @@ export class Obsidian {
    */
   async still(): Promise<void> {
     await this.page.mouse.move(0, 0);
+    // The app styles its own scrollbars, so this has to outrank it.
+    await this.hold(
+      `${FLOATING}, ${HOVERED} { visibility: hidden }` +
+        "* { scrollbar-width: none !important }" +
+        "*::-webkit-scrollbar { display: none !important }",
+    );
+  }
+
+  /**
+   * Holds only the pointer still, for a picture of the whole window. The
+   * status bar and the scrollbars stay in it.
+   */
+  async unhovered(): Promise<void> {
+    await this.page.mouse.move(0, 0);
+    await this.hold(`${HOVERED} { visibility: hidden }`);
+  }
+
+  private async hold(css: string): Promise<void> {
     await this.page.evaluate(
       (what) => {
+        // A second hold replaces the first, so one call to moving puts
+        // all of it back.
+        document.getElementById(what.id)?.remove();
         const style = document.createElement("style");
         style.id = what.id;
-        // The app styles its own scrollbars, so this has to outrank it.
-        style.textContent =
-          `${what.floating}, ${what.hovered} { visibility: hidden }` +
-          "* { scrollbar-width: none !important }" +
-          "*::-webkit-scrollbar { display: none !important }";
+        style.textContent = what.css;
         document.head.append(style);
       },
-      { id: STILL, floating: FLOATING, hovered: HOVERED },
+      { id: STILL, css },
     );
   }
 
