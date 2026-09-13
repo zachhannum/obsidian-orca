@@ -4,8 +4,11 @@ import { expect, test } from "./harness/test";
 /** The pages the fixture book sets to. */
 const PAGES = 15;
 
-/** The words the book opens on, which is its title page. */
+/** The book's title, which its title page prints. */
 const OPENING = "Pride and Prejudice";
+
+/** The blocks the fixture's title page prints, from the book's properties. */
+const TITLE_PAGE = ["The Bennet Novels", OPENING, "Jane Austen", "Whitehall Press"];
 
 /** The page the fixture's one chapter opens on. */
 const CHAPTER = 11;
@@ -38,6 +41,14 @@ test("the ribbon sets the book and paints its first page", async ({ book }) => {
   for (const [stage, runs] of Object.entries(stages)) {
     expect(runs, stage).toBeGreaterThan(0);
   }
+});
+
+test("the title page prints the book's properties", async ({ book }) => {
+  await book.open();
+  await book.painted();
+
+  await expect(book.surface).toHaveAttribute("data-first", "1");
+  for (const block of TITLE_PAGE) await expect(book.page).toContainText(block);
 });
 
 test("the status line reads the page, and what the render cost stays off it", async ({

@@ -32,12 +32,15 @@ export interface Setting {
   title?: string;
   /** The book's author, which a running head can name. */
   author?: string;
+  /** The book's publisher, which the title page sets apart from the author. */
+  publisher?: string;
 }
 
 /**
  * The design as CSS, counted against the order the book is in. Every
- * declaration comes from a field the design sets. The page names are
- * the exception, and come from the roles.
+ * declaration comes from a field the design sets, with two exceptions.
+ * The page names come from the roles, and the title page is laid out
+ * the same way in every design.
  */
 export function generatedCss(design: Design, setting: Setting): string {
   return [
@@ -45,6 +48,7 @@ export function generatedCss(design: Design, setting: Setting): string {
     ...bodyRules(design),
     ...headingRules(design),
     ...sectionRules(design, setting),
+    ...titlePageRules(design, setting),
     ...sceneRules(design),
   ]
     .filter((rule) => rule !== "")
@@ -306,6 +310,37 @@ function chapterRules(design: Design, setting: Setting): string[] {
       ),
     ]),
   ];
+}
+
+/** The body lines above a title page's first block. */
+const TITLE_SINK = 6;
+
+/** The body lines between a title page's author and its publisher. */
+const IMPRINT_GAP = 10;
+
+/**
+ * The title page, which orca writes as the series, the title, the
+ * author and the publisher, each one optional. The page reaches each
+ * block by where it sits. The engine places nothing at the foot of a
+ * page, so the publisher sits a set number of lines under the author.
+ */
+function titlePageRules(design: Design, setting: Setting): string[] {
+  const page = positions(setting.roles, "title-page");
+  if (page === undefined) return [];
+  const line = bodyLines(1, design);
+  const rules = [
+    block(`${page} > *`, [declared("text-align", "center"), declared("text-indent", "0")]),
+    block(`${page} > :first-child`, [declared("padding-top", bodyLines(TITLE_SINK, design))]),
+    block(`${page} > p + h1,\n${page} > h1 + p`, [declared("padding-top", line)]),
+  ];
+  if (setting.publisher !== undefined && setting.publisher !== "") {
+    rules.push(
+      block(`${page} > p:last-child`, [
+        declared("padding-top", bodyLines(IMPRINT_GAP, design)),
+      ]),
+    );
+  }
+  return rules;
 }
 
 function sceneRules(design: Design): string[] {

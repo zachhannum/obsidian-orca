@@ -130,9 +130,32 @@ test("a generated section is synthetic markdown, under a name no note can have",
   const ops = await planned(await fixture());
   const sources = only(ops, "book").sources;
 
-  assert.equal(sources[0]?.text, "# Pride and Prejudice\n\nJane Austen");
   assert.equal(sources[3]?.text, "# Contents");
   assert.ok(!(await paths()).includes(sources[0]?.name ?? ""));
+});
+
+test("a title page is set from the book's properties each time the book is sent", async () => {
+  const model = await fixture();
+  const sources = only(await planned(model), "book").sources;
+
+  assert.equal(
+    sources[0]?.text,
+    "The Bennet Novels\n\n# Pride and Prejudice\n\nJane Austen\n\nWhitehall Press",
+  );
+
+  // A book with other properties and no series sends a title page with
+  // no block for the series.
+  const changed: Model = {
+    ...model,
+    book: {
+      ...model.book,
+      metadata: { title: "Emma", author: "Jane Austen", publisher: "John Murray" },
+    },
+  };
+  assert.equal(
+    only(await planned(changed), "book").sources[0]?.text,
+    "# Emma\n\nJane Austen\n\nJohn Murray",
+  );
 });
 
 test("a title page with no metadata falls back to its role's own name", async () => {
@@ -445,8 +468,8 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
     const client = connected(engine);
     await client.preview([...(await planned(model)), styleOp(SET)]);
     const loaded: Loaded = { sheets: SET };
-    assert.equal(await opens(client, []), "Pride and Prejudice");
-    assert.ok((await words(client, [])).includes("Whitehall"));
+    assert.equal(await opens(client, []), "The Bennet Novels");
+    assert.ok((await words(client, [])).includes("moral"));
 
     const typed = sendEdit(
       {
@@ -479,7 +502,7 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
       SENT_NOTHING,
     );
     const rest = await words(client, deleted.ops);
-    assert.ok(!rest.includes("Whitehall"));
+    assert.ok(!rest.includes("moral"));
     assert.ok(rest.includes("carriage"));
   } finally {
     engine.free();
@@ -554,7 +577,7 @@ test("the site's sample book sets to a PDF that qpdf reads", async () => {
     (at) => registry.take(at),
   );
   const { sections } = resolve(model.order, links, SAMPLE_BOOK);
-  const { title, author } = model.book.metadata;
+  const { title, author, publisher } = model.book.metadata;
   const faces = await Promise.all(
     (await sample.list("fonts")).files
       .filter((file) => file.endsWith(".ttf"))
@@ -572,6 +595,7 @@ test("the site's sample book sets to a PDF that qpdf reads", async () => {
           roles: sentRoles(sections),
           title,
           author,
+          publisher,
         }),
       ),
     ]);
