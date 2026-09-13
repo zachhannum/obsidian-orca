@@ -30,8 +30,10 @@ import {
   gutterLineClass,
   highlightActiveLine,
   highlightActiveLineGutter,
+  hoverTooltip,
   keymap,
   lineNumbers,
+  tooltips,
   type DecorationSet,
 } from "@codemirror/view";
 import { classHighlighter } from "@lezer/highlight";
@@ -57,6 +59,7 @@ export interface Flag extends Place {
 export interface Flagged {
   from: number;
   to: number;
+  sheet: string;
   message: string;
 }
 
@@ -93,6 +96,18 @@ const flaggedLines = gutterLineClass.compute([flags], (state) => {
   return RangeSet.of(lines, true);
 });
 
+/** The card over a squiggle, which carries the engine's own words. */
+const flagHover = hoverTooltip((view, pos) => {
+  const here = flagsAt(view.state, pos);
+  if (here.length === 0) return null;
+  return {
+    pos: Math.min(...here.map((found) => found.from)),
+    end: Math.max(...here.map((found) => found.to)),
+    above: true,
+    create: () => ({ dom: flagCard(view, here) }),
+  };
+});
+
 /**
  * The editor's extensions: the CSS grammar and the engine's warnings
  * on the text. Nothing here lints or completes. Every flag comes from a
@@ -110,6 +125,7 @@ export function cssExtensions(changed: (css: string) => void): Extension[] {
     wrapping.of([]),
     flags,
     flaggedLines,
+    flagHover,
     EditorView.updateListener.of((update) => {
       if (!update.docChanged) return;
       if (update.transactions.some((tr) => tr.annotation(shown) === true)) return;
@@ -136,7 +152,9 @@ export function flagged(
     if (range === undefined) return [];
     const mark = Decoration.mark({
       class: "orca-editor-flag",
-      attributes: { title: flag.message, "data-testid": "orca-editor-flag" },
+      attributes: { "data-testid": "orca-editor-flag" },
+      sheet: flag.sheet,
+      message: flag.message,
     });
     return [mark.range(range.from, range.to)];
   });
@@ -147,11 +165,20 @@ export function flagged(
 export function flagsIn(state: EditorState): Flagged[] {
   const found: Flagged[] = [];
   for (let at = state.field(flags).iter(); at.value !== null; at.next()) {
-    const title: unknown = (at.value.spec as { attributes?: { title?: unknown } })
-      .attributes?.title;
-    found.push({ from: at.from, to: at.to, message: typeof title === "string" ? title : "" });
+    const spec = at.value.spec as { sheet?: unknown; message?: unknown };
+    found.push({
+      from: at.from,
+      to: at.to,
+      sheet: typeof spec.sheet === "string" ? spec.sheet : "",
+      message: typeof spec.message === "string" ? spec.message : "",
+    });
   }
   return found;
+}
+
+/** The flags a pointer at this position is over, which one card shows. */
+export function flagsAt(state: EditorState, pos: number): Flagged[] {
+  return flagsIn(state).filter((found) => found.from <= pos && pos <= found.to);
 }
 
 /**
@@ -175,6 +202,47 @@ function flagRange(state: EditorState, flag: Flag): { from: number; to: number }
   return to > from ? { from, to } : undefined;
 }
 
+/** The icon Obsidian draws a warning with, drawn here because CodeMirror owns this DOM. */
+const WARNING_PATHS = [
+  "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
+  "M12 9v4",
+  "M12 17h.01",
+];
+
+/**
+ * One card for every flag under the pointer. Each row is the engine's
+ * message as it sent it, and the place it names now, which moves with
+ * the typing.
+ */
+function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
+  const document = view.dom.ownerDocument;
+  const card = document.createElement("div");
+  card.className = "orca-editor-card";
+  card.dataset["testid"] = "orca-editor-card";
+  for (const found of here) {
+    const row = card.appendChild(document.createElement("div"));
+    row.className = "orca-editor-card-row";
+
+    const svg = row.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+    svg.setAttribute("class", "orca-editor-card-icon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    for (const d of WARNING_PATHS) {
+      svg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path")).setAttribute("d", d);
+    }
+
+    const body = row.appendChild(document.createElement("div"));
+    body.className = "orca-editor-card-body";
+    const said = body.appendChild(document.createElement("div"));
+    said.className = "orca-editor-card-said";
+    said.textContent = found.message;
+    const line = view.state.doc.lineAt(found.from);
+    const at = body.appendChild(document.createElement("div"));
+    at.className = "orca-editor-card-at";
+    at.textContent = `${found.sheet}:${String(line.number)}:${String(found.from - line.from + 1)}`;
+  }
+  return card;
+}
+
 /** Mounts the editor under an element the view owns. */
 export function mountEditor(
   parent: HTMLElement,
@@ -183,7 +251,15 @@ export function mountEditor(
 ): CssEditor {
   const view = new EditorView({
     parent,
-    state: EditorState.create({ doc: css, extensions: cssExtensions(changed) }),
+    state: EditorState.create({
+      doc: css,
+      extensions: [
+        ...cssExtensions(changed),
+        // The host clips its overflow, so a card near its edge is drawn
+        // on the body instead.
+        tooltips({ parent: parent.ownerDocument.body }),
+      ],
+    }),
   });
   return {
     show(next) {

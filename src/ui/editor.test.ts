@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { language } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { OWN_SHEET } from "@/style/sheet";
-import { cssExtensions, flagged, flagsIn, type Flag } from "@/ui/editor";
+import { cssExtensions, flagged, flagsAt, flagsIn, type Flag } from "@/ui/editor";
 
 const CSS = "p {\n  text-indent: 2em;\n  text-wrap: balance;\n}";
 
@@ -54,6 +54,16 @@ test("a book.css warning is underlined at the line and column it named", () => {
   assert.match(state.sliceDoc(found.from, found.to), /^text-wrap: balance;?$/);
 });
 
+test("the card over a squiggle carries the engine's message and the sheet it named", () => {
+  const state = flag(editing(), [WARNED], CSS);
+  const inside = state.doc.line(3).from + 4;
+  assert.deepEqual(
+    flagsAt(state, inside).map(({ sheet, message }) => ({ sheet, message })),
+    [{ sheet: OWN_SHEET, message: WARNED.message }],
+  );
+  assert.deepEqual(flagsAt(state, state.doc.line(2).from + 4), []);
+});
+
 test("a render's warnings wait for the text it set, and the flags on the text move with the typing", () => {
   const flaggedState = flag(editing(), [WARNED], CSS);
   const typed = flaggedState.update({ changes: { from: 0, insert: "/* mine */\n" } }).state;
@@ -65,5 +75,5 @@ test("a render's warnings wait for the text it set, and the flags on the text mo
 });
 
 // What this tier does not cover: the editor on a page, which has no
-// DOM here. The e2e suite types into it in Obsidian and waits on the
-// write, the render and the squiggle that follow.
+// DOM here, and the card a hover draws. The e2e suite types into it in
+// Obsidian and waits on the write, the render, the squiggle and its card.

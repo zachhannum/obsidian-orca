@@ -79,6 +79,8 @@ export class Controls {
   readonly flaggedLines: Locator;
   /** The count of warnings in the CSS view's header. */
   readonly warned: Locator;
+  /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
+  readonly card: Locator;
 
   constructor(protected readonly root: Locator) {
     this.panel = root.getByTestId("orca-panel");
@@ -99,6 +101,7 @@ export class Controls {
     this.lineNumbers = this.editor.locator(CODEMIRROR_LINE_NUMBER).filter({ hasText: /\d/ });
     this.flaggedLines = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}.orca-editor-flagged`);
     this.warned = root.getByTestId("orca-panel-warned");
+    this.card = root.page().getByTestId("orca-editor-card");
   }
 
   /** Types at the end of the author's CSS, as the author would. */
