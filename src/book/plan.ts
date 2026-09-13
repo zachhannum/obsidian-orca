@@ -166,10 +166,12 @@ export async function bookSources(
   const listed: Listed[] = present.flatMap((section, at) => {
     const text = texts[at];
     if (section.kind !== "note" || text === undefined) return [];
-    if (section.entry.role !== "part" && section.entry.role !== "chapter") return [];
+    const kind = section.entry.role;
+    if (kind !== "part" && kind !== "chapter") return [];
     const heading = firstHeading(text);
     const label = heading ?? entryName(section.entry);
-    return [heading === undefined ? { label, path: section.path } : { label, path: section.path, heading }];
+    const path = section.path;
+    return [heading === undefined ? { kind, label, path } : { kind, label, path, heading }];
   });
   return present.map((section, at) =>
     section.kind === "note"

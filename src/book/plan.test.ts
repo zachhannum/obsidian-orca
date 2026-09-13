@@ -132,7 +132,10 @@ test("the contents links each part and chapter in reading order, under a name no
 
   assert.equal(
     sources[3]?.text,
-    "# Contents\n\n[Volume the First](Volume%20the%20First.md#Volume%20the%20First)\n\n[Chapter Twelve](Chapter%20Twelve.md#Chapter%20Twelve)",
+    "# Contents\n\n" +
+      "{.part}\n\n[Volume the First](Volume%20the%20First.md#Volume%20the%20First)\n\n" +
+      "{.entry}\n\n[Chapter Twelve](Chapter%20Twelve.md#Chapter%20Twelve)\n\n" +
+      "{.folio}\n\n[](Chapter%20Twelve.md#Chapter%20Twelve)",
   );
   assert.ok(!(await paths()).includes(sources[0]?.name ?? ""));
 });
