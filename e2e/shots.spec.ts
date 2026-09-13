@@ -97,8 +97,19 @@ const AS_MARKDOWN = "Open as markdown";
 /** The pages the flip-through turns, counted from the spread it opens on. */
 const FLIP = 12;
 
-/** The resolution the pages are rasterized at, in dots per inch. */
-const DPI = 100;
+/**
+ * The device pixels every picture has for each CSS pixel. The site
+ * shows each picture at half its size, so it stays sharp on a dense
+ * screen.
+ */
+const DENSITY = 2;
+
+/**
+ * The resolution the pages are rasterized at, in dots per inch. A page
+ * at 100 dots per inch is the size the site shows it, so the pages take
+ * the same density as the pictures.
+ */
+const DPI = 100 * DENSITY;
 
 /** The stages the preview counts, each of which runs before a page is painted. */
 const STAGES = ["style", "lines", "flow", "paint"] as const;
@@ -141,11 +152,13 @@ async function settled(book: Book): Promise<void> {
 
 /** Sizes the window and waits for the renderer to be that size. */
 async function sized(site: Site, width: number, height: number): Promise<void> {
-  await site.obsidian.size(width, height);
+  await site.obsidian.size(width, height, DENSITY);
   await site.obsidian.page.waitForFunction(
     (size) =>
-      window.innerWidth === size.width && window.innerHeight === size.height,
-    { width, height },
+      window.innerWidth === size.width &&
+      window.innerHeight === size.height &&
+      window.devicePixelRatio === size.density,
+    { width, height, density: DENSITY },
   );
 }
 

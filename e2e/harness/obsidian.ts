@@ -196,13 +196,16 @@ export class Obsidian {
   /**
    * Sizes the window. The pictures are taken at several widths, and the
    * renderer is given the metrics rather than the window resized, so a
-   * runner's own display does not reach the shot.
+   * runner's own display does not reach the shot. The scale is the
+   * device pixels drawn for each CSS pixel, which leaves the layout as
+   * it is.
    */
-  async size(width: number, height: number): Promise<void> {
+  async size(width: number, height: number, scale = 1): Promise<void> {
     await this.session.send("Emulation.setDeviceMetricsOverride", {
       ...WINDOW,
       width,
       height,
+      deviceScaleFactor: scale,
     });
   }
 

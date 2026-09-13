@@ -39,7 +39,16 @@ export default defineConfig({
       // coming. The bound is short enough to say so while a person is
       // still watching.
       timeout: 30_000,
-      expect: { timeout: 10_000 },
+      // A picture keeps every pixel the renderer drew, so a window
+      // painted for a sharp screen is not shrunk back to its CSS size.
+      expect: {
+        timeout: 10_000,
+        toHaveScreenshot: {
+          animations: "disabled",
+          maxDiffPixelRatio: 0.01,
+          scale: "device",
+        },
+      },
     },
   ],
   reporter: [

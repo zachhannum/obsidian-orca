@@ -48,9 +48,17 @@ interface Shot {
   width: number;
   height: number;
 }
+
+/** The device pixels the spec takes each picture at for one CSS pixel. */
+const DENSITY = 2;
+
 const shot = async (source: ImageMetadata): Promise<Shot> => {
   const drawn = await getImage({ src: source, format: 'webp' });
-  return { src: drawn.src, width: source.width, height: source.height };
+  return {
+    src: drawn.src,
+    width: Math.round(source.width / DENSITY),
+    height: Math.round(source.height / DENSITY),
+  };
 };
 
 /** The pages the flip-through turns, in the order the spec rasterized them. */
