@@ -97,13 +97,15 @@ jobs:
             echo "the pictures are unchanged"
             exit 0
           fi
-          branch="shots/${GITHUB_SHA::7}"
+          # One branch for every run, so a run before the last pictures
+          # merge replaces them in the open pull request.
+          branch="shots/refresh"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$branch"
+          git checkout -B "$branch"
           git add site/src/shots
           git commit -m "Take the site's pictures again"
-          git push origin "$branch"
-          gh pr create --base main --head "$branch" \
+          git push --force origin "$branch"
+          gh pr view "$branch" --json state -q .state 2>/dev/null | grep -qx OPEN || gh pr create --base main --head "$branch" \
             --title "Take the site's pictures again" \
             --body "The screenshot spec took new pictures of ${GITHUB_SHA::7}."
