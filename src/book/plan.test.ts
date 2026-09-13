@@ -637,9 +637,11 @@ test("in the exported fixture book, each contents entry prints the page its chap
     const found = /^(.+?)\s+(\d+)$/.exec(line);
     return found?.[1] === undefined ? [] : [{ label: found[1], folio: Number(found[2]) }];
   });
+  // A part heads its chapters and prints no page of its own.
+  assert.ok(contents.includes("Volume the First"), "the contents lists no part");
   assert.deepEqual(
     entries.map((entry) => entry.label),
-    ["Volume the First", "Chapter Twelve"],
+    ["Chapter Twelve"],
   );
 
   for (const { label, folio } of entries) {
