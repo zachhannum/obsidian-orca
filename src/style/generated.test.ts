@@ -386,6 +386,51 @@ test("the space above a chapter's title shows on the page, as padding over the t
   assert.ok(Math.abs((await top(sunk(4))) - (await top(sunk(0))) - 56) < 0.01);
 });
 
+test("the front matter numbers its folio in roman, and a book with no folio gets no roman rules", () => {
+  const roles: Role[] = ["title-page", "copyright", "chapter", "back-matter"];
+  const css = generatedCss(headed("outside", "bottom"), { roles, author: "Jane Austen" });
+
+  for (const role of ["title-page", "copyright"]) {
+    assert.match(
+      css,
+      new RegExp(`@page ${role} \\{\\n {2}@bottom-center \\{ content: counter\\(page, lower-roman\\); \\}\\n\\}`),
+    );
+  }
+  // The body keeps its own format, and a role after the body is not front matter.
+  assert.match(css, /@page \{\n(?: {2}.+\n)* {2}@bottom-center \{ content: counter\(page, decimal\); \}\n/);
+  assert.doesNotMatch(css, /@page (?:chapter|back-matter)(?::left|:right)? \{/);
+  // The running heads are not rewritten.
+  assert.doesNotMatch(css, /@top-\w+ \{ content: counter\(page, lower-roman\)/);
+
+  const bare = headed("outside", "bottom");
+  delete bare.headers.pageNumber;
+  assert.doesNotMatch(generatedCss(bare, { roles, author: "Jane Austen" }), /lower-roman/);
+  // A book with no part and no chapter has no front matter.
+  assert.doesNotMatch(generatedCss(headed("outside", "bottom"), { roles: ["copyright"] }), /lower-roman/);
+});
+
+test("a folio at the outside corner numbers the front matter in roman on each side", () => {
+  const design = headed("outside", "bottom");
+  design.headers.pageNumber = "outside";
+  const css = generatedCss(design, { roles: ["copyright", "chapter"], author: "Jane Austen" });
+
+  assert.match(css, /@page copyright:left \{\n {2}@bottom-left \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.match(css, /@page copyright:right \{\n {2}@bottom-right \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.doesNotMatch(css, /@page copyright \{/);
+  // The opening's clearing comes after, and still clears the folio.
+  assert.ok(css.indexOf("@page copyright:right") < css.indexOf("@page copyright:first"));
+});
+
+test("the page count starts again at the first part or chapter, and not when the body comes first", () => {
+  const reset = /counter-reset: page 1;/g;
+  const css = generatedCss(emptyDesign(), { roles: ["title-page", "contents", "part", "chapter"] });
+
+  assert.equal(css.match(reset)?.length, 1);
+  assert.match(css, /section:nth-child\(3\) \{\n {2}counter-reset: page 1;\n\}/);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["chapter", "back-matter"] }), reset);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["title-page", "copyright"] }), reset);
+});
+
 /** A design with a head on each side at `position`, and a folio at `pageNumber`. */
 function headed(
   position: HeaderPosition,

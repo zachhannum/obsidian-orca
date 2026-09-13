@@ -38,9 +38,10 @@ export interface Setting {
 
 /**
  * The design as CSS, counted against the order the book is in. Every
- * declaration comes from a field the design sets, with two exceptions.
- * The page names come from the roles, and the title page is laid out
- * the same way in every design.
+ * declaration comes from a field the design sets, with some exceptions.
+ * The page names, and the page where the count starts again at 1, come
+ * from the roles. The title page is laid out the same way in every
+ * design.
  */
 export function generatedCss(design: Design, setting: Setting): string {
   return [
@@ -125,6 +126,7 @@ function pageRules(design: Design, setting: Setting): string[] {
     block("@page", [...root, ...boxes(rootBoxes)]),
     block("@page :left", [...left, ...boxes(placed.left)]),
     block("@page :right", [...right, ...boxes(placed.right)]),
+    ...frontPages(placed, setting),
     ...openingPages(headers, placed, setting),
   ];
 }
@@ -134,6 +136,8 @@ interface Placement {
   both: Map<Box, string>;
   left: Map<Box, string>;
   right: Map<Box, string>;
+  /** The boxes that hold the folio, and not a running head. */
+  folio: Set<Box>;
 }
 
 /**
@@ -143,19 +147,28 @@ interface Placement {
  * corner, so a head and a folio never share a box.
  */
 function placement(headers: HeaderDesign, setting: Setting): Placement {
-  const placed: Placement = { both: new Map(), left: new Map(), right: new Map() };
+  const placed: Placement = {
+    both: new Map(),
+    left: new Map(),
+    right: new Map(),
+    folio: new Set(),
+  };
   const centered = headers.position === "center";
   const folio = folioContent(headers);
   if (folio !== undefined) {
+    const at = (pages: Map<Box, string>, box: Box) => {
+      pages.set(box, folio);
+      placed.folio.add(box);
+    };
     if (headers.pageNumber === "top" && centered) {
-      placed.left.set("top-left", folio);
-      placed.right.set("top-right", folio);
+      at(placed.left, "top-left");
+      at(placed.right, "top-right");
     }
-    if (headers.pageNumber === "top" && !centered) placed.both.set("top-center", folio);
-    if (headers.pageNumber === "bottom") placed.both.set("bottom-center", folio);
+    if (headers.pageNumber === "top" && !centered) at(placed.both, "top-center");
+    if (headers.pageNumber === "bottom") at(placed.both, "bottom-center");
     if (headers.pageNumber === "outside") {
-      placed.left.set("bottom-left", folio);
-      placed.right.set("bottom-right", folio);
+      at(placed.left, "bottom-left");
+      at(placed.right, "bottom-right");
     }
   }
   if (headers.leftPage !== undefined && headers.leftPage !== "none") {
@@ -171,6 +184,29 @@ function placement(headers: HeaderDesign, setting: Setting): Placement {
     );
   }
   return placed;
+}
+
+/**
+ * The front matter's pages, which number their folio in lower-case
+ * roman whatever format the body uses. A rule on a role and side joins
+ * the boxes of the `:left` or `:right` rule, so only the folio's boxes
+ * are set again. An opening's rule still clears them.
+ */
+function frontPages(placed: Placement, setting: Setting): string[] {
+  if (placed.folio.size === 0) return [];
+  const roman = (pages: ReadonlyMap<Box, string>): string[] =>
+    boxes(
+      new Map(
+        [...pages.keys()]
+          .filter((box) => placed.folio.has(box))
+          .map((box) => [box, "counter(page, lower-roman)"]),
+      ),
+    );
+  return front(setting.roles).flatMap((role) => [
+    block(`@page ${role}`, roman(placed.both)),
+    block(`@page ${role}:left`, roman(placed.left)),
+    block(`@page ${role}:right`, roman(placed.right)),
+  ]);
 }
 
 /**
@@ -276,7 +312,18 @@ function sectionRules(design: Design, setting: Setting): string[] {
     }
     return block(positions(setting.roles, role) ?? "", lines);
   });
-  return [...rules, ...chapterRules(design, setting)];
+  return [...rules, ...restart(setting), ...chapterRules(design, setting)];
+}
+
+/**
+ * The body's first page, which is page 1 however many pages of front
+ * matter come before it. A book with no front matter counts from its
+ * first page already.
+ */
+function restart(setting: Setting): string[] {
+  const start = bodyStart(setting.roles);
+  if (start === undefined || start === 0) return [];
+  return [block(`section:nth-child(${start + 1})`, [declared("counter-reset", "page 1")])];
 }
 
 /**
@@ -386,6 +433,22 @@ function positions(roles: readonly Role[], role: Role): string | undefined {
   );
   if (found.length === 0) return undefined;
   return found.length === 1 ? found[0] : `:is(${found.join(", ")})`;
+}
+
+/** The index of the first part or chapter, where the body starts. */
+function bodyStart(roles: readonly Role[]): number | undefined {
+  const found = roles.findIndex((role) => role === "part" || role === "chapter");
+  return found === -1 ? undefined : found;
+}
+
+/**
+ * The roles that sit only before the body. A book with no part and no
+ * chapter has no front matter.
+ */
+function front(roles: readonly Role[]): Role[] {
+  const start = bodyStart(roles);
+  if (start === undefined) return [];
+  return used(roles).filter((role) => roles.lastIndexOf(role) < start);
 }
 
 /** The roles the book uses, in the order it first reaches each of them. */
