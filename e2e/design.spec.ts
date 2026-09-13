@@ -4,6 +4,9 @@ import type { Vault } from "./harness/vault";
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
+/** The fixture chapter as the toolbar names it. Its heading is a level 1 heading. */
+const CHAPTER_NAME = "Chapter Twelve";
+
 /** The font the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FONT = "Alegreya";
 
@@ -201,6 +204,49 @@ test("a font picked is written into the book note, so the book opens in it", asy
   await expect.poll(async () => vault.read(BOOK)).toContain(
     `body-font: ${FIXTURE_FONT}`,
   );
+
+  await written(vault, own);
+});
+
+test("a heading font picked in the panel is still the headings' font after Obsidian reloads", async ({
+  obsidian,
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await panel.control("heading-1-font").click();
+  await panel.type("aleg");
+  await panel.options.filter({ hasText: FIXTURE_FONT }).first().click();
+  await expect(panel.control("heading-1-font")).toContainText(FIXTURE_FONT);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `heading-1-font: ${FIXTURE_FONT}`,
+  );
+
+  // A reload stops the engine, so the book is set from its note on a
+  // new one, which has none of the faces the pick sent.
+  await obsidian.reload();
+  await book.open();
+  await book.painted();
+  await book.choose(CHAPTER_NAME);
+
+  // A painted run names its face's family after the face's own id, so
+  // the heading reads in the fixture's font only if its faces crossed.
+  const heading = book.surface.locator("text").filter({ hasText: "Twelve" });
+  await expect
+    .poll(async () => heading.evaluateAll((runs) =>
+      runs.map((run) => run.getAttribute("font-family") ?? ""),
+    ))
+    .toContainEqual(expect.stringContaining(FIXTURE_FONT.toLowerCase()));
+
+  await panel.open();
+  await expect(panel.control("heading-1-font")).toContainText(FIXTURE_FONT);
+  await expect(panel.missing).toHaveCount(0);
 
   await written(vault, own);
 });
