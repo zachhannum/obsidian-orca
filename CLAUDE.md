@@ -47,12 +47,13 @@ wins and the quick fix waits for its own PR.
 
 ## The design
 
-Twelve artboards in `design/` draw orca as it is meant to look and
+Thirteen artboards in `design/` draw orca as it is meant to look and
 behave, and five more draw the docs site. They are the specification for every surface, not a sketch of
 one, and UI work starts by opening the one it belongs to.
 
 - The screens are `Main`, `Navigator`, `DesignPanel`, `BookPage`,
-  `PreviewViews`, `Export`, `States`, `Advanced` and `Issues`. The
+  `PreviewViews`, `Export`, `States`, `Advanced`, `Issues` and
+  `Inspect`. The
   paths through them are `FlowMakeABook`, `FlowDraftLoop` and
   `FlowDesignExport`.
 - "What the screens settle" in `design/README.md` is decided. A build
