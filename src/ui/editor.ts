@@ -8,7 +8,12 @@
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { cssLanguage } from "@codemirror/lang-css";
 import { syntaxHighlighting } from "@codemirror/language";
-import { Annotation, EditorState, type Extension } from "@codemirror/state";
+import {
+  Annotation,
+  Compartment,
+  EditorState,
+  type Extension,
+} from "@codemirror/state";
 import {
   EditorView,
   highlightActiveLine,
@@ -22,11 +27,16 @@ import { classHighlighter } from "@lezer/highlight";
 export interface CssEditor {
   /** Shows this CSS. Showing it tells the view nothing, so it does not write. */
   show(css: string): void;
+  /** Wraps long lines, or scrolls them sideways, which is the default. */
+  wrap(on: boolean): void;
   destroy(): void;
 }
 
 /** Marks a change that came from the note rather than from the author. */
 const shown = Annotation.define<boolean>();
+
+/** The line wrapping, which the author switches while the editor is open. */
+const wrapping = new Compartment();
 
 /**
  * The editor's extensions: the CSS grammar and no language feature
@@ -42,7 +52,7 @@ export function cssExtensions(changed: (css: string) => void): Extension[] {
     highlightActiveLineGutter(),
     history(),
     keymap.of([...defaultKeymap, ...historyKeymap]),
-    EditorView.lineWrapping,
+    wrapping.of([]),
     EditorView.updateListener.of((update) => {
       if (!update.docChanged) return;
       if (update.transactions.some((tr) => tr.annotation(shown) === true)) return;
@@ -68,6 +78,11 @@ export function mountEditor(
       view.dispatch({
         changes: { from: 0, to: now.length, insert: next },
         annotations: shown.of(true),
+      });
+    },
+    wrap(on) {
+      view.dispatch({
+        effects: wrapping.reconfigure(on ? EditorView.lineWrapping : []),
       });
     },
     destroy() {

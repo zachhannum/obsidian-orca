@@ -14,7 +14,7 @@ import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 export const DESIGN_SHEET = "design.css";
 
 /** The sheet the author's own CSS is sent under, which a warning names. */
-export const OWN_SHEET = "your.css";
+export const OWN_SHEET = "book.css";
 
 /**
  * The generated layer as one sheet, with the defaults under the design.

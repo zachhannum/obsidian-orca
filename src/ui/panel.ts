@@ -46,6 +46,8 @@ export class DesignPanelView extends ItemView {
   private index: FontIndex | undefined;
   /** The view the panel shows: the controls, or the author's own CSS. */
   private viewing: Viewing = "controls";
+  /** Whether the CSS view wraps long lines. It scrolls them sideways until the author asks. */
+  private wrapping = false;
   /** The book last painted, which an edit in the CSS view goes to. */
   private showing: Typeset | undefined;
   /** The element CodeMirror draws in, beside the React root and never under it. */
@@ -84,6 +86,11 @@ export class DesignPanelView extends ItemView {
       },
       view: (viewing) => {
         this.view(viewing);
+      },
+      wrap: (on) => {
+        this.wrapping = on;
+        this.editor?.wrap(on);
+        this.refresh();
       },
     });
     this.contentEl.addClass("orca-design");
@@ -145,6 +152,7 @@ export class DesignPanelView extends ItemView {
       this.editor = mountEditor(host, typeset.css, (css) => {
         this.recss(css);
       });
+      this.editor.wrap(this.wrapping);
     } else this.editor.show(typeset.css);
   }
 
@@ -250,6 +258,7 @@ export class DesignPanelView extends ItemView {
     return {
       kind: "book",
       viewing: this.viewing,
+      wrapping: this.wrapping,
       name: typeset.name,
       design: typeset.design,
       index,

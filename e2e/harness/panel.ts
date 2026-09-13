@@ -19,6 +19,9 @@ export const PANEL = "orca-design";
 /** CodeMirror's own class for its editable text. */
 const CODEMIRROR_CONTENT = ".cm-content";
 
+/** CodeMirror's own class for the element that scrolls its text. */
+const CODEMIRROR_SCROLLER = ".cm-scroller";
+
 /** The id in the plugin's manifest, which the app keys its plugins by. */
 const ORCA = "orca";
 
@@ -59,6 +62,8 @@ export class Controls {
   readonly toCss: Locator;
   /** The header icon that goes back to the controls. */
   readonly toControls: Locator;
+  /** The CSS view's switch between wrapping long lines and scrolling them. */
+  readonly wrap: Locator;
   /** The element CodeMirror draws the author's CSS in. */
   readonly editor: Locator;
   /** The editable text of that editor. */
@@ -76,6 +81,7 @@ export class Controls {
     this.missing = root.getByTestId("orca-panel-missing");
     this.toCss = root.getByTestId("orca-panel-css");
     this.toControls = root.getByTestId("orca-panel-controls");
+    this.wrap = root.getByTestId("orca-panel-wrap");
     this.editor = root.getByTestId("orca-editor");
     this.code = this.editor.locator(CODEMIRROR_CONTENT);
   }
@@ -85,6 +91,31 @@ export class Controls {
     await this.code.click();
     await this.code.press("ControlOrMeta+End");
     await this.code.pressSequentially(typed);
+  }
+
+  /** How far a header icon sits from the center of its button, in pixels, as the larger of the two axes. */
+  async offCenter(button: Locator): Promise<number> {
+    return button.evaluate((element) => {
+      const icon = element.querySelector("svg");
+      if (icon === null) return Number.POSITIVE_INFINITY;
+      const outer = element.getBoundingClientRect();
+      const inner = icon.getBoundingClientRect();
+      const across = Math.abs(
+        outer.left + outer.width / 2 - (inner.left + inner.width / 2),
+      );
+      const down = Math.abs(
+        outer.top + outer.height / 2 - (inner.top + inner.height / 2),
+      );
+      return Math.max(across, down);
+    });
+  }
+
+  /** Whether a line of the editor wider than the editor scrolls sideways rather than wraps. */
+  async scrollsSideways(): Promise<boolean> {
+    return this.editor.evaluate((editor, selector) => {
+      const scroller = editor.querySelector(selector);
+      return scroller !== null && scroller.scrollWidth > scroller.clientWidth;
+    }, CODEMIRROR_SCROLLER);
   }
 
   /** Whether the editor sits under the panel's React root, which it must not. */

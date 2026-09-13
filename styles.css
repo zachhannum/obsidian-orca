@@ -818,6 +818,22 @@ button.orca-nav-action:hover {
   text-transform: uppercase;
 }
 
+/* The icon's span is a flex box, so no line box sits under the icon
+   and it centers on the hover square. */
+.orca-panel-action {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+.orca-panel-action-icon {
+  display: flex;
+}
+
 .orca-panel-book {
   flex: 1;
   min-width: 0;

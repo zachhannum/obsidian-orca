@@ -259,8 +259,12 @@ test("the CSS view edits the book's own fence, and the edit reaches the pages an
   const before = await book.painted();
   await panel.open();
 
+  // The header icons sit in the middle of the square their hover draws.
+  expect(await panel.offCenter(panel.toCss)).toBeLessThanOrEqual(0.5);
   await panel.toCss.click();
   await expect(panel.editor).toBeVisible();
+  expect(await panel.offCenter(panel.toControls)).toBeLessThanOrEqual(0.5);
+  expect(await panel.offCenter(panel.wrap)).toBeLessThanOrEqual(0.5);
   await expect(panel.code).toContainText("letter-spacing: 0.02em;");
   // CodeMirror owns its DOM, so the editor is not under the React root.
   expect(await panel.editorInReact()).toBe(false);
@@ -279,6 +283,34 @@ test("the CSS view edits the book's own fence, and the edit reaches the pages an
   await expect(panel.editor).toBeHidden();
   await expect(panel.groups.first()).toBeVisible();
 
+  await written(vault, own);
+});
+
+test("a long line in the CSS view scrolls sideways until the author wraps it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+
+  const long = `\n/* ${"a long comment ".repeat(20)}*/`;
+  await panel.typeCss(long);
+  await expect(panel.wrap).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(async () => panel.scrollsSideways()).toBe(true);
+
+  await panel.wrap.click();
+  await expect(panel.wrap).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(async () => panel.scrollsSideways()).toBe(false);
+
+  await panel.wrap.click();
+  await panel.toControls.click();
+  await expect.poll(async () => vault.read(BOOK)).toContain(long);
   await written(vault, own);
 });
 
