@@ -30,8 +30,8 @@ test("title, author, language and date reach the PDF's document information", as
   assert.match(written, /\/Lang \(en-GB\)/);
   assert.match(written, /\/CreationDate \(D:18130128/);
 
-  // Publisher, series and isbn are orca's: the engine has none of
-  // them, and they land on the page orca generates.
+  // Publisher, series and isbn are orca's, and the engine writes none
+  // of them into the document's information.
   assert.deepEqual(imprint(book), {
     publisher: "Whitehall Press",
     series: "The Bennet Novels",
@@ -74,5 +74,6 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-// What this tier does not cover: the generated page the imprint is set
-// on, which waits on the roles that make one.
+// What this tier does not cover: the title page the series and the
+// publisher are printed on, which the plan's tests hold, and the isbn,
+// which no page orca generates prints.

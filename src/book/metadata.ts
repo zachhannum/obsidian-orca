@@ -10,7 +10,7 @@
 import type { Metadata } from "fleuron";
 import type { Book } from "@/book/note";
 
-/** Publisher, series and isbn, which orca sets on the page it generates. */
+/** Publisher, series and isbn. The title page orca generates prints the series and the publisher. */
 export interface Imprint {
   publisher?: string;
   series?: string;

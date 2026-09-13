@@ -19,7 +19,7 @@ import { styleOp, type Op, type Sheet, type Source } from "fleuron";
 import type { Hashed, Sent } from "@/assets/registry";
 import { imagesIn } from "@/book/images";
 import type { Links } from "@/book/links";
-import { documentMetadata } from "@/book/metadata";
+import { documentMetadata, imprint } from "@/book/metadata";
 import type { Book } from "@/book/note";
 import {
   entryName,
@@ -185,15 +185,18 @@ async function sourceOf(
 }
 
 /**
- * A generated section's markdown. A title page takes the book's own
- * title and author; every other generated role is a heading, until
- * synthesis is a stage of its own.
+ * A generated section's markdown, read from the book's properties each
+ * time the book is sent. A title page is the series, the title, the
+ * author and the publisher, in that order, and each one that is set is
+ * one block. The generated layer reaches each block by that order.
  */
 function matter(entry: Entry, book: Book): string {
   if (entry.role !== "title-page") return `# ${entryName(entry)}`;
   const { title, author } = book.metadata;
-  const heading = `# ${title ?? entryName(entry)}`;
-  return author === undefined ? heading : `${heading}\n\n${author}`;
+  const { series, publisher } = imprint(book);
+  return [series, `# ${title ?? entryName(entry)}`, author, publisher]
+    .filter((block) => block !== undefined && block !== "")
+    .join("\n\n");
 }
 
 /** A face a book is set in, as the registry read and keyed it. */
