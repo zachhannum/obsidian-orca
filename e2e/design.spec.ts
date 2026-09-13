@@ -314,6 +314,41 @@ test("a long line in the CSS view scrolls sideways until the author wraps it", a
   await written(vault, own);
 });
 
+test("a declaration the engine cannot set is flagged on its line in the CSS view, and not in the preview", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await expect(panel.flags).toHaveCount(0);
+  await expect(panel.warned).toBeHidden();
+
+  const typed = "\np { position: absolute; }";
+  await panel.typeCss(typed);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+
+  // The squiggle arrives with the render that set the typed rule, on
+  // the last line, which is where it was typed.
+  await expect(panel.flags).toHaveCount(1);
+  await expect(panel.flags).toHaveText(/^position: absolute;?$/);
+  await expect(panel.flags).toHaveAttribute("title", /position/);
+  await expect(panel.flaggedLines).toHaveCount(1);
+  await expect(panel.flaggedLines).toHaveText(
+    (await panel.lineNumbers.last().textContent()) ?? "",
+  );
+  await expect(panel.warned).toHaveText("1 warning");
+  await expect(book.warnings).toBeHidden();
+
+  await panel.toControls.click();
+  await written(vault, own);
+});
+
 test("at the width of a narrow sidebar every control fits the panel", async ({
   book,
   panel,

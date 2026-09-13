@@ -8,6 +8,7 @@ import { Settled } from "@/ui/settled";
 import { withKey } from "@/ui/groups";
 import { missingFont } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
+import { cssFlags } from "@/ui/warnings";
 
 /** The type the design panel is registered under. */
 export const PANEL_VIEW = "orca-design";
@@ -148,12 +149,15 @@ export class DesignPanelView extends ItemView {
     this.contentEl.toggleClass("is-css", shown);
     host.hidden = !shown;
     if (!shown) return;
-    if (this.editor === undefined) {
-      this.editor = mountEditor(host, typeset.css, (css) => {
+    let editor = this.editor;
+    if (editor === undefined) {
+      editor = mountEditor(host, typeset.css, (css) => {
         this.recss(css);
       });
-      this.editor.wrap(this.wrapping);
-    } else this.editor.show(typeset.css);
+      editor.wrap(this.wrapping);
+      this.editor = editor;
+    } else editor.show(typeset.css);
+    editor.flag(cssFlags(typeset.session.warnings), typeset.cssWarned);
   }
 
   /**
@@ -265,6 +269,7 @@ export class DesignPanelView extends ItemView {
       unit: this.designing.unit(),
       language: typeset.language,
       missing: this.warning(index, font),
+      warned: cssFlags(typeset.session.warnings).length,
     };
   }
 
