@@ -7,6 +7,7 @@
  */
 
 import { has, matching, type Family, type FontIndex } from "@/assets/fonts";
+import { designFonts, type Design } from "@/style/design";
 
 /** The picker's state. */
 export interface Picking {
@@ -41,4 +42,12 @@ export function missingFont(
 ): string | undefined {
   if (font === undefined || has(index, font)) return undefined;
   return `${font} is not a font this machine has. The book is set in the one orca carries.`;
+}
+
+/**
+ * The warnings for every font a design names that the machine does not
+ * have, one per family: the body font and each heading level's.
+ */
+export function missingFonts(index: FontIndex, design: Design): string[] {
+  return designFonts(design).flatMap((font) => missingFont(index, font) ?? []);
 }

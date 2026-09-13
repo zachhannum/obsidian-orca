@@ -15,6 +15,7 @@ import {
   UNITS,
   ValueError,
   convertLength,
+  designFonts,
   emptyDesign,
   mergeDesign,
   parseCount,
@@ -354,6 +355,16 @@ async function moduleBytes(): Promise<Buffer> {
   const require = createRequire(import.meta.url);
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
+
+test("a design names the body font and each heading level's font, each family once", () => {
+  const design = emptyDesign();
+  assert.deepEqual(designFonts(design), []);
+  design.body.font = "Alegreya";
+  design.headings[1].font = "Spectral";
+  design.headings[2].font = "alegreya";
+  design.headings[4].font = "Charter";
+  assert.deepEqual(designFonts(design), ["Alegreya", "Spectral", "Charter"]);
+});
 
 // What this tier does not cover: the declarations a design turns into,
 // which belong to the generated layer. The theme's tier covers the

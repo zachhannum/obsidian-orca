@@ -33,7 +33,7 @@ import {
 import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
-import type { Design } from "@/style/design";
+import { designFonts, type Design } from "@/style/design";
 import type { Setting } from "@/style/generated";
 import { OWN_SHEET, designSheets } from "@/style/sheet";
 import { bookName } from "@/ui/shelf";
@@ -192,9 +192,9 @@ export class Typeset {
     this.plan(`embedded:${note}`, { did: "embedded", images: fresh });
   }
 
-  /** The font the book is set in, or nothing for the theme's own. */
-  get font(): string | undefined {
-    return this.designed.body.font;
+  /** Every font the book's design names, the body's first. None means the theme's own. */
+  get fonts(): string[] {
+    return designFonts(this.designed);
   }
 
   /** The design the book is set under, which the book note holds. */
@@ -520,9 +520,9 @@ export class Composer {
     };
     const css = carried?.css ?? bookCss(model.order);
     const sheets = [...(carried?.sheets ?? designSheets(design, setting, css))];
-    // The sheets name the font, and a new engine has none of its
+    // The sheets name the fonts, and a new engine has none of their
     // styles, so they cross ahead of the sheets that ask for them.
-    const faces = await this.facesOf(design.body.font);
+    const faces = await this.facesOf(designFonts(design));
     for (const face of faces) assets.crossed(face.key);
     await session.open([...ops, ...sendFaces(faces), styleOp(sheets)]);
     return new Typeset(
@@ -545,16 +545,22 @@ export class Composer {
   }
 
   /**
-   * Every style of the font a book is set in. A font the machine no
-   * longer has crosses nothing. The engine sets the book in the one it
-   * carries, and warns about the one it was asked for.
+   * Every style of each font a book is set in, each face once. A font
+   * the machine no longer has crosses nothing, and the engine sets its
+   * text in the one it carries.
    */
-  private async facesOf(font: string | undefined): Promise<readonly Face[]> {
-    if (font === undefined) return [];
-    try {
-      return await this.vault.styles(font);
-    } catch {
-      return [];
-    }
+  private async facesOf(fonts: readonly string[]): Promise<Face[]> {
+    const styles = await Promise.all(
+      fonts.map(async (font) => {
+        try {
+          return await this.vault.styles(font);
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const faces = new Map<string, Face>();
+    for (const face of styles.flat()) faces.set(face.key, face);
+    return [...faces.values()];
   }
 }

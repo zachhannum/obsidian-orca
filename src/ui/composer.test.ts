@@ -472,9 +472,74 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
     opened.filter((op) => op.op === "font").map((op) => [...op.bytes]),
     [[1, 2, 3]],
   );
-  assert.equal(again.font, "Spectral");
+  assert.deepEqual(again.fonts, ["Spectral"]);
   const styled = opened.at(-1);
   assert.equal(styled?.op, "style");
+});
+
+/** The styles of each font the headed book names, by family. */
+const CUTS: Record<string, Face[]> = {
+  Alegreya: [{ key: "alegreya-regular", bytes: new Uint8Array([1]) }],
+  Spectral: [{ key: "spectral-regular", bytes: new Uint8Array([2]) }],
+};
+
+/**
+ * The fixture book with its body in one font, its first heading level
+ * in another, and its second level in the body's font again. Every
+ * font the book asks for is written down in `asked`.
+ */
+function headed(composing: Composing, asked: string[] = []): Composing {
+  return {
+    ...composing,
+    model: async (at) => {
+      const model = await composing.model(at);
+      if (model !== undefined) {
+        model.book.design.body.font = "Alegreya";
+        model.book.design.headings[1].font = "Spectral";
+        model.book.design.headings[2].font = "Alegreya";
+      }
+      return model;
+    },
+    styles: (font) => {
+      asked.push(font);
+      return Promise.resolve(CUTS[font] ?? []);
+    },
+  };
+}
+
+/** The bytes of each face a run of ops sends, in order. */
+function sentFaces(ops: readonly Op[]): number[][] {
+  return ops.flatMap((op) => (op.op === "font" ? [[...op.bytes]] : []));
+}
+
+test("a book opens with the faces of every font its design names, each family once", async () => {
+  const client = new FakeClient();
+  const asked: string[] = [];
+  const composer = new Composer(headed(await setting(client), asked));
+
+  const book = await composer.open(BOOK);
+
+  assert.deepEqual(asked, ["Alegreya", "Spectral"]);
+  const opened = client.rendered[0] ?? [];
+  assert.deepEqual(sentFaces(opened), [[1], [2]]);
+  assert.equal(opened.at(-1)?.op, "style");
+  assert.deepEqual(book.fonts, ["Alegreya", "Spectral"]);
+});
+
+test("a book set again on a new engine after its engine stops keeps its heading fonts", async () => {
+  const clients = new Clients();
+  const composer = new Composer(
+    headed({ ...(await setting(new FakeClient())), engines: clients.engines }),
+  );
+
+  const first = await composer.open(BOOK);
+  composer.discard(BOOK);
+  await drain();
+  assert.equal(first.dropped, true);
+
+  await composer.open(BOOK);
+  assert.equal(clients.started.length, 2, "the book went onto a second engine");
+  assert.deepEqual(sentFaces(clients.started[1]?.rendered[0] ?? []), [[1], [2]]);
 });
 
 /** The design after a font pick, as the panel passes it to `restyle`. */

@@ -193,6 +193,28 @@ export function emptyDesign(): Design {
   };
 }
 
+/**
+ * Every font a design names, the body's first and then each heading
+ * level's. A family two places name is listed once, however it is
+ * capitalized, because the index matches a name without case.
+ */
+export function designFonts(design: Design): string[] {
+  const named = [
+    design.body.font,
+    ...LEVELS.map((level) => design.headings[level].font),
+  ];
+  const seen = new Set<string>();
+  const fonts: string[] = [];
+  for (const font of named) {
+    if (font === undefined) continue;
+    const key = font.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    fonts.push(font);
+  }
+  return fonts;
+}
+
 /** One scalar a design key is written as. */
 export type Written = string | number | boolean;
 

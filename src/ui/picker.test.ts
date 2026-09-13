@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Face, Family, FontIndex } from "@/assets/fonts";
-import { missingFont, picking } from "@/ui/picker";
+import { emptyDesign } from "@/style/design";
+import { missingFont, missingFonts, picking } from "@/ui/picker";
 
 /** One face of a family, as the index found it. */
 function face(family: string, style: string): Face {
@@ -63,6 +64,18 @@ test("a book naming a font the machine does not have is warned about by name", (
   assert.equal(missingFont(INDEX, "Alegreya"), undefined);
   assert.equal(missingFont(INDEX, undefined), undefined);
   assert.match(missingFont(INDEX, "Charter Italic") ?? "", /Charter Italic/);
+});
+
+test("a heading font the machine does not have is warned about as a missing body font is", () => {
+  const design = emptyDesign();
+  design.body.font = "Alegreya";
+  design.headings[1].font = "Zzyzx Grotesque";
+  design.headings[3].font = "zzyzx grotesque";
+  assert.deepEqual(missingFonts(INDEX, design), [
+    missingFont(INDEX, "Zzyzx Grotesque"),
+  ]);
+  design.body.font = "Helvetica Neue";
+  assert.equal(missingFonts(INDEX, design).length, 2);
 });
 
 // What this tier does not cover: the panel's drawing, which is React
