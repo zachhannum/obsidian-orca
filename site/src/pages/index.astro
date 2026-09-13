@@ -256,8 +256,8 @@ const swap = {
         <section class="hero">
           <h1>A book designer<br /><i>inside Obsidian.</i></h1>
           <p class="lede">
-            Each chapter is markdown. The book details and typesetting are stored in a note.
-            Preview the final result and export to PDF all without leaving Obsidian.
+            Each chapter is a Markdown note. One book note stores the book details and the design.
+            Preview the typeset book and export it to PDF, all without leaving Obsidian.
           </p>
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
@@ -276,7 +276,7 @@ const swap = {
                     src={window_[scheme].w1440.src}
                     width={window_[scheme].w1440.width}
                     height={window_[scheme].w1440.height}
-                    alt="Orca in Obsidian: the navigator, a spread of the set book, and the design panel."
+                    alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
                   />
                 </picture>
               ))
@@ -289,11 +289,10 @@ const swap = {
 
         <section class="row">
           <div class="said">
-            <h2 class="row-h">Your chapters <i>stay notes</i></h2>
+            <h2 class="row-h">Chapters <i>stay notes</i></h2>
             <p class="sec-p">
-              The book note records each chapter in reading order, as reference links.
-              All other details, such as title, author, other metadata, and style, are stored
-              in the frontmatter of the note. 
+              The book note lists the chapters in reading order, as links. Its properties are
+              the title, the author, the other metadata and the design.
             </p>
           </div>
           <div class="shown vault">
@@ -326,8 +325,8 @@ const swap = {
           <div class="said middle">
             <h2 class="sec-h">Write, then <i>format</i></h2>
             <p class="sec-p">
-              Write chapters in Markdown. Swap to the preview
-              pane to the design the book, which stays in sync with your view of the source.
+              Write chapters in Markdown. Switch the pane to the preview to see the typeset book,
+              open at the page you are writing.
             </p>
           </div>
           <div class="swap">
@@ -347,7 +346,7 @@ const swap = {
                     src={swap[scheme].read.src}
                     width={swap[scheme].read.width}
                     height={swap[scheme].read.height}
-                    alt="The same pane showing the set book, open at the page being written."
+                    alt="The same pane with the typeset book, open at the page being written."
                   />
                   </div>
                 </div>
@@ -360,8 +359,8 @@ const swap = {
           <div class="said">
             <h2 class="row-h">Design <i>in the panel</i></h2>
             <p class="sec-p">
-              Trim, margins, type, headings, and more each have a control, and the
-              preview renders live.
+              The design panel has a control for the trim size, the margins, the type, the
+              headings and more. The preview updates with each change.
             </p>
           </div>
           <div class="shown demo">
