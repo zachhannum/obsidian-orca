@@ -341,22 +341,24 @@ function restart(setting: Setting): string[] {
 function chapterRules(design: Design, setting: Setting): string[] {
   const chapters = positions(setting.roles, "chapter");
   if (chapters === undefined) return [];
-  const { spaceAbove, spaceBelow, dropCap } = design.chapter;
-  const sink =
-    spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design);
-  const below =
-    spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design);
+  const { dropCap } = design.chapter;
   return [
-    block(`${chapters} > ${OPENING}`, [
-      ...set("padding-top", sink),
-      ...set("margin-bottom", below),
-    ]),
+    block(`${chapters} > ${OPENING}`, openingSpace(design)),
     block(TEXT_START.map((start) => `${chapters} > ${start} + p::first-letter`).join(",\n"), [
       ...set(
         "initial-letter",
         dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),
       ),
     ]),
+  ];
+}
+
+/** The space a chapter's design sets above and below an opening title. */
+function openingSpace(design: Design): string[] {
+  const { spaceAbove, spaceBelow } = design.chapter;
+  return [
+    ...set("padding-top", spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design)),
+    ...set("margin-bottom", spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design)),
   ];
 }
 
@@ -392,18 +394,49 @@ function titlePageRules(design: Design, setting: Setting): string[] {
 }
 
 /**
- * The contents, which orca writes as one paragraph per entry, each a
- * link to a heading. An entry sets flush left, and prints the page its
- * link lands on in the body's folio format.
+ * The contents, which orca writes as tagged paragraphs. A part is one
+ * `.part` title. A chapter is an `.entry` title, then a `.folio` whose
+ * empty link prints the page it lands on in the body's folio format.
+ * The title sinks like a chapter's.
+ *
+ * The folio is a paragraph of its own, so it rises half a body line to
+ * sit flush right on the title's last line. The engine ignores a
+ * negative margin, so the folio moves by relative position instead.
  */
 function contentsRules(design: Design, setting: Setting): string[] {
   const contents = positions(setting.roles, "contents");
   if (contents === undefined) return [];
   const format = COUNTERS[design.headers.pageNumberFormat ?? "arabic"];
   return [
-    block(`${contents} > p`, [declared("text-indent", "0")]),
-    block(`${contents} a::after`, [
-      declared("content", `" " target-counter(attr(href url), page, ${format})`),
+    block(`${contents} > ${OPENING}`, openingSpace(design)),
+    block(`${contents} p`, [
+      declared("text-indent", "0"),
+      declared("text-align", "left"),
+      declared("hyphens", "manual"),
+      declared("margin", "0"),
+    ]),
+    block(`${contents} p.entry`, [
+      declared("margin-left", "1em"),
+      declared("padding-left", "1em"),
+      declared("padding-right", "3em"),
+      declared("text-indent", "-1em"),
+    ]),
+    block(`${contents} p.folio`, [
+      declared("text-align", "right"),
+      declared("line-height", "0"),
+      declared("position", "relative"),
+      declared("top", `-${bodyLines(0.5, design)}`),
+      declared("break-before", "avoid"),
+    ]),
+    block(`${contents} p.folio a::after`, [
+      declared("content", `target-counter(attr(href url), page, ${format})`),
+    ]),
+    block(`${contents} p.part`, [
+      declared("font-variant-caps", "small-caps"),
+      declared("letter-spacing", "0.08em"),
+      declared("margin-top", bodyLines(1, design)),
+      declared("margin-bottom", bodyLines(0.5, design)),
+      declared("break-after", "avoid"),
     ]),
   ];
 }
