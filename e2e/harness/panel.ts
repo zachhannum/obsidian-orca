@@ -93,7 +93,7 @@ export class Controls {
     await this.code.pressSequentially(typed);
   }
 
-  /** How far a header icon sits from the center of its button, in pixels, as the larger of the two axes. */
+  /** The distance from a header icon to the center of its button, in pixels, on the axis where it is larger. */
   async offCenter(button: Locator): Promise<number> {
     return button.evaluate((element) => {
       const icon = element.querySelector("svg");
