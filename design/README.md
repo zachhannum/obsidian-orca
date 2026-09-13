@@ -90,6 +90,11 @@ its editor around these files and returns a URL. The artboard list and
   platform's font directories and the vault's `fonts/`. Typing filters
   that list rather than naming a font. Each row is set in its own
   font.
+- A family whose faces come in more than one variant, such as a
+  condensed width, shows a Variant row under Font. A family with one
+  variant shows none. A book with no variant picked sets in the
+  family's default variant, and each variant row is set in its own
+  face.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view
