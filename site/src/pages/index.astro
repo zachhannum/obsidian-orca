@@ -256,8 +256,8 @@ const swap = {
         <section class="hero">
           <h1>A book designer<br /><i>inside Obsidian.</i></h1>
           <p class="lede">
-            The chapters stay notes in your vault. The book is a note beside them, and the
-            preview shows the set page while you write.
+            Each chapter is markdown. The book details and typesetting are stored in a note.
+            Preview the final result and export to PDF all without leaving Obsidian.
           </p>
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
@@ -291,9 +291,9 @@ const swap = {
           <div class="said">
             <h2 class="row-h">Your chapters <i>stay notes</i></h2>
             <p class="sec-p">
-              A book is one more note in your vault. It lists your chapters in reading order,
-              as links. Adding a chapter never moves or copies it, and removing one never
-              deletes it. If you uninstall orca, every word is still where you wrote it.
+              The book note records each chapter in reading order, as reference links.
+              All other details, such as title, author, other metadata, and style, are stored
+              in the frontmatter of the note. 
             </p>
           </div>
           <div class="shown vault">
@@ -324,10 +324,10 @@ const swap = {
 
         <section class="stack">
           <div class="said middle">
-            <h2 class="sec-h">Write, then <i>see the page</i></h2>
+            <h2 class="sec-h">Write, then <i>format</i></h2>
             <p class="sec-p">
-              Write the chapter in Markdown, as you always do. One icon in the note header
-              swaps the pane to the set book, open at the page you were writing.
+              Write chapters in Markdown. Swap to the preview
+              pane to the design the book, which stays in sync with your view of the source.
             </p>
           </div>
           <div class="swap">
@@ -360,8 +360,8 @@ const swap = {
           <div class="said">
             <h2 class="row-h">Design <i>in the panel</i></h2>
             <p class="sec-p">
-              Trim, margins, type, headings and chapter openings each have a control, and the
-              page resets as you change them.
+              Trim, margins, type, headings, and more each have a control, and the
+              preview renders live.
             </p>
           </div>
           <div class="shown demo">
@@ -384,7 +384,7 @@ const swap = {
                 src={chapterPage?.src}
                 width={chapterPage?.width}
                 height={chapterPage?.height}
-                alt="The opening of Chapter I, set by orca."
+                alt="The opening of Chapter I, typeset by Orca."
               />
               <div class="set" data-demo-page></div>
             </div>
@@ -395,7 +395,7 @@ const swap = {
           <div class="said middle">
             <h2 class="sec-h">Turn <i>the pages</i></h2>
             <p class="sec-p">
-              Twenty Thousand Leagues Under the Sea, set with orca. Click a page to turn it.
+              Twenty Thousand Leagues Under the Sea, designed in Orca. Click a page to turn it.
             </p>
           </div>
           <div
