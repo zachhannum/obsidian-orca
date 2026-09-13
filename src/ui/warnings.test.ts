@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { GENERATED_ORIGIN } from "@/book/plan";
 import { DESIGN_SHEET, OWN_SHEET } from "@/style/sheet";
 import { THEME_SHEET } from "@/style/theme";
-import { cssFlags, routeOf } from "@/ui/warnings";
+import { cssFlags, groupTitle, issueGroups, routeOf } from "@/ui/warnings";
 
 const MESSAGE = "unsupported property `position`";
 
@@ -33,5 +33,34 @@ test("the editor is flagged with the book.css warnings alone, at the place each 
   assert.deepEqual(flags, [{ sheet: OWN_SHEET, line: 8, column: 3, message: MESSAGE }]);
 });
 
-// What this tier does not cover: the console itself, and the preview's
-// warning cards, which the e2e suite reads.
+test("the author's warnings are grouped by note, each at its line, and orca's are left out", () => {
+  const groups = issueGroups([
+    { message: "a", origin: "Part One/Chapter Eleven.md:84:1" },
+    { message: "b", origin: `${GENERATED_ORIGIN}:0:1:1` },
+    { message: "c", origin: `${OWN_SHEET}:8:3` },
+    { message: "d", origin: "Part One/Chapter Eleven.md:121:5" },
+    { message: "e", origin: `${THEME_SHEET}:2:3` },
+    { message: "f", origin: null },
+  ]);
+  assert.deepEqual(groups, [
+    {
+      route: "note",
+      source: "Part One/Chapter Eleven.md",
+      issues: [
+        { message: "a", place: { sheet: "Part One/Chapter Eleven.md", line: 84, column: 1 } },
+        { message: "d", place: { sheet: "Part One/Chapter Eleven.md", line: 121, column: 5 } },
+      ],
+    },
+    {
+      route: "css",
+      source: OWN_SHEET,
+      issues: [{ message: "c", place: { sheet: OWN_SHEET, line: 8, column: 3 } }],
+    },
+    { route: "note", source: null, issues: [{ message: "f", place: undefined }] },
+  ]);
+  assert.deepEqual(groups.map(groupTitle), ["Chapter Eleven", "The book's CSS", "No place named"]);
+});
+
+// What this tier does not cover: the console itself, the preview's
+// warning cards and what a click on one opens, which the e2e suite
+// reads.
