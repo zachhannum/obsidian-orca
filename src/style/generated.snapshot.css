@@ -22,6 +22,22 @@
   @top-right { content: "Pride and Prejudice"; }
 }
 
+@page title-page {
+  @bottom-center { content: counter(page, lower-roman); }
+}
+
+@page copyright {
+  @bottom-center { content: counter(page, lower-roman); }
+}
+
+@page epigraph {
+  @bottom-center { content: counter(page, lower-roman); }
+}
+
+@page contents {
+  @bottom-center { content: counter(page, lower-roman); }
+}
+
 @page title-page:first {
   @top-left { content: none; }
   @top-right { content: none; }
@@ -146,6 +162,10 @@ section:nth-child(7) {
   page: back-matter;
 }
 
+section:nth-child(5) {
+  counter-reset: page 1;
+}
+
 section:nth-child(6) > :is(h1, h2, h3, h4, h5, h6):first-child {
   padding-top: 98pt;
   margin-bottom: 0pt;
@@ -173,6 +193,45 @@ section:nth-child(1) > h1 + p {
 
 section:nth-child(1) > p:last-child {
   padding-top: 140pt;
+}
+
+section:nth-child(4) > :is(h1, h2, h3, h4, h5, h6):first-child {
+  padding-top: 98pt;
+  margin-bottom: 0pt;
+}
+
+section:nth-child(4) p {
+  text-indent: 0;
+  text-align: left;
+  hyphens: manual;
+  margin: 0;
+}
+
+section:nth-child(4) p.entry {
+  margin-left: 1em;
+  padding-left: 1em;
+  padding-right: 3em;
+  text-indent: -1em;
+}
+
+section:nth-child(4) p.folio {
+  text-align: right;
+  line-height: 0;
+  position: relative;
+  top: -7pt;
+  break-before: avoid;
+}
+
+section:nth-child(4) p.folio a::after {
+  content: target-counter(attr(href url), page, decimal);
+}
+
+section:nth-child(4) p.part {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.08em;
+  margin-top: 14pt;
+  margin-bottom: 7pt;
+  break-after: avoid;
 }
 
 hr {

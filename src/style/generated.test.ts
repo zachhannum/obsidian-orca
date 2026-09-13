@@ -386,6 +386,129 @@ test("the space above a chapter's title shows on the page, as padding over the t
   assert.ok(Math.abs((await top(sunk(4))) - (await top(sunk(0))) - 56) < 0.01);
 });
 
+test("the front matter numbers its folio in roman, and a book with no folio gets no roman rules", () => {
+  const roles: Role[] = ["title-page", "copyright", "chapter", "back-matter"];
+  const css = generatedCss(headed("outside", "bottom"), { roles, author: "Jane Austen" });
+
+  for (const role of ["title-page", "copyright"]) {
+    assert.match(
+      css,
+      new RegExp(`@page ${role} \\{\\n {2}@bottom-center \\{ content: counter\\(page, lower-roman\\); \\}\\n\\}`),
+    );
+  }
+  // The body keeps its own format, and a role after the body is not front matter.
+  assert.match(css, /@page \{\n(?: {2}.+\n)* {2}@bottom-center \{ content: counter\(page, decimal\); \}\n/);
+  assert.doesNotMatch(css, /@page (?:chapter|back-matter)(?::left|:right)? \{/);
+  // The running heads are not rewritten.
+  assert.doesNotMatch(css, /@top-\w+ \{ content: counter\(page, lower-roman\)/);
+
+  const bare = headed("outside", "bottom");
+  delete bare.headers.pageNumber;
+  assert.doesNotMatch(generatedCss(bare, { roles, author: "Jane Austen" }), /lower-roman/);
+  // A book with no part and no chapter has no front matter.
+  assert.doesNotMatch(generatedCss(headed("outside", "bottom"), { roles: ["copyright"] }), /lower-roman/);
+});
+
+test("a folio at the outside corner numbers the front matter in roman on each side", () => {
+  const design = headed("outside", "bottom");
+  design.headers.pageNumber = "outside";
+  const css = generatedCss(design, { roles: ["copyright", "chapter"], author: "Jane Austen" });
+
+  assert.match(css, /@page copyright:left \{\n {2}@bottom-left \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.match(css, /@page copyright:right \{\n {2}@bottom-right \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.doesNotMatch(css, /@page copyright \{/);
+  // The opening's clearing comes after, and still clears the folio.
+  assert.ok(css.indexOf("@page copyright:right") < css.indexOf("@page copyright:first"));
+});
+
+test("the page count starts again at the first part or chapter, and not when the body comes first", () => {
+  const reset = /counter-reset: page 1;/g;
+  const css = generatedCss(emptyDesign(), { roles: ["title-page", "contents", "part", "chapter"] });
+
+  assert.equal(css.match(reset)?.length, 1);
+  assert.match(css, /section:nth-child\(3\) \{\n {2}counter-reset: page 1;\n\}/);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["chapter", "back-matter"] }), reset);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["title-page", "copyright"] }), reset);
+});
+
+test("the contents prints each folio in the body's folio format", () => {
+  const roles: Role[] = ["title-page", "contents", "chapter"];
+  const css = generatedCss(emptyDesign(), { roles });
+
+  assert.match(
+    css,
+    /section:nth-child\(2\) p\.folio a::after \{\n {2}content: target-counter\(attr\(href url\), page, decimal\);\n\}/,
+  );
+
+  const roman = emptyDesign();
+  roman.headers.pageNumberFormat = "roman";
+  assert.match(generatedCss(roman, { roles }), /target-counter\(attr\(href url\), page, lower-roman\)/);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["chapter"] }), /target-counter/);
+});
+
+test("the contents sets its parts, entries and folios only inside the contents", () => {
+  const css = generatedCss(emptyDesign(), { roles: ["title-page", "contents", "chapter"] });
+  const selectors = [...css.matchAll(/^([^@\s}][^{\n]*) \{$/gm)].map((match) => match[1] ?? "");
+
+  for (const name of ["p", "p.entry", "p.folio", "p.folio a::after", "p.part"]) {
+    assert.ok(selectors.includes(`section:nth-child(2) ${name}`), `no contents rule for ${name}`);
+  }
+  // Every rule on a tagged paragraph or a link sits under the contents.
+  for (const selector of selectors.filter((each) => /a::after|\.part|\.entry|\.folio/.test(each))) {
+    assert.ok(selector.startsWith("section:nth-child(2) "), `${selector} reaches past the contents`);
+  }
+  assert.match(css, /section:nth-child\(2\) p\.entry \{\n {2}margin-left: 1em;\n {2}padding-left: 1em;\n {2}padding-right: 3em;\n {2}text-indent: -1em;\n\}/);
+});
+
+test("a contents folio rises half a body line, and a part keeps a line above and half below", () => {
+  const roles: Role[] = ["contents", "chapter"];
+  const spaced = emptyDesign();
+  spaced.body.lineSpacing = { value: 14, unit: "pt" };
+  const css = generatedCss(spaced, { roles });
+
+  assert.match(css, /section:nth-child\(1\) p\.folio \{\n(?: {2}.+\n)* {2}position: relative;\n {2}top: -7pt;\n/);
+  assert.match(css, /section:nth-child\(1\) p\.part \{\n(?: {2}.+\n)* {2}margin-top: 14pt;\n {2}margin-bottom: 7pt;\n/);
+  // With no line spacing set, a body line is an em.
+  const bare = generatedCss(emptyDesign(), { roles });
+  assert.match(bare, /top: -0\.5em;/);
+  assert.match(bare, /margin-top: 1em;\n {2}margin-bottom: 0\.5em;/);
+});
+
+test("the contents title sinks as far as a chapter's, and takes no sink the design does not set", () => {
+  const roles: Role[] = ["contents", "chapter"];
+  const design = emptyDesign();
+  design.body.lineSpacing = { value: 14, unit: "pt" };
+  design.chapter.spaceAbove = 7;
+  design.chapter.spaceBelow = 2;
+  const css = generatedCss(design, { roles });
+  const opening = (at: number) =>
+    new RegExp(`section:nth-child\\(${at}\\) > :is\\(h1(?:, h[2-6])+\\):first-child \\{\\n {2}padding-top: 98pt;\\n {2}margin-bottom: 28pt;\\n\\}`);
+
+  assert.match(css, opening(1));
+  assert.match(css, opening(2));
+  assert.doesNotMatch(generatedCss(emptyDesign(), { roles }), /padding-top/);
+});
+
+test("a contents folio sets flush right on its title's line", async () => {
+  const design = emptyDesign();
+  design.body.lineSpacing = { value: 14, unit: "pt" };
+  const css = generatedCss(design, { roles: ["contents", "chapter"] });
+  const output = await rendered(css, [
+    {
+      name: "contents.md",
+      text: "# Contents\n\n{.entry}\n\n[Chapter One](one.md#Chapter%20One)\n\n{.folio}\n\n[](one.md#Chapter%20One)\n",
+    },
+    { name: "one.md", text: "# Chapter One\n\nIt is a truth universally acknowledged.\n" },
+  ]);
+  const items = (output.pages[0]?.items ?? []).flatMap((item) => (item.kind === "text" ? [item] : []));
+  const title = items.find((item) => item.text.startsWith("Chapter"));
+  const folio = items.find((item) => /^\d+$/.test(item.text));
+
+  assert.ok(title !== undefined && folio !== undefined, "the entry did not set");
+  assert.ok(Math.abs(folio.y - title.y) < 1, `the folio sits at ${folio.y}, its title at ${title.y}`);
+  assert.ok(folio.x > title.x, "the folio is not right of its title");
+});
+
 /** A design with a head on each side at `position`, and a folio at `pageNumber`. */
 function headed(
   position: HeaderPosition,

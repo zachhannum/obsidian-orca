@@ -107,8 +107,10 @@ export function fits(well: Box, trim: Box): { columns: number; rows: number } {
 /** One sheet of a view: the page painted on it, and where it falls. */
 export interface Leaf {
   markup: string;
-  /** Folio, counting from 1. */
+  /** Place in the book, counting from 1. */
   page: number;
+  /** The folio the page prints, which restarts where the body begins. */
+  folio: number;
   side: Side;
 }
 
@@ -205,9 +207,10 @@ function sheet(leaf: Leaf | undefined): string {
   if (leaf === undefined) {
     return '<div class="orca-page" data-empty="true" aria-hidden="true"></div>';
   }
-  const folio = String(leaf.page);
+  const page = String(leaf.page);
   return (
-    `<div class="orca-page" role="group" aria-label="Page ${folio}"` +
-    ` data-page="${folio}" data-side="${leaf.side}">${leaf.markup}</div>`
+    `<div class="orca-page" role="group" aria-label="Page ${page}"` +
+    ` data-page="${page}" data-folio="${String(leaf.folio)}"` +
+    ` data-side="${leaf.side}">${leaf.markup}</div>`
   );
 }

@@ -17,6 +17,7 @@
 
 import { styleOp, type Op, type Sheet, type Source } from "fleuron";
 import type { Hashed, Sent } from "@/assets/registry";
+import { contentsMarkdown, firstHeading, type Listed } from "@/book/contents";
 import { imagesIn } from "@/book/images";
 import type { Links } from "@/book/links";
 import { documentMetadata, imprint } from "@/book/metadata";
@@ -144,6 +145,10 @@ export async function bookImages(
  * The book's sources in reading order, which is also what a reorder
  * sends again. A section with no note is dropped; the warning it
  * raised is `resolve`'s.
+ *
+ * The contents lists the parts and chapters as their notes read now. A
+ * typed edit replaces only its own source, so a changed heading reaches
+ * the contents the next time the whole book is sent.
  */
 export async function bookSources(
   book: Book,
@@ -153,8 +158,25 @@ export async function bookSources(
   read: Read,
 ): Promise<Source[]> {
   const present = resolve(order, links, from).sections.filter(sendable);
-  return Promise.all(
-    present.map((section, at) => sourceOf(section, at, book, read)),
+  const texts = await Promise.all(
+    present.map((section) =>
+      section.kind === "note" ? read(section.path) : undefined,
+    ),
+  );
+  const listed: Listed[] = present.flatMap((section, at) => {
+    const text = texts[at];
+    if (section.kind !== "note" || text === undefined) return [];
+    const kind = section.entry.role;
+    if (kind !== "part" && kind !== "chapter") return [];
+    const heading = firstHeading(text);
+    const label = heading ?? entryName(section.entry);
+    const path = section.path;
+    return [heading === undefined ? { kind, label, path } : { kind, label, path, heading }];
+  });
+  return present.map((section, at) =>
+    section.kind === "note"
+      ? { name: section.path, text: texts[at] ?? "" }
+      : { name: `${GENERATED_ORIGIN}:${at}`, text: matter(section.entry, book, listed) },
   );
 }
 
@@ -172,25 +194,14 @@ export function sentRoles(sections: readonly Section[]): Role[] {
   return sections.filter(sendable).map((section) => section.entry.role);
 }
 
-async function sourceOf(
-  section: Sendable,
-  at: number,
-  book: Book,
-  read: Read,
-): Promise<Source> {
-  if (section.kind === "note") {
-    return { name: section.path, text: await read(section.path) };
-  }
-  return { name: `${GENERATED_ORIGIN}:${at}`, text: matter(section.entry, book) };
-}
-
 /**
  * A generated section's markdown, read from the book's properties each
  * time the book is sent. A title page is the series, the title, the
  * author and the publisher, in that order, and each one that is set is
  * one block. The generated layer reaches each block by that order.
  */
-function matter(entry: Entry, book: Book): string {
+function matter(entry: Entry, book: Book, listed: readonly Listed[]): string {
+  if (entry.role === "contents") return contentsMarkdown(entryName(entry), listed);
   if (entry.role !== "title-page") return `# ${entryName(entry)}`;
   const { title, author } = book.metadata;
   const { series, publisher } = imprint(book);

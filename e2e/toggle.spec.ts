@@ -85,8 +85,9 @@ test("the book opens turned to the first page of the chapter the writer was in",
   await book.painted();
 
   // A chapter typeset by itself is a different chapter, so the page
-  // is the one the whole book put it on.
-  await expect(book.surface).toHaveAttribute("data-first", String(opens));
+  // is the one the whole book put it on. The book page reads a range
+  // in the folios the pages print.
+  await expect(book.seat(0)).toHaveAttribute("data-folio", String(opens));
 });
 
 test("toggling back returns to the manuscript, on the line it was left on", async ({

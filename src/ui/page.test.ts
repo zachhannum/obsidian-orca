@@ -59,7 +59,7 @@ function surface(glyphs = 2): Fake {
 const stages = { style: 1, lines: 1, flow: 1, paint: 1 };
 
 function leaf(page: number, side: "recto" | "verso"): Leaf {
-  return { markup: `<svg viewBox="0 0 432 648"></svg>`, page, side };
+  return { markup: `<svg viewBox="0 0 432 648"></svg>`, page, folio: page, side };
 }
 
 test("a view shows the span it is on: one page, a spread, or a screenful", () => {

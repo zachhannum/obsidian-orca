@@ -175,6 +175,7 @@ function leaves(count: number): Page[] {
         features: { smallCaps: false },
         color: "#000000",
         glyphs: [],
+        layer: 0,
       },
     ],
   }));

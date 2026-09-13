@@ -32,8 +32,9 @@ jobs:
 
       - run: npm run lint
 
-      # The Node tier exports the sample book and checks the PDF it got.
-      - run: sudo apt-get update && sudo apt-get install -y qpdf
+      # The Node tier exports the sample book and the fixture book, and
+      # reads the structure and the words of each PDF.
+      - run: sudo apt-get update && sudo apt-get install -y qpdf poppler-utils
 
       - run: npm test
 

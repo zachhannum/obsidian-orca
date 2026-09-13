@@ -96,6 +96,30 @@ test("a book that sets nothing sets its text inside the default margins, and its
   assert.ok(orca.pages.some((page) => folio(page) !== undefined));
 });
 
+test("the front matter prints a roman folio, and the body counts again from 1", async () => {
+  const design = emptyDesign();
+  design.headers.pageNumber = "bottom";
+  const output = await rendered([
+    { op: "dialect", dialect: "obsidian" },
+    { op: "split", level: 0 },
+    styleOp(designSheets(design, { roles: ["copyright", "chapter"] })),
+    {
+      op: "book",
+      sources: [
+        { name: "copyright.md", text: `# Copyright\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n` },
+        { name: "one.md", text: `# Chapter One\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n` },
+      ],
+    },
+  ]);
+
+  assert.deepEqual(output.warnings, []);
+  const opening = output.pages.findIndex((page) => texts(page).includes("Chapter One"));
+  assert.ok(opening > 1, "the copyright did not turn a page");
+  const front = output.pages.slice(0, opening).map(folioText);
+  assert.ok(front.includes("ii"), `the front matter printed ${JSON.stringify(front)}`);
+  assert.equal(folioText(output.pages[opening + 1]), "2");
+});
+
 test("a book set in a font the engine does not have still sets, and warns about none of it", async () => {
   const design = emptyDesign();
   design.body.font = "Nonesuch";
@@ -111,7 +135,7 @@ test("a book set in a font the engine does not have still sets, and warns about 
 });
 
 test("a declaration the engine cannot set in book.css is reported at its own line and column in that sheet", async () => {
-  const own = "/* mine */\np {\n  position: absolute;\n}\n";
+  const own = "/* mine */\np {\n  float: left;\n}\n";
   const output = await set(designSheets(emptyDesign(), SETTING, own));
 
   const places = output.warnings.flatMap((warning) =>
@@ -204,6 +228,11 @@ function folio(page: Page): string | undefined {
     (item) => item.kind === "text" && item.y > page.height - BOTTOM_MARGIN,
   );
   return found?.kind === "text" ? `${found.text} at ${found.x.toFixed(1)}` : undefined;
+}
+
+/** The folio's text alone. */
+function folioText(page: Page | undefined): string | undefined {
+  return page === undefined ? undefined : folio(page)?.split(" at ")[0];
 }
 
 /** The default bottom margin, in points. Anything below it is a margin box. */
