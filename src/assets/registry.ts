@@ -77,6 +77,15 @@ export async function contentKey(bytes: Uint8Array): Promise<string> {
 }
 
 /**
+ * The url a face's bytes cross under and a `@font-face` src names. It
+ * is made from the content key, so it is the same on every run and
+ * needs no escaping.
+ */
+export function fontUrl(key: string): string {
+  return `orca-font:${key}`;
+}
+
+/**
  * The assets one session holds, on the main thread.
  * {@link Registry.close} gives back every url it was handed, so none
  * outlives the session that made it.

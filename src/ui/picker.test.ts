@@ -12,6 +12,9 @@ function face(family: string, style: string): Face {
     family,
     style,
     variable: false,
+    weight: 400,
+    width: 5,
+    italic: false,
     where: "platform",
   };
 }
@@ -21,6 +24,7 @@ function family(name: string, ...styles: string[]): Family {
     name,
     where: "platform",
     faces: styles.map((style) => face(name, style)),
+    variants: [],
   };
 }
 

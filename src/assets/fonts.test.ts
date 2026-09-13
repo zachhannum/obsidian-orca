@@ -157,6 +157,9 @@ test("the platform's faces and the vault's are one index, and the vault wins the
         family: "Sablon",
         style: "Book",
         variable: false,
+        weight: 400,
+        width: 5,
+        italic: false,
         where: "vault",
       },
     ],
@@ -173,7 +176,7 @@ test("a typed string filters the families, and one that matches none answers wit
   const index: FontIndex = {
     refused: [],
     families: ["EB Garamond", "Garamond Premier", "Halyard Text", "Sablon"].map(
-      (name) => ({ name, where: "platform" as const, faces: [] }),
+      (name) => ({ name, where: "platform" as const, faces: [], variants: [] }),
     ),
   };
 
