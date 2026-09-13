@@ -92,8 +92,8 @@ export type Shown =
       unit: PageUnit;
       /** The language that the book sets. The hyphenation patterns depend on it. */
       language: string | undefined;
-      /** The warning for a font the machine does not have. */
-      missing: string | undefined;
+      /** One warning for each font the design names that the machine does not have. */
+      missing: readonly string[];
       /** The warnings against the author's CSS, which the CSS view counts. */
       warned: number;
     }
@@ -267,9 +267,9 @@ export function Panel({
           })}
         </div>
       ))}
-      {shown.missing === undefined ? null : (
-        <Warning said={shown.missing} testid="orca-panel-missing" />
-      )}
+      {shown.missing.map((said) => (
+        <Warning key={said} said={said} testid="orca-panel-missing" />
+      ))}
     </div>
   );
 }

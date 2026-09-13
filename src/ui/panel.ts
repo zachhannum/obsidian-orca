@@ -1,13 +1,13 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
 import type { Face } from "@/book/plan";
-import type { Design, PageUnit, Written } from "@/style/design";
+import { designFonts, type Design, type PageUnit, type Written } from "@/style/design";
 import type { Place } from "@/style/origin";
 import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
 import { Settled } from "@/ui/settled";
 import { withKey } from "@/ui/groups";
-import { missingFont } from "@/ui/picker";
+import { missingFont, missingFonts } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -266,7 +266,6 @@ export class DesignPanelView extends ItemView {
 
   /** The panel's state for one book, from the engine and the index. */
   private shownFor(typeset: Typeset, index: FontIndex): Shown {
-    const font = typeset.font;
     return {
       kind: "book",
       viewing: this.viewing,
@@ -276,16 +275,22 @@ export class DesignPanelView extends ItemView {
       index,
       unit: this.designing.unit(),
       language: typeset.language,
-      missing: this.warning(index, font),
+      missing: this.warnings(index, typeset.design),
       warned: cssFlags(typeset.session.warnings).length,
     };
   }
 
-  /** The warning for the font a design asked for, if there is one. */
-  private warning(index: FontIndex, font: string | undefined): string | undefined {
-    return font !== undefined && font === this.unread
-      ? unreadable(font)
-      : missingFont(index, font);
+  /** The warnings for the fonts a design asks for, the body's and each heading level's. */
+  private warnings(index: FontIndex, design: Design): string[] {
+    const unread = this.unread;
+    const missing = missingFonts(index, design);
+    if (unread === undefined || !designFonts(design).includes(unread)) {
+      return missing;
+    }
+    return [
+      unreadable(unread),
+      ...missing.filter((said) => said !== missingFont(index, unread)),
+    ];
   }
 }
 

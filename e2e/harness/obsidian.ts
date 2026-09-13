@@ -243,6 +243,19 @@ export class Obsidian {
   }
 
   /**
+   * Reloads the window, as Obsidian does when it starts again. Every
+   * engine stops, and orca loads again and sets each book from its note.
+   */
+  async reload(): Promise<void> {
+    await this.page.reload();
+    await this.page.waitForFunction(
+      () => window.app?.workspace.layoutReady === true,
+      undefined,
+      { timeout: APPEARING },
+    );
+  }
+
+  /**
    * Turns off some of Obsidian's own plugins and waits for the status
    * bar to lose the items they put there.
    */
