@@ -13,6 +13,7 @@ import {
 } from "fleuron";
 import { emptyDesign, readDesign, type Design } from "@/style/design";
 import { generatedCss } from "@/style/generated";
+import { readOrigin } from "@/style/origin";
 import { DESIGN_SHEET, OWN_SHEET, designSheet, designSheets } from "@/style/sheet";
 import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 
@@ -109,6 +110,17 @@ test("a book set in a font the engine does not have still sets, and warns about 
   ]);
 });
 
+test("a declaration the engine cannot set in book.css is reported at its own line and column in that sheet", async () => {
+  const own = "/* mine */\np {\n  position: absolute;\n}\n";
+  const output = await set(designSheets(emptyDesign(), SETTING, own));
+
+  const places = output.warnings.flatMap((warning) =>
+    warning.origin === null ? [] : [readOrigin(warning.origin)],
+  );
+  assert.deepEqual(places, [{ sheet: OWN_SHEET, line: 3, column: 3 }]);
+  assert.ok(output.pages.length > 0);
+});
+
 test("a preset a note still names is ignored by the design", () => {
   const named = readDesign({ preset: "Quarto" });
 
@@ -202,7 +214,7 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-// What this tier does not cover: the author's own layer with anything
-// in it, which waits on the note's css fence. It also does not cover a
-// folio at the top or the outside edge. Orca clears the openings for
+// What this tier does not cover: a warning in the author's own layer
+// on any declaration but one. It also does not cover a folio at the
+// top or the outside edge. Orca clears the openings for
 // those the same way.

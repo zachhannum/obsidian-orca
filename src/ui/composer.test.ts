@@ -326,6 +326,34 @@ test("a burst of keystrokes leaves the pages last painted up until the render la
   assert.equal(painted, 1);
 });
 
+test("the CSS the warnings are against moves with the render that repaints the preview", async () => {
+  const clock = new Steps();
+  const client = new PausedClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+  const opened = book.css;
+  const warned: string[] = [];
+  book.watch(() => {
+    warned.push(book.cssWarned);
+  });
+
+  client.hold();
+  book.recss(`${opened}\np { position: absolute; }`);
+  await drain();
+  clock.tick();
+  await drain();
+
+  // The CSS crossed, but no render landed, so the warnings on hand are
+  // still the ones against the CSS the book opened with.
+  assert.equal(book.cssWarned, opened);
+  assert.deepEqual(warned, []);
+
+  client.release();
+  await drain();
+
+  assert.deepEqual(warned, [book.css]);
+});
+
 test("a chapter the engine already has the words of is no edit at all", async () => {
   const clock = new Steps();
   const client = new FakeClient();

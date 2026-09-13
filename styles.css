@@ -925,6 +925,74 @@ button.orca-nav-action:hover {
   color: var(--text-faint);
 }
 
+.orca-panel-warned {
+  flex: none;
+  color: var(--color-orange);
+}
+
+.orca-editor-host .orca-editor-flag {
+  text-decoration: underline wavy var(--color-orange);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.orca-editor-host .cm-lineNumbers .cm-gutterElement.orca-editor-flagged {
+  color: var(--color-orange);
+}
+
+/* CodeMirror wraps the card in its own tooltip box, drawn on the body. */
+.cm-tooltip.cm-tooltip-hover:has(.orca-editor-card) {
+  max-width: 320px;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-s);
+  overflow: hidden;
+}
+
+.orca-editor-card-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--color-orange);
+  font-family: var(--font-interface);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.orca-editor-card-row + .orca-editor-card-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.orca-editor-card-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  fill: none;
+  stroke: var(--color-orange);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orca-editor-card-body {
+  min-width: 0;
+}
+
+.orca-editor-card-said {
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.orca-editor-card-at {
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+}
+
 .orca-panel {
   container-type: inline-size;
   display: flex;

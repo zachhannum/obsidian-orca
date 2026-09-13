@@ -11,7 +11,7 @@ wins and the quick fix waits for its own PR.
 - Five modules under `src/`: `engine/` (worker bootstrap, client,
   session lifetime, stage counters), `book/` (note format, roles,
   reading order, generated matter, op planning), `style/` (settings
-  schema, presets, CSS generation, offset table, warning routing),
+  schema, presets, CSS generation, warning origins),
   `assets/` (font index, content-hash registry, image resolution),
   `ui/` (navigator, views, panel, CM6 editor, commands, settings tab).
 - Only `ui/` knows about Obsidian, and `assets/` reaches the vault

@@ -22,6 +22,9 @@ const CODEMIRROR_CONTENT = ".cm-content";
 /** CodeMirror's own class for the element that scrolls its text. */
 const CODEMIRROR_SCROLLER = ".cm-scroller";
 
+/** CodeMirror's own class for one line number. */
+const CODEMIRROR_LINE_NUMBER = ".cm-lineNumbers .cm-gutterElement";
+
 /** The id in the plugin's manifest, which the app keys its plugins by. */
 const ORCA = "orca";
 
@@ -68,6 +71,16 @@ export class Controls {
   readonly editor: Locator;
   /** The editable text of that editor. */
   readonly code: Locator;
+  /** The squiggles a render put on the author's CSS. */
+  readonly flags: Locator;
+  /** The line numbers of the editor, the empty spacer CodeMirror keeps aside. */
+  readonly lineNumbers: Locator;
+  /** The line numbers a squiggle colours. */
+  readonly flaggedLines: Locator;
+  /** The count of warnings in the CSS view's header. */
+  readonly warned: Locator;
+  /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
+  readonly card: Locator;
 
   constructor(protected readonly root: Locator) {
     this.panel = root.getByTestId("orca-panel");
@@ -84,6 +97,11 @@ export class Controls {
     this.wrap = root.getByTestId("orca-panel-wrap");
     this.editor = root.getByTestId("orca-editor");
     this.code = this.editor.locator(CODEMIRROR_CONTENT);
+    this.flags = this.editor.getByTestId("orca-editor-flag");
+    this.lineNumbers = this.editor.locator(CODEMIRROR_LINE_NUMBER).filter({ hasText: /\d/ });
+    this.flaggedLines = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}.orca-editor-flagged`);
+    this.warned = root.getByTestId("orca-panel-warned");
+    this.card = root.page().getByTestId("orca-editor-card");
   }
 
   /** Types at the end of the author's CSS, as the author would. */

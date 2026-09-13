@@ -94,6 +94,8 @@ export type Shown =
       language: string | undefined;
       /** The warning for a font the machine does not have. */
       missing: string | undefined;
+      /** The warnings against the author's CSS, which the CSS view counts. */
+      warned: number;
     }
   | { kind: "reading" }
   | { kind: "none" };
@@ -167,6 +169,11 @@ export function Panel({
     <div className="orca-panel-header">
       <span className="orca-panel-title">{css ? "CSS" : "Design"}</span>
       <span className="orca-panel-book">— {shown.name}</span>
+      {css && shown.warned > 0 ? (
+        <span className="orca-panel-warned" data-testid="orca-panel-warned">
+          {shown.warned === 1 ? "1 warning" : `${String(shown.warned)} warnings`}
+        </span>
+      ) : null}
       {css ? (
         <button
           type="button"

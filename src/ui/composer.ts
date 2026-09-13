@@ -35,7 +35,7 @@ import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
 import type { Design } from "@/style/design";
 import type { Setting } from "@/style/generated";
-import { designSheets } from "@/style/sheet";
+import { OWN_SHEET, designSheets } from "@/style/sheet";
 import { bookName } from "@/ui/shelf";
 
 /** The book, as much of it as crosses from the engine that died onto its next one. */
@@ -85,6 +85,8 @@ export class Typeset {
   private loaded: Loaded;
   private designed: Design;
   private own: string;
+  /** The author's CSS as the last render that landed set it. */
+  private linted: string;
   private gone = false;
 
   constructor(
@@ -114,6 +116,7 @@ export class Typeset {
     clock: Clock,
   ) {
     this.own = book.css;
+    this.linted = book.css;
     this.name = book.name;
     this.path = book.path;
     this.session = book.session;
@@ -228,6 +231,14 @@ export class Typeset {
     return this.own;
   }
 
+  /**
+   * The author's CSS the session's warnings are against. It trails
+   * {@link Typeset.css} while a render of newer CSS is on its way.
+   */
+  get cssWarned(): string {
+    return this.linted;
+  }
+
   /** Sets the book under the author's own CSS, which crosses last of the sheets. */
   recss(css: string): void {
     if (css === this.own) return;
@@ -300,7 +311,12 @@ export class Typeset {
   }
 
   private async render(ops: Op[]): Promise<void> {
+    const own = ops
+      .flatMap((op) => (op.op === "style" ? op.sheets : []))
+      .filter((sheet) => sheet.name === OWN_SHEET)
+      .at(-1);
     await this.session.render(ops);
+    if (own !== undefined) this.linted = own.css;
     for (const painted of this.watchers) painted();
   }
 }

@@ -314,6 +314,54 @@ test("a long line in the CSS view scrolls sideways until the author wraps it", a
   await written(vault, own);
 });
 
+test("a declaration the engine cannot set is flagged on its line in the CSS view, and listed in the preview", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await expect(panel.flags).toHaveCount(0);
+  await expect(panel.warned).toBeHidden();
+
+  const typed = "\np { position: absolute; }";
+  await panel.typeCss(typed);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+
+  // The squiggle arrives with the render that set the typed rule, on
+  // the last line, which is where it was typed.
+  await expect(panel.flags).toHaveCount(1);
+  await expect(panel.flags).toHaveText(/^position: absolute;?$/);
+  await expect(panel.flaggedLines).toHaveCount(1);
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+  await expect(panel.flaggedLines).toHaveText(line);
+  await expect(panel.warned).toHaveText("1 warning");
+
+  // The squiggle opens a card with the engine's own words and the
+  // place they name, drawn by orca rather than the browser.
+  await expect(panel.flags).not.toHaveAttribute("title", /./);
+  await expect(panel.card).toBeHidden();
+  await panel.flags.hover();
+  await expect(panel.card).toBeVisible();
+  await expect(panel.card).toContainText("position");
+  await expect(panel.card).toContainText(`book.css:${line}:`);
+
+  // The same warning is one of the preview's, with the same place.
+  await expect(book.warnings).toHaveText("1 warning");
+  await book.warnings.click();
+  await expect(book.issues.first()).toContainText("position");
+  await expect(book.issues.first()).toContainText(`book.css:${line}:`);
+  await book.warnings.click();
+
+  await panel.toControls.click();
+  await written(vault, own);
+});
+
 test("at the width of a narrow sidebar every control fits the panel", async ({
   book,
   panel,

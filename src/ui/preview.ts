@@ -34,7 +34,7 @@ import {
   type Viewing,
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
-import { isOrcas } from "@/ui/warnings";
+import { routeOf } from "@/ui/warnings";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -813,9 +813,10 @@ export class PreviewView extends ItemView {
    * re-worded, so each card carries the engine's own line and the
    * place it named.
    *
-   * A warning against matter orca generated, or against the sheet orca
-   * generated, is orca's own defect. The author has nothing to do
-   * about either, so those go to the console.
+   * A warning against matter orca generated, or against a sheet orca
+   * wrote, is orca's own defect. The author has nothing to do about
+   * either, so those go to the console. One against the author's CSS
+   * is listed here and also drawn on its line in the panel's editor.
    */
   private warns(session: Session): void {
     const chip = this.warnings;
@@ -823,7 +824,8 @@ export class PreviewView extends ItemView {
     if (chip === undefined || issues === undefined) return;
     const said: Warning[] = [];
     for (const warning of session.warnings) {
-      if (isOrcas(warning)) console.warn(`Orca: ${warning.message}`, warning.origin);
+      const route = routeOf(warning);
+      if (route === "orca") console.warn(`Orca: ${warning.message}`, warning.origin);
       else said.push(warning);
     }
 
