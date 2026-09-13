@@ -1,6 +1,6 @@
 # The v1 design
 
-Twelve artboards draw the plugin: nine screens and three flows. Five
+Thirteen artboards draw the plugin: ten screens and three flows. Five
 more draw the docs site. They show orca as it is meant to look and
 behave. They are HTML rather than pictures, so they can be edited and
 rebuilt instead of redrawn.
@@ -110,6 +110,29 @@ its editor around these files and returns a URL. The artboard list and
 - No implementation vocabulary reaches a surface. The per-stage counts
   stay as attributes for the tests, and the status line reads the page
   the author is on.
+- Inspect mode is an action in the book view's header, beside the swap
+  to the manuscript, and it is also a command. While it is on, the box
+  under the pointer is outlined on the page, with a tag that names its
+  element. Content, padding and margin each get a light tint.
+- A click pins the box. The pin opens a pane at the top of the design
+  panel's CSS view, above the editor, and turns the panel to that view.
+  The pane shows the box's ancestors as crumbs, the rules that matched
+  it grouped by the layer they came from, and a few computed values.
+- The crumbs and the rules use the selectors the engine matches. A
+  section has no class, so the pane names it by its place in the
+  reading order and shows its role beside it in faint type.
+- A rule from the author's CSS names its line, and a click puts the
+  cursor on that line. A rule from the design panel names the control
+  that wrote it, and a click opens that control. A rule for a layout
+  that has no control, such as the title page, opens nothing.
+- `Add a rule` puts an empty rule at the cursor. Its selector is the
+  box's element and each crumb the author picked.
+- A box split across two pages is outlined on both pages. A running
+  head is picked as a margin box of its `@page` rule.
+- The first Escape removes the pin. The second Escape turns inspect
+  mode off. The action and a swap to the manuscript also turn it off.
+- Inspect mode waits on fleuron to find the box under a point and to
+  return the rules that matched it and its computed values.
 
 ## What the site settles
 
