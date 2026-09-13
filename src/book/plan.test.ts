@@ -566,23 +566,23 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-test("the site's sample book sets to a PDF that qpdf reads", async () => {
-  const sample = directoryVault(path.join(root, "site/sample"));
-  const model = readModel(await readText(sample, SAMPLE_BOOK));
-  const links = pathLinks(await under(sample));
-  const registry = new Registry(sample);
+/** A book in a vault, exported with the faces in its `fonts` folder, as a PDF file on disk. */
+async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
+  const model = readModel(await readText(from, name));
+  const links = pathLinks(await under(from));
+  const registry = new Registry(from);
   const { ops } = await sendBook(
     model.book,
     model.order,
     links,
-    SAMPLE_BOOK,
-    (at) => readText(sample, at),
+    name,
+    (at) => readText(from, at),
     (at) => registry.take(at),
   );
-  const { sections } = resolve(model.order, links, SAMPLE_BOOK);
+  const { sections } = resolve(model.order, links, name);
   const { title, author, publisher } = model.book.metadata;
   const faces = await Promise.all(
-    (await sample.list("fonts")).files
+    (await from.list("fonts")).files
       .filter((file) => file.endsWith(".ttf"))
       .map((file) => registry.take(file)),
   );
@@ -607,10 +607,51 @@ test("the site's sample book sets to a PDF that qpdf reads", async () => {
   }
   assert.ok(pdf, "the export was overtaken");
 
-  const written = path.join(await mkdtemp(path.join(tmpdir(), "orca-")), "sample.pdf");
+  const written = path.join(await mkdtemp(path.join(tmpdir(), "orca-")), "book.pdf");
   await writeFile(written, pdf);
+  return written;
+}
+
+test("the site's sample book sets to a PDF that qpdf reads", async () => {
+  const sample = directoryVault(path.join(root, "site/sample"));
+  const written = await exportedBook(sample, SAMPLE_BOOK);
+
   const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });
   assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+});
+
+test("in the exported fixture book, each contents entry prints the page its chapter opens on", async () => {
+  const written = await exportedBook(vault, BOOK);
+  const read = spawnSync("pdftotext", ["-layout", written, "-"], { encoding: "utf8" });
+  assert.equal(read.status, 0, read.stderr);
+  const pages = read.stdout.split("\f").map((page) =>
+    page.split("\n").map((line) => line.trim()).filter((line) => line !== ""),
+  );
+
+  const contents = pages.find((lines) => lines[0] === "Contents");
+  assert.ok(contents, "no page opens on the contents");
+  const entries = contents.slice(1).flatMap((line) => {
+    const found = /^(.+?)\s+(\d+)$/.exec(line);
+    return found?.[1] === undefined ? [] : [{ label: found[1], folio: Number(found[2]) }];
+  });
+  assert.deepEqual(
+    entries.map((entry) => entry.label),
+    ["Volume the First", "Chapter Twelve"],
+  );
+
+  for (const { label, folio } of entries) {
+    // An opening prints no folio, and neither does the blank page before
+    // a recto. The folio an opening would print is counted back from the
+    // next page that prints one.
+    const opens = pages.findIndex((lines) => lines[0] === label);
+    assert.ok(opens >= 0, `no page opens on ${label}`);
+    const numbered = pages.findIndex(
+      (lines, at) => at > opens && /^\d+$/.test(lines.at(-1) ?? ""),
+    );
+    assert.ok(numbered > opens, `no page after ${label} prints a folio`);
+    const printed = Number(pages[numbered]?.at(-1));
+    assert.equal(folio, printed - (numbered - opens), label);
+  }
 });
 
 // What this tier does not cover: the face bytes of a `font` op reaching
