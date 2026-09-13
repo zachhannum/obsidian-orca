@@ -817,7 +817,7 @@ export class PreviewView extends ItemView {
    * Draws what the last run had to complain about: a count on the bar,
    * and the warnings themselves under it, one group per note. A warning
    * is routed, never re-worded, so each card carries the engine's own
-   * line, and the line it named opens the note there.
+   * line, and the place it named is a link that opens the note there.
    *
    * A warning against matter orca generated, or against a sheet orca
    * wrote, is orca's own defect. The author has nothing to do about
@@ -863,10 +863,9 @@ export class PreviewView extends ItemView {
         const place = issue.place;
         if (place === undefined) continue;
         const at = card.createDiv({ cls: "orca-preview-issue-at" });
-        at.createSpan({ text: `line ${String(place.line)} · ` });
         const open = at.createEl("button", {
           cls: "orca-preview-issue-open",
-          text: group.route === "css" ? "open the CSS here" : "open the note here",
+          text: `${place.sheet}:${String(place.line)}:${String(place.column)}`,
         });
         open.dataset["testid"] = "orca-issue-open";
         // The cards are drawn again on every run, so the listener goes

@@ -371,7 +371,7 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await expect(book.issues.first()).toContainText(
     "image nothing here.png: no image was supplied for it; it is skipped",
   );
-  await expect(book.issues.first()).toContainText("line 6");
+  await expect(book.issueOpens.first()).toHaveText("Acknowledgements.md:6:1");
   await expect(book.issueGroups).toHaveCount(1);
   await expect(book.issueGroups.first()).toContainText(LAST);
 

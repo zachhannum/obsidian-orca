@@ -355,7 +355,7 @@ test("a declaration the engine cannot set is flagged on its line in the CSS view
   await expect(book.warnings).toHaveText("1 warning");
   await book.warnings.click();
   await expect(book.issues.first()).toContainText("position");
-  await expect(book.issues.first()).toContainText(`line ${line}`);
+  await expect(book.issueOpens.first()).toHaveText(new RegExp(`^book\\.css:${line}:\\d+$`));
   await expect(book.issueGroups.first()).toContainText("The book's CSS");
 
   // Its line opens the CSS view with the caret on that line, from the

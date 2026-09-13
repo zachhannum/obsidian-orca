@@ -161,6 +161,7 @@
 
 .orca-preview-issue-at {
   margin-top: 3px;
+  font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
 }
