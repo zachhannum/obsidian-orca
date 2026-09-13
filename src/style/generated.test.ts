@@ -70,8 +70,25 @@ test("a role reaches the sheet as a page name and as the places it sits", async 
   );
   assert.match(
     css,
-    /section:nth-child\(6\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter \{\n {2}initial-letter: 3;\n\}/,
+    /section:nth-child\(6\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n\}/,
   );
+});
+
+test("a chapter that stacks headings over its text still takes a drop cap", async () => {
+  const design = emptyDesign();
+  design.chapter.dropCap = 3;
+  const css = generatedCss(design, { roles: ["chapter"] });
+  const text = sentence("It is a truth universally acknowledged.");
+
+  // A label over the title, and a label, a title and a subtitle.
+  for (const opening of ["# Chapter I\n\n## A Shifting Reef", "# Chapter I\n\n## A Shifting Reef\n\n### 1866"]) {
+    const output = await rendered(css, [{ name: "one.md", text: `${opening}\n\n${text}` }]);
+    assert.deepEqual(output.warnings, []);
+    assert.ok(
+      output.pages.flatMap(texts).some((line) => line.startsWith("t is a truth")),
+      `the drop cap left no initial behind under ${JSON.stringify(opening)}`,
+    );
+  }
 });
 
 test("a book reordered generates the sheet again, and the sheet counts the new order", async () => {

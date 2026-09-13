@@ -231,7 +231,10 @@ test("the sample book's own faces are in its vault, under the family its note na
       new Uint8Array(await sample.readBinary(at)).subarray(from, from + length),
   };
   const { book } = readModel(
-    await readText(sample, "Twenty Thousand Leagues Under the Sea.md"),
+    await readText(
+      sample,
+      "Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md",
+    ),
   );
 
   const found = await scanFonts(files, [VAULT_FONTS], "vault");

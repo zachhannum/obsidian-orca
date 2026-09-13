@@ -82,6 +82,12 @@ const HEADINGS = ":is(h1, h2, h3, h4, h5, h6)";
 /** The heading a section opens on, whichever level it is written at. */
 const OPENING = `${HEADINGS}:first-child`;
 
+/**
+ * The points a section's text can start at: after its opening heading, or
+ * after up to two more stacked under it, such as a title under a label.
+ */
+const TEXT_START = [OPENING, `${OPENING} + ${HEADINGS}`, `${OPENING} + ${HEADINGS} + ${HEADINGS}`];
+
 function pageRules(design: Design, setting: Setting): string[] {
   const { page, headers } = design;
   const { margins } = page;
@@ -271,8 +277,8 @@ function sectionRules(design: Design, setting: Setting): string[] {
 
 /**
  * The chapter openings. The drop cap falls on the paragraph the
- * opening heading leads into, so a note with text before its heading
- * takes no drop cap.
+ * opening headings lead into, so a note with text before its first
+ * heading takes no drop cap.
  *
  * A sink is the blank space above a chapter's title, written in lines
  * of body text. Where the design sets a line height, a sink is that
@@ -293,7 +299,7 @@ function chapterRules(design: Design, setting: Setting): string[] {
       ...set("padding-top", sink),
       ...set("margin-bottom", below),
     ]),
-    block(`${chapters} > ${OPENING} + p::first-letter`, [
+    block(TEXT_START.map((start) => `${chapters} > ${start} + p::first-letter`).join(",\n"), [
       ...set(
         "initial-letter",
         dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),

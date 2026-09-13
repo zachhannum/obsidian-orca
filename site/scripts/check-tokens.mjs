@@ -1,5 +1,5 @@
-// The artboards and the site draw from the same values, so a change to one
-// without the other stops the build.
+// The artboards and the site draw from the same colors, so a change to one
+// palette without the other stops the build.
 import { readFileSync } from 'node:fs';
 
 const block = (css, selector) => {
@@ -15,8 +15,9 @@ const block = (css, selector) => {
     .join('\n');
 };
 
-const design = readFileSync(new URL('../../design/site.css', import.meta.url), 'utf8');
-const site = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
+const here = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
+const design = here('../../design/site.css');
+const site = here('../src/styles/tokens.css');
 
 const pairs = [
   ['.site-dark', ':root'],

@@ -40,6 +40,14 @@ export const OPENED = "ORCA_E2E_VAULT";
 /** The environment the sample vault's copy is read from. */
 export const COPY = "ORCA_E2E_SAMPLE";
 
+/**
+ * The environment the display's scale is read from. A picture holds the
+ * pixels of the display the app draws on, whatever scale the renderer
+ * is told to emulate. A run on a plain display sets this to take sharp
+ * pictures.
+ */
+export const DENSITY = "ORCA_E2E_DENSITY";
+
 /** Timeout for Obsidian to open its debugging port, in milliseconds. */
 const OPENING = 60_000;
 
@@ -64,7 +72,12 @@ export default async function launch(): Promise<() => Promise<void>> {
     installerVersion: INSTALLER,
     vault,
     copy: false,
-    args: ["--remote-debugging-port=0"],
+    args: [
+      "--remote-debugging-port=0",
+      ...(process.env[DENSITY] === undefined
+        ? []
+        : [`--force-device-scale-factor=${process.env[DENSITY]}`]),
+    ],
   });
 
   try {

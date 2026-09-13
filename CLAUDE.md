@@ -64,6 +64,9 @@ one, and UI work starts by opening the one it belongs to.
 - A build that departs from its artboard changes the artboard in the
   same PR, by editing the part and rebuilding. Code and design do not
   disagree; whichever one is wrong moves.
+- The docs site's artboards are where the site started, not what holds
+  it. The site may leave them, and its PRs do not edit them to match.
+  Only the tokens stay shared, which the site's build checks.
 - Where an artboard contradicts an issue's acceptance wording, the PR
   says which one it followed and the issue is settled before the code
   lands.
