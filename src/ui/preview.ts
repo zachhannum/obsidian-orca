@@ -786,6 +786,7 @@ export class PreviewView extends ItemView {
       // A page's own number is the folio it prints, which restarts where
       // the body begins. A view turns by place in the book.
       page: reading.at + index + 1,
+      folio: page.number,
       side: page.side,
     }));
     const first = reading.pages[0];
