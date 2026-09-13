@@ -23,6 +23,8 @@ import {
   type SceneDesign,
   type TypeSpec,
 } from "@/style/design";
+import { familyFor, type Registered } from "@/style/faces";
+import { quoted } from "@/style/quoted";
 
 /** The reading order and the names a generated layer is written against. */
 export interface Setting {
@@ -41,13 +43,18 @@ export interface Setting {
  * declaration comes from a field the design sets, with some exceptions.
  * The page names, and the page where the count starts again at 1, come
  * from the roles. The title page and the contents are laid out the same
- * way in every design.
+ * way in every design. A font a face is registered for is named by the
+ * family it is registered under.
  */
-export function generatedCss(design: Design, setting: Setting): string {
+export function generatedCss(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[] = [],
+): string {
   return [
     ...pageRules(design, setting),
-    ...bodyRules(design),
-    ...headingRules(design),
+    ...bodyRules(design, registered),
+    ...headingRules(design, registered),
     ...sectionRules(design, setting),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
@@ -251,11 +258,11 @@ function boxes(content: ReadonlyMap<Box, string>): string[] {
  * engine declares its own indent there, and an indent inherited from
  * `book` loses to it.
  */
-function bodyRules(design: Design): string[] {
+function bodyRules(design: Design, registered: readonly Registered[]): string[] {
   const { body } = design;
   const lines: string[] = [];
   if (body.font !== undefined) {
-    lines.push(declared("font-family", `${quoted(body.font)}, serif`));
+    lines.push(declared("font-family", family(body.font, body.fontVariant, registered)));
   }
   lines.push(...set("font-size", written(body.size)));
   lines.push(...set("line-height", written(body.lineSpacing)));
@@ -289,16 +296,17 @@ function afterBreak(design: Design): string | undefined {
   return indentAfterBreak ? written(indent) : "0";
 }
 
-function headingRules(design: Design): string[] {
+function headingRules(design: Design, registered: readonly Registered[]): string[] {
   return LEVELS.map((level) =>
-    block(`h${level}`, typeLines(design.headings[level])),
+    block(`h${level}`, typeLines(design.headings[level], registered)),
   );
 }
 
-function typeLines(type: TypeSpec): string[] {
+/** A level with no font of its own declares none, so it inherits the body's family whole. */
+function typeLines(type: TypeSpec, registered: readonly Registered[]): string[] {
   const lines: string[] = [];
   if (type.font !== undefined) {
-    lines.push(declared("font-family", `${quoted(type.font)}, serif`));
+    lines.push(declared("font-family", family(type.font, type.fontVariant, registered)));
   }
   lines.push(...set("font-size", written(type.size)));
   lines.push(...set("text-align", type.align));
@@ -578,11 +586,7 @@ function trimmed(value: number): string {
   return String(Number(value.toFixed(4)));
 }
 
-/**
- * A string as CSS. A font name comes from a font file's own name
- * table, and an ornament comes from the author. A quote or a backslash
- * in either one is escaped.
- */
-function quoted(text: string): string {
-  return `"${text.replace(/[\\"]/g, (char) => `\\${char}`)}"`;
+/** A font's family, which is the family its variant is registered under where there is one. */
+function family(font: string, variant: string | undefined, registered: readonly Registered[]): string {
+  return `${quoted(familyFor(registered, { font, variant }) ?? font)}, serif`;
 }

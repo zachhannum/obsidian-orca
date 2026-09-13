@@ -5,6 +5,8 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { Client, createEngine, styleOp } from "fleuron";
+import { readFrontmatter } from "@/book/frontmatter";
+import { FORMAT, readBook, writeNote } from "@/book/note";
 import {
   BOOK_SIZES,
   DESIGN_KEYS,
@@ -16,6 +18,7 @@ import {
   ValueError,
   convertLength,
   designFonts,
+  designUses,
   emptyDesign,
   mergeDesign,
   parseCount,
@@ -299,6 +302,7 @@ function whole(): Design {
     },
     body: {
       font: "Alegreya",
+      fontVariant: "SC",
       size: len(10.5, "pt"),
       lineSpacing: len(14, "pt"),
       align: "justify",
@@ -336,6 +340,7 @@ function whole(): Design {
   for (const level of LEVELS) {
     design.headings[level] = {
       font: "EB Garamond",
+      fontVariant: "Semibold",
       size: len(18 - level, "pt"),
       align: "center",
     };
@@ -364,6 +369,69 @@ test("a design names the body font and each heading level's font, each family on
   design.headings[2].font = "alegreya";
   design.headings[4].font = "Charter";
   assert.deepEqual(designFonts(design), ["Alegreya", "Spectral", "Charter"]);
+});
+
+test("a font's variant is written right after its font, and sets no CSS of its own", () => {
+  assert.equal(DESIGN_KEYS[DESIGN_KEYS.indexOf("body-font") + 1], "body-font-variant");
+  for (const level of LEVELS) {
+    const at = DESIGN_KEYS.indexOf(`heading-${level}-font`);
+    assert.equal(DESIGN_KEYS[at + 1], `heading-${level}-font-variant`);
+  }
+  // The default variant is stored as absent, so a blank one is unset.
+  assert.equal(readDesign({ "body-font-variant": "  " }).body.fontVariant, undefined);
+  assert.deepEqual(writeDesign(emptyDesign()), {});
+});
+
+test("a variant survives a trip through the properties and through the note, byte for byte", () => {
+  const pieces = ["Cond", "SmCond", "Semi Bold", 'Quote "It"', "Back\\slash", "a: b", "- dash", "#tag", "Kursiv ü", "字体", "'single'", "[list]", "{map}", "yes", "123"];
+  let seed = 113;
+  const next = (below: number) => {
+    // A linear congruential step, so a failure replays the same case.
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed % below;
+  };
+  const pick = () => pieces[next(pieces.length)] ?? "Cond";
+
+  for (let round = 0; round < 200; round += 1) {
+    const design = emptyDesign();
+    design.body.font = "Junicode";
+    design.body.fontVariant = next(2) === 0 ? pick() : `${pick()} ${pick()}`;
+    for (const level of LEVELS) {
+      if (next(3) === 0) continue;
+      design.headings[level].font = "Junicode";
+      if (next(2) === 0) design.headings[level].fontVariant = pick();
+    }
+
+    assert.deepEqual(readDesign(writeDesign(design)), design);
+    const text = writeNote({ format: FORMAT, metadata: {}, design, own: {} }, "\n");
+    const { properties, body } = readFrontmatter(text);
+    assert.equal(writeNote(readBook(properties), body), text);
+    assert.deepEqual(readBook(properties).design, design);
+  }
+});
+
+test("a design sets each font and variant once, and a level with no font takes the body's pair", () => {
+  const design = emptyDesign();
+  assert.deepEqual(designUses(design), []);
+  design.body.font = "Junicode";
+  design.headings[1].font = "Junicode";
+  design.headings[1].fontVariant = "Cond";
+
+  assert.deepEqual(designUses(design), [
+    { font: "Junicode", variant: undefined },
+    { font: "Junicode", variant: "Cond" },
+  ]);
+
+  design.body.fontVariant = "SmCond";
+  design.headings[2].font = "junicode";
+  design.headings[2].fontVariant = "cond";
+  design.headings[3].font = "Junicode";
+  design.headings[4].fontVariant = "Light";
+  assert.deepEqual(designUses(design), [
+    { font: "Junicode", variant: "SmCond" },
+    { font: "Junicode", variant: "Cond" },
+    { font: "Junicode", variant: undefined },
+  ]);
 });
 
 // What this tier does not cover: the declarations a design turns into,

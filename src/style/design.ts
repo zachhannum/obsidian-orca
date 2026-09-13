@@ -85,6 +85,8 @@ export type Align = "justify" | "left";
 export interface BodyDesign {
   /** The font the book is set in, by the name its file carries. */
   font?: string;
+  /** The font's variant, by name. A font's default variant is stored as absent. */
+  fontVariant?: string;
   size?: Length;
   lineSpacing?: Length;
   align?: Align;
@@ -110,6 +112,8 @@ export type Alignment = "left" | "center" | "right";
  */
 export interface TypeSpec {
   font?: string;
+  /** The font's variant, by name. A font's default variant is stored as absent. */
+  fontVariant?: string;
   size?: Length;
   align?: Alignment;
 }
@@ -215,6 +219,55 @@ export function designFonts(design: Design): string[] {
   return fonts;
 }
 
+/** A font and the variant of it a design sets. An undefined variant is the font's default. */
+export interface FontUse {
+  font: string;
+  variant: string | undefined;
+}
+
+/**
+ * Every font and variant a design sets, the body's first and then each
+ * heading level's. A level with no font of its own takes the body's
+ * font and variant as a pair. A level with its own font and no variant
+ * takes that font's default. A pair two places set is listed once,
+ * however it is capitalized.
+ */
+export function designUses(design: Design): FontUse[] {
+  const { font, fontVariant } = design.body;
+  const body = font === undefined ? undefined : { font, variant: fontVariant };
+  const named = [
+    body,
+    ...LEVELS.map((level) => headingUse(design.headings[level], body)),
+  ];
+  const seen = new Set<string>();
+  const uses: FontUse[] = [];
+  for (const use of named) {
+    if (use === undefined) continue;
+    const key = useKey(use);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uses.push(use);
+  }
+  return uses;
+}
+
+/** The font and variant a heading level is set in, given the body's. */
+export function headingUse(
+  type: TypeSpec,
+  body: FontUse | undefined,
+): FontUse | undefined {
+  if (type.font === undefined) return body;
+  return { font: type.font, variant: type.fontVariant };
+}
+
+/** A use as one key, the same however it is capitalized. */
+export function useKey(use: FontUse): string {
+  return JSON.stringify([
+    use.font.trim().toLowerCase(),
+    use.variant?.trim().toLowerCase() ?? null,
+  ]);
+}
+
 /** One scalar a design key is written as. */
 export type Written = string | number | boolean;
 
@@ -262,6 +315,16 @@ const BODY: readonly Field[] = [
     write: ({ body }, value) => {
       const font = asText(value);
       if (font !== undefined) body.font = font;
+    },
+  },
+  {
+    // A variant picks among a font's faces and sets no CSS of its own.
+    key: "body-font-variant",
+    property: "font-family",
+    read: ({ body }) => body.fontVariant,
+    write: ({ body }, value) => {
+      const variant = asText(value);
+      if (variant !== undefined) body.fontVariant = variant;
     },
   },
   {
@@ -670,6 +733,15 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const font = asText(value);
         if (font !== undefined) headings[level].font = font;
+      },
+    },
+    {
+      key: `heading-${level}-font-variant`,
+      property: "font-family",
+      read: ({ headings }) => headings[level].fontVariant,
+      write: ({ headings }, value) => {
+        const variant = asText(value);
+        if (variant !== undefined) headings[level].fontVariant = variant;
       },
     },
     {

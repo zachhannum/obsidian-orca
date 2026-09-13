@@ -80,13 +80,19 @@ export const DEFAULTS: Design = frozen({
 
 /**
  * Fills in every default under a design. A heading level with no font
- * of its own takes the body font.
+ * of its own takes the body's font and variant as a pair. A level with
+ * its own font and no variant keeps that font's default.
  */
 export function effective(design: Design): Design {
   const merged = mergeDesign(structuredClone(DEFAULTS), design);
-  const { font } = merged.body;
-  if (font !== undefined) {
-    for (const level of LEVELS) merged.headings[level].font ??= font;
+  const { font, fontVariant } = merged.body;
+  if (font === undefined) return merged;
+  for (const level of LEVELS) {
+    const type = merged.headings[level];
+    if (type.font !== undefined) continue;
+    type.font = font;
+    if (fontVariant === undefined) delete type.fontVariant;
+    else type.fontVariant = fontVariant;
   }
   return merged;
 }
