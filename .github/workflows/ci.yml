@@ -74,6 +74,15 @@ jobs:
           npx playwright install-deps chromium
           sudo apt-get install -y xvfb
 
+      # A spec reads the fonts an exported PDF embeds with pdffonts.
+      - name: PDF tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y qpdf poppler-utils
+
+      - name: PDF tools
+        if: runner.os == 'macOS'
+        run: brew install qpdf poppler
+
       - name: e2e
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run e2e
