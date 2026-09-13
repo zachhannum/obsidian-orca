@@ -790,6 +790,141 @@ button.orca-nav-action:hover {
   height: 100%;
 }
 
+/* In the CSS view the header stays and the editor gets the rest of the
+   column. */
+.orca-design.is-css {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.orca-design.is-css .orca-panel-host {
+  height: auto;
+  flex: none;
+}
+
+.orca-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-block: 2px var(--size-4-3);
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.orca-panel-title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The icon's span is a flex box, so no line box sits under the icon
+   and it centers on the hover square. */
+.orca-panel-action {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+.orca-panel-action-icon {
+  display: flex;
+}
+
+.orca-panel-book {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orca-design.is-css .orca-panel {
+  padding-bottom: 0;
+}
+
+.orca-editor-host {
+  flex: 1;
+  min-height: 0;
+  margin: 0 var(--size-4-3) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  overflow: hidden;
+}
+
+.orca-editor-host .cm-editor {
+  height: 100%;
+}
+
+.orca-editor-host .cm-editor.cm-focused {
+  outline: none;
+}
+
+.orca-editor-host .cm-scroller {
+  padding-block: 9px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.orca-editor-host .cm-gutters {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.orca-editor-host .cm-lineNumbers .cm-gutterElement {
+  min-width: 25px;
+  padding: 0 11px 0 0;
+}
+
+.orca-editor-host .cm-activeLine {
+  background: hsla(var(--interactive-accent-hsl), 0.09);
+}
+
+.orca-editor-host .cm-activeLineGutter {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.orca-editor-host .cm-content {
+  caret-color: var(--text-normal);
+}
+
+.orca-editor-host .tok-keyword {
+  color: var(--color-orange);
+}
+
+.orca-editor-host .tok-propertyName {
+  color: var(--color-cyan);
+}
+
+.orca-editor-host .tok-number,
+.orca-editor-host .tok-string,
+.orca-editor-host .tok-atom,
+.orca-editor-host .tok-unit {
+  color: var(--color-purple);
+}
+
+.orca-editor-host .tok-className,
+.orca-editor-host .tok-typeName,
+.orca-editor-host .tok-labelName,
+.orca-editor-host .tok-variableName {
+  color: var(--color-red);
+}
+
+.orca-editor-host .tok-punctuation {
+  color: var(--text-muted);
+}
+
+.orca-editor-host .tok-comment {
+  color: var(--text-faint);
+}
+
 .orca-panel {
   container-type: inline-size;
   display: flex;

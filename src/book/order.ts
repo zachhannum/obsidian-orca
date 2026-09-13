@@ -81,13 +81,26 @@ export const NEW_GROUP = "New section";
 
 const HEADING = /^#{1,6}\s+(.*?)\s*$/;
 const ITEM = /^\s*[-*+]\s+(?:\[\[([^\]]+)\]\])?\s*(?:`([^`]*)`)?\s*$/;
+const FENCE = /^\s*(`{3,}|~{3,})/;
 
-/** The reading order in a note's body. */
+/**
+ * The reading order in a note's body. A line inside a code fence is
+ * kept as written, so CSS in the book's own fence is never read as a
+ * heading or an entry.
+ */
 export function readOrder(body: string): Order {
   const blocks: Block[] = [];
   let heading = "";
+  let fence: string | undefined;
 
   for (const line of body.split("\n")) {
+    const marker = FENCE.exec(line)?.[1];
+    if (fence !== undefined || marker !== undefined) {
+      if (fence === undefined) fence = marker;
+      else if (marker?.startsWith(fence) === true) fence = undefined;
+      blocks.push({ kind: "other", line });
+      continue;
+    }
     const head = HEADING.exec(line);
     if (head !== null) {
       heading = head[1] ?? "";

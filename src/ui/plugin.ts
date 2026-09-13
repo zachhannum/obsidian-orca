@@ -23,6 +23,7 @@ import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
+import { bookCss, withCss } from "@/book/css";
 import type { Face } from "@/book/plan";
 import { writeDesign, type Design } from "@/style/design";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
@@ -1025,6 +1026,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     return {
       book: () => this.designed(),
       setDesign: (book, design) => this.setDesign(book, design),
+      setCss: (book, css) => this.setCss(book, css),
       index: () => this.fontIndex(),
       styles: (font) => familyFaces(this.places(), font),
       unit: () => this.limits.unit,
@@ -1173,6 +1175,20 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.edits.edit(book, (current) => ({
       ...current,
       book: { ...current.book, design },
+    }));
+  }
+
+  /**
+   * Writes the author's own CSS into the book note's fence. The engine
+   * already has the sheet, and the write settles like any other edit.
+   */
+  private async setCss(book: string, css: string): Promise<void> {
+    const model = await this.edits.model(book);
+    if (model === undefined || bookCss(model.order) === css) return;
+    this.designWrites.add(book);
+    await this.edits.edit(book, (current) => ({
+      ...current,
+      order: withCss(current.order, css),
     }));
   }
 
