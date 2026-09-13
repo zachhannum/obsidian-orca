@@ -110,8 +110,10 @@ export function surfaceAt(
   const core = 42 * scale;
   const wavelength = 80 * scale;
   const speed = 240 * scale;
+  // A ripple starts when the pointer crosses this path, so it keeps
+  // its own clock rather than the path's lag.
   for (const ripple of ripples) {
-    const age = at - ripple.t;
+    const age = t - ripple.t;
     if (age < 0 || age > RIPPLE_LIFE) continue;
     const d = Math.abs(x - ripple.x);
     const sink = Math.exp(-((d / core) ** 2)) * Math.exp(-age / 0.6) * Math.cos((TAU * age) / 0.9);
@@ -166,9 +168,6 @@ function waveOf(path: SVGPathElement): Wave {
   };
 }
 
-/** The seconds of touches kept, which must outlast the longest lag. */
-const MEMORY = 2;
-
 /** The force a mouse resting under the surface keeps, out of 1. */
 const HOVER = 0.4;
 
@@ -185,72 +184,66 @@ const MOST_RIPPLES = 8;
  * Moves the surface until the page is closed. With reduced motion on it
  * draws the surface once and leaves it there.
  *
- * A mouse that goes down through the surface plunges into it: the water
- * sinks where it went in and rings spread out to both sides, deeper the
- * faster it went. Under the surface the mouse holds a trough above it,
- * deeper while it moves. Coming back out pulls a smaller ripple up.
- * Each path reads the pointer from its own lag back, so the lines above
- * follow the body. A touch screen moves nothing, because a finger
- * scrolling the page is not reaching for the sea.
+ * Each path is its own surface to the mouse. A mouse that goes down
+ * through a path plunges into it: the path sinks where it went in and
+ * rings spread out to both sides, deeper the faster it went. Under a
+ * path the mouse holds a trough in it, deeper while it moves. Coming
+ * back out pulls a smaller ripple up. A touch screen moves nothing,
+ * because a finger scrolling the page is not reaching for the sea.
  */
 export function startSea(svg: SVGSVGElement): () => void {
-  const paths = [...svg.querySelectorAll<SVGPathElement>('path[data-kind]')];
-  const waves = paths.map(waveOf);
-  const body: Wave = { off: 0, lag: 0, kind: 'body' };
+  const layers = [...svg.querySelectorAll<SVGPathElement>('path[data-kind]')].map((path) => ({
+    path,
+    wave: waveOf(path),
+    under: false,
+    touch: { x: 0, force: 0 } as Touch,
+    ripples: [] as Ripple[],
+  }));
   let width = 0;
   let now = 0;
 
   const still = window.matchMedia('(prefers-reduced-motion: reduce)');
   const mouse = window.matchMedia('(pointer: fine)');
 
-  // The pointer as last seen, and what it has done to the water.
   let pointer: { x: number; y: number; at: number } | undefined;
-  let under = false;
   let speed = 0;
-  const touch: Touch = { x: 0, force: 0 };
-  const history: { t: number; touch: Touch }[] = [];
-  const ripples: Ripple[] = [];
 
-  const draw = (t: number, touchAt: (lag: number) => Touch | undefined) => {
+  const draw = (t: number, live: boolean) => {
     const measured = Math.round(svg.getBoundingClientRect().width);
     if (measured !== width && measured > 0) {
       width = measured;
       svg.setAttribute('viewBox', `0 0 ${String(width)} ${String(LIP)}`);
     }
-    paths.forEach((path, at) => {
-      const wave = waves[at] as Wave;
-      path.setAttribute('d', seaPath(wave, width || 1440, t, touchAt(wave.lag), ripples));
-    });
+    for (const layer of layers) {
+      const d = live
+        ? seaPath(layer.wave, width || 1440, t, layer.touch, layer.ripples)
+        : seaPath(layer.wave, width || 1440, t);
+      layer.path.setAttribute('d', d);
+    }
   };
 
   const onMove = (event: PointerEvent) => {
     if (event.pointerType !== 'mouse') return;
     const { left, top } = svg.getBoundingClientRect();
     const next = { x: event.clientX - left, y: event.clientY - top, at: event.timeStamp };
-    // The surface without the pointer's own marks, so a ripple passing
-    // under a still mouse does not count as the mouse going in.
-    const surface = surfaceAt(body, width || 1440, now, next.x);
-    const wasUnder = under;
-    if (!under && next.y > surface + MARGIN) under = true;
-    else if (under && next.y < surface - MARGIN) under = false;
+    if (pointer !== undefined) speed += Math.hypot(next.x - pointer.x, next.y - pointer.y);
 
-    if (pointer !== undefined) {
-      speed += Math.hypot(next.x - pointer.x, next.y - pointer.y);
-      if (under !== wasUnder) {
-        const seconds = Math.max(0.004, (next.at - pointer.at) / 1000);
-        const fall = Math.abs(next.y - pointer.y) / seconds;
-        const strength = Math.min(1, 0.35 + fall / 1600);
-        ripples.push({ x: next.x, t: now, strength: under ? strength : -0.5 * strength });
-        if (ripples.length > MOST_RIPPLES) ripples.shift();
-      }
+    for (const layer of layers) {
+      // The path without the pointer's own marks, so a ripple passing
+      // a still mouse does not count as the mouse going through.
+      const surface = surfaceAt(layer.wave, width || 1440, now, next.x);
+      const wasUnder = layer.under;
+      if (!layer.under && next.y > surface + MARGIN) layer.under = true;
+      else if (layer.under && next.y < surface - MARGIN) layer.under = false;
+      if (pointer === undefined || layer.under === wasUnder) continue;
+
+      const seconds = Math.max(0.004, (next.at - pointer.at) / 1000);
+      const fall = Math.abs(next.y - pointer.y) / seconds;
+      const strength = Math.min(1, 0.35 + fall / 1600);
+      layer.ripples.push({ x: next.x, t: now, strength: layer.under ? strength : -0.5 * strength });
+      if (layer.ripples.length > MOST_RIPPLES) layer.ripples.shift();
     }
     pointer = next;
-  };
-
-  const touchAt = (t: number) => (lag: number) => {
-    const when = t - lag;
-    const past = history.find((entry) => entry.t >= when) ?? history[history.length - 1];
-    return past?.touch;
   };
 
   let frame = 0;
@@ -259,24 +252,23 @@ export function startSea(svg: SVGSVGElement): () => void {
     const t = (stamp - start) / 1000;
     const dt = Math.min(0.1, Math.max(0, t - now));
     now = t;
-    if (pointer !== undefined) {
-      // The trough trails the pointer rather than sticking to it. Under
-      // the surface its force rises with the distance swept since the
-      // last frame, and it fades as the pointer sinks deep. Out of the
-      // water it lets go.
-      touch.x += (pointer.x - touch.x) * Math.min(1, dt * 6);
-      const swept = Math.min(1, speed / Math.max(1, width * 0.02));
-      const depth = Math.max(0, pointer.y - REST);
-      const target = under ? Math.max(HOVER, swept) * Math.exp(-((depth / DEPTH) ** 2)) : 0;
-      touch.force += (target - touch.force) * Math.min(1, dt * (target > touch.force ? 8 : 2));
-      speed = 0;
+    const swept = Math.min(1, speed / Math.max(1, width * 0.02));
+    speed = 0;
+    for (const layer of layers) {
+      const { touch, ripples } = layer;
+      if (pointer !== undefined) {
+        // The trough trails the pointer rather than sticking to it. Its
+        // force rises with the distance swept since the last frame, and
+        // it fades as the pointer sinks deep. Out of the path it lets go.
+        touch.x += (pointer.x - touch.x) * Math.min(1, dt * 6);
+        const depth = Math.max(0, pointer.y - REST - layer.wave.off);
+        const hold = Math.max(HOVER, swept) * Math.exp(-((depth / DEPTH) ** 2));
+        const target = layer.under ? hold : 0;
+        touch.force += (target - touch.force) * Math.min(1, dt * (target > touch.force ? 8 : 2));
+      }
+      while (ripples.length > 0 && (ripples[0] as Ripple).t < t - RIPPLE_LIFE) ripples.shift();
     }
-    history.push({ t, touch: { ...touch } });
-    while (history.length > 0 && (history[0] as { t: number }).t < t - MEMORY) history.shift();
-    while (ripples.length > 0 && (ripples[0] as Ripple).t < t - RIPPLE_LIFE - MEMORY) {
-      ripples.shift();
-    }
-    draw(t, touchAt(t));
+    draw(t, true);
     frame = requestAnimationFrame(tick);
   };
 
@@ -284,7 +276,7 @@ export function startSea(svg: SVGSVGElement): () => void {
     cancelAnimationFrame(frame);
     window.removeEventListener('pointermove', onMove);
     if (still.matches) {
-      draw(0, () => undefined);
+      draw(0, false);
       return;
     }
     if (mouse.matches) window.addEventListener('pointermove', onMove, { passive: true });
