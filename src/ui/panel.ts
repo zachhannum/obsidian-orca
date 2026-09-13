@@ -4,6 +4,7 @@ import type { Face } from "@/book/plan";
 import type { Design, PageUnit, Written } from "@/style/design";
 import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
+import { Settled } from "@/ui/settled";
 import { withKey } from "@/ui/groups";
 import { missingFont } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
@@ -50,6 +51,9 @@ export class DesignPanelView extends ItemView {
   /** The element CodeMirror draws in, beside the React root and never under it. */
   private editorHost: HTMLElement | undefined;
   private editor: CssEditor | undefined;
+  private readonly writes = new Settled((book, css) => {
+    void this.designing.setCss(book, css);
+  });
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -102,6 +106,7 @@ export class DesignPanelView extends ItemView {
     this.watching = undefined;
     this.mounted?.unmount();
     this.mounted = undefined;
+    this.writes.flush();
     this.editor?.destroy();
     this.editor = undefined;
     this.editorHost?.remove();
@@ -124,7 +129,7 @@ export class DesignPanelView extends ItemView {
     const typeset = this.showing;
     if (typeset === undefined) return;
     typeset.recss(css);
-    void this.designing.setCss(typeset.path, css);
+    this.writes.put(typeset.path, css);
   }
 
   /** Shows the editor in the CSS view with the CSS of the book painted, and hides it otherwise. */

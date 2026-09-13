@@ -265,11 +265,13 @@ test("the CSS view edits the book's own fence, and the edit reaches the pages an
   // CodeMirror owns its DOM, so the editor is not under the React root.
   expect(await panel.editorInReact()).toBe(false);
 
-  const typed = "\nh1 { letter-spacing: 0.1em; }";
+  // The author's sheet crosses after the generated layer, which indents
+  // with the same selector, so this rule wins and the pages show it.
+  const typed = "\np + p { text-indent: 4em; }";
   await panel.typeCss(typed);
 
-  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
   await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
   // The edit is inside the fence, and every other line is as it was.
   expect((await vault.read(BOOK)).replace(typed, "")).toBe(own);
 
