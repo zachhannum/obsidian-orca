@@ -62,6 +62,22 @@ jobs:
 
       - run: xvfb-run -a npm run shots
 
+      - name: list the pictures that moved
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "## Pictures that moved"
+            echo
+            moved="$(git status --porcelain site/src/shots)"
+            if [ -z "$moved" ]; then
+              echo "None."
+            else
+              echo '```'
+              echo "$moved"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:

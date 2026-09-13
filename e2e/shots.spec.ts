@@ -239,11 +239,16 @@ test("the landing picture is the whole window, in both schemes, at three widths"
       await expect(site.panel.panel).toBeVisible();
       await expect(site.book.sheets).toHaveCount(2);
 
+      // The last click leaves the pointer over a control, and whether
+      // its tooltip is up yet depends on timing.
+      await site.obsidian.unhovered();
       await expect(site.obsidian.page).toHaveScreenshot(
         `landing-${scheme}-${String(width)}.png`,
       );
     }
   }
+
+  await site.obsidian.moving();
 });
 
 test("at phone width the picture is the preview pane alone", async ({
@@ -261,8 +266,11 @@ test("at phone width the picture is the preview pane alone", async ({
     // spread the landing page opens on is still on it.
     await expect(site.navigator.pane).toBeHidden();
     await expect(site.book.sheets).toHaveCount(2);
+    await site.obsidian.unhovered();
     await expect(site.book.panes).toHaveScreenshot(`phone-${scheme}.png`);
   }
+
+  await site.obsidian.moving();
 });
 
 test("the vault picture is the file tree and the book note's own Markdown", async ({
@@ -360,8 +368,11 @@ test("a docs picture crops to one group of the design panel", async ({
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
     await expect(group).toBeVisible();
+    await site.obsidian.unhovered();
     await expect(group).toHaveScreenshot(`panel-${GROUP.toLowerCase()}-${scheme}.png`);
   }
+
+  await site.obsidian.moving();
 });
 
 test("the flip-through's pages come from the book's own PDF", async ({

@@ -11,7 +11,7 @@
     "lint": "node scripts/lint.mjs",
     "test": "node scripts/test.mjs",
     "e2e": "playwright test --project=orca",
-    "shots": "ORCA_E2E_DENSITY=2 playwright test --project=shots --update-snapshots"
+    "shots": "ORCA_E2E_DENSITY=2 playwright test --project=shots --update-snapshots=changed"
   },
   "license": "MIT",
   "devDependencies": {

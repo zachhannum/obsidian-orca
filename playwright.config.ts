@@ -41,11 +41,16 @@ export default defineConfig({
       timeout: 30_000,
       // A picture keeps every pixel the renderer drew, so a window
       // painted for a sharp screen is not shrunk back to its CSS size.
+      //
+      // Any pixel that moves writes the picture again, which is what
+      // opens the pull request on main. A pixel a few color levels off is
+      // the runner's noise, and the threshold lets it pass.
       expect: {
         timeout: 10_000,
         toHaveScreenshot: {
           animations: "disabled",
-          maxDiffPixelRatio: 0.01,
+          maxDiffPixels: 0,
+          threshold: 0.02,
           scale: "device",
         },
       },
