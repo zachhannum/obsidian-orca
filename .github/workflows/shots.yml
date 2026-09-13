@@ -60,7 +60,25 @@ jobs:
           npx playwright install-deps chromium
           sudo apt-get install -y xvfb poppler-utils
 
+      # The spec writes every picture, and git is what says which ones
+      # moved. A compare inside the spec lets a small change pass.
       - run: xvfb-run -a npm run shots
+
+      - name: list the pictures that moved
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "## Pictures that moved"
+            echo
+            moved="$(git status --porcelain site/src/shots)"
+            if [ -z "$moved" ]; then
+              echo "None."
+            else
+              echo '```'
+              echo "$moved"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
