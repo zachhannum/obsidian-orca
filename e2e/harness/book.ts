@@ -380,6 +380,9 @@ export class Book {
    * The face each painted run matching the words is set in, by the name
    * the engine's font table gives it. A run names its face by font id, so
    * the id is looked up in the table of the session the pane reads.
+   *
+   * A book being set again is briefly not open, and then no run has a
+   * face yet. Read it inside a poll, which asks again.
    */
   async facesOf(book: string, words: string | RegExp): Promise<string[]> {
     const ids = await this.surface
@@ -395,11 +398,11 @@ export class Book {
       async ({ id, at }) => {
         const orca = window.app.plugins.plugins[id] as Holding | undefined;
         const typeset = await orca?.composer?.opened(at);
-        if (typeset === undefined) throw new Error(`no book is open at ${at}`);
-        return typeset.session.faces.map((face) => face.name);
+        return typeset?.session.faces.map((face) => face.name);
       },
       { id: PLUGIN, at: book },
     );
+    if (table === undefined) return [];
     return ids.map((id) => table[id] ?? "");
   }
 

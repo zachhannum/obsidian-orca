@@ -377,11 +377,17 @@ test("the body and a heading set in two variants of one family in the same book"
   await expect
     .poll(async () => book.facesOf(BOOK, HEADING_WORD))
     .toContainEqual(expect.stringMatching(CONDENSED_FACE));
+  // One read answers both questions, so an empty read between two sets
+  // of the book cannot pass the second one.
   await expect
-    .poll(async () => book.facesOf(BOOK, BODY_WORDS))
-    .toContainEqual(expect.stringMatching(/^Junicode[ -](Regular|Bold|Italic)$/));
-  const body = await book.facesOf(BOOK, BODY_WORDS);
-  expect(body.filter((name) => /Cond|Exp/.test(name))).toEqual([]);
+    .poll(async () => {
+      const body = await book.facesOf(BOOK, BODY_WORDS);
+      return (
+        body.some((name) => /^Junicode[ -](Regular|Bold|Italic)$/.test(name)) &&
+        !body.some((name) => /Cond|Exp/.test(name))
+      );
+    })
+    .toBe(true);
 
   await written(vault, own);
 });
@@ -401,11 +407,18 @@ test("the preview and the PDF set the picked variant, and the preview draws the 
   await panel.chooseVariant("body-font", CONDENSED);
   await book.choose(CHAPTER_NAME);
 
+  // The faces the PDF is held to are the ones the passing read saw.
+  let painted = new Set<string>();
   await expect
-    .poll(async () => book.facesOf(BOOK, BODY_WORDS))
-    .toContainEqual(expect.stringMatching(CONDENSED_FACE));
-  const painted = new Set(await book.facesOf(BOOK, BODY_WORDS));
-  expect([...painted].filter((name) => /^Junicode/.test(name) && !/Cond/.test(name))).toEqual([]);
+    .poll(async () => {
+      painted = new Set(await book.facesOf(BOOK, BODY_WORDS));
+      const names = [...painted];
+      return (
+        names.some((name) => CONDENSED_FACE.test(name)) &&
+        !names.some((name) => /^Junicode/.test(name) && !/Cond/.test(name))
+      );
+    })
+    .toBe(true);
 
   const pdfPath = path.join(await mkdtemp(path.join(tmpdir(), "orca-variant-")), "book.pdf");
   await writeFile(pdfPath, await book.pdf(BOOK));
