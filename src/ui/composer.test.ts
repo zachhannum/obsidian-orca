@@ -197,7 +197,7 @@ function drain(): Promise<void> {
 }
 
 function faces(): FaceSet {
-  return { add: () => Promise.resolve() };
+  return { add: () => Promise.resolve(undefined), remove: () => undefined };
 }
 
 /** Every file in the fixture vault, the way Obsidian sees one. */

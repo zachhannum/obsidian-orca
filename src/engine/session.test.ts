@@ -142,13 +142,30 @@ class PausedClient extends FakeClient {
   }
 }
 
-function faces(): FaceSet & { readonly added: string[] } {
+/** A face the fake document holds: the name it went in under, and its bytes. */
+interface Held {
+  family: string;
+  bytes: number[];
+}
+
+function faces(): FaceSet<Held> & {
+  readonly added: string[];
+  /** Every add and remove, in the order the session made them. */
+  readonly log: string[];
+} {
   const added: string[] = [];
+  const log: string[] = [];
   return {
     added,
-    add: (family) => {
+    log,
+    add: (family, bytes) => {
       added.push(family);
-      return Promise.resolve();
+      const face = { family, bytes: [...bytes] };
+      log.push(`add ${family} [${face.bytes.join(",")}]`);
+      return Promise.resolve(face);
+    },
+    remove: (face) => {
+      log.push(`remove ${face.family} [${face.bytes.join(",")}]`);
     },
   };
 }
@@ -429,6 +446,52 @@ test("the faces a run drew with come from the module, under the painter's names"
 
   assert.deepEqual(client.asked, [0]);
   assert.deepEqual(set.added, ["fleuron-face-0"]);
+});
+
+test("a face whose font-table entry changes is registered again under its id", async () => {
+  const regular = {
+    family: "junicode",
+    name: "Junicode Regular",
+    style: "Regular",
+    attributes: { italic: false, weight: 400 },
+    variations: [],
+  };
+  const condensed = { ...regular, name: "Junicode Cond", style: "Cond" };
+  const garamond = typeset().fonts[0];
+  assert.ok(garamond, "the layout carried no face");
+  const layout = typeset();
+  layout.fonts = [garamond, garamond, garamond, regular];
+  const page = layout.pages[0];
+  assert.ok(page, "the layout carried no page");
+  page.items = [
+    ...page.items,
+    ...page.items.map((item) => ({ ...item, fontId: 3 })),
+  ];
+  const client = new FakeClient(layout);
+  // The engine hands each id's bytes out as they stand now, so a
+  // renumbered id answers with the new face's file.
+  let cut = 30;
+  client.fontBytes = (font) => {
+    client.asked.push(font);
+    return Promise.resolve(new Uint8Array([font === 3 ? cut : font]));
+  };
+  const set = faces();
+  const session = new Session(client, set);
+  await session.open(openBook(SAMPLE));
+
+  // The author picks a narrower width, and id 3 now names another cut.
+  layout.fonts = [garamond, garamond, garamond, condensed];
+  cut = 31;
+  await session.render([{ op: "edit", name: "chapter", text: "It is" }]);
+
+  assert.deepEqual(set.log, [
+    "add fleuron-face-0 [0]",
+    "add fleuron-face-3 [30]",
+    "remove fleuron-face-3 [30]",
+    "add fleuron-face-3 [31]",
+  ]);
+  // Id 0 names the face it named before, so it was not asked for again.
+  assert.deepEqual(client.asked, [0, 3, 3]);
 });
 
 test("the cuts the engine registered come back indexed by the id it gave them", async () => {
