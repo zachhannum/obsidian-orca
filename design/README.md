@@ -68,7 +68,8 @@ its editor around these files and returns a URL. The artboard list and
   book was left on. A reader who paged through the book comes back to
   the line that page opens at, with the caret on it. One who turned no
   page comes back to the line they were writing on.
-- One ribbon icon, with the issues badge on it.
+- One ribbon icon. The count of warnings is the one on the preview
+  bar, and the icon carries none.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
 - The design panel is in the right sidebar. It shows the book being
