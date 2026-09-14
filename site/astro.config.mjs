@@ -39,8 +39,8 @@ export default defineConfig({
   markdown: {
     shikiConfig: {
       themes: {
-        dark: codeTheme('dark', '#86cfe0', '#e9ece8'),
-        light: codeTheme('light', '#1d6b7d', '#0a0c0f'),
+        dark: codeTheme('dark', '#6366f1', '#e9ece8'),
+        light: codeTheme('light', '#3730a3', '#0a0c0f'),
       },
       defaultColor: false,
     },
