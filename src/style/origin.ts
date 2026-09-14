@@ -1,7 +1,7 @@
 /**
  * The place a warning names. The engine reports it as one string, and
- * reading that string is the only piece of CSS knowledge orca owns: the
- * engine is the only linter, so orca carries no grammar of its own.
+ * orca reads places from the engine. Orca borrows the editor's CSS
+ * grammar to read names only, never to judge whether CSS is valid.
  */
 
 /** A line and column in one named sheet or note, both counted from 1. */
