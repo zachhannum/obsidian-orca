@@ -93,6 +93,8 @@ export class Typeset {
   private readonly setting: Setting;
   /** The embeds the retypes so far started, chained so they run in order. */
   private embedding: Promise<void> = Promise.resolve();
+  /** The embeds started and not yet resolved. */
+  private embeds = 0;
   private loaded: Loaded;
   private designed: Design;
   /** The fonts and variants the faces sheet registers, one for each use the design sets. */
@@ -194,11 +196,24 @@ export class Typeset {
     this.sent.set(note, text);
     this.plan(`typed:${note}`, { did: "typed", name: note, text });
     const embedding = (): Promise<void> => this.embed(note, text);
+    this.embeds += 1;
     // An embed that will not read crosses no bytes, and the engine
     // warns about the url.
     this.embedding = this.embedding
       .then(embedding, embedding)
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        this.embeds -= 1;
+      });
+  }
+
+  /**
+   * True when no embed is resolving and the loop has nothing waiting or
+   * in flight, so the pages the views last painted are the book as it
+   * stands.
+   */
+  get quiet(): boolean {
+    return this.embeds === 0 && this.loop.idle;
   }
 
   /**

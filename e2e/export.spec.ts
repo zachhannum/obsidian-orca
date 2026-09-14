@@ -5,7 +5,10 @@ import path from "node:path";
 import { countWords } from "@/book/words";
 import { expect, test } from "./harness/test";
 
-/** The file export names from the book's title, beside the book note at the top of the vault. */
+/** The book note in the fixture vault. It sits at the top of the vault. */
+const BOOK = "Pride and Prejudice.md";
+
+/** The file export names from the book's title, beside the book note. */
 const FILE = "Pride and Prejudice.pdf";
 
 /** The words in every note the fixture book reads. */
@@ -27,7 +30,9 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   vault,
 }) => {
   await book.open();
-  const generation = await book.painted();
+  // An earlier spec's restore can leave a render on its way, so the
+  // stages are recorded once the book has painted everything queued.
+  const generation = await book.settled(BOOK);
   const stages = await book.stages();
   // An earlier spec may leave the book a different length, so the pages
   // expected are the ones the preview counts.
@@ -66,12 +71,9 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   }
 
   // The file came off the session the preview reads, so the book was
-  // not laid out again. A render an earlier spec's restore queued can
-  // still land while the export runs, and it moves the generation, so
-  // the stages are held to the snapshot only while the generation is
-  // the one the snapshot was taken at.
-  const after = await book.stages();
-  if ((await book.painted()) === generation) expect(after).toEqual(stages);
+  // not laid out again.
+  expect(await book.stages()).toEqual(stages);
+  await expect(book.surface).toHaveAttribute("data-generation", String(generation));
 });
 
 test("the dialog offers a path on disk through the OS", async ({ book, exporting }) => {
@@ -108,6 +110,12 @@ test("an embed with no file behind it stands as an error, and export will not wr
     "One error stands. Export will not write while it does.",
   );
   await expect(exporting.write).toBeDisabled();
+
+  // The note goes back before the spec ends, and the render that puts
+  // the book back lands here rather than under the next spec.
+  await exporting.close();
+  await vault.restore();
+  await book.settled(BOOK);
 });
 
 // What this suite does not cover: the write to a path on disk, which
