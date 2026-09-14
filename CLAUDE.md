@@ -282,7 +282,8 @@ and commit subjects.
 - The wire to the worker is binary and transferable. Nothing crosses it
   that could have been a handle.
 - Nothing writes to the vault except the book note, and the view is its
-  only writer.
+  only writer. Export is the one other writer: it writes the file the
+  author named, and nothing else.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.
