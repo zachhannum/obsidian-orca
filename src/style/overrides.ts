@@ -25,8 +25,18 @@ export interface OwnDeclaration {
   page: string | undefined;
   box: string | undefined;
   property: string;
+  /** The value as written, with its whitespace collapsed. */
+  value: string;
   line: number;
   column: number;
+}
+
+/** The author declaration that beats a generated one, at its place. */
+export interface Override extends Place {
+  /** The generated property it beats, a longhand when `declared` is a shorthand. */
+  property: string;
+  declared: string;
+  value: string;
 }
 
 /** The longhands each shorthand sets that a generated rule can declare. */
@@ -61,7 +71,15 @@ export function ownDeclarations(css: string): OwnDeclaration[] {
         const name = child.firstChild;
         if (name === null) continue;
         const { line, column } = placeOf(starts, name.from);
-        found.push({ ...context, property: nameOf(css, name), line, column });
+        const colon = css.indexOf(":", name.to);
+        const value =
+          colon === -1 || colon >= child.to
+            ? ""
+            : withoutComments(css.slice(colon + 1, child.to))
+                .replace(/;\s*$/, "")
+                .replace(/\s+/g, " ")
+                .trim();
+        found.push({ ...context, property: nameOf(css, name), value, line, column });
       } else if (child.name === "AtRule" && context.page !== undefined && context.box === undefined) {
         const keyword = child.getChild("AtKeyword");
         const inner = child.getChild("Block");
@@ -101,11 +119,11 @@ export function overridden(
   rules: readonly GeneratedRule[],
   own: readonly OwnDeclaration[],
   refused: readonly { line: number; column: number }[] = [],
-): ReadonlyMap<string, Place> {
+): ReadonlyMap<string, Override> {
   const counted = own.filter(
     (mine) => !refused.some((place) => place.line === mine.line && place.column === mine.column),
   );
-  const beaten = new Map<string, Place>();
+  const beaten = new Map<string, Override>();
   for (const rule of rules) {
     const page = pagePrelude(rule.selector);
     const selectors = page === undefined ? selectorList(rule.selector) : [];
@@ -122,7 +140,14 @@ export function overridden(
         )
         .at(-1);
       if (winner === undefined) continue;
-      const place = { sheet: OWN_SHEET, line: winner.line, column: winner.column };
+      const place: Override = {
+        sheet: OWN_SHEET,
+        line: winner.line,
+        column: winner.column,
+        property: declaration.property,
+        declared: winner.property,
+        value: winner.value,
+      };
       for (const key of declaration.keys) {
         const earlier = beaten.get(key);
         if (earlier === undefined || before(earlier, place)) beaten.set(key, place);
@@ -143,7 +168,7 @@ export function designOverridden(
   css: string,
   registered: readonly Registered[] = [],
   refused: readonly { line: number; column: number }[] = [],
-): ReadonlyMap<string, Place> {
+): ReadonlyMap<string, Override> {
   return overridden(
     generatedRules(mergeDesign(DEFAULTS, design), setting, registered),
     ownDeclarations(css),
