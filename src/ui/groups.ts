@@ -10,6 +10,7 @@
  * warning.
  */
 
+import type { Variant } from "@/assets/variants";
 import {
   LEVELS,
   STEPS,
@@ -41,6 +42,7 @@ export interface Choice {
 export type Kind =
   | "trim"
   | "font"
+  | "variant"
   | "length"
   | "count"
   | "flag"
@@ -193,6 +195,7 @@ export const GROUPS: readonly Group[] = [
     name: "Text",
     rows: [
       { label: "Font", of: [{ kind: "font", key: "body-font" }] },
+      { label: "Variant", of: [{ kind: "variant", key: "body-font-variant" }] },
       { label: "Size", of: [{ kind: "length", key: "body-size" }] },
       {
         label: "Line spacing",
@@ -234,6 +237,7 @@ export const GROUPS: readonly Group[] = [
     rows: [
       { label: "", of: [{ kind: "level", choices: LEVEL_CHOICES }] },
       { label: "Font", of: [{ kind: "font", key: `${LEVELED}font` }] },
+      { label: "Variant", of: [{ kind: "variant", key: `${LEVELED}font-variant` }] },
       { label: "Size", of: [{ kind: "length", key: `${LEVELED}size` }] },
       {
         label: "Alignment",
@@ -342,6 +346,25 @@ export const GROUPS: readonly Group[] = [
     ],
   },
 ];
+
+/** The key a font's variant is written under. Setting or clearing the font clears it. */
+export function variantKey(fontKey: string): string {
+  return `${fontKey}-variant`;
+}
+
+/**
+ * Returns the design with a font key set, or cleared when `font` is
+ * undefined. The variant picked for the old font goes with it, so a new
+ * font sets in its default variant.
+ */
+export function withFont(design: Design, key: string, font: string | undefined): Design {
+  return withKey(withKey(design, variantKey(key), undefined), key, font);
+}
+
+/** Returns the design with a variant picked. The default variant is written as absent. */
+export function withVariant(design: Design, key: string, variant: Variant): Design {
+  return withKey(design, key, variant.isDefault ? undefined : variant.name);
+}
 
 /** Returns a control's key at one heading level. A key with no level comes back unchanged. */
 export function atLevel(key: string, level: Level): string {

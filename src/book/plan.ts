@@ -104,7 +104,7 @@ export async function sendBook(
  * and a session that stopped took its faces with it.
  */
 export function sendFaces(faces: readonly Face[]): Op[] {
-  return faces.map((face) => ({ op: "font", bytes: face.bytes }));
+  return faces.map(fontOp);
 }
 
 /**
@@ -211,7 +211,13 @@ function matter(entry: Entry, book: Book, listed: readonly Listed[]): string {
 }
 
 /** A face a book is set in, as the registry read and keyed it. */
-export type Face = Hashed;
+export interface Face extends Hashed {
+  /**
+   * The url a `@font-face` rule names this face by. A face with none
+   * registers under the family name in its own file.
+   */
+  url?: string;
+}
 
 /** One thing the author did, as much of it as deciding the ops takes. */
 export type Edit =
@@ -320,12 +326,18 @@ function faced(
   const crossing = faces.filter((face) => !assets.sent(face.key));
   return {
     ops: [
-      ...crossing.map((face): Op => ({ op: "font", bytes: face.bytes })),
+      ...crossing.map(fontOp),
       styling(sheets),
     ],
     loaded: { ...loaded, sheets },
     crossed: crossing.map((face) => face.key),
   };
+}
+
+function fontOp(face: Face): Op {
+  return face.url === undefined
+    ? { op: "font", bytes: face.bytes }
+    : { op: "font", url: face.url, bytes: face.bytes };
 }
 
 function styling(sheets: readonly Sheet[]): Op {

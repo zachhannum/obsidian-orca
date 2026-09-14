@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { GENERATED_ORIGIN } from "@/book/plan";
-import { DESIGN_SHEET, OWN_SHEET } from "@/style/sheet";
+import { DESIGN_SHEET, FACES_SHEET, OWN_SHEET } from "@/style/sheet";
 import { THEME_SHEET } from "@/style/theme";
 import { cssFlags, groupTitle, issueGroups, routeOf } from "@/ui/warnings";
 
@@ -15,8 +15,9 @@ test("a warning against a generated section goes to the console, and one against
   assert.equal(routeOf({ message: MESSAGE, origin: null }), "note");
 });
 
-test("a warning in orca.css or design.css is orca's defect, and one in book.css goes to the editor", () => {
+test("a warning in orca.css, faces.css or design.css is orca's defect, and one in book.css goes to the editor", () => {
   assert.equal(routeOf({ message: MESSAGE, origin: `${THEME_SHEET}:2:3` }), "orca");
+  assert.equal(routeOf({ message: MESSAGE, origin: `${FACES_SHEET}:1:1` }), "orca");
   assert.equal(routeOf({ message: MESSAGE, origin: `${DESIGN_SHEET}:40:5` }), "orca");
   assert.equal(routeOf({ message: MESSAGE, origin: `${OWN_SHEET}:8:3` }), "css");
   // Only the sheet's whole name routes a warning.

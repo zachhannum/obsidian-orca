@@ -16,7 +16,11 @@ import {
   type Sheet,
 } from "fleuron";
 import { directoryVault } from "@/assets/directory";
-import { Registry, SENT_NOTHING, type Sent } from "@/assets/registry";
+import { VAULT_FONTS, familyNamed, fontIndex, scanFonts } from "@/assets/fonts";
+import { Registry, SENT_NOTHING, fontUrl, type Sent } from "@/assets/registry";
+import { usedVariant, variantFamily } from "@/assets/variants";
+import { faceCss, type Registered } from "@/style/faces";
+import { FACES_SHEET } from "@/style/sheet";
 import { readText, type VaultAdapter } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
@@ -413,6 +417,24 @@ test("every op path asks the registry before it puts bytes on the wire", () => {
   assert.deepEqual(again.crossed, []);
 });
 
+test("a face a `@font-face` rule names crosses under its url, and one with none crosses bare", () => {
+  const faces: Face[] = [
+    { key: "junicode-regular", bytes: new Uint8Array([1]), url: "orca-font:junicode-regular" },
+    { key: "eb-garamond-regular", bytes: new Uint8Array([2]) },
+  ];
+  const planned = sendEdit(
+    { did: "fonted", faces, sheets: FACED },
+    LOADED,
+    SENT_NOTHING,
+  );
+  const fonts = planned.ops.filter((op) => op.op === "font");
+  assert.deepEqual(
+    fonts.map((op) => ("url" in op ? op.url : undefined)),
+    ["orca-font:junicode-regular", undefined],
+  );
+  assert.deepEqual(sendFaces(faces), fonts);
+});
+
 test("a book with the same face on thirty-four chapters sends it once", async () => {
   const registry = new Registry(vault);
   const bytes = await readFile(path.join(root, "fixture", BOOK));
@@ -614,6 +636,85 @@ async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
   await writeFile(written, pdf);
   return written;
 }
+
+test("Junicode sets in Regular, and its bold in Junicode Bold, in the preview and the PDF", async () => {
+  const index = fontIndex(
+    { faces: [], refused: [] },
+    await scanFonts(
+      {
+        list: (directory) => vault.list(directory),
+        read: async (at, from, length) =>
+          new Uint8Array(await vault.readBinary(at)).subarray(from, from + length),
+      },
+      [VAULT_FONTS],
+      "vault",
+    ),
+  );
+  const family = familyNamed(index, "Junicode");
+  assert.ok(family, "the fixture vault carries no Junicode");
+  const registry = new Registry(vault);
+  // Every cut crosses under its url, so only the rules decide which
+  // ones the book can reach.
+  const faces = await Promise.all(
+    family.faces.map(async (face) => {
+      const hashed = await registry.take(face.path);
+      return { ...hashed, url: fontUrl(hashed.key) };
+    }),
+  );
+  const { variant } = usedVariant(family, undefined);
+  const registered: Registered = {
+    font: family.name,
+    variant: undefined,
+    family: variantFamily(family, variant),
+    faces: variant.faces.map((face) => {
+      const crossed = faces[family.faces.indexOf(face)];
+      assert.ok(crossed);
+      return { url: crossed.url, weight: face.weight, italic: face.italic };
+    }),
+  };
+  const ops: Op[] = [
+    { op: "book", sources: [{ name: "A.md", text: "Plain words and **bold words**." }] },
+    ...sendFaces(faces),
+    styleOp([
+      { name: THEME_SHEET, css: BUNDLED_THEME },
+      { name: FACES_SHEET, css: faceCss([registered]) },
+      { name: "design.css", css: 'book { font-family: "Junicode", serif }' },
+    ]),
+  ];
+
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  let pdf: Uint8Array | null;
+  try {
+    const client = connected(engine);
+    const output = await client.preview(ops);
+    assert.ok(output, "the render was overtaken");
+    const runs = output.pages.flatMap((page) =>
+      page.items.flatMap((item) => (item.kind === "text" ? [item] : [])),
+    );
+    const faceOf = (words: string) => {
+      const run = runs.find((item) => item.text.includes(words));
+      assert.ok(run, `no run sets "${words}"`);
+      const entry = output.fonts[run.fontId];
+      assert.ok(entry);
+      return entry;
+    };
+    assert.equal(faceOf("Plain").style, "Regular");
+    assert.equal(faceOf("bold").style, "Bold");
+    for (const run of runs) {
+      assert.doesNotMatch(output.fonts[run.fontId]?.name ?? "", /Cond|Exp/);
+    }
+    pdf = await client.exportPdf(ops);
+  } finally {
+    engine.free();
+  }
+  assert.ok(pdf, "the export was overtaken");
+  const written = path.join(await mkdtemp(path.join(tmpdir(), "orca-")), "junicode.pdf");
+  await writeFile(written, pdf);
+  const embedded = spawnSync("pdffonts", [written], { encoding: "utf8" }).stdout;
+  assert.match(embedded, /Junicode-Regular/);
+  assert.match(embedded, /Junicode-Bold/);
+  assert.doesNotMatch(embedded, /Junicode-(Cond|Exp)/);
+});
 
 test("the site's sample book sets to a PDF that qpdf reads", async () => {
   const sample = directoryVault(path.join(root, "site/sample"));

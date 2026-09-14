@@ -73,6 +73,26 @@ function os2(fsType: number): Table {
   return { tag: "OS/2", bytes };
 }
 
+/** The classes a face reads as when its tables give none. */
+const REGULAR = { weight: 400, width: 5, italic: false } as const;
+
+/** An `OS/2` table with these classes, cut to `length` bytes. */
+function classed(weight: number, width: number, fsSelection: number, length = 96): Table {
+  const bytes = new Uint8Array(96);
+  const view = new DataView(bytes.buffer);
+  view.setUint16(4, weight);
+  view.setUint16(6, width);
+  view.setUint16(62, fsSelection);
+  return { tag: "OS/2", bytes: bytes.subarray(0, length) };
+}
+
+/** A `head` table with these `macStyle` bits. */
+function head(macStyle: number): Table {
+  const bytes = new Uint8Array(54);
+  new DataView(bytes.buffer).setUint16(44, macStyle);
+  return { tag: "head", bytes };
+}
+
 /** The name table for a face listed in English alone. */
 function english(family: string, style: string, postscript = family): Table {
   return {
@@ -144,8 +164,8 @@ test("a collection holds one face per entry, and a face crosses as an sfnt of it
   const names = [];
   for (const offset of offsets) names.push(await readFace(ranges(bytes), offset));
   assert.deepEqual(names, [
-    { family: "Sablon", style: "Regular", variable: false },
-    { family: "Sablon", style: "Italic", variable: true },
+    { family: "Sablon", style: "Regular", variable: false, ...REGULAR },
+    { family: "Sablon", style: "Italic", variable: true, ...REGULAR },
   ]);
 
   const one = faceBytes(bytes, 1);
@@ -155,6 +175,7 @@ test("a collection holds one face per entry, and a face crosses as an sfnt of it
     family: "Sablon",
     style: "Italic",
     variable: true,
+    ...REGULAR,
   });
 
   const alone = file([english("Sablon", "Regular")]);
@@ -171,7 +192,7 @@ test("a face with no family, restricted embedding or a hidden name is turned dow
   const printable = file([english("Sablon", "Regular"), os2(0x0004)]);
   assert.deepEqual(
     await readFace(ranges(printable), 0),
-    { family: "Sablon", style: "Regular", variable: false },
+    { family: "Sablon", style: "Regular", variable: false, ...REGULAR },
     "preview and print is not a refusal",
   );
 
@@ -205,7 +226,58 @@ test("a face is named in English, whatever order its name table lists languages 
     family: "Helvetica",
     style: "Bold",
     variable: false,
+    ...REGULAR,
   });
+});
+
+test("a face's weight, width and slope are read from its OS/2 table", async () => {
+  const read = async (tables: readonly Table[]) => {
+    const named = await readFace(ranges(file(tables)), 0);
+    assert.notEqual(typeof named, "string");
+    if (typeof named === "string") return undefined;
+    return { weight: named.weight, width: named.width, italic: named.italic };
+  };
+  const sablon = english("Sablon", "Cond SemiBold Italic");
+
+  assert.deepEqual(await read([sablon, classed(600, 3, 0x0001)]), {
+    weight: 600,
+    width: 3,
+    italic: true,
+  });
+  assert.deepEqual(
+    await read([sablon, classed(700, 7, 0x0200)]),
+    { weight: 700, width: 7, italic: true },
+    "an oblique face slopes as an italic one does",
+  );
+  assert.deepEqual(await read([sablon, classed(300, 5, 0x0040)]), {
+    weight: 300,
+    width: 5,
+    italic: false,
+  });
+});
+
+test("a short OS/2 table reads as a regular width and weight, and its slope comes from head", async () => {
+  const read = async (tables: readonly Table[]) => {
+    const named = await readFace(ranges(file(tables)), 0);
+    if (typeof named === "string") return undefined;
+    return { weight: named.weight, width: named.width, italic: named.italic };
+  };
+  const sablon = english("Sablon", "Italic");
+
+  assert.deepEqual(await read([sablon, classed(700, 3, 0x0001, 4)]), REGULAR);
+  assert.deepEqual(
+    await read([sablon, classed(700, 3, 0x0001, 7), head(0x0002)]),
+    { weight: 700, width: 5, italic: true },
+    "a table that stops before fsSelection takes the slope from macStyle",
+  );
+  assert.deepEqual(await read([sablon, head(0x0002)]), { ...REGULAR, italic: true });
+  assert.deepEqual(await read([sablon]), REGULAR);
+  const fsTypeOnly = { tag: "OS/2", bytes: Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 2) };
+  assert.equal(
+    await readFace(ranges(file([sablon, fsTypeOnly])), 0),
+    "restricted",
+    "a table long enough for fsType alone is still refused on it",
+  );
 });
 
 /** The one face this tier reads from the machine, when the machine has it. */

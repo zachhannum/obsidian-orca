@@ -1,13 +1,20 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
-import type { Face } from "@/book/plan";
-import { designFonts, type Design, type PageUnit, type Written } from "@/style/design";
+import {
+  designFonts,
+  designUses,
+  type Design,
+  type FontUse,
+  type PageUnit,
+  type Written,
+} from "@/style/design";
 import type { Place } from "@/style/origin";
 import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
 import { Settled } from "@/ui/settled";
-import { withKey } from "@/ui/groups";
-import { missingFont, missingFonts } from "@/ui/picker";
+import type { ResolvedUse } from "@/ui/fonts";
+import { withFont, withKey, withVariant } from "@/ui/groups";
+import { missingFont, missingFonts, missingVariants } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -24,8 +31,10 @@ export interface Designing {
   setCss(book: string, css: string): Promise<void>;
   /** The fonts the machine has. The scan runs once for the session. */
   index(): Promise<FontIndex>;
-  /** One font's styles, as the bytes that cross and the keys they go under. */
-  styles(font: Family): Promise<Face[]>;
+  /** The faces of each font and variant, as the bytes that cross and the rules that register them. */
+  fonts(uses: readonly FontUse[]): Promise<readonly ResolvedUse[]>;
+  /** Registers one face of each variant of a family with the document, so each variant row draws in it. */
+  preview(family: Family): Promise<void>;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
   /** Told when the book being designed changes. */
@@ -85,6 +94,12 @@ export class DesignPanelView extends ItemView {
       },
       set: (key, value) => {
         void this.set(key, value);
+      },
+      variant: (key, variant) => {
+        void this.redesign(key, (design) => withVariant(design, key, variant));
+      },
+      preview: (family) => {
+        void this.designing.preview(family);
       },
       view: (viewing) => {
         this.view(viewing);
@@ -162,8 +177,10 @@ export class DesignPanelView extends ItemView {
   }
 
   /**
-   * Sends the font's styles and sets the book in it. The registry keys
-   * them by content, so picking the font again sends the sheet alone.
+   * Sends the faces of the font's default variant and sets the book in
+   * it. A variant picked for the font before goes with the old font. The
+   * registry keys faces by content, so picking the font again sends the
+   * sheets alone.
    *
    * A file that has gone since the scan still names its font in the
    * design. The engine sets the book in the one it carries, and the
@@ -172,39 +189,56 @@ export class DesignPanelView extends ItemView {
   private async pick(font: Family, key: string): Promise<void> {
     const typeset = await this.designing.book();
     if (typeset === undefined) return;
-    let faces: Face[] = [];
-    try {
-      faces = await this.designing.styles(font);
-      this.unread = undefined;
-    } catch {
-      this.unread = font.name;
-    }
-    await this.settle(typeset, key, font.name, faces);
+    const design = withFont(typeset.design, key, font.name);
+    const resolved = await this.resolve(design);
+    const want = font.name.toLowerCase();
+    this.unread = resolved.some((each) => each.unread && each.use.font.toLowerCase() === want)
+      ? font.name
+      : undefined;
+    await this.settle(typeset, design, resolved);
   }
 
-  /** Sets the book under the design with one key changed, and writes that design. */
+  /** Sets the book under the design with one key changed, and writes that design. Clearing a font clears its variant too. */
   private async set(key: string, value: Written | undefined): Promise<void> {
+    await this.redesign(key, (design) =>
+      key.endsWith("-font") ? withFont(design, key, value?.toString()) : withKey(design, key, value),
+    );
+  }
+
+  /** Sets the book under one edit to its design. An edit to a font or a variant sends the faces the design now uses. */
+  private async redesign(key: string, edited: (design: Design) => Design): Promise<void> {
     const typeset = await this.designing.book();
     if (typeset === undefined) return;
-    await this.settle(typeset, key, value, []);
+    const design = edited(typeset.design);
+    const fonted = key.endsWith("-font") || key.endsWith("-font-variant");
+    await this.settle(typeset, design, fonted ? await this.resolve(design) : []);
+  }
+
+  /** The faces of every font and variant a design uses. A read that fails sends none. */
+  private async resolve(design: Design): Promise<readonly ResolvedUse[]> {
+    const uses = designUses(design);
+    if (uses.length === 0) return [];
+    try {
+      return await this.designing.fonts(uses);
+    } catch {
+      return [];
+    }
   }
 
   /**
-   * Sets the book under the design with one key changed, and writes
-   * that design into the note. It edits the design the engine holds, so
-   * two edits in a row keep the first.
+   * Sets the book under a design and writes that design into the note.
+   * It edits the design the engine holds, so two edits in a row keep the
+   * first.
    *
    * The engine gets the sheets before orca writes the note, so the
    * pages do not wait for the save.
    */
   private async settle(
     typeset: Typeset,
-    key: string,
-    value: Written | undefined,
-    faces: readonly Face[],
+    design: Design,
+    resolved: readonly ResolvedUse[],
   ): Promise<void> {
-    const design = withKey(typeset.design, key, value);
-    typeset.restyle(design, faces);
+    typeset.restyle(design, resolved);
     await this.repaint();
     await this.designing.setDesign(typeset.path, design);
   }
@@ -280,10 +314,10 @@ export class DesignPanelView extends ItemView {
     };
   }
 
-  /** The warnings for the fonts a design asks for, the body's and each heading level's. */
+  /** The warnings for the fonts and variants a design asks for, the body's and each heading level's. */
   private warnings(index: FontIndex, design: Design): string[] {
     const unread = this.unread;
-    const missing = missingFonts(index, design);
+    const missing = [...missingFonts(index, design), ...missingVariants(index, design)];
     if (unread === undefined || !designFonts(design).includes(unread)) {
       return missing;
     }

@@ -1,7 +1,7 @@
 import type { Warning } from "fleuron";
 import { isGenerated } from "@/book/plan";
 import { readOrigin, type Place } from "@/style/origin";
-import { DESIGN_SHEET, OWN_SHEET } from "@/style/sheet";
+import { DESIGN_SHEET, FACES_SHEET, OWN_SHEET } from "@/style/sheet";
 import { THEME_SHEET } from "@/style/theme";
 import type { Flag } from "@/ui/editor";
 
@@ -19,7 +19,9 @@ export function routeOf(warning: Warning): Route {
   if (origin === null) return "note";
   if (isGenerated(origin)) return "orca";
   const sheet = readOrigin(origin)?.sheet;
-  if (sheet === THEME_SHEET || sheet === DESIGN_SHEET) return "orca";
+  if (sheet === THEME_SHEET || sheet === FACES_SHEET || sheet === DESIGN_SHEET) {
+    return "orca";
+  }
   if (sheet === OWN_SHEET) return "css";
   return "note";
 }

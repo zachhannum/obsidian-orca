@@ -33,9 +33,11 @@ import {
 import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
-import { designFonts, type Design } from "@/style/design";
+import { designFonts, designUses, useKey, type Design, type FontUse } from "@/style/design";
+import type { Registered } from "@/style/faces";
 import type { Setting } from "@/style/generated";
 import { OWN_SHEET, designSheets } from "@/style/sheet";
+import type { ResolvedUse } from "@/ui/fonts";
 import { bookName } from "@/ui/shelf";
 
 /** The book, as much of it as crosses from the engine that died onto its next one. */
@@ -84,6 +86,8 @@ export class Typeset {
   private embedding: Promise<void> = Promise.resolve();
   private loaded: Loaded;
   private designed: Design;
+  /** The fonts and variants the faces sheet registers, one for each use the design sets. */
+  private registered: Registered[];
   private own: string;
   /** The author's CSS as the last render that landed set it. */
   private linted: string;
@@ -108,6 +112,8 @@ export class Typeset {
       links: Links;
       /** The design the sheets were generated from. */
       design: Design;
+      /** The faces the sheets register, for the uses the design sets. */
+      registered: Registered[];
       /** The author's own CSS, the last of the sheets. */
       css: string;
       /** The order and the names the sheets were generated against. */
@@ -127,6 +133,7 @@ export class Typeset {
     this.links = book.links;
     this.loaded = { sheets: book.sheets };
     this.designed = book.design;
+    this.registered = book.registered;
     this.setting = book.setting;
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
@@ -203,18 +210,31 @@ export class Typeset {
   }
 
   /**
-   * Sets the book under a design. It writes the generated layer again,
-   * which crosses with any face the design newly names. Every style of
-   * a font crosses the first time the author picks it and stays
+   * Sets the book under a design. It writes the faces sheet and the
+   * generated layer again, and crosses any face a use newly resolved.
+   * A face crosses the first time a variant is picked and stays
    * registered for the session, so picking it again sends the sheets
-   * alone.
+   * alone. A use the design no longer sets drops out of the faces sheet.
    *
    * The plan keys an edit that carries faces by those faces. A later
    * edit coalesces with it, so the faces still cross.
    */
-  restyle(design: Design, faces: readonly Face[] = []): void {
+  restyle(design: Design, resolved: readonly ResolvedUse[] = []): void {
     this.designed = design;
-    const sheets = designSheets(this.designed, this.setting, this.own);
+    const held = new Map(this.registered.map((each) => [useKey(each), each]));
+    for (const each of resolved) {
+      if (each.registered === undefined) held.delete(useKey(each.use));
+      else held.set(useKey(each.use), each.registered);
+    }
+    const uses = new Set(designUses(design).map(useKey));
+    this.registered = [...held].flatMap(([key, each]) => (uses.has(key) ? [each] : []));
+    const sheets = designSheets(this.designed, this.setting, this.own, this.registered);
+    // Only a face not yet sent keys the edit. An edit keyed by faces that
+    // already crossed would replace a waiting edit under the same key,
+    // and the faces that edit planned would never cross.
+    const faces = unique(resolved.flatMap((each) => each.faces)).filter(
+      (face) => !this.assets.sent(face.key),
+    );
     if (faces.length === 0) {
       this.plan("styled", { did: "styled", sheets });
       return;
@@ -342,8 +362,8 @@ export interface Composing {
   read(path: string): Promise<string>;
   /** A note's own name, which titles a book with no title of its own. */
   name(path: string): string;
-  /** Every style of a font, for a book being set in the one it already had. */
-  styles(font: string): Promise<readonly Face[]>;
+  /** The faces and rules of each font and variant, for a book being set in the ones it already had. */
+  fonts(uses: readonly FontUse[]): Promise<readonly ResolvedUse[]>;
   /** The vault's own files, which the asset registry reads and hashes. */
   files: VaultAdapter;
   links: Links;
@@ -519,10 +539,14 @@ export class Composer {
       publisher,
     };
     const css = carried?.css ?? bookCss(model.order);
-    const sheets = [...(carried?.sheets ?? designSheets(design, setting, css))];
+    const resolved = await this.resolve(designUses(design));
+    const registered = resolved.flatMap((each) => each.registered ?? []);
+    const sheets = [
+      ...(carried?.sheets ?? designSheets(design, setting, css, registered)),
+    ];
     // The sheets name the fonts, and a new engine has none of their
-    // styles, so they cross ahead of the sheets that ask for them.
-    const faces = await this.facesOf(designFonts(design));
+    // faces, so they cross ahead of the sheets that ask for them.
+    const faces = unique(resolved.flatMap((each) => each.faces));
     for (const face of faces) assets.crossed(face.key);
     await session.open([...ops, ...sendFaces(faces), styleOp(sheets)]);
     return new Typeset(
@@ -537,6 +561,7 @@ export class Composer {
         assets,
         links: this.vault.links,
         design,
+        registered,
         css,
         setting,
       },
@@ -545,22 +570,23 @@ export class Composer {
   }
 
   /**
-   * Every style of each font a book is set in, each face once. A font
-   * the machine no longer has crosses nothing, and the engine sets its
-   * text in the one it carries.
+   * The faces of each font and variant a book is set in. A font the
+   * machine no longer has crosses nothing, and the engine sets its text
+   * in the one it carries.
    */
-  private async facesOf(fonts: readonly string[]): Promise<Face[]> {
-    const styles = await Promise.all(
-      fonts.map(async (font) => {
-        try {
-          return await this.vault.styles(font);
-        } catch {
-          return [];
-        }
-      }),
-    );
-    const faces = new Map<string, Face>();
-    for (const face of styles.flat()) faces.set(face.key, face);
-    return [...faces.values()];
+  private async resolve(uses: readonly FontUse[]): Promise<readonly ResolvedUse[]> {
+    if (uses.length === 0) return [];
+    try {
+      return await this.vault.fonts(uses);
+    } catch {
+      return [];
+    }
   }
+}
+
+/** Each face once, by its key, in the order first seen. */
+function unique(faces: readonly Face[]): Face[] {
+  const kept = new Map<string, Face>();
+  for (const face of faces) if (!kept.has(face.key)) kept.set(face.key, face);
+  return [...kept.values()];
 }

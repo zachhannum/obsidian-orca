@@ -5,6 +5,7 @@
  */
 
 import { faceOffsets, readFace, type Refusal, type Ranges } from "@/assets/sfnt";
+import { familyVariants, type Variant } from "@/assets/variants";
 import type { Listing } from "@/assets/vault";
 
 /** Reads font directories and font files. `ui` implements it over the platform and the vault. */
@@ -24,6 +25,9 @@ export interface Face {
   family: string;
   style: string;
   variable: boolean;
+  weight: number;
+  width: number;
+  italic: boolean;
   where: Where;
 }
 
@@ -32,6 +36,8 @@ export interface Family {
   name: string;
   where: Where;
   faces: Face[];
+  /** The same faces grouped by variant, the default first. */
+  variants: Variant[];
 }
 
 /** A face the scan rejected. */
@@ -100,6 +106,7 @@ export function fontIndex(platform: Found, vault: Found): FontIndex {
   const listed = [...families.values()].sort((one, two) => before(one.name, two.name));
   for (const family of listed) {
     family.faces.sort((one, two) => before(one.style, two.style));
+    family.variants = familyVariants(family.faces);
   }
   return { families: listed, refused: [...platform.refused, ...vault.refused] };
 }
@@ -121,10 +128,15 @@ export function matching(index: FontIndex, typed: string): Family[] {
   return [...starting, ...holding];
 }
 
+/** The family of this name. The comparison ignores case and surrounding space. */
+export function familyNamed(index: FontIndex, name: string): Family | undefined {
+  const want = name.trim().toLowerCase();
+  return index.families.find((known) => known.name.toLowerCase() === want);
+}
+
 /** Whether the index has this family. The comparison ignores case. */
 export function has(index: FontIndex, family: string): boolean {
-  const want = family.trim().toLowerCase();
-  return index.families.some((known) => known.name.toLowerCase() === want);
+  return familyNamed(index, family) !== undefined;
 }
 
 /** The number of folders a scan walks down. The bound stops a loop of linked folders. */
@@ -192,7 +204,12 @@ function keep(families: Map<string, Family>, face: Face): void {
   const key = face.family.toLowerCase();
   const known = families.get(key);
   if (known === undefined) {
-    families.set(key, { name: face.family, where: face.where, faces: [face] });
+    families.set(key, {
+      name: face.family,
+      where: face.where,
+      faces: [face],
+      variants: [],
+    });
     return;
   }
   known.faces.push(face);

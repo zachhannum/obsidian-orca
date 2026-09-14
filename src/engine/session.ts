@@ -74,16 +74,21 @@ export function serialized(client: EngineClient): EngineClient {
   };
 }
 
-/** A document's faces, narrowed to what a session adds to them. */
-export interface FaceSet {
+/**
+ * A document's faces, narrowed to what a session adds to them and takes
+ * away. `add` answers with the face it registered, and `remove` takes
+ * that same face back out.
+ */
+export interface FaceSet<Face = unknown> {
   add(
     family: string,
     bytes: Uint8Array,
     attributes: FaceAttributes,
-  ): Promise<void>;
+  ): Promise<Face>;
+  remove(face: Face): void;
 }
 
-export function documentFaces(document: Document): FaceSet {
+export function documentFaces(document: Document): FaceSet<FontFace> {
   return {
     add: async (family, bytes, attributes) => {
       // Registered at the slope and weight the face already has, so
@@ -94,8 +99,20 @@ export function documentFaces(document: Document): FaceSet {
       });
       await face.load();
       document.fonts.add(face);
+      return face;
+    },
+    remove: (face) => {
+      document.fonts.delete(face);
     },
   };
+}
+
+/** A face a session has asked the document for, under one font id. */
+interface Loaded {
+  /** The font-table entry the id held when the face was asked for. */
+  entry: string;
+  /** The registered face, or nothing when it would not load. */
+  face: Promise<unknown>;
 }
 
 /** The number of pages either side of the one being read that ride along. */
@@ -120,7 +137,12 @@ export interface Reading {
 export class Session {
   private layout: LayoutOutput | undefined;
   private opening: Promise<void> | undefined;
-  private readonly loaded = new Set<number>();
+  /**
+   * The faces asked for so far, by font id. An id a `@font-face` rule
+   * declares can name a different face after the sheet or its file
+   * changes, so each one keeps the entry it was loaded for.
+   */
+  private readonly loaded = new Map<number, Loaded>();
   /** The pages decoded so far, by their place in the book. */
   private readonly cached = new Map<number, Page>();
   /** The generation {@link Session.cached} holds pages from. */
@@ -375,6 +397,7 @@ export class Session {
   }
 
   private async load(layout: LayoutOutput): Promise<void> {
+    this.forget(layout);
     const wanted = new Set<number>();
     for (const page of layout.pages) {
       for (const item of page.items) {
@@ -393,14 +416,38 @@ export class Session {
   private async face(id: number, layout: LayoutOutput): Promise<void> {
     const entry = layout.fonts[id];
     if (entry === undefined) return;
-    this.loaded.add(id);
+    const face = this.client
+      .fontBytes(id)
+      .then((bytes) => this.document.add(faceFamily(id), bytes, entry.attributes));
+    const record: Loaded = {
+      entry: JSON.stringify(entry),
+      face: face.catch(() => undefined),
+    };
+    this.loaded.set(id, record);
     try {
-      const bytes = await this.client.fontBytes(id);
-      await this.document.add(faceFamily(id), bytes, entry.attributes);
+      await face;
     } catch {
       // A face that will not load falls through the painter's stack, so
       // the page is set in the wrong one rather than left blank.
+      if (this.loaded.get(id) === record) this.loaded.delete(id);
+    }
+  }
+
+  /**
+   * Takes out every face whose id names a different entry in this
+   * reply's font table, or none, so the id loads again with the bytes
+   * it names now. A face still loading is taken out once it lands.
+   */
+  private forget(layout: LayoutOutput): void {
+    for (const [id, record] of this.loaded) {
+      const entry = layout.fonts[id];
+      if (entry !== undefined && JSON.stringify(entry) === record.entry) {
+        continue;
+      }
       this.loaded.delete(id);
+      void record.face.then((face) => {
+        if (face !== undefined) this.document.remove(face);
+      });
     }
   }
 }

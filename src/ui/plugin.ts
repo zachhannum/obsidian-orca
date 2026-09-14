@@ -12,7 +12,7 @@ import {
   type TAbstractFile,
   type ViewState,
 } from "obsidian";
-import type { FontIndex } from "@/assets/fonts";
+import type { Family, FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
 import { browserHost, startEngine } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
@@ -24,18 +24,20 @@ import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import { bookCss, withCss } from "@/book/css";
-import type { Face } from "@/book/plan";
-import { writeDesign, type Design } from "@/style/design";
+import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { byteOf, offsetOf, writtenAt } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
 import {
   documentPreviews,
-  familyFaces,
   fontPlaces,
   previewFaces,
+  previewVariants,
   readFontIndex,
+  resolveUse,
   type FontPlaces,
+  type Previews,
+  type ResolvedUse,
 } from "@/ui/fonts";
 import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
@@ -90,6 +92,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private families: Promise<FontIndex> | undefined;
   /** The directories and adapters the index is read through. */
   private fonts: FontPlaces | undefined;
+  /** The preview faces registered with the document, each family once. */
+  private previews: Previews | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
   /**
@@ -1044,7 +1048,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
           : this.app.vault.cachedRead(note);
       },
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
-      styles: (font) => this.fontStyles(font),
+      fonts: (uses) => this.resolved(uses),
       files: this.files(),
       links: cacheLinks(this.app),
       engines,
@@ -1053,15 +1057,26 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Every style of a font, by the name a design names it by. A book set
-   * again on a new engine sends them, because a face is registered for
-   * one session and that session is gone.
+   * The faces and rules of each font and variant, by the names a design
+   * names them by. A book set again on a new engine sends them, because
+   * a face is registered for one session and that session is gone.
+   *
+   * The bytes are read on every call. A face that crosses to the worker
+   * transfers its buffer, and the transfer empties it.
    */
-  private async fontStyles(font: string): Promise<readonly Face[]> {
-    const want = font.trim().toLowerCase();
-    const { families } = await this.fontIndex();
-    const found = families.find((known) => known.name.toLowerCase() === want);
-    return found === undefined ? [] : familyFaces(this.places(), found);
+  private async resolved(uses: readonly FontUse[]): Promise<ResolvedUse[]> {
+    const index = await this.fontIndex();
+    return Promise.all(uses.map((use) => resolveUse(this.places(), index, use)));
+  }
+
+  /** Registers one face of each variant of a family with the document. */
+  private previewVariants(family: Family): Promise<void> {
+    return previewVariants(this.places(), family, this.documentPreviews());
+  }
+
+  private documentPreviews(): Previews {
+    this.previews ??= documentPreviews(document);
+    return this.previews;
   }
 
   /** The book being designed and the fonts the machine has. */
@@ -1071,7 +1086,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
       setDesign: (book, design) => this.setDesign(book, design),
       setCss: (book, css) => this.setCss(book, css),
       index: () => this.fontIndex(),
-      styles: (font) => familyFaces(this.places(), font),
+      fonts: (uses) => this.resolved(uses),
+      preview: (family) => this.previewVariants(family),
       unit: () => this.limits.unit,
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
@@ -1145,7 +1161,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private async scan(): Promise<FontIndex> {
     const places = this.places();
     const index = await readFontIndex(places);
-    await previewFaces(places, index, documentPreviews(document));
+    await previewFaces(places, index, this.documentPreviews());
     return index;
   }
 

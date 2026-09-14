@@ -48,20 +48,22 @@ test("a book that sets nothing sets one font in two sizes, with nothing the engi
   }
 });
 
-test("every design key has a default but a heading's font and the scene-break word", () => {
+test("every design key has a default but a heading's font, each font's variant and the scene-break word", () => {
+  const variant = (key: string) => key.endsWith("-font-variant");
   const optional = (key: string) =>
-    /^heading-\d-font$/.test(key) || key === "scene-break-word";
+    /^heading-\d-font$/.test(key) || variant(key) || key === "scene-break-word";
 
   assert.deepEqual(
     Object.keys(writeDesign(DEFAULTS)),
     DESIGN_KEYS.filter((key) => !optional(key)),
   );
   // The panel draws the effective design, where a heading with no font
-  // of its own shows the body font.
+  // of its own shows the body font. The default variant is stored as
+  // absent.
   const shown = writeDesign(effective(emptyDesign()));
   assert.deepEqual(
     Object.keys(shown),
-    DESIGN_KEYS.filter((key) => key !== "scene-break-word"),
+    DESIGN_KEYS.filter((key) => key !== "scene-break-word" && !variant(key)),
   );
   for (const level of LEVELS) {
     assert.equal(shown[`heading-${level}-font`], "EB Garamond");
@@ -84,6 +86,31 @@ test("a book's own keys win over the defaults, and a heading follows the body fo
   // `effective` leaves the defaults as they were.
   assert.equal(DEFAULTS.body.font, "EB Garamond");
   assert.equal(DEFAULTS.headings[1].font, undefined);
+});
+
+test("a heading with no font takes the body's font and variant together, and one with its own font keeps that font's default", () => {
+  const design = effective(
+    readDesign({
+      "body-font": "Junicode",
+      "body-font-variant": "Cond",
+      "heading-1-font-variant": "SemiBold",
+      "heading-2-font": "Junicode",
+      "heading-3-font": "Spectral",
+      "heading-3-font-variant": "Light",
+    }),
+  );
+
+  // A variant alone does not make a level's font its own.
+  assert.equal(design.headings[1].font, "Junicode");
+  assert.equal(design.headings[1].fontVariant, "Cond");
+  assert.equal(design.headings[2].font, "Junicode");
+  assert.equal(design.headings[2].fontVariant, undefined);
+  assert.equal(design.headings[3].fontVariant, "Light");
+  assert.equal(design.headings[4].fontVariant, "Cond");
+  // A body with no variant leaves an inheriting level with none.
+  const plain = effective(readDesign({ "heading-1-font-variant": "Cond" }));
+  assert.equal(plain.headings[1].font, "EB Garamond");
+  assert.equal(plain.headings[1].fontVariant, undefined);
 });
 
 test("a book that sets nothing opens a chapter on the next page, inside margins in inches, with heads at the outside", () => {
