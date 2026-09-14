@@ -525,7 +525,7 @@ test("the sections that show orca's own surfaces show photographs of them", asyn
   for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc", "ex-dlg"]) {
     assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
   }
-  for (const shot of ["vault-tree", "vault-note", "write", "read", "export"]) {
+  for (const shot of ["vault-tree", "vault-note", "write", "read", "inspect", "export"]) {
     for (const scheme of ["dark", "light"]) {
       assert.ok(
         landing.includes(`../shots/${shot}-${scheme}.png`),
@@ -605,6 +605,7 @@ test("the copy claims no feature the plugin has yet to grow", async () => {
       /overridden/,
       "an overridden control",
     ],
+    [/\binspect/i, await read("src/ui/pane.tsx"), /orca-inspect-pane/, "inspect mode"],
   ];
   for (const [claimed, source, built, what] of claims) {
     if (built.test(source)) continue;

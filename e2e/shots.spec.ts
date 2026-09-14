@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { PREVIEW, type Book } from "./harness/book";
 import { Export } from "./harness/export";
+import { Inspect } from "./harness/inspect";
 import { DENSITY as DISPLAY, SAMPLE } from "./harness/launch";
 import type { Scheme } from "./harness/obsidian";
 import type { Site } from "./harness/site";
@@ -58,6 +59,19 @@ const WINDOW = { width: 1280, height: 800 };
  * other.
  */
 const SWAP = { width: 980, height: 620 };
+
+/**
+ * The window the inspect picture is taken in, at the landing picture's
+ * shape, and the width its design panel is given.
+ */
+const INSPECT = { width: 1200, height: 750, panel: 440 };
+
+/** The chapter's opening page, and the paragraph the inspect picture pins there. */
+const OPENING_PAGE = 9;
+const SECOND_PARAGRAPH = "For some time past";
+
+/** The indent the author's rule in the inspect picture sets. */
+const OWN_INDENT = "1.5em";
 
 /** The ribbon down the side of the window, which is beside the pane. */
 const RIBBON = 44;
@@ -379,6 +393,66 @@ test("the export picture is the dialog on the sample book, with the preflight pa
   }
 
   await site.obsidian.moving();
+});
+
+test("the inspect picture is a pinned paragraph beside the rules that set it", async ({
+  site,
+}) => {
+  await arrange(site);
+  const inspect = new Inspect(site.obsidian);
+  const own = await site.obsidian.page.evaluate(
+    async (at) => window.app.vault.adapter.read(at),
+    BOOK,
+  );
+  await sized(site, INSPECT.width, INSPECT.height);
+  // The page and the pane are the picture, so the navigator gives its
+  // room to them, and the panel is wide enough to read a rule on one line.
+  await site.obsidian.collapse("left");
+  const width = await site.obsidian.sidebar(INSPECT.panel);
+  await settled(site.book);
+
+  await inspect.on();
+  await inspect.pinLine(inspect.line(OPENING_PAGE, SECOND_PARAGRAPH));
+  let pin = await inspect.pinned();
+  await site.panel.inspecting(pin.key, pin.generation);
+
+  // The sample book has no CSS of its own, and an empty layer is not
+  // drawn. A rule that wins the indent over the design panel's puts all
+  // three layers in the pane, with the one it beat struck through.
+  const selector = (await site.panel.selector.textContent()) ?? "";
+  const section = selector.replace(/ > p$/, "");
+  expect(section).toMatch(/^section#/);
+  // The rule is typed over three lines, since one line is wider than the
+  // editor and scrolls it sideways under its gutter.
+  await site.panel.typeCss(`${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
+  await expect(site.panel.rulesIn("own").first()).toContainText(OWN_INDENT);
+  pin = await inspect.pinned();
+  await site.panel.inspecting(pin.key, pin.generation);
+  await expect(site.panel.ruleGroups).toHaveCount(3);
+
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await expect(inspect.outline("pinned").getByTestId("orca-inspect-edge")).toBeVisible();
+    await expect(site.panel.pane).toBeVisible();
+    await site.obsidian.unhovered();
+    await expect(site.obsidian.page).toHaveScreenshot(`inspect-${scheme}.png`);
+  }
+
+  // One app takes every picture, so the note, the mode and the panel's
+  // width are put back for the next.
+  await site.obsidian.moving();
+  await inspect.off();
+  await site.panel.toControls.click();
+  await site.obsidian.sidebar(width);
+  await site.obsidian.page.evaluate(
+    async ({ at, text }) => {
+      const note = window.app.vault.getFileByPath(at);
+      if (note === null) throw new Error(`no note at ${at}`);
+      await window.app.vault.modify(note, text);
+    },
+    { at: BOOK, text: own },
+  );
 });
 
 test("a docs picture crops to one group of the design panel", async ({

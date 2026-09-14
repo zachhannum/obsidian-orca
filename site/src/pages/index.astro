@@ -39,6 +39,8 @@ import writeDark from '../shots/write-dark.png';
 import writeLight from '../shots/write-light.png';
 import readDark from '../shots/read-dark.png';
 import readLight from '../shots/read-light.png';
+import inspectDark from '../shots/inspect-dark.png';
+import inspectLight from '../shots/inspect-light.png';
 import exportDark from '../shots/export-dark.png';
 import exportLight from '../shots/export-light.png';
 
@@ -191,6 +193,8 @@ const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
   light: { tree: await shot(treeLight), note: await shot(noteLight) },
 };
+/** A paragraph pinned in inspect mode, with the rules that set it in the panel. */
+const inspecting = { dark: await shot(inspectDark), light: await shot(inspectLight) };
 /** The export dialog, open on the sample book with the preflight passed. */
 const exporting = { dark: await shot(exportDark), light: await shot(exportLight) };
 const swap = {
@@ -393,6 +397,32 @@ const swap = {
               />
               <div class="set" data-demo-page></div>
             </div>
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Inspect <i>any box</i></h2>
+            <p class="sec-p">
+              Click a paragraph, a heading or a running head on the page. The panel shows every
+              rule that sets it, from your CSS, the design panel and Orca's theme. A rule that
+              lost is struck through.
+            </p>
+          </div>
+          <div class="inspect">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <div class={`on-${scheme}`}>
+                  <img
+                    class="inspect-shot"
+                    src={inspecting[scheme].src}
+                    width={inspecting[scheme].width}
+                    height={inspecting[scheme].height}
+                    alt="Orca in Obsidian with inspect mode on: a paragraph outlined on the page, and the design panel listing the rules that set it above the book's CSS."
+                  />
+                </div>
+              ))
+            }
           </div>
         </section>
 
@@ -809,6 +839,23 @@ const swap = {
     box-shadow:
       0 0 0 1px var(--o-border),
       0 40px 80px -24px rgba(0, 0, 0, 0.85);
+  }
+
+  .inspect {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  .inspect > div {
+    width: 100%;
+    max-width: 1080px;
+  }
+  .inspect-shot {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: var(--o-win-shadow);
   }
 
   .vault-shots img {
