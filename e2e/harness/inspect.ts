@@ -109,6 +109,47 @@ export class Inspect {
     return (await this.surface.getAttribute("data-inspected")) ?? "";
   }
 
+  /** The page `page` names, counting from 1. */
+  sheet(page: number): Locator {
+    return this.surface.locator(`.orca-page[data-page="${String(page)}"]`);
+  }
+
+  /**
+   * A line the painter set on a page, found in its selection layer by
+   * the words it begins with. The layer is the manuscript's own text,
+   * so a spec reaches a box by what it says rather than by guessing
+   * where it landed.
+   */
+  line(page: number, said: string): Locator {
+    return this.sheet(page).locator("text[data-selection-line]").filter({ hasText: said });
+  }
+
+  /** A point just inside the start of a line, on the screen. */
+  private async startOf(line: Locator): Promise<{ x: number; y: number }> {
+    // A bounding box waits for its element with no bound of its own.
+    await expect(line.first()).toBeVisible();
+    const box = await line.first().boundingBox();
+    if (box === null) throw new Error("the line is not painted");
+    return { x: box.x + Math.min(12, box.width / 2), y: box.y + box.height / 2 };
+  }
+
+  /** Moves the pointer onto a line, and waits for the preview to outline what it hovered. */
+  async hoverLine(line: Locator): Promise<string> {
+    const at = await this.startOf(line);
+    await this.obsidian.page.mouse.move(at.x, at.y);
+    await expect(this.surface).toHaveAttribute("data-hovered", /.+/);
+    await expect(this.outline("hovered").getByTestId("orca-inspect-edge").first()).toBeVisible();
+    return (await this.surface.getAttribute("data-hovered")) ?? "";
+  }
+
+  /** Clicks a line, and waits for the pin. It answers the pinned key. */
+  async pinLine(line: Locator): Promise<string> {
+    const at = await this.startOf(line);
+    await this.obsidian.page.mouse.click(at.x, at.y);
+    await expect(this.surface).toHaveAttribute("data-inspected", /.+/);
+    return (await this.surface.getAttribute("data-inspected")) ?? "";
+  }
+
   /** Presses Escape where the focus is, which the view's container hears. */
   async escape(): Promise<void> {
     await this.obsidian.page.keyboard.press("Escape");

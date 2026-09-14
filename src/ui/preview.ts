@@ -235,6 +235,11 @@ export class PreviewView extends ItemView {
   private pinText: string | undefined;
   /** The turn the next hover answer has to be, so a slow one is dropped. */
   private hovering = 0;
+  /**
+   * The same, for a click. A click keeps its own turn, so the hover the
+   * pointer's move queued ahead of it cannot drop the pin it asked for.
+   */
+  private clicking = 0;
   /** The same, for finding the pin again after a paint. */
   private pinning = 0;
   /** The last pointer position, which the next animation frame asks about. */
@@ -650,6 +655,7 @@ export class PreviewView extends ItemView {
     this.inspecting = next;
     if (!next.on) {
       this.hovering += 1;
+      this.clicking += 1;
       this.hovered = undefined;
       this.pointer = undefined;
     }
@@ -737,9 +743,11 @@ export class PreviewView extends ItemView {
 
   /** Pins the box under a click, and hands the pin to the plugin. */
   private async pins(at: { x: number; y: number }): Promise<void> {
-    const turn = (this.hovering += 1);
+    const turn = (this.clicking += 1);
+    // A hover still out is older than the click, and its answer is dropped.
+    this.hovering += 1;
     const found = await this.probe(at);
-    if (turn !== this.hovering || !this.inspecting.on) return;
+    if (turn !== this.clicking || !this.inspecting.on) return;
     this.hovered = found;
     if (found === undefined) {
       this.drawsOverlay();
@@ -747,7 +755,7 @@ export class PreviewView extends ItemView {
     }
     const anchor =
       found.target.kind === "node" ? await this.anchorOf(found.target.node) : undefined;
-    if (turn !== this.hovering || !this.inspecting.on) return;
+    if (turn !== this.clicking || !this.inspecting.on) return;
     const pin: Pin = {
       target: found.target,
       inspection: found.inspection,
