@@ -55,6 +55,8 @@ export interface Sending {
   ops: Op[];
   /** The images the ops put on the wire, for the registry to record. */
   images: Image[];
+  /** The embeds that brought no bytes, in reading order. */
+  unread: Unread[];
 }
 
 /** The prefix a generated section's name carries, so it is never read as a note's path. */
@@ -81,8 +83,9 @@ export async function sendBook(
   take: Take,
 ): Promise<Sending> {
   const sources = await bookSources(book, order, links, from, read);
-  const { images } = await bookImages(sources, links, take);
+  const { images, unread } = await bookImages(sources, links, take);
   return {
+    unread,
     ops: [
       { op: "dialect", dialect: "obsidian" },
       { op: "split", level: 0 },

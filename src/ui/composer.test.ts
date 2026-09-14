@@ -680,6 +680,36 @@ test("two font edits before the render still send the faces the first one planne
   assert.deepEqual(sentUrls(client.rendered.at(-1) ?? []), ["orca-font:junicode-regular"]);
 });
 
+test("a book keeps the uses that loaded no face and the embeds that brought no bytes", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+
+  // The fixture's one embed resolves, and its design names no font.
+  assert.deepEqual(book.unread, []);
+  assert.equal(book.images, 1);
+  assert.deepEqual(book.unloaded, []);
+
+  const note = "Copyright.md";
+  const text = `${await readText(vault, note)}\n\n![[nowhere.png]]\n`;
+  composer.retype(BOOK, note, text);
+  await crossed(book, clock);
+  const line = text.split("\n").indexOf("![[nowhere.png]]");
+  assert.deepEqual(book.unread, [{ url: "nowhere.png", note, line }]);
+
+  const use = { font: "Nowhere Sans", variant: undefined };
+  book.restyle(refonted(book.design, use.font), [
+    { use, registered: undefined, faces: [], fellBack: false, unread: true },
+  ]);
+  assert.deepEqual(book.unloaded, [{ use, unread: true }]);
+
+  // An embed taken back out of the note stops standing.
+  composer.retype(BOOK, note, `${text}.`.replace("![[nowhere.png]]", ""));
+  await crossed(book, clock);
+  assert.deepEqual(book.unread, []);
+});
+
 /** The design after a font pick, as the panel passes it to `restyle`. */
 function refonted(design: Design, font: string): Design {
   return { ...design, body: { ...design.body, font } };

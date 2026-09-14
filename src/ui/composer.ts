@@ -28,7 +28,9 @@ import {
   sendFaces,
   type Edit,
   type Face,
+  type Image,
   type Loaded,
+  type Unread,
 } from "@/book/plan";
 import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
@@ -39,6 +41,13 @@ import type { RuleFrom, Setting } from "@/style/generated";
 import { OWN_SHEET, designRuleAt, designSheets } from "@/style/sheet";
 import type { ResolvedUse } from "@/ui/fonts";
 import { bookName } from "@/ui/shelf";
+
+/** A font and variant the design sets that registered no face. */
+export interface Unloaded {
+  use: FontUse;
+  /** True when the font was found and its files would not read. */
+  unread: boolean;
+}
 
 /** The book, as much of it as crosses from the engine that died onto its next one. */
 export interface Replay {
@@ -88,6 +97,12 @@ export class Typeset {
   private designed: Design;
   /** The fonts and variants the faces sheet registers, one for each use the design sets. */
   private registered: Registered[];
+  /** The uses whose font files would not read, by their key. */
+  private readonly unreadFaces = new Set<string>();
+  /** The embeds each note has that brought no bytes, by the note's path. */
+  private readonly unreadIn = new Map<string, Unread[]>();
+  /** The urls of the images that resolved. */
+  private readonly resolvedImages = new Set<string>();
   private own: string;
   /** The author's CSS as the last render that landed set it. */
   private linted: string;
@@ -114,6 +129,12 @@ export class Typeset {
       design: Design;
       /** The faces the sheets register, for the uses the design sets. */
       registered: Registered[];
+      /** Each use the design sets as it resolved, loaded or not. */
+      resolved?: readonly ResolvedUse[];
+      /** The images that crossed. */
+      images?: readonly Image[];
+      /** The embeds that brought no bytes. */
+      unread?: readonly Unread[];
       /** The author's own CSS, the last of the sheets. */
       css: string;
       /** The order and the names the sheets were generated against. */
@@ -134,6 +155,13 @@ export class Typeset {
     this.loaded = { sheets: book.sheets };
     this.designed = book.design;
     this.registered = book.registered;
+    for (const each of book.resolved ?? []) {
+      if (each.unread) this.unreadFaces.add(useKey(each.use));
+    }
+    for (const image of book.images ?? []) this.resolvedImages.add(image.url);
+    for (const at of book.unread ?? []) {
+      this.unreadIn.set(at.note, [...(this.unreadIn.get(at.note) ?? []), at]);
+    }
     this.setting = book.setting;
     this.loop = new Loop((ops) => this.render(ops), clock);
   }
@@ -188,9 +216,13 @@ export class Typeset {
    * drafting is a second render rather than a book opened again.
    */
   private async embed(note: string, text: string): Promise<void> {
-    const { images: found } = await bookImages([{ name: note, text }], this.links, (at) =>
-      this.assets.take(at),
+    const { images: found, unread } = await bookImages(
+      [{ name: note, text }],
+      this.links,
+      (at) => this.assets.take(at),
     );
+    this.unreadIn.set(note, unread);
+    for (const image of found) this.resolvedImages.add(image.url);
     const fresh = found.filter(
       (image) => this.assets.imageUrl(image.url) === undefined,
     );
@@ -210,6 +242,29 @@ export class Typeset {
   }
 
   /**
+   * The uses the design sets that registered no face, so the PDF has
+   * none of theirs to embed. `unread` is set when the font was found
+   * and its files would not read.
+   */
+  get unloaded(): Unloaded[] {
+    const held = new Set(this.registered.map(useKey));
+    return designUses(this.designed).flatMap((use) => {
+      const key = useKey(use);
+      return held.has(key) ? [] : [{ use, unread: this.unreadFaces.has(key) }];
+    });
+  }
+
+  /** The embeds that brought no bytes, by note in the order the notes were read. */
+  get unread(): Unread[] {
+    return [...this.unreadIn.values()].flat();
+  }
+
+  /** The number of distinct image urls that resolved. */
+  get images(): number {
+    return this.resolvedImages.size;
+  }
+
+  /**
    * Sets the book under a design. It writes the faces sheet and the
    * generated layer again, and crosses any face a use newly resolved.
    * A face crosses the first time a variant is picked and stays
@@ -223,8 +278,11 @@ export class Typeset {
     this.designed = design;
     const held = new Map(this.registered.map((each) => [useKey(each), each]));
     for (const each of resolved) {
-      if (each.registered === undefined) held.delete(useKey(each.use));
-      else held.set(useKey(each.use), each.registered);
+      const key = useKey(each.use);
+      if (each.registered === undefined) held.delete(key);
+      else held.set(key, each.registered);
+      if (each.unread) this.unreadFaces.add(key);
+      else this.unreadFaces.delete(key);
     }
     const uses = new Set(designUses(design).map(useKey));
     this.registered = [...held].flatMap(([key, each]) => (uses.has(key) ? [each] : []));
@@ -518,7 +576,7 @@ export class Composer {
 
     const sent = new Map<string, string>();
     const assets = new Registry(this.vault.files);
-    const { ops, images } = await sendBook(
+    const { ops, images, unread } = await sendBook(
       model.book,
       model.order,
       this.vault.links,
@@ -572,6 +630,9 @@ export class Composer {
         links: this.vault.links,
         design,
         registered,
+        resolved,
+        images,
+        unread,
         css,
         setting,
       },
