@@ -146,6 +146,8 @@ export type Cut = "none" | "top" | "bottom" | "both";
 export interface Fragment {
   box: PageBox;
   cut: Cut;
+  /** Its place among the engine's boxes. A page can hold two boxes of one element, one per column, so the page does not name a piece. */
+  index: number;
 }
 
 /**
@@ -165,7 +167,7 @@ export function fragments(
     if (!pages.has(box.page)) return;
     const cut: Cut =
       last === 0 ? "none" : at === 0 ? "bottom" : at === last ? "top" : "both";
-    found.push({ box, cut });
+    found.push({ box, cut, index: at });
   });
   return found;
 }

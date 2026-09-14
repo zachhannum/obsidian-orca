@@ -159,7 +159,7 @@ function Outline({
   const pieces = fragments(inspection.boxes, frames.keys());
   return (
     <>
-      {pieces.map(({ box, cut }, at) => {
+      {pieces.map(({ box, cut, index }, at) => {
         const frame = frames.get(box.page);
         const trim = trims.get(box.page);
         if (frame === undefined || trim === undefined) return null;
@@ -170,7 +170,7 @@ function Outline({
         if (cut !== "none") edge.push(`is-cut-${cut}`);
         return (
           <div
-            key={box.page}
+            key={index}
             className="orca-inspect-frame"
             data-state={state}
             style={{

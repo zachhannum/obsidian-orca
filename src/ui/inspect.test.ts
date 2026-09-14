@@ -104,12 +104,33 @@ test("a box split across pages is drawn on each painted page, open on the cut si
   );
   // A page not painted draws nothing, and the cut still counts it.
   assert.deepEqual(fragments(boxes, new Set([5])), [
-    { box: boxes[2], cut: "top" },
+    { box: boxes[2], cut: "top", index: 2 },
   ]);
   assert.deepEqual(
     fragments(boxes.slice(0, 1), [3]).map((fragment) => fragment.cut),
     ["none"],
   );
+});
+
+test("two boxes of one element on the same page are two pieces, each named apart", () => {
+  // A section the engine sets in two places on one page answers with a
+  // box for each. The overlay keys a piece by its index, so a page does
+  // not name two pieces the same and a stale piece is not left behind.
+  const boxes: PageBox[] = [
+    { page: 3, x: 0, y: 40, width: 10, height: 200 },
+    { page: 4, x: 0, y: 0, width: 10, height: 300 },
+    { page: 4, x: 0, y: 340, width: 10, height: 200 },
+    { page: 5, x: 0, y: 0, width: 10, height: 20 },
+  ];
+  const pieces = fragments(boxes, [4]);
+  assert.deepEqual(
+    pieces.map(({ box, index }) => [box.page, index]),
+    [
+      [4, 1],
+      [4, 2],
+    ],
+  );
+  assert.equal(new Set(fragments(boxes, [3, 4, 5]).map(({ index }) => index)).size, boxes.length);
 });
 
 test("the tag names the element, the section's role and the size in the page unit", () => {
