@@ -4,10 +4,36 @@
  * application around it.
  */
 
-import { readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { vaultWritePath, type Sink } from "@/assets/destination";
 import { AssetError } from "@/assets/errors";
 import type { Listing, VaultAdapter } from "@/assets/vault";
+
+/**
+ * A sink for the Node tier. A vault destination lands under the root;
+ * a disk destination must be absolute and lands where it says.
+ */
+export function directorySink(root: string): Sink {
+  const vault = directoryVault(root);
+  return {
+    write: async (destination, bytes) => {
+      if (destination.kind === "vault") {
+        await vault.writeBinary(vaultWritePath(destination.path), bytes);
+        return;
+      }
+      if (!path.isAbsolute(destination.path)) {
+        throw new AssetError(`${destination.path} is not an absolute path`);
+      }
+      await writeAt(destination.path, bytes);
+    },
+  };
+}
+
+async function writeAt(full: string, bytes: Uint8Array): Promise<void> {
+  await mkdir(path.dirname(full), { recursive: true });
+  await writeFile(full, bytes);
+}
 
 export function directoryVault(root: string): VaultAdapter {
   const at = (file: string): string => resolve(root, file);
@@ -40,6 +66,7 @@ export function directoryVault(root: string): VaultAdapter {
       listing.folders.sort();
       return listing;
     },
+    writeBinary: (file, bytes) => writeAt(at(file), bytes),
   };
 }
 
