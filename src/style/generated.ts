@@ -4,8 +4,8 @@
  *
  * Each section crosses with its role as its class and a slug of its
  * name as its id. A role reaches the sheet as a page name and as the
- * ids of the sections that take it. The layer is generated again
- * whenever the order moves or a section is renamed.
+ * ids of the sections that have that role. The layer is generated again
+ * when the order changes or a section is renamed.
  *
  * Nothing here is written to the vault.
  */

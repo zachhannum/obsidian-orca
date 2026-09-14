@@ -63,7 +63,7 @@ export function Row({
   grid: boolean;
   reset: ReactNode;
   under: readonly Under[];
-  /** The design keys the row writes, which the inspect pane finds the row by. */
+  /** The design keys the row writes. The inspect pane finds the row by these keys. */
   keys?: readonly string[];
   children: ReactNode;
 }): JSX.Element {

@@ -41,7 +41,7 @@ test("an id is a slug of the entry's name, and generated matter is named by its 
     names.map((name) => name.id),
     ["title-page", "contents", "the-harbor", "elan-vital", "a-night-out"],
   );
-  // A slug a selector cannot read on its own takes the role in front.
+  // If CSS cannot read the slug as a selector, the role goes in front.
   assert.equal(slug("1984", "chapter"), "chapter-1984");
   assert.equal(slug("***", "chapter"), "chapter");
 });
@@ -132,6 +132,6 @@ test("a reorder moves no section's id", () => {
   }
 });
 
-// What this tier does not cover: an id reaching the engine and a
-// selector matching it, which the plan tier tests on the fixture book,
-// and a sheet written against an id, which is the style module's.
+// What this tier does not cover: the engine getting an id and a selector
+// matching it. The plan tier tests those on the fixture book. The style
+// module tests a sheet that names an id.

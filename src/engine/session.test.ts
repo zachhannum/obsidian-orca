@@ -856,8 +856,8 @@ test("a point in a paragraph hits it, and a point in the running head names its 
     await session.open(openBook({ name, text }));
     await session.render([styleOp([{ name: THEME_SHEET, css: RUNNING_HEAD }])]);
 
-    // The first paragraph carries no inline markup, so every point in
-    // its box is held by the paragraph itself.
+    // The first paragraph has no inline markup, so every point in its
+    // box hits the paragraph itself.
     const byte = new TextEncoder().encode(
       text.slice(0, text.indexOf("In consequence")),
     ).length;
@@ -908,7 +908,7 @@ function margin(element: string, boxes: Inspection["boxes"]): Inspection {
 // inside a leaf. Both wait on the e2e harness. It reads the PDF's header
 // and trailer only; `qpdf --check` and a `pdftotext` round trip wait on
 // the export flow. The window fetches run against a fake here, so what
-// the engine does with a range it cannot fill is the e2e run's to prove,
-// and so is which generation a real render comes back on. A point on a
-// spread is turned into a page and a point on it by the view, so that
-// waits on the view's own tests.
+// the engine does with a range it cannot fill is the e2e run's to prove.
+// So is the generation a real render comes back on. The view turns a
+// point on a spread into a page and a point on that page, so the view's
+// own tests cover that.

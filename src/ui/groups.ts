@@ -366,7 +366,7 @@ export function keysOf(group: Group): string[] {
 /** The control a generated rule came from, which a click in the inspect pane opens. */
 export interface Owner {
   group: string;
-  /** The row, when every key the rule read is in one row. A row with no label goes by its switch's words. */
+  /** The row, when every key the rule read is in one row. A row with no label uses the words of its switch. */
   row?: string;
   /** The heading level, for a rule a Headings key wrote. */
   level?: Level;

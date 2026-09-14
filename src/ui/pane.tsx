@@ -1,9 +1,9 @@
 /**
- * The inspect pane, at the top of the design panel's CSS view. It draws
- * the box pinned in the preview: its ancestors as crumbs, the rules the
- * engine matched grouped by the layer they came from, and a few
- * computed values. Orca computes none of it, and a warning the engine
- * gave keeps the engine's words.
+ * The inspect pane, at the top of the CSS view of the design panel. It
+ * shows the box pinned in the preview, with its ancestors as crumbs,
+ * the rules the engine matched by layer, and some computed values. Orca
+ * computes none of these. A warning from the engine keeps the engine's
+ * words.
  */
 
 import { Fragment, useEffect, useRef, useState, type JSX } from "react";
@@ -39,7 +39,6 @@ export interface Inspecting {
   caret: number | undefined;
 }
 
-/** The actions the pane asks of the panel. */
 export interface PaneActing {
   /** Puts the editor's caret on a line and column of the author's CSS, and focuses it. */
   cursor(line: number, column: number): void;
@@ -56,9 +55,9 @@ const LAYER_SAID: Readonly<Record<Layer, string>> = {
 };
 
 /**
- * Draws the pane. The panel keys it by the box, so the crumbs the
- * author picked stay while a refreshed pin names the same box and clear
- * for another.
+ * Draws the pane. The panel keys it by the box. The crumbs the author
+ * picked stay when a refreshed pin names the same box, and clear for
+ * another box.
  */
 export function InspectPane({
   inspecting,
@@ -191,7 +190,7 @@ function Rule({
 }: {
   layer: Layer;
   shown: ShownRule;
-  /** The margin box's at-rule, which follows the page selector a margin box rule matched by. */
+  /** The at-rule of the margin box. It follows the page selector that a margin box rule matched by. */
   box: string | undefined;
   acting: PaneActing;
 }): JSX.Element {

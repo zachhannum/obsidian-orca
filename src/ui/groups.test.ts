@@ -221,7 +221,7 @@ test("a generated rule names the control that wrote it", () => {
     row: "First-line indent",
     key: "body-first-line-indent",
   });
-  // A row with no label goes by its switch's words.
+  // A row with no label uses the words of its switch.
   assert.equal(controlOf({ keys: ["mirrored"] })?.row, "Mirror the margins on facing pages");
   // Keys across rows of one group name the group.
   assert.deepEqual(controlOf({ keys: ["margin-inside", "mirrored"] }), {

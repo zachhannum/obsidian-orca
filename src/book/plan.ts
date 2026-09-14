@@ -146,9 +146,10 @@ export async function bookImages(
  * sends again. A section with no note is dropped; the warning it
  * raised is `resolve`'s.
  *
- * Every source carries its names. A typed edit sends none, and the
- * engine keeps the ones the book op gave. A renamed entry changes the
- * book note, and the whole book crosses again with the new id.
+ * Every source carries its class and id. A typed edit sends neither,
+ * and the engine keeps the ones from the book op. A renamed entry
+ * changes the book note, so the whole book crosses again with the new
+ * id.
  *
  * The contents lists the parts and chapters as their notes read now. A
  * typed edit replaces only its own source, so a changed heading reaches
@@ -225,9 +226,9 @@ export type Edit =
   | { did: "styled"; sheets: Sheet[] }
   /**
    * Reordered chapters, so every source crosses in its new place. The
-   * sheets cross again with them, because the generated layer restarts
-   * the folio at the first part or chapter by its id, and that one may
-   * have moved.
+   * sheets cross again with them. The generated layer restarts the folio
+   * at the id of the first part or chapter, and a reorder can change
+   * which section that is.
    */
   | { did: "reordered"; sources: Source[]; sheets: Sheet[] }
   /** Picked a new family, and the cuts it is made of. */

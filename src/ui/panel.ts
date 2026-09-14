@@ -283,7 +283,7 @@ export class DesignPanelView extends ItemView {
     mounted.paint(this.shownFor(typeset, index));
   }
 
-  /** Paints the pane again when the caret moves, so it names the line a rule goes in at. */
+  /** Paints the pane again when the caret moves, so it shows the line where a new rule goes. */
   private moved(): void {
     const { mounted, showing, index, pinned } = this;
     if (mounted === undefined || showing === undefined || index === undefined) return;

@@ -251,7 +251,7 @@ export class Typeset {
     this.restyle(this.designed);
   }
 
-  /** The text a note last crossed as, which is the text the engine's byte offsets count. */
+  /** The text a note last crossed as. The engine counts its byte offsets in this text. */
   textOf(note: string): string | undefined {
     return this.sent.get(note);
   }

@@ -49,14 +49,11 @@ export interface CssEditor {
   flag(flags: readonly Flag[], against: string): void;
   /** Puts the caret at a line and column, scrolled into view. See {@link revealed}. */
   reveal(line: number, column: number): void;
-  /**
-   * Puts text in at the caret, as typing does, so it reaches the note.
-   * See {@link inserted}.
-   */
+  /** Puts text in at the caret, as typing does, so it reaches the note. */
   insert(text: string): void;
   /** The line and column of the caret, both counted from 1. */
   caret(): { line: number; column: number };
-  /** The warnings inside the rule that starts at a line and column. See {@link skippedIn}. */
+  /** The warnings inside the rule that starts at a line and column. */
   skipped(line: number, column: number): Skipped[];
   destroy(): void;
 }
@@ -244,10 +241,9 @@ function flagRange(state: EditorState, flag: Flag): { from: number; to: number }
 const RULE = /^(RuleSet|AtRule|\w+Statement)$/;
 
 /**
- * The text of the rule that starts at a line and column, both counted
- * from 1, as the engine names a matched rule. It is the innermost rule
- * the grammar puts that place in. A place outside every rule gives
- * nothing.
+ * The text of the rule that starts at a line and column. Both count from
+ * 1, as in a matched rule from the engine. The text is of the innermost
+ * rule that holds that place. A place outside every rule gives nothing.
  */
 export function ruleExtent(
   state: EditorState,

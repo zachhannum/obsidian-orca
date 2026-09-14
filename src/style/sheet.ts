@@ -35,9 +35,10 @@ export function designSheet(design: Design, setting: Setting): Sheet {
 }
 
 /**
- * The origin of the rule in `designSheet` that spans a line, counting
- * from 1. It merges the defaults the same way, so a line the engine
- * reports against the design sheet maps back to what wrote it.
+ * The origin of the rule in `designSheet` that spans a line. Lines
+ * count from 1. It merges the defaults the same way as `designSheet`,
+ * so a line the engine reports in the design sheet maps back to what
+ * wrote it.
  */
 export function designRuleAt(
   design: Design,

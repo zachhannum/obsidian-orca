@@ -246,9 +246,9 @@ export class Session {
   }
 
   /**
-   * The rules that styled one node, and where it is on the pages. A node id names
-   * a node only until the next edit. Nothing for matter the engine
-   * wrote itself, or a node the book does not hold.
+   * The rules that styled one node, and where the node is on the pages.
+   * A node id names a node only until the next edit. Nothing for matter
+   * the engine wrote itself, or for a node the book does not hold.
    */
   async inspect(node: number): Promise<Inspection | undefined> {
     const inspection = await routed(() => this.client.inspect(node));
@@ -256,8 +256,9 @@ export class Session {
   }
 
   /**
-   * The rules that styled one margin box of one page, counting from 0. Nothing
-   * for a blank page, or a box no rule for that page names.
+   * The rules that styled one margin box on one page. Pages count from 0.
+   * Nothing for a blank page, or for a box that no rule for that page
+   * names.
    */
   async inspectMarginBox(
     page: number,
@@ -270,9 +271,9 @@ export class Session {
   }
 
   /**
-   * The innermost element at a point on one page, counting from 0, in
-   * points from the page's top-left corner. Nothing over a margin box
-   * or outside every box.
+   * The innermost element at a point on one page. Pages count from 0,
+   * and the point is in points from the top-left corner of the page.
+   * Nothing over a margin box or outside every box.
    */
   async hit(page: number, x: number, y: number): Promise<number | undefined> {
     const node = await routed(() => this.client.hit(page, x, y));
@@ -280,8 +281,8 @@ export class Session {
   }
 
   /**
-   * The margin box at a point on one page, counting from 0. A page's
-   * sixteen boxes are asked about once per generation.
+   * The margin box at a point on one page. Pages count from 0. The
+   * session asks about the sixteen boxes of a page once per generation.
    */
   async marginBoxAt(
     page: number,

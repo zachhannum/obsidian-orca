@@ -13,10 +13,10 @@ export type Layer = "own" | "design" | "theme";
 /** The sheet name the engine gives its own sheet. */
 const USER_AGENT_SHEET = "user-agent.css";
 
-/** The layers in the order they are shown, the one that wins first. */
+/** The layers in the order the pane shows them. The layer that wins comes first. */
 const SHOWN: readonly Layer[] = ["own", "design", "theme"];
 
-/** A sheet orca did not send, and that is not the engine's, has no layer. */
+/** A sheet that orca did not send and that is not the engine's has no layer. */
 export function layerOf(sheet: string): Layer | undefined {
   if (sheet === OWN_SHEET) return "own";
   if (sheet === DESIGN_SHEET) return "design";
