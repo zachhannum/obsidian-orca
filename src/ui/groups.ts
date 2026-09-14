@@ -33,6 +33,7 @@ import {
 } from "@/style/design";
 import { ROLES, type Role } from "@/book/roles";
 import type { RuleFrom } from "@/style/generated";
+import type { Place } from "@/style/origin";
 
 /** One word a select or a segment offers, and the value it writes. */
 export interface Choice {
@@ -371,6 +372,18 @@ export function withVariant(design: Design, key: string, variant: Variant): Desi
 /** Returns a control's key at one heading level. A key with no level comes back unchanged. */
 export function atLevel(key: string, level: Level): string {
   return key.replace(LEVELED, `heading-${String(level)}-`);
+}
+
+/** The place that took over a row: the first of its keys, in row order, that the author's CSS beats. */
+export function takenOver(
+  keys: readonly string[],
+  overridden: ReadonlyMap<string, Place>,
+): { key: string; place: Place } | undefined {
+  for (const key of keys) {
+    const place = overridden.get(key);
+    if (place !== undefined) return { key, place };
+  }
+  return undefined;
 }
 
 /** Every design key a group can write, with a Headings key at every level. */

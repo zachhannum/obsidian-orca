@@ -1410,6 +1410,55 @@ button.orca-panel-tab.is-on {
   flex-basis: 100%;
 }
 
+/* A control the author's CSS has taken over dims where it sits. */
+.orca-panel-label.is-taken,
+.orca-panel-controls.is-taken,
+.orca-panel-cell.is-taken {
+  opacity: 0.42;
+}
+
+button.orca-panel-taken {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--size-2-1);
+  height: auto;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+  cursor: var(--cursor);
+}
+
+button.orca-panel-taken:hover {
+  text-decoration: underline;
+}
+
+.orca-panel-taken > b {
+  font-family: var(--font-monospace);
+  font-weight: var(--font-normal);
+}
+
+.orca-panel-taken-icon {
+  display: flex;
+}
+
+.orca-panel-taken-icon > svg {
+  width: 11px;
+  height: 11px;
+}
+
+.orca-panel-row.mod-grid > .orca-panel-taken {
+  margin-top: 7px;
+}
+
+.orca-panel-taken + .orca-panel-reset-slot {
+  margin-left: 0;
+}
+
 /* A line under a row sits under its controls rather than its label. */
 .orca-panel-under {
   margin-left: calc(96px + var(--size-4-2));

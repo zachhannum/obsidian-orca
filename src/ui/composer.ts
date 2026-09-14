@@ -38,6 +38,8 @@ import { Session, type FaceSet } from "@/engine/session";
 import { designFonts, designUses, useKey, type Design, type FontUse } from "@/style/design";
 import type { Registered } from "@/style/faces";
 import type { RuleFrom, Setting } from "@/style/generated";
+import type { Place } from "@/style/origin";
+import { designOverridden } from "@/style/overrides";
 import { OWN_SHEET, designRuleAt, designSheets } from "@/style/sheet";
 import type { ResolvedUse } from "@/ui/fonts";
 import { bookName } from "@/ui/shelf";
@@ -313,6 +315,14 @@ export class Typeset {
   /** The origin of the design sheet's rule that spans a line, counted from 1. */
   ruleAt(line: number): RuleFrom | undefined {
     return designRuleAt(this.designed, this.setting, line, this.registered);
+  }
+
+  /**
+   * The design keys the author's CSS beats, each with the place of the
+   * declaration that beats it. A refused declaration beats nothing.
+   */
+  overridden(refused: readonly Place[]): ReadonlyMap<string, Place> {
+    return designOverridden(this.designed, this.setting, this.own, this.registered, refused);
   }
 
   /** The author's own CSS the book is set under, which the note's fence holds. */

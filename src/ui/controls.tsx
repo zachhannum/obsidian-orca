@@ -12,6 +12,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type JSX,
@@ -46,6 +47,16 @@ export interface Under {
   wrong?: boolean;
 }
 
+/** The line of the author's CSS that took over a row. */
+export interface Taken {
+  line: number;
+  testid: string;
+  /** True when the CSS beats every key in the row, so the label dims too. */
+  every: boolean;
+  /** Opens the CSS view at that line. */
+  open: () => void;
+}
+
 /**
  * Draws one row of the panel. The row keeps the slot for the reset even
  * when it has no reset, so the controls do not move when the book starts
@@ -57,6 +68,7 @@ export function Row({
   reset,
   under,
   keys = [],
+  taken,
   children,
 }: {
   label: string;
@@ -65,22 +77,52 @@ export function Row({
   under: readonly Under[];
   /** The design keys the row writes. The inspect pane finds the row by these keys. */
   keys?: readonly string[];
+  /** Set when the author's CSS has overridden the row. */
+  taken?: Taken | undefined;
   children: ReactNode;
 }): JSX.Element {
+  const row = useRef<HTMLDivElement>(null);
+  const line = taken?.line;
+  // The e2e suite waits on this, so it is written once React commits.
+  useLayoutEffect(() => {
+    const element = row.current;
+    if (element === null) return;
+    if (line === undefined) element.removeAttribute("data-taken");
+    else element.setAttribute("data-taken", String(line));
+  }, [line]);
   return (
     <div
-      className="orca-panel-line"
+      ref={row}
+      className={classes("orca-panel-line", taken !== undefined && "mod-taken")}
       data-keys={keys.length === 0 ? undefined : keys.join(" ")}
     >
       <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
-        <span className="orca-panel-label">{label}</span>
+        <span
+          className={classes("orca-panel-label", taken?.every === true && "is-taken")}
+        >
+          {label}
+        </span>
         <div
-          className={
-            grid ? "orca-panel-controls orca-panel-grid" : "orca-panel-controls"
-          }
+          className={classes(
+            "orca-panel-controls",
+            grid && "orca-panel-grid",
+            !grid && taken !== undefined && "is-taken",
+          )}
         >
           {children}
         </div>
+        {taken === undefined ? null : (
+          <button
+            type="button"
+            className="orca-panel-taken"
+            data-testid={taken.testid}
+            aria-label={`Taken over by line ${String(taken.line)} of the book's CSS`}
+            onClick={taken.open}
+          >
+            <Icon name="lock" className="orca-panel-taken-icon" />
+            <b>line {taken.line}</b>
+          </button>
+        )}
         <div className="orca-panel-reset-slot">{reset}</div>
       </div>
       {under.map((line) => (

@@ -547,6 +547,54 @@ test("the CSS view edits the book's own fence, and the edit reaches the pages an
   await written(vault, own);
 });
 
+test("a control the author's CSS has taken over dims and names the line that took it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const before = await book.painted();
+  await panel.open();
+  const key = "body-first-line-indent";
+  const row = panel.row(key);
+  await expect(row).not.toHaveAttribute("data-taken");
+  await expect(panel.taken(key)).toHaveCount(0);
+
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  const typed = "\np + p { text-indent: 0; }";
+  await panel.typeCss(typed);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+
+  await panel.toControls.click();
+  await expect(row).toHaveAttribute("data-taken", line);
+  await expect(panel.taken(key)).toContainText(`line ${line}`);
+  await expect(panel.reset(key)).toHaveCount(0);
+  await expect(row.locator(".orca-panel-label")).toHaveCSS("opacity", "0.42");
+  await expect(panel.control(key)).toBeVisible();
+
+  // The lock is the way to the line.
+  await panel.taken(key).click();
+  await expect(panel.panel).toHaveAttribute("data-viewing", "css");
+  await expect(panel.caretLine).toHaveText(line);
+
+  // Taking the rule out gives the control back.
+  const taken = await book.painted();
+  await panel.code.press("ControlOrMeta+End");
+  for (let at = 0; at < typed.length; at += 1) await panel.code.press("Backspace");
+  await expect.poll(async () => vault.read(BOOK)).not.toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(taken);
+  await panel.toControls.click();
+  await expect(row).not.toHaveAttribute("data-taken");
+  await expect(panel.taken(key)).toHaveCount(0);
+
+  await written(vault, own);
+});
+
 test("a long line in the CSS view scrolls sideways until the author wraps it", async ({
   book,
   panel,
