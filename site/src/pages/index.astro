@@ -804,7 +804,10 @@ const swap = {
     display: block;
     max-width: 100%;
     height: auto;
-    filter: drop-shadow(0 24px 48px rgb(0 0 0 / 0.35));
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 1px var(--o-border),
+      0 40px 80px -24px rgba(0, 0, 0, 0.85);
   }
 
   .vault-shots img {

@@ -371,14 +371,11 @@ test("the export picture is the dialog on the sample book, with the preflight pa
     await settled(site.book);
     await exporting.open();
     await exporting.reaches("ready");
-    await site.obsidian.alone();
-    await expect(exporting.dialog).toHaveScreenshot(`export-${scheme}.png`, {
-      omitBackground: true,
-    });
+    // The dialog is cropped tight with its corners squared, like the other
+    // pictures of a pane, and the page draws the frame.
+    const clip = await site.obsidian.unframed(exporting.dialog);
+    await expect(site.obsidian.page).toHaveScreenshot(`export-${scheme}.png`, { clip });
     await exporting.close();
-    // The book is hidden while the dialog is photographed, and the next
-    // scheme waits on its pages being visible.
-    await site.obsidian.moving();
   }
 
   await site.obsidian.moving();
