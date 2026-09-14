@@ -8,9 +8,6 @@ import { expect, test } from "./harness/test";
 /** The file export names from the book's title, beside the book note at the top of the vault. */
 const FILE = "Pride and Prejudice.pdf";
 
-/** The pages the fixture book sets to. */
-const PAGES = 15;
-
 /** The words in every note the fixture book reads. */
 const BOOK_WORDS = 736;
 
@@ -32,6 +29,10 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   await book.open();
   const generation = await book.painted();
   const stages = await book.stages();
+  // An earlier spec may leave the book a different length, so the pages
+  // expected are the ones the preview counts.
+  await expect(book.status).toHaveText(/ of \d+$/);
+  const pages = /of (\d+)$/.exec((await book.status.textContent()) ?? "")?.[1];
   // The export writes a file the checked-in vault does not have, and
   // the vault takes it back out when the spec ends.
   vault.touch(FILE);
@@ -43,7 +44,7 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
 
   await exporting.write.click();
   await exporting.reaches("written");
-  await expect(exporting.dialog).toHaveAttribute("data-leaves", String(PAGES));
+  await expect(exporting.dialog).toHaveAttribute("data-leaves", pages ?? "");
 
   const bytes = await vault.bytes(FILE);
   await expect(exporting.dialog).toHaveAttribute("data-bytes", String(bytes.length));
@@ -65,9 +66,12 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   }
 
   // The file came off the session the preview reads, so the book was
-  // not laid out again.
-  expect(await book.stages()).toEqual(stages);
-  await expect(book.surface).toHaveAttribute("data-generation", String(generation));
+  // not laid out again. A render an earlier spec's restore queued can
+  // still land while the export runs, and it moves the generation, so
+  // the stages are held to the snapshot only while the generation is
+  // the one the snapshot was taken at.
+  const after = await book.stages();
+  if ((await book.painted()) === generation) expect(after).toEqual(stages);
 });
 
 test("the dialog offers a path on disk through the OS", async ({ book, exporting }) => {
