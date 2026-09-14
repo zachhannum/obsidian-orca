@@ -20,6 +20,7 @@ import { Registry, SENT_NOTHING, type Sent } from "@/assets/registry";
 import { readText, type VaultAdapter } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
+import { sectionIds } from "@/book/names";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder, resolve } from "@/book/order";
 import { emptyDesign } from "@/style/design";
@@ -30,7 +31,6 @@ import {
   sendBook,
   sendEdit,
   sendFaces,
-  sentRoles,
   type Edit,
   type Face,
   type Loaded,
@@ -670,7 +670,7 @@ async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
       ...sendFaces(faces),
       styleOp(
         designSheets(model.book.design, {
-          roles: sentRoles(sections),
+          sections: sectionIds(sections),
           title,
           author,
           publisher,

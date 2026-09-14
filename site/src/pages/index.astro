@@ -2,6 +2,7 @@
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { readModel } from '@/book/model';
+import { slug } from '@/book/names';
 import { writeDesign } from '@/style/design';
 import { effective } from '@/style/theme';
 import { GROUPS, atLevel, type Group } from '@/ui/groups';
@@ -176,7 +177,7 @@ const demo = {
   // key to clear.
   design: writeDesign(design),
   setting: {
-    roles: ['chapter'] as const,
+    sections: [{ role: 'chapter' as const, id: slug(CHAPTER, 'chapter') }],
     title: metadata.title,
     author: metadata.author,
   },

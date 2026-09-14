@@ -16,6 +16,7 @@ import type { VaultAdapter } from "@/assets/vault";
 import { bookCss } from "@/book/css";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
+import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { sourceNamed } from "@/book/pages";
@@ -25,7 +26,6 @@ import {
   sendBook,
   sendEdit,
   sendFaces,
-  sentRoles,
   type Edit,
   type Face,
   type Loaded,
@@ -518,7 +518,7 @@ export class Composer {
     const design: Design = carried?.design ?? model.book.design;
     const { title, author, publisher, language } = model.book.metadata;
     const setting: Setting = carried?.setting ?? {
-      roles: sentRoles(sections),
+      sections: sectionIds(sections),
       title,
       author,
       publisher,

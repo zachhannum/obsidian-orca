@@ -30,7 +30,6 @@ import {
   type Order,
   type Section,
 } from "@/book/order";
-import type { Role } from "@/book/roles";
 
 /** Reads a section's note, by its vault path. `ui` implements this over the vault. */
 export interface Read {
@@ -196,16 +195,6 @@ function sendable(section: Section): section is Sendable {
 }
 
 /**
- * The role of each section that crosses, in the order the engine
- * counts them. The generated layer reaches a role by counting. It
- * counts the sections that are sent rather than the ones the note
- * lists.
- */
-export function sentRoles(sections: readonly Section[]): Role[] {
-  return sections.filter(sendable).map((section) => section.entry.role);
-}
-
-/**
  * A generated section's markdown, read from the book's properties each
  * time the book is sent. A title page is the series, the title, the
  * author and the publisher, in that order, and each one that is set is
@@ -236,8 +225,9 @@ export type Edit =
   | { did: "styled"; sheets: Sheet[] }
   /**
    * Reordered chapters, so every source crosses in its new place. The
-   * sheets cross again with them, because the generated layer reaches
-   * a role by counting and the count moved.
+   * sheets cross again with them, because the generated layer restarts
+   * the folio at the first part or chapter by its id, and that one may
+   * have moved.
    */
   | { did: "reordered"; sources: Source[]; sheets: Sheet[] }
   /** Picked a new family, and the cuts it is made of. */

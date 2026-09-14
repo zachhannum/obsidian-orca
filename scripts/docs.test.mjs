@@ -643,7 +643,7 @@ function pageUnder(engine, design) {
   try {
     session.setDialect("obsidian");
     session.setSplit(0);
-    session.setMarkdown(DEMO_CHAPTER, engine.text);
+    session.setSources([DEMO_CHAPTER], [engine.text], [engine.attributes]);
     session.setStyle(["generated.css"], [css]);
     return JSON.stringify(decodeDisplayList(session.preview(0, 1)).pages[0]);
   } finally {
@@ -657,6 +657,7 @@ test("every control the demo offers changes the page the demo shows", async () =
   const { effective } = await moduleOf("src/style/theme.ts");
   const { designSheets } = await moduleOf("src/style/sheet.ts");
   const { readModel } = await moduleOf("src/book/model.ts");
+  const { slug } = await moduleOf("src/book/names.ts");
   const { WORKS } = await moduleOf("site/src/scripts/demo.ts");
 
   const require = createRequire(import.meta.url);
@@ -664,10 +665,14 @@ test("every control the demo offers changes the page the demo shows", async () =
   await initWasm({ module_or_path: await readFile(path.join(wasm, "fleuron_bg.wasm")) });
 
   const { design, metadata } = readModel(await read(SAMPLE_BOOK)).book;
+  // The chapter crosses with its role as its class and a slug of its
+  // name as its id, as the plugin sends it.
+  const section = { role: "chapter", id: slug(path.basename(DEMO_CHAPTER, ".md"), "chapter") };
   const engine = {
     designSheets,
     text: await read(DEMO_CHAPTER),
-    setting: { roles: ["chapter"], title: metadata.title, author: metadata.author },
+    setting: { sections: [section], title: metadata.title, author: metadata.author },
+    attributes: JSON.stringify({ classes: [section.role], id: section.id }),
   };
   // The demo opens on the design the panel shows, defaults filled in.
   const opens = readDesign(writeDesign(effective(design)));

@@ -8,10 +8,11 @@ import {
 } from "obsidian";
 import { contentKey, type Hashed } from "@/assets/registry";
 import { readModel, type Model } from "@/book/model";
+import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
 import { resolve } from "@/book/order";
 import { sectionRanges, type Range } from "@/book/pages";
-import { sendBook, sentRoles } from "@/book/plan";
+import { sendBook } from "@/book/plan";
 import { countWords } from "@/book/words";
 import type { Engines } from "@/engine/pool";
 import type { PageUnit } from "@/style/design";
@@ -382,7 +383,7 @@ export class BookView extends FileView {
         ...ops,
         styleOp(
           designSheets(shown.model.book.design, {
-            roles: sentRoles(sections),
+            sections: sectionIds(sections),
             title,
             author,
             publisher,

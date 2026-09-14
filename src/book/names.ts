@@ -30,9 +30,8 @@ export function slug(name: string, fallback: string): string {
 }
 
 /**
- * The classes and id of each section that crosses, in the order the
- * engine counts them, the same order `sentRoles` gives. A section with
- * no note is not sent and takes no name.
+ * The classes and id of each section that crosses, in reading order. A
+ * section with no note is not sent and takes no name.
  */
 export function sectionNames(sections: readonly Section[]): Attributes[] {
   return sectionIds(sections).map(({ role, id }) => ({ classes: [role], id }));

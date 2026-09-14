@@ -2,15 +2,15 @@
  * The layer a design generates: the settings as CSS, sent between the
  * theme and the author's own sheet.
  *
- * A role cannot be written as a class, because the engine's sections
- * carry neither a class nor an id. Orca counts the reading order
- * instead, so a role reaches the sheet as a page name and a set of
- * `:nth-child()` positions. Position works because orca owns the order
- * it counts. The layer is generated again whenever that order moves.
+ * Each section crosses with its role as its class and a slug of its
+ * name as its id. A role reaches the sheet as a page name and as the
+ * ids of the sections that take it. The layer is generated again
+ * whenever the order moves or a section is renamed.
  *
  * Nothing here is written to the vault.
  */
 
+import type { Named } from "@/book/names";
 import type { Role } from "@/book/roles";
 import {
   LEVELS,
@@ -27,8 +27,8 @@ import {
 
 /** The reading order and the names a generated layer is written against. */
 export interface Setting {
-  /** The role of each section that crosses, in reading order. */
-  roles: readonly Role[];
+  /** The role and id of each section that crosses, in reading order. */
+  sections: readonly Named[];
   /** The book's title, which a running head can name. */
   title?: string;
   /** The book's author, which a running head can name. */
@@ -268,7 +268,7 @@ function frontPages(placed: Placement, setting: Setting): (Rule | undefined)[] {
           ]),
       ),
     );
-  return front(setting.roles).flatMap((role) => [
+  return front(roles(setting)).flatMap((role) => [
     block(`@page ${role}`, roman(placed.both), role),
     block(`@page ${role}:left`, roman(placed.left), role),
     block(`@page ${role}:right`, roman(placed.right), role),
@@ -289,7 +289,7 @@ function openingPages(
   const cleared = printed(placed);
   if (cleared.length === 0) return [];
   const suppress = headers.suppressOnOpenings === undefined ? [] : ["suppress-head-on-openings"];
-  return used(setting.roles).map((role) =>
+  return used(roles(setting)).map((role) =>
     block(
       `@page ${role}:first`,
       cleared.map((box) =>
@@ -391,12 +391,12 @@ function typeLines(type: TypeSpec, level: Level): Declaration[] {
 }
 
 function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
-  const rules = used(setting.roles).map((role) => {
+  const rules = used(roles(setting)).map((role) => {
     const lines = [declared("page", role)];
     if (role === "chapter" && design.chapter.begins !== undefined) {
       lines.push(declared("break-before", BREAKS[design.chapter.begins], ["chapter-begins"]));
     }
-    return block(positions(setting.roles, role) ?? "", lines, role);
+    return block(sectionsOf(setting.sections, role) ?? "", lines, role);
   });
   return [...rules, ...restart(setting), ...chapterRules(design, setting)];
 }
@@ -407,13 +407,14 @@ function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
  * first page already.
  */
 function restart(setting: Setting): (Rule | undefined)[] {
-  const start = bodyStart(setting.roles);
-  if (start === undefined || start === 0) return [];
+  const start = bodyStart(roles(setting));
+  const opening = start === undefined ? undefined : setting.sections[start];
+  if (start === 0 || opening === undefined) return [];
   return [
     block(
-      `section:nth-child(${start + 1})`,
+      `section#${opening.id}`,
       [declared("counter-reset", "page 1")],
-      setting.roles[start],
+      opening.role,
     ),
   ];
 }
@@ -430,7 +431,7 @@ function restart(setting: Setting): (Rule | undefined)[] {
  * box that starts a page.
  */
 function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
-  const chapters = positions(setting.roles, "chapter");
+  const chapters = sectionsOf(setting.sections, "chapter");
   if (chapters === undefined) return [];
   const { dropCap } = design.chapter;
   return [
@@ -479,7 +480,7 @@ const IMPRINT_GAP = 10;
  * page, so the publisher sits a set number of lines under the author.
  */
 function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] {
-  const page = positions(setting.roles, "title-page");
+  const page = sectionsOf(setting.sections, "title-page");
   if (page === undefined) return [];
   const role = "title-page";
   const line = bodyLines(1, design);
@@ -520,7 +521,7 @@ function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] 
  * negative margin, so the folio moves by relative position instead.
  */
 function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
-  const contents = positions(setting.roles, "contents");
+  const contents = sectionsOf(setting.sections, "contents");
   if (contents === undefined) return [];
   const role = "contents";
   const format = COUNTERS[design.headers.pageNumberFormat ?? "arabic"];
@@ -623,13 +624,17 @@ function sceneKeys(scene: SceneDesign): string[] {
   return [...mark, "scene-break-ornament"];
 }
 
-/** The places a role sits, as one selector, or nothing when it sits nowhere. */
-function positions(roles: readonly Role[], role: Role): string | undefined {
-  const found = roles.flatMap((each, index) =>
-    each === role ? [`section:nth-child(${index + 1})`] : [],
+/** The sections a role sits in, as one selector by id, or nothing when it sits nowhere. */
+function sectionsOf(sections: readonly Named[], role: Role): string | undefined {
+  const found = sections.flatMap((each) =>
+    each.role === role ? [`section#${each.id}`] : [],
   );
   if (found.length === 0) return undefined;
   return found.length === 1 ? found[0] : `:is(${found.join(", ")})`;
+}
+
+function roles(setting: Setting): Role[] {
+  return setting.sections.map((section) => section.role);
 }
 
 /** The index of the first part or chapter, where the body starts. */

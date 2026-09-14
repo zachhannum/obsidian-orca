@@ -56,11 +56,20 @@ export async function startTypeset(
   /**
    * The book, as the ops one chapter takes. The chapter is one section,
    * as the plugin sends it, so a heading over its title stays with it.
+   * It crosses with the class and id the setting names it by.
    */
+  const section = setting.sections[0];
   const opened = (sets: Design): Op[] => [
     { op: 'dialect', dialect: 'obsidian' },
     { op: 'split', level: 0 },
-    { op: 'markdown', name: source.name, text: source.text },
+    {
+      op: 'book',
+      sources: [
+        section === undefined
+          ? source
+          : { ...source, attributes: { classes: [section.role], id: section.id } },
+      ],
+    },
     styleOp(designSheets(sets, setting)),
   ];
 
