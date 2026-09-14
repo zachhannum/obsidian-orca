@@ -20,6 +20,7 @@ import type { Hashed, Sent } from "@/assets/registry";
 import { contentsMarkdown, firstHeading, type Listed } from "@/book/contents";
 import { imagesIn } from "@/book/images";
 import type { Links } from "@/book/links";
+import { sectionNames } from "@/book/names";
 import { documentMetadata, imprint } from "@/book/metadata";
 import type { Book } from "@/book/note";
 import {
@@ -146,6 +147,10 @@ export async function bookImages(
  * sends again. A section with no note is dropped; the warning it
  * raised is `resolve`'s.
  *
+ * Every source carries its names. A typed edit sends none, and the
+ * engine keeps the ones the book op gave. A renamed entry changes the
+ * book note, and the whole book crosses again with the new id.
+ *
  * The contents lists the parts and chapters as their notes read now. A
  * typed edit replaces only its own source, so a changed heading reaches
  * the contents the next time the whole book is sent.
@@ -173,11 +178,17 @@ export async function bookSources(
     const path = section.path;
     return [heading === undefined ? { kind, label, path } : { kind, label, path, heading }];
   });
-  return present.map((section, at) =>
-    section.kind === "note"
-      ? { name: section.path, text: texts[at] ?? "" }
-      : { name: `${GENERATED_ORIGIN}:${at}`, text: matter(section.entry, book, listed) },
-  );
+  const names = sectionNames(present);
+  return present.map((section, at) => {
+    const attributes = names[at] ?? {};
+    return section.kind === "note"
+      ? { name: section.path, text: texts[at] ?? "", attributes }
+      : {
+          name: `${GENERATED_ORIGIN}:${at}`,
+          text: matter(section.entry, book, listed),
+          attributes,
+        };
+  });
 }
 
 function sendable(section: Section): section is Sendable {
