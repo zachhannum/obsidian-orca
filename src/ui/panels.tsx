@@ -55,9 +55,12 @@ import {
   trims,
   withKey,
   type Control,
+  type Owner,
   type Row as Listed,
 } from "@/ui/groups";
+import { boxKey } from "@/ui/inspect";
 import { hyphenating } from "@/ui/language";
+import { InspectPane, type Inspecting } from "@/ui/pane";
 import { picking } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
@@ -71,6 +74,10 @@ export interface Acting {
   view(viewing: Viewing): void;
   /** Switches the CSS view between wrapping long lines and scrolling them sideways. */
   wrap(on: boolean): void;
+  /** Puts the editor's caret at a line and column of the author's CSS, and focuses it. */
+  cursor(line: number, column: number): void;
+  /** Puts text in at the editor's caret, as typing does. */
+  add(text: string): void;
 }
 
 /** The panel's two views. In the CSS view the panel draws its header, and the editor under it is not React's. */
@@ -96,6 +103,8 @@ export type Shown =
       missing: readonly string[];
       /** The warnings against the author's CSS, which the CSS view counts. */
       warned: number;
+      /** The box pinned in the preview, which the CSS view draws the inspect pane for. */
+      inspecting: Inspecting | undefined;
     }
   | { kind: "reading" }
   | { kind: "none" };
@@ -150,6 +159,21 @@ export function Panel({
 }): JSX.Element {
   // The panel owns the level, not the book, so the level starts on H1.
   const [level, choose] = useState<Level>(1);
+  // The control a rule in the inspect pane asked for, until its row is scrolled to.
+  const [opening, setOpening] = useState<Owner | undefined>(undefined);
+  const panel = useRef<HTMLDivElement>(null);
+  const viewing = shown.kind === "book" ? shown.viewing : undefined;
+  useEffect(() => {
+    const element = panel.current;
+    if (opening === undefined || viewing !== "controls" || element === null) return;
+    const row =
+      opening.key === undefined
+        ? null
+        : element.querySelector(`[data-keys~="${CSS.escape(opening.key)}"]`);
+    const group = element.querySelector(`[data-group="${CSS.escape(opening.group)}"]`);
+    (row ?? group)?.scrollIntoView({ block: "center" });
+    setOpening(undefined);
+  }, [opening, viewing]);
   if (shown.kind === "none") {
     return (
       <div className="orca-panel-empty" data-testid="orca-panel-empty">
@@ -211,12 +235,33 @@ export function Panel({
   if (css) {
     return (
       <div
+        ref={panel}
         className="orca-panel"
         data-testid="orca-panel"
         data-book={shown.name}
         data-viewing="css"
       >
         {header}
+        {shown.inspecting === undefined ? null : (
+          <InspectPane
+            key={boxKey(shown.inspecting.pin)}
+            inspecting={shown.inspecting}
+            unit={shown.unit}
+            acting={{
+              cursor: (line, column) => {
+                acting.cursor(line, column);
+              },
+              add: (text) => {
+                acting.add(text);
+              },
+              open: (owner) => {
+                if (owner.level !== undefined) choose(owner.level);
+                setOpening(owner);
+                acting.view("controls");
+              },
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -229,6 +274,7 @@ export function Panel({
   };
   return (
     <div
+      ref={panel}
       className="orca-panel"
       data-testid="orca-panel"
       data-book={shown.name}
@@ -340,7 +386,13 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
 
   const grid = line.grid === true;
   return (
-    <Row label={line.label} grid={grid} reset={reset} under={under}>
+    <Row
+      label={line.label}
+      grid={grid}
+      reset={reset}
+      under={under}
+      keys={keyed.map(({ key }) => key)}
+    >
       {line.of.map((control) => (
         <Beside
           key={control.key === undefined ? control.kind : atLevel(control.key, level)}

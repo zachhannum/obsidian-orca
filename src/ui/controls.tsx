@@ -56,16 +56,22 @@ export function Row({
   grid,
   reset,
   under,
+  keys = [],
   children,
 }: {
   label: string;
   grid: boolean;
   reset: ReactNode;
   under: readonly Under[];
+  /** The design keys the row writes, which the inspect pane finds the row by. */
+  keys?: readonly string[];
   children: ReactNode;
 }): JSX.Element {
   return (
-    <div className="orca-panel-line">
+    <div
+      className="orca-panel-line"
+      data-keys={keys.length === 0 ? undefined : keys.join(" ")}
+    >
       <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
         <span className="orca-panel-label">{label}</span>
         <div

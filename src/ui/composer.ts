@@ -34,8 +34,8 @@ import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
 import { designFonts, type Design } from "@/style/design";
-import type { Setting } from "@/style/generated";
-import { OWN_SHEET, designSheets } from "@/style/sheet";
+import type { RuleFrom, Setting } from "@/style/generated";
+import { OWN_SHEET, designRuleAt, designSheets } from "@/style/sheet";
 import { bookName } from "@/ui/shelf";
 
 /** The book, as much of it as crosses from the engine that died onto its next one. */
@@ -224,6 +224,11 @@ export class Typeset {
       faces,
       sheets,
     });
+  }
+
+  /** The origin of the design sheet's rule that spans a line, counted from 1. */
+  ruleAt(line: number): RuleFrom | undefined {
+    return designRuleAt(this.designed, this.setting, line);
   }
 
   /** The author's own CSS the book is set under, which the note's fence holds. */

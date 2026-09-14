@@ -3,12 +3,16 @@ import { test } from "node:test";
 import type { Inspection, NodeSource, PageBox } from "fleuron";
 import {
   INSPECT_OFF,
+  boxKey,
   computedRows,
+  crumbsOf,
   escape,
   fragments,
   layersOf,
   mapAnchor,
   pointOn,
+  ruleFor,
+  selectorFor,
   stillPinned,
   tagOf,
   targetKey,
@@ -189,6 +193,60 @@ test("a point on a page element converts to points from the page's corner", () =
   const trim = { width: 432, height: 648 };
   assert.deepEqual(pointOn(rect, trim, 250, 275), { x: 216, y: 324 });
   assert.equal(pointOn(rect, trim, 99, 60), undefined);
+});
+
+test("a crumb names a section by its id with its class faint, and the box comes last", () => {
+  const found = inspection();
+  assert.deepEqual(crumbsOf(found), [
+    { name: "book", faint: undefined, ancestor: 0 },
+    { name: "section#the-harbor", faint: "chapter", ancestor: 1 },
+    { name: "p", faint: undefined, ancestor: undefined },
+  ]);
+  const head = inspection({
+    node: null,
+    element: "@top-left",
+    ancestors: [],
+    page: "@page :left",
+  });
+  assert.deepEqual(
+    crumbsOf(head).map(({ name, ancestor }) => [name, ancestor]),
+    [
+      ["@page :left", undefined],
+      ["@top-left", undefined],
+    ],
+  );
+});
+
+test("a picked crumb joins the selector, by `>` for a parent and a space for any other", () => {
+  const found = inspection();
+  assert.equal(selectorFor(found, []), "p");
+  assert.equal(selectorFor(found, [1]), "section#the-harbor > p");
+  assert.equal(selectorFor(found, [0]), "book p");
+  assert.equal(selectorFor(found, [1, 0]), "book > section#the-harbor > p");
+  // A place past the chain is not a crumb.
+  assert.equal(selectorFor(found, [7]), "p");
+  // A section pinned itself is named by its id, never by its place.
+  const section = inspection({
+    element: "section",
+    id: "chapter-twelve",
+    classes: ["chapter"],
+    ancestors: [{ node: null, element: "book", id: null, classes: [] }],
+  });
+  assert.equal(selectorFor(section, []), "section#chapter-twelve");
+});
+
+test("an added rule is empty, and a margin box's sits inside its page rule", () => {
+  assert.equal(ruleFor(inspection(), [1]), "section#the-harbor > p {\n  \n}");
+  const head = inspection({ node: null, element: "@top-left", ancestors: [], page: "@page :left" });
+  assert.equal(selectorFor(head, [0]), "@top-left");
+  assert.equal(ruleFor(head, []), "@page :left {\n  @top-left {\n    \n  }\n}");
+});
+
+test("a refreshed pin on the same box keeps its key, and another box does not", () => {
+  const again: Pin = { ...pin, generation: 4, inspection: inspection({ rules: [] }) };
+  assert.equal(boxKey(again), boxKey(pin));
+  const other: Pin = { ...pin, target: { kind: "node", node: 13 } };
+  assert.notEqual(boxKey(other), boxKey(pin));
 });
 
 // What this tier does not cover: the overlay in a painted preview, the

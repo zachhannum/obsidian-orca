@@ -7,7 +7,9 @@ import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
 import type { Pin } from "@/ui/inspect";
 import { Settled } from "@/ui/settled";
-import { withKey } from "@/ui/groups";
+import { groupRules } from "@/style/layers";
+import { controlOf, withKey } from "@/ui/groups";
+import type { Inspecting } from "@/ui/pane";
 import { missingFont, missingFonts } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
@@ -97,6 +99,12 @@ export class DesignPanelView extends ItemView {
         this.editor?.wrap(on);
         this.refresh();
       },
+      cursor: (line, column) => {
+        this.editor?.reveal(line, column);
+      },
+      add: (text) => {
+        this.editor?.insert(text);
+      },
     });
     this.contentEl.addClass("orca-design");
     this.editorHost = this.contentEl.createDiv({
@@ -155,9 +163,16 @@ export class DesignPanelView extends ItemView {
     if (!shown) return;
     let editor = this.editor;
     if (editor === undefined) {
-      editor = mountEditor(host, typeset.css, (css) => {
-        this.recss(css);
-      });
+      editor = mountEditor(
+        host,
+        typeset.css,
+        (css) => {
+          this.recss(css);
+        },
+        () => {
+          this.moved();
+        },
+      );
       editor.wrap(this.wrapping);
       this.editor = editor;
     } else editor.show(typeset.css);
@@ -263,8 +278,17 @@ export class DesignPanelView extends ItemView {
     this.index = index;
     if (run !== this.painting) return;
     this.watch(typeset);
-    mounted.paint(this.shownFor(typeset, index));
+    // The editor goes first, so the pane reads the flags of this render.
     this.edit(typeset);
+    mounted.paint(this.shownFor(typeset, index));
+  }
+
+  /** Paints the pane again when the caret moves, so it names the line a rule goes in at. */
+  private moved(): void {
+    const { mounted, showing, index, pinned } = this;
+    if (mounted === undefined || showing === undefined || index === undefined) return;
+    if (pinned === undefined) return;
+    mounted.paint(this.shownFor(showing, index));
   }
 
   /** Follows the book's renders, so the styles appear as the engine returns them. */
@@ -278,8 +302,9 @@ export class DesignPanelView extends ItemView {
   private async painted(typeset: Typeset): Promise<void> {
     const mounted = this.mounted;
     if (mounted === undefined) return;
-    mounted.paint(this.shownFor(typeset, await this.designing.index()));
+    const index = await this.designing.index();
     this.edit(typeset);
+    mounted.paint(this.shownFor(typeset, index));
   }
 
   /** The panel's state for one book, from the engine and the index. */
@@ -295,7 +320,34 @@ export class DesignPanelView extends ItemView {
       language: typeset.language,
       missing: this.warnings(index, typeset.design),
       warned: cssFlags(typeset.session.warnings).length,
+      inspecting: this.inspecting(typeset),
     };
+  }
+
+  /**
+   * The pinned box as the pane draws it. A design panel rule names the
+   * control that wrote it, and an author's rule carries the flags the
+   * editor holds inside it.
+   */
+  private inspecting(typeset: Typeset): Inspecting | undefined {
+    const pin = this.pinned;
+    if (pin === undefined) return undefined;
+    const editor = this.editor;
+    const layers = groupRules(pin.inspection.rules).map(({ layer, rules }) => ({
+      layer,
+      rules: rules.map((rule) => {
+        const from = layer === "design" ? typeset.ruleAt(rule.line) : undefined;
+        return {
+          rule,
+          owner: from === undefined ? undefined : controlOf(from),
+          skipped:
+            layer === "own" && editor !== undefined
+              ? editor.skipped(rule.line, rule.column)
+              : [],
+        };
+      }),
+    }));
+    return { pin, layers, caret: editor?.caret().line };
   }
 
   /** The warnings for the fonts a design asks for, the body's and each heading level's. */

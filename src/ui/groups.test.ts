@@ -6,7 +6,9 @@ import {
   GROUPS,
   PANEL_KEYS,
   atLevel,
+  controlOf,
   defaultSaid,
+  ownerSaid,
   inUnit,
   keysOf,
   stepSaid,
@@ -210,6 +212,34 @@ test("a length the schema cannot read leaves the design as it was", () => {
   assert.deepEqual(writeDesign(withKey(design, "body-size", "10.5px")), {
     "body-size": "10.5pt",
   });
+});
+
+test("a generated rule names the control that wrote it", () => {
+  // One key names its row.
+  assert.deepEqual(controlOf({ keys: ["body-first-line-indent"] }), {
+    group: "Text",
+    row: "First-line indent",
+    key: "body-first-line-indent",
+  });
+  // A row with no label goes by its switch's words.
+  assert.equal(controlOf({ keys: ["mirrored"] })?.row, "Mirror the margins on facing pages");
+  // Keys across rows of one group name the group.
+  assert.deepEqual(controlOf({ keys: ["margin-inside", "mirrored"] }), {
+    group: "Page",
+    key: "margin-inside",
+  });
+  // A heading key names its level.
+  const heading = controlOf({ keys: ["heading-1-size", "heading-1-align"] });
+  assert.deepEqual(heading, { group: "Headings", level: 1, key: "heading-1-size" });
+  assert.equal(heading === undefined ? undefined : ownerSaid(heading), "Headings, H1");
+  const size = controlOf({ keys: ["heading-2-size"] });
+  assert.equal(size === undefined ? undefined : ownerSaid(size), "Size, H2");
+  // A rule a role put there, with no key, names its layout and nothing to open.
+  const title = controlOf({ keys: [], role: "title-page" });
+  assert.deepEqual(title, { group: "Title page", layout: "title-page" });
+  assert.equal(title === undefined ? undefined : ownerSaid(title), "title page");
+  assert.equal(controlOf({ keys: [] }), undefined);
+  assert.equal(controlOf({ keys: ["not-a-key"] }), undefined);
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite

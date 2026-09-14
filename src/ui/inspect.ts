@@ -266,6 +266,100 @@ function bare(value: string): string {
   return /^-?[0.]+(pt)?$/.test(value.trim()) ? "0" : value;
 }
 
+export interface Crumb {
+  /** The name a selector reaches it by, as `section#chapter-twelve`. */
+  name: string;
+  /** Its classes, which show faint beside the name. For a section that is its role. */
+  faint: string | undefined;
+  /** Its place in `ancestors`, for a crumb the author can add to the selector. */
+  ancestor: number | undefined;
+}
+
+/**
+ * The crumbs over the pane, the book first and the box last. A margin
+ * box has its page selector before it, which cannot be picked, because
+ * a rule for the box is always written inside that page rule.
+ */
+export function crumbsOf(inspection: Inspection): Crumb[] {
+  if (inspection.node === null && inspection.page !== undefined) {
+    return [
+      { name: inspection.page, faint: undefined, ancestor: undefined },
+      { name: inspection.element, faint: undefined, ancestor: undefined },
+    ];
+  }
+  const chain = inspection.ancestors.map((element, at) => ({
+    name: nameOf(element),
+    faint: faintOf(element),
+    ancestor: at,
+  }));
+  return [
+    ...chain,
+    { name: nameOf(inspection), faint: faintOf(inspection), ancestor: undefined },
+  ];
+}
+
+/** An element by its id where it has one, so a section never goes by its place in the book. */
+function nameOf(element: { element: string; id: string | null }): string {
+  return element.id === null || element.id === ""
+    ? element.element
+    : `${element.element}#${element.id}`;
+}
+
+function faintOf(element: { classes: readonly string[] }): string | undefined {
+  return element.classes.length === 0 ? undefined : element.classes.join(" ");
+}
+
+/**
+ * The selector for the box with the ancestors the author picked, as
+ * `section#chapter-twelve > p`. A picked ancestor that is the parent of
+ * the next part is joined with `>`, and any other with a space. A
+ * margin box is named by its at-rule alone.
+ */
+export function selectorFor(
+  inspection: Inspection,
+  picked: Iterable<number>,
+): string {
+  if (inspection.node === null && inspection.page !== undefined) {
+    return inspection.element;
+  }
+  const last = inspection.ancestors.length;
+  const chosen = [...new Set(picked)]
+    .filter((at) => Number.isInteger(at) && at >= 0 && at < last)
+    .sort((a, b) => a - b);
+  let selector = "";
+  chosen.forEach((at, index) => {
+    const ancestor = inspection.ancestors[at];
+    if (ancestor === undefined) return;
+    const next = chosen[index + 1] ?? last;
+    selector += `${nameOf(ancestor)}${next === at + 1 ? " > " : " "}`;
+  });
+  return `${selector}${nameOf(inspection)}`;
+}
+
+/**
+ * The empty rule "Add a rule" writes. A margin box's rule sits inside
+ * its page rule, as `@page :left { @top-left { } }`. The caret goes on
+ * the empty line inside the innermost braces, which `inserted` finds.
+ */
+export function ruleFor(inspection: Inspection, picked: Iterable<number>): string {
+  const selector = selectorFor(inspection, picked);
+  if (inspection.node === null && inspection.page !== undefined) {
+    return `${inspection.page} {\n  ${selector} {\n    \n  }\n}`;
+  }
+  return `${selector} {\n  \n}`;
+}
+
+/**
+ * The key the pane keeps its picked crumbs under. A refreshed pin with
+ * the same key is the same box, so the crumbs stay; any other starts
+ * with none picked.
+ */
+export function boxKey(pin: Pin): string {
+  const { inspection } = pin;
+  const chain = [...inspection.ancestors, inspection].map(nameOf).join(" ");
+  return `${targetKey(pin.target)} ${chain}`;
+}
+
 /**
  * Whether the node found at the anchor's first byte is the pinned box:
  * read from the same note and starting at the same byte.

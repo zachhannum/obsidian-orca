@@ -86,6 +86,20 @@ export class Controls {
   readonly warned: Locator;
   /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
   readonly card: Locator;
+  /** The inspect pane over the editor, there only while a box is pinned. */
+  readonly pane: Locator;
+  /** The pane's crumbs, the book first and the box last. Each one an author can pick carries `data-picked`. */
+  readonly crumbs: Locator;
+  /** The selector "Add a rule" writes. */
+  readonly selector: Locator;
+  /** The pane's rule groups, each with its layer in `data-layer`. */
+  readonly ruleGroups: Locator;
+  /** Every matched rule, with `data-layer`, and `data-line` or `data-keys` by its layer. */
+  readonly rules: Locator;
+  /** Every declaration in the pane, a lost one with `data-lost` and a refused one with `data-skipped`. */
+  readonly declarations: Locator;
+  readonly computed: Locator;
+  readonly addRule: Locator;
 
   constructor(protected readonly root: Locator) {
     this.panel = root.getByTestId("orca-panel");
@@ -108,6 +122,71 @@ export class Controls {
     this.caretLine = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}${CODEMIRROR_CARET_LINE}`);
     this.warned = root.getByTestId("orca-panel-warned");
     this.card = root.page().getByTestId("orca-editor-card");
+    this.pane = root.getByTestId("orca-inspect-pane");
+    this.crumbs = this.pane.getByTestId("orca-inspect-crumb");
+    this.selector = this.pane.getByTestId("orca-inspect-selector");
+    this.ruleGroups = this.pane.getByTestId("orca-inspect-group");
+    this.rules = this.pane.getByTestId("orca-inspect-rule");
+    this.declarations = this.pane.getByTestId("orca-inspect-decl");
+    this.computed = this.pane.getByTestId("orca-inspect-computed");
+    this.addRule = this.pane.getByTestId("orca-inspect-add");
+  }
+
+  /** The matched rules of one layer: `own`, `design` or `theme`. */
+  rulesIn(layer: "own" | "design" | "theme"): Locator {
+    return this.pane.locator(
+      `[data-testid="orca-inspect-rule"][data-layer="${layer}"]`,
+    );
+  }
+
+  /** The author's rule that starts on a line of the CSS. */
+  ownRule(line: number): Locator {
+    return this.pane.locator(
+      `[data-testid="orca-inspect-rule"][data-layer="own"][data-line="${String(line)}"]`,
+    );
+  }
+
+  /** The design panel rule a control wrote, by a key the control writes. */
+  designRule(key: string): Locator {
+    return this.pane.locator(
+      `[data-testid="orca-inspect-rule"][data-layer="design"][data-keys="${key}"]`,
+    );
+  }
+
+  /** The panel row that writes a key, which a design rule's click scrolls to. */
+  row(key: string): Locator {
+    return this.panel.locator(`[data-keys~="${key}"]`);
+  }
+
+  /** Waits for the pane to show the pin the preview answered at a generation. */
+  async inspecting(key: string, generation: number): Promise<void> {
+    await expect(this.pane).toHaveAttribute("data-inspected", key);
+    await expect(this.pane).toHaveAttribute("data-generation", String(generation));
+  }
+
+  /** Clicks the crumb that names an element, as `section#chapter-twelve`, and waits for it to be picked. */
+  async pickCrumb(name: string): Promise<void> {
+    const crumb = this.crumbs.filter({ hasText: name }).first();
+    const was = await crumb.getAttribute("data-picked");
+    await crumb.click();
+    await expect(crumb).toHaveAttribute("data-picked", was === "true" ? "false" : "true");
+  }
+
+  /** Clicks the line an author's rule names, which puts the caret on that line. */
+  async openRule(rule: Locator): Promise<void> {
+    await rule.getByRole("button").first().click();
+  }
+
+  /** The number of the line the editor's caret is on. */
+  async caretAt(): Promise<number> {
+    return Number(await this.caretLine.textContent());
+  }
+
+  /** Clicks "Add a rule" and waits for the caret to move off the line it was on. */
+  async add(): Promise<void> {
+    const before = await this.caretAt();
+    await this.addRule.click();
+    await expect.poll(() => this.caretAt()).not.toBe(before);
   }
 
   /** Types at the end of the author's CSS, as the author would. */

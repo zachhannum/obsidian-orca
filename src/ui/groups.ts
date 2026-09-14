@@ -30,6 +30,8 @@ import {
   type Unit,
   type Written,
 } from "@/style/design";
+import { ROLES, type Role } from "@/book/roles";
+import type { RuleFrom } from "@/style/generated";
 
 /** One word a select or a segment offers, and the value it writes. */
 export interface Choice {
@@ -359,6 +361,80 @@ export function keysOf(group: Group): string[] {
         : [key];
     }),
   );
+}
+
+/** The control a generated rule came from, which a click in the inspect pane opens. */
+export interface Owner {
+  group: string;
+  /** The row, when every key the rule read is in one row. A row with no label goes by its switch's words. */
+  row?: string;
+  /** The heading level, for a rule a Headings key wrote. */
+  level?: Level;
+  /** A key the rule read, at its level, which the row carries in `data-keys`. */
+  key?: string;
+  /** The layout of a rule no control wrote, which opens nothing. */
+  layout?: Role;
+}
+
+/** The group, row and level of one design key in the panel. */
+interface Placed {
+  group: Group;
+  row: Row;
+  level: Level | undefined;
+}
+
+function placeOf(key: string): Placed | undefined {
+  const leveled = /^heading-(\d)-(.+)$/.exec(key);
+  const level = LEVELS.find((each) => String(each) === leveled?.[1]);
+  const listed = level === undefined ? key : `${LEVELED}${leveled?.[2] ?? ""}`;
+  for (const group of GROUPS) {
+    for (const row of group.rows) {
+      if (row.of.some((control) => control.key === listed)) {
+        return { group, row, level };
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The control that wrote a generated rule. One row's keys name that
+ * row, and keys across rows name the group of the first. A rule that
+ * reads no key the panel writes, but was written for a role, names that
+ * role's layout. Anything else names nothing.
+ */
+export function controlOf(from: RuleFrom): Owner | undefined {
+  const placed = from.keys.flatMap((key) => {
+    const found = placeOf(key);
+    return found === undefined ? [] : [{ key, ...found }];
+  });
+  const first = placed[0];
+  if (first === undefined) {
+    return from.role === undefined
+      ? undefined
+      : { group: ROLES[from.role].name, layout: from.role };
+  }
+  const level = first.level;
+  const levels = level === undefined ? {} : { level };
+  const oneRow = placed.every((each) => each.row === first.row);
+  if (oneRow) {
+    const said = first.row.of.find((control) => control.said !== undefined)?.said;
+    const row = first.row.label === "" ? said : first.row.label;
+    return {
+      group: first.group.name,
+      ...(row === undefined ? {} : { row }),
+      ...levels,
+      key: first.key,
+    };
+  }
+  return { group: first.group.name, ...levels, key: first.key };
+}
+
+/** The words the pane names a control by, as `Headings, H1` or `Size, H2`. */
+export function ownerSaid(owner: Owner): string {
+  if (owner.layout !== undefined) return owner.group.toLowerCase();
+  const name = owner.row ?? owner.group;
+  return owner.level === undefined ? name : `${name}, H${String(owner.level)}`;
 }
 
 /** Every design key the panel writes, in the order the panel offers them. */

@@ -119,6 +119,15 @@ export class Inspect {
     await expect(this.surface).not.toHaveAttribute("data-inspected", /.*/);
   }
 
+  /** The key and generation the preview last pinned, which the design panel's pane shows. */
+  async pinned(): Promise<{ key: string; generation: number }> {
+    await expect(this.surface).toHaveAttribute("data-inspected", /.+/);
+    return {
+      key: (await this.surface.getAttribute("data-inspected")) ?? "",
+      generation: Number(await this.surface.getAttribute("data-inspected-generation")),
+    };
+  }
+
   /** Waits for the pin to answer a generation past `after`, and answers it. */
   async refreshed(after: number): Promise<number> {
     await expect

@@ -49,7 +49,24 @@ export interface CssEditor {
   flag(flags: readonly Flag[], against: string): void;
   /** Puts the caret at a line and column, scrolled into view. See {@link revealed}. */
   reveal(line: number, column: number): void;
+  /**
+   * Puts text in at the caret, as typing does, so it reaches the note.
+   * See {@link inserted}.
+   */
+  insert(text: string): void;
+  /** The line and column of the caret, both counted from 1. */
+  caret(): { line: number; column: number };
+  /** The warnings inside the rule that starts at a line and column. See {@link skippedIn}. */
+  skipped(line: number, column: number): Skipped[];
   destroy(): void;
+}
+
+/** A declaration the engine refused, split at its colon, with the engine's warning. */
+export interface Skipped {
+  property: string;
+  /** The text after the colon, without its semicolon. Nothing when the flagged text has no colon. */
+  value: string | undefined;
+  message: string;
 }
 
 /** A warning the engine put on the author's CSS, at the place it named. */
@@ -223,6 +240,81 @@ function flagRange(state: EditorState, flag: Flag): { from: number; to: number }
   return to > from ? { from, to } : undefined;
 }
 
+/** The syntax nodes that are one whole rule, at-rules included. */
+const RULE = /^(RuleSet|AtRule|\w+Statement)$/;
+
+/**
+ * The text of the rule that starts at a line and column, both counted
+ * from 1, as the engine names a matched rule. It is the innermost rule
+ * the grammar puts that place in. A place outside every rule gives
+ * nothing.
+ */
+export function ruleExtent(
+  state: EditorState,
+  line: number,
+  column: number,
+): { from: number; to: number } | undefined {
+  if (line < 1 || line > state.doc.lines) return undefined;
+  const at = state.doc.line(line);
+  const from = Math.min(at.from + Math.max(column - 1, 0), at.to);
+  const tree = ensureSyntaxTree(state, state.doc.length, 50) ?? syntaxTree(state);
+  for (let node = tree.resolveInner(from, 1); ; ) {
+    if (RULE.test(node.name)) return { from: node.from, to: node.to };
+    const parent = node.parent;
+    if (parent === null) return undefined;
+    node = parent;
+  }
+}
+
+/**
+ * The flags on the text inside the rule that starts at a line and
+ * column. The engine leaves a declaration it refused out of its matched
+ * rule, so the pane shows it from here, with the engine's own words.
+ */
+export function skippedIn(state: EditorState, line: number, column: number): Skipped[] {
+  const extent = ruleExtent(state, line, column);
+  if (extent === undefined) return [];
+  return flagsIn(state)
+    .filter((found) => found.from >= extent.from && found.to <= extent.to)
+    .map((found) => {
+      const text = state.sliceDoc(found.from, found.to).trim().replace(/;$/, "");
+      const colon = text.indexOf(":");
+      return colon < 0
+        ? { property: text, value: undefined, message: found.message }
+        : {
+            property: text.slice(0, colon).trim(),
+            value: text.slice(colon + 1).trim(),
+            message: found.message,
+          };
+    });
+}
+
+/**
+ * The transaction that puts text in at the caret, on lines of its own,
+ * with the caret on the line after the text's last `{`. It carries no
+ * annotation, so the change reaches the note as typing does.
+ */
+export function inserted(state: EditorState, text: string): TransactionSpec {
+  const head = state.selection.main.head;
+  const line = state.doc.lineAt(head);
+  const before = state.sliceDoc(line.from, head).trim() === "" ? "" : "\n";
+  const after = state.sliceDoc(head, line.to).trim() === "" ? "" : "\n";
+  const open = text.lastIndexOf("{");
+  let inside = text.length;
+  if (open >= 0) {
+    const next = text.indexOf("\n", open);
+    const end = next < 0 ? -1 : text.indexOf("\n", next + 1);
+    inside = next < 0 ? Math.min(open + 2, text.length) : end < 0 ? text.length : end;
+  }
+  const pos = head + before.length + inside;
+  return {
+    changes: { from: head, insert: `${before}${text}${after}` },
+    selection: { anchor: pos },
+    effects: EditorView.scrollIntoView(pos, { y: "center" }),
+    userEvent: "input",
+  };
+}
+
 /** The icon Obsidian draws a warning with, drawn here because CodeMirror owns this DOM. */
 const WARNING_PATHS = [
   "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
@@ -269,6 +361,7 @@ export function mountEditor(
   parent: HTMLElement,
   css: string,
   changed: (css: string) => void,
+  moved: () => void = () => undefined,
 ): CssEditor {
   const view = new EditorView({
     parent,
@@ -276,6 +369,9 @@ export function mountEditor(
       doc: css,
       extensions: [
         ...cssExtensions(changed),
+        EditorView.updateListener.of((update) => {
+          if (update.selectionSet) moved();
+        }),
         // The host clips its overflow, so a card near its edge is drawn
         // on the body instead.
         tooltips({ parent: parent.ownerDocument.body }),
@@ -305,6 +401,18 @@ export function mountEditor(
       if (spec === undefined) return;
       view.dispatch(spec);
       view.focus();
+    },
+    insert(text) {
+      view.dispatch(inserted(view.state, text));
+      view.focus();
+    },
+    caret() {
+      const head = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(head);
+      return { line: line.number, column: head - line.from + 1 };
+    },
+    skipped(line, column) {
+      return skippedIn(view.state, line, column);
     },
     destroy() {
       view.destroy();
