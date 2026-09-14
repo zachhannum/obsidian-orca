@@ -584,6 +584,9 @@ test("a control the author's CSS overrides dims and names the line that override
   await expect(panel.overriddenCard).toContainText("is overridden with value");
   await expect(panel.overriddenCard).toContainText("0");
   await expect(panel.overriddenCard).toContainText(`book.css:${line}:`);
+  // Obsidian draws an aria-label as its own tooltip over the card, so the lock names itself in text.
+  await expect(panel.overridden(key)).not.toHaveAttribute("aria-label");
+  await expect(panel.overridden(key)).toHaveAccessibleName(`Overridden by line ${line} of the book's CSS`);
   await panel.control(key).hover();
   await expect(panel.overriddenCard).toBeHidden();
 
