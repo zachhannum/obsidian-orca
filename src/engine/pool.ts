@@ -294,6 +294,9 @@ function stamped(client: EngineClient, used: () => void): EngineClient {
     nodeAt: (source, byte) => client.nodeAt(source, byte),
     sourceOf: (node) => client.sourceOf(node),
     foliosOf: (nodes) => client.foliosOf(nodes),
+    inspect: (node) => client.inspect(node),
+    inspectMarginBox: (page, box) => client.inspectMarginBox(page, box),
+    hit: (page, x, y) => client.hit(page, x, y),
     get current(): number {
       return client.current;
     },

@@ -11,6 +11,8 @@ import {
   styleOp,
   type LayoutOutput,
   type Folios,
+  type Inspection,
+  type MarginBoxName,
   type NodeSource,
   type Op,
   type Page,
@@ -27,6 +29,7 @@ import { EngineError } from "@/engine/errors";
 import { readModule } from "@/engine/module";
 import { THEME_SHEET } from "@/style/theme";
 import {
+  MARGIN_BOXES,
   Session,
   serialized,
   type EngineClient,
@@ -48,6 +51,10 @@ class FakeClient implements EngineClient {
   readonly sources = new Map<number, NodeSource>();
   /** The pages each node's content is set on, as a test sets them. */
   readonly folios = new Map<number, Folios>();
+  /** Each margin box a rule names, by `page:box`, as a test sets them. */
+  readonly margins = new Map<string, Inspection>();
+  /** Every margin box asked about, as `page:box`, in the order asked. */
+  readonly inspected: string[] = [];
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   private book: Page[];
@@ -117,6 +124,20 @@ class FakeClient implements EngineClient {
 
   foliosOf(nodes: number[]): Promise<(Folios | null)[]> {
     return Promise.resolve(nodes.map((node) => this.folios.get(node) ?? null));
+  }
+
+  inspect(): Promise<Inspection | null> {
+    return Promise.resolve(null);
+  }
+
+  inspectMarginBox(page: number, box: MarginBoxName): Promise<Inspection | null> {
+    const key = `${String(page)}:${box}`;
+    this.inspected.push(key);
+    return Promise.resolve(this.margins.get(key) ?? null);
+  }
+
+  hit(): Promise<number | null> {
+    return Promise.resolve(null);
   }
 }
 
@@ -473,6 +494,9 @@ test("a serialized client holds a second render back until the first answers", a
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
     foliosOf: () => Promise.resolve([]),
+    inspect: () => Promise.resolve(null),
+    inspectMarginBox: () => Promise.resolve(null),
+    hit: () => Promise.resolve(null),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -503,6 +527,9 @@ test("a serialized client's queue moves on from a render that failed", async () 
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
     foliosOf: () => Promise.resolve([]),
+    inspect: () => Promise.resolve(null),
+    inspectMarginBox: () => Promise.resolve(null),
+    hit: () => Promise.resolve(null),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -557,6 +584,9 @@ test("a book the engine refuses comes back as an engine error, not re-worded", a
     nodeAt: () => Promise.reject(new Error("no book")),
     sourceOf: () => Promise.reject(new Error("no book")),
     foliosOf: () => Promise.reject(new Error("no book")),
+    inspect: () => Promise.reject(new Error("no book")),
+    inspectMarginBox: () => Promise.reject(new Error("no book")),
+    hit: () => Promise.reject(new Error("no book")),
     current: 1,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -755,9 +785,130 @@ test("several nodes answer with where each is set now, in the order asked about"
   ]);
 });
 
+test("a serialized client answers an inspection while a render is still out", async () => {
+  let release = (): void => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const answer = margin("p", []);
+  const client: EngineClient = {
+    preview: async () => {
+      await gate;
+      return typeset();
+    },
+    exportPdf: () => Promise.resolve(new Uint8Array()),
+    fontBytes: () => Promise.resolve(new Uint8Array()),
+    nodeAt: () => Promise.resolve(null),
+    sourceOf: () => Promise.resolve(null),
+    foliosOf: () => Promise.resolve([]),
+    inspect: () => Promise.resolve(answer),
+    inspectMarginBox: () => Promise.resolve(answer),
+    hit: () => Promise.resolve(7),
+    current: 0,
+    stages: { style: 0, lines: 0, flow: 0, paint: 0 },
+  };
+  const wrapped = serialized(client);
+
+  const render = wrapped.preview();
+  // Each of these resolves while the render is held at the gate.
+  assert.equal(await wrapped.inspect(7), answer);
+  assert.equal(await wrapped.inspectMarginBox(0, "top-center"), answer);
+  assert.equal(await wrapped.hit(0, 10, 10), 7);
+
+  release();
+  await render;
+});
+
+test("a page's margin boxes are asked about once per page per generation", async () => {
+  const client = new FakeClient(typeset(4));
+  const head = margin("@top-center", [
+    { page: 0, x: 100, y: 20, width: 200, height: 30 },
+  ]);
+  client.margins.set("0:top-center", head);
+  const session = new Session(client, faces());
+
+  assert.equal(await session.marginBoxAt(0, 150, 35), head);
+  assert.equal(await session.marginBoxAt(0, 10, 600), undefined);
+  assert.equal(client.inspected.length, MARGIN_BOXES.length);
+
+  await session.marginBoxAt(1, 150, 35);
+  assert.equal(client.inspected.length, 2 * MARGIN_BOXES.length);
+
+  // An edit moves the boxes, so the next point asks again.
+  client.current += 1;
+  await session.marginBoxAt(0, 150, 35);
+  assert.equal(client.inspected.length, 3 * MARGIN_BOXES.length);
+});
+
+/** A sheet that sets a running head on every page. */
+const RUNNING_HEAD = '@page { @top-center { content: "Pride and Prejudice"; } }';
+
+test("a point in a paragraph hits it, and a point in the running head names its page selector", async () => {
+  const vault = directoryVault(path.join(root, "fixture"));
+  const engine = await startEngine(
+    await readModule(directoryVault(engineDirectory()), "."),
+    nodeHost(),
+  );
+  try {
+    const name = "Chapter Twelve.md";
+    const text = await readText(vault, name);
+    const session = new Session(engine.client, faces());
+    await session.open(openBook({ name, text }));
+    await session.render([styleOp([{ name: THEME_SHEET, css: RUNNING_HEAD }])]);
+
+    // The first paragraph carries no inline markup, so every point in
+    // its box is held by the paragraph itself.
+    const byte = new TextEncoder().encode(
+      text.slice(0, text.indexOf("In consequence")),
+    ).length;
+    const node = await session.nodeAt(name, byte);
+    assert.ok(node !== undefined, "the paragraph was read into no node");
+    const paragraph = await session.inspect(node);
+    const box = paragraph?.boxes[0];
+    assert.ok(box, "the paragraph reached no page");
+
+    const hit = await session.hit(
+      box.page,
+      box.x + box.width / 2,
+      box.y + box.height / 2,
+    );
+    assert.ok(hit !== undefined, "the point hit nothing");
+    assert.equal((await session.inspect(hit))?.element, "p");
+
+    const head = await session.inspectMarginBox(box.page, "top-center");
+    const area = head?.boxes.find((each) => each.page === box.page);
+    assert.ok(area, "the running head reached no page");
+    const found = await session.marginBoxAt(
+      box.page,
+      area.x + area.width / 2,
+      area.y + area.height / 2,
+    );
+    assert.equal(found?.element, "@top-center");
+    assert.match(found?.page ?? "", /^@page/);
+  } finally {
+    engine.stop();
+  }
+});
+
+/** An inspection of one element or margin box, set where a test says. */
+function margin(element: string, boxes: Inspection["boxes"]): Inspection {
+  return {
+    node: null,
+    element,
+    id: null,
+    classes: [],
+    ancestors: [],
+    rules: [],
+    computed: {},
+    boxes,
+  };
+}
+
 // What this tier does not cover: registering the view, and the page
 // inside a leaf. Both wait on the e2e harness. It reads the PDF's header
 // and trailer only; `qpdf --check` and a `pdftotext` round trip wait on
 // the export flow. The window fetches run against a fake here, so what
 // the engine does with a range it cannot fill is the e2e run's to prove,
-// and so is which generation a real render comes back on.
+// and so is which generation a real render comes back on. A point on a
+// spread is turned into a page and a point on it by the view, so that
+// waits on the view's own tests.

@@ -5,7 +5,9 @@ import {
   type FaceAttributes,
   type Folios,
   type FontRefEntry,
+  type Inspection,
   type LayoutOutput,
+  type MarginBoxName,
   type NodeSource,
   type Op,
   type Page,
@@ -35,6 +37,9 @@ export interface EngineClient {
   nodeAt(source: string, byte: number): Promise<number | null>;
   sourceOf(node: number): Promise<NodeSource | null>;
   foliosOf(nodes: number[]): Promise<(Folios | null)[]>;
+  inspect(node: number): Promise<Inspection | null>;
+  inspectMarginBox(page: number, box: MarginBoxName): Promise<Inspection | null>;
+  hit(page: number, x: number, y: number): Promise<number | null>;
   readonly current: number;
   readonly stages: Stages;
 }
@@ -65,6 +70,9 @@ export function serialized(client: EngineClient): EngineClient {
     nodeAt: (source, byte) => client.nodeAt(source, byte),
     sourceOf: (node) => client.sourceOf(node),
     foliosOf: (nodes) => client.foliosOf(nodes),
+    inspect: (node) => client.inspect(node),
+    inspectMarginBox: (page, box) => client.inspectMarginBox(page, box),
+    hit: (page, x, y) => client.hit(page, x, y),
     get current(): number {
       return client.current;
     },
@@ -73,6 +81,26 @@ export function serialized(client: EngineClient): EngineClient {
     },
   };
 }
+
+/** Every page margin box. fleuron exports the names only as a type. */
+export const MARGIN_BOXES = [
+  "top-left-corner",
+  "top-left",
+  "top-center",
+  "top-right",
+  "top-right-corner",
+  "right-top",
+  "right-middle",
+  "right-bottom",
+  "bottom-right-corner",
+  "bottom-right",
+  "bottom-center",
+  "bottom-left",
+  "bottom-left-corner",
+  "left-bottom",
+  "left-middle",
+  "left-top",
+] as const satisfies readonly MarginBoxName[];
 
 /** A document's faces, narrowed to what a session adds to them. */
 export interface FaceSet {
@@ -127,6 +155,10 @@ export class Session {
   private cachedAt = -1;
   /** The window fetches in flight, by the range each one asked for. */
   private readonly fetching = new Map<string, Promise<void>>();
+  /** Each page's margin boxes, as the engine inspected them. */
+  private readonly margins = new Map<number, Promise<Inspection[]>>();
+  /** The generation {@link Session.margins} holds answers from. */
+  private marginsAt = -1;
 
   constructor(
     private readonly client: EngineClient,
@@ -211,6 +243,86 @@ export class Session {
   async foliosOf(nodes: number[]): Promise<(Folios | undefined)[]> {
     const found = await routed(() => this.client.foliosOf(nodes));
     return found.map((folios) => folios ?? undefined);
+  }
+
+  /**
+   * The rules that styled one node, and where it is on the pages. A node id names
+   * a node only until the next edit. Nothing for matter the engine
+   * wrote itself, or a node the book does not hold.
+   */
+  async inspect(node: number): Promise<Inspection | undefined> {
+    const inspection = await routed(() => this.client.inspect(node));
+    return inspection ?? undefined;
+  }
+
+  /**
+   * The rules that styled one margin box of one page, counting from 0. Nothing
+   * for a blank page, or a box no rule for that page names.
+   */
+  async inspectMarginBox(
+    page: number,
+    box: MarginBoxName,
+  ): Promise<Inspection | undefined> {
+    const inspection = await routed(() =>
+      this.client.inspectMarginBox(page, box),
+    );
+    return inspection ?? undefined;
+  }
+
+  /**
+   * The innermost element at a point on one page, counting from 0, in
+   * points from the page's top-left corner. Nothing over a margin box
+   * or outside every box.
+   */
+  async hit(page: number, x: number, y: number): Promise<number | undefined> {
+    const node = await routed(() => this.client.hit(page, x, y));
+    return node ?? undefined;
+  }
+
+  /**
+   * The margin box at a point on one page, counting from 0. A page's
+   * sixteen boxes are asked about once per generation.
+   */
+  async marginBoxAt(
+    page: number,
+    x: number,
+    y: number,
+  ): Promise<Inspection | undefined> {
+    const inspections = await this.marginBoxes(page);
+    return inspections.find((inspection) =>
+      inspection.boxes.some(
+        (box) =>
+          box.page === page &&
+          x >= box.x &&
+          x <= box.x + box.width &&
+          y >= box.y &&
+          y <= box.y + box.height,
+      ),
+    );
+  }
+
+  /** One page's margin boxes that some rule names, cached for the generation. */
+  private marginBoxes(page: number): Promise<Inspection[]> {
+    const at = this.client.current;
+    if (at !== this.marginsAt) {
+      this.margins.clear();
+      this.marginsAt = at;
+    }
+    const cached = this.margins.get(page);
+    if (cached !== undefined) return cached;
+    const asked = Promise.all(
+      MARGIN_BOXES.map((box) =>
+        routed(() => this.client.inspectMarginBox(page, box)),
+      ),
+    ).then((answers) =>
+      answers.filter((answer): answer is Inspection => answer !== null),
+    );
+    this.margins.set(page, asked);
+    // A failed question is asked again next time rather than kept.
+    asked.catch(() => {
+      if (this.margins.get(page) === asked) this.margins.delete(page);
+    });
+    return asked;
   }
 
   /**
