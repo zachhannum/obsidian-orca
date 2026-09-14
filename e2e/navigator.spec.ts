@@ -526,6 +526,7 @@ test("a chapter click turns the preview in the most recent tab, and a Mod click 
       }, PREVIEW),
     )
     .toEqual({ shown: `markdown:${CHAPTER}.md`, previews: 1 });
+  await obsidian.detach("markdown");
 });
 
 test("opening a book note reveals the navigator", async ({

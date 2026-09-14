@@ -949,6 +949,7 @@ test("the panel shows a book only while a preview of it is visible", async ({
     window.app.workspace.setActiveLeaf(leaf, { focus: true });
   }, PREVIEW);
   await expect(panel.panel).toBeVisible();
+  await obsidian.detach("markdown");
 });
 
 test("a click low in the panel leaves it scrolled where it was", async ({

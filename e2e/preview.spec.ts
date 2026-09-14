@@ -64,6 +64,7 @@ test("a preview opened without a chapter offers `Open as markdown`, which opens 
       }),
     )
     .toEqual(`markdown:${BOOK_NOTE}`);
+  await obsidian.detach("markdown");
 });
 
 test("the title page prints the book's properties", async ({ book }) => {
