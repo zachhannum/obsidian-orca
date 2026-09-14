@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { directoryVault } from "@/assets/directory";
-import { Registry, contentKey, type Later, type Revoke } from "@/assets/registry";
+import { Registry, contentKey, fontUrl, type Later, type Revoke } from "@/assets/registry";
 import type { VaultAdapter } from "@/assets/vault";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
@@ -156,6 +156,15 @@ test("a read that fails is not kept, so the next ask reads the file again", asyn
   await assert.rejects(registry.key("nothing here.otf"));
   await assert.rejects(registry.key("nothing here.otf"));
   assert.equal(reads.length, 2);
+});
+
+test("a face's url is made from its content key, the same on every run", async () => {
+  const bytes = new Uint8Array(await fixture.readBinary(FILE));
+  const key = await contentKey(bytes);
+
+  assert.equal(fontUrl(key), `orca-font:${key}`);
+  assert.equal(fontUrl(await contentKey(bytes)), fontUrl(key));
+  assert.equal(encodeURI(fontUrl(key)), fontUrl(key), "a hex key needs no escaping");
 });
 
 // What this tier does not cover: `whenIdle` itself, which is the

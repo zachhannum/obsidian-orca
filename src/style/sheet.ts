@@ -1,12 +1,13 @@
 /**
- * The three layers a book is styled by: the theme orca bundles, the
- * layer a design generates, and the author's own sheet. They cross in
- * that order, and source order decides which one wins. A later layer
- * beats an earlier one without a specificity trick.
+ * The layers a book is styled by: the theme orca bundles, the faces a
+ * book registers, the layer a design generates, and the author's own
+ * sheet. They cross in that order, and source order decides which one
+ * wins. A later layer beats an earlier one without a specificity trick.
  */
 
 import type { Sheet } from "fleuron";
 import { mergeDesign, type Design } from "@/style/design";
+import { faceCss, type Registered } from "@/style/faces";
 import {
   generatedCss,
   generatedRules,
@@ -14,6 +15,9 @@ import {
   type Setting,
 } from "@/style/generated";
 import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
+
+/** The sheet the registered faces are sent under, which a warning names. */
+export const FACES_SHEET = "faces.css";
 
 /** The sheet the generated layer is sent under, which a warning names. */
 export const DESIGN_SHEET = "design.css";
@@ -27,10 +31,14 @@ export const OWN_SHEET = "book.css";
  * rule reads other fields. A sink, for example, is counted in lines of
  * the line spacing.
  */
-export function designSheet(design: Design, setting: Setting): Sheet {
+export function designSheet(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[] = [],
+): Sheet {
   return {
     name: DESIGN_SHEET,
-    css: generatedCss(mergeDesign(DEFAULTS, design), setting),
+    css: generatedCss(mergeDesign(DEFAULTS, design), setting, registered),
   };
 }
 
@@ -44,8 +52,9 @@ export function designRuleAt(
   design: Design,
   setting: Setting,
   line: number,
+  registered: readonly Registered[] = [],
 ): RuleFrom | undefined {
-  return generatedRules(mergeDesign(DEFAULTS, design), setting).find(
+  return generatedRules(mergeDesign(DEFAULTS, design), setting, registered).find(
     (rule) => line >= rule.line && line < rule.line + rule.lines,
   )?.from;
 }
@@ -58,10 +67,12 @@ export function designSheets(
   design: Design,
   setting: Setting,
   own = "",
+  registered: readonly Registered[] = [],
 ): Sheet[] {
   return [
     { name: THEME_SHEET, css: BUNDLED_THEME },
-    designSheet(design, setting),
+    { name: FACES_SHEET, css: faceCss(registered) },
+    designSheet(design, setting, registered),
     { name: OWN_SHEET, css: own },
   ];
 }

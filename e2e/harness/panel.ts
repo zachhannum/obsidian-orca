@@ -347,6 +347,66 @@ export class Controls {
   async reading(): Promise<string> {
     return (await this.font.textContent()) ?? "";
   }
+
+  /** The menu a Variant row opens. */
+  get variantMenu(): Locator {
+    return this.root.getByTestId("orca-panel-variants");
+  }
+
+  /** The row of the font list that offers one family. */
+  option(family: string): Locator {
+    return this.options.and(this.root.locator(`[data-font="${family}"]`));
+  }
+
+  /** The row of the Variant menu that offers one variant. */
+  variant(name: string): Locator {
+    return this.root.getByTestId("orca-panel-variant").and(
+      this.root.locator(`[data-variant="${name}"]`),
+    );
+  }
+
+  /** The variants the open Variant menu offers, in order. */
+  async variants(): Promise<string[]> {
+    await expect(this.variantMenu).toBeVisible();
+    return this.root
+      .getByTestId("orca-panel-variant")
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-variant") ?? ""));
+  }
+
+  /** Picks a family for a font key, through the filter, and waits for the field to show it. */
+  async chooseFont(key: string, family: string): Promise<void> {
+    const field = key === "body-font" ? this.font : this.control(key);
+    await field.click();
+    await expect(this.filter).toBeVisible();
+    await this.type(family);
+    await this.option(family).click();
+    await expect(field).toContainText(family);
+  }
+
+  /** Picks a variant for a font key, and waits for its field to show it. */
+  async chooseVariant(fontKey: string, name: string): Promise<void> {
+    const field = this.control(`${fontKey}-variant`);
+    await field.click();
+    await this.variant(name).click();
+    await expect(field).toContainText(name);
+  }
+
+  /**
+   * The first family a row is drawn in, and whether the document holds
+   * a loaded face under that family. A family the document does not hold
+   * would draw in the next one in the stack.
+   */
+  async drawnIn(row: Locator): Promise<{ family: string; loaded: boolean }> {
+    return row.evaluate((element) => {
+      const first = getComputedStyle(element).fontFamily.split(",")[0] ?? "";
+      const family = first.trim().replace(/^["']|["']$/g, "");
+      const loaded = [...document.fonts].some(
+        (face) =>
+          face.family.replace(/^["']|["']$/g, "") === family && face.status === "loaded",
+      );
+      return { family, loaded };
+    });
+  }
 }
 
 /** The panel in the right sidebar. It shows the book being read. */

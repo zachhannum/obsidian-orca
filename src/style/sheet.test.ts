@@ -15,7 +15,8 @@ import type { Named } from "@/book/names";
 import { emptyDesign, readDesign, type Design } from "@/style/design";
 import { generatedCss, type Setting } from "@/style/generated";
 import { readOrigin } from "@/style/origin";
-import { DESIGN_SHEET, OWN_SHEET, designSheet, designSheets } from "@/style/sheet";
+import { faceCss, type Registered } from "@/style/faces";
+import { DESIGN_SHEET, FACES_SHEET, OWN_SHEET, designSheet, designSheets } from "@/style/sheet";
 import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 
 /** A book of one chapter, which the sheets set. */
@@ -33,11 +34,12 @@ const CHAPTERS: Named[] = [
   { role: "chapter", id: "chapter-two" },
 ];
 
-test("the three layers cross in one order, and the last one to set a size wins", async () => {
+test("the layers cross in one order, and the last one to set a size wins", async () => {
   const sheets = designSheets(sized(20), SETTING, "book { font-size: 30pt; }");
 
   assert.deepEqual(sheets.map((sheet) => sheet.name), [
     THEME_SHEET,
+    FACES_SHEET,
     DESIGN_SHEET,
     OWN_SHEET,
   ]);
@@ -53,7 +55,26 @@ test("a design that settles nothing generates the defaults, over the theme", () 
 
   assert.deepEqual(sheets[0], { name: THEME_SHEET, css: BUNDLED_THEME });
   assert.equal(designSheet(emptyDesign(), SETTING).css, generatedCss(DEFAULTS, SETTING));
-  assert.equal(sheets[2]?.css, "");
+  assert.deepEqual(sheets[1], { name: FACES_SHEET, css: "" });
+  assert.equal(sheets[3]?.css, "");
+});
+
+test("the registered faces cross ahead of the design that names them, and the author's CSS is sent as written", () => {
+  const design = emptyDesign();
+  design.body.font = "Junicode";
+  design.headings[1].font = "Junicode";
+  design.headings[1].fontVariant = "Cond";
+  const registered: Registered[] = [
+    { font: "Junicode", variant: undefined, family: "Junicode", faces: [{ url: "orca-font:a", weight: 400, italic: false }] },
+    { font: "Junicode", variant: "Cond", family: "Junicode Cond", faces: [{ url: "orca-font:b", weight: 400, italic: false }] },
+  ];
+  const own = "h1 { font-family: \"Mine\"; }\n";
+
+  const sheets = designSheets(design, SETTING, own, registered);
+
+  assert.deepEqual(sheets[1], { name: FACES_SHEET, css: faceCss(registered) });
+  assert.match(sheets[2]?.css ?? "", /h1 \{\n {2}font-family: "Junicode Cond", serif;/);
+  assert.deepEqual(sheets[3], { name: OWN_SHEET, css: own });
 });
 
 test("a book that sets nothing gets every default in design.css", () => {

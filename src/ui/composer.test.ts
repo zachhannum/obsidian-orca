@@ -4,11 +4,15 @@ import process from "node:process";
 import { test } from "node:test";
 import type { Folios, LayoutOutput, Op, Page } from "fleuron";
 import { directoryVault } from "@/assets/directory";
+import { VAULT_FONTS, familyNamed } from "@/assets/fonts";
+import { contentKey, fontUrl } from "@/assets/registry";
+import { faceBytes } from "@/assets/sfnt";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Face } from "@/book/plan";
-import type { Design } from "@/style/design";
+import type { Design, FontUse } from "@/style/design";
+import { FACES_SHEET } from "@/style/sheet";
 import type { Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
@@ -18,6 +22,13 @@ import {
   type Progress,
   type Typeset,
 } from "@/ui/composer";
+import {
+  readFontIndex,
+  resolveUse,
+  vaultFonts,
+  type FontPlaces,
+  type ResolvedUse,
+} from "@/ui/fonts";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -209,7 +220,7 @@ function drain(): Promise<void> {
 }
 
 function faces(): FaceSet {
-  return { add: () => Promise.resolve() };
+  return { add: () => Promise.resolve(undefined), remove: () => undefined };
 }
 
 /** Every file in the fixture vault, the way Obsidian sees one. */
@@ -227,7 +238,7 @@ async function setting(client: EngineClient): Promise<Composing> {
     read: (at) => readText(vault, at),
     files: vault,
     name: (at) => path.basename(at, ".md"),
-    styles: () => Promise.resolve([]),
+    fonts: () => Promise.resolve([]),
     links,
     engines: {
       client: () => Promise.resolve(client),
@@ -440,12 +451,18 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   const clients = new Clients();
   const cut: Face = { key: "spectral-regular", bytes: new Uint8Array([1, 2, 3]) };
   const composer = new Composer(
-    { ...(await setting(new FakeClient())), engines: clients.engines, styles: () => Promise.resolve([cut]) },
+    {
+      ...(await setting(new FakeClient())),
+      engines: clients.engines,
+      fonts: (uses) => Promise.resolve(uses.map((use) => resolvedOf(use, [cut]))),
+    },
     clock,
   );
 
   const book = await composer.open(BOOK);
-  book.restyle(refonted(book.design, "Spectral"), [cut]);
+  book.restyle(refonted(book.design, "Spectral"), [
+    resolvedOf({ font: "Spectral", variant: undefined }, [cut]),
+  ]);
   await crossed(book, clock);
   // The keystroke is on this thread and nowhere else: the wait has not
   // run, so the engine that dies never saw it.
@@ -512,9 +529,9 @@ function headed(composing: Composing, asked: string[] = []): Composing {
       }
       return model;
     },
-    styles: (font) => {
-      asked.push(font);
-      return Promise.resolve(CUTS[font] ?? []);
+    fonts: (uses) => {
+      asked.push(...uses.map((use) => use.font));
+      return Promise.resolve(uses.map((use) => resolvedOf(use, CUTS[use.font] ?? [])));
     },
   };
 }
@@ -552,6 +569,115 @@ test("a book set again on a new engine after its engine stops keeps its heading 
   await composer.open(BOOK);
   assert.equal(clients.started.length, 2, "the book went onto a second engine");
   assert.deepEqual(sentFaces(clients.started[1]?.rendered[0] ?? []), [[1], [2]]);
+});
+
+/** A font and variant resolved to faces, as the plugin's resolver hands them back. */
+function resolvedOf(use: FontUse, faces: Face[]): ResolvedUse {
+  return {
+    use,
+    registered: {
+      font: use.font,
+      variant: use.variant,
+      family: use.font,
+      faces: faces.map((face) => ({ url: face.url ?? face.key })),
+    },
+    faces,
+    fellBack: false,
+    unread: false,
+  };
+}
+
+/** The fixture vault's own faces, and no platform directory. */
+const PLACES: FontPlaces = {
+  platform: vaultFonts(vault),
+  vault: vaultFonts(vault),
+  directories: [],
+  folder: VAULT_FONTS,
+};
+
+/** The urls of the faces a run of ops sends. */
+function sentUrls(ops: readonly Op[]): string[] {
+  return ops.flatMap((op) => (op.op === "font" && op.url !== undefined ? [op.url] : []));
+}
+
+test("a book opens sending only the faces of the variants it uses", async () => {
+  const index = await readFontIndex(PLACES);
+  const junicode = familyNamed(index, "Junicode");
+  assert.ok(junicode, "the fixture vault carries no Junicode");
+  const urlsOf = (name: string): Promise<string[]> => {
+    const variant = junicode.variants.find((each) => each.name === name);
+    assert.ok(variant, `Junicode has no ${name}`);
+    return Promise.all(
+      variant.faces.map(async (face) => {
+        const file = new Uint8Array(await vault.readBinary(face.path));
+        return fontUrl(await contentKey(faceBytes(file, face.face)));
+      }),
+    );
+  };
+  const clock = new Steps();
+  const client = new FakeClient();
+  const base = await setting(client);
+  const composer = new Composer(
+    {
+      ...base,
+      model: async (at) => {
+        const model = await base.model(at);
+        if (model !== undefined) model.book.design.body.font = "Junicode";
+        return model;
+      },
+      fonts: (uses) => Promise.all(uses.map((use) => resolveUse(PLACES, index, use))),
+    },
+    clock,
+  );
+
+  const book = await composer.open(BOOK);
+
+  const opened = client.rendered[0] ?? [];
+  const regular = await urlsOf("Regular");
+  assert.equal(regular.length, 3);
+  assert.deepEqual(new Set(sentUrls(opened)), new Set(regular));
+  const faces = (sheets: readonly Op[]): string => {
+    const style = sheets.filter((op) => op.op === "style").at(-1);
+    assert.ok(style?.op === "style");
+    return style.sheets.find((sheet) => sheet.name === FACES_SHEET)?.css ?? "";
+  };
+  assert.doesNotMatch(faces(opened), /Cond|Exp/);
+
+  // A heading set in Cond sends Cond's faces alone, ahead of the style op.
+  const design = structuredClone(book.design);
+  design.headings[1] = { ...design.headings[1], font: "Junicode", fontVariant: "Cond" };
+  const uses: FontUse[] = [
+    { font: "Junicode", variant: undefined },
+    { font: "Junicode", variant: "Cond" },
+  ];
+  book.restyle(design, await Promise.all(uses.map((use) => resolveUse(PLACES, index, use))));
+  clock.tick();
+  await drain();
+  const restyled = client.rendered.at(-1) ?? [];
+  assert.deepEqual(new Set(sentUrls(restyled)), new Set(await urlsOf("Cond")));
+  assert.equal(restyled.at(-1)?.op, "style");
+  assert.match(faces(restyled), /"Junicode Cond"/);
+});
+
+test("two font edits before the render still send the faces the first one planned", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+  const cut: Face = { key: "junicode-regular", bytes: new Uint8Array([7]), url: "orca-font:junicode-regular" };
+  const junicode = resolvedOf({ font: "Junicode", variant: undefined }, [cut]);
+
+  // The body and then a heading take the same font before the settle,
+  // so both edits resolve to the same faces.
+  const body = refonted(book.design, "Junicode");
+  book.restyle(body, [junicode]);
+  const headed = structuredClone(body);
+  headed.headings[1] = { ...headed.headings[1], font: "Junicode" };
+  book.restyle(headed, [junicode]);
+  clock.tick();
+  await drain();
+
+  assert.deepEqual(sentUrls(client.rendered.at(-1) ?? []), ["orca-font:junicode-regular"]);
 });
 
 /** The design after a font pick, as the panel passes it to `restyle`. */

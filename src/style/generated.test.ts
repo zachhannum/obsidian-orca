@@ -746,6 +746,29 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
+test("a heading set in a variant names the family that variant is registered under", () => {
+  const design = emptyDesign();
+  design.body.font = "Junicode";
+  design.headings[1].font = "junicode";
+  design.headings[1].fontVariant = "cond";
+  design.headings[2].font = "Spectral";
+  const registered = [
+    { font: "Junicode", variant: undefined, family: "Junicode", faces: [] },
+    { font: "Junicode", variant: "Cond", family: "Junicode Cond", faces: [] },
+  ];
+
+  const css = generatedCss(design, { sections: named([]) }, registered);
+
+  assert.match(css, /book \{\n {2}font-family: "Junicode", serif;/);
+  assert.match(css, /h1 \{\n {2}font-family: "Junicode Cond", serif;/);
+  // A font with no face registered is named as the design names it.
+  assert.match(css, /h2 \{\n {2}font-family: "Spectral", serif;/);
+  assert.equal(
+    generatedCss(design, { sections: named([]) }, []),
+    generatedCss(design, { sections: named([]) }),
+  );
+});
+
 // What this tier does not cover: the author's own layer over this one,
 // which waits on the note's css fence, and the warning a control can
 // raise, which the panel's own controls answer for.

@@ -15,6 +15,11 @@ export interface FaceNames {
   style: string;
   /** Whether the file names variation axes. */
   variable: boolean;
+  /** The `OS/2` weight class, 400 when the table does not give one. */
+  weight: number;
+  /** The `OS/2` width class from 1 to 9, 5 when the table does not give one. */
+  width: number;
+  italic: boolean;
 }
 
 /** Reads a slice of one file. A read past the end returns what is there. */
@@ -51,11 +56,15 @@ export async function readFace(
   // PostScript name.
   const postscript = names.get(POSTSCRIPT) ?? "";
   if (family.startsWith(".") || postscript.startsWith(".")) return "hidden";
-  if (await restricted(read, directory.get("OS/2"))) return "restricted";
+  const os2 = await tableBytes(read, directory.get("OS/2"), OS2_READ);
+  if (os2.length >= 10 && (viewing(os2).getUint16(8) & RESTRICTED) !== 0) {
+    return "restricted";
+  }
   return {
     family,
     style: (names.get(TYPOGRAPHIC_STYLE) ?? names.get(STYLE) ?? "Regular").trim(),
     variable: directory.has("fvar"),
+    ...(await classes(read, os2, directory.get("head"))),
   };
 }
 
@@ -128,6 +137,14 @@ const ENGLISH = 0x0409;
 /** Restricted embedding, the one `fsType` bit that keeps a face out of the index. */
 const RESTRICTED = 0x0002;
 
+/** The bytes of `OS/2` read, up to and through `fsSelection`. */
+const OS2_READ = 64;
+
+/** The `fsSelection` bits for an italic and an oblique face, and the `macStyle` bit for italic. */
+const ITALIC = 0x0001;
+const OBLIQUE = 0x0200;
+const MAC_ITALIC = 0x0002;
+
 interface Table {
   at: number;
   length: number;
@@ -159,10 +176,41 @@ async function tables(
   return found;
 }
 
-async function restricted(read: Ranges, os2: Table | undefined): Promise<boolean> {
-  if (os2 === undefined || os2.length < 10) return false;
-  const table = viewing(await slice(read, os2.at, 10));
-  return (table.getUint16(8) & RESTRICTED) !== 0;
+/** The first bytes of a table, as many of them as it has. */
+async function tableBytes(
+  read: Ranges,
+  table: Table | undefined,
+  most: number,
+): Promise<Uint8Array> {
+  if (table === undefined) return new Uint8Array(0);
+  return slice(read, table.at, Math.min(table.length, most));
+}
+
+/**
+ * A face's weight, width and slope. A weight or width outside its range
+ * reads as the regular one, since a face that leaves the field empty
+ * means no class rather than the thinnest.
+ */
+async function classes(
+  read: Ranges,
+  os2: Uint8Array,
+  head: Table | undefined,
+): Promise<Pick<FaceNames, "weight" | "width" | "italic">> {
+  const view = viewing(os2);
+  const weight = os2.length >= 6 ? view.getUint16(4) : 0;
+  const width = os2.length >= 8 ? view.getUint16(6) : 0;
+  let italic: boolean;
+  if (os2.length >= 64) {
+    italic = (view.getUint16(62) & (ITALIC | OBLIQUE)) !== 0;
+  } else {
+    const bytes = await tableBytes(read, head, 46);
+    italic = bytes.length >= 46 && (viewing(bytes).getUint16(44) & MAC_ITALIC) !== 0;
+  }
+  return {
+    weight: weight >= 1 && weight <= 1000 ? weight : 400,
+    width: width >= 1 && width <= 9 ? width : 5,
+    italic,
+  };
 }
 
 /**

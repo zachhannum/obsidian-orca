@@ -26,9 +26,15 @@ interface Props {
 
 const { group, values, own, faces } = Astro.props;
 
-/** The kinds this file draws. Every other one stops the build. */
+/**
+ * The kinds this file knows. Every other one stops the build. This file
+ * draws no Variant row. The demo offers only the faces the engine
+ * carries, and each of those has one variant. The plugin also hides the
+ * row for a family with one variant.
+ */
 const DRAWN = new Set([
   'font',
+  'variant',
   'length',
   'count',
   'flag',
@@ -85,7 +91,9 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
 <div class="o-grp">
   <div class="o-gh">{group.name}</div>
   {
-    group.rows.map((row) => (
+    group.rows
+      .filter((row) => !row.of.every((control) => control.kind === 'variant'))
+      .map((row) => (
       <div class={row.grid === true ? 'o-row o-grid' : 'o-row'}>
         {row.label !== '' && <span class="o-lab">{row.label}</span>}
         {row.of.map((control) => (

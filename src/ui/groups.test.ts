@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { DESIGN_KEYS, LEVELS, emptyDesign, writeDesign } from "@/style/design";
+import type { Variant } from "@/assets/variants";
 import { effective } from "@/style/theme";
 import {
   GROUPS,
@@ -15,7 +16,9 @@ import {
   stepped,
   trims,
   typed,
+  withFont,
   withKey,
+  withVariant,
   type Control,
 } from "@/ui/groups";
 
@@ -46,7 +49,7 @@ test("the panel offers every group a book designer works in", () => {
   }
 });
 
-test("the Headings group sets font, size and alignment at every level, and chapter openings set none", () => {
+test("the Headings group sets font, variant, size and alignment at every level, and chapter openings set none", () => {
   const headings = GROUPS.find((group) => group.name === "Headings");
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
   assert.ok(headings !== undefined && openings !== undefined);
@@ -55,7 +58,9 @@ test("the Headings group sets font, size and alignment at every level, and chapt
     new Set(keysOf(headings)),
     new Set(
       LEVELS.flatMap((level) =>
-        ["font", "size", "align"].map((part) => `heading-${String(level)}-${part}`),
+        ["font", "font-variant", "size", "align"].map(
+          (part) => `heading-${String(level)}-${part}`,
+        ),
       ),
     ),
   );
@@ -84,10 +89,11 @@ test("every word the panel draws is spelled the American way", () => {
   }
 });
 
-test("every key the panel writes has a default, except the word a scene break is marked with", () => {
+test("every key the panel writes has a default, except the word a scene break is marked with and a font's variant", () => {
   const defaults = writeDesign(effective(emptyDesign()));
   for (const key of PANEL_KEYS) {
-    if (key === "scene-break-word") continue;
+    // A font's default variant is written as absent.
+    if (key === "scene-break-word" || key.endsWith("-font-variant")) continue;
     assert.notEqual(defaults[key], undefined, `\`${key}\` has no default`);
   }
   assert.equal(defaults["scene-break-word"], undefined);
@@ -103,6 +109,24 @@ test("a reset names the default in the words the control draws it with", () => {
   // A page length comes out in the unit the author measures pages in.
   assert.equal(defaultSaid(control("margin-top"), "54pt", "in"), "0.75in");
   assert.equal(defaultSaid(control("trim"), "6in 9in", "mm"), "US trade (152.4 × 228.6 mm)");
+});
+
+test("the panel writes a picked variant under the font's variant key and clears it with the font", () => {
+  const regular: Variant = { name: "Regular", isDefault: true, faces: [] };
+  const cond: Variant = { name: "Cond", isDefault: false, faces: [] };
+  let design = withFont(emptyDesign(), "heading-1-font", "Junicode");
+  design = withVariant(design, "heading-1-font-variant", cond);
+  assert.equal(writeDesign(design)["heading-1-font-variant"], "Cond");
+
+  // The default variant is stored as absent.
+  const back = withVariant(design, "heading-1-font-variant", regular);
+  assert.equal(writeDesign(back)["heading-1-font-variant"], undefined);
+  // A new font opens in its default variant, and a font reset takes its variant with it.
+  const refonted = withFont(design, "heading-1-font", "Alegreya");
+  assert.equal(writeDesign(refonted)["heading-1-font-variant"], undefined);
+  const reset = writeDesign(withFont(design, "heading-1-font", undefined));
+  assert.equal(reset["heading-1-font"], undefined);
+  assert.equal(reset["heading-1-font-variant"], undefined);
 });
 
 test("a chapter begins on the next page unless the book says otherwise, and that choice is offered first", () => {
