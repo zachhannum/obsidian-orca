@@ -33,6 +33,7 @@ import {
   LOADED_NOTHING,
   bookImages,
   bookSources,
+  cssImages,
   sendBook,
   sendEdit,
   sendFaces,
@@ -79,13 +80,14 @@ async function planned(model: Model): Promise<Op[]> {
 }
 
 /** The same, with the images the ops registered. */
-async function sending({ book, order }: Model): Promise<Sending> {
+async function sending({ book, order }: Model, css = ""): Promise<Sending> {
   const registry = new Registry(vault);
   return sendBook(
     book,
     order,
     pathLinks(await paths()),
     BOOK,
+    css,
     (at) => readText(vault, at),
     (at) => registry.take(at),
   );
@@ -182,6 +184,7 @@ test("a title page with no metadata falls back to its role's own name", async ()
     order,
     pathLinks([]),
     "Test.md",
+    "",
     () => Promise.reject(new Error("a generated section reads no note")),
     () => Promise.reject(new Error("a generated section embeds nothing")),
   );
@@ -202,6 +205,83 @@ test("an embed crosses as bytes, under the url the manuscript names it by", asyn
   assert.deepEqual(
     image.bytes,
     new Uint8Array(await vault.readBinary(`images/${DEVICE}`)),
+  );
+});
+
+test("a url the CSS names outside @font-face crosses as an image op, under the url as written", async () => {
+  const css = [
+    '@font-face { font-family: "Junicode"; src: url("fonts/Junicode-Regular.otf"); }',
+    '@page { background-image: url("images/device.png"); }',
+  ].join("\n");
+  const { ops } = await sending(await fixture(), css);
+
+  assert.deepEqual(
+    ops.map((op) => op.op),
+    ["dialect", "split", "image", "image", "book", "metadata"],
+  );
+  const styled = ops.filter((op) => op.op === "image").at(-1);
+  assert.equal(styled?.url, "images/device.png");
+  assert.deepEqual(
+    styled?.bytes,
+    new Uint8Array(await vault.readBinary(`images/${DEVICE}`)),
+  );
+
+  // The engine paints the background from the bytes under that url. A
+  // style op replaces every sheet, so the theme crosses with the CSS.
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const output = await connected(engine).preview([
+      ...ops,
+      styleOp([
+        { name: THEME_SHEET, css: BUNDLED_THEME },
+        { name: "book.css", css },
+      ]),
+    ]);
+    assert.ok(output, "the render was overtaken");
+    const items = output.pages.flatMap((page) => page.items);
+    assert.ok(items.some((item) => item.kind === "background"));
+  } finally {
+    engine.free();
+  }
+});
+
+test("a url in the CSS resolves through the vault like an embed, and a url outside it crosses nothing", async () => {
+  const taken: string[] = [];
+  const registry = new Registry(vault);
+  const images = await cssImages(
+    [
+      "@page { background-image: url(device.png); }",
+      'h1 { background-image: url("nothing here.png"); }',
+      'h2 { background-image: url("https://example.com/device.png"); }',
+    ].join("\n"),
+    pathLinks(await paths()),
+    BOOK,
+    (at) => {
+      taken.push(at);
+      return registry.take(at);
+    },
+  );
+
+  assert.deepEqual(taken, [`images/${DEVICE}`]);
+  assert.deepEqual(
+    images.map((image) => image.url),
+    [DEVICE],
+  );
+});
+
+test("a url both a chapter and the CSS name crosses once", async () => {
+  const { ops, images } = await sending(
+    await fixture(),
+    `@page { background-image: url("${DEVICE}"); }`,
+  );
+
+  assert.deepEqual(
+    ops.filter((op) => op.op === "image").map((op) => op.url),
+    [DEVICE],
+  );
+  assert.deepEqual(
+    images.map((image) => image.url),
+    [DEVICE],
   );
 });
 
@@ -703,6 +783,7 @@ async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
     model.order,
     links,
     name,
+    "",
     (at) => readText(from, at),
     (at) => registry.take(at),
   );

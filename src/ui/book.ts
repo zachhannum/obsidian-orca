@@ -375,6 +375,9 @@ export class BookView extends FileView {
         shown.model.order,
         links,
         file.path,
+        // The folios are set without the author's CSS, so it names no
+        // image this run needs.
+        "",
         (path) => this.readNote(path),
         (path) => this.readFile(path),
       );

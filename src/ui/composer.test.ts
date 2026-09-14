@@ -432,6 +432,35 @@ test("an image a chapter picks up while it is drafted crosses on the next render
   );
 });
 
+test("CSS that names a new image sends the image before the style op that uses it", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client), clock);
+  const book = await composer.open(BOOK);
+  const renders = client.rendered.length;
+  const named = `${book.css}\n@page { background-image: url("images/device.png"); }`;
+
+  book.recss(named);
+  await crossed(book, clock);
+
+  const sent = client.rendered.slice(renders).flat();
+  assert.deepEqual(sent.map((op) => op.op), ["image", "style"]);
+  const image = sent.find((op) => op.op === "image");
+  assert.equal(image?.url, "images/device.png");
+  assert.deepEqual(
+    image?.bytes,
+    new Uint8Array(await vault.readBinary("images/device.png")),
+  );
+
+  // A url the engine already holds crosses no second time.
+  book.recss(`${named}\nh1 { background-image: url("images/device.png"); }`);
+  await crossed(book, clock);
+  assert.deepEqual(
+    client.rendered.slice(renders).flat().map((op) => op.op),
+    ["image", "style", "style"],
+  );
+});
+
 /**
  * Waits out the reads an embed costs, then steps the loop the ops they
  * planned are waiting on. The book says when it has finished resolving,

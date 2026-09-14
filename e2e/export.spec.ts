@@ -24,6 +24,13 @@ const PRINTED_WORDS = 160;
 /** The note that embeds the fixture's one image. */
 const EMBEDS = "Acknowledgements.md";
 
+/**
+ * A rule that puts the fixture's image behind every page, once. The url
+ * is bare, so the editor closes no quote the spec types.
+ */
+const BACKGROUND =
+  "@page { background-image: url(images/device.png); background-repeat: no-repeat; }";
+
 test("export writes the pages on screen to a vault path, and the file is a PDF with the book's words", async ({
   book,
   exporting,
@@ -111,6 +118,56 @@ test("an embed with no file behind it stands as an error, and export will not wr
 
   // The note goes back before the spec ends, and the render that puts
   // the book back lands here rather than under the next spec.
+  await exporting.close();
+  await vault.restore();
+  await book.settled(BOOK);
+});
+
+test("an image the book's CSS names is painted behind the pages, and the PDF carries it", async ({
+  book,
+  exporting,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  vault.touch(FILE);
+  await book.open();
+  const before = await book.settled(BOOK);
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+
+  await panel.typeCss(`\n${BACKGROUND}`);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  await book.settled(BOOK);
+
+  // The title page embeds nothing, so the image on it is the background.
+  await book.type("1");
+  await expect(book.surface).toHaveAttribute("data-first", "1");
+  await expect(book.page.locator("image")).toHaveCount(1);
+  await expect(book.page.locator("image")).toHaveAttribute("href", /^blob:/);
+  await expect(book.warnings).toBeHidden();
+  await expect(book.status).toHaveText(/ of \d+$/);
+  const pages = Number(/of (\d+)$/.exec((await book.status.textContent()) ?? "")?.[1]);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.write.click();
+  await exporting.reaches("written");
+
+  const folder = await mkdtemp(path.join(tmpdir(), "orca-export-"));
+  try {
+    const written = path.join(folder, FILE);
+    await writeFile(written, await vault.bytes(FILE));
+    // Two heading lines, then one line for each image a page draws: the
+    // background on every page, and the embed on the last.
+    const listed = execFileSync("pdfimages", ["-list", written], { encoding: "utf8" });
+    const drawn = listed.trim().split("\n").slice(2);
+    expect(drawn.length).toBe(pages + 1);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+
   await exporting.close();
   await vault.restore();
   await book.settled(BOOK);
