@@ -28,6 +28,9 @@ interface Holding {
   };
 }
 
+/** The command that opens the book, or reveals a preview already open. */
+export const OPEN_BOOK = "orca:open-book";
+
 /** The command that splits the pane and ties the two. */
 export const TO_THE_RIGHT = "orca:preview-to-the-right";
 
@@ -318,9 +321,9 @@ export class Book {
     }, PREVIEW);
   }
 
-  /** Opens the book from the ribbon. */
+  /** Opens the book with `Open a book`. */
   async open(): Promise<void> {
-    await this.obsidian.ribbon("Open the book").click();
+    await this.obsidian.command(OPEN_BOOK);
   }
 
   async close(): Promise<void> {

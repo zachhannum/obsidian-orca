@@ -6,6 +6,7 @@
  */
 
 import { expect, type Locator } from "@playwright/test";
+import { OPEN_PREVIEW } from "./note";
 import type { Obsidian } from "./obsidian";
 
 /** The type the navigator is registered under. */
@@ -38,6 +39,11 @@ export class Navigator {
   /** A book's own row, which is what its menu opens from. */
   name(path: string): Locator {
     return this.book(path).getByTestId("orca-book");
+  }
+
+  /** The action on a book's row that opens its preview. */
+  preview(path: string): Locator {
+    return this.name(path).locator(`[aria-label="${OPEN_PREVIEW}"]`);
   }
 
   /** One entry in a book's reading order, by what the row is called. */

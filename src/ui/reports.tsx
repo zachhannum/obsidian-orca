@@ -25,8 +25,6 @@ export interface Acting {
   /** Focuses an entry in the navigator, by its place in the reading order. */
   locate(at: number): void;
   asMarkdown(): void;
-  /** Opens the design panel in the right sidebar. */
-  openPanel(): void;
   /** Opens the export dialog on this book. */
   exports(): void;
 }
@@ -171,17 +169,6 @@ function Book({
             </div>
           ))}
         </div>
-        <button
-          type="button"
-          className="orca-book-open-design"
-          data-testid="orca-book-open-design"
-          onClick={() => {
-            acting.openPanel();
-          }}
-        >
-          <Icon name="sliders-horizontal" className="orca-book-icon" />
-          Open the design panel
-        </button>
       </div>
 
       <div className="orca-book-order">

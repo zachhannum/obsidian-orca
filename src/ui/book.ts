@@ -19,6 +19,7 @@ import type { PageUnit } from "@/style/design";
 import { designSheets } from "@/style/sheet";
 import { Changed } from "@/ui/changed";
 import { save, type Edits } from "@/ui/edits";
+import { PREVIEW_ICON } from "@/ui/icon";
 import { cacheLinks } from "@/ui/notes";
 import { report, setField } from "@/ui/report";
 import { mountPage, type Mounted } from "@/ui/reports";
@@ -34,8 +35,8 @@ export interface Handoff {
   asMarkdown(view: BookView): void;
   /** Reveals the navigator and focuses one entry of a book there. */
   locate(book: string, at: number): void;
-  /** Opens the design panel in the right sidebar, where the author edits the design. */
-  openPanel(): void;
+  /** Opens the preview of a book. */
+  preview(book: string): void;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
   /** Opens the export dialog on a book. */
@@ -96,6 +97,9 @@ export class BookView extends FileView {
     this.addAction("file-text", "Open as markdown", () => {
       this.handoff.asMarkdown(this);
     });
+    this.addAction(PREVIEW_ICON, "Open preview", () => {
+      if (this.file !== null) this.handoff.preview(this.file.path);
+    });
     this.mounted = mountPage(this.contentEl, {
       set: (key, value) => {
         this.edit((model) => setField(model, key, value));
@@ -105,9 +109,6 @@ export class BookView extends FileView {
       },
       asMarkdown: () => {
         this.handoff.asMarkdown(this);
-      },
-      openPanel: () => {
-        this.handoff.openPanel();
       },
       exports: () => {
         if (this.file !== null) this.handoff.exports(this.file.path);

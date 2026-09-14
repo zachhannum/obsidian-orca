@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PREVIEW } from "./harness/book";
 import { expect, test } from "./harness/test";
 import type { Vault } from "./harness/vault";
 
@@ -24,6 +25,9 @@ const BOOK = "Pride and Prejudice.md";
 
 /** The fixture chapter as the toolbar names it. Its heading is a level 1 heading. */
 const CHAPTER_NAME = "Chapter Twelve";
+
+/** The note that chapter is read from. */
+const CHAPTER_NOTE = "Chapter Twelve.md";
 
 /** The font the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FONT = "Alegreya";
@@ -913,35 +917,38 @@ test("the book note's page draws the design read-only, in the panel's words", as
   await expect(note.summed("Chapters begin on")).toContainText(
     "Right-hand page",
   );
-  // Nothing on the page edits the design. The button opens the panel.
+  // Nothing on the page edits the design, and nothing opens the panel.
   await expect(
     note.design.locator("input, select, [role='switch']"),
   ).toHaveCount(0);
-  await expect(note.openDesign).toBeVisible();
+  await expect(note.page.getByText("Open the design panel")).toHaveCount(0);
 });
 
-test("the book page's button opens the design panel, and reveals it once open", async ({
-  note,
+test("the panel shows a book only while a preview of it is visible", async ({
+  book,
   obsidian,
   panel,
 }) => {
-  // The spec begins with no panel leaf, so the first click makes one.
-  await panel.close();
-  await note.open(BOOK);
-  await note.painted();
-  await expect(panel.leaf).toHaveCount(0);
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await expect(panel.panel).toBeVisible();
 
-  await note.openDesign.click();
-  await expect(panel.leaf).toBeVisible();
+  // A note in a tab in front of the preview hides it.
+  await obsidian.page.evaluate(async (at) => {
+    const note = window.app.vault.getFileByPath(at);
+    if (note === null) throw new Error(`${at} is not in the vault`);
+    await window.app.workspace.getLeaf("tab").openFile(note);
+  }, CHAPTER_NOTE);
+  await expect(panel.empty).toHaveText("No book is open");
 
-  // If the sidebar is collapsed, the same click reveals the leaf that
-  // is there and does not open a second one.
-  await obsidian.collapse("right");
-  expect(await obsidian.collapsed("right")).toEqual(true);
-  await note.openDesign.click();
-  await expect.poll(async () => obsidian.collapsed("right")).toEqual(false);
-  await expect(panel.leaf).toBeVisible();
-  await expect(panel.leaf).toHaveCount(1);
+  await obsidian.page.evaluate(async (type) => {
+    const leaf = window.app.workspace.getLeavesOfType(type)[0];
+    if (leaf === undefined) throw new Error("no preview is open");
+    await window.app.workspace.revealLeaf(leaf);
+    window.app.workspace.setActiveLeaf(leaf, { focus: true });
+  }, PREVIEW);
+  await expect(panel.panel).toBeVisible();
 });
 
 test("a click low in the panel leaves it scrolled where it was", async ({

@@ -21,6 +21,7 @@ import { isGenerated } from "@/book/plan";
 import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { copiedText, type SelectionLine } from "@/ui/copy";
+import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
   nextPage,
@@ -273,7 +274,7 @@ export class PreviewView extends ItemView {
   }
 
   override getIcon(): string {
-    return "book";
+    return PREVIEW_ICON;
   }
 
   override getState(): Record<string, unknown> {
@@ -622,19 +623,13 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Puts the way back to the manuscript in the view's header, for a
-   * preview the author toggled into from a note. One opened from the
-   * ribbon has no manuscript to go back to.
+   * Puts the way to markdown in the view's header. A preview toggled
+   * into from a note goes back to that note, and one opened without a
+   * chapter opens the book note.
    */
   private attach(): void {
-    const note = this.state.note;
-    if (note === undefined) {
-      this.edit?.remove();
-      this.edit = undefined;
-      return;
-    }
     this.edit ??= this.addAction("file-text", "Open as markdown", () => {
-      const at = this.state.note;
+      const at = this.state.note ?? this.state.book;
       if (at === undefined) return;
       this.setInspecting(INSPECT_OFF);
       this.handoff.asMarkdown(this, at);

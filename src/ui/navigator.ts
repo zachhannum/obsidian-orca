@@ -1,4 +1,4 @@
-import { ItemView, Menu, Notice, TFile, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Keymap, Menu, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
 import { bookFormat } from "@/book/note";
@@ -31,6 +31,18 @@ import { mountShelf, type Mounted } from "@/ui/shelves";
 /** The type the navigator is registered under. */
 export const NAVIGATOR_VIEW = "orca-navigator";
 
+/** The plugin, as much of it as the navigator reaches: it owns the main area. */
+export interface Handoff {
+  /** Opens the preview of a book, or reveals one already reading it. */
+  preview(book: string): void;
+  /**
+   * Turns the preview in the main area's most recent tab to a chapter.
+   * It answers false, and turns nothing, where that tab is not a
+   * preview of the book.
+   */
+  turn(book: string, note: string): boolean;
+}
+
 /**
  * Every book in the vault, and the reading order of each.
  *
@@ -54,6 +66,7 @@ export class NavigatorView extends ItemView {
   constructor(
     leaf: WorkspaceLeaf,
     private readonly edits: Edits,
+    private readonly handoff: Handoff,
   ) {
     super(leaf);
   }
@@ -109,6 +122,12 @@ export class NavigatorView extends ItemView {
     this.mounted = mountShelf(this.contentEl, {
       open: (path) => {
         void this.openNote(path);
+      },
+      preview: (book) => {
+        this.handoff.preview(book.path);
+      },
+      openEntry: (book, path, event) => {
+        void this.openEntry(book, path, event.nativeEvent);
       },
       bookMenu: (event, book) => {
         this.bookMenu(event.nativeEvent, book);
@@ -561,6 +580,26 @@ export class NavigatorView extends ItemView {
   private async openNote(path: string): Promise<void> {
     const note = this.app.vault.getFileByPath(path);
     if (note === null) return;
+    await this.app.workspace.getLeaf(false).openFile(note);
+  }
+
+  /**
+   * Opens a chapter. A click with the Mod key opens it as markdown in a
+   * new tab. Otherwise a preview of the book in the most recent tab
+   * turns to it, and the note opens only where there is none.
+   */
+  private async openEntry(
+    book: Shelved,
+    path: string,
+    event: MouseEvent,
+  ): Promise<void> {
+    const note = this.app.vault.getFileByPath(path);
+    if (note === null) return;
+    if (Keymap.isModEvent(event) !== false) {
+      await this.app.workspace.getLeaf("tab").openFile(note);
+      return;
+    }
+    if (this.handoff.turn(book.path, path)) return;
     await this.app.workspace.getLeaf(false).openFile(note);
   }
 }

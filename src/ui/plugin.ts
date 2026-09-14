@@ -2,6 +2,7 @@ import { ViewPlugin } from "@codemirror/view";
 import {
   MarkdownView,
   Notice,
+  addIcon,
   Plugin,
   TFile,
   TFolder,
@@ -23,6 +24,7 @@ import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
+import { PREVIEW_ICON } from "@/ui/icon";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import { bookCss, withCss } from "@/book/css";
 import { writeDesign, type Design, type FontUse } from "@/style/design";
@@ -57,6 +59,20 @@ import type { Opened } from "@/ui/shelf";
 
 /** The view a book note is handed back to. */
 const MARKDOWN_VIEW = "markdown";
+
+/** The ribbon's icon, registered under this name. */
+const ORCA_ICON = "orca";
+
+/**
+ * The orca tail from `design/orca-tail.svg`, fitted to the 100 by 100
+ * box `addIcon` draws in. The tail is a fill, and Obsidian's icon rules
+ * stroke, so the style on the group wins over them.
+ */
+const ORCA_SVG =
+  '<g style="fill: currentColor; stroke: none" transform="translate(0 21.27) scale(0.1105) translate(-60 -244)">' +
+  '<path d="M797.14 322.264C701.904 337.045 656.024 322.264 585.814 381.386C515.604 440.507 530.898 491.5 530.898 727.247C531.632 759.024 538.347 759.169 542.02 759.024C560.789 758.285 565.172 711.922 688.909 618.805C812.645 525.688 830.955 523.281 884.3 473.658C958.279 404.84 961.195 286.052 954.243 267.577C947.292 249.101 892.375 307.484 797.14 322.264Z"/>' +
+  '<path d="M227.611 322.264C322.847 337.045 368.727 322.264 438.937 381.386C509.147 440.507 493.853 491.5 493.853 727.247C493.119 759.024 486.404 759.169 482.731 759.024C463.962 758.285 459.579 711.922 335.842 618.805C212.106 525.688 193.796 523.281 140.452 473.658C66.4723 404.84 63.5559 286.052 70.5077 267.577C77.4594 249.101 132.376 307.484 227.611 322.264Z"/>' +
+  "</g>";
 
 /** The signature of `setViewState`, which orca wraps to answer first. */
 type SetViewState = (
@@ -147,6 +163,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
           composer,
           {
             asMarkdown: (view, note) => {
+              // A leaf is let into the editor on a book note only once
+              // the author has asked for markdown there.
+              if (note === view.book) this.asMarkdown.set(view.leaf, note);
               void this.openAsMarkdown(view.leaf, note);
             },
             follows: (view, note, at) => {
@@ -181,8 +200,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
           locate: (book, at) => {
             void this.locate(book, at);
           },
-          openPanel: () => {
-            void this.openPanel();
+          preview: (book) => {
+            void this.previewBook(book);
           },
           unit: () => this.limits.unit,
           exports: (book) => {
@@ -192,19 +211,26 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
     this.registerView(
       NAVIGATOR_VIEW,
-      (leaf) => new NavigatorView(leaf, this.edits),
+      (leaf) =>
+        new NavigatorView(leaf, this.edits, {
+          preview: (book) => {
+            void this.previewBook(book);
+          },
+          turn: (book, note) => this.turnPreview(book, note),
+        }),
     );
     this.registerView(
       PANEL_VIEW,
       (leaf) => new DesignPanelView(leaf, this.designing()),
     );
     this.catchOpening();
-    this.addRibbonIcon("book", "Open the book", () => {
-      void this.reveal();
+    addIcon(ORCA_ICON, ORCA_SVG);
+    this.addRibbonIcon(ORCA_ICON, "Open the navigator", () => {
+      void this.show();
     });
     this.addCommand({
       id: "open-book",
-      name: "Open the book",
+      name: "Open a book",
       callback: () => {
         void this.reveal();
       },
@@ -614,7 +640,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const existing = this.back.get(view);
     if (existing?.at === at) return;
     existing?.icon.remove();
-    const icon = view.addAction("book", "Open as book", opens);
+    const icon = view.addAction(
+      at.startsWith("page:") ? PREVIEW_ICON : "book",
+      "Open as book",
+      opens,
+    );
     this.back.set(view, { at, icon });
   }
 
@@ -679,7 +709,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     menu.addItem((item) =>
       item
         .setTitle("Open preview to the right")
-        .setIcon("book")
+        .setIcon(PREVIEW_ICON)
         .onClick(() => {
           void this.splitPreview(note, member);
         }),
@@ -1168,8 +1198,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * The book the panel designs. It is the one the reader is in, or the
-   * only one open when the panel itself has focus.
+   * The book the panel designs. It is the book of a preview on screen:
+   * the active one, or another that is visible when the panel itself
+   * has focus. A preview in a tab behind another one designs nothing.
    *
    * The pane answers with the book it is reading, rather than the
    * composer answering by path. A note the book reads, written from
@@ -1187,9 +1218,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const drawn = workspace
       .getLeavesOfType(PREVIEW_VIEW)
       .map((leaf) => leaf.view)
-      .filter((view): view is PreviewView => view instanceof PreviewView);
+      .filter(
+        (view): view is PreviewView =>
+          view instanceof PreviewView && view.containerEl.isShown(),
+      );
+    const active = workspace.getActiveViewOfType(PreviewView);
     const view =
-      workspace.getActiveViewOfType(PreviewView) ??
+      drawn.find((pane) => pane === active) ??
       drawn.find((pane) => pane.typeset !== undefined) ??
       drawn[0];
     if (view === undefined) return undefined;
@@ -1333,6 +1368,30 @@ export default class OrcaPlugin extends Plugin implements Limited {
     return member === undefined
       ? undefined
       : { book: member.book, note: active.path };
+  }
+
+  /** Reveals a preview already reading a book, and otherwise opens one in a new tab. */
+  private async previewBook(book: string): Promise<void> {
+    const { workspace } = this.app;
+    // A deferred leaf has no preview under it yet, but its state names
+    // the book it will read.
+    const open = workspace
+      .getLeavesOfType(PREVIEW_VIEW)
+      .find((leaf) => leaf.getViewState().state?.["book"] === book);
+    if (open === undefined) {
+      await this.openPreview({ book });
+      return;
+    }
+    await workspace.revealLeaf(open);
+    workspace.setActiveLeaf(open, { focus: true });
+  }
+
+  private turnPreview(book: string, note: string): boolean {
+    const { workspace } = this.app;
+    const view = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
+    if (!(view instanceof PreviewView) || view.book !== book) return false;
+    void view.turnTo(note);
+    return true;
   }
 
   private async openPreview(state: PreviewState): Promise<void> {

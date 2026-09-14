@@ -7,6 +7,9 @@ const PAGES = 15;
 /** The book's title, which its title page prints. */
 const OPENING = "Pride and Prejudice";
 
+/** The book note the fixture book is read from. */
+const BOOK_NOTE = "Pride and Prejudice.md";
+
 /** The blocks the fixture's title page prints, from the book's properties. */
 const TITLE_PAGE = ["The Bennet Novels", OPENING, "Jane Austen", "Whitehall Press"];
 
@@ -30,7 +33,7 @@ const LATE = BACK - 2;
 const LAST_NOTE = "Acknowledgements.md";
 const DEVICE = "![[device.png]]";
 
-test("the ribbon sets the book and paints its first page", async ({ book }) => {
+test("`Open a book` sets the book and paints its first page", async ({ book }) => {
   await book.open();
 
   expect(await book.painted()).toBeGreaterThan(0);
@@ -41,6 +44,26 @@ test("the ribbon sets the book and paints its first page", async ({ book }) => {
   for (const [stage, runs] of Object.entries(stages)) {
     expect(runs, stage).toBeGreaterThan(0);
   }
+});
+
+test("a preview opened without a chapter offers `Open as markdown`, which opens the book note", async ({
+  book,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+
+  await book.asMarkdown.click();
+
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate(() => {
+        const view = window.app.workspace.getMostRecentLeaf()?.view;
+        const file = (view as { file?: { path: string } | null } | undefined)?.file;
+        return `${view?.getViewType()}:${file?.path}`;
+      }),
+    )
+    .toEqual(`markdown:${BOOK_NOTE}`);
 });
 
 test("the title page prints the book's properties", async ({ book }) => {

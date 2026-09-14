@@ -1,4 +1,11 @@
+import { OPEN_BOOK, PREVIEW } from "./harness/book";
 import { expect, test } from "./harness/test";
+
+/** The ribbon icon's label. */
+const RIBBON = "Open the navigator";
+
+/** A chapter of the fixture book, as its row and the toolbar name it. */
+const CHAPTER = "Chapter Twelve";
 
 /** The book note in the fixture vault, and the notes a spec makes. */
 const BOOK = "Pride and Prejudice.md";
@@ -455,6 +462,70 @@ test("the navigator highlights the book the active note is in, and both books wh
 
   await expect(navigator.book(BOOK)).toHaveAttribute("data-holds", "true");
   await expect(navigator.book(SECOND)).toHaveAttribute("data-holds", "true");
+});
+
+test("the ribbon icon is the orca tail, and a click on it reveals the navigator", async ({
+  navigator,
+  obsidian,
+}) => {
+  await obsidian.collapse();
+  expect(await obsidian.collapsed()).toEqual(true);
+
+  const ribbon = obsidian.ribbon(RIBBON);
+  // The tail is two filled paths, and no other icon Obsidian carries is.
+  await expect(ribbon.locator("svg path")).toHaveCount(2);
+  await ribbon.click();
+
+  await expect.poll(async () => obsidian.collapsed()).toEqual(false);
+  await expect(navigator.pane).toBeVisible();
+});
+
+test("the command that opens a book is `Open a book`", async ({ obsidian }) => {
+  const name = await obsidian.page.evaluate(
+    (id) => window.app.commands.commands[id]?.name,
+    OPEN_BOOK,
+  );
+  expect(name).toMatch(/Open a book$/);
+});
+
+test("a book's row opens the preview of that book", async ({
+  book,
+  navigator,
+}) => {
+  await navigator.reveal();
+  await navigator.preview(BOOK).click();
+
+  expect(await book.painted()).toBeGreaterThan(0);
+  await expect(book.surface).toHaveAttribute("data-first", "1");
+});
+
+test("a chapter click turns the preview in the most recent tab, and a Mod click opens it as markdown", async ({
+  book,
+  navigator,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+  await expect(book.chapterName).not.toHaveText(CHAPTER);
+  await navigator.reveal();
+
+  await navigator.entry(BOOK, CHAPTER).click();
+  await expect(book.chapterName).toHaveText(CHAPTER);
+
+  await navigator.entry(BOOK, CHAPTER).click({ modifiers: ["ControlOrMeta"] });
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate((type) => {
+        const { workspace } = window.app;
+        const view = workspace.getMostRecentLeaf()?.view;
+        const file = (view as { file?: { path: string } | null } | undefined)?.file;
+        return {
+          shown: `${view?.getViewType()}:${file?.path}`,
+          previews: workspace.getLeavesOfType(type).length,
+        };
+      }, PREVIEW),
+    )
+    .toEqual({ shown: `markdown:${CHAPTER}.md`, previews: 1 });
 });
 
 test("opening a book note reveals the navigator", async ({

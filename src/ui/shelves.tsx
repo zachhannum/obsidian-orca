@@ -53,12 +53,15 @@ import {
   rowId,
   type Item,
 } from "@/ui/list";
-import { Icon } from "@/ui/icon";
+import { Icon, PREVIEW_ICON } from "@/ui/icon";
 import type { Row, Shelved } from "@/ui/shelf";
 
 /** The actions a shelf row can ask the view to perform. */
 export interface Acting {
   open(path: string): void;
+  preview(book: Shelved): void;
+  /** A click on an entry with a note. The view reads the Mod key off the event. */
+  openEntry(book: Shelved, path: string, event: Pointed): void;
   bookMenu(event: Pointed, book: Shelved): void;
   /** The entry's own menu. `after` is where `New chapter here` goes. */
   entryMenu(event: Pointed, book: Shelved, row: Row, after: Place): void;
@@ -471,6 +474,13 @@ function Book({
         <span className="orca-label">{book.name}</span>
         <span className="orca-nav-actions">
           <Action
+            icon={PREVIEW_ICON}
+            label="Open preview"
+            onClick={() => {
+              acting.preview(book);
+            }}
+          />
+          <Action
             icon="plus"
             label="Add to this book"
             onClick={(event) => {
@@ -678,8 +688,8 @@ function Entry({
       data-kind={row.kind}
       {...sortable.attributes}
       {...sortable.listeners}
-      onClick={() => {
-        if (row.path !== undefined) acting.open(row.path);
+      onClick={(event) => {
+        if (row.path !== undefined) acting.openEntry(book, row.path, event);
       }}
       onContextMenu={(event) => {
         acting.entryMenu(event, book, row, after);
