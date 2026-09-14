@@ -108,7 +108,6 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
         type="button"
         className="orca-panel-overridden"
         data-testid={overridden.testid}
-        aria-label={`Overridden by line ${String(first?.line)} of the book's CSS`}
         aria-describedby={body === undefined ? undefined : id}
         onPointerEnter={show}
         onPointerLeave={hide}
@@ -125,6 +124,10 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
         }}
       >
         <Icon name="lock" className="orca-panel-overridden-icon" />
+        {/* Obsidian draws an aria-label as its own tooltip, so the name is hidden text. */}
+        <span className="orca-visually-hidden">
+          {`Overridden by line ${String(first?.line)} of the book's CSS`}
+        </span>
       </button>
       {body === undefined
         ? null
@@ -144,12 +147,14 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
                   <Icon name="lock" className="orca-card-icon" />
                   <div className="orca-card-body">
                     <div className="orca-card-said">
-                      <code>{override.property}</code> is overridden by{" "}
-                      <code>
-                        {override.declared === override.property
-                          ? override.value
-                          : `${override.declared}: ${override.value}`}
-                      </code>
+                      <code>{override.property}</code> is overridden with value{" "}
+                      <code>{override.value}</code>
+                      {override.declared === override.property ? null : (
+                        <>
+                          {" "}
+                          from <code>{override.declared}</code>
+                        </>
+                      )}
                     </div>
                     <div className="orca-card-at">
                       {`${override.sheet}:${String(override.line)}:${String(override.column)}`}

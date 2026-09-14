@@ -1455,6 +1455,16 @@ button.orca-panel-tab.is-on {
   opacity: 0.42;
 }
 
+/* A name for assistive technology that draws nothing. */
+.orca-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 button.orca-panel-overridden {
   display: inline-flex;
   flex: none;

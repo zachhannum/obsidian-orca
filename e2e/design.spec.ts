@@ -581,7 +581,7 @@ test("a control the author's CSS overrides dims and names the line that override
   await panel.overridden(key).hover();
   await expect(panel.overriddenCard).toBeVisible();
   await expect(panel.overriddenCard).toContainText("text-indent");
-  await expect(panel.overriddenCard).toContainText("is overridden by");
+  await expect(panel.overriddenCard).toContainText("is overridden with value");
   await expect(panel.overriddenCard).toContainText("0");
   await expect(panel.overriddenCard).toContainText(`book.css:${line}:`);
   await panel.control(key).hover();
