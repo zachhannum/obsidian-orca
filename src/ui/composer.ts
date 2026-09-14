@@ -246,6 +246,11 @@ export class Typeset {
     this.restyle(this.designed);
   }
 
+  /** The text a note last crossed as, which is the text the engine's byte offsets count. */
+  textOf(note: string): string | undefined {
+    return this.sent.get(note);
+  }
+
   /** Told once a render has landed, so a view repaints where it left off. */
   watch(painted: () => void): () => void {
     this.watchers.add(painted);

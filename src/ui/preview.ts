@@ -1,4 +1,4 @@
-import { paintPage, type Warning } from "fleuron";
+import { paintPage, type Inspection, type NodeSource, type Warning } from "fleuron";
 import {
   ItemView,
   setIcon,
@@ -34,6 +34,20 @@ import {
   type Viewing,
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
+import {
+  INSPECT_OFF,
+  escape,
+  mapAnchor,
+  pointOn,
+  stillPinned,
+  targetKey,
+  targetOf,
+  type InspectState,
+  type Pin,
+  type Target,
+} from "@/ui/inspect";
+import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
+import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
 import { groupTitle, issueGroups, routeOf, type IssueGroup } from "@/ui/warnings";
 
@@ -87,6 +101,30 @@ export interface PreviewHandoff {
    * manuscript pane, or the author's CSS in the design panel.
    */
   opens(view: PreviewView, route: IssueGroup["route"], place: Place): void;
+  /**
+   * Told when a box is pinned, when a paint finds the pin again, and
+   * with nothing when the pin comes off. A pin found again is
+   * `refreshed`, so the author's own click is the one that opens a panel.
+   */
+  inspected(view: PreviewView, pin: Pin | undefined, refreshed: boolean): void;
+  /** The unit the author measures pages in, which the inspect tag sizes a box in. */
+  unit(): PageUnit;
+}
+
+/** A box the pointer found, and the generation the answer is from. */
+interface Probed {
+  target: Target;
+  inspection: Inspection;
+  generation: number;
+}
+
+/** A pin found again after a paint. */
+interface Refound {
+  target: Target;
+  anchor: NodeSource | undefined;
+  inspection: Inspection;
+  /** The note's text the new anchor counts bytes in. */
+  text: string | undefined;
 }
 
 /**
@@ -186,6 +224,26 @@ export class PreviewView extends ItemView {
    * page being read, so nothing opens it but the author.
    */
   private opened = false;
+  /** The overlay inspect mode draws, beside the surface in the well. */
+  private overlay: MountedOverlay | undefined;
+  /** The header action that turns inspect mode on and off. */
+  private inspectAction: HTMLElement | undefined;
+  private inspecting: InspectState = INSPECT_OFF;
+  /** The box under the pointer. */
+  private hovered: Probed | undefined;
+  /** The text of the note the pin's anchor counts bytes in. */
+  private pinText: string | undefined;
+  /** The turn the next hover answer has to be, so a slow one is dropped. */
+  private hovering = 0;
+  /** The same, for finding the pin again after a paint. */
+  private pinning = 0;
+  /** The last pointer position, which the next animation frame asks about. */
+  private pointer: { x: number; y: number } | undefined;
+  private framing = false;
+  /** The trim of each painted page, counting from 0, in points. */
+  private trims = new Map<number, Box>();
+  /** Raised on each paint and resize, so the overlay measures the pages again. */
+  private measured = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -290,6 +348,11 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
+    this.inspectAction ??= this.addAction("crosshair", "Inspect the page", () => {
+      this.toggleInspect();
+    });
+    this.inspectAction.setAttribute("aria-pressed", "false");
+    this.ordersActions();
     // The workspace may have handed this leaf its state before the
     // chrome existed to draw it on, and a paint into a pane with no
     // surface is a paint nobody sees.
@@ -297,6 +360,11 @@ export class PreviewView extends ItemView {
   }
 
   override onClose(): Promise<void> {
+    this.setInspecting(INSPECT_OFF);
+    this.overlay?.unmount();
+    this.overlay = undefined;
+    this.inspectAction?.remove();
+    this.inspectAction = undefined;
     this.watching?.disconnect();
     this.watching = undefined;
     this.unwatch?.();
@@ -507,6 +575,8 @@ export class PreviewView extends ItemView {
     const surface = well.createDiv({ cls: "orca-preview-sheets" });
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
+    this.overlay = mountOverlay(surface);
+    this.inspects(surface);
 
     this.registerDomEvent(folio, "change", () => {
       this.typed(folio.value);
@@ -550,8 +620,266 @@ export class PreviewView extends ItemView {
     }
     this.edit ??= this.addAction("file-text", "Open as markdown", () => {
       const at = this.state.note;
-      if (at !== undefined) this.handoff.asMarkdown(this, at);
+      if (at === undefined) return;
+      this.setInspecting(INSPECT_OFF);
+      this.handoff.asMarkdown(this, at);
     });
+    this.ordersActions();
+  }
+
+  /** Puts the inspect action left of the way back to the manuscript, as the artboard draws them. */
+  private ordersActions(): void {
+    const inspect = this.inspectAction;
+    const edit = this.edit;
+    if (inspect === undefined || edit === undefined) return;
+    if (edit.previousElementSibling !== inspect) edit.before(inspect);
+  }
+
+  /** Turns inspect mode on, or off with the pin and the hover. */
+  toggleInspect(): void {
+    this.setInspecting(this.inspecting.on ? INSPECT_OFF : { on: true, pin: undefined });
+  }
+
+  /** Whether inspect mode is on. */
+  get inspectOn(): boolean {
+    return this.inspecting.on;
+  }
+
+  private setInspecting(next: InspectState): void {
+    const unpinned = this.inspecting.pin !== undefined && next.pin === undefined;
+    this.inspecting = next;
+    if (!next.on) {
+      this.hovering += 1;
+      this.hovered = undefined;
+      this.pointer = undefined;
+    }
+    if (next.pin === undefined) {
+      this.pinning += 1;
+      this.pinText = undefined;
+    }
+    this.inspectAction?.toggleClass("is-active", next.on);
+    this.inspectAction?.setAttribute("aria-pressed", String(next.on));
+    this.drawsOverlay();
+    if (unpinned) this.handoff.inspected(this, undefined, false);
+  }
+
+  private drawsOverlay(): void {
+    const { on, pin } = this.inspecting;
+    const hovered = this.hovered;
+    this.overlay?.draw({
+      on,
+      hovered:
+        hovered === undefined
+          ? undefined
+          : { key: targetKey(hovered.target), inspection: hovered.inspection },
+      pinned:
+        pin === undefined
+          ? undefined
+          : {
+              key: targetKey(pin.target),
+              inspection: pin.inspection,
+              generation: pin.generation,
+            },
+      unit: this.handoff.unit(),
+      trims: this.trims,
+      measured: this.measured,
+    });
+  }
+
+  /**
+   * Listens for the pointer on the surface and for Escape on the view.
+   * A hover is asked about at most once an animation frame, and a click
+   * pins what is under it.
+   */
+  private inspects(surface: HTMLElement): void {
+    this.registerDomEvent(surface, "pointermove", (event) => {
+      if (!this.inspecting.on) return;
+      this.pointer = { x: event.clientX, y: event.clientY };
+      if (this.framing) return;
+      this.framing = true;
+      const view = surface.ownerDocument.defaultView ?? window;
+      view.requestAnimationFrame(() => {
+        this.framing = false;
+        const at = this.pointer;
+        if (at !== undefined) void this.hovers(at);
+      });
+    });
+    this.registerDomEvent(surface, "pointerleave", () => {
+      if (!this.inspecting.on) return;
+      this.hovering += 1;
+      this.pointer = undefined;
+      this.hovered = undefined;
+      this.drawsOverlay();
+    });
+    this.registerDomEvent(surface, "click", (event) => {
+      if (!this.inspecting.on) return;
+      event.preventDefault();
+      void this.pins({ x: event.clientX, y: event.clientY });
+    });
+    // The warnings panel shuts on its own Escape first, and marks the
+    // key taken.
+    this.registerDomEvent(this.containerEl, "keydown", (event) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      const next = escape(this.inspecting);
+      if (next === this.inspecting) return;
+      event.preventDefault();
+      this.setInspecting(next);
+    });
+  }
+
+  private async hovers(at: { x: number; y: number }): Promise<void> {
+    const turn = (this.hovering += 1);
+    const found = await this.probe(at);
+    if (turn !== this.hovering || !this.inspecting.on) return;
+    this.hovered = found;
+    this.drawsOverlay();
+  }
+
+  /** Pins the box under a click, and hands the pin to the plugin. */
+  private async pins(at: { x: number; y: number }): Promise<void> {
+    const turn = (this.hovering += 1);
+    const found = await this.probe(at);
+    if (turn !== this.hovering || !this.inspecting.on) return;
+    this.hovered = found;
+    if (found === undefined) {
+      this.drawsOverlay();
+      return;
+    }
+    const anchor =
+      found.target.kind === "node" ? await this.anchorOf(found.target.node) : undefined;
+    if (turn !== this.hovering || !this.inspecting.on) return;
+    const pin: Pin = {
+      target: found.target,
+      inspection: found.inspection,
+      generation: found.generation,
+    };
+    if (anchor !== undefined) pin.anchor = anchor;
+    // A refind still running is for the pin this one replaces.
+    this.pinning += 1;
+    this.inspecting = { on: true, pin };
+    this.pinText = anchor === undefined ? undefined : this.composed?.textOf(anchor.source);
+    this.drawsOverlay();
+    this.handoff.inspected(this, pin, false);
+  }
+
+  /** The bytes of a note a node was read from. Nothing for matter orca wrote itself. */
+  private async anchorOf(node: number): Promise<NodeSource | undefined> {
+    try {
+      const source = await this.session?.sourceOf(node);
+      return source === undefined || isGenerated(source.source) ? undefined : source;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * The box at a point on the screen: the painted page under it, the
+   * element the engine hits there, and the margin box where it hits none.
+   */
+  private async probe(at: { x: number; y: number }): Promise<Probed | undefined> {
+    const session = this.session;
+    const surface = this.surface;
+    if (session === undefined || surface === undefined) return undefined;
+    for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
+      const page = Number(sheet.dataset["page"]) - 1;
+      const trim = this.trims.get(page);
+      if (trim === undefined) continue;
+      const point = pointOn(sheet.getBoundingClientRect(), trim, at.x, at.y);
+      if (point === undefined) continue;
+      const generation = session.generation;
+      try {
+        const node = await session.hit(page, point.x, point.y);
+        const held = this.hovered;
+        if (
+          node !== undefined &&
+          held?.generation === generation &&
+          held.target.kind === "node" &&
+          held.target.node === node
+        ) {
+          return held;
+        }
+        const inspection =
+          node === undefined
+            ? await session.marginBoxAt(page, point.x, point.y)
+            : await session.inspect(node);
+        const target = inspection === undefined ? undefined : targetOf(inspection, page);
+        if (inspection === undefined || target === undefined) return undefined;
+        return { target, inspection, generation };
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Finds the pin again once a paint has landed a new generation, and
+   * takes it off where the box is gone. A node id names a node only
+   * until the next edit, so the pin is found by the bytes it was read
+   * from, carried through the edit.
+   */
+  private async refinds(session: Session): Promise<void> {
+    const pin = this.inspecting.pin;
+    if (pin === undefined || pin.generation === session.generation) return;
+    const pinning = (this.pinning += 1);
+    const generation = session.generation;
+    let found: Refound | undefined;
+    try {
+      found = await this.refound(session, pin);
+    } catch {
+      found = undefined;
+    }
+    if (pinning !== this.pinning || this.inspecting.pin !== pin) return;
+    if (found === undefined) {
+      this.setInspecting({ on: this.inspecting.on, pin: undefined });
+      return;
+    }
+    const next: Pin = { target: found.target, inspection: found.inspection, generation };
+    if (found.anchor !== undefined) next.anchor = found.anchor;
+    this.inspecting = { ...this.inspecting, pin: next };
+    this.pinText = found.text;
+    this.drawsOverlay();
+    this.handoff.inspected(this, next, true);
+  }
+
+  private async refound(session: Session, pin: Pin): Promise<Refound | undefined> {
+    const { target, anchor } = pin;
+    if (target.kind === "margin") {
+      const inspection = await session.inspectMarginBox(target.page, target.box);
+      return inspection === undefined
+        ? undefined
+        : { target, anchor: undefined, inspection, text: undefined };
+    }
+    if (anchor === undefined) {
+      const inspection = await session.inspect(target.node);
+      return inspection?.element === pin.inspection.element
+        ? { target, anchor: undefined, inspection, text: undefined }
+        : undefined;
+    }
+    const text = this.composed?.textOf(anchor.source);
+    const before = this.pinText;
+    const moved =
+      text === undefined || before === undefined ? anchor : mapAnchor(anchor, before, text);
+    if (moved === undefined) return undefined;
+    const node = await session.nodeAt(moved.source, moved.start);
+    const inspection = node === undefined ? undefined : await session.inspect(node);
+    if (inspection === undefined) return undefined;
+    // The first byte of a box can be read into an element inside it
+    // that starts there too, so the box is looked for up the chain.
+    const chain = [inspection.node ?? node, ...[...inspection.ancestors].reverse().map((up) => up.node)];
+    for (const candidate of chain) {
+      if (candidate === null || candidate === undefined) continue;
+      const source = await session.sourceOf(candidate);
+      if (source === undefined || !stillPinned(moved, source)) {
+        if (source !== undefined && source.start < moved.start) return undefined;
+        continue;
+      }
+      const found =
+        candidate === inspection.node ? inspection : await session.inspect(candidate);
+      if (found?.element !== pin.inspection.element) continue;
+      return { target: { kind: "node", node: candidate }, anchor: source, inspection: found, text };
+    }
+    return undefined;
   }
 
   /** Sets the book this preview was opened on, reporting what it waits for. */
@@ -564,6 +892,10 @@ export class PreviewView extends ItemView {
     this.named = undefined;
     this.ledAt = undefined;
     this.showing = this.state.note;
+    // A pin names a box in the book being dropped.
+    if (this.inspecting.pin !== undefined) {
+      this.setInspecting({ on: this.inspecting.on, pin: undefined });
+    }
     // The pane drops the book it holds.
     this.holding?.();
     this.holding = undefined;
@@ -721,6 +1053,10 @@ export class PreviewView extends ItemView {
     );
     this.columns = grid.columns;
     this.rows = grid.rows;
+    if (this.inspecting.on) {
+      this.measured += 1;
+      this.drawsOverlay();
+    }
     const screenful = grid.columns * grid.rows;
     if (screenful === this.screenful) return;
     this.screenful = screenful;
@@ -804,6 +1140,16 @@ export class PreviewView extends ItemView {
       columns: SEATS[this.mode] ?? this.columns,
       rows: this.mode === "grid" ? this.rows : 1,
     });
+    this.trims = new Map(
+      reading.pages.map((page, index) => [
+        reading.at + index,
+        { width: page.width, height: page.height },
+      ]),
+    );
+    this.measured += 1;
+    if (this.hovered?.generation !== session.generation) this.hovered = undefined;
+    this.drawsOverlay();
+    void this.refinds(session);
     this.settle(reading.at, reading.length, leaves.length);
     this.warns(session);
     void this.namesSpan(reading);

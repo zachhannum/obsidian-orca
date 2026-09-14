@@ -5,6 +5,7 @@ import { designFonts, type Design, type PageUnit, type Written } from "@/style/d
 import type { Place } from "@/style/origin";
 import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
+import type { Pin } from "@/ui/inspect";
 import { Settled } from "@/ui/settled";
 import { withKey } from "@/ui/groups";
 import { missingFont, missingFonts } from "@/ui/picker";
@@ -55,6 +56,8 @@ export class DesignPanelView extends ItemView {
   /** The element CodeMirror draws in, beside the React root and never under it. */
   private editorHost: HTMLElement | undefined;
   private editor: CssEditor | undefined;
+  /** The box pinned in the preview, which the inspect pane shows. */
+  private pinned: Pin | undefined;
   private readonly writes = new Settled((book, css) => {
     void this.designing.setCss(book, css);
   });
@@ -207,6 +210,21 @@ export class DesignPanelView extends ItemView {
     typeset.restyle(design, faces);
     await this.repaint();
     await this.designing.setDesign(typeset.path, design);
+  }
+
+  /** The box pinned in the preview, for the inspect pane. */
+  get inspected(): Pin | undefined {
+    return this.pinned;
+  }
+
+  /**
+   * Takes the box pinned in the preview, or nothing once the pin comes
+   * off. A pin turns the panel to its CSS view.
+   */
+  inspect(pin: Pin | undefined): void {
+    this.pinned = pin;
+    if (pin !== undefined) this.viewing = "css";
+    this.refresh();
   }
 
   /** Opens the author's CSS with the caret at the place a warning named. */

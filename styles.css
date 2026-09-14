@@ -1582,3 +1582,101 @@ input.orca-panel-filter {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Inspect mode. The header action is Obsidian's own, marked while it is
+   on. The paper is light in both themes, so the tints are mixed from the
+   ramp rather than themed. */
+.workspace-leaf-content[data-type="orca-book-preview"] .view-action.is-active {
+  color: var(--text-accent);
+  background: var(--background-modifier-hover);
+}
+
+.orca-preview-sheets[data-inspect="on"] {
+  cursor: crosshair;
+}
+
+/* A sibling of the sheets, so a paint that rewrites them leaves it. */
+.orca-inspect-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orca-inspect-frame,
+.orca-inspect {
+  position: absolute;
+  pointer-events: none;
+}
+
+.orca-inspect-margin {
+  background: color-mix(in srgb, var(--color-yellow) 26%, transparent);
+}
+
+.orca-inspect-padding {
+  background: color-mix(in srgb, var(--color-green) 22%, transparent);
+}
+
+.orca-inspect-content {
+  background: hsla(258, 88%, 66%, 0.16);
+}
+
+.orca-inspect-edge {
+  box-sizing: border-box;
+  outline: 1px dashed hsla(258, 88%, 60%, 0.9);
+}
+
+.orca-inspect-edge.is-pinned {
+  outline: 1.5px solid hsl(258, 88%, 60%);
+}
+
+/* A fragment is open on the side the page cut. */
+.orca-inspect-edge.is-cut-top,
+.orca-inspect-edge.is-cut-bottom,
+.orca-inspect-edge.is-cut-both {
+  outline: none;
+  border: 1.5px solid hsl(258, 88%, 60%);
+}
+
+.orca-inspect-edge:not(.is-pinned).is-cut-top,
+.orca-inspect-edge:not(.is-pinned).is-cut-bottom,
+.orca-inspect-edge:not(.is-pinned).is-cut-both {
+  border-style: dashed;
+}
+
+.orca-inspect-edge.is-cut-top,
+.orca-inspect-edge.is-cut-both {
+  border-top-color: transparent;
+}
+
+.orca-inspect-edge.is-cut-bottom,
+.orca-inspect-edge.is-cut-both {
+  border-bottom-color: transparent;
+}
+
+.orca-inspect-tag {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #dadada;
+  font-family: var(--font-monospace);
+  font-size: 10.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: translate(-2px, calc(-100% - 3px));
+}
+
+.orca-inspect-tag b {
+  font-weight: var(--font-normal);
+  color: #b89cff;
+}
+
+.orca-inspect-tag i {
+  font-style: normal;
+  color: #8a8a8a;
+}
