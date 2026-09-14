@@ -522,10 +522,10 @@ test("the sections that show orca's own surfaces show photographs of them", asyn
   for (const section of ["vault-shots", "sw-win"]) {
     assert.match(landing, new RegExp(`<div class="${section}">`), `the page has no ${section}`);
   }
-  for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc"]) {
+  for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc", "ex-dlg"]) {
     assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
   }
-  for (const shot of ["vault-tree", "vault-note", "write", "read"]) {
+  for (const shot of ["vault-tree", "vault-note", "write", "read", "export"]) {
     for (const scheme of ["dark", "light"]) {
       assert.ok(
         landing.includes(`../shots/${shot}-${scheme}.png`),
@@ -598,7 +598,7 @@ test("the copy claims no feature the plugin has yet to grow", async () => {
   // Each claim, with the line in `src` that would make it true. A claim
   // whose line is not there yet may not be on the page.
   const claims = [
-    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, /"orca:export/, "export"],
+    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, /id: "export-pdf"/, "export"],
     [/your own CSS|takes over a setting/i, /overridden|overrides layer/, "an overridden control"],
   ];
   for (const [claimed, built, what] of claims) {

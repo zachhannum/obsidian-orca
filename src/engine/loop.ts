@@ -67,6 +67,11 @@ export class Loop {
     return this.running ?? Promise.resolve();
   }
 
+  /** True when no edit is waiting, no wait is armed and no render is in flight. */
+  get idle(): boolean {
+    return this.waiting.size === 0 && this.cancel === undefined && this.running === undefined;
+  }
+
   /** Drops the wait. What is waiting on it stays waiting. */
   stop(): void {
     this.cancel?.();

@@ -105,6 +105,7 @@ const CHROME = {
   notice: ".notice",
   status: ".status-bar",
   tooltip: ".tooltip",
+  modal: ".modal",
 };
 
 export type Side = "left" | "right";
@@ -448,6 +449,33 @@ export class Obsidian {
   async unhovered(): Promise<void> {
     await this.page.mouse.move(0, 0);
     await this.hold(`${HOVERED} { visibility: hidden }`);
+  }
+
+  /**
+   * Holds the pointer still, squares the open modal (no rounded corners,
+   * no border, no shadow) and hands back a crop to it. The crop is rounded
+   * inward to whole pixels, because a modal centred in the window can sit
+   * on a half pixel, and a crop rounded outward takes a row of the window
+   * behind it. The page the picture is shown on draws the frame.
+   */
+  async unframed(
+    modal: Locator,
+  ): Promise<{ x: number; y: number; width: number; height: number }> {
+    await this.page.mouse.move(0, 0);
+    await this.hold(
+      `${HOVERED} { visibility: hidden }` +
+        `${CHROME.modal} { border-radius: 0 !important; border: 0 !important; box-shadow: none !important }`,
+    );
+    const box = await modal.boundingBox();
+    if (box === null) throw new Error("the modal has no box to crop to");
+    const x = Math.ceil(box.x);
+    const y = Math.ceil(box.y);
+    return {
+      x,
+      y,
+      width: Math.floor(box.x + box.width) - x,
+      height: Math.floor(box.y + box.height) - y,
+    };
   }
 
   private async hold(css: string): Promise<void> {

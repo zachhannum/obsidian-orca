@@ -16,7 +16,14 @@ import { FLOATING, type Obsidian } from "./obsidian";
 interface Holding {
   composer?: {
     opened(at: string):
-      | Promise<{ session: { faces: { name: string }[]; pdf(): Promise<Uint8Array> } }>
+      | Promise<{
+          quiet: boolean;
+          session: {
+            generation: number;
+            faces: { name: string }[];
+            pdf(): Promise<Uint8Array>;
+          };
+        }>
       | undefined;
   };
 }
@@ -368,6 +375,33 @@ export class Book {
     await this.obsidian.page.evaluate((id) => {
       document.getElementById(id)?.remove();
     }, POSED);
+  }
+
+  /**
+   * The generation on the surface once the book at this path is quiet:
+   * no embed resolving, no edit waiting or rendering, and the surface
+   * painted at the session's own generation. A spec that counts stage
+   * runs starts from here, so a render an earlier spec queued is not
+   * counted against it.
+   */
+  async settled(at: string): Promise<number> {
+    await expect
+      .poll(async () => {
+        const book = await this.obsidian.page.evaluate(
+          async ({ id, path }) => {
+            const orca = window.app.plugins.plugins[id] as Holding | undefined;
+            const typeset = await orca?.composer?.opened(path);
+            return typeset === undefined
+              ? undefined
+              : { quiet: typeset.quiet, generation: typeset.session.generation };
+          },
+          { id: PLUGIN, path: at },
+        );
+        const shown = await this.surface.getAttribute("data-generation");
+        return book !== undefined && book.quiet && shown === String(book.generation);
+      })
+      .toBe(true);
+    return this.painted();
   }
 
   /** The generation on the surface, once there is one. */

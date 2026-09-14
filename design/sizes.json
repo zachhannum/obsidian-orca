@@ -29,7 +29,7 @@
   },
   "Export": {
     "w": 720,
-    "h": 620
+    "h": 720
   },
   "States": {
     "w": 1900,
@@ -53,7 +53,7 @@
   },
   "SiteLanding": {
     "w": 1440,
-    "h": 5544,
+    "h": 6160,
     "sheet": "site.css",
     "script": "site-landing.js",
     "props": { "animate": { "editor": "boolean", "default": true } }

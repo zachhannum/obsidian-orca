@@ -48,6 +48,28 @@ test("a burst of keystrokes crosses as one render", async () => {
   assert.deepEqual(rendered[0], typed("one.md", "It is"));
 });
 
+test("the loop is idle only with no edit waiting, no wait armed and no render in flight", async () => {
+  const clock = new Steps();
+  let land: (() => void) | undefined;
+  const loop = new Loop(
+    () =>
+      new Promise<void>((resolve) => {
+        land = resolve;
+      }),
+    clock,
+  );
+  assert.equal(loop.idle, true);
+
+  loop.edit("typed:one.md", typed("one.md", "a"));
+  assert.equal(loop.idle, false);
+  clock.tick();
+  // The render has started and not landed.
+  assert.equal(loop.idle, false);
+  land?.();
+  await loop.settled;
+  assert.equal(loop.idle, true);
+});
+
 test("two chapters typed in one wait cross together, in the order they were typed", async () => {
   const clock = new Steps();
   const rendered: Op[][] = [];

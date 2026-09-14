@@ -38,6 +38,8 @@ export interface Handoff {
   openPanel(): void;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
+  /** Opens the export dialog on a book. */
+  exports(book: string): void;
 }
 
 /**
@@ -106,6 +108,9 @@ export class BookView extends FileView {
       },
       openPanel: () => {
         this.handoff.openPanel();
+      },
+      exports: () => {
+        if (this.file !== null) this.handoff.exports(this.file.path);
       },
     });
 

@@ -20,6 +20,8 @@
 .o-tog.off{background:var(--o-border)}
 .o-tog.off::after{right:auto;left:2px;background:var(--o-muted)}
 
+
+
 .pg{width:268px;height:414px;background:#fdfcf9;color:#1a1712;position:relative;overflow:hidden;font-family:'EB Garamond',Georgia,serif}
 .pg.v{padding:30px 32px 0 26px;background-image:linear-gradient(to left,rgba(40,30,10,.10),rgba(40,30,10,0) 22px)}
 .pg.r{padding:26px 26px 0 32px;background-image:linear-gradient(to right,rgba(40,30,10,.10),rgba(40,30,10,0) 22px)}

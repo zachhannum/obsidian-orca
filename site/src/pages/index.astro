@@ -39,6 +39,8 @@ import writeDark from '../shots/write-dark.png';
 import writeLight from '../shots/write-light.png';
 import readDark from '../shots/read-dark.png';
 import readLight from '../shots/read-light.png';
+import exportDark from '../shots/export-dark.png';
+import exportLight from '../shots/export-light.png';
 
 const docs = '/start/install/';
 const repo = 'https://github.com/zachhannum/obsidian-orca';
@@ -189,6 +191,8 @@ const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
   light: { tree: await shot(treeLight), note: await shot(noteLight) },
 };
+/** The export dialog, open on the sample book with the preflight passed. */
+const exporting = { dark: await shot(exportDark), light: await shot(exportLight) };
 const swap = {
   dark: { write: await shot(writeDark), read: await shot(readDark) },
   light: { write: await shot(writeLight), read: await shot(readLight) },
@@ -258,7 +262,7 @@ const swap = {
           <h1>A book designer<br /><i>inside Obsidian.</i></h1>
           <p class="lede">
             Each chapter is a Markdown note. One book note stores the book details and the design.
-            Preview the typeset book without leaving Obsidian.
+            Preview the typeset book and export it to PDF, all without leaving Obsidian.
           </p>
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
@@ -391,11 +395,37 @@ const swap = {
           </div>
         </section>
 
+        <section class="row shown-first">
+          <div class="said">
+            <h2 class="row-h">Export <i>for the printer</i></h2>
+            <p class="sec-p">
+              Export writes the PDF from the pages on screen. Preflight catches missing fonts and
+              images before you export.
+            </p>
+          </div>
+          <div class="shown">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <div class={`on-${scheme}`}>
+                  <img
+                    class="export-shot"
+                    src={exporting[scheme].src}
+                    width={exporting[scheme].width}
+                    height={exporting[scheme].height}
+                    alt="Orca's Export to PDF dialog on the sample book, with a save path, a preflight that shows no errors, and the Export button."
+                  />
+                </div>
+              ))
+            }
+          </div>
+        </section>
+
         <section class="stack">
           <div class="said middle">
             <h2 class="sec-h">Turn <i>the pages</i></h2>
             <p class="sec-p">
-              Twenty Thousand Leagues Under the Sea, designed in Orca. Click a page to turn it.
+              Twenty Thousand Leagues Under the Sea, set and exported with Orca. Click a page to
+              turn it.
             </p>
           </div>
           <div
@@ -730,6 +760,12 @@ const swap = {
     gap: 72px;
     align-items: center;
   }
+  .row.shown-first {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .row.shown-first .shown {
+    order: -1;
+  }
   .said {
     display: flex;
     flex-direction: column;
@@ -764,6 +800,16 @@ const swap = {
     gap: 22px;
     align-items: flex-start;
   }
+  .export-shot {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 1px var(--o-border),
+      0 40px 80px -24px rgba(0, 0, 0, 0.85);
+  }
+
   .vault-shots img {
     display: block;
     height: auto;
@@ -987,9 +1033,13 @@ const swap = {
       --gutter: 40px;
       --step: 160px;
     }
-    .row {
+    .row,
+    .row.shown-first {
       grid-template-columns: minmax(0, 1fr);
       gap: 44px;
+    }
+    .row.shown-first .shown {
+      order: 0;
     }
     .said {
       max-width: none;

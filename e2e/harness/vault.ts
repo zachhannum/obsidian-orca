@@ -40,6 +40,19 @@ export class Vault {
     );
   }
 
+  /** A file's bytes, as they are in the vault. */
+  async bytes(file: string): Promise<Buffer> {
+    const encoded = await this.page.evaluate(async (at) => {
+      const bytes = new Uint8Array(await window.app.vault.adapter.readBinary(at));
+      let said = "";
+      for (let from = 0; from < bytes.length; from += 0x8000) {
+        said += String.fromCharCode(...bytes.subarray(from, from + 0x8000));
+      }
+      return btoa(said);
+    }, file);
+    return Buffer.from(encoded, "base64");
+  }
+
   async write(file: string, text: string): Promise<void> {
     this.touched.add(file);
     await this.page.evaluate(

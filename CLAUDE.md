@@ -41,6 +41,9 @@ wins and the quick fix waits for its own PR.
   `site/src/styles/tokens.css` is the site's tokens, and the build stops
   when it and `design/site.css` disagree. `site/sample/` is the vault
   the site's pages are set from, and it shares no file with `fixture/`.
+  Orca's UI on the site is a shot that `npm run shots` takes of real
+  Obsidian, never markup drawn to look like it. The exception is a
+  surface the reader uses, like the design panel demo.
 - Work is tracked in GitHub issues, grouped by the v1 epic (#1) and
   built in milestone order, M0 through M4. An issue's acceptance
   checkboxes are its definition of done.
@@ -282,7 +285,8 @@ and commit subjects.
 - The wire to the worker is binary and transferable. Nothing crosses it
   that could have been a handle.
 - Nothing writes to the vault except the book note, and the view is its
-  only writer.
+  only writer. Export is the one other writer: it writes the file the
+  author named, and nothing else.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.

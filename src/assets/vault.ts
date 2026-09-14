@@ -19,6 +19,8 @@ export interface VaultAdapter {
   readBinary(path: string): Promise<ArrayBuffer>;
   /** Lists the files and folders directly under a folder. */
   list(folder: string): Promise<Listing>;
+  /** Writes a file's bytes, making the folders above it. */
+  writeBinary(path: string, bytes: Uint8Array): Promise<void>;
 }
 
 /** A file's text. A read that fails is an asset error naming the path. */

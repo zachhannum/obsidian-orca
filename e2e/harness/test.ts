@@ -6,6 +6,7 @@
 
 import { chromium, test as base } from "@playwright/test";
 import { Book } from "./book";
+import { Export } from "./export";
 import { CDP, FIXTURE } from "./launch";
 import { Inspect } from "./inspect";
 import { Manuscript } from "./manuscript";
@@ -18,6 +19,8 @@ import { Vault } from "./vault";
 
 interface Fixtures {
   book: Book;
+  /** The export dialog, shut when the spec ends. */
+  exporting: Export;
   /** Inspect mode on the book, and the overlay it draws. */
   inspect: Inspect;
   /** The book note's own view. */
@@ -62,6 +65,12 @@ export const test = base.extend<Fixtures, Shared>({
     const book = new Book(obsidian);
     await use(book);
     await book.close();
+  },
+
+  exporting: async ({ obsidian }, use) => {
+    const exporting = new Export(obsidian);
+    await use(exporting);
+    await exporting.close();
   },
 
   inspect: async ({ obsidian }, use) => {

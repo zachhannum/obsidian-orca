@@ -55,6 +55,8 @@ export interface Sending {
   ops: Op[];
   /** The images the ops put on the wire, for the registry to record. */
   images: Image[];
+  /** The embeds that brought no bytes, in reading order. */
+  unread: Unread[];
 }
 
 /** The prefix a generated section's name carries, so it is never read as a note's path. */
@@ -81,8 +83,9 @@ export async function sendBook(
   take: Take,
 ): Promise<Sending> {
   const sources = await bookSources(book, order, links, from, read);
-  const images = await bookImages(sources, links, take);
+  const { images, unread } = await bookImages(sources, links, take);
   return {
+    unread,
     ops: [
       { op: "dialect", dialect: "obsidian" },
       { op: "split", level: 0 },
@@ -107,10 +110,27 @@ export function sendFaces(faces: readonly Face[]): Op[] {
   return faces.map(fontOp);
 }
 
+/** An embed that brought no bytes, where the author wrote it. */
+export interface Unread {
+  url: string;
+  /** The name of the source that embeds it. */
+  note: string;
+  /** The 0-based line the embed is written on. */
+  line: number;
+}
+
+/** The images a book embeds, and the embeds that brought no bytes. */
+export interface Embedded {
+  images: Image[];
+  /** In reading order, each url once. */
+  unread: Unread[];
+}
+
 /**
  * Every image the sources embed, resolved through the vault, each url
- * once. An embed with no file behind it sends nothing, and the engine
- * warns about the url it was given no bytes for.
+ * once. An embed with no file behind it, or a file that will not read,
+ * sends nothing and is listed in `unread`. The engine still warns
+ * about the url it was given no bytes for.
  *
  * An embed that resolves to a note is a transclusion, which orca does
  * not set.
@@ -119,26 +139,33 @@ export async function bookImages(
   sources: readonly Source[],
   links: Links,
   take: Take,
-): Promise<Image[]> {
-  const wanted = new Map<string, string>();
+): Promise<Embedded> {
+  const wanted = new Map<string, { path: string | undefined; at: Unread }>();
   for (const source of sources) {
     if (isGenerated(source.name)) continue;
     for (const embed of imagesIn(source.text)) {
       if (wanted.has(embed.url)) continue;
       const path = links.find(embed.link, source.name);
-      if (path === undefined || path.endsWith(".md")) continue;
-      wanted.set(embed.url, path);
+      if (path?.endsWith(".md") === true) continue;
+      const at = { url: embed.url, note: source.name, line: embed.line };
+      wanted.set(embed.url, { path, at });
     }
   }
   const read = await Promise.all(
-    [...wanted].map(async ([url, path]) => {
-      // A file that will not read crosses no bytes, the same as one
-      // the vault never had.
+    [...wanted.values()].map(async ({ path, at }) => {
+      if (path === undefined) return { at, image: undefined };
       const bytes = await take(path).catch(() => undefined);
-      return bytes === undefined ? undefined : { url, ...bytes };
+      const image = bytes === undefined ? undefined : { url: at.url, ...bytes };
+      return { at, image };
     }),
   );
-  return read.filter((image) => image !== undefined);
+  const images: Image[] = [];
+  const unread: Unread[] = [];
+  for (const { at, image } of read) {
+    if (image === undefined) unread.push(at);
+    else images.push(image);
+  }
+  return { images, unread };
 }
 
 /**

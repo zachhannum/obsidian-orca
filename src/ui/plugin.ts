@@ -22,6 +22,7 @@ import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
+import { openExport } from "@/ui/export";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import { bookCss, withCss } from "@/book/css";
 import { writeDesign, type Design, type FontUse } from "@/style/design";
@@ -158,6 +159,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
               void this.inspected(pin, refreshed);
             },
             unit: () => this.limits.unit,
+            exports: (book) => {
+              this.exportBook(book);
+            },
           },
           (text) => {
             this.reading(leaf, text);
@@ -181,6 +185,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
             void this.openPanel();
           },
           unit: () => this.limits.unit,
+          exports: (book) => {
+            this.exportBook(book);
+          },
         }),
     );
     this.registerView(
@@ -245,6 +252,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const view = this.app.workspace.getActiveViewOfType(PreviewView);
         if (view === null) return false;
         if (!checking) view.toggleInspect();
+        return true;
+      },
+    });
+    this.addCommand({
+      id: "export-pdf",
+      name: "Export to PDF",
+      checkCallback: (checking) => {
+        const book = this.exportable();
+        if (book === undefined) return false;
+        if (!checking) this.exportBook(book);
         return true;
       },
     });
@@ -383,6 +400,31 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * Turns the preview being read a chapter along. The command goes gray
    * at either end of the book, and where no preview is open.
    */
+  /** The book the active view reads: a preview's, a book note's, or the book a note belongs to. */
+  private exportable(): string | undefined {
+    const { workspace } = this.app;
+    const preview = workspace.getActiveViewOfType(PreviewView);
+    if (preview !== null) return preview.book;
+    const page = workspace.getActiveViewOfType(BookView);
+    if (page !== null) return page.file?.path;
+    const file = workspace.getActiveViewOfType(MarkdownView)?.file;
+    return file === null || file === undefined ? undefined : this.members.get(file.path)?.book;
+  }
+
+  private exportBook(book: string): void {
+    const composer = this.composer;
+    if (composer === undefined) return;
+    openExport(this.app, {
+      composer,
+      book,
+      files: this.files(),
+      metadata: async () => (await this.edits.model(book))?.book.metadata,
+      openPanel: () => {
+        void this.openPanel();
+      },
+    });
+  }
+
   private turnsChapter(checking: boolean, step: number): boolean {
     const view = this.app.workspace.getActiveViewOfType(PreviewView);
     if (view === null) return false;
@@ -1307,6 +1349,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
       exists: (path) => adapter.exists(at(path)),
       read: (path) => adapter.read(at(path)),
       readBinary: (path) => adapter.readBinary(at(path)),
+      writeBinary: async (path, bytes) => {
+        const file = at(path);
+        const folder = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
+        if (folder !== "" && !(await adapter.exists(folder))) await adapter.mkdir(folder);
+        await adapter.writeBinary(file, bytes.slice().buffer);
+      },
       list: (folder) => adapter.list(at(folder)),
     };
   }

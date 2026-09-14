@@ -27,6 +27,8 @@ export interface Acting {
   asMarkdown(): void;
   /** Opens the design panel in the right sidebar. */
   openPanel(): void;
+  /** Opens the export dialog on this book. */
+  exports(): void;
 }
 
 /** The state the page is drawn in. */
@@ -120,6 +122,17 @@ function Book({
           <span>·</span>
           <span>{counted(report.words, "word")}</span>
         </div>
+        <button
+          type="button"
+          className="orca-book-export"
+          data-testid="orca-book-export"
+          onClick={() => {
+            acting.exports();
+          }}
+        >
+          <Icon name="download" className="orca-book-icon" />
+          Export to PDF
+        </button>
       </div>
 
       <div className="orca-book-metadata">
