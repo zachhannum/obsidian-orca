@@ -184,6 +184,10 @@ const demo = {
   source: { name: `${CHAPTER}.md`, text: chapterNote },
 };
 
+/** The export dialog's file, in the sample book's folder and named from its title. */
+if (metadata.title === undefined) throw new Error('the sample book has no title');
+const saveTo = `Twenty Thousand Leagues/${metadata.title}.pdf`;
+
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
@@ -258,7 +262,7 @@ const swap = {
           <h1>A book designer<br /><i>inside Obsidian.</i></h1>
           <p class="lede">
             Each chapter is a Markdown note. One book note stores the book details and the design.
-            Preview the typeset book without leaving Obsidian.
+            Preview the typeset book and export it to PDF, all without leaving Obsidian.
           </p>
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
@@ -391,11 +395,50 @@ const swap = {
           </div>
         </section>
 
+        <section class="row shown-first">
+          <div class="said">
+            <h2 class="row-h">Export <i>for the printer</i></h2>
+            <p class="sec-p">
+              Export writes the PDF from the pages on screen. A preflight checks that every face
+              embeds and every image resolves, and export waits until they do.
+            </p>
+          </div>
+          <div class="shown">
+            <div class="ex-dlg" role="img" aria-label="The Export a PDF dialog, with the preflight passed.">
+              <div class="ex-hd">
+                <Icon name="download" size={16} />
+                <span>Export a PDF</span>
+                <span class="o-grow"></span>
+                <Icon name="close" size={16} />
+              </div>
+              <div class="ex-bd">
+                <div class="ex-row">
+                  <span class="ex-lab">Save to</span>
+                  <div class="o-field o-grow"><span class="ex-mono">{saveTo}</span></div>
+                  <div class="x-btn">Choose…</div>
+                </div>
+                <div class="ex-div"></div>
+                <div class="ex-gh">PREFLIGHT</div>
+                <div class="ex-ok">
+                  <span class="ex-tick"><Icon name="check" size={14} /></span>
+                  <span>Every face embeds. Every image resolves.</span>
+                </div>
+              </div>
+              <div class="ex-ft">
+                <span class="o-grow"></span>
+                <div class="x-btn">Cancel</div>
+                <div class="x-btn pri">Export</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="stack">
           <div class="said middle">
             <h2 class="sec-h">Turn <i>the pages</i></h2>
             <p class="sec-p">
-              Twenty Thousand Leagues Under the Sea, designed in Orca. Click a page to turn it.
+              Twenty Thousand Leagues Under the Sea, set and exported with Orca. Click a page to
+              turn it.
             </p>
           </div>
           <div
@@ -730,6 +773,12 @@ const swap = {
     gap: 72px;
     align-items: center;
   }
+  .row.shown-first {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .row.shown-first .shown {
+    order: -1;
+  }
   .said {
     display: flex;
     flex-direction: column;
@@ -987,9 +1036,13 @@ const swap = {
       --gutter: 40px;
       --step: 160px;
     }
-    .row {
+    .row,
+    .row.shown-first {
       grid-template-columns: minmax(0, 1fr);
       gap: 44px;
+    }
+    .row.shown-first .shown {
+      order: 0;
     }
     .said {
       max-width: none;
