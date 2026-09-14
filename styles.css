@@ -1070,6 +1070,11 @@ button.orca-nav-action:hover {
   color: var(--text-accent);
 }
 
+.orca-inspect-close {
+  flex: none;
+  padding: 3px;
+}
+
 .orca-inspect-crumbs {
   display: flex;
   flex: 1;

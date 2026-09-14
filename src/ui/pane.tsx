@@ -18,6 +18,7 @@ import {
   crumbsOf,
   ruleFor,
   selectorFor,
+  specificPicks,
   targetKey,
   type Pin,
 } from "@/ui/inspect";
@@ -46,10 +47,12 @@ export interface PaneActing {
   open(owner: Owner): void;
   /** Puts a rule in at the editor's caret. */
   add(text: string): void;
+  /** Takes the pin off in the preview, which closes the pane. */
+  unpin(): void;
 }
 
 const LAYER_SAID: Readonly<Record<Layer, string>> = {
-  own: "Your CSS",
+  own: "Book CSS",
   design: "Design panel",
   theme: "Orca's theme",
 };
@@ -70,7 +73,7 @@ export function InspectPane({
 }): JSX.Element {
   const { pin, layers, caret } = inspecting;
   const { inspection } = pin;
-  const [picked, setPicked] = useState<readonly number[]>([]);
+  const [picked, setPicked] = useState<readonly number[]>(() => specificPicks(inspection));
   const pane = useRef<HTMLDivElement>(null);
   const key = targetKey(pin.target);
 
@@ -121,6 +124,17 @@ export function InspectPane({
             );
           })}
         </div>
+        <button
+          type="button"
+          className="clickable-icon orca-inspect-close"
+          data-testid="orca-inspect-close"
+          aria-label="Take the pin off"
+          onClick={() => {
+            acting.unpin();
+          }}
+        >
+          <Icon name="x" className="orca-inspect-icon" />
+        </button>
       </div>
 
       {layers.map(({ layer, rules }) => (

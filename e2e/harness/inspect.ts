@@ -109,6 +109,12 @@ export class Inspect {
     return (await this.surface.getAttribute("data-inspected")) ?? "";
   }
 
+  /** Clicks a point on a page without waiting on a pin, for a click that takes one off. */
+  async click(page: number, point: Point): Promise<void> {
+    const at = await this.at(page, point);
+    await this.obsidian.page.mouse.click(at.x, at.y);
+  }
+
   /** The page `page` names, counting from 1. */
   sheet(page: number): Locator {
     return this.surface.locator(`.orca-page[data-page="${String(page)}"]`);
@@ -148,6 +154,12 @@ export class Inspect {
     await this.obsidian.page.mouse.click(at.x, at.y);
     await expect(this.surface).toHaveAttribute("data-inspected", /.+/);
     return (await this.surface.getAttribute("data-inspected")) ?? "";
+  }
+
+  /** Clicks a line without waiting on a pin, for a click that takes one off. */
+  async clickLine(line: Locator): Promise<void> {
+    const at = await this.startOf(line);
+    await this.obsidian.page.mouse.click(at.x, at.y);
   }
 
   /** Presses Escape where the focus is, which the view's container hears. */

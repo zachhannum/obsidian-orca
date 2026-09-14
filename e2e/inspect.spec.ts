@@ -49,7 +49,10 @@ const HEAD_BOX = "top-left";
 const IN_THE_HEAD = { x: 60, y: 28 };
 
 /** A rule that restyles the book and moves no paragraph. */
-const RESTYLED = "\nh1 { color: #111111; }";
+/** The page's top-left corner, in points, where no box and no margin box is set. */
+const NO_BOX = { x: 4, y: 4 };
+
+const RESTYLED ="\nh1 { color: #111111; }";
 
 test("the header action and the command each turn inspect mode on and off", async ({
   book,
@@ -326,6 +329,29 @@ test("the first Escape removes the pin, and the second turns inspect mode off", 
   await expect(inspect.action).toHaveAttribute("aria-pressed", "false");
 });
 
+test("a click on the pinned box again, or where no box is, takes the pin off", async ({
+  book,
+  inspect,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.type(String(TEXT_PAGE));
+  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await inspect.on();
+  const line = inspect.sheet(TEXT_PAGE).locator("text[data-selection-line]").nth(10);
+  await inspect.pinLine(line);
+
+  await inspect.clickLine(line);
+  await inspect.unpinned();
+  await expect(inspect.outline("pinned")).toHaveCount(0);
+  await expect(inspect.surface).toHaveAttribute("data-inspect", "on");
+
+  await inspect.pinLine(line);
+  await inspect.click(TEXT_PAGE, NO_BOX);
+  await inspect.unpinned();
+  await expect(inspect.surface).toHaveAttribute("data-inspect", "on");
+});
+
 test("the pinned node and its generation are written once the outline is committed", async ({
   book,
   inspect,
@@ -496,7 +522,20 @@ test("the pane: a click pins the box, and the pane sits above the CSS editor", a
   expect((pane?.y ?? 0) + (pane?.height ?? 0)).toBeLessThanOrEqual((editor?.y ?? 0) + 1);
 });
 
-test("the pane: the ancestors are crumbs, and a click on one adds it to the selector", async ({
+test("the pane: its close button takes the pin off and leaves inspect mode on", async ({
+  book,
+  inspect,
+  panel,
+}) => {
+  await pinSecond(book, inspect, panel);
+
+  await panel.unpinButton.click();
+  await inspect.unpinned();
+  await expect(panel.pane).toHaveCount(0);
+  await expect(inspect.surface).toHaveAttribute("data-inspect", "on");
+});
+
+test("the pane: the ancestors are crumbs, and a click on one takes it out of the selector or puts it back", async ({
   book,
   inspect,
   panel,
@@ -506,14 +545,17 @@ test("the pane: the ancestors are crumbs, and a click on one adds it to the sele
   await expect(panel.crumbs.last()).toHaveText("p");
   const section = panel.crumbs.filter({ hasText: SECTION });
   await expect(section).toHaveCount(1);
-  await expect(section).toHaveAttribute("data-picked", "false");
-  await expect(panel.selector).toHaveText("p");
+  // The selector starts at the nearest ancestor with an id.
+  await expect(section).toHaveAttribute("data-picked", "true");
+  await expect(panel.selector).toHaveText(`${SECTION} > p`);
 
+  await panel.pickCrumb(SECTION);
+  await expect(panel.selector).toHaveText("p");
   await panel.pickCrumb(SECTION);
   await expect(panel.selector).toHaveText(`${SECTION} > p`);
 });
 
-test("the pane: matched rules are grouped as Your CSS, Design panel and Orca's theme", async ({
+test("the pane: matched rules are grouped as Book CSS, Design panel and Orca's theme", async ({
   book,
   inspect,
   panel,
@@ -533,7 +575,7 @@ test("the pane: matched rules are grouped as Your CSS, Design panel and Orca's t
       groups.map((group) => group.getAttribute("data-layer")),
     ),
   ).toEqual(["own", "design", "theme"]);
-  await expect(panel.ruleGroups).toHaveText([/^Your CSS/, /^Design panel/, /^Orca's theme/]);
+  await expect(panel.ruleGroups).toHaveText([/^Book CSS/, /^Design panel/, /^Orca's theme/]);
   for (const layer of ["own", "design", "theme"] as const) {
     await expect(panel.rulesIn(layer).first()).toBeVisible();
   }
@@ -661,7 +703,6 @@ test("the pane: Add a rule inserts an empty rule for the selector at the caret",
   await panel.code.click();
   await panel.code.press("ControlOrMeta+End");
   await expect.poll(async () => panel.caretAt()).toBe(3);
-  await panel.pickCrumb(SECTION);
   await expect(panel.selector).toHaveText(`${SECTION} > p`);
 
   await panel.add();
@@ -689,7 +730,7 @@ test("the pane: a running head and a title page element show their selectors and
   let pin = await inspect.pinned();
   await panel.inspecting(pin.key, pin.generation);
   await expect(panel.crumbs.filter({ hasText: "section#title-page" })).toHaveCount(1);
-  await expect(panel.selector).toHaveText("h1");
+  await expect(panel.selector).toHaveText("section#title-page > h1");
   await expect(
     panel.rulesIn("design").filter({ hasText: "section#title-page" }).first(),
   ).toBeVisible();
@@ -761,7 +802,6 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
 
   await panel.code.click();
   await panel.code.press("ControlOrMeta+End");
-  await panel.pickCrumb(SECTION);
   await expect(panel.selector).toHaveText(`${SECTION} > h1`);
   await panel.add();
 
@@ -775,5 +815,6 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
 // animation frames, since the pointer is moved once and the answer read
 // after it lands. The size of a tag in millimetres or points is not
 // checked here; the unit's conversion is a Node test. A rule the pane
-// opens from a heading level other than H1 is not driven, and neither
-// is a crumb picked and then unpicked.
+// opens from a heading level other than H1 is not driven. No element in
+// the fixture has classes and no id, so a selector that names classes
+// is a Node test.

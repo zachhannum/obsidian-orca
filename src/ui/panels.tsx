@@ -83,6 +83,8 @@ export interface Acting {
   cursor(line: number, column: number): void;
   /** Puts text in at the editor's caret, as typing does. */
   add(text: string): void;
+  /** Takes the pin off in the preview. */
+  unpin(): void;
 }
 
 /** The panel's two views. In the CSS view the panel draws its header, and the editor under it is not React's. */
@@ -258,6 +260,9 @@ export function Panel({
               },
               add: (text) => {
                 acting.add(text);
+              },
+              unpin: () => {
+                acting.unpin();
               },
               open: (owner) => {
                 if (owner.level !== undefined) choose(owner.level);

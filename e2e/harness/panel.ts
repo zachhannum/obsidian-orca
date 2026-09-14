@@ -100,6 +100,8 @@ export class Controls {
   readonly declarations: Locator;
   readonly computed: Locator;
   readonly addRule: Locator;
+  /** The pane's button that takes the pin off. */
+  readonly unpinButton: Locator;
 
   constructor(protected readonly root: Locator) {
     this.panel = root.getByTestId("orca-panel");
@@ -130,6 +132,7 @@ export class Controls {
     this.declarations = this.pane.getByTestId("orca-inspect-decl");
     this.computed = this.pane.getByTestId("orca-inspect-computed");
     this.addRule = this.pane.getByTestId("orca-inspect-add");
+    this.unpinButton = this.pane.getByTestId("orca-inspect-close");
   }
 
   /** The matched rules of one layer: `own`, `design` or `theme`. */
@@ -164,7 +167,7 @@ export class Controls {
     await expect(this.pane).toHaveAttribute("data-generation", String(generation));
   }
 
-  /** Clicks the crumb that names an element, as `section#chapter-twelve`, and waits for it to be picked. */
+  /** Clicks the crumb that names an element, as `section#chapter-twelve`, and waits for its picked state to flip. */
   async pickCrumb(name: string): Promise<void> {
     const crumb = this.crumbs.filter({ hasText: name }).first();
     const was = await crumb.getAttribute("data-picked");

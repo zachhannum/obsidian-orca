@@ -40,6 +40,8 @@ export interface Designing {
   preview(family: Family): Promise<void>;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
+  /** Takes the pin off in every preview. */
+  unpin(): void;
   /** Told when the book being designed changes. */
   watch(again: () => void): () => void;
 }
@@ -119,6 +121,9 @@ export class DesignPanelView extends ItemView {
       },
       add: (text) => {
         this.editor?.insert(text);
+      },
+      unpin: () => {
+        this.designing.unpin();
       },
     });
     this.contentEl.addClass("orca-design");

@@ -4,6 +4,7 @@ import type { Inspection, NodeSource, PageBox } from "fleuron";
 import {
   INSPECT_OFF,
   boxKey,
+  clicked,
   computedRows,
   crumbsOf,
   escape,
@@ -13,6 +14,7 @@ import {
   pointOn,
   ruleFor,
   selectorFor,
+  specificPicks,
   stillPinned,
   tagOf,
   targetKey,
@@ -51,6 +53,16 @@ test("the first Escape removes the pin and the second turns inspect mode off", (
   assert.deepEqual(second, INSPECT_OFF);
   // With inspect mode off, the key is not the overlay's to take.
   assert.equal(escape(second), second);
+});
+
+test("a click on the pinned box again, or where no box is, takes the pin off", () => {
+  const pinned = { on: true, pin };
+  assert.equal(clicked(pinned, { kind: "node", node: 12 }), "unpin");
+  assert.equal(clicked(pinned, undefined), "unpin");
+  assert.equal(clicked(pinned, { kind: "node", node: 13 }), "pin");
+  assert.equal(clicked({ on: true, pin: undefined }, { kind: "node", node: 12 }), "pin");
+  assert.equal(clicked({ on: true, pin: undefined }, undefined), "keep");
+  assert.equal(clicked(INSPECT_OFF, { kind: "node", node: 12 }), "keep");
 });
 
 test("a margin, padding and content rectangle come from the computed lengths", () => {
@@ -233,6 +245,37 @@ test("a picked crumb joins the selector, by `>` for a parent and a space for any
     ancestors: [{ node: null, element: "book", id: null, classes: [] }],
   });
   assert.equal(selectorFor(section, []), "section#chapter-twelve");
+});
+
+test("the selector starts at the nearest ancestor with an id, naming each element by its id or classes", () => {
+  const book = { node: null, element: "book", id: null, classes: [] };
+  const cell = inspection({
+    ancestors: [
+      book,
+      { node: 3, element: "section", id: "chapter-twelve", classes: ["chapter"] },
+      { node: 5, element: "table", id: null, classes: ["wide"] },
+      { node: 6, element: "thead", id: null, classes: [] },
+      { node: 7, element: "tr", id: null, classes: [] },
+      { node: 8, element: "th", id: null, classes: [] },
+    ],
+  });
+  assert.deepEqual(specificPicks(cell), [1, 2, 3, 4, 5]);
+  assert.equal(
+    selectorFor(cell, specificPicks(cell)),
+    "section#chapter-twelve > table.wide > thead > tr > th > p",
+  );
+  // A class-only crumb carries its classes in its name, not faint.
+  assert.deepEqual(crumbsOf(cell)[2], { name: "table.wide", faint: undefined, ancestor: 2 });
+  // Nothing above the box has an id, so the selector stops below the book.
+  const loose = inspection({
+    ancestors: [book, { node: 4, element: "div", id: null, classes: ["note"] }],
+  });
+  assert.equal(selectorFor(loose, specificPicks(loose)), "div.note > p");
+  // A box with its own id needs no ancestor, and neither does a margin box.
+  assert.deepEqual(specificPicks(inspection({ id: "epigraph", classes: ["quiet"] })), []);
+  assert.equal(selectorFor(inspection({ id: "epigraph", classes: ["quiet"] }), []), "p#epigraph");
+  const head = inspection({ node: null, element: "@top-left", ancestors: [], page: "@page :left" });
+  assert.deepEqual(specificPicks(head), []);
 });
 
 test("an added rule is empty, and a margin box's sits inside its page rule", () => {

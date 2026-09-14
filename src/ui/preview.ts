@@ -36,6 +36,7 @@ import {
 import type { Composer, Progress, Typeset } from "@/ui/composer";
 import {
   INSPECT_OFF,
+  clicked,
   escape,
   mapAnchor,
   pointOn,
@@ -645,6 +646,12 @@ export class PreviewView extends ItemView {
     this.setInspecting(this.inspecting.on ? INSPECT_OFF : { on: true, pin: undefined });
   }
 
+  /** Takes the pin off, and leaves inspect mode as it was. */
+  unpin(): void {
+    if (this.inspecting.pin === undefined) return;
+    this.setInspecting({ on: this.inspecting.on, pin: undefined });
+  }
+
   /** Whether inspect mode is on. */
   get inspectOn(): boolean {
     return this.inspecting.on;
@@ -749,6 +756,10 @@ export class PreviewView extends ItemView {
     const found = await this.probe(at);
     if (turn !== this.clicking || !this.inspecting.on) return;
     this.hovered = found;
+    if (clicked(this.inspecting, found?.target) === "unpin") {
+      this.setInspecting({ on: true, pin: undefined });
+      return;
+    }
     if (found === undefined) {
       this.drawsOverlay();
       return;

@@ -266,10 +266,26 @@ function bare(value: string): string {
   return /^-?[0.]+(pt)?$/.test(value.trim()) ? "0" : value;
 }
 
+/** The effect a click in inspect mode has on the pin. */
+export type Clicked = "pin" | "unpin" | "keep";
+
+/**
+ * A click on the pinned box again, or where there is no box, takes the
+ * pin off. A click on any other box pins it.
+ */
+export function clicked(state: InspectState, target: Target | undefined): Clicked {
+  if (!state.on) return "keep";
+  if (target === undefined) return state.pin === undefined ? "keep" : "unpin";
+  if (state.pin !== undefined && targetKey(state.pin.target) === targetKey(target)) {
+    return "unpin";
+  }
+  return "pin";
+}
+
 export interface Crumb {
-  /** The name a selector reaches it by, as `section#chapter-twelve`. */
+  /** The name a selector reaches it by, as `section#chapter-twelve` or `table.wide`. */
   name: string;
-  /** Its classes, which show faint beside the name. For a section that is its role. */
+  /** Its classes, faint beside an id. For a section that is its role. */
   faint: string | undefined;
   /** Its place in `ancestors`, for a crumb the author can add to the selector. */
   ancestor: number | undefined;
@@ -298,15 +314,26 @@ export function crumbsOf(inspection: Inspection): Crumb[] {
   ];
 }
 
-/** An element by its id where it has one, so a section never goes by its place in the book. */
-function nameOf(element: { element: string; id: string | null }): string {
-  return element.id === null || element.id === ""
-    ? element.element
-    : `${element.element}#${element.id}`;
+/**
+ * An element by its id where it has one, and by its classes where it
+ * does not. A section always has an id, so it never goes by its place
+ * in the book.
+ */
+function nameOf(element: {
+  element: string;
+  id: string | null;
+  classes: readonly string[];
+}): string {
+  if (hasId(element)) return `${element.element}#${element.id ?? ""}`;
+  return `${element.element}${element.classes.map((name) => `.${name}`).join("")}`;
 }
 
-function faintOf(element: { classes: readonly string[] }): string | undefined {
-  return element.classes.length === 0 ? undefined : element.classes.join(" ");
+function faintOf(element: { id: string | null; classes: readonly string[] }): string | undefined {
+  return hasId(element) && element.classes.length > 0 ? element.classes.join(" ") : undefined;
+}
+
+function hasId(element: { id: string | null }): boolean {
+  return element.id !== null && element.id !== "";
 }
 
 /**
@@ -334,6 +361,24 @@ export function selectorFor(
     selector += `${nameOf(ancestor)}${next === at + 1 ? " > " : " "}`;
   });
   return `${selector}${nameOf(inspection)}`;
+}
+
+/**
+ * The ancestors a selector starts with: each one up to the nearest
+ * ancestor with an id, since no other element shares an id. The book is
+ * never one of them. A box with its own id, or a margin box, needs none.
+ */
+export function specificPicks(inspection: Inspection): number[] {
+  if (inspection.node === null && inspection.page !== undefined) return [];
+  if (hasId(inspection)) return [];
+  const picks: number[] = [];
+  for (let at = inspection.ancestors.length - 1; at >= 0; at -= 1) {
+    const ancestor = inspection.ancestors[at];
+    if (ancestor === undefined || ancestor.element === "book") break;
+    picks.unshift(at);
+    if (hasId(ancestor)) break;
+  }
+  return picks;
 }
 
 /**
