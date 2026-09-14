@@ -212,7 +212,7 @@ test("Obsidian takes the site's colors and fonts, in both schemes", async ({
     expect(painted.side).toEqual(dark ? "#101317" : "#f6f7f5");
     expect(painted.ribbon).toEqual(dark ? "#0b0d10" : "#e6e9e5");
     expect(painted.text).toEqual(dark ? "#e9ece8" : "#0a0c0f");
-    expect(painted.accent).toEqual(dark ? "#86cfe0" : "#1d6b7d");
+    expect(painted.accent).toEqual(dark ? "#6366f1" : "#3730a3");
     expect(painted.ui).toContain("Archivo");
     expect(painted.face).toEqual(true);
   }

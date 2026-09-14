@@ -150,7 +150,7 @@ its editor around these files and returns a URL. The artboard list and
 ## What the site settles
 
 - The site's look is Deep water: black `#0a0c0f`, white `#eef0ec`, and
-  glacier blue, `#86cfe0` on dark and `#1d6b7d` on light. Dark is the
+  ink indigo, `#6366f1` on dark and `#3730a3` on light. Dark is the
   default.
 - Titles are Bodoni Moda, and the second line of a title is italic.
   Reading text is Source Serif 4, the interface is Archivo, and code is
@@ -162,7 +162,7 @@ its editor around these files and returns a URL. The artboard list and
   letters invert below the waterline.
 - In the dark scheme, the landing page has a light sky over a black
   sea, and most of the page is dark. The light scheme swaps the two.
-- The main button is black on the white sea and glacier on the black
+- The main button is black on the white sea and ink indigo on the black
   sea.
 - The sea surface moves, and the sea gets darker toward the end of the
   page. With reduced motion on, the sea holds still.

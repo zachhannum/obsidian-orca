@@ -13,25 +13,25 @@
   --o-text: #e9ece8;
   --o-muted: #9aa3ab;
   --o-faint: #626b75;
-  --o-accent: #86cfe0;
-  --o-knob: #06222a;
+  --o-accent: #6366f1;
+  --o-knob: #ffffff;
   --o-field: #171b20;
   --o-seg-on: #262d35;
   --o-chip: #1d2228;
   --o-hover: #1d2228;
-  --o-selected: rgba(134,207,224,.14);
+  --o-selected: rgba(99,102,241,.14);
   --o-page-shadow: 0 30px 60px -10px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04);
   --o-win-shadow: 0 0 0 1px #232930,0 50px 100px -20px rgba(0,0,0,.55);
   --bg: #0a0c0f;
   --surface: #101317;
   --code: #101317;
   --codetext: #e9ece8;
-  --key: #86cfe0;
+  --key: #6366f1;
   --border: #20262d;
   --text: #eef0ec;
   --muted: #a3acb4;
   --faint: #66707a;
-  --accent: #86cfe0;
+  --accent: #6366f1;
   --pill: #eef0ec;
   --pilltext: #0a0c0f;
   --desk: #07090b;
@@ -39,13 +39,13 @@
   --sky-text: #0a0c0f;
   --sky-muted: #4a535b;
   --sky-faint: #7d868e;
-  --sea-0: #15212a;
-  --sea-1: #0b1116;
-  --sea-2: #05080a;
-  --sea-3: #010202;
-  --speck: #cfe6ee;
-  --button: #86cfe0;
-  --button-text: #06222a;
+  --sea-0: #0c0d18;
+  --sea-1: #07080e;
+  --sea-2: #040509;
+  --sea-3: #010102;
+  --speck: #c9cbf8;
+  --button: #6366f1;
+  --button-text: #ffffff;
   --display: 'Bodoni Moda',Didot,Georgia,serif;
   --body: 'Source Serif 4',Georgia,serif;
   --ui: 'Archivo',system-ui,sans-serif;
@@ -63,25 +63,25 @@
   --o-text: #0a0c0f;
   --o-muted: #4a535b;
   --o-faint: #8a939b;
-  --o-accent: #1d6b7d;
+  --o-accent: #3730a3;
   --o-knob: #ffffff;
   --o-field: #ffffff;
   --o-seg-on: #ffffff;
   --o-chip: #e6e9e5;
   --o-hover: #e6e9e5;
-  --o-selected: rgba(29,107,125,.12);
+  --o-selected: rgba(55,48,163,.12);
   --o-page-shadow: 0 1px 2px rgba(10,12,15,.18), 0 24px 48px -14px rgba(10,12,15,.4);
   --o-win-shadow: 0 0 0 1px rgba(255,255,255,.1),0 50px 100px -20px rgba(0,0,0,.6);
   --bg: #eef0ec;
   --surface: #f6f7f5;
   --code: #f6f7f5;
   --codetext: #0a0c0f;
-  --key: #1d6b7d;
+  --key: #3730a3;
   --border: #cfd4d0;
   --text: #0a0c0f;
   --muted: #4a535b;
   --faint: #7d868e;
-  --accent: #1d6b7d;
+  --accent: #3730a3;
   --pill: #0a0c0f;
   --pilltext: #eef0ec;
   --desk: #dce1de;
@@ -93,7 +93,7 @@
   --sea-1: #e6e9e5;
   --sea-2: #dce1de;
   --sea-3: #cfd4d0;
-  --speck: #1d6b7d;
+  --speck: #3730a3;
   --button: #0a0c0f;
   --button-text: #eef0ec;
   --display: 'Bodoni Moda',Didot,Georgia,serif;
@@ -200,8 +200,8 @@
 .x-li::before{content:"";position:absolute;left:5px;top:11px;width:4px;height:4px;border-radius:2px;background:var(--o-faint)}
 .x-link{color:var(--o-accent)}
 .x-p{font-size:13.5px;line-height:1.62;margin:0 0 10px -6px;padding:2px 6px;border-radius:4px;color:var(--o-text)}
-.x-p.hl{background:rgba(134,207,224,.13)}
-.pg-text p.hl{background:rgba(134,207,224,.3);box-shadow:0 0 0 1.5px rgba(134,207,224,.3)}
+.x-p.hl{background:rgba(99,102,241,.13)}
+.pg-text p.hl{background:rgba(99,102,241,.3);box-shadow:0 0 0 1.5px rgba(99,102,241,.3)}
 .x-menu{position:absolute;background:var(--o-field);border:1px solid var(--o-border);border-radius:8px;padding:5px;box-shadow:0 18px 40px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:1px;min-width:236px}
 .x-mi{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:5px;font-size:12.5px;color:var(--o-text)}
 .x-mi svg{color:var(--o-faint)}
@@ -235,7 +235,7 @@
 .sw-bk{animation:show-bk 10s infinite}
 @keyframes show-ms{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
 @keyframes show-bk{0%,42%{opacity:0}50%,92%{opacity:1}100%{opacity:0}}
-@keyframes ping-ic{0%,34%,52%,84%{box-shadow:0 0 0 0 rgba(134,207,224,0);background:transparent}40%,46%,90%,96%{box-shadow:0 0 0 4px rgba(134,207,224,.25);background:rgba(134,207,224,.18)}}
+@keyframes ping-ic{0%,34%,52%,84%{box-shadow:0 0 0 0 rgba(99,102,241,0);background:transparent}40%,46%,90%,96%{box-shadow:0 0 0 4px rgba(99,102,241,.25);background:rgba(99,102,241,.18)}}
 @media (prefers-reduced-motion:reduce){.sw-ms,.sw-i1{animation:none;opacity:0}.sw-bk,.sw-i2,.sw-ic{animation:none;opacity:1}}
 .o-tog.off{background:var(--o-border)}
 .o-tog.off::after{right:auto;left:2px;background:var(--o-muted)}
