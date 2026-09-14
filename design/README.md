@@ -68,13 +68,26 @@ its editor around these files and returns a URL. The artboard list and
   book was left on. A reader who paged through the book comes back to
   the line that page opens at, with the caret on it. One who turned no
   page comes back to the line they were writing on.
-- One ribbon icon. The count of warnings is the one on the preview
-  bar, and the icon carries none.
+- One ribbon icon, the orca tail. A click on it shows the navigator.
+  The count of warnings is the one on the preview bar, and the icon
+  carries none.
+- Each book's row in the navigator has `Open preview` beside `Add to
+  this book`. The book note's page has `Open preview` in its header,
+  beside `Open as markdown`.
+- The preview's icon is an open book. The book note's page keeps the
+  closed book.
+- `Open as markdown` on a preview opens the chapter it was opened
+  from. A preview opened without a chapter opens the book note.
+- A chapter click in the navigator turns a preview to that chapter
+  when the most recent tab in the main area previews its book. A click
+  with the Mod key opens the chapter as markdown in a new tab. Any
+  other chapter click opens the note.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
-- The design panel is in the right sidebar. It shows the book being
-  read, and it does not open or close with a book. The book note's own
-  page shows the design read-only, with a button that opens the panel.
+- The design panel is in the right sidebar, and it does not open or
+  close with a book. It shows a book only while a preview of that book
+  is visible. With no preview visible, it shows "No book is open". The
+  book note's own page shows the design read-only.
 - The panel draws margins and a custom trim in the unit from orca's
   settings. That unit is inches unless the author picks millimeters or
   points.
