@@ -371,9 +371,14 @@ test("the export picture is the dialog on the sample book, with the preflight pa
     await settled(site.book);
     await exporting.open();
     await exporting.reaches("ready");
-    await site.obsidian.unhovered();
-    await expect(exporting.dialog).toHaveScreenshot(`export-${scheme}.png`);
+    await site.obsidian.alone();
+    await expect(exporting.dialog).toHaveScreenshot(`export-${scheme}.png`, {
+      omitBackground: true,
+    });
     await exporting.close();
+    // The book is hidden while the dialog is photographed, and the next
+    // scheme waits on its pages being visible.
+    await site.obsidian.moving();
   }
 
   await site.obsidian.moving();

@@ -105,6 +105,7 @@ const CHROME = {
   notice: ".notice",
   status: ".status-bar",
   tooltip: ".tooltip",
+  modal: ".modal",
 };
 
 export type Side = "left" | "right";
@@ -448,6 +449,20 @@ export class Obsidian {
   async unhovered(): Promise<void> {
     await this.page.mouse.move(0, 0);
     await this.hold(`${HOVERED} { visibility: hidden }`);
+  }
+
+  /**
+   * Hides everything but the open modal and paints nothing behind it,
+   * for a picture of a dialog alone. The modal's rounded corners come
+   * out transparent rather than showing the window under them.
+   */
+  async alone(): Promise<void> {
+    await this.page.mouse.move(0, 0);
+    await this.hold(
+      "body * { visibility: hidden !important }" +
+        `${CHROME.modal}, ${CHROME.modal} * { visibility: visible !important }` +
+        "html, body { background: transparent !important }",
+    );
   }
 
   private async hold(css: string): Promise<void> {
