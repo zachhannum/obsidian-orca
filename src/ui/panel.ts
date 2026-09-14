@@ -11,9 +11,12 @@ import {
 import type { Place } from "@/style/origin";
 import type { Typeset } from "@/ui/composer";
 import { mountEditor, type CssEditor } from "@/ui/editor";
+import type { Pin } from "@/ui/inspect";
 import { Settled } from "@/ui/settled";
+import { groupRules } from "@/style/layers";
 import type { ResolvedUse } from "@/ui/fonts";
-import { withFont, withKey, withVariant } from "@/ui/groups";
+import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
+import type { Inspecting } from "@/ui/pane";
 import { missingFont, missingFonts, missingVariants } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
@@ -37,6 +40,8 @@ export interface Designing {
   preview(family: Family): Promise<void>;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
+  /** Takes the pin off in every preview. */
+  unpin(): void;
   /** Told when the book being designed changes. */
   watch(again: () => void): () => void;
 }
@@ -64,6 +69,8 @@ export class DesignPanelView extends ItemView {
   /** The element CodeMirror draws in, beside the React root and never under it. */
   private editorHost: HTMLElement | undefined;
   private editor: CssEditor | undefined;
+  /** The box pinned in the preview, which the inspect pane shows. */
+  private pinned: Pin | undefined;
   private readonly writes = new Settled((book, css) => {
     void this.designing.setCss(book, css);
   });
@@ -108,6 +115,15 @@ export class DesignPanelView extends ItemView {
         this.wrapping = on;
         this.editor?.wrap(on);
         this.refresh();
+      },
+      cursor: (line, column) => {
+        this.editor?.reveal(line, column);
+      },
+      add: (text) => {
+        this.editor?.insert(text);
+      },
+      unpin: () => {
+        this.designing.unpin();
       },
     });
     this.contentEl.addClass("orca-design");
@@ -167,9 +183,16 @@ export class DesignPanelView extends ItemView {
     if (!shown) return;
     let editor = this.editor;
     if (editor === undefined) {
-      editor = mountEditor(host, typeset.css, (css) => {
-        this.recss(css);
-      });
+      editor = mountEditor(
+        host,
+        typeset.css,
+        (css) => {
+          this.recss(css);
+        },
+        () => {
+          this.moved();
+        },
+      );
       editor.wrap(this.wrapping);
       this.editor = editor;
     } else editor.show(typeset.css);
@@ -243,6 +266,21 @@ export class DesignPanelView extends ItemView {
     await this.designing.setDesign(typeset.path, design);
   }
 
+  /** The box pinned in the preview, for the inspect pane. */
+  get inspected(): Pin | undefined {
+    return this.pinned;
+  }
+
+  /**
+   * Takes the box pinned in the preview, or nothing once the pin comes
+   * off. A pin turns the panel to its CSS view.
+   */
+  inspect(pin: Pin | undefined): void {
+    this.pinned = pin;
+    if (pin !== undefined) this.viewing = "css";
+    this.refresh();
+  }
+
   /** Opens the author's CSS with the caret at the place a warning named. */
   async reveal(place: Place): Promise<void> {
     this.viewing = "css";
@@ -279,8 +317,17 @@ export class DesignPanelView extends ItemView {
     this.index = index;
     if (run !== this.painting) return;
     this.watch(typeset);
-    mounted.paint(this.shownFor(typeset, index));
+    // The editor goes first, so the pane reads the flags of this render.
     this.edit(typeset);
+    mounted.paint(this.shownFor(typeset, index));
+  }
+
+  /** Paints the pane again when the caret moves, so it shows the line where a new rule goes. */
+  private moved(): void {
+    const { mounted, showing, index, pinned } = this;
+    if (mounted === undefined || showing === undefined || index === undefined) return;
+    if (pinned === undefined) return;
+    mounted.paint(this.shownFor(showing, index));
   }
 
   /** Follows the book's renders, so the styles appear as the engine returns them. */
@@ -294,8 +341,9 @@ export class DesignPanelView extends ItemView {
   private async painted(typeset: Typeset): Promise<void> {
     const mounted = this.mounted;
     if (mounted === undefined) return;
-    mounted.paint(this.shownFor(typeset, await this.designing.index()));
+    const index = await this.designing.index();
     this.edit(typeset);
+    mounted.paint(this.shownFor(typeset, index));
   }
 
   /** The panel's state for one book, from the engine and the index. */
@@ -311,7 +359,34 @@ export class DesignPanelView extends ItemView {
       language: typeset.language,
       missing: this.warnings(index, typeset.design),
       warned: cssFlags(typeset.session.warnings).length,
+      inspecting: this.inspecting(typeset),
     };
+  }
+
+  /**
+   * The pinned box as the pane draws it. A design panel rule names the
+   * control that wrote it, and an author's rule carries the flags the
+   * editor holds inside it.
+   */
+  private inspecting(typeset: Typeset): Inspecting | undefined {
+    const pin = this.pinned;
+    if (pin === undefined) return undefined;
+    const editor = this.editor;
+    const layers = groupRules(pin.inspection.rules).map(({ layer, rules }) => ({
+      layer,
+      rules: rules.map((rule) => {
+        const from = layer === "design" ? typeset.ruleAt(rule.line) : undefined;
+        return {
+          rule,
+          owner: from === undefined ? undefined : controlOf(from),
+          skipped:
+            layer === "own" && editor !== undefined
+              ? editor.skipped(rule.line, rule.column)
+              : [],
+        };
+      }),
+    }));
+    return { pin, layers, caret: editor?.caret().line };
   }
 
   /** The warnings for the fonts and variants a design asks for, the body's and each heading level's. */

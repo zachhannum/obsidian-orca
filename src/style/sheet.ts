@@ -8,7 +8,12 @@
 import type { Sheet } from "fleuron";
 import { mergeDesign, type Design } from "@/style/design";
 import { faceCss, type Registered } from "@/style/faces";
-import { generatedCss, type Setting } from "@/style/generated";
+import {
+  generatedCss,
+  generatedRules,
+  type RuleFrom,
+  type Setting,
+} from "@/style/generated";
 import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 
 /** The sheet the registered faces are sent under, which a warning names. */
@@ -35,6 +40,23 @@ export function designSheet(
     name: DESIGN_SHEET,
     css: generatedCss(mergeDesign(DEFAULTS, design), setting, registered),
   };
+}
+
+/**
+ * The origin of the rule in `designSheet` that spans a line. Lines
+ * count from 1. It merges the defaults the same way as `designSheet`,
+ * so a line the engine reports in the design sheet maps back to what
+ * wrote it.
+ */
+export function designRuleAt(
+  design: Design,
+  setting: Setting,
+  line: number,
+  registered: readonly Registered[] = [],
+): RuleFrom | undefined {
+  return generatedRules(mergeDesign(DEFAULTS, design), setting, registered).find(
+    (rule) => line >= rule.line && line < rule.line + rule.lines,
+  )?.from;
 }
 
 /**

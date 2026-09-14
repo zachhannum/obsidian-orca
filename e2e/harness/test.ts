@@ -7,6 +7,7 @@
 import { chromium, test as base } from "@playwright/test";
 import { Book } from "./book";
 import { CDP, FIXTURE } from "./launch";
+import { Inspect } from "./inspect";
 import { Manuscript } from "./manuscript";
 import { Navigator } from "./navigator";
 import { Note } from "./note";
@@ -17,6 +18,8 @@ import { Vault } from "./vault";
 
 interface Fixtures {
   book: Book;
+  /** Inspect mode on the book, and the overlay it draws. */
+  inspect: Inspect;
   /** The book note's own view. */
   note: Note;
   /** A chapter as the writer has it, and the icon that swaps it for the book. */
@@ -59,6 +62,10 @@ export const test = base.extend<Fixtures, Shared>({
     const book = new Book(obsidian);
     await use(book);
     await book.close();
+  },
+
+  inspect: async ({ obsidian }, use) => {
+    await use(new Inspect(obsidian));
   },
 
   note: async ({ obsidian }, use) => {

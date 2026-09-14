@@ -1037,6 +1037,245 @@ button.orca-nav-action:hover {
   font-size: 11px;
 }
 
+/* The inspect pane sits over the editor. It scrolls on its own, so a
+   box with many rules leaves the editor room. */
+.orca-inspect-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 45vh;
+  margin-bottom: var(--size-4-3);
+  padding: 10px 10px 12px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.orca-inspect-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.orca-inspect-icon {
+  display: flex;
+  flex: none;
+  --icon-size: 14px;
+}
+
+.orca-inspect-top > .orca-inspect-icon {
+  color: var(--text-accent);
+}
+
+.orca-inspect-close {
+  flex: none;
+  padding: 3px;
+}
+
+.orca-inspect-crumbs {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+}
+
+.orca-inspect-crumb-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+button.orca-inspect-crumb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  height: auto;
+  padding: 2px 5px;
+  border-radius: var(--radius-s);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: var(--cursor);
+}
+
+button.orca-inspect-crumb:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+button.orca-inspect-crumb:not(:disabled):hover {
+  background: var(--background-modifier-hover);
+}
+
+.orca-inspect-crumb i {
+  color: var(--text-faint);
+  font-family: var(--font-interface);
+  font-size: 10px;
+  font-style: normal;
+}
+
+button.orca-inspect-crumb.is-active {
+  background: hsla(var(--interactive-accent-hsl), 0.15);
+  color: var(--text-normal);
+}
+
+.orca-inspect-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.orca-inspect-origin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.orca-inspect-origin::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+.orca-inspect-rule {
+  padding: 4px 8px;
+  border-radius: var(--radius-s);
+  background: rgba(var(--mono-rgb-100), 0.03);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.orca-inspect-rule-h {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.orca-inspect-sel {
+  min-width: 0;
+  color: var(--color-red);
+  overflow-wrap: anywhere;
+}
+
+.orca-inspect-src {
+  margin-left: auto;
+  color: var(--text-accent);
+  font-family: var(--font-interface);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+button.orca-inspect-src {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: var(--cursor);
+}
+
+button.orca-inspect-src:hover {
+  text-decoration: underline;
+}
+
+.orca-inspect-src.is-faint {
+  color: var(--text-faint);
+}
+
+.orca-inspect-decl {
+  padding-left: 12px;
+}
+
+.orca-inspect-p {
+  color: var(--color-cyan);
+}
+
+.orca-inspect-v {
+  color: var(--color-purple);
+}
+
+.orca-inspect-decl.is-lost {
+  opacity: 0.55;
+  text-decoration: line-through;
+  text-decoration-color: var(--text-faint);
+}
+
+.orca-inspect-decl.is-skipped .orca-inspect-p,
+.orca-inspect-decl.is-skipped .orca-inspect-v {
+  text-decoration: underline wavy var(--color-orange);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.orca-inspect-said {
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.orca-inspect-computed {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  font-size: 11.5px;
+}
+
+.orca-inspect-label {
+  color: var(--text-faint);
+}
+
+.orca-inspect-value {
+  color: var(--text-normal);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+}
+
+.orca-inspect-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+button.orca-inspect-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+}
+
+.orca-inspect-selector {
+  font-family: var(--font-monospace);
+  font-weight: var(--font-normal);
+}
+
+.orca-inspect-note {
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
 .orca-panel {
   container-type: inline-size;
   display: flex;
@@ -1581,4 +1820,102 @@ input.orca-panel-filter {
   .orca-panel-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Inspect mode. The header action is Obsidian's own, marked while it is
+   on. The paper is light in both themes, so the tints are mixed from the
+   ramp rather than themed. */
+.workspace-leaf-content[data-type="orca-book-preview"] .view-action.is-active {
+  color: var(--text-accent);
+  background: var(--background-modifier-hover);
+}
+
+.orca-preview-sheets[data-inspect="on"] {
+  cursor: crosshair;
+}
+
+/* A sibling of the sheets, so a paint that rewrites them leaves it. */
+.orca-inspect-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orca-inspect-frame,
+.orca-inspect {
+  position: absolute;
+  pointer-events: none;
+}
+
+.orca-inspect-margin {
+  background: color-mix(in srgb, var(--color-yellow) 26%, transparent);
+}
+
+.orca-inspect-padding {
+  background: color-mix(in srgb, var(--color-green) 22%, transparent);
+}
+
+.orca-inspect-content {
+  background: hsla(258, 88%, 66%, 0.16);
+}
+
+.orca-inspect-edge {
+  box-sizing: border-box;
+  outline: 1px dashed hsla(258, 88%, 60%, 0.9);
+}
+
+.orca-inspect-edge.is-pinned {
+  outline: 1.5px solid hsl(258, 88%, 60%);
+}
+
+/* A fragment is open on the side the page cut. */
+.orca-inspect-edge.is-cut-top,
+.orca-inspect-edge.is-cut-bottom,
+.orca-inspect-edge.is-cut-both {
+  outline: none;
+  border: 1.5px solid hsl(258, 88%, 60%);
+}
+
+.orca-inspect-edge:not(.is-pinned).is-cut-top,
+.orca-inspect-edge:not(.is-pinned).is-cut-bottom,
+.orca-inspect-edge:not(.is-pinned).is-cut-both {
+  border-style: dashed;
+}
+
+.orca-inspect-edge.is-cut-top,
+.orca-inspect-edge.is-cut-both {
+  border-top-color: transparent;
+}
+
+.orca-inspect-edge.is-cut-bottom,
+.orca-inspect-edge.is-cut-both {
+  border-bottom-color: transparent;
+}
+
+.orca-inspect-tag {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #dadada;
+  font-family: var(--font-monospace);
+  font-size: 10.5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: translate(-2px, calc(-100% - 3px));
+}
+
+.orca-inspect-tag b {
+  font-weight: var(--font-normal);
+  color: #b89cff;
+}
+
+.orca-inspect-tag i {
+  font-style: normal;
+  color: #8a8a8a;
 }

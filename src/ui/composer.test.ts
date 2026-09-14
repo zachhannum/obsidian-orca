@@ -120,6 +120,18 @@ class FakeClient implements EngineClient {
     );
   }
 
+  inspect(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  inspectMarginBox(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  hit(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
   private pages(): Page[] {
     return Array.from({ length: this.sources * SPREAD }, (_, at) => ({
       number: at + 1,

@@ -62,6 +62,18 @@ class FakeClient implements EngineClient {
   foliosOf(): Promise<null[]> {
     return Promise.resolve([]);
   }
+
+  inspect(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  inspectMarginBox(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  hit(): Promise<null> {
+    return Promise.resolve(null);
+  }
 }
 
 /** The workers a pool started, and which of them still run. */

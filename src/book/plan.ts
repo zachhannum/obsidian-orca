@@ -20,6 +20,7 @@ import type { Hashed, Sent } from "@/assets/registry";
 import { contentsMarkdown, firstHeading, type Listed } from "@/book/contents";
 import { imagesIn } from "@/book/images";
 import type { Links } from "@/book/links";
+import { sectionNames } from "@/book/names";
 import { documentMetadata, imprint } from "@/book/metadata";
 import type { Book } from "@/book/note";
 import {
@@ -29,7 +30,6 @@ import {
   type Order,
   type Section,
 } from "@/book/order";
-import type { Role } from "@/book/roles";
 
 /** Reads a section's note, by its vault path. `ui` implements this over the vault. */
 export interface Read {
@@ -146,6 +146,11 @@ export async function bookImages(
  * sends again. A section with no note is dropped; the warning it
  * raised is `resolve`'s.
  *
+ * Every source carries its class and id. A typed edit sends neither,
+ * and the engine keeps the ones from the book op. A renamed entry
+ * changes the book note, so the whole book crosses again with the new
+ * id.
+ *
  * The contents lists the parts and chapters as their notes read now. A
  * typed edit replaces only its own source, so a changed heading reaches
  * the contents the next time the whole book is sent.
@@ -173,25 +178,21 @@ export async function bookSources(
     const path = section.path;
     return [heading === undefined ? { kind, label, path } : { kind, label, path, heading }];
   });
-  return present.map((section, at) =>
-    section.kind === "note"
-      ? { name: section.path, text: texts[at] ?? "" }
-      : { name: `${GENERATED_ORIGIN}:${at}`, text: matter(section.entry, book, listed) },
-  );
+  const names = sectionNames(present);
+  return present.map((section, at) => {
+    const attributes = names[at] ?? {};
+    return section.kind === "note"
+      ? { name: section.path, text: texts[at] ?? "", attributes }
+      : {
+          name: `${GENERATED_ORIGIN}:${at}`,
+          text: matter(section.entry, book, listed),
+          attributes,
+        };
+  });
 }
 
 function sendable(section: Section): section is Sendable {
   return section.kind !== "missing";
-}
-
-/**
- * The role of each section that crosses, in the order the engine
- * counts them. The generated layer reaches a role by counting. It
- * counts the sections that are sent rather than the ones the note
- * lists.
- */
-export function sentRoles(sections: readonly Section[]): Role[] {
-  return sections.filter(sendable).map((section) => section.entry.role);
 }
 
 /**
@@ -231,8 +232,9 @@ export type Edit =
   | { did: "styled"; sheets: Sheet[] }
   /**
    * Reordered chapters, so every source crosses in its new place. The
-   * sheets cross again with them, because the generated layer reaches
-   * a role by counting and the count moved.
+   * sheets cross again with them. The generated layer restarts the folio
+   * at the id of the first part or chapter, and a reorder can change
+   * which section that is.
    */
   | { did: "reordered"; sources: Source[]; sheets: Sheet[] }
   /** Picked a new family, and the cuts it is made of. */

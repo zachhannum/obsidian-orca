@@ -16,6 +16,7 @@ import type { VaultAdapter } from "@/assets/vault";
 import { bookCss } from "@/book/css";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
+import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { sourceNamed } from "@/book/pages";
@@ -25,7 +26,6 @@ import {
   sendBook,
   sendEdit,
   sendFaces,
-  sentRoles,
   type Edit,
   type Face,
   type Loaded,
@@ -35,8 +35,8 @@ import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
 import { designFonts, designUses, useKey, type Design, type FontUse } from "@/style/design";
 import type { Registered } from "@/style/faces";
-import type { Setting } from "@/style/generated";
-import { OWN_SHEET, designSheets } from "@/style/sheet";
+import type { RuleFrom, Setting } from "@/style/generated";
+import { OWN_SHEET, designRuleAt, designSheets } from "@/style/sheet";
 import type { ResolvedUse } from "@/ui/fonts";
 import { bookName } from "@/ui/shelf";
 
@@ -246,6 +246,11 @@ export class Typeset {
     });
   }
 
+  /** The origin of the design sheet's rule that spans a line, counted from 1. */
+  ruleAt(line: number): RuleFrom | undefined {
+    return designRuleAt(this.designed, this.setting, line, this.registered);
+  }
+
   /** The author's own CSS the book is set under, which the note's fence holds. */
   get css(): string {
     return this.own;
@@ -264,6 +269,11 @@ export class Typeset {
     if (css === this.own) return;
     this.own = css;
     this.restyle(this.designed);
+  }
+
+  /** The text a note last crossed as. The engine counts its byte offsets in this text. */
+  textOf(note: string): string | undefined {
+    return this.sent.get(note);
   }
 
   /** Told once a render has landed, so a view repaints where it left off. */
@@ -533,7 +543,7 @@ export class Composer {
     const design: Design = carried?.design ?? model.book.design;
     const { title, author, publisher, language } = model.book.metadata;
     const setting: Setting = carried?.setting ?? {
-      roles: sentRoles(sections),
+      sections: sectionIds(sections),
       title,
       author,
       publisher,

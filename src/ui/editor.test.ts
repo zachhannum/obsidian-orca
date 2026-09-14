@@ -3,7 +3,17 @@ import { test } from "node:test";
 import { language } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { OWN_SHEET } from "@/style/sheet";
-import { cssExtensions, flagged, flagsAt, flagsIn, revealed, type Flag } from "@/ui/editor";
+import {
+  cssExtensions,
+  flagged,
+  flagsAt,
+  flagsIn,
+  inserted,
+  revealed,
+  ruleExtent,
+  skippedIn,
+  type Flag,
+} from "@/ui/editor";
 
 const CSS = "p {\n  text-indent: 2em;\n  text-wrap: balance;\n}";
 
@@ -84,6 +94,46 @@ test("a render's warnings wait for the text it set, and the flags on the text mo
   const kept = flag(typed, [], CSS);
   assert.deepEqual(flagsIn(kept), before);
   assert.equal(kept.doc.lineAt(before[0]?.from ?? 0).number, 4);
+});
+
+test("a rule's extent is the innermost rule the engine's line and column start", () => {
+  const css = "p {\n  a: b;\n}\n@page :left {\n  @top-left { content: none; }\n}\n";
+  const state = editing(css);
+  const extent = (line: number, column: number): string | undefined => {
+    const found = ruleExtent(state, line, column);
+    return found === undefined ? undefined : state.sliceDoc(found.from, found.to);
+  };
+  assert.equal(extent(1, 1), "p {\n  a: b;\n}");
+  assert.equal(extent(4, 1), "@page :left {\n  @top-left { content: none; }\n}");
+  assert.equal(extent(5, 3), "@top-left { content: none; }");
+  assert.equal(extent(9, 1), undefined);
+});
+
+test("a declaration the engine refused shows inside its rule with the engine's words", () => {
+  const css = `${CSS}\nh1 {\n  text-wrap: pretty;\n}`;
+  const other: Flag = { ...WARNED, line: 6, message: "another warning" };
+  const state = flag(editing(css), [WARNED, other], css);
+  assert.deepEqual(skippedIn(state, 1, 1), [
+    { property: "text-wrap", value: "balance", message: WARNED.message },
+  ]);
+  assert.deepEqual(skippedIn(state, 5, 1).map(({ message }) => message), ["another warning"]);
+});
+
+test("an added rule goes in on its own lines with the caret inside it, as typing does", () => {
+  const state = editing("p { a: b; }");
+  const end = state.update({ selection: { anchor: state.doc.length } }).state;
+  const spec = inserted(end, "h1 {\n  \n}");
+  const after = end.update(spec).state;
+  assert.equal(after.doc.toString(), "p { a: b; }\nh1 {\n  \n}");
+  assert.equal(after.selection.main.head, "p { a: b; }\nh1 {\n  ".length);
+  // Nothing marks the change as shown from the note, so the editor writes it.
+  assert.equal(spec.annotations, undefined);
+  // Text after the caret goes on the line below the rule.
+  const middle = editing("a {}b {}").update({ selection: { anchor: 4 } }).state;
+  assert.equal(middle.update(inserted(middle, "p {\n  \n}")).state.doc.toString(), "a {}\np {\n  \n}\nb {}");
+  const margin = inserted(editing(""), "@page :left {\n  @top-left {\n    \n  }\n}");
+  const set = editing("").update(margin).state;
+  assert.equal(set.selection.main.head, "@page :left {\n  @top-left {\n    ".length);
 });
 
 // What this tier does not cover: the editor on a page, which has no

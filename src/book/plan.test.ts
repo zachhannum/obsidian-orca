@@ -24,6 +24,7 @@ import { FACES_SHEET } from "@/style/sheet";
 import { readText, type VaultAdapter } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
+import { sectionIds } from "@/book/names";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder, resolve } from "@/book/order";
 import { emptyDesign } from "@/style/design";
@@ -34,7 +35,6 @@ import {
   sendBook,
   sendEdit,
   sendFaces,
-  sentRoles,
   type Edit,
   type Face,
   type Loaded,
@@ -537,6 +537,78 @@ test("a typed chapter, a reorder and a deletion reach a live session", async () 
   }
 });
 
+test("a paragraph's section carries its role as its class and its entry's slug as its id, through an edit and a rename", async () => {
+  const model = await fixture();
+  const links = pathLinks(await paths());
+  const chapter = "Chapter Twelve.md";
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const client = connected(engine);
+    await client.preview([...(await planned(model)), styleOp(SET)]);
+
+    /** The section around the first paragraph of the chapter, as the inspector sees it. */
+    async function section(): Promise<{ id: string | null; classes: string[] }> {
+      const text = await readText(vault, chapter);
+      const opening = text.indexOf("In consequence");
+      assert.ok(opening >= 0, "the chapter no longer opens on its paragraph");
+      const byte = Buffer.byteLength(text.slice(0, opening));
+      const node = await client.nodeAt(chapter, byte);
+      assert.ok(node !== null, "no node at the chapter's first paragraph");
+      const inspected = await client.inspect(node);
+      assert.ok(inspected, "the paragraph was not inspected");
+      const found = inspected.ancestors.find((ancestor) => ancestor.element === "section");
+      assert.ok(found, "the paragraph sits in no section");
+      return { id: found.id, classes: found.classes };
+    }
+
+    assert.deepEqual(await section(), { id: "chapter-twelve", classes: ["chapter"] });
+
+    // A typed edit sends no names, and the engine keeps the ones it had.
+    const typed = sendEdit(
+      { did: "typed", name: chapter, text: await readText(vault, chapter) },
+      LOADED,
+      SENT_NOTHING,
+    );
+    assert.equal(only(typed.ops, "edit").name, chapter);
+    await painted(client, typed.ops);
+    assert.deepEqual(await section(), { id: "chapter-twelve", classes: ["chapter"] });
+
+    // A renamed entry changes the book note, and the book crosses again
+    // with the new id.
+    const renamed = readModel(
+      (await readText(vault, BOOK)).replace("[[Chapter Twelve]]", "[[Chapter Twelve|The Harbor]]"),
+    );
+    const sources = await bookSources(
+      renamed.book,
+      renamed.order,
+      links,
+      BOOK,
+      (at) => readText(vault, at),
+    );
+    await painted(client, sendEdit({ did: "reordered", sources, sheets: SET }, LOADED, SENT_NOTHING).ops);
+    assert.deepEqual(await section(), { id: "the-harbor", classes: ["chapter"] });
+  } finally {
+    engine.free();
+  }
+});
+
+test("every source in the book op carries its names, and generated matter is named by its role", async () => {
+  const sources = only(await planned(await fixture()), "book").sources;
+
+  assert.deepEqual(
+    sources.map((source) => source.attributes),
+    [
+      { classes: ["title-page"], id: "title-page" },
+      { classes: ["copyright"], id: "copyright" },
+      { classes: ["epigraph"], id: "a-note-on-the-text" },
+      { classes: ["contents"], id: "contents" },
+      { classes: ["part"], id: "volume-the-first" },
+      { classes: ["chapter"], id: "chapter-twelve" },
+      { classes: ["back-matter"], id: "acknowledgements" },
+    ],
+  );
+});
+
 /** Sets these ops on an engine of their own, over the bundled theme. */
 async function set(ops: Op[]): Promise<LayoutOutput> {
   const engine = await createEngine({ wasm: await moduleBytes() });
@@ -620,7 +692,7 @@ async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
       ...sendFaces(faces),
       styleOp(
         designSheets(model.book.design, {
-          roles: sentRoles(sections),
+          sections: sectionIds(sections),
           title,
           author,
           publisher,

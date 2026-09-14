@@ -25,7 +25,7 @@ test("a book that sets nothing sets one font in two sizes, with nothing the engi
     });
     const ops: Op[] = [
       { op: "dialect", dialect: "obsidian" },
-      styleOp(designSheets(emptyDesign(), { roles: ["chapter"] })),
+      styleOp(designSheets(emptyDesign(), { sections: [{ role: "chapter", id: "chapter-one" }] })),
       {
         op: "markdown",
         name: "chapter.md",

@@ -125,18 +125,25 @@ its editor around these files and returns a URL. The artboard list and
   The pane shows the box's ancestors as crumbs, the rules that matched
   it grouped by the layer they came from, and a few computed values.
 - The crumbs and the rules use the selectors the engine matches. A
-  section has no class, so the pane names it by its place in the
-  reading order and shows its role beside it in faint type.
+  section is named by its id, as `section#chapter-twelve`, and its
+  class shows beside the id in faint type. The class is the section's
+  role. The design panel's rules name a section by its id too.
+- The pane lists only the rules that match the box itself. A
+  declaration the engine skipped shows inside its rule with the
+  engine's warning.
 - A rule from the author's CSS names its line, and a click puts the
   cursor on that line. A rule from the design panel names the control
   that wrote it, and a click opens that control. A rule for a layout
   that has no control, such as the title page, opens nothing.
-- `Add a rule` puts an empty rule at the cursor. Its selector is the
-  box's element and each crumb the author picked.
+- `Add a rule` puts an empty rule at the cursor. Its selector starts
+  with each ancestor up to the nearest one with an id, and names an
+  element by its id or its classes. A click on a crumb takes it out of
+  the selector or puts it back.
 - A box split across two pages is outlined on both pages. A running
   head is picked as a margin box of its `@page` rule.
 - The first Escape removes the pin. The second Escape turns inspect
-  mode off. The action and a swap to the manuscript also turn it off.
+  mode off. A click on the pinned box again, a click where there is no
+  box, and the pane's close button each remove the pin too. The action and a swap to the manuscript also turn it off.
 - Inspect mode waits on fleuron to find the box under a point and to
   return the rules that matched it and its computed values.
 

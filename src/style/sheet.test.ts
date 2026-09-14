@@ -11,8 +11,9 @@ import {
   type Sheet,
   type Source,
 } from "fleuron";
+import type { Named } from "@/book/names";
 import { emptyDesign, readDesign, type Design } from "@/style/design";
-import { generatedCss } from "@/style/generated";
+import { generatedCss, type Setting } from "@/style/generated";
 import { readOrigin } from "@/style/origin";
 import { faceCss, type Registered } from "@/style/faces";
 import { DESIGN_SHEET, FACES_SHEET, OWN_SHEET, designSheet, designSheets } from "@/style/sheet";
@@ -25,7 +26,13 @@ const CHAPTER: Op = {
   text: "# Chapter One\n\nBody text, long enough to break over a line.\n",
 };
 
-const SETTING = { roles: ["chapter"] } as const;
+const SETTING: Setting = { sections: [{ role: "chapter", id: "chapter-one" }] };
+
+/** The two chapters of `SOURCES`, by the ids they cross with. */
+const CHAPTERS: Named[] = [
+  { role: "chapter", id: "chapter-one" },
+  { role: "chapter", id: "chapter-two" },
+];
 
 test("the layers cross in one order, and the last one to set a size wins", async () => {
   const sheets = designSheets(sized(20), SETTING, "book { font-size: 30pt; }");
@@ -83,7 +90,7 @@ test("a book that sets nothing gets every default in design.css", () => {
     /p \+ p \{\n {2}text-indent: 1\.2em;\n\}/,
     /hr \+ p \{\n {2}text-indent: 0;\n\}/,
     /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/,
-    /section:nth-child\(1\) \{\n {2}page: chapter;\n {2}break-before: page;\n\}/,
+    /section#chapter-one \{\n {2}page: chapter;\n {2}break-before: page;\n\}/,
     /:first-child \{\n {2}padding-top: 0pt;\n {2}margin-bottom: 0pt;\n\}/,
     /hr \{\n {2}content: "❧";\n {2}margin-top: 16\.5pt;\n {2}margin-bottom: 16\.5pt;\n\}/,
   ];
@@ -97,7 +104,7 @@ test("a book that sets nothing gets every default in design.css", () => {
 
 test("a book that sets nothing sets its text inside the default margins, and its openings carry no folio", async () => {
   const engine = await book([]);
-  const orca = await book(designSheets(emptyDesign(), { roles: ["chapter", "chapter"] }));
+  const orca = await book(designSheets(emptyDesign(), { sections: CHAPTERS }));
 
   assert.deepEqual(orca.warnings, []);
   assert.deepEqual(sides(orca.pages), sides(engine.pages));
@@ -123,12 +130,27 @@ test("the front matter prints a roman folio, and the body counts again from 1", 
   const output = await rendered([
     { op: "dialect", dialect: "obsidian" },
     { op: "split", level: 0 },
-    styleOp(designSheets(design, { roles: ["copyright", "chapter"] })),
+    styleOp(
+      designSheets(design, {
+        sections: [
+          { role: "copyright", id: "copyright" },
+          { role: "chapter", id: "chapter-one" },
+        ],
+      }),
+    ),
     {
       op: "book",
       sources: [
-        { name: "copyright.md", text: `# Copyright\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n` },
-        { name: "one.md", text: `# Chapter One\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n` },
+        {
+          name: "copyright.md",
+          text: `# Copyright\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n`,
+          attributes: { classes: ["copyright"], id: "copyright" },
+        },
+        {
+          name: "one.md",
+          text: `# Chapter One\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n`,
+          attributes: { classes: ["chapter"], id: "chapter-one" },
+        },
       ],
     },
   ]);
@@ -225,8 +247,16 @@ async function rendered(ops: Op[]) {
 const PARAGRAPH = "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. ".repeat(20);
 
 const SOURCES: Source[] = [
-  { name: "one.md", text: `# Chapter One\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n` },
-  { name: "two.md", text: `# Chapter Two\n\n${PARAGRAPH}\n` },
+  {
+    name: "one.md",
+    text: `# Chapter One\n\n${PARAGRAPH}\n\n${PARAGRAPH}\n`,
+    attributes: { classes: ["chapter"], id: "chapter-one" },
+  },
+  {
+    name: "two.md",
+    text: `# Chapter Two\n\n${PARAGRAPH}\n`,
+    attributes: { classes: ["chapter"], id: "chapter-two" },
+  },
 ];
 
 function texts(page: Page): string[] {

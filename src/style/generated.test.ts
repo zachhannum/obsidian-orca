@@ -16,18 +16,21 @@ import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
+import { sectionIds, type Named } from "@/book/names";
 import { writeNote } from "@/book/note";
 import { entries, move, resolve } from "@/book/order";
-import { sentRoles } from "@/book/plan";
 import type { Role } from "@/book/roles";
 import {
+  DESIGN_KEYS,
   emptyDesign,
+  mergeDesign,
   type Design,
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
-import { generatedCss, type Setting } from "@/style/generated";
-import { designSheet } from "@/style/sheet";
+import { generatedCss, generatedRules, type Setting } from "@/style/generated";
+import { designRuleAt, designSheet } from "@/style/sheet";
+import { DEFAULTS } from "@/style/theme";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -44,45 +47,96 @@ test("the fixture's design generates the sheet checked in beside this spec", asy
   const { css } = designSheet(model.book.design, await setting(model));
 
   assert.equal(css, await snapshot(css));
-  assert.equal(generatedCss(emptyDesign(), { roles: [] }), "");
+  assert.equal(generatedCss(emptyDesign(), { sections: named([]) }), "");
 });
 
-test("a role reaches the sheet as a page name and as the places it sits", async () => {
+test("every generated rule sits at its line, reads only real setting keys, and maps back from any line it spans", async () => {
   const model = await fixture();
-  const roles = await setting(model);
-  const css = generatedCss(model.book.design, roles);
+  const at = await setting(model);
+  const designs: Design[] = [model.book.design, emptyDesign()];
+  const centered = structuredClone(model.book.design);
+  centered.page.mirrored = true;
+  centered.headers.position = "center";
+  centered.headers.pageNumber = "top";
+  centered.scene.mark = "word";
+  centered.scene.word = "Fin";
+  designs.push(centered);
 
-  // The fixture opens on a title page, and its one chapter is the
-  // sixth section of seven.
-  assert.deepEqual(roles.roles, [
-    "title-page",
-    "copyright",
-    "epigraph",
-    "contents",
-    "part",
-    "chapter",
-    "back-matter",
+  for (const design of designs) {
+    const { css } = designSheet(design, at);
+    const lines = css.split("\n");
+    const rules = generatedRules(mergeDesign(DEFAULTS, design), at);
+    assert.equal(rules.map((rule) => rule.css).join("\n"), css);
+    for (const rule of rules) {
+      const text = lines.slice(rule.line - 1, rule.line - 1 + rule.lines).join("\n");
+      assert.equal(`${text}\n`, rule.css);
+      for (const key of rule.from.keys) assert.ok(DESIGN_KEYS.includes(key), key);
+      for (let line = rule.line; line < rule.line + rule.lines; line++) {
+        assert.deepEqual(designRuleAt(design, at, line), rule.from);
+      }
+      // The blank line after a rule belongs to no rule.
+      assert.equal(designRuleAt(design, at, rule.line + rule.lines), undefined);
+    }
+  }
+
+  // The body's rule spans many lines, and a line inside it names every
+  // control the rule reads.
+  const rules = generatedRules(mergeDesign(DEFAULTS, model.book.design), at);
+  const book = rules.find((rule) => rule.css.startsWith("book {"));
+  assert.ok(book !== undefined);
+  assert.deepEqual(designRuleAt(model.book.design, at, book.line + 3), {
+    keys: [
+      "body-font",
+      "body-size",
+      "body-line-spacing",
+      "body-align",
+      "body-hyphens",
+      "body-hanging-punctuation",
+      "body-orphans",
+      "body-widows",
+    ],
+  });
+  const indent = rules.find((rule) => rule.css.startsWith("p + p {"));
+  assert.deepEqual(indent?.from, { keys: ["body-first-line-indent"] });
+  const chapter = rules.find((rule) => rule.css.includes("page: chapter;"));
+  assert.deepEqual(chapter?.from, { keys: ["chapter-begins"], role: "chapter" });
+});
+
+test("a role reaches the sheet as a page name and as the ids of the sections that take it", async () => {
+  const model = await fixture();
+  const at = await setting(model);
+  const css = generatedCss(model.book.design, at);
+
+  // Each section crosses with a slug of its name as its id.
+  assert.deepEqual(at.sections, [
+    { role: "title-page", id: "title-page" },
+    { role: "copyright", id: "copyright" },
+    { role: "epigraph", id: "a-note-on-the-text" },
+    { role: "contents", id: "contents" },
+    { role: "part", id: "volume-the-first" },
+    { role: "chapter", id: "chapter-twelve" },
+    { role: "back-matter", id: "acknowledgements" },
   ]);
-  assert.match(css, /section:nth-child\(1\) \{\n {2}page: title-page;\n\}/);
+  assert.match(css, /section#title-page \{\n {2}page: title-page;\n\}/);
   assert.match(
     css,
-    /section:nth-child\(6\) \{\n {2}page: chapter;\n {2}break-before: recto;\n\}/,
+    /section#chapter-twelve \{\n {2}page: chapter;\n {2}break-before: recto;\n\}/,
   );
   assert.match(
     css,
-    /section:nth-child\(6\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n\}/,
+    /section#chapter-twelve > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n\}/,
   );
 });
 
 test("a chapter that stacks headings over its text still takes a drop cap", async () => {
   const design = emptyDesign();
   design.chapter.dropCap = 3;
-  const css = generatedCss(design, { roles: ["chapter"] });
+  const css = generatedCss(design, { sections: named(["chapter"]) });
   const text = sentence("It is a truth universally acknowledged.");
 
   // A label over the title, and a label, a title and a subtitle.
   for (const opening of ["# Chapter I\n\n## A Shifting Reef", "# Chapter I\n\n## A Shifting Reef\n\n### 1866"]) {
-    const output = await rendered(css, [{ name: "one.md", text: `${opening}\n\n${text}` }]);
+    const output = await rendered(css, [{ name: "one.md", text: `${opening}\n\n${text}` }], named(["chapter"]));
     assert.deepEqual(output.warnings, []);
     assert.ok(
       output.pages.flatMap(texts).some((line) => line.startsWith("t is a truth")),
@@ -93,16 +147,21 @@ test("a chapter that stacks headings over its text still takes a drop cap", asyn
 
 test("the title page is set centered and down the page, with the publisher apart from the author", async () => {
   const model = await fixture();
+  const sections = named(["title-page"]);
   const css = generatedCss(model.book.design, {
-    roles: ["title-page"],
+    sections,
     publisher: "Whitehall Press",
   });
-  const output = await rendered(css, [
-    {
-      name: "orca-generated:0",
-      text: "The Bennet Novels\n\n# Pride and Prejudice\n\nJane Austen\n\nWhitehall Press",
-    },
-  ]);
+  const output = await rendered(
+    css,
+    [
+      {
+        name: "orca-generated:0",
+        text: "The Bennet Novels\n\n# Pride and Prejudice\n\nJane Austen\n\nWhitehall Press",
+      },
+    ],
+    sections,
+  );
   assert.deepEqual(output.warnings, []);
 
   const runs = (output.pages[0]?.items ?? []).flatMap((item) =>
@@ -131,7 +190,7 @@ test("the title page is set centered and down the page, with the publisher apart
   }
 });
 
-test("a book reordered generates the sheet again, and the sheet counts the new order", async () => {
+test("a book reordered generates the sheet again, and each section keeps its id", async () => {
   const model = await fixture();
   const at = entries(model.order).findIndex((entry) => entry.role === "chapter");
   const moved = {
@@ -139,12 +198,15 @@ test("a book reordered generates the sheet again, and the sheet counts the new o
     order: move(model.order, at, { heading: "Front matter", at: 0 }),
   };
 
-  const before = generatedCss(model.book.design, await setting(model));
-  const after = generatedCss(model.book.design, await setting(moved));
+  const before = await setting(model);
+  const after = await setting(moved);
+  const ids = (each: Setting) => each.sections.map((section) => section.id).sort();
+  const css = generatedCss(model.book.design, after);
 
-  assert.equal((await setting(moved)).roles.indexOf("chapter"), 0);
-  assert.match(after, /section:nth-child\(1\) \{\n {2}page: chapter;/);
-  assert.notEqual(before, after);
+  assert.equal(after.sections[0]?.role, "chapter");
+  assert.deepEqual(ids(after), ids(before));
+  assert.match(css, /section#chapter-twelve \{\n {2}page: chapter;/);
+  assert.notEqual(generatedCss(model.book.design, before), css);
 });
 
 test("the layer a design generates is not in the note the design is written in", async () => {
@@ -168,7 +230,7 @@ test("the generated layer sets the pages it describes, and the engine warns abou
     // is the one slot that must reach the engine as a string, so this
     // design picks that slot.
     { ...design, headers: { ...design.headers, rightPage: "chapter-title" } },
-    { roles: ROLES, title: "Pride and Prejudice", author: "Jane Austen" },
+    { sections: named(ROLES), title: "Pride and Prejudice", author: "Jane Austen" },
   );
 
   const engine = await createEngine({ wasm: await moduleBytes() });
@@ -184,7 +246,7 @@ test("the generated layer sets the pages it describes, and the engine warns abou
       { op: "dialect", dialect: "obsidian" },
       { op: "split", level: 0 },
       styleOp([{ name: "generated.css", css }]),
-      { op: "book", sources: SOURCES },
+      { op: "book", sources: attributed(SOURCES, named(ROLES)) },
     ];
     const output = await client.preview(ops);
 
@@ -229,7 +291,7 @@ test("a scene break sets as a blank line, an ornament or a word on its own line"
   const scene = (over: Design["scene"]): string => {
     const design = emptyDesign();
     design.scene = over;
-    return generatedCss(design, { roles: [] });
+    return generatedCss(design, { sections: named([]) });
   };
 
   assert.equal(scene({ mark: "space", ornament: "\u2042" }), "hr {\n  content: none;\n}\n");
@@ -247,13 +309,13 @@ test("a scene break sets as a blank line, an ornament or a word on its own line"
 
 test("the panel's own controls generate their declarations, and the engine warns about none of them", async () => {
   const design = whole();
-  const css = generatedCss(design, { roles: ROLES });
+  const css = generatedCss(design, { sections: named(ROLES) });
 
   // A heading's alignment, and the blank space around a chapter's title.
   assert.match(css, /h1 \{\n {2}text-align: center;\n\}/);
   assert.match(
     css,
-    /:is\(section:nth-child\(3\), section:nth-child\(4\)\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}padding-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
+    /:is\(section#chapter-3, section#chapter-4\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}padding-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
   );
   // A heading keeps the text under it, and the paragraph after a scene
   // break takes no indent.
@@ -270,12 +332,12 @@ test("the panel's own controls generate their declarations, and the engine warns
 test("the first-line indent lands on a paragraph that follows another, and not on the one after a heading", async () => {
   const design = emptyDesign();
   design.body.indent = { value: 2, unit: "em" };
-  const css = generatedCss(design, { roles: [] });
+  const css = generatedCss(design, { sections: named([]) });
 
   assert.equal(css, "p + p {\n  text-indent: 2em;\n}\n");
 
-  const output = await rendered(css, [INDENTED]);
-  const start = (prefix: string): number => {
+  const output = await rendered(css, [INDENTED], []);
+  const start =(prefix: string): number => {
     const found = output.pages
       .flatMap((page) => page.items)
       .find((item) => item.kind === "text" && item.text.startsWith(prefix));
@@ -291,7 +353,7 @@ test("the first-line indent lands on a paragraph that follows another, and not o
 });
 
 test("heads at the outside corners leave a folio at the top in the center, and an opening clears all three", () => {
-  const css = generatedCss(headed("outside", "top"), { roles: ["chapter"], author: "Jane Austen" });
+  const css = generatedCss(headed("outside", "top"), { sections: named(["chapter"]), author: "Jane Austen" });
 
   assert.match(css, /@page \{\n(?: {2}.+\n)* {2}@top-center \{ content: counter\(page, decimal\); \}\n/);
   assert.match(css, /@page :left \{\n {2}@top-left \{ content: "Jane Austen"; \}\n\}/);
@@ -303,7 +365,7 @@ test("heads at the outside corners leave a folio at the top in the center, and a
 });
 
 test("centered heads take the center box, and push a folio at the top to the outside corners", () => {
-  const css = generatedCss(headed("center", "top"), { roles: ["chapter"], author: "Jane Austen" });
+  const css = generatedCss(headed("center", "top"), { sections: named(["chapter"]), author: "Jane Austen" });
 
   assert.match(
     css,
@@ -322,7 +384,7 @@ test("centered heads take the center box, and push a folio at the top to the out
 
   // A folio at the foot stays in the center, and an opening clears it
   // with the centered heads.
-  const footed = generatedCss(headed("center", "bottom"), { roles: ["chapter"], author: "Jane Austen" });
+  const footed = generatedCss(headed("center", "bottom"), { sections: named(["chapter"]), author: "Jane Austen" });
   assert.match(footed, /@page :left \{\n {2}@top-center \{ content: "Jane Austen"; \}\n\}/);
   assert.match(
     footed,
@@ -333,7 +395,7 @@ test("centered heads take the center box, and push a folio at the top to the out
 test("centered heads print in the middle of the page, with the folio at the outside corner and neither on an opening", async () => {
   const design = headed("center", "top");
   design.page.margins.top = { value: 0.8, unit: "in" };
-  const { css } = designSheet(design, { roles: ROLES, author: "Jane Austen" });
+  const { css } = designSheet(design, { sections: named(ROLES), author: "Jane Austen" });
   const output = await rendered(css, SOURCES);
 
   assert.deepEqual(output.warnings, []);
@@ -369,11 +431,11 @@ test("the space above a chapter's title shows on the page, as padding over the t
     const design = emptyDesign();
     design.body.lineSpacing = { value: 14, unit: "pt" };
     design.chapter.spaceAbove = lines;
-    return generatedCss(design, { roles: ["chapter"], author: "Jane Austen" });
+    return generatedCss(design, { sections: named(["chapter"]), author: "Jane Austen" });
   };
   const top = async (css: string) => {
-    const output = await rendered(css, [INDENTED]);
-    const found = output.pages[0]?.items.find(
+    const output = await rendered(css, [INDENTED], named(["chapter"]));
+    const found =output.pages[0]?.items.find(
       (item) => item.kind === "text" && item.text.startsWith("Chapter"),
     );
     assert.ok(found?.kind === "text", "the title did not set");
@@ -388,7 +450,7 @@ test("the space above a chapter's title shows on the page, as padding over the t
 
 test("the front matter numbers its folio in roman, and a book with no folio gets no roman rules", () => {
   const roles: Role[] = ["title-page", "copyright", "chapter", "back-matter"];
-  const css = generatedCss(headed("outside", "bottom"), { roles, author: "Jane Austen" });
+  const css = generatedCss(headed("outside", "bottom"), { sections: named(roles), author: "Jane Austen" });
 
   for (const role of ["title-page", "copyright"]) {
     assert.match(
@@ -404,15 +466,15 @@ test("the front matter numbers its folio in roman, and a book with no folio gets
 
   const bare = headed("outside", "bottom");
   delete bare.headers.pageNumber;
-  assert.doesNotMatch(generatedCss(bare, { roles, author: "Jane Austen" }), /lower-roman/);
+  assert.doesNotMatch(generatedCss(bare, { sections: named(roles), author: "Jane Austen" }), /lower-roman/);
   // A book with no part and no chapter has no front matter.
-  assert.doesNotMatch(generatedCss(headed("outside", "bottom"), { roles: ["copyright"] }), /lower-roman/);
+  assert.doesNotMatch(generatedCss(headed("outside", "bottom"), { sections: named(["copyright"]) }), /lower-roman/);
 });
 
 test("a folio at the outside corner numbers the front matter in roman on each side", () => {
   const design = headed("outside", "bottom");
   design.headers.pageNumber = "outside";
-  const css = generatedCss(design, { roles: ["copyright", "chapter"], author: "Jane Austen" });
+  const css = generatedCss(design, { sections: named(["copyright", "chapter"]), author: "Jane Austen" });
 
   assert.match(css, /@page copyright:left \{\n {2}@bottom-left \{ content: counter\(page, lower-roman\); \}\n\}/);
   assert.match(css, /@page copyright:right \{\n {2}@bottom-right \{ content: counter\(page, lower-roman\); \}\n\}/);
@@ -423,53 +485,53 @@ test("a folio at the outside corner numbers the front matter in roman on each si
 
 test("the page count starts again at the first part or chapter, and not when the body comes first", () => {
   const reset = /counter-reset: page 1;/g;
-  const css = generatedCss(emptyDesign(), { roles: ["title-page", "contents", "part", "chapter"] });
+  const css = generatedCss(emptyDesign(), { sections: named(["title-page", "contents", "part", "chapter"]) });
 
   assert.equal(css.match(reset)?.length, 1);
-  assert.match(css, /section:nth-child\(3\) \{\n {2}counter-reset: page 1;\n\}/);
-  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["chapter", "back-matter"] }), reset);
-  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["title-page", "copyright"] }), reset);
+  assert.match(css, /section#part-3 \{\n {2}counter-reset: page 1;\n\}/);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter", "back-matter"]) }), reset);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["title-page", "copyright"]) }), reset);
 });
 
 test("the contents prints each folio in the body's folio format", () => {
   const roles: Role[] = ["title-page", "contents", "chapter"];
-  const css = generatedCss(emptyDesign(), { roles });
+  const css = generatedCss(emptyDesign(), { sections: named(roles) });
 
   assert.match(
     css,
-    /section:nth-child\(2\) p\.folio a::after \{\n {2}content: target-counter\(attr\(href url\), page, decimal\);\n\}/,
+    /section#contents-2 p\.folio a::after \{\n {2}content: target-counter\(attr\(href url\), page, decimal\);\n\}/,
   );
 
   const roman = emptyDesign();
   roman.headers.pageNumberFormat = "roman";
-  assert.match(generatedCss(roman, { roles }), /target-counter\(attr\(href url\), page, lower-roman\)/);
-  assert.doesNotMatch(generatedCss(emptyDesign(), { roles: ["chapter"] }), /target-counter/);
+  assert.match(generatedCss(roman, { sections: named(roles) }), /target-counter\(attr\(href url\), page, lower-roman\)/);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter"]) }), /target-counter/);
 });
 
 test("the contents sets its parts, entries and folios only inside the contents", () => {
-  const css = generatedCss(emptyDesign(), { roles: ["title-page", "contents", "chapter"] });
+  const css = generatedCss(emptyDesign(), { sections: named(["title-page", "contents", "chapter"]) });
   const selectors = [...css.matchAll(/^([^@\s}][^{\n]*) \{$/gm)].map((match) => match[1] ?? "");
 
   for (const name of ["p", "p.entry", "p.folio", "p.folio a::after", "p.part"]) {
-    assert.ok(selectors.includes(`section:nth-child(2) ${name}`), `no contents rule for ${name}`);
+    assert.ok(selectors.includes(`section#contents-2 ${name}`), `no contents rule for ${name}`);
   }
   // Every rule on a tagged paragraph or a link sits under the contents.
   for (const selector of selectors.filter((each) => /a::after|\.part|\.entry|\.folio/.test(each))) {
-    assert.ok(selector.startsWith("section:nth-child(2) "), `${selector} reaches past the contents`);
+    assert.ok(selector.startsWith("section#contents-2 "), `${selector} reaches past the contents`);
   }
-  assert.match(css, /section:nth-child\(2\) p\.entry \{\n {2}margin-left: 1em;\n {2}padding-left: 1em;\n {2}padding-right: 3em;\n {2}text-indent: -1em;\n\}/);
+  assert.match(css, /section#contents-2 p\.entry \{\n {2}margin-left: 1em;\n {2}padding-left: 1em;\n {2}padding-right: 3em;\n {2}text-indent: -1em;\n\}/);
 });
 
 test("a contents folio rises half a body line, and a part keeps a line above and half below", () => {
   const roles: Role[] = ["contents", "chapter"];
   const spaced = emptyDesign();
   spaced.body.lineSpacing = { value: 14, unit: "pt" };
-  const css = generatedCss(spaced, { roles });
+  const css = generatedCss(spaced, { sections: named(roles) });
 
-  assert.match(css, /section:nth-child\(1\) p\.folio \{\n(?: {2}.+\n)* {2}position: relative;\n {2}top: -7pt;\n/);
-  assert.match(css, /section:nth-child\(1\) p\.part \{\n(?: {2}.+\n)* {2}margin-top: 14pt;\n {2}margin-bottom: 7pt;\n/);
+  assert.match(css, /section#contents-1 p\.folio \{\n(?: {2}.+\n)* {2}position: relative;\n {2}top: -7pt;\n/);
+  assert.match(css, /section#contents-1 p\.part \{\n(?: {2}.+\n)* {2}margin-top: 14pt;\n {2}margin-bottom: 7pt;\n/);
   // With no line spacing set, a body line is an em.
-  const bare = generatedCss(emptyDesign(), { roles });
+  const bare = generatedCss(emptyDesign(), { sections: named(roles) });
   assert.match(bare, /top: -0\.5em;/);
   assert.match(bare, /margin-top: 1em;\n {2}margin-bottom: 0\.5em;/);
 });
@@ -480,26 +542,26 @@ test("the contents title sinks as far as a chapter's, and takes no sink the desi
   design.body.lineSpacing = { value: 14, unit: "pt" };
   design.chapter.spaceAbove = 7;
   design.chapter.spaceBelow = 2;
-  const css = generatedCss(design, { roles });
-  const opening = (at: number) =>
-    new RegExp(`section:nth-child\\(${at}\\) > :is\\(h1(?:, h[2-6])+\\):first-child \\{\\n {2}padding-top: 98pt;\\n {2}margin-bottom: 28pt;\\n\\}`);
+  const css = generatedCss(design, { sections: named(roles) });
+  const opening = (id: string) =>
+    new RegExp(`section#${id} > :is\\(h1(?:, h[2-6])+\\):first-child \\{\\n {2}padding-top: 98pt;\\n {2}margin-bottom: 28pt;\\n\\}`);
 
-  assert.match(css, opening(1));
-  assert.match(css, opening(2));
-  assert.doesNotMatch(generatedCss(emptyDesign(), { roles }), /padding-top/);
+  assert.match(css, opening("contents-1"));
+  assert.match(css, opening("chapter-2"));
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(roles) }), /padding-top/);
 });
 
 test("a contents folio sets flush right on its title's line", async () => {
   const design = emptyDesign();
   design.body.lineSpacing = { value: 14, unit: "pt" };
-  const css = generatedCss(design, { roles: ["contents", "chapter"] });
+  const css = generatedCss(design, { sections: named(["contents", "chapter"]) });
   const output = await rendered(css, [
     {
       name: "contents.md",
       text: "# Contents\n\n{.entry}\n\n[Chapter One](one.md#Chapter%20One)\n\n{.folio}\n\n[](one.md#Chapter%20One)\n",
     },
     { name: "one.md", text: "# Chapter One\n\nIt is a truth universally acknowledged.\n" },
-  ]);
+  ], named(["contents", "chapter"]));
   const items = (output.pages[0]?.items ?? []).flatMap((item) => (item.kind === "text" ? [item] : []));
   const title = items.find((item) => item.text.startsWith("Chapter"));
   const folio = items.find((item) => /^\d+$/.test(item.text));
@@ -563,9 +625,14 @@ function whole(): Design {
 
 /**
  * Sets a book with the sheet handed in. The book is two chapters unless
- * the caller passes its own sources.
+ * the caller passes its own sources. Each source crosses with the class
+ * and id of the section at its place in `sections`.
  */
-async function rendered(css: string, sources: Source[] = BROKEN) {
+async function rendered(
+  css: string,
+  sources: Source[] = BROKEN,
+  sections: readonly Named[] = named(ROLES),
+) {
   const engine = await createEngine({ wasm: await moduleBytes() });
   try {
     const client: Client = new Client({
@@ -579,7 +646,7 @@ async function rendered(css: string, sources: Source[] = BROKEN) {
       { op: "dialect", dialect: "obsidian" },
       { op: "split", level: 0 },
       styleOp([{ name: "generated.css", css }]),
-      { op: "book", sources },
+      { op: "book", sources: attributed(sources, sections) },
     ]);
     assert.ok(output, "the render was overtaken");
     return output;
@@ -590,6 +657,21 @@ async function rendered(css: string, sources: Source[] = BROKEN) {
 
 /** The roles of a book long enough to turn a page inside a chapter. */
 const ROLES: Role[] = ["title-page", "copyright", "chapter", "chapter"];
+
+/** Sections of each role, with an id made of the role and its place, the way a test names them. */
+function named(roles: readonly Role[]): Named[] {
+  return roles.map((role, at) => ({ role, id: `${role}-${at + 1}` }));
+}
+
+/** Sources that cross with the class and id of the section at the same place. */
+function attributed(sources: readonly Source[], sections: readonly Named[]): Source[] {
+  return sources.map((source, at) => {
+    const section = sections[at];
+    return section === undefined
+      ? source
+      : { ...source, attributes: { classes: [section.role], id: section.id } };
+  });
+}
 
 const SOURCES: Source[] = [
   { name: "title.md", text: "# Pride and Prejudice\n\nJane Austen\n" },
@@ -619,11 +701,11 @@ async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
 }
 
-/** The fixture book's reading order, as the generated layer counts it. */
+/** The fixture book's reading order, with the id each section crosses with. */
 async function setting(model: Model): Promise<Setting> {
   const { sections } = resolve(model.order, pathLinks(await paths()), BOOK);
   const { title, author, publisher } = model.book.metadata;
-  return { roles: sentRoles(sections), title, author, publisher };
+  return { sections: sectionIds(sections), title, author, publisher };
 }
 
 async function paths(folder = "/"): Promise<string[]> {
@@ -675,13 +757,16 @@ test("a heading set in a variant names the family that variant is registered und
     { font: "Junicode", variant: "Cond", family: "Junicode Cond", faces: [] },
   ];
 
-  const css = generatedCss(design, { roles: [] }, registered);
+  const css = generatedCss(design, { sections: named([]) }, registered);
 
   assert.match(css, /book \{\n {2}font-family: "Junicode", serif;/);
   assert.match(css, /h1 \{\n {2}font-family: "Junicode Cond", serif;/);
   // A font with no face registered is named as the design names it.
   assert.match(css, /h2 \{\n {2}font-family: "Spectral", serif;/);
-  assert.equal(generatedCss(design, { roles: [] }, []), generatedCss(design, { roles: [] }));
+  assert.equal(
+    generatedCss(design, { sections: named([]) }, []),
+    generatedCss(design, { sections: named([]) }),
+  );
 });
 
 // What this tier does not cover: the author's own layer over this one,

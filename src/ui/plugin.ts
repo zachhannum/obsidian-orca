@@ -39,6 +39,7 @@ import {
   type Previews,
   type ResolvedUse,
 } from "@/ui/fonts";
+import type { Pin } from "@/ui/inspect";
 import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
@@ -153,6 +154,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
             opens: (view, route, place) => {
               void (route === "css" ? this.opensCss(place) : this.opensNote(view, place));
             },
+            inspected: (_view, pin, refreshed) => {
+              void this.inspected(pin, refreshed);
+            },
+            unit: () => this.limits.unit,
           },
           (text) => {
             this.reading(leaf, text);
@@ -230,6 +235,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
           return false;
         }
         if (!checking) void this.splitManuscript(view, note);
+        return true;
+      },
+    });
+    this.addCommand({
+      id: "inspect-page",
+      name: "Inspect the page",
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(PreviewView);
+        if (view === null) return false;
+        if (!checking) view.toggleInspect();
         return true;
       },
     });
@@ -1089,6 +1104,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
       fonts: (uses) => this.resolved(uses),
       preview: (family) => this.previewVariants(family),
       unit: () => this.limits.unit,
+      unpin: () => {
+        for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
+          if (leaf.view instanceof PreviewView) leaf.view.unpin();
+        }
+      },
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the
@@ -1168,6 +1188,17 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private places(): FontPlaces {
     this.fonts ??= fontPlaces(this.files());
     return this.fonts;
+  }
+
+  /**
+   * Hands a pin in the preview to the design panel. A pin the author set
+   * opens the panel; one a paint found again only updates a panel that
+   * is open, so an author who turned the sidebar elsewhere stays there.
+   */
+  private async inspected(pin: Pin | undefined, refreshed: boolean): Promise<void> {
+    if (pin !== undefined && !refreshed) await this.openPanel();
+    const panel = this.app.workspace.getLeavesOfType(PANEL_VIEW)[0]?.view;
+    if (panel instanceof DesignPanelView) panel.inspect(pin);
   }
 
   /** Opens the design panel in the right sidebar, revealing one already there. */
