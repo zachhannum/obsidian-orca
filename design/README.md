@@ -78,8 +78,9 @@ its editor around these files and returns a URL. The artboard list and
 - The panel draws margins and a custom trim in the unit from orca's
   settings. That unit is inches unless the author picks millimeters or
   points.
-- A control the CSS has taken over dims where it sits and shows the
-  line that took it, which is also the way to that line.
+- A control the CSS overrides dims and shows a lock. A hover over the
+  lock names the property, the value that overrides it and its line. A
+  click on the lock goes to that line.
 - The control for a key the book does not set shows orca's default in
   faint type. A key the book sets has a reset at the end of its row.
   The reset returns the key to the default.

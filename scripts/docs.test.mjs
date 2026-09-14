@@ -595,16 +595,30 @@ test("the copy claims no feature the plugin has yet to grow", async () => {
     ...[...landing.matchAll(/<figcaption>([\s\S]*?)<\/figcaption>/g)].map((f) => words(f[1])),
   ].join(" ");
 
-  // Each claim, with the line in `src` that would make it true. A claim
-  // whose line is not there yet may not be on the page.
+  // Each claim, with the file and the line in `src` that would make it
+  // true. A claim whose line is not there yet must not be on the page.
   const claims = [
-    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, /id: "export-pdf"/, "export"],
-    [/your own CSS|takes over a setting/i, /overridden|overrides layer/, "an overridden control"],
+    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, plugin, /id: "export-pdf"/, "export"],
+    [
+      /your own CSS|overrides a setting/i,
+      await read("src/ui/panels.tsx"),
+      /overridden/,
+      "an overridden control",
+    ],
   ];
-  for (const [claimed, built, what] of claims) {
-    if (built.test(plugin)) continue;
+  for (const [claimed, source, built, what] of claims) {
+    if (built.test(source)) continue;
     assert.doesNotMatch(said, claimed, `the page claims ${what}, which orca has not built`);
   }
+});
+
+test("the panel section says a control the author's CSS overrides dims and names the line", () => {
+  const from = landing.indexOf("in the panel</i>");
+  assert.notEqual(from, -1, "no panel section");
+  const section = landing.slice(from, landing.indexOf("</section>", from));
+  const said = prose(section).join(" ");
+  assert.match(said, /your own CSS overrides a setting/);
+  assert.match(said, /dims and names the line/);
 });
 
 test("the footer carries the tail mark in one flat colour", async () => {

@@ -32,6 +32,8 @@ import {
   type PageUnit,
   type Written,
 } from "@/style/design";
+import type { Place } from "@/style/origin";
+import type { Override } from "@/style/overrides";
 import { effective } from "@/style/theme";
 import {
   Field,
@@ -53,6 +55,7 @@ import {
   atLevel,
   defaultSaid,
   inUnit,
+  overriddenAt,
   trims,
   withKey,
   type Control,
@@ -85,6 +88,8 @@ export interface Acting {
   add(text: string): void;
   /** Takes the pin off in the preview. */
   unpin(): void;
+  /** Opens the author's CSS with the caret at a place in it. */
+  reveal(place: Place): void;
 }
 
 /** The panel's two views. In the CSS view the panel draws its header, and the editor under it is not React's. */
@@ -112,6 +117,8 @@ export type Shown =
       warned: number;
       /** The box pinned in the preview, which the CSS view draws the inspect pane for. */
       inspecting: Inspecting | undefined;
+      /** The design keys overridden by the author's CSS, each with the declaration that beats it. */
+      overridden: ReadonlyMap<string, Override>;
     }
   | { kind: "reading" }
   | { kind: "none" };
@@ -386,8 +393,15 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
       ? `${control.said} ${value}`
       : value;
   });
+  // A row the author's CSS has overridden has no reset. Clearing the key
+  // would change nothing on the page.
+  const { overridden } = drawing.shown;
+  const override = overriddenAt(
+    keyed.map(({ key }) => key),
+    overridden,
+  );
   const reset =
-    first === undefined || set.length === 0 ? null : (
+    first === undefined || set.length === 0 || override !== undefined ? null : (
       <Reset
         said={`Reset to default (${defaults.join(", ")})`}
         testid={`orca-panel-reset-${first}`}
@@ -405,6 +419,18 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
       reset={reset}
       under={under}
       keys={keyed.map(({ key }) => key)}
+      overridden={
+        override === undefined
+          ? undefined
+          : {
+              overrides: override.overrides,
+              testid: `orca-panel-overridden-${override.key}`,
+              every: keyed.every(({ key }) => overridden.has(key)),
+              open: (place) => {
+                acting.reveal(place);
+              },
+            }
+      }
     >
       {line.of.map((control) => (
         <Beside
@@ -413,6 +439,9 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
           grid={grid}
           drawing={drawing}
           wrong={wrong}
+          overridden={
+            control.key !== undefined && overridden.has(atLevel(control.key, level))
+          }
         />
       ))}
     </Row>
@@ -425,11 +454,14 @@ function Beside({
   grid,
   drawing,
   wrong,
+  overridden,
 }: {
   control: Control;
   grid: boolean;
   drawing: Drawing;
   wrong: (id: string) => Wrong;
+  /** True when the author's CSS overrides the key the control writes. */
+  overridden: boolean;
 }): JSX.Element {
   const drawn = <Drawn control={control} drawing={drawing} wrong={wrong} />;
   const said =
@@ -447,12 +479,16 @@ function Beside({
         {control.said}
       </span>
     );
-  return grid ? (
-    <div className="orca-panel-cell">
-      {drawn}
-      {said}
-    </div>
-  ) : (
+  if (grid) {
+    return (
+      <div className={overridden ? "orca-panel-cell is-overridden" : "orca-panel-cell"}>
+        {drawn}
+        {said}
+      </div>
+    );
+  }
+  // Outside a grid the row dims its controls as a whole.
+  return (
     <>
       {drawn}
       {said}

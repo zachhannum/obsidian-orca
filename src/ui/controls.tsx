@@ -12,13 +12,18 @@
 
 import {
   useEffect,
+  useId,
+  useLayoutEffect,
   useRef,
   useState,
   type JSX,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import type { Unit, Written } from "@/style/design";
+import type { Place } from "@/style/origin";
+import type { Override } from "@/style/overrides";
 import {
   stepSaid,
   stepped,
@@ -46,6 +51,124 @@ export interface Under {
   wrong?: boolean;
 }
 
+/** The declarations of the author's CSS that override a row. */
+export interface Overridden {
+  /** Never empty. The first names the row and is the one a click opens. */
+  overrides: readonly Override[];
+  testid: string;
+  /** True when the CSS beats every key in the row, so the label dims too. */
+  every: boolean;
+  /** Opens the CSS view at a place. */
+  open: (place: Place) => void;
+}
+
+/** The gap between the lock and its card, and between the card and the window's edge. */
+const CARD_GAP = 6;
+
+/**
+ * Draws the lock on an overridden row. A hover or focus opens a card with
+ * each overriding declaration and its place. The card is drawn on the
+ * body because the panel clips overflow. It sits above the lock, or below
+ * when the window has no room above.
+ */
+function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
+  const lock = useRef<HTMLButtonElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+  const [body, setBody] = useState<HTMLElement | undefined>(undefined);
+  const id = useId();
+  const first = overridden.overrides[0];
+
+  useLayoutEffect(() => {
+    const button = lock.current;
+    const drawn = card.current;
+    if (body === undefined || button === null || drawn === null) return;
+    const view = button.ownerDocument.defaultView ?? window;
+    const at = button.getBoundingClientRect();
+    const size = drawn.getBoundingClientRect();
+    const above = at.top - CARD_GAP - size.height;
+    const top = above >= CARD_GAP ? above : at.bottom + CARD_GAP;
+    const left = Math.min(
+      Math.max(at.right - size.width, CARD_GAP),
+      view.innerWidth - size.width - CARD_GAP,
+    );
+    drawn.style.top = `${String(Math.max(top, CARD_GAP))}px`;
+    drawn.style.left = `${String(Math.max(left, CARD_GAP))}px`;
+  }, [body, overridden.overrides]);
+
+  const show = (): void => {
+    setBody(lock.current?.ownerDocument.body);
+  };
+  const hide = (): void => {
+    setBody(undefined);
+  };
+  return (
+    <>
+      <button
+        ref={lock}
+        type="button"
+        className="orca-panel-overridden"
+        data-testid={overridden.testid}
+        aria-describedby={body === undefined ? undefined : id}
+        onPointerEnter={show}
+        onPointerLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || body === undefined) return;
+          event.stopPropagation();
+          hide();
+        }}
+        onClick={() => {
+          hide();
+          if (first !== undefined) overridden.open(first);
+        }}
+      >
+        <Icon name="lock" className="orca-panel-overridden-icon" />
+        {/* Obsidian draws an aria-label as its own tooltip, so the name is hidden text. */}
+        <span className="orca-visually-hidden">
+          {`Overridden by line ${String(first?.line)} of the book's CSS`}
+        </span>
+      </button>
+      {body === undefined
+        ? null
+        : createPortal(
+            <div
+              ref={card}
+              id={id}
+              role="tooltip"
+              className="orca-card mod-floating"
+              data-testid="orca-panel-card"
+            >
+              {overridden.overrides.map((override) => (
+                <div
+                  key={`${override.sheet}:${String(override.line)}:${String(override.column)}:${override.property}`}
+                  className="orca-card-row mod-overridden"
+                >
+                  <Icon name="lock" className="orca-card-icon" />
+                  <div className="orca-card-body">
+                    <div className="orca-card-said">
+                      <code>{override.property}</code> is overridden with value{" "}
+                      <code>{override.value}</code>
+                      {override.declared === override.property ? null : (
+                        <>
+                          {" "}
+                          from <code>{override.declared}</code>
+                        </>
+                      )}
+                    </div>
+                    <div className="orca-card-at">
+                      {`${override.sheet}:${String(override.line)}:${String(override.column)}`}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>,
+            body,
+          )}
+    </>
+  );
+}
+
 /**
  * Draws one row of the panel. The row keeps the slot for the reset even
  * when it has no reset, so the controls do not move when the book starts
@@ -57,6 +180,7 @@ export function Row({
   reset,
   under,
   keys = [],
+  overridden,
   children,
 }: {
   label: string;
@@ -65,22 +189,41 @@ export function Row({
   under: readonly Under[];
   /** The design keys the row writes. The inspect pane finds the row by these keys. */
   keys?: readonly string[];
+  /** Set when the author's CSS has overridden the row. */
+  overridden?: Overridden | undefined;
   children: ReactNode;
 }): JSX.Element {
+  const row = useRef<HTMLDivElement>(null);
+  const line = overridden?.overrides[0]?.line;
+  // The e2e suite waits on this, so it is written once React commits.
+  useLayoutEffect(() => {
+    const element = row.current;
+    if (element === null) return;
+    if (line === undefined) element.removeAttribute("data-overridden");
+    else element.setAttribute("data-overridden", String(line));
+  }, [line]);
   return (
     <div
-      className="orca-panel-line"
+      ref={row}
+      className={classes("orca-panel-line", overridden !== undefined && "mod-overridden")}
       data-keys={keys.length === 0 ? undefined : keys.join(" ")}
     >
       <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
-        <span className="orca-panel-label">{label}</span>
+        <span
+          className={classes("orca-panel-label", overridden?.every === true && "is-overridden")}
+        >
+          {label}
+        </span>
         <div
-          className={
-            grid ? "orca-panel-controls orca-panel-grid" : "orca-panel-controls"
-          }
+          className={classes(
+            "orca-panel-controls",
+            grid && "orca-panel-grid",
+            !grid && overridden !== undefined && "is-overridden",
+          )}
         >
           {children}
         </div>
+        {overridden === undefined ? null : <Lock overridden={overridden} />}
         <div className="orca-panel-reset-slot">{reset}</div>
       </div>
       {under.map((line) => (

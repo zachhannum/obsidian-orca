@@ -125,6 +125,9 @@ export class DesignPanelView extends ItemView {
       unpin: () => {
         this.designing.unpin();
       },
+      reveal: (place) => {
+        void this.reveal(place);
+      },
     });
     this.contentEl.addClass("orca-design");
     this.editorHost = this.contentEl.createDiv({
@@ -348,6 +351,10 @@ export class DesignPanelView extends ItemView {
 
   /** The panel's state for one book, from the engine and the index. */
   private shownFor(typeset: Typeset, index: FontIndex): Shown {
+    const flags = cssFlags(typeset.session.warnings);
+    // Warnings against older CSS name places that have moved. The
+    // repaint once the render of this CSS lands draws them right.
+    const refused = typeset.cssWarned === typeset.css ? flags : [];
     return {
       kind: "book",
       viewing: this.viewing,
@@ -358,8 +365,9 @@ export class DesignPanelView extends ItemView {
       unit: this.designing.unit(),
       language: typeset.language,
       missing: this.warnings(index, typeset.design),
-      warned: cssFlags(typeset.session.warnings).length,
+      warned: flags.length,
       inspecting: this.inspecting(typeset),
+      overridden: typeset.overridden(refused),
     };
   }
 

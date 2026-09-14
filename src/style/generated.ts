@@ -56,6 +56,16 @@ export interface GeneratedRule {
   line: number;
   lines: number;
   from: RuleFrom;
+  /** The selector list, or the whole `@page` prelude for a page rule. */
+  selector: string;
+  declarations: readonly DeclarationFrom[];
+}
+
+/** One declaration of a generated rule. `box` names the margin box it sits in, inside a page rule. */
+export interface DeclarationFrom {
+  property: string;
+  box?: string;
+  keys: readonly string[];
 }
 
 /**
@@ -92,10 +102,10 @@ export function generatedRules(
     ...sceneRules(design),
   ].filter((rule) => rule !== undefined);
   let line = 1;
-  return rules.map(({ css, from }) => {
+  return rules.map(({ css, from, selector, declarations }) => {
     // A rule ends on a newline, and the join adds a blank line after it.
     const lines = css.split("\n").length - 1;
-    const rule = { css, line, lines, from };
+    const rule = { css, line, lines, from, selector, declarations };
     line += lines + 1;
     return rule;
   });
@@ -105,12 +115,13 @@ export function generatedRules(
 interface Rule {
   css: string;
   from: RuleFrom;
+  selector: string;
+  declarations: readonly DeclarationFrom[];
 }
 
 /** A declaration, and the setting keys its value reads. */
-interface Declaration {
+interface Declaration extends DeclarationFrom {
   text: string;
-  keys: readonly string[];
 }
 
 /** The text a margin box prints, and the setting keys that put it there. */
@@ -771,11 +782,11 @@ function declared(
   value: string,
   keys: readonly string[] = [],
 ): Declaration {
-  return { text: `${property}: ${value};`, keys };
+  return { text: `${property}: ${value};`, property, keys };
 }
 
 function boxed(box: string, content: string, keys: readonly string[]): Declaration {
-  return { text: `@${box} { content: ${content}; }`, keys };
+  return { text: `@${box} { content: ${content}; }`, property: "content", box, keys };
 }
 
 /**
@@ -792,6 +803,10 @@ function block(
   return {
     css: `${selector} {\n${lines.map((line) => `  ${line.text}`).join("\n")}\n}\n`,
     from: role === undefined ? { keys } : { keys, role },
+    selector,
+    declarations: lines.map(({ property, box, keys: read }) =>
+      box === undefined ? { property, keys: read } : { property, box, keys: read },
+    ),
   };
 }
 

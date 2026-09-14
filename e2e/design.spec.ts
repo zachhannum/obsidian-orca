@@ -547,6 +547,67 @@ test("the CSS view edits the book's own fence, and the edit reaches the pages an
   await written(vault, own);
 });
 
+test("a control the author's CSS overrides dims and names the line that overrides it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const before = await book.painted();
+  await panel.open();
+  const key = "body-first-line-indent";
+  const row = panel.row(key);
+  await expect(row).not.toHaveAttribute("data-overridden");
+  await expect(panel.overridden(key)).toHaveCount(0);
+
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  const typed = "\np + p { text-indent: 0; }";
+  await panel.typeCss(typed);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+
+  await panel.toControls.click();
+  await expect(row).toHaveAttribute("data-overridden", line);
+  await expect(panel.reset(key)).toHaveCount(0);
+  await expect(row.locator(".orca-panel-label")).toHaveCSS("opacity", "0.42");
+  await expect(panel.control(key)).toBeVisible();
+
+  // A hover over the lock names the property, the value that beats it and its place.
+  await expect(panel.overriddenCard).toBeHidden();
+  await panel.overridden(key).hover();
+  await expect(panel.overriddenCard).toBeVisible();
+  await expect(panel.overriddenCard).toContainText("text-indent");
+  await expect(panel.overriddenCard).toContainText("is overridden with value");
+  await expect(panel.overriddenCard).toContainText("0");
+  await expect(panel.overriddenCard).toContainText(`book.css:${line}:`);
+  // Obsidian draws an aria-label as its own tooltip over the card, so the lock names itself in text.
+  await expect(panel.overridden(key)).not.toHaveAttribute("aria-label");
+  await expect(panel.overridden(key)).toHaveAccessibleName(`Overridden by line ${line} of the book's CSS`);
+  await panel.control(key).hover();
+  await expect(panel.overriddenCard).toBeHidden();
+
+  // The lock is the way to the line.
+  await panel.overridden(key).click();
+  await expect(panel.panel).toHaveAttribute("data-viewing", "css");
+  await expect(panel.caretLine).toHaveText(line);
+
+  // Taking the rule out gives the control back.
+  const painted = await book.painted();
+  await panel.code.press("ControlOrMeta+End");
+  for (let at = 0; at < typed.length; at += 1) await panel.code.press("Backspace");
+  await expect.poll(async () => vault.read(BOOK)).not.toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  await panel.toControls.click();
+  await expect(row).not.toHaveAttribute("data-overridden");
+  await expect(panel.overridden(key)).toHaveCount(0);
+
+  await written(vault, own);
+});
+
 test("a long line in the CSS view scrolls sideways until the author wraps it", async ({
   book,
   panel,

@@ -208,8 +208,16 @@
 .behind-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); font-weight: var(--font-semibold); }
 
 /* ---- a control your own CSS has taken over ---- */
-.lock { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 10.5px; color: var(--text-faint); white-space: nowrap; }
-.lock b { font-family: var(--font-monospace); font-weight: var(--font-normal); color: var(--text-accent); }
+.lock { display: inline-flex; align-items: center; flex: none; color: var(--text-accent); }
+
+/* ---- a card over a squiggle or a lock ---- */
+.card { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); box-shadow: var(--shadow-s); overflow: hidden; }
+.card-row { display: flex; gap: 8px; padding: 8px 12px; border-left: 2px solid var(--color-orange); font-size: 12px; line-height: 1.45; color: var(--text-normal); white-space: normal; }
+.card-row > svg { flex: none; width: 14px; height: 14px; margin-top: 1px; stroke: var(--color-orange); }
+.card-row.is-overridden { border-left-color: var(--interactive-accent); }
+.card-row.is-overridden > svg { stroke: var(--text-accent); }
+.card-said code { font-family: var(--font-monospace); font-size: 11.5px; }
+.card-at { margin-top: 2px; color: var(--text-faint); font-family: var(--font-monospace); font-size: 11px; }
 
 /* ---- inspect mode ---- */
 /* A header action that is switched on. */

@@ -33,6 +33,7 @@ import {
 } from "@/style/design";
 import { ROLES, type Role } from "@/book/roles";
 import type { RuleFrom } from "@/style/generated";
+import type { Override } from "@/style/overrides";
 
 /** One word a select or a segment offers, and the value it writes. */
 export interface Choice {
@@ -371,6 +372,33 @@ export function withVariant(design: Design, key: string, variant: Variant): Desi
 /** Returns a control's key at one heading level. A key with no level comes back unchanged. */
 export function atLevel(key: string, level: Level): string {
   return key.replace(LEVELED, `heading-${String(level)}-`);
+}
+
+/**
+ * The declarations of the author's CSS that override a row, in row order,
+ * one for each place and property. The first key the CSS overrides names
+ * the row, and its declaration comes first.
+ */
+export function overriddenAt(
+  keys: readonly string[],
+  overridden: ReadonlyMap<string, Override>,
+): { key: string; overrides: readonly Override[] } | undefined {
+  const overrides: Override[] = [];
+  let first: string | undefined;
+  for (const key of keys) {
+    const found = overridden.get(key);
+    if (found === undefined) continue;
+    first ??= key;
+    const same = overrides.some(
+      (each) =>
+        each.sheet === found.sheet &&
+        each.line === found.line &&
+        each.column === found.column &&
+        each.property === found.property,
+    );
+    if (!same) overrides.push(found);
+  }
+  return first === undefined ? undefined : { key: first, overrides };
 }
 
 /** Every design key a group can write, with a Headings key at every level. */
