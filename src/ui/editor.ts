@@ -326,27 +326,27 @@ const WARNING_PATHS = [
 function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
   const document = view.dom.ownerDocument;
   const card = document.createElement("div");
-  card.className = "orca-editor-card";
+  card.className = "orca-card";
   card.dataset["testid"] = "orca-editor-card";
   for (const found of here) {
     const row = card.appendChild(document.createElement("div"));
-    row.className = "orca-editor-card-row";
+    row.className = "orca-card-row mod-warning";
 
     const svg = row.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
-    svg.setAttribute("class", "orca-editor-card-icon");
+    svg.setAttribute("class", "orca-card-icon");
     svg.setAttribute("viewBox", "0 0 24 24");
     for (const d of WARNING_PATHS) {
       svg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path")).setAttribute("d", d);
     }
 
     const body = row.appendChild(document.createElement("div"));
-    body.className = "orca-editor-card-body";
+    body.className = "orca-card-body";
     const said = body.appendChild(document.createElement("div"));
-    said.className = "orca-editor-card-said";
+    said.className = "orca-card-said";
     said.textContent = found.message;
     const line = view.state.doc.lineAt(found.from);
     const at = body.appendChild(document.createElement("div"));
-    at.className = "orca-editor-card-at";
+    at.className = "orca-card-at";
     at.textContent = `${found.sheet}:${String(line.number)}:${String(found.from - line.from + 1)}`;
   }
   return card;

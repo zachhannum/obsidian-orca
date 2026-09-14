@@ -39,7 +39,7 @@ import { designFonts, designUses, useKey, type Design, type FontUse } from "@/st
 import type { Registered } from "@/style/faces";
 import type { RuleFrom, Setting } from "@/style/generated";
 import type { Place } from "@/style/origin";
-import { designOverridden } from "@/style/overrides";
+import { designOverridden, type Override } from "@/style/overrides";
 import { OWN_SHEET, designRuleAt, designSheets } from "@/style/sheet";
 import type { ResolvedUse } from "@/ui/fonts";
 import { bookName } from "@/ui/shelf";
@@ -318,10 +318,10 @@ export class Typeset {
   }
 
   /**
-   * The design keys the author's CSS beats, each with the place of the
-   * declaration that beats it. A refused declaration beats nothing.
+   * The design keys the author's CSS beats, each with the declaration
+   * that beats it. A refused declaration beats nothing.
    */
-  overridden(refused: readonly Place[]): ReadonlyMap<string, Place> {
+  overridden(refused: readonly Place[]): ReadonlyMap<string, Override> {
     return designOverridden(this.designed, this.setting, this.own, this.registered, refused);
   }
 

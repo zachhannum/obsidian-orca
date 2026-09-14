@@ -269,12 +269,18 @@ test("a generated rule names the control that wrote it", () => {
 
 test("a row the author's CSS overrides is named by the line that overrides it", () => {
   const margins = ["margin-inside", "margin-outside", "margin-top", "margin-bottom"];
-  const top = { sheet: "book.css", line: 7, column: 3 };
-  const bottom = { sheet: "book.css", line: 4, column: 3 };
+  const at = { sheet: "book.css", column: 3, declared: "margin", value: "1in" };
+  const top = { ...at, line: 7, property: "margin-top" };
+  const bottom = { ...at, line: 4, property: "margin-bottom" };
   // The first key in row order names the row, whatever line it is on.
   assert.deepEqual(
     overriddenAt(margins, new Map([["margin-bottom", bottom], ["margin-top", top]])),
-    { key: "margin-top", place: top },
+    { key: "margin-top", overrides: [top, bottom] },
+  );
+  // Two keys beaten by one declaration of one property give one card row.
+  assert.deepEqual(
+    overriddenAt(margins, new Map([["margin-top", top], ["margin-bottom", { ...top }]])),
+    { key: "margin-top", overrides: [top] },
   );
   assert.equal(overriddenAt(margins, new Map([["body-size", top]])), undefined);
   assert.equal(overriddenAt([], new Map([["body-size", top]])), undefined);

@@ -572,10 +572,20 @@ test("a control the author's CSS overrides dims and names the line that override
 
   await panel.toControls.click();
   await expect(row).toHaveAttribute("data-overridden", line);
-  await expect(panel.overridden(key)).toContainText(`line ${line}`);
   await expect(panel.reset(key)).toHaveCount(0);
   await expect(row.locator(".orca-panel-label")).toHaveCSS("opacity", "0.42");
   await expect(panel.control(key)).toBeVisible();
+
+  // A hover over the lock names the property, the value that beats it and its place.
+  await expect(panel.overriddenCard).toBeHidden();
+  await panel.overridden(key).hover();
+  await expect(panel.overriddenCard).toBeVisible();
+  await expect(panel.overriddenCard).toContainText("text-indent");
+  await expect(panel.overriddenCard).toContainText("is overridden by");
+  await expect(panel.overriddenCard).toContainText("0");
+  await expect(panel.overriddenCard).toContainText(`book.css:${line}:`);
+  await panel.control(key).hover();
+  await expect(panel.overriddenCard).toBeHidden();
 
   // The lock is the way to the line.
   await panel.overridden(key).click();

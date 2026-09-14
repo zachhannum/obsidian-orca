@@ -33,6 +33,7 @@ import {
   type Written,
 } from "@/style/design";
 import type { Place } from "@/style/origin";
+import type { Override } from "@/style/overrides";
 import { effective } from "@/style/theme";
 import {
   Field,
@@ -116,8 +117,8 @@ export type Shown =
       warned: number;
       /** The box pinned in the preview, which the CSS view draws the inspect pane for. */
       inspecting: Inspecting | undefined;
-      /** The design keys overridden by the author's CSS, each with the place of the declaration that beats it. */
-      overridden: ReadonlyMap<string, Place>;
+      /** The design keys overridden by the author's CSS, each with the declaration that beats it. */
+      overridden: ReadonlyMap<string, Override>;
     }
   | { kind: "reading" }
   | { kind: "none" };
@@ -422,11 +423,11 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
         override === undefined
           ? undefined
           : {
-              line: override.place.line,
+              overrides: override.overrides,
               testid: `orca-panel-overridden-${override.key}`,
               every: keyed.every(({ key }) => overridden.has(key)),
-              open: () => {
-                acting.reveal(override.place);
+              open: (place) => {
+                acting.reveal(place);
               },
             }
       }
