@@ -120,8 +120,12 @@ its editor around these files and returns a URL. The artboard list and
   The pane shows the box's ancestors as crumbs, the rules that matched
   it grouped by the layer they came from, and a few computed values.
 - The crumbs and the rules use the selectors the engine matches. A
-  section has no class, so the pane names it by its place in the
-  reading order and shows its role beside it in faint type.
+  section is named by its id, as `section#chapter-twelve`, and its
+  class shows beside the id in faint type. The class is the section's
+  role. The design panel's rules name a section by its id too.
+- The pane lists only the rules that match the box itself. A
+  declaration the engine skipped shows inside its rule with the
+  engine's warning.
 - A rule from the author's CSS names its line, and a click puts the
   cursor on that line. A rule from the design panel names the control
   that wrote it, and a click opens that control. A rule for a layout

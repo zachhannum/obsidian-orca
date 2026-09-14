@@ -88,11 +88,11 @@
                 <div style="display: flex; align-items: center; gap: 6px">
                   <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-accent)"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg>
                   <div class="crumbs" style="flex: 1; min-width: 0">
-                    <span class="crumb">book</span>›<span class="crumb">section:nth-child(16)<i>chapter</i></span>›<span class="crumb is-active">p</span>
+                    <span class="crumb">book</span>›<span class="crumb">section#chapter-twelve<i>chapter</i></span>›<span class="crumb is-active">p</span>
                   </div>
                   <div class="clickable-icon" style="padding: 3px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
                 </div>
-                <div class="note" style="margin: -2px 0 0 19px">page 147 · Chapter Twelve.md, paragraph 2</div>
+                <div class="note" style="margin: -2px 0 0 19px">page 147 · Chapter Twelve.md, line 14</div>
 
                 <div class="origin">Your CSS</div>
                 <div class="rule" style="background: hsla(258, 88%, 66%, 0.09)">
@@ -105,12 +105,6 @@
                 <div class="rule">
                   <div class="rule-h"><span class="sel">p + p</span><span class="src">First-line indent</span></div>
                   <div class="decl is-lost"><span class="p">text-indent</span>: <span class="v">1.2em</span>;</div>
-                </div>
-                <div class="rule">
-                  <div class="rule-h"><span class="sel">book</span><span style="font-family: var(--font-interface); font-size: 10.5px; color: var(--text-faint)">inherited</span><span class="src">Text</span></div>
-                  <div class="decl"><span class="p">font-family</span>: <span class="v">"Alegreya"</span>;</div>
-                  <div class="decl"><span class="p">font-size</span>: <span class="v">10.5pt</span>; <span class="p">line-height</span>: <span class="v">14pt</span>;</div>
-                  <div class="decl"><span class="p">text-align</span>: <span class="v">justify</span>; <span class="p">hyphens</span>: <span class="v">auto</span>;</div>
                 </div>
 
                 <div class="origin">Computed</div>
@@ -263,15 +257,15 @@
           <div style="padding-top: 86px; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: #6a6355">Longbourn Press</div>
         </div>
         <div style="width: 330px; flex: none; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 10px; display: flex; flex-direction: column; gap: 7px">
-          <div class="crumbs"><span class="crumb">book</span>›<span class="crumb">section:nth-child(1)<i>title page</i></span>›<span class="crumb is-active">h1</span></div>
+          <div class="crumbs"><span class="crumb">book</span>›<span class="crumb">section#title-page<i>title-page</i></span>›<span class="crumb is-active">h1</span></div>
           <div class="note">Orca writes this page from the book's properties. No note has a line for it.</div>
           <div class="origin">Design panel</div>
           <div class="rule">
-            <div class="rule-h"><span class="sel">section:nth-child(1) &gt; p + h1</span><span class="src is-faint">title page</span></div>
+            <div class="rule-h"><span class="sel">section#title-page &gt; p + h1</span><span class="src is-faint">title page</span></div>
             <div class="decl"><span class="p">padding-top</span>: <span class="v">14pt</span>;</div>
           </div>
           <div class="rule">
-            <div class="rule-h"><span class="sel">section:nth-child(1) &gt; *</span><span class="src is-faint">title page</span></div>
+            <div class="rule-h"><span class="sel">section#title-page &gt; *</span><span class="src is-faint">title page</span></div>
             <div class="decl"><span class="p">text-align</span>: <span class="v">center</span>; <span class="p">text-indent</span>: <span class="v">0</span>;</div>
           </div>
           <div class="rule">
@@ -334,18 +328,18 @@
     <div class="step" style="width: 470px">
       <div class="step-n"><b>7</b>Add a rule</div>
       <div class="step-frame" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px">
-        <div class="crumbs"><span class="crumb">book</span>›<span class="crumb is-active">section:nth-child(16)<i>chapter</i></span>›<span class="crumb is-active">p</span></div>
+        <div class="crumbs"><span class="crumb">book</span>›<span class="crumb is-active">section#chapter-twelve<i>chapter</i></span>›<span class="crumb is-active">p</span></div>
         <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); overflow: hidden">
           <div style="padding: 8px 0; font-family: var(--font-monospace); font-size: 12px; line-height: 1.7">
             <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">11</div><div><span style="color: var(--color-red)">h1</span> <span style="color: var(--text-muted)">{</span> <span style="color: var(--color-cyan)">font-variant</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">small-caps</span><span style="color: var(--text-muted)">; }</span></div></div>
             <div style="display: flex"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-faint)">12</div><div><span style="color: var(--color-red)">hr</span> <span style="color: var(--text-muted)">{</span> <span style="color: var(--color-cyan)">margin-block</span><span style="color: var(--text-muted)">:</span> <span style="color: var(--color-purple)">1lh</span><span style="color: var(--text-muted)">; }</span></div></div>
-            <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">13</div><div><span style="color: var(--color-red)">section:nth-child(16) &gt; p</span> <span style="color: var(--text-muted)">{</span></div></div>
+            <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">13</div><div><span style="color: var(--color-red)">section#chapter-twelve &gt; p</span> <span style="color: var(--text-muted)">{</span></div></div>
             <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">14</div><div style="display: flex; align-items: center">&nbsp;&nbsp;<span style="width: 1px; height: 14px; background: var(--text-accent)"></span></div></div>
             <div style="display: flex; background: hsla(258, 88%, 66%, 0.09)"><div style="width: 36px; text-align: right; padding-right: 11px; color: var(--text-muted)">15</div><div><span style="color: var(--text-muted)">}</span></div></div>
           </div>
         </div>
       </div>
-      <div class="step-note">The rule goes in at the cursor, and the cursor lands inside it. With no crumb picked, the selector is the box's element alone. Each crumb the author picks is added to the selector. A position counts the reading order, so <span class="mono">section:nth-child(16)</span> names a different section when the order moves.</div>
+      <div class="step-note">The rule goes in at the cursor, and the cursor lands inside it. With no crumb picked, the selector is the box's element alone. Each crumb the author picks is added to the selector. A section's id matches the same section after the reading order moves.</div>
     </div>
 
     <div class="step" style="flex: 1; min-width: 0">
@@ -381,7 +375,7 @@
   </div>
 
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-    <div class="callout"><div><span class="k">The engine's names.</span> A section carries no class and no id, so the crumbs and the rules show the selectors the engine matches: an element, and a section by its place in the reading order. The role in faint type beside a section is orca's, and is not a selector.</div></div>
+    <div class="callout"><div><span class="k">The engine's names.</span> The crumbs and the rules show the selectors the engine matches. A section is named by its id, as <span class="mono">section#chapter-twelve</span>, in your CSS and in the design panel's. Its class is its role, and shows in faint type beside the id.</div></div>
     <div class="callout"><div><span class="k">Where a rule came from.</span> Your CSS comes first and names its line, and a click puts the cursor on it. The design panel's rules name the control that wrote them. A declaration a later rule beat is struck through, and one the engine skipped keeps the warning's squiggle.</div></div>
     <div class="callout"><div><span class="k">Waiting on the engine.</span> The box under a point, its fragments, the rules that matched it with their sheet and line, and its computed values all come from fleuron. Orca draws the answers and computes none of them.</div></div>
   </div>
