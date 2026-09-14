@@ -1307,6 +1307,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
       exists: (path) => adapter.exists(at(path)),
       read: (path) => adapter.read(at(path)),
       readBinary: (path) => adapter.readBinary(at(path)),
+      writeBinary: async (path, bytes) => {
+        const file = at(path);
+        const folder = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
+        if (folder !== "" && !(await adapter.exists(folder))) await adapter.mkdir(folder);
+        await adapter.writeBinary(file, bytes.slice().buffer);
+      },
       list: (folder) => adapter.list(at(folder)),
     };
   }
