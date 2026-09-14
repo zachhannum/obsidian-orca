@@ -19,6 +19,7 @@ import {
   type Design,
   type HeaderDesign,
   type HeaderSlot,
+  type Level,
   type NumberFormat,
   type SceneDesign,
   type TypeSpec,
@@ -37,6 +38,25 @@ export interface Setting {
 }
 
 /**
+ * The origin of one generated rule. `keys` are the book-note setting keys
+ * whose values the rule reads, and are empty for a rule orca sets the
+ * same way in every design. `role` is the section role the rule is
+ * written for, when the reading order and not a setting put it there.
+ */
+export interface RuleFrom {
+  keys: readonly string[];
+  role?: Role;
+}
+
+/** One rule of the generated sheet. `line` counts from 1, and `lines` is how many it spans. */
+export interface GeneratedRule {
+  css: string;
+  line: number;
+  lines: number;
+  from: RuleFrom;
+}
+
+/**
  * The design as CSS, counted against the order the book is in. Every
  * declaration comes from a field the design sets, with some exceptions.
  * The page names, and the page where the count starts again at 1, come
@@ -44,7 +64,14 @@ export interface Setting {
  * way in every design.
  */
 export function generatedCss(design: Design, setting: Setting): string {
-  return [
+  return generatedRules(design, setting)
+    .map((rule) => rule.css)
+    .join("\n");
+}
+
+/** The rules `generatedCss` joins, in order, each with the line it starts on. */
+export function generatedRules(design: Design, setting: Setting): GeneratedRule[] {
+  const rules = [
     ...pageRules(design, setting),
     ...bodyRules(design),
     ...headingRules(design),
@@ -52,9 +79,33 @@ export function generatedCss(design: Design, setting: Setting): string {
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
     ...sceneRules(design),
-  ]
-    .filter((rule) => rule !== "")
-    .join("\n");
+  ].filter((rule) => rule !== undefined);
+  let line = 1;
+  return rules.map(({ css, from }) => {
+    // A rule ends on a newline, and the join adds a blank line after it.
+    const lines = css.split("\n").length - 1;
+    const rule = { css, line, lines, from };
+    line += lines + 1;
+    return rule;
+  });
+}
+
+/** A rule before it is placed in the sheet. */
+interface Rule {
+  css: string;
+  from: RuleFrom;
+}
+
+/** A declaration, and the setting keys its value reads. */
+interface Declaration {
+  text: string;
+  keys: readonly string[];
+}
+
+/** The text a margin box prints, and the setting keys that put it there. */
+interface Content {
+  content: string;
+  keys: readonly string[];
 }
 
 /** The CSS break for each opening. */
@@ -94,32 +145,36 @@ const OPENING = `${HEADINGS}:first-child`;
  */
 const TEXT_START = [OPENING, `${OPENING} + ${HEADINGS}`, `${OPENING} + ${HEADINGS} + ${HEADINGS}`];
 
-function pageRules(design: Design, setting: Setting): string[] {
+function pageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const { page, headers } = design;
   const { margins } = page;
-  const root: string[] = [];
+  const root: Declaration[] = [];
   if (page.trim !== undefined) {
     root.push(
-      declared("size", `${written(page.trim.width)} ${written(page.trim.height)}`),
+      declared("size", `${written(page.trim.width)} ${written(page.trim.height)}`, ["trim"]),
     );
   }
-  root.push(...set("margin-top", written(margins.top)));
-  root.push(...set("margin-bottom", written(margins.bottom)));
-  const left: string[] = [];
-  const right: string[] = [];
+  root.push(...set("margin-top", written(margins.top), ["margin-top"]));
+  root.push(...set("margin-bottom", written(margins.bottom), ["margin-bottom"]));
+  const mirrored = page.mirrored === undefined ? [] : ["mirrored"];
+  const inside = { value: written(margins.inside), keys: ["margin-inside", ...mirrored] };
+  const outside = { value: written(margins.outside), keys: ["margin-outside", ...mirrored] };
+  const left: Declaration[] = [];
+  const right: Declaration[] = [];
   if (page.mirrored === true) {
-    left.push(...sideMargins(written(margins.outside), written(margins.inside)));
-    right.push(...sideMargins(written(margins.inside), written(margins.outside)));
+    left.push(...sideMargins(outside, inside));
+    right.push(...sideMargins(inside, outside));
   } else {
-    root.push(...sideMargins(written(margins.inside), written(margins.outside)));
+    root.push(...sideMargins(inside, outside));
   }
 
   // Orca owns the running heads and the folio as soon as the design
   // sets anything about them. Orca clears the boxes it does not use
   // rather than leave them to the engine's own folio.
   const placed = placement(headers, setting);
-  const rootBoxes = new Map<Box, string>(
-    owned(headers) ? BOXES.map((box) => [box, "none"]) : [],
+  const cleared = { content: "none", keys: ownedKeys(headers) };
+  const rootBoxes = new Map<Box, Content>(
+    owned(headers) ? BOXES.map((box) => [box, cleared]) : [],
   );
   for (const [box, content] of placed.both) rootBoxes.set(box, content);
 
@@ -134,9 +189,9 @@ function pageRules(design: Design, setting: Setting): string[] {
 
 /** The content of the margin boxes the design prints in, by the pages they print on. */
 interface Placement {
-  both: Map<Box, string>;
-  left: Map<Box, string>;
-  right: Map<Box, string>;
+  both: Map<Box, Content>;
+  left: Map<Box, Content>;
+  right: Map<Box, Content>;
   /** The boxes that hold the folio, and not a running head. */
   folio: Set<Box>;
 }
@@ -155,10 +210,14 @@ function placement(headers: HeaderDesign, setting: Setting): Placement {
     folio: new Set(),
   };
   const centered = headers.position === "center";
+  const position = headers.position === undefined ? [] : ["header-position"];
   const folio = folioContent(headers);
   if (folio !== undefined) {
-    const at = (pages: Map<Box, string>, box: Box) => {
-      pages.set(box, folio);
+    const at = (pages: Map<Box, Content>, box: Box) => {
+      pages.set(box, {
+        content: folio.content,
+        keys: headers.pageNumber === "top" ? [...folio.keys, ...position] : folio.keys,
+      });
       placed.folio.add(box);
     };
     if (headers.pageNumber === "top" && centered) {
@@ -173,16 +232,16 @@ function placement(headers: HeaderDesign, setting: Setting): Placement {
     }
   }
   if (headers.leftPage !== undefined && headers.leftPage !== "none") {
-    placed.left.set(
-      centered ? "top-center" : "top-left",
-      slotContent(headers.leftPage, setting),
-    );
+    placed.left.set(centered ? "top-center" : "top-left", {
+      content: slotContent(headers.leftPage, setting),
+      keys: ["header-left-page", ...position],
+    });
   }
   if (headers.rightPage !== undefined && headers.rightPage !== "none") {
-    placed.right.set(
-      centered ? "top-center" : "top-right",
-      slotContent(headers.rightPage, setting),
-    );
+    placed.right.set(centered ? "top-center" : "top-right", {
+      content: slotContent(headers.rightPage, setting),
+      keys: ["header-right-page", ...position],
+    });
   }
   return placed;
 }
@@ -193,20 +252,26 @@ function placement(headers: HeaderDesign, setting: Setting): Placement {
  * the boxes of the `:left` or `:right` rule, so only the folio's boxes
  * are set again. An opening's rule still clears them.
  */
-function frontPages(placed: Placement, setting: Setting): string[] {
+function frontPages(placed: Placement, setting: Setting): (Rule | undefined)[] {
   if (placed.folio.size === 0) return [];
-  const roman = (pages: ReadonlyMap<Box, string>): string[] =>
+  const roman = (pages: ReadonlyMap<Box, Content>): Declaration[] =>
     boxes(
       new Map(
-        [...pages.keys()]
-          .filter((box) => placed.folio.has(box))
-          .map((box) => [box, "counter(page, lower-roman)"]),
+        [...pages]
+          .filter(([box]) => placed.folio.has(box))
+          .map(([box, { keys }]) => [
+            box,
+            {
+              content: "counter(page, lower-roman)",
+              keys: keys.filter((key) => key !== "page-number-format"),
+            },
+          ]),
       ),
     );
   return front(setting.roles).flatMap((role) => [
-    block(`@page ${role}`, roman(placed.both)),
-    block(`@page ${role}:left`, roman(placed.left)),
-    block(`@page ${role}:right`, roman(placed.right)),
+    block(`@page ${role}`, roman(placed.both), role),
+    block(`@page ${role}:left`, roman(placed.left), role),
+    block(`@page ${role}:right`, roman(placed.right), role),
   ]);
 }
 
@@ -219,14 +284,23 @@ function openingPages(
   headers: HeaderDesign,
   placed: Placement,
   setting: Setting,
-): string[] {
+): (Rule | undefined)[] {
   if (headers.suppressOnOpenings === false) return [];
   const cleared = printed(placed);
   if (cleared.length === 0) return [];
+  const suppress = headers.suppressOnOpenings === undefined ? [] : ["suppress-head-on-openings"];
   return used(setting.roles).map((role) =>
     block(
       `@page ${role}:first`,
-      cleared.map((box) => boxed(box, "none")),
+      cleared.map((box) =>
+        boxed(box, "none", [
+          ...suppress,
+          ...[placed.both, placed.left, placed.right].flatMap(
+            (pages) => pages.get(box)?.keys ?? [],
+          ),
+        ]),
+      ),
+      role,
     ),
   );
 }
@@ -239,10 +313,10 @@ function printed(placed: Placement): Box[] {
 }
 
 /** The margin boxes of one page rule, in the order the rule sets them. */
-function boxes(content: ReadonlyMap<Box, string>): string[] {
+function boxes(content: ReadonlyMap<Box, Content>): Declaration[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
-    return found === undefined ? [] : [boxed(box, found)];
+    return found === undefined ? [] : [boxed(box, found.content, found.keys)];
   });
 }
 
@@ -251,30 +325,33 @@ function boxes(content: ReadonlyMap<Box, string>): string[] {
  * engine declares its own indent there, and an indent inherited from
  * `book` loses to it.
  */
-function bodyRules(design: Design): string[] {
+function bodyRules(design: Design): (Rule | undefined)[] {
   const { body } = design;
-  const lines: string[] = [];
+  const lines: Declaration[] = [];
   if (body.font !== undefined) {
-    lines.push(declared("font-family", `${quoted(body.font)}, serif`));
+    lines.push(declared("font-family", `${quoted(body.font)}, serif`, ["body-font"]));
   }
-  lines.push(...set("font-size", written(body.size)));
-  lines.push(...set("line-height", written(body.lineSpacing)));
-  lines.push(...set("text-align", body.align));
-  lines.push(...set("hyphens", flagged(body.hyphens, "auto", "manual")));
+  lines.push(...set("font-size", written(body.size), ["body-size"]));
+  lines.push(...set("line-height", written(body.lineSpacing), ["body-line-spacing"]));
+  lines.push(...set("text-align", body.align, ["body-align"]));
+  lines.push(...set("hyphens", flagged(body.hyphens, "auto", "manual"), ["body-hyphens"]));
   lines.push(
     ...set(
       "hanging-punctuation",
       flagged(body.hangingPunctuation, "first allow-end last", "none"),
+      ["body-hanging-punctuation"],
     ),
   );
-  lines.push(...set("orphans", counted(body.orphans)));
-  lines.push(...set("widows", counted(body.widows)));
+  lines.push(...set("orphans", counted(body.orphans), ["body-orphans"]));
+  lines.push(...set("widows", counted(body.widows), ["body-widows"]));
   return [
     block("book", lines),
-    block("p + p", [...set("text-indent", written(body.indent))]),
-    block("hr + p", [...set("text-indent", afterBreak(design))]),
+    block("p + p", [...set("text-indent", written(body.indent), ["body-first-line-indent"])]),
+    block("hr + p", [...set("text-indent", afterBreak(design), afterBreakKeys(design))]),
     block(HEADINGS, [
-      ...set("break-after", flagged(body.keepHeadings, "avoid", "auto")),
+      ...set("break-after", flagged(body.keepHeadings, "avoid", "auto"), [
+        "keep-heading-with-text",
+      ]),
     ]),
   ];
 }
@@ -289,29 +366,37 @@ function afterBreak(design: Design): string | undefined {
   return indentAfterBreak ? written(indent) : "0";
 }
 
-function headingRules(design: Design): string[] {
+function afterBreakKeys(design: Design): string[] {
+  return design.body.indentAfterBreak === true
+    ? ["body-indent-after-break", "body-first-line-indent"]
+    : ["body-indent-after-break"];
+}
+
+function headingRules(design: Design): (Rule | undefined)[] {
   return LEVELS.map((level) =>
-    block(`h${level}`, typeLines(design.headings[level])),
+    block(`h${level}`, typeLines(design.headings[level], level)),
   );
 }
 
-function typeLines(type: TypeSpec): string[] {
-  const lines: string[] = [];
+function typeLines(type: TypeSpec, level: Level): Declaration[] {
+  const lines: Declaration[] = [];
   if (type.font !== undefined) {
-    lines.push(declared("font-family", `${quoted(type.font)}, serif`));
+    lines.push(
+      declared("font-family", `${quoted(type.font)}, serif`, [`heading-${level}-font`]),
+    );
   }
-  lines.push(...set("font-size", written(type.size)));
-  lines.push(...set("text-align", type.align));
+  lines.push(...set("font-size", written(type.size), [`heading-${level}-size`]));
+  lines.push(...set("text-align", type.align, [`heading-${level}-align`]));
   return lines;
 }
 
-function sectionRules(design: Design, setting: Setting): string[] {
+function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const rules = used(setting.roles).map((role) => {
     const lines = [declared("page", role)];
     if (role === "chapter" && design.chapter.begins !== undefined) {
-      lines.push(declared("break-before", BREAKS[design.chapter.begins]));
+      lines.push(declared("break-before", BREAKS[design.chapter.begins], ["chapter-begins"]));
     }
-    return block(positions(setting.roles, role) ?? "", lines);
+    return block(positions(setting.roles, role) ?? "", lines, role);
   });
   return [...rules, ...restart(setting), ...chapterRules(design, setting)];
 }
@@ -321,10 +406,16 @@ function sectionRules(design: Design, setting: Setting): string[] {
  * matter come before it. A book with no front matter counts from its
  * first page already.
  */
-function restart(setting: Setting): string[] {
+function restart(setting: Setting): (Rule | undefined)[] {
   const start = bodyStart(setting.roles);
   if (start === undefined || start === 0) return [];
-  return [block(`section:nth-child(${start + 1})`, [declared("counter-reset", "page 1")])];
+  return [
+    block(
+      `section:nth-child(${start + 1})`,
+      [declared("counter-reset", "page 1")],
+      setting.roles[start],
+    ),
+  ];
 }
 
 /**
@@ -338,27 +429,40 @@ function restart(setting: Setting): string[] {
  * ems. A sink is padding, since the engine drops the top margin of a
  * box that starts a page.
  */
-function chapterRules(design: Design, setting: Setting): string[] {
+function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const chapters = positions(setting.roles, "chapter");
   if (chapters === undefined) return [];
   const { dropCap } = design.chapter;
   return [
-    block(`${chapters} > ${OPENING}`, openingSpace(design)),
-    block(TEXT_START.map((start) => `${chapters} > ${start} + p::first-letter`).join(",\n"), [
-      ...set(
-        "initial-letter",
-        dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),
-      ),
-    ]),
+    block(`${chapters} > ${OPENING}`, openingSpace(design), "chapter"),
+    block(
+      TEXT_START.map((start) => `${chapters} > ${start} + p::first-letter`).join(",\n"),
+      [
+        ...set(
+          "initial-letter",
+          dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),
+          ["chapter-drop-cap"],
+        ),
+      ],
+      "chapter",
+    ),
   ];
 }
 
 /** The space a chapter's design sets above and below an opening title. */
-function openingSpace(design: Design): string[] {
+function openingSpace(design: Design): Declaration[] {
   const { spaceAbove, spaceBelow } = design.chapter;
   return [
-    ...set("padding-top", spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design)),
-    ...set("margin-bottom", spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design)),
+    ...set(
+      "padding-top",
+      spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design),
+      ["chapter-space-above", ...spacing(design)],
+    ),
+    ...set(
+      "margin-bottom",
+      spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design),
+      ["chapter-space-below", ...spacing(design)],
+    ),
   ];
 }
 
@@ -374,20 +478,32 @@ const IMPRINT_GAP = 10;
  * block by where it sits. The engine places nothing at the foot of a
  * page, so the publisher sits a set number of lines under the author.
  */
-function titlePageRules(design: Design, setting: Setting): string[] {
+function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const page = positions(setting.roles, "title-page");
   if (page === undefined) return [];
+  const role = "title-page";
   const line = bodyLines(1, design);
+  const lines = spacing(design);
   const rules = [
-    block(`${page} > *`, [declared("text-align", "center"), declared("text-indent", "0")]),
-    block(`${page} > :first-child`, [declared("padding-top", bodyLines(TITLE_SINK, design))]),
-    block(`${page} > p + h1,\n${page} > h1 + p`, [declared("padding-top", line)]),
+    block(
+      `${page} > *`,
+      [declared("text-align", "center"), declared("text-indent", "0")],
+      role,
+    ),
+    block(
+      `${page} > :first-child`,
+      [declared("padding-top", bodyLines(TITLE_SINK, design), lines)],
+      role,
+    ),
+    block(`${page} > p + h1,\n${page} > h1 + p`, [declared("padding-top", line, lines)], role),
   ];
   if (setting.publisher !== undefined && setting.publisher !== "") {
     rules.push(
-      block(`${page} > p:last-child`, [
-        declared("padding-top", bodyLines(IMPRINT_GAP, design)),
-      ]),
+      block(
+        `${page} > p:last-child`,
+        [declared("padding-top", bodyLines(IMPRINT_GAP, design), lines)],
+        role,
+      ),
     );
   }
   return rules;
@@ -403,49 +519,70 @@ function titlePageRules(design: Design, setting: Setting): string[] {
  * sit flush right on the title's last line. The engine ignores a
  * negative margin, so the folio moves by relative position instead.
  */
-function contentsRules(design: Design, setting: Setting): string[] {
+function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const contents = positions(setting.roles, "contents");
   if (contents === undefined) return [];
+  const role = "contents";
   const format = COUNTERS[design.headers.pageNumberFormat ?? "arabic"];
+  const formatKeys = design.headers.pageNumberFormat === undefined ? [] : ["page-number-format"];
+  const lines = spacing(design);
   return [
-    block(`${contents} > ${OPENING}`, openingSpace(design)),
-    block(`${contents} p`, [
-      declared("text-indent", "0"),
-      declared("text-align", "left"),
-      declared("hyphens", "manual"),
-      declared("margin", "0"),
-    ]),
-    block(`${contents} p.entry`, [
-      declared("margin-left", "1em"),
-      declared("padding-left", "1em"),
-      declared("padding-right", "3em"),
-      declared("text-indent", "-1em"),
-    ]),
-    block(`${contents} p.folio`, [
-      declared("text-align", "right"),
-      declared("line-height", "0"),
-      declared("position", "relative"),
-      declared("top", `-${bodyLines(0.5, design)}`),
-      declared("break-before", "avoid"),
-    ]),
-    block(`${contents} p.folio a::after`, [
-      declared("content", `target-counter(attr(href url), page, ${format})`),
-    ]),
-    block(`${contents} p.part`, [
-      declared("font-variant-caps", "small-caps"),
-      declared("letter-spacing", "0.08em"),
-      declared("margin-top", bodyLines(1, design)),
-      declared("margin-bottom", bodyLines(0.5, design)),
-      declared("break-after", "avoid"),
-    ]),
+    block(`${contents} > ${OPENING}`, openingSpace(design), role),
+    block(
+      `${contents} p`,
+      [
+        declared("text-indent", "0"),
+        declared("text-align", "left"),
+        declared("hyphens", "manual"),
+        declared("margin", "0"),
+      ],
+      role,
+    ),
+    block(
+      `${contents} p.entry`,
+      [
+        declared("margin-left", "1em"),
+        declared("padding-left", "1em"),
+        declared("padding-right", "3em"),
+        declared("text-indent", "-1em"),
+      ],
+      role,
+    ),
+    block(
+      `${contents} p.folio`,
+      [
+        declared("text-align", "right"),
+        declared("line-height", "0"),
+        declared("position", "relative"),
+        declared("top", `-${bodyLines(0.5, design)}`, lines),
+        declared("break-before", "avoid"),
+      ],
+      role,
+    ),
+    block(
+      `${contents} p.folio a::after`,
+      [declared("content", `target-counter(attr(href url), page, ${format})`, formatKeys)],
+      role,
+    ),
+    block(
+      `${contents} p.part`,
+      [
+        declared("font-variant-caps", "small-caps"),
+        declared("letter-spacing", "0.08em"),
+        declared("margin-top", bodyLines(1, design), lines),
+        declared("margin-bottom", bodyLines(0.5, design), lines),
+        declared("break-after", "avoid"),
+      ],
+      role,
+    ),
   ];
 }
 
-function sceneRules(design: Design): string[] {
+function sceneRules(design: Design): (Rule | undefined)[] {
   const { scene } = design;
-  const lines = [...set("content", sceneContent(scene))];
+  const lines = [...set("content", sceneContent(scene), sceneKeys(scene))];
   if (scene.mark === "word" && scene.word !== undefined) {
-    lines.push(declared("text-align", "center"));
+    lines.push(declared("text-align", "center", ["scene-break-mark", "scene-break-word"]));
   }
   lines.push(
     ...set(
@@ -453,6 +590,7 @@ function sceneRules(design: Design): string[] {
       scene.spaceAbove === undefined
         ? undefined
         : bodyLines(scene.spaceAbove, design),
+      ["scene-break-space-above", ...spacing(design)],
     ),
   );
   lines.push(
@@ -461,6 +599,7 @@ function sceneRules(design: Design): string[] {
       scene.spaceBelow === undefined
         ? undefined
         : bodyLines(scene.spaceBelow, design),
+      ["scene-break-space-below", ...spacing(design)],
     ),
   );
   return [block("hr", lines)];
@@ -475,6 +614,13 @@ function sceneContent(scene: SceneDesign): string | undefined {
   if (mark === "space") return "none";
   if (mark === "word") return word === undefined ? undefined : quoted(word);
   return ornament === undefined ? undefined : quoted(ornament);
+}
+
+function sceneKeys(scene: SceneDesign): string[] {
+  const mark = scene.mark === undefined ? [] : ["scene-break-mark"];
+  if (scene.mark === "space") return mark;
+  if (scene.mark === "word") return [...mark, "scene-break-word"];
+  return [...mark, "scene-break-ornament"];
 }
 
 /** The places a role sits, as one selector, or nothing when it sits nowhere. */
@@ -508,16 +654,27 @@ function used(roles: readonly Role[]): Role[] {
 }
 
 function owned(headers: HeaderDesign): boolean {
-  return (
-    headers.leftPage !== undefined ||
-    headers.rightPage !== undefined ||
-    headers.pageNumber !== undefined
-  );
+  return ownedKeys(headers).length > 0;
 }
 
-function folioContent(headers: HeaderDesign): string | undefined {
+/** The keys of the header settings that make orca own the margin boxes. */
+function ownedKeys(headers: HeaderDesign): string[] {
+  return [
+    ...(headers.leftPage === undefined ? [] : ["header-left-page"]),
+    ...(headers.rightPage === undefined ? [] : ["header-right-page"]),
+    ...(headers.pageNumber === undefined ? [] : ["page-number-position"]),
+  ];
+}
+
+function folioContent(headers: HeaderDesign): Content | undefined {
   if (headers.pageNumber === undefined) return undefined;
-  return `counter(page, ${COUNTERS[headers.pageNumberFormat ?? "arabic"]})`;
+  return {
+    content: `counter(page, ${COUNTERS[headers.pageNumberFormat ?? "arabic"]})`,
+    keys:
+      headers.pageNumberFormat === undefined
+        ? ["page-number-position"]
+        : ["page-number-position", "page-number-format"],
+  };
 }
 
 /**
@@ -533,14 +690,27 @@ function slotContent(slot: HeaderSlot, setting: Setting): string {
   return named === undefined ? "none" : quoted(named);
 }
 
-function sideMargins(left: string | undefined, right: string | undefined): string[] {
-  return [...set("margin-left", left), ...set("margin-right", right)];
+interface Side {
+  value: string | undefined;
+  keys: readonly string[];
+}
+
+function sideMargins(left: Side, right: Side): Declaration[] {
+  return [
+    ...set("margin-left", left.value, left.keys),
+    ...set("margin-right", right.value, right.keys),
+  ];
 }
 
 function bodyLines(count: number, design: Design): string {
   const spacing = design.body.lineSpacing;
   if (spacing === undefined) return `${trimmed(count)}em`;
   return `${trimmed(count * spacing.value)}${spacing.unit}`;
+}
+
+/** The key a count of body lines reads, when the design sets a line spacing. */
+function spacing(design: Design): string[] {
+  return design.body.lineSpacing === undefined ? [] : ["body-line-spacing"];
 }
 
 function flagged(
@@ -556,22 +726,41 @@ function counted(count: number | undefined): string | undefined {
   return count === undefined ? undefined : String(count);
 }
 
-function set(property: string, value: string | undefined): string[] {
-  return value === undefined ? [] : [declared(property, value)];
+function set(
+  property: string,
+  value: string | undefined,
+  keys: readonly string[] = [],
+): Declaration[] {
+  return value === undefined ? [] : [declared(property, value, keys)];
 }
 
-function declared(property: string, value: string): string {
-  return `${property}: ${value};`;
+function declared(
+  property: string,
+  value: string,
+  keys: readonly string[] = [],
+): Declaration {
+  return { text: `${property}: ${value};`, keys };
 }
 
-function boxed(box: string, content: string): string {
-  return `@${box} { ${declared("content", content)} }`;
+function boxed(box: string, content: string, keys: readonly string[]): Declaration {
+  return { text: `@${box} { content: ${content}; }`, keys };
 }
 
-/** One rule, or nothing at all when the design sets none of its declarations. */
-function block(selector: string, lines: readonly string[]): string {
-  if (selector === "" || lines.length === 0) return "";
-  return `${selector} {\n${lines.map((line) => `  ${line}`).join("\n")}\n}\n`;
+/**
+ * One rule, or nothing at all when the design sets none of its
+ * declarations. Its keys are those of its declarations, each once.
+ */
+function block(
+  selector: string,
+  lines: readonly Declaration[],
+  role?: Role,
+): Rule | undefined {
+  if (selector === "" || lines.length === 0) return undefined;
+  const keys = [...new Set(lines.flatMap((line) => line.keys))];
+  return {
+    css: `${selector} {\n${lines.map((line) => `  ${line.text}`).join("\n")}\n}\n`,
+    from: role === undefined ? { keys } : { keys, role },
+  };
 }
 
 function trimmed(value: number): string {

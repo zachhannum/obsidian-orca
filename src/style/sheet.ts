@@ -7,7 +7,12 @@
 
 import type { Sheet } from "fleuron";
 import { mergeDesign, type Design } from "@/style/design";
-import { generatedCss, type Setting } from "@/style/generated";
+import {
+  generatedCss,
+  generatedRules,
+  type RuleFrom,
+  type Setting,
+} from "@/style/generated";
 import { BUNDLED_THEME, DEFAULTS, THEME_SHEET } from "@/style/theme";
 
 /** The sheet the generated layer is sent under, which a warning names. */
@@ -27,6 +32,21 @@ export function designSheet(design: Design, setting: Setting): Sheet {
     name: DESIGN_SHEET,
     css: generatedCss(mergeDesign(DEFAULTS, design), setting),
   };
+}
+
+/**
+ * The origin of the rule in `designSheet` that spans a line, counting
+ * from 1. It merges the defaults the same way, so a line the engine
+ * reports against the design sheet maps back to what wrote it.
+ */
+export function designRuleAt(
+  design: Design,
+  setting: Setting,
+  line: number,
+): RuleFrom | undefined {
+  return generatedRules(mergeDesign(DEFAULTS, design), setting).find(
+    (rule) => line >= rule.line && line < rule.line + rule.lines,
+  )?.from;
 }
 
 /**

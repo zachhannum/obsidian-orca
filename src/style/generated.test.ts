@@ -21,13 +21,16 @@ import { entries, move, resolve } from "@/book/order";
 import { sentRoles } from "@/book/plan";
 import type { Role } from "@/book/roles";
 import {
+  DESIGN_KEYS,
   emptyDesign,
+  mergeDesign,
   type Design,
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
-import { generatedCss, type Setting } from "@/style/generated";
-import { designSheet } from "@/style/sheet";
+import { generatedCss, generatedRules, type Setting } from "@/style/generated";
+import { designRuleAt, designSheet } from "@/style/sheet";
+import { DEFAULTS } from "@/style/theme";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -45,6 +48,58 @@ test("the fixture's design generates the sheet checked in beside this spec", asy
 
   assert.equal(css, await snapshot(css));
   assert.equal(generatedCss(emptyDesign(), { roles: [] }), "");
+});
+
+test("every generated rule sits at its line, reads only real setting keys, and maps back from any line it spans", async () => {
+  const model = await fixture();
+  const at = await setting(model);
+  const designs: Design[] = [model.book.design, emptyDesign()];
+  const centered = structuredClone(model.book.design);
+  centered.page.mirrored = true;
+  centered.headers.position = "center";
+  centered.headers.pageNumber = "top";
+  centered.scene.mark = "word";
+  centered.scene.word = "Fin";
+  designs.push(centered);
+
+  for (const design of designs) {
+    const { css } = designSheet(design, at);
+    const lines = css.split("\n");
+    const rules = generatedRules(mergeDesign(DEFAULTS, design), at);
+    assert.equal(rules.map((rule) => rule.css).join("\n"), css);
+    for (const rule of rules) {
+      const text = lines.slice(rule.line - 1, rule.line - 1 + rule.lines).join("\n");
+      assert.equal(`${text}\n`, rule.css);
+      for (const key of rule.from.keys) assert.ok(DESIGN_KEYS.includes(key), key);
+      for (let line = rule.line; line < rule.line + rule.lines; line++) {
+        assert.deepEqual(designRuleAt(design, at, line), rule.from);
+      }
+      // The blank line after a rule belongs to no rule.
+      assert.equal(designRuleAt(design, at, rule.line + rule.lines), undefined);
+    }
+  }
+
+  // The body's rule spans many lines, and a line inside it names every
+  // control the rule reads.
+  const rules = generatedRules(mergeDesign(DEFAULTS, model.book.design), at);
+  const book = rules.find((rule) => rule.css.startsWith("book {"));
+  assert.ok(book !== undefined);
+  assert.deepEqual(designRuleAt(model.book.design, at, book.line + 3), {
+    keys: [
+      "body-font",
+      "body-size",
+      "body-line-spacing",
+      "body-align",
+      "body-hyphens",
+      "body-hanging-punctuation",
+      "body-orphans",
+      "body-widows",
+    ],
+  });
+  const indent = rules.find((rule) => rule.css.startsWith("p + p {"));
+  assert.deepEqual(indent?.from, { keys: ["body-first-line-indent"] });
+  const chapter = rules.find((rule) => rule.css.includes("page: chapter;"));
+  assert.deepEqual(chapter?.from, { keys: ["chapter-begins"], role: "chapter" });
 });
 
 test("a role reaches the sheet as a page name and as the places it sits", async () => {
