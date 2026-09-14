@@ -188,7 +188,7 @@ export class Typeset {
    * drafting is a second render rather than a book opened again.
    */
   private async embed(note: string, text: string): Promise<void> {
-    const found = await bookImages([{ name: note, text }], this.links, (at) =>
+    const { images: found } = await bookImages([{ name: note, text }], this.links, (at) =>
       this.assets.take(at),
     );
     const fresh = found.filter(

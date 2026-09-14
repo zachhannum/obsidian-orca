@@ -19,6 +19,8 @@ export interface Embed {
   url: string;
   /** The same url as a link the vault resolves. A markdown url is percent-decoded. */
   link: string;
+  /** The 0-based line of the source it is written on, frontmatter counted. */
+  line: number;
 }
 
 /** `![[file]]`, with the size or the alias after a pipe left off. */
@@ -38,28 +40,36 @@ const REMOTE = /^[a-z][a-z0-9+.-]*:/i;
  */
 export function imagesIn(text: string): Embed[] {
   const { body } = readFrontmatter(text);
+  const head = linesIn(text.slice(0, text.length - body.length));
   const found = new Map<string, Embed>();
-  for (const embed of [...wikilinks(body), ...inlines(body)]) {
+  for (const embed of [...wikilinks(body, head), ...inlines(body, head)]) {
     if (REMOTE.test(embed.url) || found.has(embed.url)) continue;
     found.set(embed.url, embed);
   }
   return [...found.values()];
 }
 
-function* wikilinks(body: string): Generator<Embed> {
+function* wikilinks(body: string, head: number): Generator<Embed> {
   for (const found of body.matchAll(WIKI)) {
     const url = (found[1] ?? "").split("|")[0]?.trim() ?? "";
-    if (url !== "") yield { url, link: url };
+    const line = head + linesIn(body.slice(0, found.index));
+    if (url !== "") yield { url, link: url, line };
   }
 }
 
-function* inlines(body: string): Generator<Embed> {
+function* inlines(body: string, head: number): Generator<Embed> {
   for (const found of body.matchAll(INLINE)) {
     const written = found[1] ?? "";
     const url = written.startsWith("<") ? written.slice(1, -1) : written;
     if (url === "") continue;
-    yield { url, link: decoded(url) };
+    const line = head + linesIn(body.slice(0, found.index));
+    yield { url, link: decoded(url), line };
   }
+}
+
+/** The number of line breaks in the text. */
+function linesIn(text: string): number {
+  return text.split("\n").length - 1;
 }
 
 /** The url with its percent escapes decoded, which is the path the vault resolves. */

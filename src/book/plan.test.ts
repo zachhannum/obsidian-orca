@@ -31,6 +31,7 @@ import { emptyDesign } from "@/style/design";
 import {
   GENERATED_ORIGIN,
   LOADED_NOTHING,
+  bookImages,
   bookSources,
   sendBook,
   sendEdit,
@@ -247,6 +248,35 @@ test("an embed with no file behind it is a warning, and the book still sets", as
     output.warnings.map((warning) => warning.message),
     ["No image was supplied for nothing here.png. The image is skipped."],
   );
+});
+
+test("an embed with no file, or a file that will not read, is unread with its note and line", async () => {
+  const sources = [
+    { name: "One.md", text: ["# One", "", "![[device.png]]", ""].join("\n") },
+    {
+      name: "Two.md",
+      text: ["# Two", "", "![[nothing here.png]]", "", "![](broken.png)", ""].join(
+        "\n",
+      ),
+    },
+  ];
+  const links = pathLinks([`images/${DEVICE}`, "images/broken.png"]);
+  const registry = new Registry(vault);
+
+  const { images, unread } = await bookImages(sources, links, (at) =>
+    at === "images/broken.png"
+      ? Promise.reject(new Error("the file will not read"))
+      : registry.take(at),
+  );
+
+  assert.deepEqual(
+    images.map((image) => image.url),
+    [DEVICE],
+  );
+  assert.deepEqual(unread, [
+    { url: "nothing here.png", note: "Two.md", line: 2 },
+    { url: "broken.png", note: "Two.md", line: 4 },
+  ]);
 });
 
 test("the fixture book typesets and paints, over the bundled theme", async () => {
