@@ -47,8 +47,8 @@ export interface Under {
   wrong?: boolean;
 }
 
-/** The line of the author's CSS that took over a row. */
-export interface Taken {
+/** The line of the author's CSS that overrides a row. */
+export interface Overridden {
   line: number;
   testid: string;
   /** True when the CSS beats every key in the row, so the label dims too. */
@@ -68,7 +68,7 @@ export function Row({
   reset,
   under,
   keys = [],
-  taken,
+  overridden,
   children,
 }: {
   label: string;
@@ -78,27 +78,27 @@ export function Row({
   /** The design keys the row writes. The inspect pane finds the row by these keys. */
   keys?: readonly string[];
   /** Set when the author's CSS has overridden the row. */
-  taken?: Taken | undefined;
+  overridden?: Overridden | undefined;
   children: ReactNode;
 }): JSX.Element {
   const row = useRef<HTMLDivElement>(null);
-  const line = taken?.line;
+  const line = overridden?.line;
   // The e2e suite waits on this, so it is written once React commits.
   useLayoutEffect(() => {
     const element = row.current;
     if (element === null) return;
-    if (line === undefined) element.removeAttribute("data-taken");
-    else element.setAttribute("data-taken", String(line));
+    if (line === undefined) element.removeAttribute("data-overridden");
+    else element.setAttribute("data-overridden", String(line));
   }, [line]);
   return (
     <div
       ref={row}
-      className={classes("orca-panel-line", taken !== undefined && "mod-taken")}
+      className={classes("orca-panel-line", overridden !== undefined && "mod-overridden")}
       data-keys={keys.length === 0 ? undefined : keys.join(" ")}
     >
       <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
         <span
-          className={classes("orca-panel-label", taken?.every === true && "is-taken")}
+          className={classes("orca-panel-label", overridden?.every === true && "is-overridden")}
         >
           {label}
         </span>
@@ -106,21 +106,21 @@ export function Row({
           className={classes(
             "orca-panel-controls",
             grid && "orca-panel-grid",
-            !grid && taken !== undefined && "is-taken",
+            !grid && overridden !== undefined && "is-overridden",
           )}
         >
           {children}
         </div>
-        {taken === undefined ? null : (
+        {overridden === undefined ? null : (
           <button
             type="button"
-            className="orca-panel-taken"
-            data-testid={taken.testid}
-            aria-label={`Taken over by line ${String(taken.line)} of the book's CSS`}
-            onClick={taken.open}
+            className="orca-panel-overridden"
+            data-testid={overridden.testid}
+            aria-label={`Overridden by line ${String(overridden.line)} of the book's CSS`}
+            onClick={overridden.open}
           >
-            <Icon name="lock" className="orca-panel-taken-icon" />
-            <b>line {taken.line}</b>
+            <Icon name="lock" className="orca-panel-overridden-icon" />
+            <b>line {overridden.line}</b>
           </button>
         )}
         <div className="orca-panel-reset-slot">{reset}</div>

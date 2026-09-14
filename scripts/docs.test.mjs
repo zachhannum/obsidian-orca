@@ -600,7 +600,7 @@ test("the copy claims no feature the plugin has yet to grow", async () => {
   const claims = [
     [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, plugin, /id: "export-pdf"/, "export"],
     [
-      /your own CSS|takes over a setting/i,
+      /your own CSS|overrides a setting/i,
       await read("src/ui/panels.tsx"),
       /overridden/,
       "an overridden control",
@@ -612,12 +612,12 @@ test("the copy claims no feature the plugin has yet to grow", async () => {
   }
 });
 
-test("the panel section says a control the author's CSS takes over dims and names the line", () => {
+test("the panel section says a control the author's CSS overrides dims and names the line", () => {
   const from = landing.indexOf("in the panel</i>");
   assert.notEqual(from, -1, "no panel section");
   const section = landing.slice(from, landing.indexOf("</section>", from));
   const said = prose(section).join(" ");
-  assert.match(said, /your own CSS takes over a setting/);
+  assert.match(said, /your own CSS overrides a setting/);
   assert.match(said, /dims and names the line/);
 });
 

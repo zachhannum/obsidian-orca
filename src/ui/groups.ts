@@ -374,8 +374,8 @@ export function atLevel(key: string, level: Level): string {
   return key.replace(LEVELED, `heading-${String(level)}-`);
 }
 
-/** The place that took over a row: the first of its keys, in row order, that the author's CSS beats. */
-export function takenOver(
+/** The place that overrides a row: the first of its keys, in row order, that the author's CSS overrides. */
+export function overriddenAt(
   keys: readonly string[],
   overridden: ReadonlyMap<string, Place>,
 ): { key: string; place: Place } | undefined {

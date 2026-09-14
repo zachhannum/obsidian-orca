@@ -54,7 +54,7 @@ import {
   atLevel,
   defaultSaid,
   inUnit,
-  takenOver,
+  overriddenAt,
   trims,
   withKey,
   type Control,
@@ -395,12 +395,12 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
   // A row the author's CSS has overridden has no reset. Clearing the key
   // would change nothing on the page.
   const { overridden } = drawing.shown;
-  const taken = takenOver(
+  const override = overriddenAt(
     keyed.map(({ key }) => key),
     overridden,
   );
   const reset =
-    first === undefined || set.length === 0 || taken !== undefined ? null : (
+    first === undefined || set.length === 0 || override !== undefined ? null : (
       <Reset
         said={`Reset to default (${defaults.join(", ")})`}
         testid={`orca-panel-reset-${first}`}
@@ -418,15 +418,15 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
       reset={reset}
       under={under}
       keys={keyed.map(({ key }) => key)}
-      taken={
-        taken === undefined
+      overridden={
+        override === undefined
           ? undefined
           : {
-              line: taken.place.line,
-              testid: `orca-panel-taken-${taken.key}`,
+              line: override.place.line,
+              testid: `orca-panel-overridden-${override.key}`,
               every: keyed.every(({ key }) => overridden.has(key)),
               open: () => {
-                acting.reveal(taken.place);
+                acting.reveal(override.place);
               },
             }
       }
@@ -438,7 +438,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
           grid={grid}
           drawing={drawing}
           wrong={wrong}
-          taken={
+          overridden={
             control.key !== undefined && overridden.has(atLevel(control.key, level))
           }
         />
@@ -453,14 +453,14 @@ function Beside({
   grid,
   drawing,
   wrong,
-  taken,
+  overridden,
 }: {
   control: Control;
   grid: boolean;
   drawing: Drawing;
   wrong: (id: string) => Wrong;
-  /** True when the author's CSS beats the key the control writes. */
-  taken: boolean;
+  /** True when the author's CSS overrides the key the control writes. */
+  overridden: boolean;
 }): JSX.Element {
   const drawn = <Drawn control={control} drawing={drawing} wrong={wrong} />;
   const said =
@@ -480,7 +480,7 @@ function Beside({
     );
   if (grid) {
     return (
-      <div className={taken ? "orca-panel-cell is-taken" : "orca-panel-cell"}>
+      <div className={overridden ? "orca-panel-cell is-overridden" : "orca-panel-cell"}>
         {drawn}
         {said}
       </div>

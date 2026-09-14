@@ -251,9 +251,9 @@ export class Controls {
     return this.root.getByTestId(`orca-panel-reset-${key}`);
   }
 
-  /** The lock on a row the author's CSS has taken over, by the first key it beats. */
-  taken(key: string): Locator {
-    return this.root.getByTestId(`orca-panel-taken-${key}`);
+  /** The lock on a row the author's CSS overrides, by the first key it overrides. */
+  overridden(key: string): Locator {
+    return this.root.getByTestId(`orca-panel-overridden-${key}`);
   }
 
   /** A number field's stepper button that increases it. */

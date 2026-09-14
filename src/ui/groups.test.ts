@@ -14,7 +14,7 @@ import {
   keysOf,
   stepSaid,
   stepped,
-  takenOver,
+  overriddenAt,
   trims,
   typed,
   withFont,
@@ -267,17 +267,17 @@ test("a generated rule names the control that wrote it", () => {
   assert.equal(controlOf({ keys: ["not-a-key"] }), undefined);
 });
 
-test("a row the author's CSS has taken over is named by the line that took it", () => {
+test("a row the author's CSS overrides is named by the line that overrides it", () => {
   const margins = ["margin-inside", "margin-outside", "margin-top", "margin-bottom"];
   const top = { sheet: "book.css", line: 7, column: 3 };
   const bottom = { sheet: "book.css", line: 4, column: 3 };
   // The first key in row order names the row, whatever line it is on.
   assert.deepEqual(
-    takenOver(margins, new Map([["margin-bottom", bottom], ["margin-top", top]])),
+    overriddenAt(margins, new Map([["margin-bottom", bottom], ["margin-top", top]])),
     { key: "margin-top", place: top },
   );
-  assert.equal(takenOver(margins, new Map([["body-size", top]])), undefined);
-  assert.equal(takenOver([], new Map([["body-size", top]])), undefined);
+  assert.equal(overriddenAt(margins, new Map([["body-size", top]])), undefined);
+  assert.equal(overriddenAt([], new Map([["body-size", top]])), undefined);
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite
