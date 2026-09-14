@@ -1683,6 +1683,199 @@ button.orca-book-open-design {
   margin-top: var(--size-4-3);
 }
 
+button.orca-book-export {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  align-self: flex-start;
+  margin-top: var(--size-4-2);
+}
+
+/* The export dialog, drawn after the Export artboard. */
+.orca-export-modal {
+  width: min(620px, calc(100vw - var(--size-4-8)));
+}
+
+.orca-export {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-4);
+}
+
+.orca-export-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.orca-export-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+}
+
+.orca-export-label {
+  flex: none;
+  width: 88px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.orca-export-destination {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+}
+
+.orca-export-hint {
+  padding-left: calc(88px + var(--size-4-2));
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.orca-export-divider {
+  height: 1px;
+  background: var(--divider-color);
+}
+
+.orca-export-heading {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.orca-export-checking {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.orca-preview-issue.orca-export-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-left-color: var(--color-red);
+  background: rgba(251, 70, 76, 0.09);
+}
+
+.orca-export-error-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-red);
+}
+
+.orca-export-error-icon svg,
+.orca-export-fine-icon svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.orca-export-engine,
+.orca-export-at {
+  margin-top: 2px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.orca-export-engine {
+  font-family: var(--font-monospace);
+}
+
+.orca-export-fine {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: var(--size-4-1) 10px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.orca-export-fine-icon {
+  display: flex;
+  color: var(--color-green);
+}
+
+.orca-export-progress {
+  height: 2px;
+  overflow: hidden;
+  background: var(--background-modifier-border);
+}
+
+/* The engine reports no progress while it writes, so the bar runs rather than fills. */
+.orca-export-progress-bar {
+  width: 38%;
+  height: 100%;
+  background: var(--interactive-accent);
+  animation: orca-export-running 1.2s ease-in-out infinite;
+}
+
+@keyframes orca-export-running {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(270%);
+  }
+}
+
+.orca-export-footer {
+  align-items: center;
+}
+
+.orca-export-said {
+  flex: 1;
+  margin-right: auto;
+  text-align: left;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.orca-export-said.mod-error {
+  color: var(--color-red);
+}
+
+.orca-export-mono {
+  font-family: var(--font-monospace);
+}
+
+.orca-export-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-4-3);
+  padding: var(--size-4-4) 0;
+  text-align: center;
+}
+
+.orca-export-done-icon {
+  display: flex;
+  color: var(--color-green);
+}
+
+.orca-export-done-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.orca-export-done-name {
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.orca-export-done-size {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.orca-export-done-said {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
 /* The picker is the field's positioning context, so the menu hangs
    from the field rather than from the pane. */
 .orca-panel-picker {

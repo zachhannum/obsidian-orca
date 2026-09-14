@@ -598,7 +598,7 @@ test("the copy claims no feature the plugin has yet to grow", async () => {
   // Each claim, with the line in `src` that would make it true. A claim
   // whose line is not there yet may not be on the page.
   const claims = [
-    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, /id: "export-/, "export"],
+    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, /id: "export-pdf"/, "export"],
     [/your own CSS|takes over a setting/i, /overridden|overrides layer/, "an overridden control"],
   ];
   for (const [claimed, built, what] of claims) {

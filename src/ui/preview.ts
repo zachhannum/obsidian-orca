@@ -110,6 +110,8 @@ export interface PreviewHandoff {
   inspected(view: PreviewView, pin: Pin | undefined, refreshed: boolean): void;
   /** The unit the author measures pages in, which the inspect tag sizes a box in. */
   unit(): PageUnit;
+  /** Opens the export dialog on the book this view reads. */
+  exports(book: string): void;
 }
 
 /** A box the pointer found, and the generation the answer is from. */
@@ -229,6 +231,7 @@ export class PreviewView extends ItemView {
   private overlay: MountedOverlay | undefined;
   /** The header action that turns inspect mode on and off. */
   private inspectAction: HTMLElement | undefined;
+  private exportAction: HTMLElement | undefined;
   private inspecting: InspectState = INSPECT_OFF;
   /** The box under the pointer. */
   private hovered: Probed | undefined;
@@ -354,7 +357,11 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
-    this.inspectAction ??= this.addAction("crosshair", "Inspect the page", () => {
+    this.exportAction ??= this.addAction("download", "Export a PDF", () => {
+      const book = this.state.book;
+      if (book !== undefined) this.handoff.exports(book);
+    });
+    this.inspectAction ??=this.addAction("crosshair", "Inspect the page", () => {
       this.toggleInspect();
     });
     this.inspectAction.setAttribute("aria-pressed", "false");
@@ -371,6 +378,8 @@ export class PreviewView extends ItemView {
     this.overlay = undefined;
     this.inspectAction?.remove();
     this.inspectAction = undefined;
+    this.exportAction?.remove();
+    this.exportAction = undefined;
     this.watching?.disconnect();
     this.watching = undefined;
     this.unwatch?.();
