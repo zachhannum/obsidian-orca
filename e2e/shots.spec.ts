@@ -395,6 +395,65 @@ test("the export picture is the dialog on the sample book, with the preflight pa
   await site.obsidian.moving();
 });
 
+test("a docs picture crops to one group of the design panel", async ({
+  site,
+}) => {
+  await arrange(site);
+  const group = site.panel.leaf.locator(`[data-group="${GROUP}"]`);
+
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(group).toBeVisible();
+    await site.obsidian.unhovered();
+    await expect(group).toHaveScreenshot(`panel-${GROUP.toLowerCase()}-${scheme}.png`);
+  }
+
+  await site.obsidian.moving();
+});
+
+test("the flip-through's pages come from the book's own PDF", async ({
+  site,
+}) => {
+  await arrange(site);
+  await settled(site.book);
+  const first = await site.book.reading();
+
+  // The preview and the export come from one session, so the bytes
+  // here are the pages the pictures above were taken of.
+  const pdf = await site.pdf(BOOK);
+  expect(pdf.subarray(0, 5).toString("latin1")).toEqual("%PDF-");
+
+  const where = await mkdtemp(path.join(tmpdir(), "orca-shots-"));
+  const written = path.join(where, "sample.pdf");
+  await writeFile(written, pdf);
+  execFileSync("pdftoppm", [
+    "-png",
+    "-r",
+    String(DPI),
+    "-f",
+    String(first),
+    "-l",
+    String(first + FLIP - 1),
+    written,
+    path.join(where, "page"),
+  ]);
+
+  // Poppler pads the number it writes to the width of the last page, so
+  // the pages are read back in the order it wrote them rather than by a
+  // name built here.
+  const rendered = (await readdir(where))
+    .filter((file) => file.endsWith(".png"))
+    .sort();
+  expect(rendered).toHaveLength(FLIP);
+  for (const [at, file] of rendered.entries()) {
+    const page = await readFile(path.join(where, file));
+    const folio = String(first + at).padStart(2, "0");
+    expect(page).toMatchSnapshot(["pages", `page-${folio}.png`]);
+  }
+});
+
+// The inspect picture is taken last. Its rule is a change to the book
+// note, and a change to the note drops the book the flip-through reads.
 test("the inspect picture is a pinned paragraph beside the rules that set it", async ({
   site,
 }) => {
@@ -453,63 +512,14 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
     },
     { at: BOOK, text: own },
   );
-});
-
-test("a docs picture crops to one group of the design panel", async ({
-  site,
-}) => {
-  await arrange(site);
-  const group = site.panel.leaf.locator(`[data-group="${GROUP}"]`);
-
-  for (const scheme of SCHEMES) {
-    await site.paint(scheme);
-    await expect(group).toBeVisible();
-    await site.obsidian.unhovered();
-    await expect(group).toHaveScreenshot(`panel-${GROUP.toLowerCase()}-${scheme}.png`);
-  }
-
-  await site.obsidian.moving();
-});
-
-test("the flip-through's pages come from the book's own PDF", async ({
-  site,
-}) => {
-  await arrange(site);
+  // The editor writes the note on a debounce, so the wait is on the note
+  // holding its own text and on the book painted from it.
+  await expect
+    .poll(async () =>
+      site.obsidian.page.evaluate(async (at) => window.app.vault.adapter.read(at), BOOK),
+    )
+    .toEqual(own);
   await settled(site.book);
-  const first = await site.book.reading();
-
-  // The preview and the export come from one session, so the bytes
-  // here are the pages the pictures above were taken of.
-  const pdf = await site.pdf(BOOK);
-  expect(pdf.subarray(0, 5).toString("latin1")).toEqual("%PDF-");
-
-  const where = await mkdtemp(path.join(tmpdir(), "orca-shots-"));
-  const written = path.join(where, "sample.pdf");
-  await writeFile(written, pdf);
-  execFileSync("pdftoppm", [
-    "-png",
-    "-r",
-    String(DPI),
-    "-f",
-    String(first),
-    "-l",
-    String(first + FLIP - 1),
-    written,
-    path.join(where, "page"),
-  ]);
-
-  // Poppler pads the number it writes to the width of the last page, so
-  // the pages are read back in the order it wrote them rather than by a
-  // name built here.
-  const rendered = (await readdir(where))
-    .filter((file) => file.endsWith(".png"))
-    .sort();
-  expect(rendered).toHaveLength(FLIP);
-  for (const [at, file] of rendered.entries()) {
-    const page = await readFile(path.join(where, file));
-    const folio = String(first + at).padStart(2, "0");
-    expect(page).toMatchSnapshot(["pages", `page-${folio}.png`]);
-  }
 });
 
 // What this spec does not cover: the pictures on any platform but the
