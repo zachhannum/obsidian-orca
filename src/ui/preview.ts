@@ -357,7 +357,7 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
-    this.exportAction ??= this.addAction("download", "Export a PDF", () => {
+    this.exportAction ??= this.addAction("download", "Export to PDF", () => {
       const book = this.state.book;
       if (book !== undefined) this.handoff.exports(book);
     });

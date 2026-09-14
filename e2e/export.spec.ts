@@ -45,7 +45,7 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   await exporting.open();
   await exporting.reaches("ready");
   await expect(exporting.destination).toHaveValue(FILE);
-  await expect(exporting.fine).toHaveText("Every face embeds. Every image resolves.");
+  await expect(exporting.fine).toHaveText("No errors");
 
   await exporting.write.click();
   await exporting.reaches("written");
@@ -104,11 +104,9 @@ test("an embed with no file behind it stands as an error, and export will not wr
   await exporting.reaches("refused");
   await expect(exporting.dialog).toHaveAttribute("data-errors", "1");
   await expect(exporting.errors).toHaveCount(1);
-  await expect(exporting.errors).toContainText("The vault has no nowhere.png.");
-  await expect(exporting.errors).toContainText(`embedded in Acknowledgements, line ${String(line)}`);
-  await expect(exporting.said).toHaveText(
-    "One error stands. Export will not write while it does.",
-  );
+  await expect(exporting.errors).toContainText("Missing image: nowhere.png");
+  await expect(exporting.errors).toContainText(`Acknowledgements, line ${String(line)}`);
+  await expect(exporting.said).toHaveText("Fix 1 error to export");
   await expect(exporting.write).toBeDisabled();
 
   // The note goes back before the spec ends, and the render that puts

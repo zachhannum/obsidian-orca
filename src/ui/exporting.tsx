@@ -146,9 +146,6 @@ function Exporting({
           <div className="orca-export-done-size">
             {pages(result.leaves)} · {size(result.bytes)}
           </div>
-          <div className="orca-export-done-said">
-            Drawn from the pages already on screen. The book was not typeset again.
-          </div>
         </div>
         <div className="modal-button-container orca-export-footer">
           {destination.kind === "vault" ? (
@@ -160,7 +157,7 @@ function Exporting({
                 exporter.close();
               }}
             >
-              Open
+              Open PDF
             </button>
           ) : null}
           <button type="button" className="mod-cta" onClick={() => exporter.close()}>
@@ -199,9 +196,6 @@ function Exporting({
             Choose…
           </button>
         </div>
-        <div className="orca-export-hint">
-          A path in the vault, or a path on disk from the Choose button. The name comes from the book's title.
-        </div>
       </div>
 
       <div className="orca-export-divider" />
@@ -209,7 +203,7 @@ function Exporting({
       <div className="orca-export-group" data-testid="orca-export-preflight">
         <div className="orca-export-heading">Preflight</div>
         {checked === undefined ? (
-          <div className="orca-export-checking">Checking the book.</div>
+          <div className="orca-export-checking">Checking…</div>
         ) : null}
         {errors.map((blocker, at) => (
           <Card key={at} blocker={blocker} exporter={exporter} />
@@ -243,7 +237,7 @@ function Exporting({
             failure
           ) : writing ? (
             <>
-              Writing <span className="orca-export-mono">{file}</span> from the pages on screen.
+              Exporting <span className="orca-export-mono">{file}</span>…
             </>
           ) : null}
         </div>
@@ -299,7 +293,7 @@ function Card({ blocker, exporter }: { blocker: Blocker; exporter: Exporter }): 
 /** The line a failed export shows. A typed error carries words meant for the author. */
 function said(cause: unknown): string {
   const message = cause instanceof Error ? cause.message : String(cause);
-  return `The export did not write: ${message}`;
+  return `Export failed: ${message}`;
 }
 
 function fileName(path: string): string {

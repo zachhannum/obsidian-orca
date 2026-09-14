@@ -39,7 +39,7 @@ export async function chooseDiskPath(
   const dialog = saveDialog();
   if (dialog === undefined) return undefined;
   const chosen = await dialog.showSaveDialog({
-    title: `Export a ${format.label}`,
+    title: `Export to ${format.label}`,
     defaultPath: name,
     filters: [{ name: format.label, extensions: [format.extension] }],
   });

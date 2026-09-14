@@ -7,7 +7,7 @@
 
 import type { Warning } from "fleuron";
 import type { Unread } from "@/book/plan";
-import { LEVELS, designUses, headingUse, useKey, type Design, type FontUse } from "@/style/design";
+import { LEVELS, headingUse, useKey, type Design, type FontUse } from "@/style/design";
 import { readOrigin } from "@/style/origin";
 import type { Unloaded } from "@/ui/composer";
 
@@ -16,9 +16,9 @@ export interface Blocker {
   kind: "face" | "image";
   /** The line the author reads first. */
   said: string;
-  /** The place the error is at: what the face was chosen for, or the note and line. */
+  /** The place the error is at: where the font is used, or the note and line. */
   place: string;
-  /** A fix, in a few words. */
+  /** The label of the button that goes to the fix. */
   fix: string;
   /** The engine's own warning at the same place, as the engine wrote it. */
   engine: string | undefined;
@@ -31,25 +31,13 @@ export interface Checking {
   design: Design;
   unloaded: readonly Unloaded[];
   unread: readonly Unread[];
-  /** The number of image urls that resolved. */
-  images: number;
   warnings: readonly Warning[];
 }
 
 export interface Checked {
   errors: Blocker[];
-  /** The line that says the rest is fine, or nothing when nothing else is. */
+  /** `No errors` when the book passes, and nothing when it does not. */
   fine: string | undefined;
-}
-
-const NUMBERS = [
-  "no", "one", "two", "three", "four", "five", "six",
-  "seven", "eight", "nine", "ten", "eleven", "twelve",
-];
-
-/** A count as a word up to twelve, and in digits above. */
-function counted(count: number): string {
-  return NUMBERS[count] ?? count.toLocaleString("en");
 }
 
 export function preflight(book: Checking): Checked {
@@ -57,69 +45,63 @@ export function preflight(book: Checking): Checked {
     const name = faceName(each.use);
     return {
       kind: "face",
-      said: each.unread
-        ? `${name} has files that would not read, so the PDF could not embed it.`
-        : `${name} has no file the PDF could embed.`,
-      place: `chosen for ${chosenFor(book.design, each.use)}`,
-      fix: "pick another face",
+      said: each.unread ? `Cannot read font file: ${name}` : `Missing font: ${name}`,
+      place: usedIn(book.design, each.use),
+      fix: "Change font…",
       engine: undefined,
       at: undefined,
     };
   });
   const images = book.unread.map((each): Blocker => ({
     kind: "image",
-    said: `The vault has no ${each.url}.`,
-    place: `embedded in ${noteTitle(each.note)}, line ${String(each.line + 1)}`,
-    fix: "locate it",
+    said: `Missing image: ${each.url}`,
+    place: `${noteTitle(each.note)}, line ${String(each.line + 1)}`,
+    fix: "Go to line",
     engine: warningAt(book.warnings, each.note, each.line + 1),
     at: { note: each.note, line: each.line },
   }));
 
-  const uses = designUses(book.design).length;
-  const said: string[] = [];
-  if (faces.length === 0) said.push("Every face embeds.");
-  else if (uses > faces.length) said.push("Every other face embeds.");
-  if (images.length === 0) said.push("Every image resolves.");
-  else if (book.images === 1) said.push("The other image resolves.");
-  else if (book.images > 1) said.push(`The other ${counted(book.images)} images resolve.`);
-
-  return {
-    errors: [...faces, ...images],
-    fine: said.length === 0 ? undefined : said.join(" "),
-  };
+  const errors = [...faces, ...images];
+  return { errors, fine: errors.length === 0 ? "No errors" : undefined };
 }
 
 /** The footer line while errors stand. */
 export function standing(errors: number): string {
-  const count = counted(errors);
-  const capital = count.charAt(0).toUpperCase() + count.slice(1);
-  return errors === 1
-    ? `${capital} error stands. Export will not write while it does.`
-    : `${capital} errors stand. Export will not write while they do.`;
+  return `Fix ${String(errors)} ${errors === 1 ? "error" : "errors"} to export`;
 }
 
 function faceName(use: FontUse): string {
   return use.variant === undefined ? use.font : `${use.font} ${use.variant}`;
 }
 
-/** The places a design sets a use, as `the body text and level 1 and 2 headings`. */
-function chosenFor(design: Design, use: FontUse): string {
+/** The places a design sets a use, as `Body text, headings 1–3, 5`. */
+function usedIn(design: Design, use: FontUse): string {
   const key = useKey(use);
   const { font, fontVariant } = design.body;
   const body = font === undefined ? undefined : { font, variant: fontVariant };
   const places: string[] = [];
-  if (body !== undefined && useKey(body) === key) places.push("the body text");
-  const levels = LEVELS.filter((level) => {
+  if (body !== undefined && useKey(body) === key) places.push("body text");
+  const levels: number[] = LEVELS.filter((level) => {
     const heading = headingUse(design.headings[level], body);
     return heading !== undefined && useKey(heading) === key;
-  }).map(String);
-  if (levels.length > 0) places.push(`level ${listed(levels)} headings`);
-  return places.length === 0 ? "the book" : places.join(" and ");
+  });
+  if (levels.length === 1) places.push(`heading ${String(levels[0])}`);
+  if (levels.length > 1) places.push(`headings ${runs(levels)}`);
+  const said = places.length === 0 ? "book" : places.join(", ");
+  return said.charAt(0).toUpperCase() + said.slice(1);
 }
 
-function listed(items: readonly string[]): string {
-  if (items.length < 2) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items.at(-1) ?? ""}`;
+/** Ascending numbers with each unbroken run joined, as `1–3, 5`. */
+function runs(numbers: readonly number[]): string {
+  const grouped: number[][] = [];
+  for (const each of numbers) {
+    const last = grouped.at(-1);
+    if (last !== undefined && last.at(-1) === each - 1) last.push(each);
+    else grouped.push([each]);
+  }
+  return grouped
+    .map((run) => (run.length === 1 ? String(run[0]) : `${String(run[0])}–${String(run.at(-1))}`))
+    .join(", ");
 }
 
 function noteTitle(note: string): string {

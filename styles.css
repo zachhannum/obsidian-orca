@@ -1728,12 +1728,6 @@ button.orca-book-export {
   font-size: var(--font-ui-small);
 }
 
-.orca-export-hint {
-  padding-left: calc(88px + var(--size-4-2));
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-}
-
 .orca-export-divider {
   height: 1px;
   background: var(--divider-color);
@@ -1867,12 +1861,6 @@ button.orca-book-export {
 .orca-export-done-size {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-}
-
-.orca-export-done-said {
-  font-size: var(--font-ui-smaller);
-  line-height: 1.5;
   color: var(--text-faint);
 }
 

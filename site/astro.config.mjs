@@ -83,7 +83,7 @@ export default defineConfig({
             'design/heads-and-folios',
           ],
         },
-        { label: 'Export', items: ['export/export-a-pdf'] },
+        { label: 'Export', items: ['export/export-to-pdf'] },
         { label: 'Reference', items: ['reference/design-keys', 'reference/the-book-note'] },
       ],
     }),

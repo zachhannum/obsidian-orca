@@ -143,6 +143,17 @@ A commit subject is imperative and says what changed: "Rename the
 default section heading". No wordplay, no clause that holds the
 subject back.
 
+## Interface text
+
+A string in orca's UI reads like a label in a desktop app. A title, a
+button or a status names the thing: `Export to PDF`, `No errors`,
+`Missing font: Charter Italic`. An error puts the problem first and the
+name after a colon. A count is in digits. A string does not tell the
+author how orca did the work.
+
+If Obsidian has a word for a thing, orca uses it. If Obsidian has no
+word, orca uses the word of print tools like InDesign.
+
 ## Words
 
 Use the ordinary word. A trade word belongs where it is the API's own

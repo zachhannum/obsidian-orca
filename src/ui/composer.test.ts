@@ -688,7 +688,6 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
 
   // The fixture's one embed resolves, and its design names no font.
   assert.deepEqual(book.unread, []);
-  assert.equal(book.images, 1);
   assert.deepEqual(book.unloaded, []);
 
   const note = "Copyright.md";

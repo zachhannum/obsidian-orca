@@ -399,8 +399,8 @@ const swap = {
           <div class="said">
             <h2 class="row-h">Export <i>for the printer</i></h2>
             <p class="sec-p">
-              Export writes the PDF from the pages on screen. A preflight checks that every face
-              embeds and every image resolves, and export waits until they do.
+              Export writes the PDF from the pages on screen. Preflight catches missing fonts and
+              images before you export.
             </p>
           </div>
           <div class="shown">
@@ -412,7 +412,7 @@ const swap = {
                     src={exporting[scheme].src}
                     width={exporting[scheme].width}
                     height={exporting[scheme].height}
-                    alt="Orca's Export a PDF dialog on the sample book: the Save to path, a passed preflight, and the Export button."
+                    alt="Orca's Export to PDF dialog on the sample book, with a save path, a preflight that shows no errors, and the Export button."
                   />
                 </div>
               ))

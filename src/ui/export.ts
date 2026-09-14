@@ -38,7 +38,7 @@ class ExportModal extends Modal {
   override onOpen(): void {
     this.modalEl.dataset["testid"] = "orca-export";
     this.modalEl.addClass("orca-export-modal");
-    this.setTitle(`Export a ${pdfTarget.label}`);
+    this.setTitle(`Export to ${pdfTarget.label}`);
     const { composer, book } = this.exports;
     // The dialog holds the book, so its engine does not stop under an export.
     this.release = composer.hold(book);
@@ -81,7 +81,6 @@ class ExportModal extends Modal {
           design: typeset.design,
           unloaded: typeset.unloaded,
           unread: typeset.unread,
-          images: typeset.images,
           warnings: typeset.session.warnings,
         });
       },

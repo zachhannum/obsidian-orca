@@ -103,8 +103,6 @@ export class Typeset {
   private readonly unreadFaces = new Set<string>();
   /** The embeds each note has that brought no bytes, by the note's path. */
   private readonly unreadIn = new Map<string, Unread[]>();
-  /** The urls of the images that resolved. */
-  private readonly resolvedImages = new Set<string>();
   private own: string;
   /** The author's CSS as the last render that landed set it. */
   private linted: string;
@@ -160,7 +158,6 @@ export class Typeset {
     for (const each of book.resolved ?? []) {
       if (each.unread) this.unreadFaces.add(useKey(each.use));
     }
-    for (const image of book.images ?? []) this.resolvedImages.add(image.url);
     for (const at of book.unread ?? []) {
       this.unreadIn.set(at.note, [...(this.unreadIn.get(at.note) ?? []), at]);
     }
@@ -237,7 +234,6 @@ export class Typeset {
       (at) => this.assets.take(at),
     );
     this.unreadIn.set(note, unread);
-    for (const image of found) this.resolvedImages.add(image.url);
     const fresh = found.filter(
       (image) => this.assets.imageUrl(image.url) === undefined,
     );
@@ -272,11 +268,6 @@ export class Typeset {
   /** The embeds that brought no bytes, by note in the order the notes were read. */
   get unread(): Unread[] {
     return [...this.unreadIn.values()].flat();
-  }
-
-  /** The number of distinct image urls that resolved. */
-  get images(): number {
-    return this.resolvedImages.size;
   }
 
   /**
