@@ -18,7 +18,7 @@
 import { styleOp, type Op, type Sheet, type Source } from "fleuron";
 import type { Hashed, Sent } from "@/assets/registry";
 import { contentsMarkdown, firstHeading, type Listed } from "@/book/contents";
-import { imagesIn } from "@/book/images";
+import { imagesIn, imagesInCss } from "@/book/images";
 import type { Links } from "@/book/links";
 import { sectionNames } from "@/book/names";
 import { documentMetadata, imprint } from "@/book/metadata";
@@ -72,28 +72,32 @@ type Sendable = Exclude<Section, { kind: "missing" }>;
 
 /**
  * The book's reading order, as the ops that typeset it, with every
- * image its sources embed registered ahead of them.
+ * image its sources embed or its CSS names registered ahead of them.
+ * An image both name crosses once.
  */
 export async function sendBook(
   book: Book,
   order: Order,
   links: Links,
   from: string,
+  css: string,
   read: Read,
   take: Take,
 ): Promise<Sending> {
   const sources = await bookSources(book, order, links, from, read);
-  const { images, unread } = await bookImages(sources, links, take);
+  const embedded = await bookImages(sources, links, take);
+  const named = new Set(embedded.images.map((image) => image.url));
+  const styled = (await cssImages(css, links, from, take)).filter(
+    (image) => !named.has(image.url),
+  );
+  const images = [...embedded.images, ...styled];
+  const unread = embedded.unread;
   return {
     unread,
     ops: [
       { op: "dialect", dialect: "obsidian" },
       { op: "split", level: 0 },
-      ...images.map((image): Op => ({
-        op: "image",
-        url: image.url,
-        bytes: image.bytes,
-      })),
+      ...images.map(imageOp),
       { op: "book", sources },
       { op: "metadata", metadata: documentMetadata(book) },
     ],
@@ -166,6 +170,28 @@ export async function bookImages(
     else images.push(image);
   }
   return { images, unread };
+}
+
+/**
+ * Every image the author's CSS names, resolved through the vault from
+ * the book note the way an embed is resolved from its chapter. A url
+ * with no file behind it, or a file that will not read, sends nothing.
+ */
+export async function cssImages(
+  css: string,
+  links: Links,
+  from: string,
+  take: Take,
+): Promise<Image[]> {
+  const read = await Promise.all(
+    imagesInCss(css).map(async (named) => {
+      const path = links.find(named.link, from);
+      if (path === undefined || path.endsWith(".md")) return [];
+      const bytes = await take(path).catch(() => undefined);
+      return bytes === undefined ? [] : [{ url: named.url, ...bytes }];
+    }),
+  );
+  return read.flat();
 }
 
 /**
@@ -254,9 +280,10 @@ export type Edit =
   /**
    * Moved a slider, or changed a margin. Both send the sheet, and the
    * engine reads off the declarations that moved whether the lines
-   * break again.
+   * break again. An image the CSS newly names crosses ahead of the
+   * sheet.
    */
-  | { did: "styled"; sheets: Sheet[] }
+  | { did: "styled"; sheets: Sheet[]; images?: readonly Image[] }
   /**
    * Reordered chapters, so every source crosses in its new place. The
    * sheets cross again with them. The generated layer restarts the folio
@@ -316,7 +343,7 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
       };
     case "styled":
       return {
-        ops: [styling(edit.sheets)],
+        ops: [...(edit.images ?? []).map(imageOp), styling(edit.sheets)],
         loaded: { ...loaded, sheets: edit.sheets },
         crossed: [],
       };
@@ -328,11 +355,7 @@ export function sendEdit(edit: Edit, loaded: Loaded, assets: Sent): Planned {
       };
     case "embedded":
       return {
-        ops: edit.images.map((image) => ({
-          op: "image",
-          url: image.url,
-          bytes: image.bytes,
-        })),
+        ops: edit.images.map(imageOp),
         loaded,
         crossed: [],
       };
@@ -367,6 +390,10 @@ function fontOp(face: Face): Op {
   return face.url === undefined
     ? { op: "font", bytes: face.bytes }
     : { op: "font", url: face.url, bytes: face.bytes };
+}
+
+function imageOp(image: Image): Op {
+  return { op: "image", url: image.url, bytes: image.bytes };
 }
 
 function styling(sheets: readonly Sheet[]): Op {

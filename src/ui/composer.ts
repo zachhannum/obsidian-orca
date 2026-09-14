@@ -14,6 +14,7 @@ import { styleOp, type Op, type Sheet } from "fleuron";
 import { Registry } from "@/assets/registry";
 import type { VaultAdapter } from "@/assets/vault";
 import { bookCss } from "@/book/css";
+import { imagesInCss } from "@/book/images";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { sectionIds } from "@/book/names";
@@ -23,6 +24,7 @@ import { sourceNamed } from "@/book/pages";
 import { writtenByte } from "@/book/place";
 import {
   bookImages,
+  cssImages,
   sendBook,
   sendEdit,
   sendFaces,
@@ -106,6 +108,12 @@ export class Typeset {
   /** The embeds each note has that brought no bytes, by the note's path. */
   private readonly unreadIn = new Map<string, Unread[]>();
   private own: string;
+  /**
+   * The images the author's CSS newly named, which ride every `styled`
+   * edit until a render carries them. An edit that replaces a waiting
+   * one would otherwise drop the images it planned.
+   */
+  private crossing: Image[] = [];
   /** The author's CSS as the last render that landed set it. */
   private linted: string;
   private gone = false;
@@ -302,7 +310,7 @@ export class Typeset {
       (face) => !this.assets.sent(face.key),
     );
     if (faces.length === 0) {
-      this.plan("styled", { did: "styled", sheets });
+      this.plan("styled", { did: "styled", sheets, images: [...this.crossing] });
       return;
     }
     this.plan(`fonted:${faces.map((face) => face.key).join(" ")}`, {
@@ -338,11 +346,42 @@ export class Typeset {
     return this.linted;
   }
 
-  /** Sets the book under the author's own CSS, which crosses last of the sheets. */
+  /**
+   * Sets the book under the author's own CSS, which crosses last of the
+   * sheets. An image the CSS names that the engine has no bytes for is
+   * read first, and crosses ahead of the sheet that asks for it.
+   */
   recss(css: string): void {
     if (css === this.own) return;
     this.own = css;
-    this.restyle(this.designed);
+    const fresh = imagesInCss(css).some(
+      (named) => this.assets.imageUrl(named.url) === undefined,
+    );
+    if (!fresh) {
+      this.restyle(this.designed);
+      return;
+    }
+    const naming = async (): Promise<void> => {
+      try {
+        const found = await cssImages(css, this.links, this.path, (at) =>
+          this.assets.take(at),
+        );
+        for (const image of found) {
+          if (this.assets.imageUrl(image.url) !== undefined) continue;
+          this.assets.image(image.url, image);
+          this.crossing.push(image);
+        }
+      } finally {
+        this.restyle(this.designed);
+      }
+    };
+    this.embeds += 1;
+    this.embedding = this.embedding
+      .then(naming, naming)
+      .catch(() => undefined)
+      .finally(() => {
+        this.embeds -= 1;
+      });
   }
 
   /** The text a note last crossed as. The engine counts its byte offsets in this text. */
@@ -415,6 +454,8 @@ export class Typeset {
   }
 
   private async render(ops: Op[]): Promise<void> {
+    const carried = new Set(ops.flatMap((op) => (op.op === "image" ? [op.url] : [])));
+    this.crossing = this.crossing.filter((image) => !carried.has(image.url));
     const own = ops
       .flatMap((op) => (op.op === "style" ? op.sheets : []))
       .filter((sheet) => sheet.name === OWN_SHEET)
@@ -592,11 +633,13 @@ export class Composer {
 
     const sent = new Map<string, string>();
     const assets = new Registry(this.vault.files);
+    const css = carried?.css ?? bookCss(model.order);
     const { ops, images, unread } = await sendBook(
       model.book,
       model.order,
       this.vault.links,
       path,
+      css,
       async (at) => {
         // A note the dead engine was sent crosses as it was sent. The
         // author may have typed since the vault last held it.
@@ -622,7 +665,6 @@ export class Composer {
       author,
       publisher,
     };
-    const css = carried?.css ?? bookCss(model.order);
     const resolved = await this.resolve(designUses(design));
     const registered = resolved.flatMap((each) => each.registered ?? []);
     const sheets = [

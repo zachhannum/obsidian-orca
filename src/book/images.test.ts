@@ -1,6 +1,30 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { imagesIn } from "@/book/images";
+import { imagesIn, imagesInCss } from "@/book/images";
+
+test("the CSS names an image with each url outside @font-face, as it is written", () => {
+  const found = imagesInCss(
+    [
+      "@font-face {",
+      '  font-family: "Junicode";',
+      '  src: url("fonts/Junicode.otf");',
+      "}",
+      "@page :left { background-image: url('Book/images/bg_left.webp'); }",
+      '@page :right { background-image: url("plates/second%20plate.png"); }',
+      "/* body { background-image: url(commented.png); } */",
+      "h1 { background: url( bare.png ) no-repeat; }",
+      "h2 { background-image: url(bare.png); }",
+      'p { background-image: url("https://example.com/remote.png"); }',
+      'p { background-image: url("data:image/png;base64,AAAA"); }',
+    ].join("\n"),
+  );
+
+  assert.deepEqual(found, [
+    { url: "Book/images/bg_left.webp", link: "Book/images/bg_left.webp", line: 4 },
+    { url: "plates/second%20plate.png", link: "plates/second plate.png", line: 5 },
+    { url: "bare.png", link: "bare.png", line: 7 },
+  ]);
+});
 
 test("an embed is read as the url the engine names it by", () => {
   const found = imagesIn(

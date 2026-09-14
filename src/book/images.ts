@@ -32,6 +32,30 @@ const INLINE = /!\[[^\]]*\]\(\s*(<[^>]*>|[^)\s]+)/g;
 /** A url outside the vault. */
 const REMOTE = /^[a-z][a-z0-9+.-]*:/i;
 
+/** `url(...)`, with the url quoted either way or bare. */
+const CSS_URL = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)"'\s]*))\s*\)/gi;
+
+/** A comment or an `@font-face` rule. Neither names an image. */
+const NOT_IMAGES = /\/\*[\s\S]*?\*\/|@font-face\s*\{[^}]*\}/gi;
+
+/**
+ * Every image a stylesheet names with `url(...)`, in the order it
+ * names them, each url once. A url in a comment or an `@font-face`
+ * rule is not one of them, and neither is a url outside the vault. The
+ * line is counted from 0 in the CSS.
+ */
+export function imagesInCss(css: string): Embed[] {
+  const kept = css.replace(NOT_IMAGES, (skipped) => skipped.replace(/[^\n]/g, " "));
+  const found = new Map<string, Embed>();
+  for (const named of kept.matchAll(CSS_URL)) {
+    const url = (named[1] ?? named[2] ?? named[3] ?? "").trim();
+    if (url === "" || REMOTE.test(url) || found.has(url)) continue;
+    const line = linesIn(kept.slice(0, named.index));
+    found.set(url, { url, link: decoded(url), line });
+  }
+  return [...found.values()];
+}
+
 /**
  * Every image the body of a source names, in the order it names them,
  * each url once. A url outside the vault is not one of them. Orca reads
