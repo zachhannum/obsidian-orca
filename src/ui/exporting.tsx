@@ -200,7 +200,7 @@ function Exporting({
           </button>
         </div>
         <div className="orca-export-hint">
-          A vault path, or anywhere on disk through Choose…. The name comes from the book's title.
+          A path in the vault, or a path on disk from the Choose button. The name comes from the book's title.
         </div>
       </div>
 

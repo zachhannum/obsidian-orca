@@ -522,10 +522,10 @@ test("the sections that show orca's own surfaces show photographs of them", asyn
   for (const section of ["vault-shots", "sw-win"]) {
     assert.match(landing, new RegExp(`<div class="${section}">`), `the page has no ${section}`);
   }
-  for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc"]) {
+  for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc", "ex-dlg"]) {
     assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
   }
-  for (const shot of ["vault-tree", "vault-note", "write", "read"]) {
+  for (const shot of ["vault-tree", "vault-note", "write", "read", "export"]) {
     for (const scheme of ["dark", "light"]) {
       assert.ok(
         landing.includes(`../shots/${shot}-${scheme}.png`),

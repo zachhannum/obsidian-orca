@@ -39,6 +39,8 @@ import writeDark from '../shots/write-dark.png';
 import writeLight from '../shots/write-light.png';
 import readDark from '../shots/read-dark.png';
 import readLight from '../shots/read-light.png';
+import exportDark from '../shots/export-dark.png';
+import exportLight from '../shots/export-light.png';
 
 const docs = '/start/install/';
 const repo = 'https://github.com/zachhannum/obsidian-orca';
@@ -184,15 +186,13 @@ const demo = {
   source: { name: `${CHAPTER}.md`, text: chapterNote },
 };
 
-/** The export dialog's file, in the sample book's folder and named from its title. */
-if (metadata.title === undefined) throw new Error('the sample book has no title');
-const saveTo = `Twenty Thousand Leagues/${metadata.title}.pdf`;
-
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
   light: { tree: await shot(treeLight), note: await shot(noteLight) },
 };
+/** The export dialog, open on the sample book with the preflight passed. */
+const exporting = { dark: await shot(exportDark), light: await shot(exportLight) };
 const swap = {
   dark: { write: await shot(writeDark), read: await shot(readDark) },
   light: { write: await shot(writeLight), read: await shot(readLight) },
@@ -404,32 +404,19 @@ const swap = {
             </p>
           </div>
           <div class="shown">
-            <div class="ex-dlg" role="img" aria-label="The Export a PDF dialog, with the preflight passed.">
-              <div class="ex-hd">
-                <Icon name="download" size={16} />
-                <span>Export a PDF</span>
-                <span class="o-grow"></span>
-                <Icon name="close" size={16} />
-              </div>
-              <div class="ex-bd">
-                <div class="ex-row">
-                  <span class="ex-lab">Save to</span>
-                  <div class="o-field o-grow"><span class="ex-mono">{saveTo}</span></div>
-                  <div class="x-btn">Choose…</div>
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <div class={`on-${scheme}`}>
+                  <img
+                    class="export-shot"
+                    src={exporting[scheme].src}
+                    width={exporting[scheme].width}
+                    height={exporting[scheme].height}
+                    alt="Orca's Export a PDF dialog on the sample book: the Save to path, a passed preflight, and the Export button."
+                  />
                 </div>
-                <div class="ex-div"></div>
-                <div class="ex-gh">PREFLIGHT</div>
-                <div class="ex-ok">
-                  <span class="ex-tick"><Icon name="check" size={14} /></span>
-                  <span>Every face embeds. Every image resolves.</span>
-                </div>
-              </div>
-              <div class="ex-ft">
-                <span class="o-grow"></span>
-                <div class="x-btn">Cancel</div>
-                <div class="x-btn pri">Export</div>
-              </div>
-            </div>
+              ))
+            }
           </div>
         </section>
 
@@ -813,6 +800,12 @@ const swap = {
     gap: 22px;
     align-items: flex-start;
   }
+  .export-shot {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
   .vault-shots img {
     display: block;
     height: auto;

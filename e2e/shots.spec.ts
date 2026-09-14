@@ -3,6 +3,7 @@ import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PREVIEW, type Book } from "./harness/book";
+import { Export } from "./harness/export";
 import { DENSITY as DISPLAY, SAMPLE } from "./harness/launch";
 import type { Scheme } from "./harness/obsidian";
 import type { Site } from "./harness/site";
@@ -357,6 +358,25 @@ test("the swap pictures are one window, written and then set", async ({
 
   await site.obsidian.moving();
   await site.obsidian.reopen(layout);
+});
+
+test("the export picture is the dialog on the sample book, with the preflight passed", async ({
+  site,
+}) => {
+  await arrange(site);
+  const exporting = new Export(site.obsidian);
+
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await exporting.open();
+    await exporting.reaches("ready");
+    await site.obsidian.unhovered();
+    await expect(exporting.dialog).toHaveScreenshot(`export-${scheme}.png`);
+    await exporting.close();
+  }
+
+  await site.obsidian.moving();
 });
 
 test("a docs picture crops to one group of the design panel", async ({
