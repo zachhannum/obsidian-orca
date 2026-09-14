@@ -817,4 +817,5 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
 // checked here; the unit's conversion is a Node test. A rule the pane
 // opens from a heading level other than H1 is not driven. No element in
 // the fixture has classes and no id, so a selector that names classes
-// is a Node test.
+// is a Node test. No section in the fixture is set in columns, so a box
+// with two pieces on one page is a Node test too.
