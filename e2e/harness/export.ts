@@ -26,6 +26,8 @@ export class Export {
   readonly fine: Locator;
   /** The footer line. */
   readonly said: Locator;
+  /** The button a written export offers, which opens the PDF in the vault. */
+  readonly openPdf: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.dialog = obsidian.page.getByTestId("orca-export");
@@ -35,6 +37,7 @@ export class Export {
     this.errors = this.dialog.getByTestId("orca-export-error");
     this.fine = this.dialog.getByTestId("orca-export-fine");
     this.said = this.dialog.getByTestId("orca-export-said");
+    this.openPdf = this.dialog.getByTestId("orca-export-open");
   }
 
   /** Opens the dialog the way the palette runs it. */

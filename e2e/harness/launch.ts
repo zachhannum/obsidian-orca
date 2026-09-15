@@ -5,7 +5,7 @@
  */
 
 import { execFileSync, type ChildProcess } from "node:child_process";
-import { copyFile, mkdtemp, rename, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -124,6 +124,13 @@ async function orcaIn(
     path.join(staged, MODULE),
     path.join(vault, ".obsidian/plugins", PLUGIN, MODULE),
   );
+  // CDP can neither see nor click a native menu, so the copy uses Obsidian's own.
+  const config = path.join(vault, ".obsidian/app.json");
+  const had = await readFile(config, "utf8").then(
+    (text) => JSON.parse(text) as Record<string, unknown>,
+    () => ({}),
+  );
+  await writeFile(config, JSON.stringify({ ...had, nativeMenus: false }, null, 2));
   return vault;
 }
 

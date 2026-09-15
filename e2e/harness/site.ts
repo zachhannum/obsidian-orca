@@ -11,6 +11,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Locator } from "@playwright/test";
 import { Book } from "./book";
 import { Navigator } from "./navigator";
 import { PLUGIN } from "./launch";
@@ -165,6 +166,40 @@ export async function snippet(): Promise<string> {
   ].join("\n\n");
 }
 
+/** A box in CSS pixels. */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The actions a docs picture highlights, each a box from the picture's
+ * corner. The width and height are the crop's size in CSS pixels, so the
+ * picture itself is twice that.
+ */
+export interface Marks {
+  width: number;
+  height: number;
+  marks: Record<string, Box>;
+}
+
+/**
+ * The crop Playwright takes of an element: the box rounded out to whole
+ * pixels, with a thousandth of a pixel of slack on each edge.
+ */
+function enclosing(box: Box): Box {
+  const x = Math.floor(box.x + 1e-3);
+  const y = Math.floor(box.y + 1e-3);
+  return {
+    x,
+    y,
+    width: Math.ceil(box.x + box.width - 1e-3) - x,
+    height: Math.ceil(box.y + box.height - 1e-3) - y,
+  };
+}
+
 /**
  * The sample vault in its own window. The snippet is written into the
  * copy and turned on before the window opens, so the app has the site's
@@ -229,6 +264,37 @@ export class Site {
         want.value,
       { name: PAINTED_PANE, value: this.painted.get(scheme) ?? "" },
     );
+  }
+
+  /**
+   * Measures the targets against a crop. A locator crop is rounded the
+   * way its element screenshot is, so the boxes line up with the
+   * picture. A target that is not on screen is left out. Measure after
+   * anything that scrolls the crop, right before the picture is taken.
+   */
+  async marks(crop: Locator | Box, targets: Record<string, Locator>): Promise<Marks> {
+    let from: Box;
+    if ("boundingBox" in crop) {
+      const box = await crop.boundingBox();
+      if (box === null) throw new Error("the crop has no box");
+      from = enclosing(box);
+    } else {
+      from = crop;
+    }
+    const marks: Record<string, Box> = {};
+    for (const id of Object.keys(targets).sort()) {
+      const target = targets[id];
+      if (target === undefined || (await target.count()) === 0) continue;
+      const box = await target.boundingBox();
+      if (box === null) continue;
+      marks[id] = {
+        x: Math.round(box.x - from.x),
+        y: Math.round(box.y - from.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      };
+    }
+    return { width: from.width, height: from.height, marks };
   }
 
   async close(): Promise<void> {
