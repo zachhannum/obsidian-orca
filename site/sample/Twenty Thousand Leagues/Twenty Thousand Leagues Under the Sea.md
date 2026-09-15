@@ -92,20 +92,25 @@ suppress-head-on-openings: true
 - [[A note on the text]] `back-matter`
 
 ```css
-/* The box is placed from the top of the page area. At 22pt the shell
-   fills the space above the heading and ends above the first line. */
+/* Four body lines under the title keep the text clear of the shell. */
+section.chapter h1 {
+  margin-bottom: 56pt;
+}
+
+/* The box is placed from the top of the page area. At 81pt the middle
+   of the shell is on the middle of the chapter heading. */
 section.chapter h1::before {
   content: "";
   position: absolute;
-  top: 22pt;
+  top: 81pt;
   left: 0;
   right: 0;
-  height: 1.5in;
+  height: 1in;
   background-image: url("nautilus.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.5;
+  opacity: 0.25;
   z-index: -1;
 }
 ```
