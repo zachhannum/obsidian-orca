@@ -1,0 +1,49 @@
+---
+title: Design keys
+eyebrow: Reference
+description: Every key the design panel writes.
+---
+
+Each control in the design panel writes one key to the frontmatter of the book note. A key that the note does not have takes its default. In a key, `N` is a heading level, from 1 to 6.
+
+| Key | Values | Page |
+| --- | --- | --- |
+| `trim` | A width and a height, as `6in 9in` | [Page](/design/page/) |
+| `margin-inside` | A length | [Page](/design/page/) |
+| `margin-outside` | A length | [Page](/design/page/) |
+| `margin-top` | A length | [Page](/design/page/) |
+| `margin-bottom` | A length | [Page](/design/page/) |
+| `mirrored` | `true`, `false` | [Page](/design/page/) |
+| `body-font` | A font family | [Text](/design/text/) |
+| `body-font-variant` | A variant of the font | [Text](/design/text/) |
+| `body-size` | A length | [Text](/design/text/) |
+| `body-line-spacing` | A length | [Text](/design/text/) |
+| `body-align` | `justify`, `left` | [Text](/design/text/) |
+| `body-first-line-indent` | A length | [Text](/design/text/) |
+| `body-indent-after-break` | `true`, `false` | [Text](/design/text/) |
+| `body-hyphens` | `true`, `false` | [Text](/design/text/) |
+| `body-hanging-punctuation` | `true`, `false` | [Text](/design/text/) |
+| `body-orphans` | A count of lines | [Page breaks](/design/page-breaks/) |
+| `body-widows` | A count of lines | [Page breaks](/design/page-breaks/) |
+| `keep-heading-with-text` | `true`, `false` | [Page breaks](/design/page-breaks/) |
+| `heading-N-font` | A font family | [Headings](/design/headings/) |
+| `heading-N-font-variant` | A variant of the font | [Headings](/design/headings/) |
+| `heading-N-size` | A length | [Headings](/design/headings/) |
+| `heading-N-align` | `left`, `center`, `right` | [Headings](/design/headings/) |
+| `chapter-begins` | `next-page`, `right-page`, `same-page` | [Chapter openings](/design/chapter-openings/) |
+| `chapter-space-above` | A count of lines | [Chapter openings](/design/chapter-openings/) |
+| `chapter-space-below` | A count of lines | [Chapter openings](/design/chapter-openings/) |
+| `chapter-drop-cap` | `0`, `2`, `3`, `4` | [Chapter openings](/design/chapter-openings/) |
+| `scene-break-mark` | `space`, `ornament`, `word` | [Scene breaks](/design/scene-breaks/) |
+| `scene-break-ornament` | A glyph | [Scene breaks](/design/scene-breaks/) |
+| `scene-break-word` | A word | [Scene breaks](/design/scene-breaks/) |
+| `scene-break-space-above` | A count of lines | [Scene breaks](/design/scene-breaks/) |
+| `scene-break-space-below` | A count of lines | [Scene breaks](/design/scene-breaks/) |
+| `header-left-page` | `none`, `author`, `book-title`, `chapter-title` | [Heads & folios](/design/heads-and-folios/) |
+| `header-right-page` | `none`, `author`, `book-title`, `chapter-title` | [Heads & folios](/design/heads-and-folios/) |
+| `header-position` | `outside`, `center` | [Heads & folios](/design/heads-and-folios/) |
+| `page-number-position` | `top`, `bottom`, `outside` | [Heads & folios](/design/heads-and-folios/) |
+| `page-number-format` | `arabic`, `roman` | [Heads & folios](/design/heads-and-folios/) |
+| `suppress-head-on-openings` | `true`, `false` | [Heads & folios](/design/heads-and-folios/) |
+
+A length is a number and a unit: `pt`, `pc`, `in`, `mm`, `cm` or `em`. A number with no unit is in points.

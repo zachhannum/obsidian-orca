@@ -1,0 +1,46 @@
+---
+title: Scene breaks
+eyebrow: Design
+description: The mark between two scenes.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+A scene break is the space between two scenes in a chapter. The Scene breaks group in the design panel sets the mark in that space and the space around it.
+
+<Shot
+  name="panel-scene-breaks"
+  alt="The Scene breaks group of the design panel, with Mark, Glyph, Space above and Space below."
+  caption="The Scene breaks group, for the sample book."
+  marks={['scene-break-mark', 'scene-break-ornament', 'scene-break-space-above', 'scene-break-space-below']}
+  numbered
+/>
+
+## Controls
+
+| Control | Default | Key |
+| --- | --- | --- |
+| Mark | `Ornament` | `scene-break-mark` |
+| Glyph | `❧` | `scene-break-ornament` |
+| Word | none | `scene-break-word` |
+| Space above | 1 line | `scene-break-space-above` |
+| Space below | 1 line | `scene-break-space-below` |
+
+## Mark
+
+`Mark` takes one of three values:
+
+- `Space` leaves the space empty.
+- `Ornament` sets a glyph in the space. `Glyph` shows when `Mark` is `Ornament`, and offers `❧`, `⁂`, `§` and `✦`.
+- `Word` sets a word in the space. `Word` shows when `Mark` is `Word`.
+
+`Space above` and `Space below` are counts of lines of text.
+
+## In the book note
+
+Each control that you change writes one key to the frontmatter of the book note.
+
+```yaml
+scene-break-mark: ornament
+scene-break-ornament: ⁂
+```

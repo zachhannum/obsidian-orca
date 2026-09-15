@@ -1,0 +1,54 @@
+---
+title: Text
+eyebrow: Design
+description: The reading face, its size, and how it is set.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The Text group in the design panel sets the font of the text, its size and line spacing, and how each paragraph is set.
+
+<Shot
+  name="panel-text"
+  alt="The Text group of the design panel, with Font, Size, Line spacing, Setting, First-line indent and three switches."
+  caption="The Text group, for the sample book."
+  marks={['body-font', 'body-size', 'body-line-spacing', 'body-align', 'body-first-line-indent', 'body-hyphens']}
+  numbered
+/>
+
+## Controls
+
+| Control | Default | Key |
+| --- | --- | --- |
+| Font | `EB Garamond` | `body-font` |
+| Variant | The default variant of the font | `body-font-variant` |
+| Size | `11pt` | `body-size` |
+| Line spacing | `16.5pt` | `body-line-spacing` |
+| Setting | `Justified` | `body-align` |
+| First-line indent | `1.2em` | `body-first-line-indent` |
+| Hyphenate | on | `body-hyphens` |
+| Indent again after a scene break | off | `body-indent-after-break` |
+| Hanging punctuation | off | `body-hanging-punctuation` |
+
+## Font and variant
+
+`Font` sets the font family of the text. `Variant` shows only when the family has more than one variant. The default variant writes no key.
+
+## Size and spacing
+
+`Line spacing` is the distance from one baseline to the next. A number with no unit is in points. `First-line indent` in `em` scales with the size of the text.
+
+## Setting
+
+`Justified` sets each line to the full width of the text. `Ragged right` sets the lines flush left.
+
+## In the book note
+
+Each control that you change writes one key to the frontmatter of the book note.
+
+```yaml
+body-font: EB Garamond
+body-size: 10.5pt
+body-line-spacing: 14pt
+body-align: justify
+```
