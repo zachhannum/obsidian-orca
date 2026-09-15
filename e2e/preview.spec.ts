@@ -15,6 +15,9 @@ const CHAPTER = 11;
 /** The chapter that page opens, as the toolbar names it. */
 const CHAPTER_NAME = "Chapter Twelve";
 
+/** The first note the reading order lists after the title page. */
+const FIRST_NOTE = "Copyright.md";
+
 /** The sections either end of the book, as the toolbar names them. */
 const FIRST = "Title page";
 const LAST = "Acknowledgements";
@@ -65,7 +68,7 @@ test("`Open as markdown` on a chapter's page opens that chapter", async ({
   await obsidian.detach("markdown");
 });
 
-test("`Open as markdown` on generated matter, with no chapter read, opens the nearest chapter", async ({
+test("`Open as markdown` on generated matter, with no note read, opens the nearest note in the reading order", async ({
   book,
   obsidian,
 }) => {
@@ -82,7 +85,7 @@ test("`Open as markdown` on generated matter, with no chapter read, opens the ne
         return `${view?.getViewType()}:${file?.path}`;
       }),
     )
-    .toEqual(`markdown:${CHAPTER_NAME}.md`);
+    .toEqual(`markdown:${FIRST_NOTE}`);
   await obsidian.detach("markdown");
 });
 
