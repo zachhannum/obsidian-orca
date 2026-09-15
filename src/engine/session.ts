@@ -363,6 +363,28 @@ export class Session {
   }
 
   /**
+   * Every page of the book as it stands, for a surface that reports on
+   * the whole book. The pages are not kept, so the window a view paints
+   * is untouched. Nothing when an edit overtook the ask, because the
+   * render that overtook it tells its watchers.
+   */
+  async outline(): Promise<Page[] | undefined> {
+    await this.opening;
+    let count = this.pages;
+    // A book that grew since the last reply is asked for once more, at
+    // the length that reply gave.
+    for (let asked = 0; asked < 2; asked += 1) {
+      const layout = await routed(() =>
+        this.client.preview([], { first: 0, count }),
+      );
+      if (layout === null) return undefined;
+      if (layout.bookPages <= count) return layout.pages;
+      count = layout.bookPages;
+    }
+    return undefined;
+  }
+
+  /**
    * The `count` pages from `at`, counting from 0, with the pages either
    * side of them asked for alongside, so the next turn paints without a
    * round trip. A book too short for the span reads what it has rather

@@ -51,8 +51,8 @@ export function placeOf(
 
 /** The engine, as much of it as placing a run of pages takes. */
 export interface Placing {
-  sourceOf(node: number): Promise<NodeSource | null>;
-  foliosOf(nodes: number[]): Promise<(Folios | null)[]>;
+  sourceOf(node: number): Promise<NodeSource | null | undefined>;
+  foliosOf(nodes: number[]): Promise<(Folios | null | undefined)[]>;
 }
 
 /**
