@@ -20,7 +20,7 @@ import type { Model } from "@/book/model";
 import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
-import { sourceNamed } from "@/book/pages";
+import { sectionRanges, sourceNamed, type Range as Folio } from "@/book/pages";
 import { writtenByte } from "@/book/place";
 import {
   bookImages,
@@ -191,6 +191,17 @@ export class Typeset {
     if (node === undefined) return undefined;
     const [folios] = await this.session.foliosOf([node]);
     return folios?.at;
+  }
+
+  /**
+   * Every section's folio range, by its place in the reading order. The
+   * pages are read without an op, so asking changes nothing the engine
+   * holds. Nothing when an edit overtook the ask.
+   */
+  async ranges(): Promise<Map<number, Folio> | undefined> {
+    const pages = await this.session.outline();
+    if (pages === undefined) return undefined;
+    return sectionRanges(this.sections, pages, this.session);
   }
 
   /**
@@ -398,8 +409,9 @@ export class Typeset {
   }
 
   /**
-   * Whether the engine of this book stopped. A view that reads the book
-   * then sets it again rather than reads a session that is gone.
+   * Whether this book was dropped: its engine stopped, or its notes
+   * changed under it. A view that reads the book then sets it again
+   * rather than reads a session that is gone.
    */
   get dropped(): boolean {
     return this.gone;
@@ -438,6 +450,16 @@ export class Typeset {
    * that died is put back now, on the page the reader was on.
    */
   died(): void {
+    this.drop();
+    for (const painted of this.watchers) painted();
+  }
+
+  /**
+   * Drops the book after its notes changed under it, and tells the views
+   * to set it again from the notes as they now are. A view that went on
+   * reading it would open a second session on the book's engine.
+   */
+  superseded(): void {
     this.drop();
     for (const painted of this.watchers) painted();
   }
@@ -555,10 +577,23 @@ export class Composer {
     return this.books.get(path);
   }
 
-  /** Drops a book, so the next open typesets it from the notes as they are now. */
+  /**
+   * The book at this path, set. A book already open is handed back, and
+   * one that was dropped is set again, so every surface reads the book's
+   * one session.
+   */
+  async reading(path: string): Promise<Typeset> {
+    const typeset = await this.open(path);
+    return typeset.dropped ? this.open(path) : typeset;
+  }
+
+  /**
+   * Drops a book, so the next open typesets it from the notes as they
+   * are now. The views on it are told, and they open it again.
+   */
   forget(path: string): void {
     this.release(path, (book) => {
-      book.stop();
+      book.superseded();
     });
   }
 
