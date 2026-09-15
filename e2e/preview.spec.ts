@@ -6,10 +6,6 @@ const PAGES = 15;
 
 /** The book's title, which its title page prints. */
 const OPENING = "Pride and Prejudice";
-
-/** The book note the fixture book is read from. */
-const BOOK_NOTE = "Pride and Prejudice.md";
-
 /** The blocks the fixture's title page prints, from the book's properties. */
 const TITLE_PAGE = ["The Bennet Novels", OPENING, "Jane Austen", "Whitehall Press"];
 
@@ -69,7 +65,7 @@ test("`Open as markdown` on a chapter's page opens that chapter", async ({
   await obsidian.detach("markdown");
 });
 
-test("`Open as markdown` on generated matter, with no chapter read, opens the book note", async ({
+test("`Open as markdown` on generated matter, with no chapter read, opens the nearest chapter", async ({
   book,
   obsidian,
 }) => {
@@ -86,7 +82,7 @@ test("`Open as markdown` on generated matter, with no chapter read, opens the bo
         return `${view?.getViewType()}:${file?.path}`;
       }),
     )
-    .toEqual(`markdown:${BOOK_NOTE}`);
+    .toEqual(`markdown:${CHAPTER_NAME}.md`);
   await obsidian.detach("markdown");
 });
 

@@ -83,7 +83,8 @@ its editor around these files and returns a URL. The artboard list and
 - Opening a preview reveals the design panel in the right sidebar.
 - `Open as markdown` on a preview opens the note the page being read
   opens in, at the line that page opens at. A page of generated matter
-  opens the note read last. If no note was read, it opens the book
+  opens the note read last. If no note was read, it opens the nearest
+  note in the reading order. Only a book with no notes opens the book
   note.
 - If the most recent tab in the main area previews a book, a click on
   a chapter or a generated section of that book in the navigator turns
