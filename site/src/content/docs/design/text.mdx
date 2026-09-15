@@ -1,0 +1,54 @@
+---
+title: Text
+eyebrow: Design
+description: The reading face, its size, and how it is set.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The Text group in the design panel sets the font of the text, its size and line spacing, and the alignment of each paragraph.
+
+<Shot
+  name="panel-text"
+  alt="The Text group of the design panel, with Font, Size, Line spacing, Setting, First-line indent and three switches."
+  caption="The Text group, for the sample book."
+  marks={['body-font', 'body-size', 'body-line-spacing', 'body-align', 'body-first-line-indent', 'body-hyphens']}
+  numbered
+/>
+
+## Controls
+
+| Control | Default | Key |
+| --- | --- | --- |
+| Font | `EB Garamond` | `body-font` |
+| Variant | The default variant of the font | `body-font-variant` |
+| Size | `11pt` | `body-size` |
+| Line spacing | `16.5pt` | `body-line-spacing` |
+| Setting | `Justified` | `body-align` |
+| First-line indent | `1.2em` | `body-first-line-indent` |
+| Hyphenate | on | `body-hyphens` |
+| Indent again after a scene break | off | `body-indent-after-break` |
+| Hanging punctuation | off | `body-hanging-punctuation` |
+
+## Font and variant
+
+`Font` sets the font family of the text. `Variant` shows only when the family has more than one variant. The panel writes no key for the default variant.
+
+## Size and spacing
+
+The baseline is the line that the letters sit on. `Line spacing` is the distance from the baseline of one line to the baseline of the next. A number with no unit is in points. If `First-line indent` is in `em`, the indent changes with the size of the text.
+
+## Setting
+
+`Justified` makes each line as wide as the text. `Ragged right` aligns each line on the left edge.
+
+## In the book note
+
+Each control that you change writes one key to the frontmatter of the book note.
+
+```yaml
+body-font: EB Garamond
+body-size: 10.5pt
+body-line-spacing: 14pt
+body-align: justify
+```

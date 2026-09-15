@@ -1,0 +1,50 @@
+---
+title: Heads & folios
+eyebrow: Design
+description: Running heads and page numbers.
+---
+
+import Shot from '../../../components/Shot.astro';
+import Page from '../../../components/Page.astro';
+
+A running head is the line at the top of a page. A folio is the page number. The Heads & folios group in the design panel sets both.
+
+<Shot
+  name="panel-heads-and-folios"
+  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format and a switch."
+  caption="The Heads & folios group, for the sample book."
+  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'suppress-head-on-openings']}
+  numbered
+/>
+
+## Controls
+
+| Control | Default | Key |
+| --- | --- | --- |
+| Left-page header | `Nothing` | `header-left-page` |
+| Right-page header | `Nothing` | `header-right-page` |
+| Header position | `Outside` | `header-position` |
+| Page number | `Bottom` | `page-number-position` |
+| Number format | `1, 2, 3` | `page-number-format` |
+| Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+
+## Running heads
+
+`Left-page header` and `Right-page header` each take `Nothing`, `Author`, `Book title` or `Chapter title`. `Header position` puts the running head at the outside edge of the page or in the center.
+
+<Page n={12} alt="A left page of the sample book, with the author's name at the top and the page number at the bottom." caption="A left page in the sample book, with the author as its running head." />
+
+## Page numbers
+
+`Page number` puts the folio at the top, at the bottom, or at the outside edge. `Number format` chooses arabic numerals or lowercase roman numerals for the folio.
+
+An opening is the first page of a chapter. When `Hide the running head and page number on openings` is on, an opening has no running head and no folio.
+
+## In the book note
+
+Each control that you change writes one key to the frontmatter of the book note.
+
+```yaml
+header-left-page: author
+header-right-page: chapter-title
+```

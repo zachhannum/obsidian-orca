@@ -81,6 +81,7 @@ export default defineConfig({
             'design/chapter-openings',
             'design/scene-breaks',
             'design/heads-and-folios',
+            'design/page-breaks',
           ],
         },
         { label: 'Export', items: ['export/export-to-pdf'] },

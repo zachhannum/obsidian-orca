@@ -53,6 +53,8 @@ export class Controls {
   readonly empty: Locator;
   /** The panel's groups. Each one carries its name. */
   readonly groups: Locator;
+  /** The strip that picks the heading level the Headings group edits. */
+  readonly levels: Locator;
   /** The closed field, which shows the font the book is set in. */
   readonly font: Locator;
   /** The filter, which narrows the list rather than naming a font. */
@@ -109,6 +111,7 @@ export class Controls {
     this.panel = root.getByTestId("orca-panel");
     this.empty = root.getByTestId("orca-panel-empty");
     this.groups = root.getByTestId("orca-panel-group");
+    this.levels = root.getByTestId("orca-panel-heading-level");
     this.font = root.getByTestId("orca-panel-font");
     this.filter = root.getByTestId("orca-panel-filter");
     this.rows = root.getByTestId("orca-panel-rows");

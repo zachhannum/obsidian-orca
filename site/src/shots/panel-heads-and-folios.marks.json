@@ -1,0 +1,66 @@
+{
+  "width": 252,
+  "height": 408,
+  "marks": {
+    "header-left-page": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "header-position": {
+      "x": 0,
+      "y": 193,
+      "width": 220,
+      "height": 30
+    },
+    "header-right-page": {
+      "x": 0,
+      "y": 130,
+      "width": 220,
+      "height": 30
+    },
+    "page-number-format": {
+      "x": 0,
+      "y": 318,
+      "width": 220,
+      "height": 30
+    },
+    "page-number-position": {
+      "x": 0,
+      "y": 256,
+      "width": 220,
+      "height": 30
+    },
+    "reset-header-left-page": {
+      "x": 228,
+      "y": 70,
+      "width": 24,
+      "height": 24
+    },
+    "reset-header-right-page": {
+      "x": 228,
+      "y": 133,
+      "width": 24,
+      "height": 24
+    },
+    "reset-page-number-position": {
+      "x": 228,
+      "y": 259,
+      "width": 24,
+      "height": 24
+    },
+    "reset-suppress-head-on-openings": {
+      "x": 228,
+      "y": 364,
+      "width": 24,
+      "height": 24
+    },
+    "suppress-head-on-openings": {
+      "x": 0,
+      "y": 367,
+      "width": 34,
+      "height": 19
+    }
+  }
+}

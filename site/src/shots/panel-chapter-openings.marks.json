@@ -1,0 +1,48 @@
+{
+  "width": 252,
+  "height": 302,
+  "marks": {
+    "chapter-begins": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "chapter-drop-cap": {
+      "x": 0,
+      "y": 256,
+      "width": 220,
+      "height": 30
+    },
+    "chapter-space-above": {
+      "x": 0,
+      "y": 130,
+      "width": 60,
+      "height": 30
+    },
+    "chapter-space-below": {
+      "x": 0,
+      "y": 193,
+      "width": 60,
+      "height": 30
+    },
+    "reset-chapter-begins": {
+      "x": 228,
+      "y": 70,
+      "width": 24,
+      "height": 24
+    },
+    "reset-chapter-drop-cap": {
+      "x": 228,
+      "y": 259,
+      "width": 24,
+      "height": 24
+    },
+    "reset-chapter-space-above": {
+      "x": 228,
+      "y": 133,
+      "width": 24,
+      "height": 24
+    }
+  }
+}
