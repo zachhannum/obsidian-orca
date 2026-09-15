@@ -190,7 +190,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     this.registerView(
       BOOK_VIEW,
       (leaf) =>
-        new BookView(leaf, this.edits, engines, {
+        new BookView(leaf, this.edits, composer, {
           asMarkdown: (view) => {
             if (view.file !== null) {
               this.asMarkdown.set(view.leaf, view.file.path);
@@ -1209,10 +1209,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
    *
    * The pane answers with the book it is reading, rather than the
    * composer answering by path. A note the book reads, written from
-   * outside Obsidian, takes the book off the composer so the next open
-   * sets it from the notes as they now are, and the pane goes on
-   * reading the one it has. That book is the one on screen, and the one
-   * a pick has to reach.
+   * outside Obsidian, takes the book off the composer, and the pane sets
+   * it again from the notes as they now are. Until that lands, the book
+   * the pane holds is the one on screen, and the one a pick has to
+   * reach.
    */
   private async designed(): Promise<Typeset | undefined> {
     const { workspace } = this.app;

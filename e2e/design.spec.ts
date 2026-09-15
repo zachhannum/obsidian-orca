@@ -152,9 +152,8 @@ test("a book note written while a pane reads it leaves the panel designing that 
   const font = (await panel.reading()).trim();
 
   // A note written from outside Obsidian takes the book off the
-  // composer, so the next open sets it from the notes as they now are.
-  // The pane goes on reading the book it has, and that is the one the
-  // panel designs.
+  // composer, and the pane sets it again from the notes as they now
+  // are. The book the pane reads is the one the panel designs.
   await vault.modify(BOOK, await vault.read(BOOK));
   await panel.focus();
 
