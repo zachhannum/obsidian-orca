@@ -26,6 +26,9 @@ const BOOK = "Pride and Prejudice.md";
 /** The fixture chapter as the toolbar names it. Its heading is a level 1 heading. */
 const CHAPTER_NAME = "Chapter Twelve";
 
+/** A folio, or a span of them. */
+const FOLIO = /^\d+(–\d+)?$/;
+
 /** The note that chapter is read from. */
 const CHAPTER_NOTE = "Chapter Twelve.md";
 
@@ -46,7 +49,7 @@ test("the picker offers the fonts the scan found, and typing narrows them", asyn
   panel,
 }) => {
   await book.open();
-  const painted = await book.painted();
+  const painted = await book.settled(BOOK);
   await panel.open();
 
   expect(await panel.reading()).toContain(CARRIED);
@@ -397,6 +400,7 @@ test("the body and a heading set in two variants of one family in the same book"
 
 test("the preview and the PDF set the picked variant, and the preview draws the face the PDF embeds", async ({
   book,
+  note,
   panel,
   vault,
 }) => {
@@ -408,6 +412,10 @@ test("the preview and the PDF set the picked variant, and the preview draws the 
 
   await panel.chooseFont("body-font", VARIED);
   await panel.chooseVariant("body-font", CONDENSED);
+  // The book note page reads its folios off the same session, and the
+  // faces the design registers stay registered.
+  await note.beside(BOOK);
+  await expect(note.pages(CHAPTER_NAME)).toHaveText(FOLIO);
   await book.choose(CHAPTER_NAME);
 
   // The faces the PDF is held to are the ones the passing read saw.
@@ -434,6 +442,7 @@ test("the preview and the PDF set the picked variant, and the preview draws the 
   }
   expect(embedded).not.toMatch(/Junicode-(Regular|Bold|Italic|Exp)/);
 
+  await note.close();
   await written(vault, own);
 });
 

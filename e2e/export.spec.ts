@@ -21,6 +21,9 @@ const BOOK_WORDS = 736;
  */
 const PRINTED_WORDS = 160;
 
+/** A folio, or a span of them. */
+const FOLIO = /^\d+(–\d+)?$/;
+
 /** The note that embeds the fixture's one image. */
 const EMBEDS = "Acknowledgements.md";
 
@@ -126,6 +129,7 @@ test("an embed with no file behind it stands as an error, and export will not wr
 test("an image the book's CSS names is painted behind the pages, and the PDF carries it", async ({
   book,
   exporting,
+  note,
   panel,
   vault,
 }) => {
@@ -140,6 +144,10 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
   await panel.typeCss(`\n${BACKGROUND}`);
   await expect.poll(async () => book.painted()).toBeGreaterThan(before);
   await book.settled(BOOK);
+  // The book note page reads its folios off the same session, and the
+  // pages and the PDF still carry the image the book's CSS names.
+  await note.beside(BOOK);
+  await expect(note.pages("Copyright")).toHaveText(FOLIO);
 
   // The title page embeds nothing, so the image on it is the background.
   await book.type("1");
@@ -169,6 +177,7 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
   }
 
   await exporting.close();
+  await note.close();
   await vault.restore();
   await book.settled(BOOK);
 });

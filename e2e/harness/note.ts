@@ -128,6 +128,20 @@ export class Note {
     await this.obsidian.open(path);
   }
 
+  /** Opens a note in a pane split beside the active one, which stays open. */
+  async beside(path: string): Promise<void> {
+    const { page } = this.obsidian;
+    await page.waitForFunction(
+      (at) => window.app.metadataCache.getCache(at) !== null,
+      path,
+    );
+    await page.evaluate(async (at) => {
+      const file = window.app.vault.getFileByPath(at);
+      if (file === null) throw new Error(`no note at ${at}`);
+      await window.app.workspace.getLeaf("split").openFile(file);
+    }, path);
+  }
+
   /** The field one property orca owns is edited in. */
   metadata(key: string): Locator {
     return this.page.getByTestId(`orca-metadata-${key}`);
