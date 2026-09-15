@@ -1,12 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PREVIEW, type Book } from "./harness/book";
 import { Export } from "./harness/export";
 import { Inspect } from "./harness/inspect";
 import { DENSITY as DISPLAY, SAMPLE } from "./harness/launch";
-import type { Scheme } from "./harness/obsidian";
+import { Obsidian, type Scheme } from "./harness/obsidian";
 import type { Site } from "./harness/site";
 import { expect, test } from "./harness/test";
 
@@ -102,12 +102,15 @@ const REVEAL = "file-explorer:reveal-active-file";
 /** The editor's own view type, which a chapter is written in. */
 const EDITOR = "markdown";
 
-/** The view orca draws a book note in, which the way back is an action on. */
-const NOTE = "orca-book";
-
 /** The actions in a note's header that hand the leaf between the two views. */
 const OPEN_PREVIEW = "Open preview";
 const AS_MARKDOWN = "Open as markdown";
+
+/** The preview's own action that opens the export dialog. */
+const EXPORT = "Export to PDF";
+
+/** The file the export writes beside the book note, named from its title. */
+const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
 
 /** The pages the flip-through turns, counted from the spread it opens on. */
 const FLIP = 12;
@@ -305,10 +308,11 @@ test("the vault picture is the file tree and the book note's own Markdown", asyn
   await expect(site.obsidian.view(EXPLORER)).toContainText(FOLDER);
   // The book note is opened as Markdown so the picture is of the text
   // on disk. Opening it also tells the tree which folder to unfold.
-  await site.obsidian.open(BOOK);
-  // Both the book note and the preview offer the way to the Markdown,
-  // so the click is on the book note's own header.
-  await site.obsidian.actionIn(NOTE, AS_MARKDOWN).click();
+  // The note opens from its file menu straight into Obsidian's editor,
+  // never as the book note's own page. That page sets the book again for
+  // its folios, and an export after it leaves out the book's CSS.
+  await site.obsidian.fileMenu(BOOK, AS_MARKDOWN);
+  await expect(site.obsidian.view(EDITOR)).toContainText("orca-book: 1");
   await site.obsidian.command(REVEAL);
 
   // The note opens on its properties, and the reading order is what the
@@ -418,9 +422,20 @@ test("the flip-through's pages come from the book's own PDF", async ({
   await settled(site.book);
   const first = await site.book.reading();
 
-  // The preview and the export come from one session, so the bytes
-  // here are the pages the pictures above were taken of.
-  const pdf = await site.pdf(BOOK);
+  // The pages are the file an author gets from the preview's own Export
+  // button, written beside the book note.
+  const exporting = new Export(site.obsidian);
+  await site.obsidian.actionIn(PREVIEW, EXPORT).click();
+  await exporting.reaches("ready");
+  await expect(exporting.destination).toHaveValue(EXPORTED);
+  await exporting.write.click();
+  await exporting.reaches("written");
+  await exporting.close();
+
+  // The checked-in sample vault has no PDF, so the export comes back out.
+  const exported = path.join(Obsidian.sample(), EXPORTED);
+  const pdf = await readFile(exported);
+  await rm(exported);
   expect(pdf.subarray(0, 5).toString("latin1")).toEqual("%PDF-");
 
   const where = await mkdtemp(path.join(tmpdir(), "orca-shots-"));

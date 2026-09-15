@@ -207,6 +207,7 @@ function leaves(count: number): Page[] {
         fontId: 0,
         size: 18,
         text: `Page ${String(at + 1)}`,
+        pseudoElement: null,
         source: "",
         sourceMap: [],
         origin: null,

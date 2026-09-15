@@ -39,17 +39,6 @@ const SNIPPET = "orca-site";
 /** The property the snippet sets, which says it has been loaded. */
 const MARK = "--orca-site";
 
-/**
- * The book orca is holding, as the plugin holds it. Orca has no export
- * command yet, so the spec takes the bytes off the session the preview
- * is already reading, which is the one session the invariant names.
- */
-interface Holding {
-  composer?: {
-    opened(at: string): Promise<{ session: { pdf(): Promise<Uint8Array> } }> | undefined;
-  };
-}
-
 /** The block each scheme's tokens are written in. */
 const BLOCKS: Record<Scheme, string> = {
   dark: ":root",
@@ -240,29 +229,6 @@ export class Site {
         want.value,
       { name: PAINTED_PANE, value: this.painted.get(scheme) ?? "" },
     );
-  }
-
-  /**
-   * The book at this path as a PDF, exported off the session the
-   * preview is reading. The bytes cross as base64: a page evaluate
-   * answers in JSON, and an array of numbers is a byte an entry.
-   */
-  async pdf(at: string): Promise<Buffer> {
-    const encoded = await this.obsidian.page.evaluate(
-      async ({ id, book }) => {
-        const orca = window.app.plugins.plugins[id] as Holding | undefined;
-        const typeset = await orca?.composer?.opened(book);
-        if (typeset === undefined) throw new Error(`no book is open at ${book}`);
-        const bytes = await typeset.session.pdf();
-        let said = "";
-        for (let at = 0; at < bytes.length; at += 0x8000) {
-          said += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
-        }
-        return btoa(said);
-      },
-      { id: PLUGIN, book: at },
-    );
-    return Buffer.from(encoded, "base64");
   }
 
   async close(): Promise<void> {

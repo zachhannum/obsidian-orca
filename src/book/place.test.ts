@@ -21,6 +21,7 @@ function run(node: number | undefined): TextItem {
     source: "",
     sourceMap: [],
     origin: node === undefined ? null : { node, range: [0, 5] },
+    pseudoElement: null,
     features: { smallCaps: false },
     color: "#000000",
     glyphs: [],
