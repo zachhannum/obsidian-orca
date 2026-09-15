@@ -133,9 +133,16 @@ export class Inspect {
   /** A point just inside the start of a line, on the screen. */
   private async startOf(line: Locator): Promise<{ x: number; y: number }> {
     // A bounding box waits for its element with no bound of its own.
-    await expect(line.first()).toBeVisible();
-    const box = await line.first().boundingBox();
-    if (box === null) throw new Error("the line is not painted");
+    // A repaint can put a new line in the place of the one found visible,
+    // so the box is read again until a painted line answers.
+    const found: { box?: { x: number; y: number; width: number; height: number } } = {};
+    await expect(async () => {
+      const read = await line.first().boundingBox();
+      expect(read).not.toBeNull();
+      if (read !== null) found.box = read;
+    }).toPass();
+    const box = found.box;
+    if (box === undefined) throw new Error("the line is not painted");
     return { x: box.x + Math.min(12, box.width / 2), y: box.y + box.height / 2 };
   }
 

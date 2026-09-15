@@ -6,7 +6,6 @@ const PAGES = 15;
 
 /** The book's title, which its title page prints. */
 const OPENING = "Pride and Prejudice";
-
 /** The blocks the fixture's title page prints, from the book's properties. */
 const TITLE_PAGE = ["The Bennet Novels", OPENING, "Jane Austen", "Whitehall Press"];
 
@@ -15,6 +14,9 @@ const CHAPTER = 11;
 
 /** The chapter that page opens, as the toolbar names it. */
 const CHAPTER_NAME = "Chapter Twelve";
+
+/** The first note the reading order lists after the title page. */
+const FIRST_NOTE = "Copyright.md";
 
 /** The sections either end of the book, as the toolbar names them. */
 const FIRST = "Title page";
@@ -30,7 +32,7 @@ const LATE = BACK - 2;
 const LAST_NOTE = "Acknowledgements.md";
 const DEVICE = "![[device.png]]";
 
-test("the ribbon sets the book and paints its first page", async ({ book }) => {
+test("`Open a book` sets the book and paints its first page", async ({ book }) => {
   await book.open();
 
   expect(await book.painted()).toBeGreaterThan(0);
@@ -41,6 +43,50 @@ test("the ribbon sets the book and paints its first page", async ({ book }) => {
   for (const [stage, runs] of Object.entries(stages)) {
     expect(runs, stage).toBeGreaterThan(0);
   }
+});
+
+test("`Open as markdown` on a chapter's page opens that chapter", async ({
+  book,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.chapter.selectOption({ label: CHAPTER_NAME });
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+
+  await book.asMarkdown.click();
+
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate(() => {
+        const view = window.app.workspace.getMostRecentLeaf()?.view;
+        const file = (view as { file?: { path: string } | null } | undefined)?.file;
+        return `${view?.getViewType()}:${file?.path}`;
+      }),
+    )
+    .toEqual(`markdown:${CHAPTER_NAME}.md`);
+  await obsidian.detach("markdown");
+});
+
+test("`Open as markdown` on generated matter, with no note read, opens the nearest note in the reading order", async ({
+  book,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+
+  await book.asMarkdown.click();
+
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate(() => {
+        const view = window.app.workspace.getMostRecentLeaf()?.view;
+        const file = (view as { file?: { path: string } | null } | undefined)?.file;
+        return `${view?.getViewType()}:${file?.path}`;
+      }),
+    )
+    .toEqual(`markdown:${FIRST_NOTE}`);
+  await obsidian.detach("markdown");
 });
 
 test("the title page prints the book's properties", async ({ book }) => {

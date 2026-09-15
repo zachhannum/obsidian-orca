@@ -21,7 +21,7 @@ interface Commands {
   executeCommandById(id: string): boolean;
   commands: Record<
     string,
-    { checkCallback?: (checking: boolean) => boolean } | undefined
+    { name: string; checkCallback?: (checking: boolean) => boolean } | undefined
   >;
 }
 

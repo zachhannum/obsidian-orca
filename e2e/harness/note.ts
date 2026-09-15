@@ -17,7 +17,10 @@ export const MARKDOWN = "markdown";
 
 /** Labels of the actions that switch a note between the editor and the book view. */
 export const AS_MARKDOWN = "Open as markdown";
-export const AS_BOOK = "Open as book";
+export const AS_BOOK = "Open as book page";
+
+/** The label of the action that opens a book's preview, on the book note's page and on its navigator row. */
+export const OPEN_PREVIEW = "Open preview";
 
 /** The view method every edit to the book goes through. */
 interface Editing {
@@ -39,8 +42,8 @@ export class Note {
   readonly order: Locator;
   /** The design, read-only. The panel in the sidebar edits it. */
   readonly design: Locator;
-  /** The button that opens or reveals the design panel in the right sidebar. */
-  readonly openDesign: Locator;
+  /** The header action that opens the preview of the book. */
+  readonly preview: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.page = obsidian.view(BOOK).getByTestId("orca-book");
@@ -50,7 +53,7 @@ export class Note {
     this.line = this.page.getByTestId("orca-book-line");
     this.order = this.page.getByTestId("orca-order");
     this.design = this.page.getByTestId("orca-book-design");
-    this.openDesign = this.page.getByTestId("orca-book-open-design");
+    this.preview = obsidian.actionIn(BOOK, OPEN_PREVIEW);
   }
 
   /** One line of the design, by its label. */

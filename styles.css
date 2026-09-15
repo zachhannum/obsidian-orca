@@ -1767,14 +1767,6 @@ button.orca-panel-glyph.is-on.is-default {
   font-size: var(--font-ui-medium);
 }
 
-button.orca-book-open-design {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-  align-self: flex-start;
-  margin-top: var(--size-4-3);
-}
-
 button.orca-book-export {
   display: flex;
   align-items: center;

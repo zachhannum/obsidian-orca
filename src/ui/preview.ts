@@ -21,6 +21,7 @@ import { isGenerated } from "@/book/plan";
 import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { copiedText, type SelectionLine } from "@/ui/copy";
+import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
   nextPage,
@@ -273,7 +274,7 @@ export class PreviewView extends ItemView {
   }
 
   override getIcon(): string {
-    return "book";
+    return PREVIEW_ICON;
   }
 
   override getState(): Record<string, unknown> {
@@ -524,6 +525,16 @@ export class PreviewView extends ItemView {
    * already in the answer.
    */
   async turnToChapter(chapter: Chapter): Promise<void> {
+    await this.turnToPlace(chapter);
+  }
+
+  /** Turns to where a section opens, by its place in the reading order. A section the book did not set turns nothing. */
+  async turnToSection(at: number): Promise<void> {
+    const chapter = this.turns.find((turn) => turn.at === at);
+    if (chapter !== undefined) await this.turnToPlace(chapter);
+  }
+
+  private async turnToPlace(chapter: Chapter): Promise<void> {
     const at = await this.opensSection(chapter.at);
     if (at === undefined) return;
     // The chapter is kept from the turn, so a spread or a screenful
@@ -621,25 +632,39 @@ export class PreviewView extends ItemView {
     this.watching = watching;
   }
 
-  /**
-   * Puts the way back to the manuscript in the view's header, for a
-   * preview the author toggled into from a note. One opened from the
-   * ribbon has no manuscript to go back to.
-   */
+  /** Puts the way to markdown in the view's header. */
   private attach(): void {
-    const note = this.state.note;
-    if (note === undefined) {
-      this.edit?.remove();
-      this.edit = undefined;
-      return;
-    }
     this.edit ??= this.addAction("file-text", "Open as markdown", () => {
-      const at = this.state.note;
-      if (at === undefined) return;
-      this.setInspecting(INSPECT_OFF);
-      this.handoff.asMarkdown(this, at);
+      void this.toMarkdown();
     });
     this.ordersActions();
+  }
+
+  /**
+   * Hands the pane to the note the page being read opens in. A page orca
+   * wrote alone goes to the note read last, and a book read no further
+   * than its generated matter goes to the nearest note in the reading
+   * order. Only a book that lists no note goes to the book note.
+   */
+  private async toMarkdown(): Promise<void> {
+    const opens = await this.opensIn().catch(() => undefined);
+    const at = opens?.note ?? this.state.note ?? this.nearestNote() ?? this.state.book;
+    if (at === undefined) return;
+    this.setInspecting(INSPECT_OFF);
+    this.handoff.asMarkdown(this, at);
+  }
+
+  /** The first note at or after the section on screen, or else the last one before it. */
+  private nearestNote(): string | undefined {
+    const sections = this.composed?.sections ?? [];
+    const from = this.named ?? 0;
+    let before: string | undefined;
+    for (const [at, section] of sections.entries()) {
+      if (section.kind !== "note") continue;
+      if (at >= from) return section.path;
+      before = section.path;
+    }
+    return before;
   }
 
   /** Puts the inspect action left of the way back to the manuscript, as the artboard draws them. */

@@ -106,7 +106,7 @@ const EDITOR = "markdown";
 const NOTE = "orca-book";
 
 /** The actions in a note's header that hand the leaf between the two views. */
-const AS_BOOK = "Open as book";
+const OPEN_PREVIEW = "Open preview";
 const AS_MARKDOWN = "Open as markdown";
 
 /** The pages the flip-through turns, counted from the spread it opens on. */
@@ -367,7 +367,7 @@ test("the swap pictures are one window, written and then set", async ({
     await site.obsidian.open(WRITING);
     await expect(editor).toContainText(CHAPTER);
     await expect(editor).toHaveScreenshot(`write-${scheme}.png`);
-    await site.obsidian.actionIn(EDITOR, AS_BOOK).click();
+    await site.obsidian.actionIn(EDITOR, OPEN_PREVIEW).click();
   }
 
   await site.obsidian.moving();

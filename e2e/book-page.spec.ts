@@ -1,5 +1,7 @@
+import { PREVIEW } from "./harness/book";
 import { expect, test } from "./harness/test";
 import { NAVIGATOR } from "./harness/navigator";
+import { BOOK as BOOK_VIEW } from "./harness/note";
 
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
@@ -10,6 +12,32 @@ const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
 const BOOK_WORDS = 736;
+
+test("the page's `Open preview` opens its book, under an icon of the preview's own", async ({
+  book,
+  note,
+  obsidian,
+}) => {
+  await note.open(BOOK);
+  await note.painted();
+
+  // Obsidian draws nothing for an icon name it does not carry.
+  await expect(note.preview.locator("svg")).toHaveCount(1);
+  await note.preview.click();
+  expect(await book.painted()).toBeGreaterThan(0);
+  await expect(book.surface).toHaveAttribute("data-first", "1");
+
+  const icons = await obsidian.page.evaluate(
+    (types) =>
+      types.map(
+        (type) => window.app.workspace.getLeavesOfType(type)[0]?.view.getIcon(),
+      ),
+    [BOOK_VIEW, PREVIEW],
+  );
+  expect(icons[0]).toBeDefined();
+  expect(icons[1]).toBeDefined();
+  expect(icons[1]).not.toEqual(icons[0]);
+});
 
 test("a metadata edit on the page is written to the note once, on settle", async ({
   note,
