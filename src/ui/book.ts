@@ -67,6 +67,8 @@ export class BookView extends FileView {
   private reading: Promise<void> | undefined;
   /** Whether a render landed while a read was out, so one more read follows it. */
   private again = false;
+  /** Counts the times the page stopped following, so a read out at the time is dropped. */
+  private unfollowed = 0;
   /** Drops this page's hold on its book, so the book's engine can stop. */
   private holding: (() => void) | undefined;
 
@@ -358,13 +360,18 @@ export class BookView extends FileView {
    */
   private async ranges(): Promise<void> {
     const file = this.file;
-    if (file === null || this.shown === undefined) return;
+    // A page with no hold is closed or between notes, and a closed page
+    // that opened the book would open it ahead of the preview.
+    if (file === null || this.shown === undefined || this.holding === undefined) return;
+    const at = this.unfollowed;
     try {
       const typeset = await this.composer.reading(file.path);
-      if (this.file !== file) return;
+      // A closed page that watched the book would open it again each
+      // time the book is dropped.
+      if (this.file !== file || at !== this.unfollowed) return;
       this.watching(typeset);
       const folios = await typeset.ranges();
-      if (this.file !== file || folios === undefined) return;
+      if (this.file !== file || at !== this.unfollowed || folios === undefined) return;
       this.folios = folios;
       this.repaint();
     } catch (cause) {
@@ -383,6 +390,7 @@ export class BookView extends FileView {
   }
 
   private unfollow(): void {
+    this.unfollowed += 1;
     this.unwatch?.();
     this.unwatch = undefined;
     this.following = undefined;
