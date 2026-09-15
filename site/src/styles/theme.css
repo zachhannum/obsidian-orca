@@ -266,6 +266,80 @@ site-search button[data-open-modal] > kbd kbd {
   color: var(--faint);
 }
 
+/* A picture comes in both schemes, and the root shows one. */
+.on-light {
+  display: none;
+}
+:root[data-theme='light'] .on-dark {
+  display: none;
+}
+:root[data-theme='light'] .on-light {
+  display: block;
+}
+
+.shot-desk {
+  padding: 26px;
+  background: var(--desk);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex;
+  justify-content: center;
+}
+.shot-frame {
+  position: relative;
+  width: 100%;
+}
+.shot-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+.shot-page img {
+  border-radius: 0;
+  box-shadow: var(--o-page-shadow);
+}
+/* The marks are placed in percentages of the picture, so they scale with it. */
+.shot-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.shot-mark {
+  position: absolute;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.shot-number {
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--button-text);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+/* A step's number is the number on its mark. */
+.sl-markdown-content ol > li::marker {
+  color: var(--accent);
+  font-family: var(--ui);
+  font-weight: 600;
+}
+@media (max-width: 30rem) {
+  .shot-desk {
+    padding: 16px;
+  }
+}
+
 /* The right sidebar: what is on this page. Starlight gives the reading
    column the space between the two rails; the artboards give the rails a
    width and the column the rest. */

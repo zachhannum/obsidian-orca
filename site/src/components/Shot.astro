@@ -1,0 +1,93 @@
+---
+/** A picture the screenshot spec took of Obsidian, in both schemes, with
+    rings over the parts a page names. A missing picture or mark stops the
+    build. */
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The marks the spec measured, in CSS pixels of a picture `width` wide. */
+interface Sidecar {
+  width: number;
+  height: number;
+  marks: Record<string, Box>;
+}
+
+interface Props {
+  name: string;
+  alt: string;
+  caption?: string;
+  /** Mark ids, in the order the page's steps number them. */
+  marks?: string[];
+  numbered?: boolean;
+}
+
+const { name, alt, caption, marks = [], numbered = false } = Astro.props;
+
+/** The device pixels the spec takes each picture at for one CSS pixel. */
+const DENSITY = 2;
+
+const pictures = import.meta.glob<{ default: ImageMetadata }>('../shots/*.png', { eager: true });
+const sidecars = import.meta.glob<{ default: Sidecar }>('../shots/*.marks.json', { eager: true });
+
+const picture = (scheme: 'dark' | 'light'): ImageMetadata => {
+  const found = pictures[`../shots/${name}-${scheme}.png`];
+  if (found === undefined) throw new Error(`no picture ${name}-${scheme}.png in site/src/shots`);
+  return found.default;
+};
+const dark = picture('dark');
+const light = picture('light');
+
+const sidecar = marks.length === 0 ? undefined : sidecars[`../shots/${name}.marks.json`]?.default;
+if (marks.length > 0 && sidecar === undefined) {
+  throw new Error(`no ${name}.marks.json in site/src/shots, and the page asks for marks`);
+}
+
+const percent = (part: number, whole: number): string => `${String((part / whole) * 100)}%`;
+const boxes = marks.map((id) => {
+  const box = sidecar?.marks[id];
+  if (sidecar === undefined || box === undefined) throw new Error(`${name} has no mark ${id}`);
+  return {
+    left: percent(box.x, sidecar.width),
+    top: percent(box.y, sidecar.height),
+    width: percent(box.width, sidecar.width),
+    height: percent(box.height, sidecar.height),
+  };
+});
+
+const width = Math.round(dark.width / DENSITY);
+const height = Math.round(dark.height / DENSITY);
+const [darkSrc, lightSrc] = await Promise.all(
+  [dark, light].map(async (src) => (await getImage({ src, format: 'webp' })).src),
+);
+---
+
+<figure class="shot-figure not-content">
+  <div class="shot-desk">
+    <div class="shot-frame" style={`max-width: ${String(width)}px; aspect-ratio: ${String(width)} / ${String(height)}`}>
+      <img class="on-dark" src={darkSrc} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
+      <img class="on-light" src={lightSrc} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
+      {
+        boxes.length > 0 && (
+          <div class="shot-marks" aria-hidden="true">
+            {boxes.map((box, at) => (
+              <span
+                class="shot-mark"
+                style={`left: ${box.left}; top: ${box.top}; width: ${box.width}; height: ${box.height}`}
+              >
+                {numbered && <span class="shot-number">{at + 1}</span>}
+              </span>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
