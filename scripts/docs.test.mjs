@@ -231,6 +231,20 @@ test("a plate from the 1871 edition takes the page facing Chapter I", async () =
   assert.match(copyright, /public domain/);
 });
 
+test("each chapter heading sits over a nautilus shell at half strength", async () => {
+  const css = /\n```css\n([\s\S]*?)\n```\n/.exec(await read(SAMPLE_BOOK))?.[1];
+  assert.ok(css, "the book note has no css fence");
+  const rule = /section\.chapter h1::before \{([^}]*)\}/.exec(css)?.[1];
+  assert.ok(rule, "no rule draws behind the chapter heading");
+  assert.match(rule, /background-image: url\("nautilus\.png"\)/);
+  assert.match(rule, /opacity: 0\.5/);
+  assert.match(rule, /z-index: -1/);
+
+  // The engine reads no SVG, so the shell ships as a PNG.
+  const png = await readFile(path.join(root, "site/sample/images/nautilus.png"));
+  assert.equal(png.subarray(1, 4).toString("latin1"), "PNG");
+});
+
 test("the book note carries the design the landing page shows", async () => {
   const design = properties(await read(SAMPLE_BOOK));
 

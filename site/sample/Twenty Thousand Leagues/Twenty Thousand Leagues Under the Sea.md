@@ -90,3 +90,22 @@ suppress-head-on-openings: true
 # Back matter
 
 - [[A note on the text]] `back-matter`
+
+```css
+/* The box is placed from the top of the page area, so 63pt puts the
+   middle of the shell on the middle of the chapter heading. */
+section.chapter h1::before {
+  content: "";
+  position: absolute;
+  top: 63pt;
+  left: 0;
+  right: 0;
+  height: 1.5in;
+  background-image: url("nautilus.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.5;
+  z-index: -1;
+}
+```
