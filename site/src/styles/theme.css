@@ -285,12 +285,16 @@ site-search button[data-open-modal] > kbd kbd {
   display: flex;
   justify-content: center;
 }
+/* Both pictures sit in one cell, so the frame the marks are placed in is
+   one picture tall. The img rule sets no display, which the scheme rules
+   above own. */
 .shot-frame {
   position: relative;
+  display: grid;
   width: 100%;
 }
 .shot-frame img {
-  display: block;
+  grid-area: 1 / 1;
   width: 100%;
   height: auto;
   border-radius: 6px;
