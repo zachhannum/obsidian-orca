@@ -321,8 +321,21 @@ export class Book {
     }, PREVIEW);
   }
 
-  /** Opens the book with `Open a book`. */
+  /**
+   * Opens the book with `Open a book`. The command finds a book by its
+   * properties, and a window just launched has not parsed them yet, so
+   * the wait here is on a book note reaching the metadata cache.
+   */
   async open(): Promise<void> {
+    await this.obsidian.page.waitForFunction(() =>
+      window.app.vault
+        .getMarkdownFiles()
+        .some(
+          (note) =>
+            window.app.metadataCache.getFileCache(note)?.frontmatter?.["orca-book"] !==
+            undefined,
+        ),
+    );
     await this.obsidian.command(OPEN_BOOK);
   }
 

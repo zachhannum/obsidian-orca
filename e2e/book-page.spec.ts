@@ -21,6 +21,8 @@ test("the page's `Open preview` opens its book, under an icon of the preview's o
   await note.open(BOOK);
   await note.painted();
 
+  // Obsidian draws nothing for an icon name it does not carry.
+  await expect(note.preview.locator("svg")).toHaveCount(1);
   await note.preview.click();
   expect(await book.painted()).toBeGreaterThan(0);
   await expect(book.surface).toHaveAttribute("data-first", "1");
