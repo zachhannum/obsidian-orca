@@ -2,7 +2,7 @@ import { OPEN_BOOK, PREVIEW } from "./harness/book";
 import { expect, test } from "./harness/test";
 
 /** The ribbon icon's label. */
-const RIBBON = "Open the navigator";
+const RIBBON = "Open Orca";
 
 /** A chapter of the fixture book, as its row and the toolbar name it. */
 const CHAPTER = "Chapter Twelve";

@@ -225,7 +225,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
     this.catchOpening();
     addIcon(ORCA_ICON, ORCA_SVG);
-    this.addRibbonIcon(ORCA_ICON, "Open the navigator", () => {
+    this.addRibbonIcon(ORCA_ICON, "Open Orca", () => {
       void this.show();
     });
     this.addCommand({
