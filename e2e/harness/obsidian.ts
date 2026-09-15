@@ -67,6 +67,13 @@ interface Internal {
   getPluginById(id: string): { disable(): void } | null;
 }
 
+/** The settings window, which the API does not declare. */
+interface Settings {
+  open(): void;
+  close(): void;
+  openTabById(id: string): unknown;
+}
+
 declare global {
   interface Window {
     /** Undefined until Obsidian has opened the vault. */
@@ -74,6 +81,7 @@ declare global {
       commands: Commands;
       plugins: Plugins;
       internalPlugins: Internal;
+      setting: Settings;
     } & Painted;
     /** Obsidian runs its renderer with node integration on. */
     require(id: string): unknown;
@@ -107,6 +115,11 @@ const CHROME = {
   tooltip: ".tooltip",
   modal: ".modal",
   buttons: ".titlebar-button-container.mod-right",
+  folder: (path: string) => `.nav-folder-title[data-path="${path}"]`,
+  settings: ".modal.mod-settings",
+  installed: ".setting-item",
+  installedName: ".setting-item-name",
+  toggle: ".checkbox-container",
 };
 
 export type Side = "left" | "right";
@@ -355,6 +368,76 @@ export class Obsidian {
       await item.click();
       await expect(this.menu()).toHaveCount(0, { timeout: 1000 });
     }).toPass({ timeout: 30_000 });
+  }
+
+  /** A folder's own row in the file tree, by its path. */
+  treeItem(path: string): Locator {
+    return this.page.locator(CHROME.folder(path));
+  }
+
+  /**
+   * Right-clicks a row and waits for its menu. A row the tree is still
+   * drawing takes a click that opens nothing, so the click is tried again
+   * until a menu is up.
+   */
+  async contextMenu(row: Locator): Promise<void> {
+    await expect(async () => {
+      await row.click({ button: "right" });
+      await expect(this.menu()).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  }
+
+  /** The settings window. */
+  settings(): Locator {
+    return this.page.locator(CHROME.settings);
+  }
+
+  /**
+   * Opens settings on one tab, by the tab's id, as a modal in this window,
+   * and returns the vault's value for opening settings in a window of
+   * their own. CDP is attached to this window only.
+   */
+  async openSettings(tab: string): Promise<boolean | null> {
+    const had = await this.page.evaluate((id) => {
+      const vault = window.app.vault as unknown as Config & {
+        getConfig(key: string): unknown;
+      };
+      const was = vault.getConfig("settingsPopoutWindow");
+      vault.setConfig("settingsPopoutWindow", false);
+      window.app.setting.open();
+      window.app.setting.openTabById(id);
+      return typeof was === "boolean" ? was : null;
+    }, tab);
+    await expect(this.settings()).toBeVisible();
+    return had;
+  }
+
+  /** Closes settings and puts back the value `openSettings` returned. */
+  async closeSettings(had: boolean | null): Promise<void> {
+    await this.page.evaluate((value) => {
+      window.app.setting.close();
+      (window.app.vault as unknown as Config).setConfig("settingsPopoutWindow", value);
+    }, had);
+    await expect(this.settings()).toHaveCount(0);
+  }
+
+  /**
+   * An installed community plugin's row in settings, by its name. The
+   * row's name is followed by its version and author.
+   */
+  installed(name: string): Locator {
+    return this.settings()
+      .locator(CHROME.installed)
+      .filter({
+        has: this.page.locator(CHROME.installedName, {
+          hasText: new RegExp(`^${name}\\b`),
+        }),
+      });
+  }
+
+  /** The toggle that turns an installed plugin on and off. */
+  enabled(name: string): Locator {
+    return this.installed(name).locator(CHROME.toggle);
   }
 
   /** One command, run the way the palette runs it. */
