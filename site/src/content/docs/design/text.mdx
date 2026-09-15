@@ -6,7 +6,7 @@ description: The reading face, its size, and how it is set.
 
 import Shot from '../../../components/Shot.astro';
 
-The Text group in the design panel sets the font of the text, its size and line spacing, and how each paragraph is set.
+The Text group in the design panel sets the font of the text, its size and line spacing, and the alignment of each paragraph.
 
 <Shot
   name="panel-text"
@@ -32,15 +32,15 @@ The Text group in the design panel sets the font of the text, its size and line 
 
 ## Font and variant
 
-`Font` sets the font family of the text. `Variant` shows only when the family has more than one variant. The default variant writes no key.
+`Font` sets the font family of the text. `Variant` shows only when the family has more than one variant. The panel writes no key for the default variant.
 
 ## Size and spacing
 
-`Line spacing` is the distance from one baseline to the next. A number with no unit is in points. `First-line indent` in `em` scales with the size of the text.
+The baseline is the line that the letters sit on. `Line spacing` is the distance from the baseline of one line to the baseline of the next. A number with no unit is in points. If `First-line indent` is in `em`, the indent changes with the size of the text.
 
 ## Setting
 
-`Justified` sets each line to the full width of the text. `Ragged right` sets the lines flush left.
+`Justified` makes each line as wide as the text. `Ragged right` aligns each line on the left edge.
 
 ## In the book note
 
