@@ -7,7 +7,7 @@ description: Where a chapter begins, the space above its title, and its drop cap
 import Shot from '../../../components/Shot.astro';
 import Page from '../../../components/Page.astro';
 
-A chapter opens on a new page, lower than the text around it. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, and the drop cap.
+By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, and the drop cap.
 
 <Shot
   name="panel-chapter-openings"
@@ -28,11 +28,11 @@ A chapter opens on a new page, lower than the text around it. The Chapter openin
 
 ## Where a chapter begins
 
-`Begins on` takes one of three values. `Next page` starts the chapter on a new page. `Right-hand page` leaves a blank page when a chapter falls on a left page. `Same page` runs the chapter on below the one before it.
+`Begins on` takes one of three values. `Next page` starts the chapter on a new page. `Right-hand page` starts the chapter on a right page. If the next page is a left page, orca leaves that page blank. `Same page` starts the chapter on the same page, below the chapter before it.
 
 ## Space and drop cap
 
-`Space above` and `Space below` are counts of lines of text. `Drop cap` sets the first letter of the chapter across 2, 3 or 4 lines.
+`Space above` and `Space below` are counts of lines of text. A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
 
 <Page n={9} alt="The first page of Chapter I, A Shifting Reef, with space above the title and a drop cap over three lines." caption="The opening of Chapter I in the sample book." />
 
