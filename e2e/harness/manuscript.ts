@@ -5,7 +5,7 @@
 
 import { expect, type Locator } from "@playwright/test";
 import type { MarkdownView } from "obsidian";
-import { AS_BOOK, MARKDOWN } from "./note";
+import { MARKDOWN, OPEN_PREVIEW } from "./note";
 import type { Obsidian } from "./obsidian";
 
 /** The caret in a manuscript, as the editor keeps it. */
@@ -22,7 +22,7 @@ export class Manuscript {
 
   constructor(private readonly obsidian: Obsidian) {
     this.pane = this.obsidian.view(MARKDOWN);
-    this.asBook = this.obsidian.action(AS_BOOK);
+    this.asBook = this.obsidian.action(OPEN_PREVIEW);
   }
 
   /** Opens a note in the active pane. */

@@ -525,6 +525,16 @@ export class PreviewView extends ItemView {
    * already in the answer.
    */
   async turnToChapter(chapter: Chapter): Promise<void> {
+    await this.turnToPlace(chapter);
+  }
+
+  /** Turns to where a section opens, by its place in the reading order. A section the book did not set turns nothing. */
+  async turnToSection(at: number): Promise<void> {
+    const chapter = this.turns.find((turn) => turn.at === at);
+    if (chapter !== undefined) await this.turnToPlace(chapter);
+  }
+
+  private async turnToPlace(chapter: Chapter): Promise<void> {
     const at = await this.opensSection(chapter.at);
     if (at === undefined) return;
     // The chapter is kept from the turn, so a spread or a screenful
@@ -622,19 +632,25 @@ export class PreviewView extends ItemView {
     this.watching = watching;
   }
 
-  /**
-   * Puts the way to markdown in the view's header. A preview toggled
-   * into from a note goes back to that note, and one opened without a
-   * chapter opens the book note.
-   */
+  /** Puts the way to markdown in the view's header. */
   private attach(): void {
     this.edit ??= this.addAction("file-text", "Open as markdown", () => {
-      const at = this.state.note ?? this.state.book;
-      if (at === undefined) return;
-      this.setInspecting(INSPECT_OFF);
-      this.handoff.asMarkdown(this, at);
+      void this.toMarkdown();
     });
     this.ordersActions();
+  }
+
+  /**
+   * Hands the pane to the note the page being read opens in. A page orca
+   * wrote alone goes to the note read last, and a book read no further
+   * than its generated matter goes to the book note.
+   */
+  private async toMarkdown(): Promise<void> {
+    const opens = await this.opensIn().catch(() => undefined);
+    const at = opens?.note ?? this.state.note ?? this.state.book;
+    if (at === undefined) return;
+    this.setInspecting(INSPECT_OFF);
+    this.handoff.asMarkdown(this, at);
   }
 
   /** Puts the inspect action left of the way back to the manuscript, as the artboard draws them. */

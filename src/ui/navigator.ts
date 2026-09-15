@@ -36,11 +36,11 @@ export interface Handoff {
   /** Opens the preview of a book, or reveals one already reading it. */
   preview(book: string): void;
   /**
-   * Turns the preview in the main area's most recent tab to a chapter.
-   * It answers false, and turns nothing, where that tab is not a
-   * preview of the book.
+   * Turns the preview in the main area's most recent tab to a section,
+   * by its place in the reading order. It answers false, and turns
+   * nothing, where that tab is not a preview of the book.
    */
-  turn(book: string, note: string): boolean;
+  turn(book: string, at: number): boolean;
 }
 
 /**
@@ -126,8 +126,8 @@ export class NavigatorView extends ItemView {
       preview: (book) => {
         this.handoff.preview(book.path);
       },
-      openEntry: (book, path, event) => {
-        void this.openEntry(book, path, event.nativeEvent);
+      openEntry: (book, row, event) => {
+        void this.openEntry(book, row, event.nativeEvent);
       },
       bookMenu: (event, book) => {
         this.bookMenu(event.nativeEvent, book);
@@ -584,22 +584,22 @@ export class NavigatorView extends ItemView {
   }
 
   /**
-   * Opens a chapter. A click with the Mod key opens it as markdown in a
-   * new tab. Otherwise a preview of the book in the most recent tab
-   * turns to it, and the note opens only where there is none.
+   * Opens an entry. A preview of the book in the most recent tab turns
+   * to it, a generated section included. Otherwise a chapter opens as
+   * markdown, and a click with the Mod key opens it in a new tab.
    */
   private async openEntry(
     book: Shelved,
-    path: string,
+    row: Row,
     event: MouseEvent,
   ): Promise<void> {
-    const note = this.app.vault.getFileByPath(path);
-    if (note === null) return;
+    const note =
+      row.path === undefined ? null : this.app.vault.getFileByPath(row.path);
     if (Keymap.isModEvent(event) !== false) {
-      await this.app.workspace.getLeaf("tab").openFile(note);
+      if (note !== null) await this.app.workspace.getLeaf("tab").openFile(note);
       return;
     }
-    if (this.handoff.turn(book.path, path)) return;
+    if (this.handoff.turn(book.path, row.at) || note === null) return;
     await this.app.workspace.getLeaf(false).openFile(note);
   }
 }

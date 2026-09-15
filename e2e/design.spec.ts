@@ -924,6 +924,22 @@ test("the book note's page draws the design read-only, in the panel's words", as
   await expect(note.page.getByText("Open the design panel")).toHaveCount(0);
 });
 
+test("opening a preview reveals the design panel", async ({
+  book,
+  obsidian,
+  panel,
+}) => {
+  await panel.close();
+  await obsidian.collapse("right");
+  expect(await obsidian.collapsed("right")).toEqual(true);
+
+  await book.open();
+  await book.painted();
+
+  await expect(panel.leaf).toBeVisible();
+  await expect.poll(async () => obsidian.collapsed("right")).toEqual(false);
+});
+
 test("the panel shows a book only while a preview of it is visible", async ({
   book,
   obsidian,

@@ -60,8 +60,8 @@ import type { Row, Shelved } from "@/ui/shelf";
 export interface Acting {
   open(path: string): void;
   preview(book: Shelved): void;
-  /** A click on an entry with a note. The view reads the Mod key off the event. */
-  openEntry(book: Shelved, path: string, event: Pointed): void;
+  /** A click on an entry that has a note or generates its own. The view reads the Mod key off the event. */
+  openEntry(book: Shelved, row: Row, event: Pointed): void;
   bookMenu(event: Pointed, book: Shelved): void;
   /** The entry's own menu. `after` is where `New chapter here` goes. */
   entryMenu(event: Pointed, book: Shelved, row: Row, after: Place): void;
@@ -689,7 +689,7 @@ function Entry({
       {...sortable.attributes}
       {...sortable.listeners}
       onClick={(event) => {
-        if (row.path !== undefined) acting.openEntry(book, row.path, event);
+        if (row.kind !== "missing") acting.openEntry(book, row, event);
       }}
       onContextMenu={(event) => {
         acting.entryMenu(event, book, row, after);

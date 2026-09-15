@@ -63,7 +63,7 @@ its editor around these files and returns a URL. The artboard list and
 - The preview keeps the page it is on, so a swap to the manuscript and
   back opens on it, mid-chapter included, and a workspace reopened at
   startup opens the preview where it was closed.
-- The icon on a note opens the book at the page the manuscript is
+- `Open preview` on a note opens the book at the page the manuscript is
   scrolled to, unless the pane is still scrolled inside the page the
   book was left on. A reader who paged through the book comes back to
   the line that page opens at, with the caret on it. One who turned no
@@ -77,12 +77,18 @@ its editor around these files and returns a URL. The artboard list and
 - The preview's icon is an eye in a viewfinder. The book note's page
   keeps the closed book. The open book is Obsidian's reading view
   toggle, which sits beside `Open preview` on a note.
-- `Open as markdown` on a preview opens the chapter it was opened
-  from. A preview opened without a chapter opens the book note.
-- A chapter click in the navigator turns a preview to that chapter
-  when the most recent tab in the main area previews its book. A click
-  with the Mod key opens the chapter as markdown in a new tab. Any
-  other chapter click opens the note.
+- `Open as ...` swaps one note between its views: `Open as markdown`
+  and `Open as book page`. `Open preview` opens the book's preview,
+  from a chapter, the book note's page and the navigator.
+- Opening a preview reveals the design panel in the right sidebar.
+- `Open as markdown` on a preview opens the note the page being read
+  opens in, at the line that page opens at. A page of generated matter
+  opens the note read last. If no note was read, it opens the book
+  note.
+- If the most recent tab in the main area previews a book, a click on
+  a chapter or a generated section of that book in the navigator turns
+  the preview to it. A click with the Mod key opens a chapter as
+  markdown in a new tab. Any other chapter click opens the note.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
 - The design panel is in the right sidebar, and it does not open or

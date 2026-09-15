@@ -46,7 +46,30 @@ test("`Open a book` sets the book and paints its first page", async ({ book }) =
   }
 });
 
-test("a preview opened without a chapter offers `Open as markdown`, which opens the book note", async ({
+test("`Open as markdown` on a chapter's page opens that chapter", async ({
+  book,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.chapter.selectOption({ label: CHAPTER_NAME });
+  await expect(book.chapterName).toHaveText(CHAPTER_NAME);
+
+  await book.asMarkdown.click();
+
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate(() => {
+        const view = window.app.workspace.getMostRecentLeaf()?.view;
+        const file = (view as { file?: { path: string } | null } | undefined)?.file;
+        return `${view?.getViewType()}:${file?.path}`;
+      }),
+    )
+    .toEqual(`markdown:${CHAPTER_NAME}.md`);
+  await obsidian.detach("markdown");
+});
+
+test("`Open as markdown` on generated matter, with no chapter read, opens the book note", async ({
   book,
   obsidian,
 }) => {

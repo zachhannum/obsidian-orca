@@ -17,7 +17,7 @@ export const MARKDOWN = "markdown";
 
 /** Labels of the actions that switch a note between the editor and the book view. */
 export const AS_MARKDOWN = "Open as markdown";
-export const AS_BOOK = "Open as book";
+export const AS_BOOK = "Open as book page";
 
 /** The label of the action that opens a book's preview, on the book note's page and on its navigator row. */
 export const OPEN_PREVIEW = "Open preview";

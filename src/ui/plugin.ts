@@ -216,7 +216,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
           preview: (book) => {
             void this.previewBook(book);
           },
-          turn: (book, note) => this.turnPreview(book, note),
+          turn: (book, at) => this.turnPreview(book, at),
         }),
     );
     this.registerView(
@@ -632,7 +632,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Adds the "open as book" icon to the markdown view's header, beside
+   * Adds the way to the book to the markdown view's header, beside
    * Obsidian's own reading toggle. `addAction` is the API for adding an
    * icon to a view orca does not own.
    */
@@ -640,9 +640,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const existing = this.back.get(view);
     if (existing?.at === at) return;
     existing?.icon.remove();
+    const page = at.startsWith("page:");
     const icon = view.addAction(
-      at.startsWith("page:") ? PREVIEW_ICON : "book",
-      "Open as book",
+      page ? PREVIEW_ICON : "book",
+      page ? "Open preview" : "Open as book page",
       opens,
     );
     this.back.set(view, { at, icon });
@@ -689,7 +690,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       shown.view instanceof MarkdownView && shown.view.file?.path === file.path;
     menu.addItem((item) =>
       item
-        .setTitle(asBook ? "Open as book" : "Open as markdown")
+        .setTitle(asBook ? "Open as book page" : "Open as markdown")
         .setIcon(asBook ? "book" : "file-text")
         .onClick(() => {
           if (asBook) {
@@ -787,8 +788,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const folio = from instanceof PreviewView ? from.turned : undefined;
     // The page being read is asked for while the pane still holds it,
     // because the swap takes the view down with it.
+    // A pane that has no place in this note to go back to goes to the
+    // page too.
     const opens =
-      from instanceof PreviewView && from.paged
+      from instanceof PreviewView && (from.paged || left?.at !== path)
         ? await from.opensIn().catch(() => undefined)
         : undefined;
     await leaf.setViewState({
@@ -860,6 +863,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       } satisfies PreviewState,
       active: true,
     });
+    await this.openPanel();
   }
 
   /**
@@ -881,6 +885,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       } satisfies PreviewState,
       active: false,
     });
+    await this.openPanel();
   }
 
   /**
@@ -1301,6 +1306,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       workspace.getLeavesOfType(PREVIEW_VIEW)[0];
     if (open !== undefined) {
       await workspace.revealLeaf(open);
+      await this.openPanel();
       return;
     }
     const on = this.onBook();
@@ -1384,13 +1390,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
     }
     await workspace.revealLeaf(open);
     workspace.setActiveLeaf(open, { focus: true });
+    await this.openPanel();
   }
 
-  private turnPreview(book: string, note: string): boolean {
+  private turnPreview(book: string, at: number): boolean {
     const { workspace } = this.app;
     const view = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
     if (!(view instanceof PreviewView) || view.book !== book) return false;
-    void view.turnTo(note);
+    void view.turnToSection(at);
     return true;
   }
 
@@ -1398,6 +1405,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const leaf = this.app.workspace.getLeaf(true);
     await leaf.setViewState({ type: PREVIEW_VIEW, state: { ...state }, active: true });
     await this.app.workspace.revealLeaf(leaf);
+    await this.openPanel();
   }
 
   /** The vault, as the engine and the asset registry read it. */

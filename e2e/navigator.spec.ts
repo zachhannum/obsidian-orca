@@ -7,6 +7,9 @@ const RIBBON = "Open Orca";
 /** A chapter of the fixture book, as its row and the toolbar name it. */
 const CHAPTER = "Chapter Twelve";
 
+/** A generated section of the fixture book, as its row and the toolbar name it. */
+const TITLE_PAGE = "Title page";
+
 /** The book note in the fixture vault, and the notes a spec makes. */
 const BOOK = "Pride and Prejudice.md";
 const SECOND = "The Bennet Novels.md";
@@ -527,6 +530,20 @@ test("a chapter click turns the preview in the most recent tab, and a Mod click 
     )
     .toEqual({ shown: `markdown:${CHAPTER}.md`, previews: 1 });
   await obsidian.detach("markdown");
+});
+
+test("a click on a generated section turns the preview to it", async ({
+  book,
+  navigator,
+}) => {
+  await book.open();
+  await book.painted();
+  await navigator.reveal();
+
+  await navigator.entry(BOOK, CHAPTER).click();
+  await expect(book.chapterName).toHaveText(CHAPTER);
+  await navigator.entry(BOOK, TITLE_PAGE).click();
+  await expect(book.chapterName).toHaveText(TITLE_PAGE);
 });
 
 test("opening a book note reveals the navigator", async ({
