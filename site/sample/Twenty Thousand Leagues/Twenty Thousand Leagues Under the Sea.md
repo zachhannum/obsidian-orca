@@ -92,12 +92,12 @@ suppress-head-on-openings: true
 - [[A note on the text]] `back-matter`
 
 ```css
-/* The box is placed from the top of the page area, so 63pt puts the
-   middle of the shell on the middle of the chapter heading. */
+/* The box is placed from the top of the page area. At 22pt the shell
+   fills the space above the heading and ends above the first line. */
 section.chapter h1::before {
   content: "";
   position: absolute;
-  top: 63pt;
+  top: 22pt;
   left: 0;
   right: 0;
   height: 1.5in;

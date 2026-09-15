@@ -245,6 +245,56 @@ test("each chapter heading sits over a nautilus shell at half strength", async (
   assert.equal(png.subarray(1, 4).toString("latin1"), "PNG");
 });
 
+test("the shell behind a chapter heading reaches no line of the chapter's text", async () => {
+  const { designSheets } = await moduleOf("src/style/sheet.ts");
+  const { effective } = await moduleOf("src/style/theme.ts");
+  const { readModel } = await moduleOf("src/book/model.ts");
+  const { slug } = await moduleOf("src/book/names.ts");
+
+  const require = createRequire(import.meta.url);
+  const wasm = path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
+  await initWasm({ module_or_path: await readFile(path.join(wasm, "fleuron_bg.wasm")) });
+
+  const note = await read(SAMPLE_BOOK);
+  const { design, metadata } = readModel(note).book;
+  const css = /\n```css\n([\s\S]*?)\n```\n/.exec(note)[1];
+  const chapter = `${SAMPLE_DIR}/A Shifting Reef.md`;
+  const section = { role: "chapter", id: slug("A Shifting Reef", "chapter") };
+  const setting = { sections: [section], title: metadata.title, author: metadata.author };
+  const generated = designSheets(effective(design), setting).map((sheet) => sheet.css).join("\n");
+  const faces = [
+    '@font-face { font-family: "EB Garamond"; src: url("EBGaramond[wght].ttf"); font-style: normal; }',
+    '@font-face { font-family: "EB Garamond"; src: url("EBGaramond-Italic[wght].ttf"); font-style: italic; }',
+  ].join("\n");
+
+  const session = new Session();
+  try {
+    session.setDialect("obsidian");
+    session.setSplit(0);
+    for (const face of ["EBGaramond[wght].ttf", "EBGaramond-Italic[wght].ttf"]) {
+      session.addFontFile(face, await readFile(path.join(root, "site/sample/fonts", face)));
+    }
+    session.addImage("nautilus.png", await readFile(path.join(root, "site/sample/images/nautilus.png")));
+    session.setSources([chapter], [await read(chapter)], [JSON.stringify({ classes: [section.role], id: section.id })]);
+    session.setStyle(["faces.css", "generated.css", "book.css"], [faces, generated, css]);
+    const page = decodeDisplayList(session.preview(0, 1)).pages[0];
+
+    const shell = page.items.find((item) => item.kind === "background");
+    assert.ok(shell, "nothing is drawn behind the chapter heading");
+    const titleSize = Number.parseFloat(properties(note)["heading-1-size"]);
+    const title = page.items.find((item) => item.kind === "text" && item.size === titleSize);
+    assert.ok(title, "the chapter title is not on the page");
+    // A run's ink rises no more than 0.8 of its size above its baseline,
+    // the drop cap included.
+    const text = page.items.filter((item) => item.kind === "text" && item.y > title.y);
+    const top = Math.min(...text.map((run) => run.y - 0.8 * run.size));
+    const bottom = shell.tileY + shell.tileH;
+    assert.ok(bottom <= top, `the shell ends at ${bottom}pt, below text that starts at ${top}pt`);
+  } finally {
+    session.free();
+  }
+});
+
 test("the book note carries the design the landing page shows", async () => {
   const design = properties(await read(SAMPLE_BOOK));
 
