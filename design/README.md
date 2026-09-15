@@ -74,8 +74,9 @@ its editor around these files and returns a URL. The artboard list and
 - Each book's row in the navigator has `Open preview` beside `Add to
   this book`. The book note's page has `Open preview` in its header,
   beside `Open as markdown`.
-- The preview's icon is an open book. The book note's page keeps the
-  closed book.
+- The preview's icon is an eye in a viewfinder. The book note's page
+  keeps the closed book. The open book is Obsidian's reading view
+  toggle, which sits beside `Open preview` on a note.
 - `Open as markdown` on a preview opens the chapter it was opened
   from. A preview opened without a chapter opens the book note.
 - A chapter click in the navigator turns a preview to that chapter
