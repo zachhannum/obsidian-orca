@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { glob, readFile } from "node:fs/promises";
+import { access, glob, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
@@ -804,7 +804,143 @@ test("every control the demo offers changes the page the demo shows", async () =
   }
 });
 
+/** The docs pages' directory. */
+const DOCS = "site/src/content/docs";
+
+/** Every docs page, by its path under the docs directory. */
+async function docsPages() {
+  const found = [];
+  for await (const file of glob("**/*.{md,mdx}", { cwd: path.join(root, DOCS) })) found.push(file);
+  return found.sort();
+}
+
+/** The body rows of the table on a page with this header row, cell by cell. */
+function table(page, header) {
+  const from = page.indexOf(`| ${header.join(" | ")} |`);
+  assert.notEqual(from, -1, `no table with the columns ${header.join(", ")}`);
+  const rows = [];
+  for (const line of page.slice(from).split("\n").slice(2)) {
+    if (!line.startsWith("|")) break;
+    rows.push(line.trim().slice(1, -1).split("|").map((cell) => cell.trim()));
+  }
+  return rows;
+}
+
+/** A cell's text with the backticks around it taken off. */
+const unquoted = (cell) => cell.replace(/^`(.*)`$/, "$1");
+
+/** A file under the repository root exists. */
+const exists = (file) =>
+  access(path.join(root, file)).then(
+    () => true,
+    () => false,
+  );
+
+test("the design keys page lists every key, in the order the schema writes them", async () => {
+  const { DESIGN_KEYS, LEVELS } = await moduleOf("src/style/design.ts");
+  const listed = table(await read(`${DOCS}/reference/design-keys.mdx`), ["Key", "Values", "Page"]).map(
+    ([key]) => unquoted(key),
+  );
+
+  // A run of `heading-N-` rows stands for those keys at every level.
+  const expanded = [];
+  let run = [];
+  const flush = () => {
+    expanded.push(...LEVELS.flatMap((level) => run.map((key) => key.replace("-N-", `-${level}-`))));
+    run = [];
+  };
+  for (const key of listed) {
+    if (key.startsWith("heading-N-")) {
+      run.push(key);
+      continue;
+    }
+    flush();
+    expanded.push(key);
+  }
+  flush();
+  assert.deepEqual(expanded, [...DESIGN_KEYS]);
+});
+
+test("each group in the design panel has a page with its controls, their defaults and their keys", async () => {
+  const { GROUPS, atLevel, defaultSaid } = await moduleOf("src/ui/groups.ts");
+  const { emptyDesign, writeDesign } = await moduleOf("src/style/design.ts");
+  const { effective } = await moduleOf("src/style/theme.ts");
+  const { LIMITS } = await moduleOf("src/ui/limits.ts");
+  const empty = writeDesign(effective(emptyDesign()));
+
+  for (const group of GROUPS) {
+    const slug = group.name.toLowerCase().replace(" & ", " and ").replaceAll(" ", "-");
+    const rows = table(await read(`${DOCS}/design/${slug}.mdx`), ["Control", "Default", "Key"]);
+    const controls = group.rows.flatMap((row) => row.of).filter((control) => control.key !== undefined);
+    assert.deepEqual(
+      rows.map(([, , key]) => unquoted(key)),
+      [...controls.map((control) => control.key)],
+      `the ${group.name} page lists other keys than the group writes`,
+    );
+    for (const [at, control] of controls.entries()) {
+      // A variant's default is the default face of the font, which only
+      // the faces on the machine name.
+      if (control.kind === "variant") continue;
+      // The panel draws a count with its word after it.
+      const shown = defaultSaid(control, empty[atLevel(control.key, 1)], LIMITS.unit);
+      const cell = unquoted(rows[at][1]);
+      assert.ok(
+        cell === shown || cell.startsWith(`${shown} line`),
+        `the ${group.name} page gives ${control.key} the default ${cell}, and the panel shows ${shown}`,
+      );
+    }
+  }
+});
+
+test("every docs page shows orca only in pictures the screenshot spec took", async () => {
+  for (const file of await docsPages()) {
+    const page = await read(`${DOCS}/${file}`);
+    assert.doesNotMatch(page, /Figure\.astro/, `${file} imports a figure drawn by hand`);
+    assert.doesNotMatch(page, /\.(?:png|jpe?g|webp|svg)\b/, `${file} names a picture of its own`);
+    assert.doesNotMatch(page, /<img\b|!\[/, `${file} shows a picture outside <Shot>`);
+
+    for (const [, props] of page.matchAll(/<Shot\b([\s\S]*?)\/>/g)) {
+      const name = /name="([^"]+)"/.exec(props)?.[1];
+      assert.ok(name, `${file} has a <Shot> with no name`);
+      for (const scheme of ["dark", "light"]) {
+        assert.ok(await exists(`site/src/shots/${name}-${scheme}.png`), `${file} shows ${name}-${scheme}, which the spec has not taken`);
+      }
+      const marks = /marks=\{\[([^\]]*)\]\}/.exec(props);
+      if (marks === null) continue;
+      const sidecar = `site/src/shots/${name}.marks.json`;
+      assert.ok(await exists(sidecar), `${file} marks ${name}, which has no marks`);
+      const measured = JSON.parse(await read(sidecar)).marks;
+      for (const [, id] of marks[1].matchAll(/'([^']+)'/g)) {
+        assert.ok(id in measured, `${file} marks ${id} on ${name}, which the spec did not measure`);
+      }
+    }
+    for (const [, n] of page.matchAll(/<Page n=\{(\d+)\}/g)) {
+      const picture = `site/src/shots/pages/page-${n.padStart(2, "0")}.png`;
+      assert.ok(await exists(picture), `${file} shows ${picture}, which the spec has not taken`);
+    }
+  }
+
+  // The components read the shots directory and nothing else.
+  for (const component of ["Shot", "Page"]) {
+    const source = await read(`site/src/components/${component}.astro`);
+    const globbed = [...source.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map((found) => found[1]);
+    assert.ok(globbed.length > 0, `${component} reads no picture`);
+    for (const pattern of globbed) assert.match(pattern, /^\.\.\/shots\//);
+  }
+});
+
+test("every docs page is in the sidebar, and every entry in the sidebar is a page", async () => {
+  const listed = [...config.slice(config.indexOf("sidebar:")).matchAll(/'([\w-]+\/[\w-]+)'/g)].map(
+    (found) => found[1],
+  );
+  const pages = (await docsPages()).map((file) => file.replace(/\.mdx?$/, ""));
+  assert.deepEqual([...listed].sort(), pages.sort());
+});
+
 // What this file does not cover: the pictures themselves, which the
-// screenshot spec takes and compares; and whether a control the demo
-// leaves out would change the page, since a book with a scene break or
-// a facing page would answer differently.
+// screenshot spec takes and compares; whether a control the demo leaves
+// out would change the page, since a book with a scene break or a facing
+// page would answer differently; whether a mark sits over the control it
+// names, which the spec measures; the default of a font variant, which
+// the faces on the machine decide; and whether the prose of a docs page
+// is plain, which the simple-english pass reads.
