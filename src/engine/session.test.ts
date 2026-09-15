@@ -386,6 +386,27 @@ test("a render overtaken by a later one paints no page of the book it asked for"
   assert.equal(session.pages, 12);
 });
 
+test("the whole book is read without an op, and the window a view paints stays cached", async () => {
+  const client = new FakeClient(typeset(337));
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  await session.read(0);
+  const generation = session.generation;
+
+  const pages = await session.outline();
+
+  assert.equal(pages?.length, 337);
+  assert.equal(client.rendered.length, 1);
+  assert.equal(session.generation, generation);
+  const asked = client.ranges.length;
+  await session.read(0);
+  assert.equal(client.ranges.length, asked, "the painted window was asked for again");
+
+  // A book that grew since the last reply is read at its new length.
+  client.rewrite(400);
+  assert.equal((await session.outline())?.length, 400);
+});
+
 test("a book that got shorter reads its last page rather than nothing", async () => {
   const client = new FakeClient(typeset(337));
   const session = new Session(client, faces());

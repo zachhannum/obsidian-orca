@@ -410,6 +410,10 @@ export class PreviewView extends ItemView {
     this.holding = undefined;
     this.session = undefined;
     this.composed = undefined;
+    // A book still setting lands on a closed pane. The pane drops it
+    // rather than watch it, or it would set the book again each time the
+    // book is dropped.
+    this.opening += 1;
     this.contentEl.empty();
     return Promise.resolve();
   }

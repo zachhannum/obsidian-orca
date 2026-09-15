@@ -1,23 +1,12 @@
-import { styleOp } from "fleuron";
-import {
-  FileView,
-  Notice,
-  TFile,
-  normalizePath,
-  type WorkspaceLeaf,
-} from "obsidian";
-import { contentKey, type Hashed } from "@/assets/registry";
+import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { readModel, type Model } from "@/book/model";
-import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
-import { resolve } from "@/book/order";
-import { sectionRanges, type Range } from "@/book/pages";
-import { sendBook } from "@/book/plan";
+import { resolve, type Section } from "@/book/order";
+import type { Range } from "@/book/pages";
 import { countWords } from "@/book/words";
-import type { Engines } from "@/engine/pool";
 import type { PageUnit } from "@/style/design";
-import { designSheets } from "@/style/sheet";
 import { Changed } from "@/ui/changed";
+import type { Composer, Typeset } from "@/ui/composer";
 import { save, type Edits } from "@/ui/edits";
 import { PREVIEW_ICON } from "@/ui/icon";
 import { cacheLinks } from "@/ui/notes";
@@ -52,9 +41,9 @@ export interface Handoff {
  * reading order with a word count and a folio range beside each note.
  * The counts are read from the vault as the page needs them and kept
  * until the note changes, so a repaint costs no reads. The folio
- * ranges come from a run of the book through the engine, which the
- * view sends again once an edit to the order or a note it reads
- * settles.
+ * ranges are read from the book's one session, which the preview and
+ * the export read too. The page sends the engine nothing, so it cannot
+ * set the book under sheets other than the session's.
  */
 export class BookView extends FileView {
   private writer: Writer | undefined;
@@ -69,17 +58,24 @@ export class BookView extends FileView {
   private readonly counts = new Map<string, number>();
   /** The reads still counting, so a note is read once however often the page paints. */
   private readonly counting = new Map<string, Promise<number>>();
-  /** Every entry's folio range, as the last run through the engine placed it. */
+  /** Every entry's folio range, as the book's session last placed it. */
   private folios = new Map<number, Range>();
-  /** Counts the runs sent, so a run a later one overtakes is dropped rather than painted. */
-  private typesetting = 0;
+  /** The book whose renders the page follows. */
+  private following: Typeset | undefined;
+  private unwatch: (() => void) | undefined;
+  /** The read of the folios in flight. */
+  private reading: Promise<void> | undefined;
+  /** Whether a render landed while a read was out, so one more read follows it. */
+  private again = false;
+  /** Counts the times the page stopped following, so a read out at the time is dropped. */
+  private unfollowed = 0;
   /** Drops this page's hold on its book, so the book's engine can stop. */
   private holding: (() => void) | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly edits: Edits,
-    private readonly engines: Engines,
+    private readonly composer: Composer,
     private readonly handoff: Handoff,
   ) {
     super(leaf);
@@ -123,12 +119,9 @@ export class BookView extends FileView {
           void this.arrived(file);
           return;
         }
-        // A note the book reads has changed, so its count and its
-        // pages are both stale.
-        if (this.forget(file.path)) {
-          this.repaint();
-          void this.relay();
-        }
+        // A note the book reads has changed, so its count is stale. The
+        // session sets the change, and its render moves the folios.
+        if (this.forget(file.path)) this.repaint();
       }),
     );
     // The note is gone, so an unwritten edit has nowhere to settle.
@@ -139,12 +132,7 @@ export class BookView extends FileView {
           this.writer = undefined;
           return;
         }
-        // A note this book was reading is gone, so its count and its
-        // pages are both stale.
-        if (this.forget(file.path)) {
-          this.repaint();
-          void this.relay();
-        }
+        if (this.forget(file.path)) this.repaint();
       }),
     );
     this.registerEvent(
@@ -154,10 +142,7 @@ export class BookView extends FileView {
           this.repaint();
           return;
         }
-        if (this.forget(was)) {
-          this.repaint();
-          void this.relay();
-        }
+        if (this.forget(was)) this.repaint();
       }),
     );
     // A new note or a resolved cache can only change what this book
@@ -168,7 +153,7 @@ export class BookView extends FileView {
       vault.on("create", () => {
         if (this.hasMissing()) {
           this.repaint();
-          void this.relay();
+          this.stale();
         }
       }),
     );
@@ -176,7 +161,7 @@ export class BookView extends FileView {
       metadataCache.on("resolved", () => {
         if (this.hasMissing()) {
           this.repaint();
-          void this.relay();
+          this.stale();
         }
       }),
     );
@@ -185,7 +170,7 @@ export class BookView extends FileView {
 
   override async onLoadFile(file: TFile): Promise<void> {
     this.holding?.();
-    this.holding = this.engines.hold(file.path);
+    this.holding = this.composer.hold(file.path);
     this.hold(file, await this.app.vault.cachedRead(file));
   }
 
@@ -193,6 +178,7 @@ export class BookView extends FileView {
     // The leaf is closing or opening another note, so the model is
     // written first.
     await this.settle();
+    this.unfollow();
     this.holding?.();
     this.holding = undefined;
     this.writer = undefined;
@@ -202,6 +188,7 @@ export class BookView extends FileView {
 
   override async onClose(): Promise<void> {
     await this.settle();
+    this.unfollow();
     this.holding?.();
     this.holding = undefined;
     this.writer = undefined;
@@ -237,7 +224,7 @@ export class BookView extends FileView {
       save: (model) => this.write(file, model),
     });
     this.show(model, 0);
-    void this.relay();
+    this.follow();
   }
 
   /** The book in the note, or nothing when orca refused it. */
@@ -289,10 +276,7 @@ export class BookView extends FileView {
 
   private reload(text: string): void {
     const model = this.opened(text);
-    if (model !== undefined) {
-      this.writer?.take(model);
-      void this.relay();
-    }
+    if (model !== undefined) this.writer?.take(model);
   }
 
   /** Writes the model, and reports a write that failed. */
@@ -318,9 +302,6 @@ export class BookView extends FileView {
     } finally {
       this.saving -= 1;
     }
-    // The edit that just settled may have reordered the book or
-    // changed what a note holds, so its pages are sent again.
-    void this.relay();
   }
 
   /** Paints the page again with the settings as they are now. */
@@ -355,79 +336,83 @@ export class BookView extends FileView {
   }
 
   /**
-   * Sends the book through the engine again and paints the pages it
-   * comes back with. A run a later one overtakes before it lands is
-   * dropped rather than painted.
+   * Reads the folio ranges again. A render that lands while a read is
+   * out is followed by one more read, so a burst of renders reads the
+   * whole book once rather than once each.
    */
-  private async relay(): Promise<void> {
-    const file = this.file;
-    const shown = this.shown;
-    if (file === null || shown === undefined) return;
-    const generation = (this.typesetting += 1);
-    let folios = this.folios;
-    try {
-      const links = cacheLinks(this.app);
-      // The view asks for the engine on every run rather than keeps
-      // one. If that engine stopped, the view sets the book on a new
-      // engine.
-      const client = await this.engines.client(file.path);
-      const { ops } = await sendBook(
-        shown.model.book,
-        shown.model.order,
-        links,
-        file.path,
-        // The folios are set without the author's CSS, so it names no
-        // image this run needs.
-        "",
-        (path) => this.readNote(path),
-        (path) => this.readFile(path),
-      );
-      const { sections } = resolve(shown.model.order, links, file.path);
-      const { title, author, publisher } = shown.model.book.metadata;
-      // The page reports the folios the preview paints, so both are set
-      // under the same design. Registering the faces the design names
-      // is the preview's job. Here the engine falls back to the face it
-      // carries.
-      const output = await client.preview([
-        ...ops,
-        styleOp(
-          designSheets(shown.model.book.design, {
-            sections: sectionIds(sections),
-            title,
-            author,
-            publisher,
-          }),
-        ),
-      ]);
-      if (output !== null) {
-        folios = await sectionRanges(sections, output.pages, client);
-      }
-    } catch (cause) {
-      console.error(`Orca: ${file.path} did not typeset.`, cause);
+  private follow(): void {
+    if (this.reading !== undefined) {
+      this.again = true;
+      return;
     }
-    if (generation !== this.typesetting) return;
-    this.folios = folios;
-    this.repaint();
+    this.reading = this.ranges().finally(() => {
+      this.reading = undefined;
+      if (!this.again) return;
+      this.again = false;
+      this.follow();
+    });
   }
 
   /**
-   * Reads the file an embed names, for the same run. The page keeps no
-   * registry: it sends the book once an edit settles rather than on the
-   * keystroke, and nothing here paints an image.
+   * Reads the folio ranges from the book's session, which sets the book
+   * if nothing has, and paints them. A read an edit overtook keeps the
+   * ranges already painted, and the render that overtook it reads again.
    */
-  private async readFile(path: string): Promise<Hashed> {
-    const bytes = new Uint8Array(
-      await this.app.vault.adapter.readBinary(normalizePath(path)),
-    );
-    return { key: await contentKey(bytes), bytes };
+  private async ranges(): Promise<void> {
+    const file = this.file;
+    // A page with no hold is closed or between notes, and a closed page
+    // that opened the book would open it ahead of the preview.
+    if (file === null || this.shown === undefined || this.holding === undefined) return;
+    const at = this.unfollowed;
+    try {
+      const typeset = await this.composer.reading(file.path);
+      // A closed page that watched the book would open it again each
+      // time the book is dropped.
+      if (this.file !== file || at !== this.unfollowed) return;
+      this.watching(typeset);
+      const folios = await typeset.ranges();
+      if (this.file !== file || at !== this.unfollowed || folios === undefined) return;
+      this.folios = folios;
+      this.repaint();
+    } catch (cause) {
+      console.error(`Orca: ${file.path} did not typeset.`, cause);
+    }
   }
 
-  /** Reads a note a section names, for the run `relay` sends. */
-  private readNote(path: string): Promise<string> {
-    const note = this.app.vault.getFileByPath(path);
-    return note === null
-      ? Promise.reject(new Error(`${path} is gone`))
-      : this.app.vault.cachedRead(note);
+  /** Follows the renders of a book, in place of the one it followed. */
+  private watching(typeset: Typeset): void {
+    if (typeset === this.following) return;
+    this.unwatch?.();
+    this.following = typeset;
+    this.unwatch = typeset.watch(() => {
+      this.follow();
+    });
+  }
+
+  private unfollow(): void {
+    this.unfollowed += 1;
+    this.unwatch?.();
+    this.unwatch = undefined;
+    this.following = undefined;
+  }
+
+  /**
+   * Drops the book from the composer when a new note fills an entry the
+   * session set as missing. The vault event names the new note, which
+   * no book reads yet, so nothing else drops the book.
+   */
+  private stale(): void {
+    const file = this.file;
+    const following = this.following;
+    if (file === null || this.shown === undefined || following === undefined) return;
+    const { sections } = resolve(this.shown.model.order, cacheLinks(this.app), file.path);
+    const same =
+      sections.length === following.sections.length &&
+      sections.every((section, at) => {
+        const was = following.sections[at];
+        return was !== undefined && sameSection(section, was);
+      });
+    if (!same) this.composer.forget(file.path);
   }
 
   /**
@@ -478,4 +463,11 @@ export class BookView extends FileView {
     const reading = this.counting.delete(path);
     return known || reading;
   }
+}
+
+/** Whether two sections set the same thing: the same kind, from the same note. */
+function sameSection(one: Section, other: Section): boolean {
+  const pathOf = (section: Section): string | undefined =>
+    "path" in section ? section.path : undefined;
+  return one.kind === other.kind && pathOf(one) === pathOf(other);
 }

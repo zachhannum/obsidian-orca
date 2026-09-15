@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import type { Folios, LayoutOutput, Op, Page } from "fleuron";
+import type { Folios, LayoutOutput, NodeSource, Op, Page, Sheet } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { VAULT_FONTS, familyNamed } from "@/assets/fonts";
 import { contentKey, fontUrl } from "@/assets/registry";
@@ -12,7 +12,8 @@ import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
 import type { Face } from "@/book/plan";
 import type { Design, FontUse } from "@/style/design";
-import { FACES_SHEET } from "@/style/sheet";
+import { FACES_SHEET, OWN_SHEET } from "@/style/sheet";
+import { pdfTarget } from "@/engine/export";
 import type { Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import type { EngineClient, FaceSet, Range, Stages } from "@/engine/session";
@@ -46,6 +47,10 @@ const SPREAD = 2;
 class FakeClient implements EngineClient {
   readonly rendered: Op[][] = [];
   readonly ranges: Range[] = [];
+  /** The sheets the last style op sent, which the engine styles every page with. */
+  sheets: readonly Sheet[] = [];
+  /** The sheets the engine held at each export. */
+  readonly exported: (readonly Sheet[])[] = [];
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   /** The text of each source the book op sent, by the name it sent it under. */
@@ -63,6 +68,7 @@ class FakeClient implements EngineClient {
         if (op.op === "book") {
           this.sent = op.sources.map(({ name, text }) => ({ name, text }));
         }
+        if (op.op === "style") this.sheets = op.sheets;
       }
     }
     if (range !== undefined) this.ranges.push(range);
@@ -80,6 +86,7 @@ class FakeClient implements EngineClient {
   }
 
   exportPdf(): Promise<Uint8Array | null> {
+    this.exported.push(this.sheets);
     return Promise.resolve(new Uint8Array());
   }
 
@@ -100,9 +107,12 @@ class FakeClient implements EngineClient {
     return Promise.resolve(byte < written ? null : at * 10 + 5);
   }
 
-  sourceOf(node: number): Promise<null> {
-    void node;
-    return Promise.resolve(null);
+  /** The source a section id came from, the way `nodeAt` numbers them. */
+  sourceOf(node: number): Promise<NodeSource | null> {
+    const at = Math.floor(node / 10);
+    const sent = this.sent[at];
+    if (at * 10 + 5 !== node || sent === undefined) return Promise.resolve(null);
+    return Promise.resolve({ source: sent.name, start: 0, end: 0 });
   }
 
   foliosOf(nodes: number[]): Promise<(Folios | null)[]> {
@@ -600,6 +610,89 @@ test("a book set again on a new engine after its engine stops keeps its heading 
   assert.deepEqual(sentFaces(clients.started[1]?.rendered[0] ?? []), [[1], [2]]);
 });
 
+/** Asserts the sheets carry the book's own CSS and the faces of the headed book. */
+function styledAsOpened(sheets: readonly Sheet[], book: Typeset): void {
+  const own = sheets.find((sheet) => sheet.name === OWN_SHEET)?.css ?? "";
+  assert.notEqual(own, "", "the fixture book has no CSS of its own");
+  assert.equal(own, book.css);
+  const faces = sheets.find((sheet) => sheet.name === FACES_SHEET)?.css ?? "";
+  assert.match(faces, /Alegreya/);
+  assert.match(faces, /Spectral/);
+}
+
+test("after the folios are read, the preview keeps the book's own CSS and its faces", async () => {
+  const clock = new Steps();
+  const client = new FakeClient();
+  const composer = new Composer(headed(await setting(client)), clock);
+  const book = await composer.open(BOOK);
+
+  await (await composer.reading(BOOK)).ranges();
+  composer.retype(BOOK, "Chapter Twelve.md", "# Chapter Twelve\n\nIt is a truth.\n");
+  await drain();
+  clock.tick();
+  await drain();
+  await book.session.read(0);
+
+  // Only the open styled the book, so the sheets the pages are set
+  // under are the ones it sent.
+  assert.equal(client.rendered.flat().filter((op) => op.op === "style").length, 1);
+  styledAsOpened(client.sheets, book);
+});
+
+test("after the folios are read, the export keeps the book's own CSS and its faces", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(headed(await setting(client)));
+  const book = await composer.reading(BOOK);
+
+  await book.ranges();
+  await pdfTarget.run(book.session, () => Promise.resolve());
+
+  assert.equal(client.exported.length, 1);
+  styledAsOpened(client.exported[0] ?? [], book);
+});
+
+test("the folios come from the book's one session, and reading them sends no op", async () => {
+  const clients = new Clients();
+  const composer = new Composer({
+    ...(await setting(new FakeClient())),
+    engines: clients.engines,
+  });
+  const book = await composer.open(BOOK);
+  const client = clients.started[0];
+  assert.ok(client);
+  const renders = client.rendered.length;
+
+  assert.equal(await composer.reading(BOOK), book);
+  const ranges = await book.ranges();
+
+  assert.equal(client.rendered.length, renders);
+  assert.equal(clients.started.length, 1);
+  // Chapter Twelve is the sixth section sent, two pages to a section.
+  assert.deepEqual(ranges?.get(5), { first: 11, last: 12 });
+  // The chapter the vault does not have lands on no page.
+  assert.equal(ranges?.has(6), false);
+});
+
+test("a book whose notes changed tells its views, and the next read sets it once", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client));
+  const book = await composer.open(BOOK);
+  let told = 0;
+  book.watch(() => {
+    told += 1;
+  });
+
+  composer.forget(BOOK);
+  await drain();
+
+  assert.equal(book.dropped, true);
+  assert.equal(told, 1, "a view left reading the book would set a second session");
+  const [one, two] = await Promise.all([composer.reading(BOOK), composer.reading(BOOK)]);
+  assert.equal(one, two);
+  assert.notEqual(one, book);
+  assert.equal(client.rendered.length, 2);
+});
+
 /** A font and variant resolved to faces, as the plugin's resolver hands them back. */
 function resolvedOf(use: FontUse, faces: Face[]): ResolvedUse {
   return {
@@ -746,4 +839,6 @@ function refonted(design: Design, font: string): Design {
 // What this tier does not cover: the engine's own pagination, so the
 // folios here are the fake client's. The e2e suite is where a real
 // chapter opens on the page the real run put it on, and where a reflow
-// moves it.
+// moves it. The book note page asking the composer for its folios lives
+// inside Obsidian, so the e2e suite proves that wiring and the sheets
+// the real engine keeps after it.

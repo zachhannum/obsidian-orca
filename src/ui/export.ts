@@ -56,11 +56,8 @@ class ExportModal extends Modal {
    * The book the preview already set. A book no view has open is set
    * through the composer, which the preview then reads too.
    */
-  private async typeset(): Promise<Typeset> {
-    const { composer, book } = this.exports;
-    const open = composer.opened(book) ?? composer.open(book);
-    const typeset = await open;
-    return typeset.dropped ? composer.open(book) : typeset;
+  private typeset(): Promise<Typeset> {
+    return this.exports.composer.reading(this.exports.book);
   }
 
   private exporter(): Exporter {

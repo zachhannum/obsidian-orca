@@ -158,6 +158,25 @@ test("folio ranges come from a run of the book through the engine", async ({
   await expect(note.pages("Chapter Four")).toHaveText("—");
 });
 
+test("the page reads its folios off the preview's session and sends its engine nothing", async ({
+  book,
+  note,
+}) => {
+  await book.open();
+  const before = await book.settled(BOOK);
+
+  await note.beside(BOOK);
+  await expect(note.pages(CHAPTER)).toHaveText(FOLIO);
+
+  // A run of the page's own would raise the generation the preview
+  // paints at, and a second engine would be a second worker.
+  expect(await book.settled(BOOK)).toBe(before);
+  expect(await book.engines(BOOK)).toBe(1);
+
+  await note.close();
+  await book.close();
+});
+
 test("a folio range follows a note as it grows past its page", async ({
   note,
   vault,
