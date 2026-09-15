@@ -1,0 +1,30 @@
+{
+  "width": 252,
+  "height": 303,
+  "marks": {
+    "scene-break-mark": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "scene-break-ornament": {
+      "x": 0,
+      "y": 130,
+      "width": 148,
+      "height": 30
+    },
+    "scene-break-space-above": {
+      "x": 0,
+      "y": 193,
+      "width": 60,
+      "height": 30
+    },
+    "scene-break-space-below": {
+      "x": 0,
+      "y": 256,
+      "width": 60,
+      "height": 30
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "width": 252,
+  "height": 280,
+  "marks": {
+    "heading-1-align": {
+      "x": 0,
+      "y": 233,
+      "width": 220,
+      "height": 30
+    },
+    "heading-1-font": {
+      "x": 0,
+      "y": 107,
+      "width": 220,
+      "height": 30
+    },
+    "heading-1-size": {
+      "x": 0,
+      "y": 170,
+      "width": 60,
+      "height": 30
+    },
+    "heading-level": {
+      "x": 0,
+      "y": 46,
+      "width": 252,
+      "height": 28
+    },
+    "reset-heading-1-align": {
+      "x": 228,
+      "y": 236,
+      "width": 24,
+      "height": 24
+    },
+    "reset-heading-1-size": {
+      "x": 228,
+      "y": 173,
+      "width": 24,
+      "height": 24
+    }
+  }
+}
