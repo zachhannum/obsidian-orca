@@ -1,0 +1,90 @@
+{
+  "width": 252,
+  "height": 515,
+  "marks": {
+    "body-align": {
+      "x": 0,
+      "y": 256,
+      "width": 220,
+      "height": 30
+    },
+    "body-first-line-indent": {
+      "x": 0,
+      "y": 318,
+      "width": 60,
+      "height": 30
+    },
+    "body-font": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "body-hanging-punctuation": {
+      "x": 0,
+      "y": 478,
+      "width": 36,
+      "height": 16
+    },
+    "body-hyphens": {
+      "x": 0,
+      "y": 385,
+      "width": 36,
+      "height": 16
+    },
+    "body-indent-after-break": {
+      "x": 0,
+      "y": 440,
+      "width": 36,
+      "height": 16
+    },
+    "body-line-spacing": {
+      "x": 0,
+      "y": 193,
+      "width": 60,
+      "height": 30
+    },
+    "body-size": {
+      "x": 0,
+      "y": 130,
+      "width": 60,
+      "height": 30
+    },
+    "reset-body-align": {
+      "x": 228,
+      "y": 259,
+      "width": 24,
+      "height": 24
+    },
+    "reset-body-first-line-indent": {
+      "x": 228,
+      "y": 321,
+      "width": 24,
+      "height": 24
+    },
+    "reset-body-font": {
+      "x": 228,
+      "y": 70,
+      "width": 24,
+      "height": 24
+    },
+    "reset-body-hyphens": {
+      "x": 228,
+      "y": 381,
+      "width": 24,
+      "height": 24
+    },
+    "reset-body-line-spacing": {
+      "x": 228,
+      "y": 196,
+      "width": 24,
+      "height": 24
+    },
+    "reset-body-size": {
+      "x": 228,
+      "y": 133,
+      "width": 24,
+      "height": 24
+    }
+  }
+}

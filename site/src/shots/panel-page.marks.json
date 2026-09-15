@@ -1,0 +1,60 @@
+{
+  "width": 252,
+  "height": 291,
+  "marks": {
+    "margin-bottom": {
+      "x": 114,
+      "y": 183,
+      "width": 88,
+      "height": 30
+    },
+    "margin-inside": {
+      "x": 0,
+      "y": 130,
+      "width": 88,
+      "height": 30
+    },
+    "margin-outside": {
+      "x": 114,
+      "y": 130,
+      "width": 88,
+      "height": 30
+    },
+    "margin-top": {
+      "x": 0,
+      "y": 183,
+      "width": 88,
+      "height": 30
+    },
+    "mirrored": {
+      "x": 0,
+      "y": 250,
+      "width": 36,
+      "height": 16
+    },
+    "reset-margin-inside": {
+      "x": 228,
+      "y": 133,
+      "width": 24,
+      "height": 24
+    },
+    "reset-mirrored": {
+      "x": 228,
+      "y": 246,
+      "width": 24,
+      "height": 24
+    },
+    "reset-trim": {
+      "x": 228,
+      "y": 70,
+      "width": 24,
+      "height": 24
+    },
+    "trim": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    }
+  }
+}
