@@ -83,6 +83,7 @@ export default defineConfig({
             'design/scene-breaks',
             'design/heads-and-folios',
             'design/page-breaks',
+            'design/custom-css',
           ],
         },
         { label: 'Export', items: ['export/export-to-pdf'] },
