@@ -1,0 +1,82 @@
+---
+title: The inspector
+eyebrow: Design
+description: See which rules set a part of a page, and add a rule for it.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The inspector shows the CSS rules that set a part of a page. Use it to find out why a part of the book looks the way it does, or to find the selector for a rule of your own.
+
+<Shot
+  name="inspect"
+  alt="A paragraph pinned on a page of the preview, beside the pane that shows the rules that set it, grouped as Book CSS, Design panel and Orca's theme."
+  caption="The inspector, with a paragraph pinned."
+/>
+
+## Turn on inspect mode
+
+1. Open the preview.
+2. In the header of the preview, select `Inspect the page`.
+
+You can also run the command `Inspect the page` from the command palette.
+
+When you move the pointer over the page, the inspector outlines the part under the pointer. The margin, the padding and the content each get a light tint. A tag above the outline names the element, the role of its section and its size, for example `p chapter 3.85 × 0.58in`.
+
+If a part continues on the next page, the inspector outlines it on both pages. A running head or a page number is a margin box of an `@page` rule, and you can pick it in the same way.
+
+## Pin a part
+
+Select a part of the page to pin it. The design panel opens its CSS view, and a pane opens above the editor.
+
+The top row of the pane shows the path from the book to the pinned part, for example `book › section#a-shifting-reef › p`. A section shows its id, and its role follows in faint type.
+
+## Read the rules
+
+The pane shows only the rules that match the pinned part. It groups them by where they come from:
+
+| Group | Rules from |
+| --- | --- |
+| `Book CSS` | Your CSS |
+| `Design panel` | The controls of the design panel |
+| `Orca's theme` | Orca's theme |
+
+In each group, the winning rule comes first. A declaration that lost to another rule is struck through. [Custom CSS](/design/custom-css/) shows the order in which the groups apply.
+
+If fleuron skipped a declaration in your CSS, the pane shows the declaration with a wavy line and the warning below it.
+
+Under the rules, `Computed` shows some of the final values, for example the font, the line height and the indent.
+
+## Go to the source of a rule
+
+Each rule names its source on the right.
+
+- A rule from your CSS names its line, for example `line 21`. Select it to put the cursor on that line.
+- A rule from the design panel names its control, for example `First-line indent`. Select it to open that control.
+- A rule from Orca's theme names no source.
+
+Some rules from the design panel set a part that has no control, for example the title page. The name of such a rule is faint, and it opens nothing.
+
+## Add a rule
+
+1. In the CSS view, put the cursor where the rule goes.
+2. In the pane, select `Add a rule for`. Orca puts an empty rule with that selector at the cursor.
+
+The selector starts at the nearest section or other element with an id, and ends at the pinned part. To add a step of the path to the selector or take it out, select that step in the top row of the pane.
+
+For a margin box, orca puts the rule inside its `@page` rule.
+
+## Remove the pin
+
+To remove the pin, do one of these:
+
+- Press Escape.
+- Select the pinned part again.
+- Select a place on the page where there is no part.
+- In the pane, select `Take the pin off`.
+
+Inspect mode stays on when you remove the pin.
+
+## Turn off inspect mode
+
+If no part is pinned, press Escape. You can also select `Inspect the page` again, or open the manuscript. Escape works only while the preview has focus.

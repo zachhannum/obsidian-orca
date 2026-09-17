@@ -84,6 +84,7 @@ export default defineConfig({
             'design/heads-and-folios',
             'design/page-breaks',
             'design/custom-css',
+            'design/inspect',
           ],
         },
         { label: 'Export', items: ['export/export-to-pdf'] },
