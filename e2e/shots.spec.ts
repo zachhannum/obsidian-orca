@@ -854,10 +854,17 @@ test("the make pictures are a folder of notes made into a book", async ({
   await site.obsidian.asRendered();
 });
 
-test("the CSS picture is the sample book's own CSS beside the page it sets", async ({
+/** The rule a CSS picture types: it overrides the indent control and holds a declaration fleuron skips. */
+const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;\n}";
+
+/** The control that rule overrides. */
+const OVERRIDDEN = "body-first-line-indent";
+
+test("the CSS pictures are the sample book's own CSS, a warning on a rule, and the control that rule overrides", async ({
   site,
 }) => {
   await arrange(site);
+  const own = await noteText(site);
   await sized(site, INSPECT.width, INSPECT.height);
   await site.obsidian.collapse("left");
   const width = await site.obsidian.sidebar(INSPECT.panel);
@@ -868,19 +875,151 @@ test("the CSS picture is the sample book's own CSS beside the page it sets", asy
   await settled(site.book);
   await expect(site.panel.flags).toHaveCount(0);
 
+  const css: Marks[] = [];
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
     await settled(site.book);
     await expect(site.panel.editor).toBeVisible();
     await site.obsidian.unhovered();
+    css.push(
+      await site.marks(await windowBox(site), {
+        controls: site.panel.toControls,
+        wrap: site.panel.wrap,
+      }),
+    );
     await expect(site.obsidian.page).toHaveScreenshot(`css-${scheme}.png`);
   }
+  await sidecar("css", css);
+
+  await site.obsidian.moving();
+  await typed(site, own, OVERRIDING);
+  await expect(site.panel.flags).toHaveCount(1);
+  await expect(site.panel.warned).toBeVisible();
+
+  const warning: Marks[] = [];
+  const bar: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    // The card is the warning the picture shows, so the pointer rests on
+    // the mark rather than off the window.
+    await site.obsidian.moving();
+    await site.panel.flags.first().hover();
+    await expect(site.panel.card).toBeVisible();
+    const card = await around(
+      site,
+      [
+        await measured(site.panel.warned),
+        await measured(site.panel.editor),
+        await measured(site.panel.card),
+      ],
+      PAD,
+    );
+    warning.push(
+      await site.marks(card, { flag: site.panel.flags.first(), warned: site.panel.warned }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`css-warning-${scheme}.png`, {
+      clip: card,
+    });
+
+    await site.obsidian.unhovered();
+    await site.book.warnings.click();
+    await expect(site.book.issueOpens.first()).toBeVisible();
+    const list = site.obsidian.view(PREVIEW).getByTestId("orca-issues");
+    const opened = await around(
+      site,
+      [await measured(site.book.warnings), await measured(list)],
+      PAD,
+    );
+    bar.push(
+      await site.marks(opened, {
+        warnings: site.book.warnings,
+        place: site.book.issueOpens.first(),
+      }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`preview-warnings-${scheme}.png`, {
+      clip: opened,
+    });
+    await site.book.warnings.click();
+    await expect(list).toBeHidden();
+  }
+  await sidecar("css-warning", warning);
+  await sidecar("preview-warnings", bar);
 
   await site.obsidian.moving();
   await site.panel.wrap.click();
   await site.panel.toControls.click();
+  await expect(site.panel.overridden(OVERRIDDEN)).toBeVisible();
+
+  const locked: Marks[] = [];
+  const header: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await site.obsidian.unhovered();
+
+    // The switch to the CSS view, cropped from the top of the panel's
+    // leaf to just under the switch. The row below scrolls the panel, so
+    // the panel goes back to its top first.
+    await site.panel.leaf.locator(`[data-group="${GROUPS[0]}"]`).scrollIntoViewIfNeeded();
+    const leaf = await measured(site.panel.leaf);
+    const button = await measured(site.panel.toCss);
+    const top = {
+      x: Math.ceil(leaf.x),
+      y: Math.ceil(leaf.y),
+      width: Math.floor(leaf.width),
+      height: Math.ceil(button.y + button.height + PAD - leaf.y),
+    };
+    header.push(await site.marks(top, { css: site.panel.toCss }));
+    await expect(site.obsidian.page).toHaveScreenshot(`css-switch-${scheme}.png`, { clip: top });
+
+    const row = site.panel.row(OVERRIDDEN);
+    await row.scrollIntoViewIfNeeded();
+    // The field of the row above sits close, so the crop pads by less.
+    const clip = await around(site, [await measured(row)], PAD / 2);
+    locked.push(await site.marks(clip, { lock: site.panel.overridden(OVERRIDDEN) }));
+    await expect(site.obsidian.page).toHaveScreenshot(`css-overridden-${scheme}.png`, { clip });
+  }
+  await sidecar("css-switch", header);
+  await sidecar("css-overridden", locked);
+
+  await site.obsidian.moving();
+  await site.panel.toCss.click();
+  await untyped(site, own);
+  await site.panel.toControls.click();
   await site.obsidian.sidebar(width);
 });
+
+/**
+ * Types CSS at the end of the author's CSS, and waits for the editor to
+ * write it to the note. A note put back before that write is written
+ * over by it.
+ */
+async function typed(site: Site, own: string, css: string): Promise<void> {
+  await site.panel.typeCss(css);
+  await expect.poll(async () => noteText(site)).not.toEqual(own);
+}
+
+/** The book note's text as it is on disk. */
+async function noteText(site: Site): Promise<string> {
+  return site.obsidian.page.evaluate(async (at) => window.app.vault.adapter.read(at), BOOK);
+}
+
+/**
+ * Deletes what a picture typed at the end of the author's CSS, in the
+ * editor, and waits for the note to hold its own text again. The editor
+ * keeps its own copy of the CSS, so a note written from outside it is
+ * written over on the next edit.
+ */
+async function untyped(site: Site, own: string): Promise<void> {
+  const extra = (await noteText(site)).length - own.length;
+  await site.panel.code.click();
+  await site.panel.code.press("ControlOrMeta+End");
+  for (let at = 0; at < extra; at++) await site.panel.code.press("Shift+ArrowLeft");
+  await site.panel.code.press("Backspace");
+  await expect.poll(async () => noteText(site)).toEqual(own);
+  await settled(site.book);
+}
 
 // The inspect picture is taken last. Its rule is a change to the book
 // note, and a change to the note drops the book the flip-through reads.
@@ -889,10 +1028,7 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
 }) => {
   await arrange(site);
   const inspect = new Inspect(site.obsidian);
-  const own = await site.obsidian.page.evaluate(
-    async (at) => window.app.vault.adapter.read(at),
-    BOOK,
-  );
+  const own = await noteText(site);
   await sized(site, INSPECT.width, INSPECT.height);
   // The page and the pane are the picture, so the navigator gives its
   // room to them, and the panel is wide enough to read a rule on one line.
@@ -913,43 +1049,56 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
   expect(section).toMatch(/^section#/);
   // The rule is typed over three lines, since one line is wider than the
   // editor and scrolls it sideways under its gutter.
-  await site.panel.typeCss(`${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
+  await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
   await expect(site.panel.rulesIn("own").first()).toContainText(OWN_INDENT);
   pin = await inspect.pinned();
   await site.panel.inspecting(pin.key, pin.generation);
   await expect(site.panel.ruleGroups).toHaveCount(3);
 
+  const taken: Marks[] = [];
+  const adding: Marks[] = [];
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
     await settled(site.book);
     await expect(inspect.outline("pinned").getByTestId("orca-inspect-edge")).toBeVisible();
     await expect(site.panel.pane).toBeVisible();
+    // The pane scrolls, and its top row holds the pin's own icon.
+    await site.panel.unpinButton.scrollIntoViewIfNeeded();
     await site.obsidian.unhovered();
+    taken.push(
+      await site.marks(await windowBox(site), {
+        inspect: inspect.action,
+        unpin: site.panel.unpinButton,
+      }),
+    );
     await expect(site.obsidian.page).toHaveScreenshot(`inspect-${scheme}.png`);
+
+    // "Add a rule" sits under the rules, past the foot of the pane, so
+    // its picture is the pane scrolled to it above the editor.
+    await site.obsidian.moving();
+    await site.panel.addRule.scrollIntoViewIfNeeded();
+    // The pane is scrolled, so its scrollbar would show in the picture.
+    await site.obsidian.still();
+    const clip = await around(
+      site,
+      [await measured(site.panel.pane), await measured(site.panel.editor)],
+      PAD,
+    );
+    adding.push(
+      await site.marks(clip, { caret: site.panel.caretLine, "add-rule": site.panel.addRule }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`inspect-add-${scheme}.png`, { clip });
   }
+  await sidecar("inspect", taken);
+  await sidecar("inspect-add", adding);
 
   // One app takes every picture, so the note, the mode and the panel's
   // width are put back for the next.
   await site.obsidian.moving();
   await inspect.off();
+  await untyped(site, own);
   await site.panel.toControls.click();
   await site.obsidian.sidebar(width);
-  await site.obsidian.page.evaluate(
-    async ({ at, text }) => {
-      const note = window.app.vault.getFileByPath(at);
-      if (note === null) throw new Error(`no note at ${at}`);
-      await window.app.vault.modify(note, text);
-    },
-    { at: BOOK, text: own },
-  );
-  // The editor writes the note on a debounce, so the wait is on the note
-  // holding its own text and on the book painted from it.
-  await expect
-    .poll(async () =>
-      site.obsidian.page.evaluate(async (at) => window.app.vault.adapter.read(at), BOOK),
-    )
-    .toEqual(own);
-  await settled(site.book);
 });
 
 // The book note picture comes after every export. The note's page sets
