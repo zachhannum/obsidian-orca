@@ -17,7 +17,7 @@ import {
   type Written,
 } from '@/style/design';
 import type { Setting } from '@/style/generated';
-import type { Source, Typeset } from './typeset';
+import type { Served, Source, Typeset } from './typeset';
 
 /** What the demo needs to set a page, which the page hands it. */
 export interface Demo {
@@ -27,6 +27,10 @@ export interface Demo {
   setting: Setting;
   /** The chapter the page is set from. */
   source: Source;
+  /** The book note's own CSS. */
+  css: string;
+  /** The images that CSS names. */
+  images: Served[];
 }
 
 /**
@@ -247,7 +251,14 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
   if (into === null) return;
   mount(() => {
     void import('./typeset').then(async ({ startTypeset }) => {
-      typeset = await startTypeset(into, demo.source, demo.setting, design);
+      typeset = await startTypeset(
+        into,
+        demo.source,
+        demo.setting,
+        design,
+        demo.css,
+        demo.images
+      );
     });
   });
 }

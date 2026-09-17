@@ -511,10 +511,16 @@ test("the design demo is the plugin's own panel over the plugin's own engine", a
   const typeset = await read("site/src/scripts/typeset.ts");
   assert.match(typeset, /import \{ designSheets \} from '@\/style\/sheet'/);
   assert.match(typeset, /new Session\(serialized\(/);
-  assert.match(typeset, /styleOp\(designSheets\(/);
+  assert.match(typeset, /styleOp\(designSheets\(sets, setting, css\)\)/);
+  // The book note's own CSS sets the page, so the shell behind a chapter
+  // heading is on it, with the image the CSS names.
+  assert.match(landing, /const css = bookCss\(sampleModel\.order\)/);
+  assert.match(landing, /const images = imagesInCss\(css\)/);
+  assert.match(typeset, /op: 'image', url, bytes/);
+  assert.match(typeset, /asset: \(asset\) => served\.get\(asset\.url\)/);
   // A chapter is one section, so a label over its title stays with it.
   assert.match(typeset, /\{ op: 'split', level: 0 \}/);
-  assert.match(typeset, /paintPage\(page, \{ fonts: reading\.fonts/);
+  assert.match(typeset, /paintPage\(page, \{\s*fonts: reading\.fonts/);
   // Nothing about the page is drawn by CSS: the old fake page is gone.
   assert.doesNotMatch(landing, /class="pg-text"|class="pg r"|data-demo-text|data-demo-mark/);
 
@@ -643,9 +649,11 @@ test("every picture on the page is one the screenshot spec takes", async () => {
   const sources = [...landing.matchAll(/from '(\.\.\/[^']+\.(?:png|jpe?g|webp|svg))'/g)].map(
     (found) => found[1],
   );
-  const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map(
-    (found) => found[1],
-  );
+  // The sample vault's images are not pictures of orca. They are what
+  // the book's CSS names, and the engine draws them into the demo's page.
+  const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)]
+    .map((found) => found[1])
+    .filter((glob) => glob !== "../../sample/images/*");
   assert.ok(sources.length > 0, "the page shows no picture");
   for (const source of [...sources, ...globbed]) {
     assert.match(source, /^\.\.\/shots\//, `${source} is not a picture the spec takes`);
