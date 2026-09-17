@@ -63,6 +63,9 @@ const CREATE = "Create book from these notes";
  */
 const BOOK_NOTE_HEIGHT = 1100;
 
+/** The ribbon action that shows the navigator. */
+const OPEN_ORCA = "Open Orca";
+
 /** The navigator's header action that makes a book with no notes. */
 const NEW_BOOK = "New book";
 
@@ -397,6 +400,41 @@ test("the landing picture is the whole window, in both schemes, at three widths"
 
   await site.obsidian.moving();
 });
+
+test("the anatomy picture is the whole window, with the navigator, the preview and the panel marked", async ({
+  site,
+}) => {
+  await arrange(site);
+  await site.navigator.reveal();
+  await settled(site.book);
+
+  const taken: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await expect(site.navigator.pane).toBeVisible();
+    await expect(site.panel.panel).toBeVisible();
+    await expect(site.book.sheets).toHaveCount(2);
+    await site.obsidian.unhovered();
+    taken.push(
+      await site.marks(await windowBox(site), {
+        "open-orca": site.obsidian.ribbon(OPEN_ORCA),
+        navigator: site.obsidian.view(NAVIGATOR),
+        preview: site.book.panes,
+        panel: site.panel.leaf,
+      }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`anatomy-${scheme}.png`);
+  }
+  await sidecar("anatomy", taken);
+
+  await site.obsidian.moving();
+});
+
+/** The whole window as a box, which a picture of the page is cropped to. */
+async function windowBox(site: Site): Promise<Box> {
+  return site.obsidian.page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight }));
+}
 
 test("at phone width the picture is the preview pane alone", async ({
   site,
