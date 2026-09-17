@@ -6,13 +6,52 @@ description: What orca keeps in the note beside the chapters.
 
 import Shot from '../../../components/Shot.astro';
 
-The book note is a plain Markdown note. It holds the details of the book, its design, its reading order and its own CSS. The navigator and the design panel write it.
+The book note is a plain Markdown note. It holds the details of the book, its design, its reading order and custom CSS.
 
 <Shot
-  name="vault-tree"
-  alt="The file tree of the sample vault, with the book note beside the folder of chapters."
-  caption="The sample vault. The book note is beside the chapters."
+  name="book-note"
+  alt="The book note of Twenty Thousand Leagues Under the Sea, open as a book page, with the details of the book and a summary of its design."
+  caption="The book note of Twenty Thousand Leagues Under the Sea, open as a book page."
 />
+
+## A full book note
+
+````md
+---
+orca-book: 1
+title: Twenty Thousand Leagues Under the Sea
+author: Jules Verne
+language: "en-GB"
+trim: 5.5in 8.5in
+body-font: EB Garamond
+body-size: 10.5pt
+chapter-drop-cap: 3
+header-left-page: author
+header-right-page: chapter-title
+---
+
+# Front matter
+
+- `title-page`
+- [[Copyright]] `copyright`
+- `contents`
+
+# Body
+
+- [[Part One]] `part`
+- [[A Shifting Reef]]
+- [[Pro and Con]]
+
+# Back matter
+
+- [[A note on the text]] `back-matter`
+
+```css
+section.chapter h1 {
+  margin-bottom: 56pt;
+}
+```
+````
 
 ## Frontmatter
 
@@ -28,32 +67,28 @@ The frontmatter starts with `orca-book: 1`. The keys after it are the details of
 | `series` | The series |
 | `isbn` | The ISBN |
 
-The design keys come after these keys. [Design keys](/reference/design-keys/) lists them.
+The frontmatter also stores the design keys. A full description of all supported design keys can be found [here](/reference/design-keys/).
 
 ## Reading order
 
-<Shot
-  name="vault-note"
-  alt="The book note of the sample book open as markdown, with its frontmatter and reading order."
-  caption="The book note of the sample book."
-/>
-
-The body of the note is the reading order. A heading starts a section, for example `# Front matter` or `# Body`. A list item under a heading is one entry. An entry links to a note. An entry can also have a role, in backticks after the link. A role is the kind of entry, for example `copyright` or `part`.
+The body of the note is the reading order. A list item is one entry. An entry links to a note. An entry can also have a role, in backticks after the link. A role is the kind of entry, for example `copyright` or `part`.
 
 ```md
-# Front matter
-
-- `title-page`
 - [[Copyright]] `copyright`
-- `contents`
-
-# Body
-
 - [[Part One]] `part`
 - [[A Shifting Reef]]
 ```
 
 An entry with no role is a chapter. An entry with a generated role needs no link, because orca makes the text of that entry.
+
+```md
+- `title-page`
+- `contents`
+```
+
+## Sections
+
+A heading starts a section, for example `# Front matter` or `# Body`. Sections group the entries in the navigator. They do not change the typeset book. The role of an entry sets how orca typesets it, in any section.
 
 ## Roles
 
@@ -71,4 +106,10 @@ An entry with no role is a chapter. An entry with a generated role needs no link
 
 ## Book CSS
 
-A `css` code block in the note holds the CSS of the book. Orca applies it after the CSS that the design panel makes. The panel does not write this block.
+A `css` code block in the note contains custom CSS for advanced overrides.
+
+```css
+section.chapter h1 {
+  margin-bottom: 56pt;
+}
+```

@@ -15,7 +15,6 @@ A book is a folder of notes and one book note that lists them in reading order. 
   alt="The file tree with the menu for a folder open, and Create book from these notes in the menu."
   caption="The menu for a folder in the file tree."
   marks={['create']}
-  numbered
 />
 
 1. In the file tree, right-click the folder that holds the chapters.
@@ -23,32 +22,47 @@ A book is a folder of notes and one book note that lists them in reading order. 
 
 Orca writes a book note beside the folder, in the parent folder. The name of the note and its `title` are the name of the folder. Under the heading `# Body`, the note links to every note in the folder, sorted by name. The headings `# Front matter` and `# Back matter` are empty.
 
-Orca then opens the book note.
+## The navigator
 
-To start a book with no notes, run the command `New book`. The command writes a book note with the name `Untitled book`.
+The navigator is in the left sidebar. It shows each book in the vault. To open the navigator, select `Open Orca` in the ribbon.
 
-## The new book
+<Shot
+  name="make-new"
+  alt="The header of Orca's navigator, with the New book button."
+  caption="The header of the navigator."
+  marks={['new-book']}
+/>
+
+To start a book with no notes, select `New book` in the header of the navigator. You can also run the command `New book`. Orca writes a book note with the name `Untitled book` and opens it.
 
 <Shot
   name="make-navigator"
-  alt="Orca's navigator in the left sidebar, with the new book and its chapters under it."
-  caption="The navigator, with the new book in it."
-  marks={['book']}
+  alt="The new book in the navigator, with its chapters under it in reading order."
+  caption="The new book in the navigator."
+  marks={['book', 'note']}
+  numbered
 />
 
-The navigator shows the new book and its notes in reading order. To show the navigator, select `Open Orca` in the ribbon. To change the reading order, drag a note to a new place in the navigator.
+The navigator shows the notes of each book in reading order.
+
+1. To open the book note, select the name of the book.
+2. To edit a note, select it. The note opens in the editor.
+
+To change the reading order, drag a note to a new place in the navigator.
+
+## The book note
 
 <Shot
   name="make-page"
-  alt="The new book note open as a book page, with Open as markdown and Open preview in the header."
+  alt="The new book note open as a book page, with Open preview and Open as markdown in the header."
   caption="The book note, open as a book page."
-  marks={['as-markdown', 'open-preview']}
+  marks={['open-preview', 'as-markdown']}
   numbered
 />
 
 The book note opens as a book page. The book page has two actions in its header:
 
-1. `Open as markdown` shows the note as text.
-2. `Open preview` shows the book as typeset pages, laid out as they print.
+1. `Open preview` shows the book as typeset pages.
+2. `Open as markdown` shows the note as text.
 
-The book note is plain Markdown. [The book note](/reference/the-book-note/) shows its format. [Write with the preview](/start/write-with-the-preview/) is the next step.
+[The book note](/reference/the-book-note/) shows its format. [The preview](/start/the-preview/) is the next step.

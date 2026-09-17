@@ -56,6 +56,19 @@ const MADE = `${DRAFT}.md`;
 /** The item on a folder's menu that makes a book from its notes. */
 const CREATE = "Create book from these notes";
 
+/**
+ * The window height the book note picture is taken at. It holds the
+ * details, the design and the start of the reading order, which is as
+ * much of a long book's order as the page needs.
+ */
+const BOOK_NOTE_HEIGHT = 1100;
+
+/** The navigator's header action that makes a book with no notes. */
+const NEW_BOOK = "New book";
+
+/** The note of the new book that the navigator picture marks. */
+const FIRST_DRAFT = "Chapter One";
+
 /** The room around the rows and the menu in the menu picture. */
 const PAD = 16;
 
@@ -557,6 +570,10 @@ test("a docs picture crops to each group of the design panel", async ({
     await site.paint(scheme);
     // The status bar floats over the foot of the panel, so it goes too.
     await site.obsidian.still();
+    // The whole panel opens the Design pages, so it is taken from the top
+    // before any group is scrolled to.
+    await site.panel.leaf.locator(`[data-group="${GROUPS[0]}"]`).scrollIntoViewIfNeeded();
+    await expect(site.panel.leaf).toHaveScreenshot(`panel-${scheme}.png`);
     for (const name of GROUPS) {
       const group = site.panel.leaf.locator(`[data-group="${name}"]`);
       const shot = `panel-${slug(name)}`;
@@ -735,20 +752,43 @@ test("the make pictures are a folder of notes made into a book", async ({
   const note = new Note(site.obsidian);
   await note.painted();
 
-  // The new book on the shelf, and the book note open as its page.
+  // The navigator's header, with the action that makes a book with no
+  // notes. The crop ends under the header, so no book is in it.
   await site.navigator.reveal();
   const shelf = site.obsidian.view(NAVIGATOR);
+  const newBook = site.navigator.button(NEW_BOOK);
+  const header: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(newBook).toBeVisible();
+    const pane = await measured(shelf);
+    const button = await measured(newBook);
+    const clip = {
+      x: Math.floor(pane.x),
+      y: Math.floor(pane.y),
+      width: Math.floor(pane.width),
+      height: Math.ceil(button.y + button.height - pane.y + PAD / 2),
+    };
+    header.push(await site.marks(clip, { "new-book": newBook }));
+    await expect(site.obsidian.page).toHaveScreenshot(`make-new-${scheme}.png`, { clip });
+  }
+  await sidecar("make-new", header);
+
+  // The new book alone, and the book note open as its page.
+  const book = site.navigator.book(MADE);
   const made = site.navigator.name(MADE);
+  const drafted = site.navigator.entry(MADE, FIRST_DRAFT);
   const page = site.obsidian.view(BOOK_PAGE);
-  await made.scrollIntoViewIfNeeded();
+  await book.scrollIntoViewIfNeeded();
   const navigator: Marks[] = [];
   const opened: Marks[] = [];
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
     await expect(made).toBeVisible();
+    await expect(drafted).toBeVisible();
     await expect(note.page).toBeVisible();
-    navigator.push(await site.marks(shelf, { book: made }));
-    await expect(shelf).toHaveScreenshot(`make-navigator-${scheme}.png`);
+    navigator.push(await site.marks(book, { book: made, note: drafted }));
+    await expect(book).toHaveScreenshot(`make-navigator-${scheme}.png`);
     opened.push(
       await site.marks(page, {
         "as-markdown": site.obsidian.actionIn(BOOK_PAGE, AS_MARKDOWN),
@@ -844,6 +884,29 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
     )
     .toEqual(own);
   await settled(site.book);
+});
+
+// The book note picture comes after every export. The note's page sets
+// the book again, and an export after it leaves out the book's CSS.
+test("the book note picture is the sample book's note open as its page", async ({
+  site,
+}) => {
+  await sized(site, WINDOW.width, BOOK_NOTE_HEIGHT);
+  const layout = await site.obsidian.layout();
+  const note = new Note(site.obsidian);
+  await note.open(BOOK);
+  await note.painted();
+  const page = site.obsidian.view(BOOK_PAGE);
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    // The status bar floats over the foot of the page, so it goes too.
+    await site.obsidian.still();
+    await expect(note.page).toBeVisible();
+    await expect(page).toHaveScreenshot(`book-note-${scheme}.png`);
+  }
+  await site.obsidian.moving();
+  await site.obsidian.reopen(layout);
+  await sized(site, WINDOW.width, WINDOW.height);
 });
 
 // What this spec does not cover: the pictures on any platform but the
