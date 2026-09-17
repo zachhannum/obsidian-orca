@@ -9,9 +9,9 @@ import Shot from '../../../components/Shot.astro';
 The controls of the design panel do not set everything. To change the book in other ways, write your own CSS in the CSS view of the design panel. Orca calls this CSS the book's CSS.
 
 <Shot
-  name="inspect"
-  alt="A paragraph pinned on a page of the preview, beside the design panel's CSS view with a rule for its indent, and the rules that set it grouped as Book CSS, Design panel and Orca's theme."
-  caption="A rule in the book's CSS sets the indent of a paragraph."
+  name="css"
+  alt="The CSS view of the design panel, with the rules that put a shell behind each chapter heading, beside the opening page of a chapter."
+  caption="The CSS view, with the rules that put a shell behind each chapter heading."
 />
 
 ## Write CSS
@@ -76,6 +76,12 @@ Each role sets its own named page, for example `@page chapter` or `@page chapter
 ## Find a selector
 
 The inspector shows the selector and the rules for a part of a page.
+
+<Shot
+  name="inspect"
+  alt="A paragraph pinned on a page of the preview, beside the pane that shows the rules that set it, grouped as Book CSS, Design panel and Orca's theme."
+  caption="The inspector, with a paragraph pinned."
+/>
 
 1. In the header of the preview, select `Inspect the page`.
 2. Select a line on a page. The inspector pins it and opens a pane above the editor in the CSS view.

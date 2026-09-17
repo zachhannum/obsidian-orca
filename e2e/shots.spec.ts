@@ -854,6 +854,34 @@ test("the make pictures are a folder of notes made into a book", async ({
   await site.obsidian.asRendered();
 });
 
+test("the CSS picture is the sample book's own CSS beside the page it sets", async ({
+  site,
+}) => {
+  await arrange(site);
+  await sized(site, INSPECT.width, INSPECT.height);
+  await site.obsidian.collapse("left");
+  const width = await site.obsidian.sidebar(INSPECT.panel);
+  await site.panel.toCss.click();
+  // The rules are wider than the panel, so the picture wraps them.
+  await site.panel.wrap.click();
+  await expect(site.panel.wrap).toHaveAttribute("aria-pressed", "true");
+  await settled(site.book);
+  await expect(site.panel.flags).toHaveCount(0);
+
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await expect(site.panel.editor).toBeVisible();
+    await site.obsidian.unhovered();
+    await expect(site.obsidian.page).toHaveScreenshot(`css-${scheme}.png`);
+  }
+
+  await site.obsidian.moving();
+  await site.panel.wrap.click();
+  await site.panel.toControls.click();
+  await site.obsidian.sidebar(width);
+});
+
 // The inspect picture is taken last. Its rule is a change to the book
 // note, and a change to the note drops the book the flip-through reads.
 test("the inspect picture is a pinned paragraph beside the rules that set it", async ({
