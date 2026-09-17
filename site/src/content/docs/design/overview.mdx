@@ -36,6 +36,12 @@ The controls are grouped into logical sections:
 | [Heads & folios](/design/heads-and-folios/) | Running heads and page numbers |
 | [Page breaks](/design/page-breaks/) | Orphans, widows and headings at the foot of a page |
 
-## CSS
+## Custom CSS
 
-To see the CSS of the book, select the `<>` button in the header of the panel. To go back to the controls, select the button again. [The book note](/reference/the-book-note/) shows where your own CSS goes.
+The controls cannot set everything. To change the book in ways that the controls do not offer, write your own CSS.
+
+1. In the header of the panel, select the `<>` button. The CSS view opens. It is empty until you write CSS.
+2. Type your CSS. The preview shows each change.
+3. To go back to the controls, select the `<>` button again.
+
+Your CSS applies on top of the design that the controls set. Orca typesets the book with fleuron, which supports a subset of CSS. The [fleuron CSS subset](https://fleuron.typeworks.dev/css-subset/) lists the properties and selectors that you can use. Orca keeps your CSS in the book note, in a `css` code block. [The book note](/reference/the-book-note/) shows its place in the note.
