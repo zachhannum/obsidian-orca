@@ -49,17 +49,34 @@ if (marks.length > 0 && sidecar === undefined) {
   throw new Error(`no ${name}.marks.json in site/src/shots, and the page asks for marks`);
 }
 
+/** The pixels between two marks under which their rings would touch. */
+const CROWD = 12;
+
 const percent = (part: number, whole: number): string => `${String((part / whole) * 100)}%`;
-const boxes = marks.map((id) => {
+const measuredBoxes = marks.map((id) => {
   const box = sidecar?.marks[id];
   if (sidecar === undefined || box === undefined) throw new Error(`${name} has no mark ${id}`);
-  return {
-    left: percent(box.x, sidecar.width),
-    top: percent(box.y, sidecar.height),
-    width: percent(box.width, sidecar.width),
-    height: percent(box.height, sidecar.height),
-  };
+  return box;
 });
+/** A mark with a neighbor on the same line, such as one of a row of header
+    actions. Its ring sits inside its box and its number sits above it, so
+    neither lands on the neighbor. */
+const crowded = (box: Box): boolean =>
+  measuredBoxes.some(
+    (other) =>
+      other !== box &&
+      other.y < box.y + box.height &&
+      box.y < other.y + other.height &&
+      other.x < box.x + box.width + CROWD &&
+      box.x < other.x + other.width + CROWD,
+  );
+const boxes = measuredBoxes.map((box) => ({
+  left: percent(box.x, sidecar?.width ?? 1),
+  top: percent(box.y, sidecar?.height ?? 1),
+  width: percent(box.width, sidecar?.width ?? 1),
+  height: percent(box.height, sidecar?.height ?? 1),
+  crowded: crowded(box),
+}));
 
 const width = Math.round(dark.width / DENSITY);
 const height = Math.round(dark.height / DENSITY);
@@ -78,7 +95,7 @@ const [darkSrc, lightSrc] = await Promise.all(
           <div class="shot-marks" aria-hidden="true">
             {boxes.map((box, at) => (
               <span
-                class="shot-mark"
+                class={box.crowded ? 'shot-mark crowded' : 'shot-mark'}
                 style={`left: ${box.left}; top: ${box.top}; width: ${box.width}; height: ${box.height}`}
               >
                 {numbered && <span class="shot-number">{at + 1}</span>}

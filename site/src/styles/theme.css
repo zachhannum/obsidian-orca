@@ -213,7 +213,8 @@ site-search button[data-open-modal] > kbd kbd {
 .sl-markdown-content :not(h1, h2, h3, h4, h5, h6, .sl-heading-wrapper) + .sl-heading-wrapper {
   margin-top: 6px;
 }
-.sl-markdown-content p {
+.sl-markdown-content :is(p, table),
+.sl-markdown-content > :is(ul, ol) {
   margin: 0 0 24px;
 }
 .sl-markdown-content a {
@@ -315,6 +316,9 @@ site-search button[data-open-modal] > kbd kbd {
   outline-offset: 3px;
   border-radius: 4px;
 }
+.shot-mark.crowded {
+  outline-offset: -1px;
+}
 .shot-number {
   position: absolute;
   top: -14px;
@@ -331,6 +335,11 @@ site-search button[data-open-modal] > kbd kbd {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
+}
+.shot-mark.crowded .shot-number {
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 /* A step's number is the number on its mark. */
 .sl-markdown-content ol > li::marker {

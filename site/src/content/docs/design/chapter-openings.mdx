@@ -12,19 +12,19 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 <Shot
   name="panel-chapter-openings"
   alt="The Chapter openings group of the design panel, with Begins on, Space above, Space below and Drop cap."
-  caption="The Chapter openings group, for the sample book."
+  caption="The Chapter openings group."
   marks={['chapter-begins', 'chapter-space-above', 'chapter-space-below', 'chapter-drop-cap']}
   numbered
 />
 
 ## Controls
 
-| Control | Default | Key |
-| --- | --- | --- |
-| Begins on | `Next page` | `chapter-begins` |
-| Space above | 0 lines | `chapter-space-above` |
-| Space below | 0 lines | `chapter-space-below` |
-| Drop cap | `None` | `chapter-drop-cap` |
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Begins on | `Next page` | `chapter-begins` |
+| 2 | Space above | 0 lines | `chapter-space-above` |
+| 3 | Space below | 0 lines | `chapter-space-below` |
+| 4 | Drop cap | `None` | `chapter-drop-cap` |
 
 ## Where a chapter begins
 
@@ -34,13 +34,14 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 
 `Space above` and `Space below` are counts of lines of text. A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
 
-<Page n={9} alt="The first page of Chapter I, A Shifting Reef, with space above the title and a drop cap over three lines." caption="The opening of Chapter I in the sample book." />
+## Example
 
-## In the book note
+<Page n={9} alt="The first page of Chapter I, A Shifting Reef, with space above the title and a drop cap over three lines." caption="The opening of Chapter I of Twenty Thousand Leagues Under the Sea." />
 
-Each control that you change writes one key to the frontmatter of the book note.
+These keys set the opening above:
 
 ```yaml
+chapter-begins: next-page
 chapter-space-above: 7
 chapter-drop-cap: 3
 ```

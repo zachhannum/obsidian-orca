@@ -5,34 +5,35 @@ description: The reading face, its size, and how it is set.
 ---
 
 import Shot from '../../../components/Shot.astro';
+import Page from '../../../components/Page.astro';
 
 The Text group in the design panel sets the font of the text, its size and line spacing, and the alignment of each paragraph.
 
 <Shot
   name="panel-text"
   alt="The Text group of the design panel, with Font, Size, Line spacing, Setting, First-line indent and three switches."
-  caption="The Text group, for the sample book."
-  marks={['body-font', 'body-size', 'body-line-spacing', 'body-align', 'body-first-line-indent', 'body-hyphens']}
+  caption="The Text group."
+  marks={['body-font', 'body-size', 'body-line-spacing', 'body-align', 'body-first-line-indent', 'body-hyphens', 'body-indent-after-break', 'body-hanging-punctuation']}
   numbered
 />
 
 ## Controls
 
-| Control | Default | Key |
-| --- | --- | --- |
-| Font | `EB Garamond` | `body-font` |
-| Variant | The default variant of the font | `body-font-variant` |
-| Size | `11pt` | `body-size` |
-| Line spacing | `16.5pt` | `body-line-spacing` |
-| Setting | `Justified` | `body-align` |
-| First-line indent | `1.2em` | `body-first-line-indent` |
-| Hyphenate | on | `body-hyphens` |
-| Indent again after a scene break | off | `body-indent-after-break` |
-| Hanging punctuation | off | `body-hanging-punctuation` |
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Font | `EB Garamond` | `body-font` |
+|  | Variant | The default variant of the font | `body-font-variant` |
+| 2 | Size | `11pt` | `body-size` |
+| 3 | Line spacing | `16.5pt` | `body-line-spacing` |
+| 4 | Setting | `Justified` | `body-align` |
+| 5 | First-line indent | `1.2em` | `body-first-line-indent` |
+| 6 | Hyphenate | on | `body-hyphens` |
+| 7 | Indent again after a scene break | off | `body-indent-after-break` |
+| 8 | Hanging punctuation | off | `body-hanging-punctuation` |
 
 ## Font and variant
 
-`Font` sets the font family of the text. `Variant` shows only when the family has more than one variant. The panel writes no key for the default variant.
+`Font` sets the font family of the text. `Variant` shows only when the family has more than one variant.
 
 ## Size and spacing
 
@@ -40,15 +41,19 @@ The baseline is the line that the letters sit on. `Line spacing` is the distance
 
 ## Setting
 
-`Justified` makes each line as wide as the text. `Ragged right` aligns each line on the left edge.
+Justified text aligns on both the left and the right margin. Orca adjusts the space between the words so that each line fills the full width. Ragged right text aligns on the left margin only, so the right edge is uneven.
 
-## In the book note
+## Example
 
-Each control that you change writes one key to the frontmatter of the book note.
+<Page n={11} alt="A right page of Twenty Thousand Leagues Under the Sea, set justified in EB Garamond with hyphens and indented paragraphs." caption="A right page of Twenty Thousand Leagues Under the Sea." />
+
+These keys set the text above:
 
 ```yaml
 body-font: EB Garamond
 body-size: 10.5pt
 body-line-spacing: 14pt
 body-align: justify
+body-first-line-indent: 1.2em
+body-hyphens: true
 ```

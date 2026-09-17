@@ -12,27 +12,25 @@ A running head is the line at the top of a page. A folio is the page number. The
 <Shot
   name="panel-heads-and-folios"
   alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format and a switch."
-  caption="The Heads & folios group, for the sample book."
+  caption="The Heads & folios group."
   marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'suppress-head-on-openings']}
   numbered
 />
 
 ## Controls
 
-| Control | Default | Key |
-| --- | --- | --- |
-| Left-page header | `Nothing` | `header-left-page` |
-| Right-page header | `Nothing` | `header-right-page` |
-| Header position | `Outside` | `header-position` |
-| Page number | `Bottom` | `page-number-position` |
-| Number format | `1, 2, 3` | `page-number-format` |
-| Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Left-page header | `Nothing` | `header-left-page` |
+| 2 | Right-page header | `Nothing` | `header-right-page` |
+| 3 | Header position | `Outside` | `header-position` |
+| 4 | Page number | `Bottom` | `page-number-position` |
+| 5 | Number format | `1, 2, 3` | `page-number-format` |
+| 6 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
 
 ## Running heads
 
 `Left-page header` and `Right-page header` each take `Nothing`, `Author`, `Book title` or `Chapter title`. `Header position` puts the running head at the outside edge of the page or in the center.
-
-<Page n={12} alt="A left page of the sample book, with the author's name at the top and the page number at the bottom." caption="A left page in the sample book, with the author as its running head." />
 
 ## Page numbers
 
@@ -40,11 +38,15 @@ A running head is the line at the top of a page. A folio is the page number. The
 
 An opening is the first page of a chapter. When `Hide the running head and page number on openings` is on, an opening has no running head and no folio.
 
-## In the book note
+## Example
 
-Each control that you change writes one key to the frontmatter of the book note.
+<Page n={12} alt="A left page of Twenty Thousand Leagues Under the Sea, with the author's name at the top and the page number at the bottom." caption="A left page, with the author as its running head." />
+
+These keys set the heads and folios above:
 
 ```yaml
 header-left-page: author
 header-right-page: chapter-title
+page-number-position: bottom
+suppress-head-on-openings: true
 ```

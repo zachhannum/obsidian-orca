@@ -6,11 +6,7 @@ description: Save the book as a PDF.
 
 import Shot from '../../../components/Shot.astro';
 
-Orca writes the book to a PDF from the same pages that the preview shows.
-
-## Open the dialog
-
-To open the dialog, select `Export to PDF` in the header of the preview. You can also run the command `Export to PDF`.
+To export the book, select `Export to PDF` in the header of the preview, or run the command `Export to PDF`.
 
 ## Export the book
 
@@ -18,18 +14,15 @@ To open the dialog, select `Export to PDF` in the header of the preview. You can
   name="export"
   alt="The Export to PDF dialog, with Save to, Choose, Preflight showing No errors, and Export."
   caption="The Export to PDF dialog, ready to export."
-  marks={['destination', 'choose', 'fine', 'write']}
-  numbered
 />
 
-1. To change the file that orca writes, edit the path in `Save to`. By default, the path is the book title with `.pdf`, beside the book note.
-2. To write the file outside the vault, select `Choose…`. The system save dialog opens.
-3. Under `Preflight`, wait until `Checking…` changes to `No errors`. Preflight finds the errors that stop an export.
-4. Select `Export`.
+1. In `Save to`, edit the path of the file. By default, the file has the name of the book and is beside the book note.
+2. To save the file outside the vault, select `Choose…`.
+3. When `Preflight` shows `No errors`, select `Export`.
 
 ## Preflight errors
 
-If preflight finds an error, orca shows a card for it and does not export. The footer shows `Fix N errors to export`, where N is the number of errors.
+Preflight finds the errors that stop an export. You cannot export until you fix them.
 
 | Error | Action |
 | --- | --- |
@@ -43,7 +36,6 @@ If preflight finds an error, orca shows a card for it and does not export. The f
   name="export-written"
   alt="The Export to PDF dialog after export, with the file name, page count and size, and Open PDF and Done."
   caption="The dialog after orca writes the file."
-  marks={['open']}
 />
 
-After export, the dialog shows the file name, the page count and the file size. To open the file, select `Open PDF`. To close the dialog, select `Done`.
+To open the file, select `Open PDF`.

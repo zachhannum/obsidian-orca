@@ -11,30 +11,21 @@ The Page breaks group in the design panel sets where a paragraph can break acros
 <Shot
   name="panel-page-breaks"
   alt="The Page breaks group of the design panel, with Orphans, Widows and a switch."
-  caption="The Page breaks group, for the sample book."
+  caption="The Page breaks group."
   marks={['body-orphans', 'body-widows', 'keep-heading-with-text']}
   numbered
 />
 
 ## Controls
 
-| Control | Default | Key |
-| --- | --- | --- |
-| Orphans | 2 lines | `body-orphans` |
-| Widows | 2 lines | `body-widows` |
-| Keep a heading with what follows it | on | `keep-heading-with-text` |
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Orphans | 2 lines | `body-orphans` |
+| 2 | Widows | 2 lines | `body-widows` |
+| 3 | Keep a heading with what follows it | on | `keep-heading-with-text` |
 
 ## Orphans and widows
 
 An orphan is a line of a paragraph alone at the foot of a page. A widow is a line of a paragraph alone at the top of a page. `Orphans` and `Widows` set the smallest number of lines that a paragraph leaves on each side of a page break.
 
 When `Keep a heading with what follows it` is on, a heading does not end a page.
-
-## In the book note
-
-Each control that you change writes one key to the frontmatter of the book note.
-
-```yaml
-body-orphans: 3
-body-widows: 3
-```

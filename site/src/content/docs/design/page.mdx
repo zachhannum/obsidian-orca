@@ -5,27 +5,28 @@ description: Trim, margins, and the unit they are set in.
 ---
 
 import Shot from '../../../components/Shot.astro';
+import Page from '../../../components/Page.astro';
 
 The Page group in the design panel sets the trim and the margins around the text. The trim is the size of the page.
 
 <Shot
   name="panel-page"
   alt="The Page group of the design panel, with Trim, the four margins and the switch that mirrors them."
-  caption="The Page group, for the sample book."
+  caption="The Page group."
   marks={['trim', 'margin-inside', 'margin-outside', 'margin-top', 'margin-bottom', 'mirrored']}
   numbered
 />
 
 ## Controls
 
-| Control | Default | Key |
-| --- | --- | --- |
-| Trim | `US trade (6 × 9 in)` | `trim` |
-| Margins inside | `0.75in` | `margin-inside` |
-| Margins outside | `0.6in` | `margin-outside` |
-| Margins top | `0.75in` | `margin-top` |
-| Margins bottom | `0.75in` | `margin-bottom` |
-| Mirror the margins on facing pages | on | `mirrored` |
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Trim | `US trade (6 × 9 in)` | `trim` |
+| 2 | Margins inside | `0.75in` | `margin-inside` |
+| 3 | Margins outside | `0.6in` | `margin-outside` |
+| 4 | Margins top | `0.75in` | `margin-top` |
+| 5 | Margins bottom | `0.75in` | `margin-bottom` |
+| 6 | Mirror the margins on facing pages | on | `mirrored` |
 
 ## Trim
 
@@ -53,9 +54,11 @@ A number field takes a number and a unit: `pt`, `pc`, `in`, `mm`, `cm` or `em`. 
 
 The `Page measurements` setting chooses the unit that the panel uses for the trim and the margins. The values are `Inches`, `Millimeters` and `Points`.
 
-## In the book note
+## Example
 
-Each control that you change writes one key to the frontmatter of the book note.
+<Page n={10} alt="A left page of Twenty Thousand Leagues Under the Sea, with a wide inside margin and a deep bottom margin." caption="A left page of Twenty Thousand Leagues Under the Sea." />
+
+These keys set the page above:
 
 ```yaml
 trim: 5.5in 8.5in
@@ -63,4 +66,5 @@ margin-inside: 0.95in
 margin-outside: 0.7in
 margin-top: 0.8in
 margin-bottom: 1in
+mirrored: true
 ```

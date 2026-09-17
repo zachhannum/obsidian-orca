@@ -11,36 +11,27 @@ A scene break is the space between two scenes in a chapter. The Scene breaks gro
 <Shot
   name="panel-scene-breaks"
   alt="The Scene breaks group of the design panel, with Mark, Glyph, Space above and Space below."
-  caption="The Scene breaks group, for the sample book."
+  caption="The Scene breaks group."
   marks={['scene-break-mark', 'scene-break-ornament', 'scene-break-space-above', 'scene-break-space-below']}
   numbered
 />
 
 ## Controls
 
-| Control | Default | Key |
-| --- | --- | --- |
-| Mark | `Ornament` | `scene-break-mark` |
-| Glyph | `❧` | `scene-break-ornament` |
-| Word | none | `scene-break-word` |
-| Space above | 1 line | `scene-break-space-above` |
-| Space below | 1 line | `scene-break-space-below` |
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Mark | `Ornament` | `scene-break-mark` |
+| 2 | Glyph | `❧` | `scene-break-ornament` |
+|  | Word | none | `scene-break-word` |
+| 3 | Space above | 1 line | `scene-break-space-above` |
+| 4 | Space below | 1 line | `scene-break-space-below` |
 
 ## Mark
 
 `Mark` takes one of three values:
 
 - `Space` leaves the space empty.
-- `Ornament` sets a glyph in the space. `Glyph` shows when `Mark` is `Ornament`. It offers `❧`, `⁂`, `§` and `✦`.
-- `Word` sets a word in the space. `Word` shows when `Mark` is `Word`.
+- `Ornament` sets a glyph in the space. The `Glyph` row shows the glyphs `❧`, `⁂`, `§` and `✦`.
+- `Word` sets a word in the space. When you select `Word`, the `Word` row replaces the `Glyph` row. Type the word in that row.
 
 `Space above` and `Space below` are counts of lines of text.
-
-## In the book note
-
-Each control that you change writes one key to the frontmatter of the book note.
-
-```yaml
-scene-break-mark: ornament
-scene-break-ornament: ⁂
-```

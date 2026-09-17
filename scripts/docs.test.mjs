@@ -838,7 +838,7 @@ const exists = (file) =>
 
 test("the design keys page lists every key, in the order the schema writes them", async () => {
   const { DESIGN_KEYS, LEVELS } = await moduleOf("src/style/design.ts");
-  const listed = table(await read(`${DOCS}/reference/design-keys.mdx`), ["Key", "Values", "Page"]).map(
+  const listed = table(await read(`${DOCS}/reference/design-keys.mdx`), ["Key", "Values", "Reference"]).map(
     ([key]) => unquoted(key),
   );
 
@@ -870,10 +870,14 @@ test("each group in the design panel has a page with its controls, their default
 
   for (const group of GROUPS) {
     const slug = group.name.toLowerCase().replace(" & ", " and ").replaceAll(" ", "-");
-    const rows = table(await read(`${DOCS}/design/${slug}.mdx`), ["Control", "Default", "Key"]);
+    // The level row picks which heading the rows under it write, and
+    // writes no key of its own.
+    const rows = table(await read(`${DOCS}/design/${slug}.mdx`), ["#", "Control", "Default", "Key"]).filter(
+      ([, , , key]) => key !== "none",
+    );
     const controls = group.rows.flatMap((row) => row.of).filter((control) => control.key !== undefined);
     assert.deepEqual(
-      rows.map(([, , key]) => unquoted(key)),
+      rows.map(([, , , key]) => unquoted(key)),
       [...controls.map((control) => control.key)],
       `the ${group.name} page lists other keys than the group writes`,
     );
@@ -883,12 +887,29 @@ test("each group in the design panel has a page with its controls, their default
       if (control.kind === "variant") continue;
       // The panel draws a count with its word after it.
       const shown = defaultSaid(control, empty[atLevel(control.key, 1)], LIMITS.unit);
-      const cell = unquoted(rows[at][1]);
+      const cell = unquoted(rows[at][2]);
       assert.ok(
         cell === shown || cell.startsWith(`${shown} line`),
         `the ${group.name} page gives ${control.key} the default ${cell}, and the panel shows ${shown}`,
       );
     }
+  }
+});
+
+test("the number on each mark of a design group's picture is the number of its row", async () => {
+  const { GROUPS } = await moduleOf("src/ui/groups.ts");
+  for (const group of GROUPS) {
+    const slug = group.name.toLowerCase().replace(" & ", " and ").replaceAll(" ", "-");
+    const page = await read(`${DOCS}/design/${slug}.mdx`);
+    const marks = [.../marks=\{\[([^\]]*)\]\}/.exec(page)[1].matchAll(/'([^']+)'/g)].map((found) => found[1]);
+    const numbered = table(page, ["#", "Control", "Default", "Key"])
+      .filter(([n]) => n !== "")
+      .map(([n, , , key]) => [Number(n), key === "none" ? "heading-level" : unquoted(key).replace("-N-", "-1-")]);
+    assert.deepEqual(
+      numbered,
+      marks.map((id, at) => [at + 1, id]),
+      `the ${group.name} page numbers its rows other than its marks`,
+    );
   }
 });
 
