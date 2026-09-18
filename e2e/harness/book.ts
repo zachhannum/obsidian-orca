@@ -26,6 +26,9 @@ interface Holding {
         }>
       | undefined;
   };
+  /** The settings the machine keeps, which the view is one of. */
+  limits?: Record<string, unknown>;
+  limit?(limits: Record<string, unknown>): void;
 }
 
 /** The command that opens the book, or reveals a preview already open. */
@@ -341,6 +344,19 @@ export class Book {
 
   async close(): Promise<void> {
     await this.obsidian.detach(PREVIEW);
+  }
+
+  /**
+   * Puts the view back to single, which is the view a spec starts in.
+   * The view is the machine's rather than the pane's, so a spec that
+   * switches it hands the next spec a book in that view.
+   */
+  async reset(): Promise<void> {
+    await this.obsidian.page.evaluate((id) => {
+      const orca = window.app.plugins.plugins[id] as Holding | undefined;
+      if (orca?.limits === undefined) return;
+      orca.limit?.({ ...orca.limits, view: "single" });
+    }, PLUGIN);
   }
 
   /**

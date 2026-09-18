@@ -25,6 +25,7 @@ import { copiedText, type SelectionLine } from "@/ui/copy";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
+  isViewMode,
   nextPage,
   previousPage,
   showPages,
@@ -82,6 +83,8 @@ export interface PreviewState {
   linked?: boolean;
   /** The page being read, counting from 1. */
   folio?: number;
+  /** The view the book is being read in. */
+  view?: ViewMode;
   /**
    * The byte of the note the manuscript is scrolled to. It says where a
    * book opens rather than where it is, so the workspace never keeps
@@ -112,6 +115,10 @@ export interface PreviewHandoff {
   inspected(view: PreviewView, pin: Pin | undefined, refreshed: boolean): void;
   /** The unit the author measures pages in, which the inspect tag sizes a box in. */
   unit(): PageUnit;
+  /** The view a preview opens in, which is the one the last switch chose. */
+  view(): ViewMode;
+  /** Told which view the author switched to, so the next preview opens in it. */
+  viewed(mode: ViewMode): void;
   /** Opens the export dialog on the book this view reads. */
   exports(book: string): void;
 }
@@ -181,7 +188,7 @@ export class PreviewView extends ItemView {
   /** Counts the books opened here, so a book the author left is dropped. */
   private opening = 0;
   /** The view the book is being read in. */
-  private mode: ViewMode = "single";
+  private mode: ViewMode;
   /** The chapters the book set, in reading order. */
   private turns: Chapter[] = [];
   /** The chapter the control names, by its place in the reading order. */
@@ -264,6 +271,7 @@ export class PreviewView extends ItemView {
     private readonly reading: (text: string | undefined) => void,
   ) {
     super(leaf);
+    this.mode = handoff.view();
   }
 
   override getViewType(): string {
@@ -279,7 +287,7 @@ export class PreviewView extends ItemView {
   }
 
   override getState(): Record<string, unknown> {
-    return { ...super.getState(), ...this.state };
+    return { ...super.getState(), ...this.state, view: this.mode };
   }
 
   override async setState(
@@ -289,12 +297,16 @@ export class PreviewView extends ItemView {
     await super.setState(state, result);
     const wanted = readState(state);
     const changed = wanted.book !== this.state.book;
+    const reviewed = wanted.view !== undefined && wanted.view !== this.mode;
+    if (wanted.view !== undefined) this.mode = wanted.view;
     this.caret = wanted.at;
     this.state = kept(wanted);
     this.attach();
+    if (reviewed) this.marksView();
     if (changed) await this.compose();
     else if (wanted.folio !== undefined) await this.turn(wanted.folio - 1);
     else if (wanted.note !== undefined) await this.turnTo(wanted.note, wanted.at);
+    else if (reviewed) await this.turn(this.at);
   }
 
   /** The page this preview is turned to, counting from 1, once it has one. */
@@ -557,6 +569,7 @@ export class PreviewView extends ItemView {
     views.setAttribute("role", "group");
     views.setAttribute("aria-label", "View");
     for (const view of VIEWS) this.switchesTo(views, view);
+    this.marksView();
     bar.createDiv({ cls: "orca-preview-spacer" });
 
     const warnings = bar.createEl("button", { cls: "orca-preview-warnings" });
@@ -1079,12 +1092,27 @@ export class PreviewView extends ItemView {
     return button;
   }
 
-  /** Reads the book in `mode`, from the page it is already open at. */
+  /**
+   * Reads the book in `mode`, from the page it is already open at. The
+   * view is the leaf's and the machine's both, so the pane keeps it
+   * across a restart and the next preview opens in it.
+   */
   private async show(mode: ViewMode): Promise<void> {
     if (mode === this.mode) return;
     this.mode = mode;
+    this.marksView();
+    this.handoff.viewed(mode);
+    this.app.workspace.requestSaveLayout();
     this.measure();
     await this.turn(this.at);
+  }
+
+  /** Marks the switch of the view the book is being read in. */
+  private marksView(): void {
+    for (const [mode, button] of this.switches) {
+      button.toggleClass("is-on", mode === this.mode);
+      button.setAttribute("aria-pressed", String(mode === this.mode));
+    }
   }
 
   /** The reader's place in the book, which a turn is worked out from. */
@@ -1402,10 +1430,7 @@ export class PreviewView extends ItemView {
         ? `pages ${String(first)}–${String(last)} of ${String(pages)}`
         : `page ${String(first)} of ${String(pages)}`,
     );
-    for (const [mode, button] of this.switches) {
-      button.toggleClass("is-on", mode === this.mode);
-      button.setAttribute("aria-pressed", String(mode === this.mode));
-    }
+    this.marksView();
     if (this.back !== undefined) this.back.disabled = at === 0;
     if (this.on !== undefined) this.on.disabled = last >= pages;
   }
@@ -1608,6 +1633,7 @@ function readState(state: unknown): PreviewState {
   if (typeof raw["note"] === "string") made.note = raw["note"];
   if (raw["linked"] === true) made.linked = true;
   if (typeof raw["folio"] === "number") made.folio = raw["folio"];
+  if (isViewMode(raw["view"])) made.view = raw["view"];
   if (typeof raw["at"] === "number") made.at = raw["at"];
   return made;
 }

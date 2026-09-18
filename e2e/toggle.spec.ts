@@ -396,6 +396,26 @@ test("a workspace reopened on a preview opens it at the page it was closed on", 
   await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
 });
 
+test("and in the view it was reading, which is the pane's own", async ({
+  book,
+  obsidian,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.show("Spread", "spread");
+
+  const layout = await obsidian.layout();
+  await book.close();
+  // The machine keeps the last view switched to as well, so it is put
+  // back to single: the view the pane opens in is its own.
+  await book.reset();
+  await obsidian.reopen(layout);
+
+  await expect(book.panes).toHaveCount(1);
+  await book.painted();
+  await expect(book.surface).toHaveAttribute("data-view", "spread");
+});
+
 test("a note the book does not list, and a page orca wrote, turn neither pane", async ({
   book,
   manuscript,

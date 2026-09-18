@@ -2,7 +2,13 @@ import type { Side } from "fleuron";
 import type { Stages } from "@/engine/session";
 
 /** The three ways the preview shows a book. */
-export type ViewMode = "single" | "spread" | "grid";
+export const VIEW_MODES = ["single", "spread", "grid"] as const;
+
+export type ViewMode = (typeof VIEW_MODES)[number];
+
+export function isViewMode(value: unknown): value is ViewMode {
+  return (VIEW_MODES as readonly unknown[]).includes(value);
+}
 
 /** A box on screen, in CSS pixels. */
 export interface Box {
