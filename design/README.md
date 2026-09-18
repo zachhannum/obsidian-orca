@@ -180,8 +180,7 @@ its editor around these files and returns a URL. The artboard list and
 - The mark is the tail from the orca icon, in one flat color. The site
   does not use the colors of the icon.
 - On the landing page, the sea rises through the second line of the
-  title. The title is the light color with a difference blend, so its
-  letters invert below the waterline.
+  title, and the title's letters invert below the waterline.
 - In the dark scheme, the landing page has a light sky over a black
   sea, and most of the page is dark. The light scheme swaps the two.
 - The main button is black on the white sea and ink indigo on the black
