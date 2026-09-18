@@ -13,7 +13,7 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
-import type { App } from "obsidian";
+import type { App, WorkspaceLeaf } from "obsidian";
 import { COPY, OPENED } from "./launch";
 
 /** The two pieces of the app the API does not declare. */
@@ -783,12 +783,19 @@ export class Obsidian {
     );
   }
 
-  /** Closes every leaf with a view of this type. */
+  /**
+   * Closes every leaf with a view of this type, a deferred one included.
+   * A background tab holds the type in its state and no view yet, and a
+   * reload of the window would open it beside the leaf the next spec
+   * asks for.
+   */
   async detach(type: string): Promise<void> {
     await this.page.evaluate((of) => {
-      for (const leaf of window.app?.workspace.getLeavesOfType(of) ?? []) {
-        leaf.detach();
-      }
+      const leaves: WorkspaceLeaf[] = [];
+      window.app?.workspace.iterateAllLeaves((leaf) => {
+        if (leaf.getViewState().type === of) leaves.push(leaf);
+      });
+      for (const leaf of leaves) leaf.detach();
     }, type);
   }
 }
