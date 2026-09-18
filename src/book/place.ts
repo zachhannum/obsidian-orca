@@ -148,6 +148,27 @@ export function heldOn(page: Page): Written[] {
   return [...blocks.values()];
 }
 
+/**
+ * The node a page opens at: the earliest block that begins on the page,
+ * or the earliest block on it where none begins there. A page that opens
+ * mid-block has no opening of its own to name, so it names the block it
+ * opens inside. Nothing for a page that sets no block at all.
+ */
+export function opensOn(held: Written[]): number | undefined {
+  return (
+    earliest(held.filter((block) => block.from === 0)) ?? earliest(held)
+  );
+}
+
+/** The earliest of these blocks, which is the one with the lowest node. */
+function earliest(blocks: Written[]): number | undefined {
+  let first: number | undefined;
+  for (const block of blocks) {
+    if (first === undefined || block.node < first) first = block.node;
+  }
+  return first;
+}
+
 /** Reads one page of the book, counting from 0. */
 export type ReadPage = (at: number) => Promise<Page | undefined>;
 

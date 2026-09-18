@@ -18,6 +18,9 @@ const SECTIONS = 7;
 /** The line the fixture chapter's own heading is on, counting from 0. */
 const HEADING = 5;
 
+/** The pages into the chapter a swap back is made from. */
+const INTO = 3;
+
 /**
  * The chapter with paragraphs enough to run over several pages, so a
  * caret has somewhere inside it to be.
@@ -444,6 +447,43 @@ test("a cold session says what the book is waiting on rather than showing an emp
   expect(last).toContain("Pride and Prejudice");
   expect(last).toContain(`chapters of ${String(SECTIONS)}`);
   expect(last).toContain("it will open at Chapter Twelve");
+});
+
+test("a swap from a page that opens mid-paragraph leads to the paragraph that page begins", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  const text = await pagedOut(vault);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.scrollTo(HEADING);
+  await manuscript.asBook.click();
+  await book.painted();
+  const opens = await book.reading();
+
+  // Far enough into the chapter that the page opens on a paragraph
+  // carried over from the page before.
+  for (let turn = 1; turn <= INTO; turn += 1) {
+    await book.next.click();
+    await expect(book.surface).toHaveAttribute("data-first", String(opens + turn));
+  }
+  const words = await book.words(0);
+  const said = /Paragraph (\d+)\./.exec(words)?.[1] ?? "";
+  const begins = `Paragraph ${said}.`;
+  expect(said).not.toBe("");
+  // The paragraph above this one begins on the page before, so its own
+  // words are only a sliver at the top of this page.
+  expect(words.startsWith(begins)).toBe(false);
+
+  await book.asMarkdown.click();
+  await expect(manuscript.pane).toHaveCount(1);
+
+  // The caret is on the paragraph the page begins rather than on the one
+  // it opens inside, which starts a page back.
+  await expect
+    .poll(async () => (await manuscript.caret())?.line)
+    .toBe(lineOf(text, begins));
 });
 
 // What this spec does not cover: a book long enough for the wait to be

@@ -7,6 +7,7 @@ import {
   heldOn,
   nodesOn,
   offsetOf,
+  opensOn,
   pagesOf,
   writtenAt,
   writtenByte,
@@ -162,6 +163,24 @@ test("a page inside one long paragraph comes back to a page of it, not to its fi
   // nowhere for a reflow to turn to.
   assert.deepEqual(heldOn(sheet(51, [])), []);
   assert.equal(anchorOf([]), undefined);
+});
+
+test("a page opens at the block it begins, not at the sliver carried over above it", () => {
+  // The page opens on the tail of one paragraph and then sets two of its
+  // own, so the first of those two is where it opens.
+  const held = heldOn(
+    sheet(50, [
+      ...lined(10, 900, 30, 2),
+      ...lined(11, 0, 30, 20),
+      ...lined(12, 0, 30, 9),
+    ]),
+  );
+  assert.equal(opensOn(held), 11);
+
+  // A page wholly inside one paragraph begins no block of its own, so it
+  // opens at the one it is inside.
+  assert.equal(opensOn(heldOn(sheet(51, lined(30, 3000, 40, 34)))), 30);
+  assert.equal(opensOn([]), undefined);
 });
 
 test("two blocks landing on one page count their lines together, and a tie goes to the earlier", () => {

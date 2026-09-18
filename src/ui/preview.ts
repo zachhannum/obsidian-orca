@@ -26,6 +26,7 @@ import {
   anchorOf,
   heldOn,
   nodesOn,
+  opensOn,
   pagesOf,
   type Landed,
   type Nodes,
@@ -335,17 +336,16 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * The place in the manuscript the page being read opens at: the
-   * earliest node the page's runs name, taken back to the note it was
-   * read from. Nothing for a page orca wrote itself.
+   * The place in the manuscript the page the reader is on opens at: the
+   * first block that begins on that page, taken back to the note it was
+   * read from. A paragraph carried over from the page before begins on
+   * the page before, so a sliver of one at the top of a page leads
+   * nowhere. Nothing for a page orca wrote itself.
    */
   async opensIn(): Promise<Opens | undefined> {
     const session = this.session;
-    if (session === undefined) return undefined;
-    const reading = await session.read(this.at, 1);
-    const page = reading?.pages[0];
-    const node = page === undefined ? undefined : nodesOn(page)?.first;
-    if (node === undefined) return undefined;
+    const node = opensOn(this.blocks);
+    if (session === undefined || node === undefined) return undefined;
     const source = await session.sourceOf(node);
     if (source === undefined || isGenerated(source.source)) return undefined;
     return { note: source.source, at: source.start };
