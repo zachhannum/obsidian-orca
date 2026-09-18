@@ -187,7 +187,7 @@ export function tagOf(
   box: PageBox | undefined = inspection.boxes[0],
 ): Tag {
   return {
-    element: inspection.element,
+    element: leafName(inspection),
     role: roleIn(inspection),
     size: box === undefined ? undefined : sizeOf(box, unit),
   };
@@ -310,10 +310,13 @@ export function crumbsOf(inspection: Inspection): Crumb[] {
     faint: faintOf(element),
     ancestor: at,
   }));
-  return [
-    ...chain,
+  const leaf: Crumb[] = [
     { name: nameOf(inspection), faint: faintOf(inspection), ancestor: undefined },
   ];
+  if (inspection.pseudoElement !== undefined) {
+    leaf.push({ name: inspection.pseudoElement, faint: undefined, ancestor: undefined });
+  }
+  return [...chain, ...leaf];
 }
 
 /**
@@ -328,6 +331,14 @@ function nameOf(element: {
 }): string {
   if (hasId(element)) return `${element.element}#${element.id ?? ""}`;
   return `${element.element}${element.classes.map((name) => `.${name}`).join("")}`;
+}
+
+/**
+ * The end of the selector the pane names: the element, and the
+ * pseudo-element after it where the box is one.
+ */
+function leafName(inspection: Inspection): string {
+  return `${nameOf(inspection)}${inspection.pseudoElement ?? ""}`;
 }
 
 function faintOf(element: { id: string | null; classes: readonly string[] }): string | undefined {
@@ -362,7 +373,7 @@ export function selectorFor(
     const next = chosen[index + 1] ?? last;
     selector += `${nameOf(ancestor)}${next === at + 1 ? " > " : " "}`;
   });
-  return `${selector}${nameOf(inspection)}`;
+  return `${selector}${leafName(inspection)}`;
 }
 
 /**
@@ -403,8 +414,20 @@ export function ruleFor(inspection: Inspection, picked: Iterable<number>): strin
  */
 export function boxKey(pin: Pin): string {
   const { inspection } = pin;
-  const chain = [...inspection.ancestors, inspection].map(nameOf).join(" ");
+  const chain = [...inspection.ancestors.map(nameOf), leafName(inspection)].join(" ");
   return `${targetKey(pin.target)} ${chain}`;
+}
+
+/**
+ * Whether two inspections answer for the same box: the same element,
+ * and the same pseudo-element of it. A paragraph and its drop cap are
+ * not the same box, and both name `p`.
+ */
+export function sameBox(found: Inspection, pinned: Inspection): boolean {
+  return (
+    found.element === pinned.element &&
+    found.pseudoElement === pinned.pseudoElement
+  );
 }
 
 /**

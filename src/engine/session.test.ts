@@ -975,6 +975,49 @@ test("a point in a paragraph hits it, and a point in the running head names its 
   }
 });
 
+/** A sheet that sets the opening paragraph's first letter three lines deep. */
+const DROP_CAP = "section > p:first-of-type::first-letter { initial-letter: 3; }";
+
+test("a point on a drop cap hits the pseudo-element, which answers for itself", async () => {
+  const vault = directoryVault(path.join(root, "fixture"));
+  const engine = await startEngine(
+    await readModule(directoryVault(engineDirectory()), "."),
+    nodeHost(),
+  );
+  try {
+    const name = "Chapter Twelve.md";
+    const text = await readText(vault, name);
+    const session = new Session(engine.client, faces());
+    await session.open(openBook({ name, text }));
+    await session.render([styleOp([{ name: THEME_SHEET, css: DROP_CAP }])]);
+
+    const byte = new TextEncoder().encode(
+      text.slice(0, text.indexOf("In consequence")),
+    ).length;
+    const node = await session.nodeAt(name, byte);
+    assert.ok(node !== undefined, "the paragraph was read into no node");
+    const paragraph = await session.inspect(node);
+    const box = paragraph?.boxes[0];
+    assert.ok(box, "the paragraph reached no page");
+
+    // The letter sits at the top-left corner of the paragraph's box.
+    const hit = await session.hit(box.page, box.x + 1, box.y + 1);
+    assert.ok(hit !== undefined, "the point hit nothing");
+    assert.notEqual(hit, paragraph?.node, "the drop cap has the paragraph's id");
+    const cap = await session.inspect(hit);
+    assert.equal(cap?.element, "p");
+    assert.equal(cap?.pseudoElement, "::first-letter");
+    assert.ok(cap?.rules.some((rule) => rule.selector.endsWith("::first-letter")));
+
+    // Its box is the letter, which is smaller than the paragraph.
+    const letter = cap?.boxes[0];
+    assert.ok(letter, "the drop cap reached no page");
+    assert.ok(letter.width < box.width, "the drop cap is as wide as the paragraph");
+  } finally {
+    engine.stop();
+  }
+});
+
 /** An inspection of one element or margin box, set where a test says. */
 function margin(element: string, boxes: Inspection["boxes"]): Inspection {
   return {
@@ -997,3 +1040,5 @@ function margin(element: string, boxes: Inspection["boxes"]): Inspection {
 // So is the generation a real render comes back on. The view turns a
 // point on a spread into a page and a point on that page, so the view's
 // own tests cover that.
+// Of the pseudo-elements, only `::first-letter` is hit here. A first
+// line and a generated box wait on the e2e run.

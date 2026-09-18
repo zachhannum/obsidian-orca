@@ -57,6 +57,7 @@ import {
   escape,
   mapAnchor,
   pointOn,
+  sameBox,
   stillPinned,
   targetKey,
   targetOf,
@@ -957,7 +958,7 @@ export class PreviewView extends ItemView {
     }
     if (anchor === undefined) {
       const inspection = await session.inspect(target.node);
-      return inspection?.element === pin.inspection.element
+      return inspection !== undefined && sameBox(inspection, pin.inspection)
         ? { target, anchor: undefined, inspection, text: undefined }
         : undefined;
     }
@@ -981,7 +982,7 @@ export class PreviewView extends ItemView {
       }
       const found =
         candidate === inspection.node ? inspection : await session.inspect(candidate);
-      if (found?.element !== pin.inspection.element) continue;
+      if (found === undefined || !sameBox(found, pin.inspection)) continue;
       return { target: { kind: "node", node: candidate }, anchor: source, inspection: found, text };
     }
     return undefined;

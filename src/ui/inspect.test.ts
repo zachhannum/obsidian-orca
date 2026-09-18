@@ -13,6 +13,7 @@ import {
   mapAnchor,
   pointOn,
   ruleFor,
+  sameBox,
   selectorFor,
   specificPicks,
   stillPinned,
@@ -306,6 +307,38 @@ test("an added rule is empty, and a margin box's sits inside its page rule", () 
   assert.equal(ruleFor(head, []), "@page :left {\n  @top-left {\n    \n  }\n}");
 });
 
+test("the tag and the crumbs name a pseudo-element after its element", () => {
+  const cap = inspection({ node: 2147483690, pseudoElement: "::first-letter" });
+  assert.equal(tagOf(cap, "in").element, "p::first-letter");
+  assert.deepEqual(crumbsOf(cap), [
+    { name: "book", faint: undefined, ancestor: 0 },
+    { name: "section#the-harbor", faint: "chapter", ancestor: 1 },
+    { name: "p", faint: undefined, ancestor: undefined },
+    { name: "::first-letter", faint: undefined, ancestor: undefined },
+  ]);
+});
+
+test("an added rule for a pseudo-element has a selector that ends with it", () => {
+  const cap = inspection({ node: 2147483690, pseudoElement: "::first-letter" });
+  assert.equal(selectorFor(cap, []), "p::first-letter");
+  assert.equal(
+    ruleFor(cap, specificPicks(cap)),
+    "section#the-harbor > p::first-letter {\n  \n}",
+  );
+  // The element's own id still ends the chain, with the pseudo-element after it.
+  const before = inspection({ id: "epigraph", pseudoElement: "::before" });
+  assert.equal(ruleFor(before, specificPicks(before)), "p#epigraph::before {\n  \n}");
+});
+
+test("a pseudo-element and the element it belongs to are not the same box", () => {
+  const paragraph = inspection();
+  const cap = inspection({ node: 2147483690, pseudoElement: "::first-letter" });
+  assert.equal(sameBox(cap, cap), true);
+  assert.equal(sameBox(paragraph, cap), false);
+  assert.equal(sameBox(cap, inspection({ pseudoElement: "::first-line" })), false);
+  assert.notEqual(boxKey({ ...pin, target: { kind: "node", node: 2147483690 }, inspection: cap }), boxKey(pin));
+});
+
 test("a refreshed pin on the same box keeps its key, and another box does not", () => {
   const again: Pin = { ...pin, generation: 4, inspection: inspection({ rules: [] }) };
   assert.equal(boxKey(again), boxKey(pin));
@@ -313,6 +346,10 @@ test("a refreshed pin on the same box keeps its key, and another box does not", 
   assert.notEqual(boxKey(other), boxKey(pin));
 });
 
+// A pinned pseudo-element has no anchor, because no source holds one.
+// It is found again by its id alone, and the pin comes off when the
+// engine no longer answers for it. That path runs in the e2e specs.
+//
 // What this tier does not cover: the overlay in a painted preview, the
 // pointer turning into a hit on the engine, and a pin found again after
 // a real edit, which wait on the e2e specs. mapAnchor reads one edit as
