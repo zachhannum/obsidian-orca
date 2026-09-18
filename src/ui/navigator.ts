@@ -38,9 +38,10 @@ export interface Handoff {
   /**
    * Turns the preview in the main area's most recent tab to a section,
    * by its place in the reading order. It answers false, and turns
-   * nothing, where that tab is not a preview of the book.
+   * nothing, where that tab is not a preview of the book, or where the
+   * book set that section to no page.
    */
-  turn(book: string, at: number): boolean;
+  turn(book: string, at: number): Promise<boolean>;
 }
 
 /**
@@ -586,7 +587,8 @@ export class NavigatorView extends ItemView {
   /**
    * Opens an entry. A preview of the book in the most recent tab turns
    * to it, a generated section included. Otherwise a chapter opens as
-   * markdown, and a click with the Mod key opens it in a new tab.
+   * markdown, and a click with the Mod key opens it in a new tab. A
+   * chapter the preview cannot turn to opens as markdown as well.
    */
   private async openEntry(
     book: Shelved,
@@ -599,7 +601,7 @@ export class NavigatorView extends ItemView {
       if (note !== null) await this.app.workspace.getLeaf("tab").openFile(note);
       return;
     }
-    if (this.handoff.turn(book.path, row.at) || note === null) return;
+    if ((await this.handoff.turn(book.path, row.at)) || note === null) return;
     await this.app.workspace.getLeaf(false).openFile(note);
   }
 }

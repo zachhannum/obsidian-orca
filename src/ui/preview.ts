@@ -558,29 +558,35 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Turns to the page a chapter opens on now. Where it opens is asked
-   * of the engine at the turn, so a reflow since the book was set is
-   * already in the answer.
+   * Turns to the page a chapter opens on now, and answers whether it
+   * turned. Where it opens is asked of the engine at the turn, so a
+   * reflow since the book was set is already in the answer. A chapter
+   * the book set to no page turns nothing.
    */
-  async turnToChapter(chapter: Chapter): Promise<void> {
-    await this.turnToPlace(chapter);
+  async turnToChapter(chapter: Chapter): Promise<boolean> {
+    return await this.turnToPlace(chapter);
   }
 
-  /** Turns to where a section opens, by its place in the reading order. A section the book did not set turns nothing. */
-  async turnToSection(at: number): Promise<void> {
+  /**
+   * Turns to where a section opens, by its place in the reading order,
+   * and answers whether it turned. A section the book did not set
+   * turns nothing.
+   */
+  async turnToSection(at: number): Promise<boolean> {
     const chapter = this.turns.find((turn) => turn.at === at);
-    if (chapter !== undefined) await this.turnToPlace(chapter);
+    return chapter === undefined ? false : await this.turnToPlace(chapter);
   }
 
-  private async turnToPlace(chapter: Chapter): Promise<void> {
+  private async turnToPlace(chapter: Chapter): Promise<boolean> {
     const at = await this.opensSection(chapter.at);
-    if (at === undefined) return;
+    if (at === undefined) return false;
     // The chapter is kept from the turn, so a spread or a screenful
     // that also carries the one before it is still named for the one
     // the reader asked for, and the next turn command steps from it.
     this.turnedTo = chapter.at;
     this.namesAt(chapter.at);
     await this.turn(at);
+    return true;
   }
 
   /** Draws the toolbar, the well the pages sit in, and the status line. */
@@ -648,7 +654,14 @@ export class PreviewView extends ItemView {
     });
     this.registerDomEvent(chapter, "change", () => {
       const to = this.turns.find((turn) => String(turn.at) === chapter.value);
-      if (to !== undefined) void this.turnToChapter(to);
+      if (to === undefined) return;
+      // A chapter the book set to no page leaves the reader where they
+      // are, so the control goes back to the chapter on screen rather
+      // than name one the pane is not showing.
+      const named = this.named;
+      void this.turnToChapter(to).then((turned) => {
+        if (!turned && named !== undefined) this.namesAt(named);
+      });
     });
     this.registerDomEvent(this.containerEl, "keydown", (event) => {
       // The folio is a field, so Home and End belong to its caret.
