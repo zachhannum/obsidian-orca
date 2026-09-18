@@ -309,6 +309,20 @@ export class Book {
     return this.sheets.nth(at);
   }
 
+  /**
+   * The words one sheet sets, or every sheet on screen where no slot is
+   * named, in reading order. The painter's own selection layer is what
+   * the author wrote, one line at a time, so this reads that rather than
+   * the glyphs.
+   */
+  async words(at?: number): Promise<string> {
+    const on = at === undefined ? this.surface : this.seat(at);
+    const lines = await on
+      .locator("text[data-selection-line]")
+      .allTextContents();
+    return lines.join(" ");
+  }
+
   /** The pages the view says it is showing. */
   async showing(): Promise<number> {
     return Number(await this.surface.getAttribute("data-count"));
