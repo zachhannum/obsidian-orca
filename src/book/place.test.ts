@@ -2,11 +2,18 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Page, TextItem } from "fleuron";
 import {
+  anchorOf,
   byteOf,
+  heldOn,
   nodesOn,
   offsetOf,
+  pagesOf,
   writtenAt,
   writtenByte,
+  type Landed,
+  type ReadPage,
+  type Runs,
+  type Written,
 } from "@/book/place";
 
 /** A run of a page, named for the node it was shaped from. */
@@ -44,6 +51,122 @@ function page(number: number, nodes: number[]): Page {
 test("a page's nodes are the span its own runs name, and the engine's are not in it", () => {
   assert.deepEqual(nodesOn(page(3, [12, 40, 27])), { first: 12, last: 40 });
   assert.equal(nodesOn(page(4, [])), undefined);
+});
+
+/** A run at a baseline, over the bytes of a node it was shaped from. */
+function set(line: Written, y: number): TextItem {
+  return {
+    ...run(line.node),
+    y,
+    origin: { node: line.node, range: [line.from, line.to] },
+  };
+}
+
+/** A page of these lines, one to a baseline, under a folio the engine wrote. */
+function sheet(number: number, lines: Written[]): Page {
+  return {
+    ...page(number, []),
+    items: [run(undefined), ...lines.map((line, at) => set(line, 73 + at * 14))],
+  };
+}
+
+/** Lines of one node, `bytes` bytes each, from `from`. */
+function lined(node: number, from: number, bytes: number, count: number): Written[] {
+  return Array.from({ length: count }, (_, at) => ({
+    node,
+    from: from + at * bytes,
+    to: from + (at + 1) * bytes,
+  }));
+}
+
+/** Reads the book these pages are, counting from 0. */
+function book(pages: Page[]): ReadPage {
+  return (at) => Promise.resolve(pages[at]);
+}
+
+/** The pages `node` runs across, over a book of these pages. */
+function runsOf(pages: Page[], node: number): Runs {
+  const on = pages.flatMap((page, at) =>
+    heldOn(page).some((held) => held.node === node) ? [at] : [],
+  );
+  const at = on[0] ?? 0;
+  return { at, count: on.length };
+}
+
+/** The pages the blocks of the reader's page landed on, over a book of these pages. */
+async function landed(held: Written[], pages: Page[]): Promise<Landed[]> {
+  const found: Landed[] = [];
+  for (const block of held) {
+    found.push(...(await pagesOf(block, runsOf(pages, block.node), book(pages))));
+  }
+  return found;
+}
+
+test("a reflow comes back to the page now setting the blocks the reader's page held", async () => {
+  const held = heldOn(
+    sheet(50, [
+      ...lined(10, 90, 30, 4),
+      ...lined(11, 0, 30, 8),
+      ...lined(12, 0, 40, 2),
+    ]),
+  );
+  assert.deepEqual(held, [
+    { node: 10, from: 90, to: 210 },
+    { node: 11, from: 0, to: 240 },
+    { node: 12, from: 0, to: 80 },
+  ]);
+
+  // The reflow moved all three blocks a page along, and split the one
+  // the page opened with over the page before.
+  const pages = [
+    sheet(59, lined(9, 0, 30, 10)),
+    sheet(60, [...lined(9, 300, 30, 4), ...lined(10, 0, 30, 3)]),
+    sheet(61, [
+      ...lined(10, 90, 30, 4),
+      ...lined(11, 0, 30, 8),
+      ...lined(12, 0, 40, 2),
+    ]),
+  ];
+  assert.equal(anchorOf(await landed(held, pages)), 2);
+});
+
+test("a page that opens mid-paragraph comes back to the page setting its own lines", async () => {
+  // The reader's page opens 240 bytes into a paragraph, so the lines
+  // before that are on the page before and are not the reader's place.
+  const held = heldOn(sheet(50, [...lined(20, 240, 40, 9), ...lined(21, 0, 40, 3)]));
+  const pages = [
+    // The paragraph starts here, which is where the old anchor turned to.
+    sheet(60, lined(20, 0, 40, 6)),
+    sheet(61, [...lined(20, 240, 40, 9), ...lined(21, 0, 40, 3)]),
+  ];
+  assert.equal(anchorOf(await landed(held, pages)), 1);
+});
+
+test("a page inside one long paragraph comes back to a page of it, not to its first", async () => {
+  const held = heldOn(sheet(50, lined(30, 4300, 40, 38)));
+  assert.deepEqual(held, [{ node: 30, from: 4300, to: 5820 }]);
+
+  // One paragraph over five pages. The reader's own bytes begin at the
+  // foot of the third and run through the fourth, which sets most of
+  // them, so that is the page and not the one they begin on.
+  const pages = Array.from({ length: 5 }, (_, at) =>
+    sheet(70 + at, lined(30, at * 1480, 40, 37)),
+  );
+  assert.deepEqual(await landed(held, pages), [
+    { at: 2, lines: 4 },
+    { at: 3, lines: 35 },
+  ]);
+  assert.equal(anchorOf(await landed(held, pages)), 3);
+
+  // A page the engine wrote alone sets no block of its own, so there is
+  // nowhere for a reflow to turn to.
+  assert.deepEqual(heldOn(sheet(51, [])), []);
+  assert.equal(anchorOf([]), undefined);
+});
+
+test("two blocks landing on one page count their lines together, and a tie goes to the earlier", () => {
+  assert.equal(anchorOf([{ at: 9, lines: 4 }, { at: 8, lines: 3 }, { at: 8, lines: 2 }]), 8);
+  assert.equal(anchorOf([{ at: 9, lines: 3 }, { at: 8, lines: 3 }]), 8);
 });
 
 test("a byte of a note and the character it falls in name each other", () => {
@@ -94,4 +217,5 @@ test("a section is asked about at the first byte anything was read from", () => 
 // What this tier does not cover: the node a byte was read into, the
 // source a node was read from and the folios a node is set on, which
 // are the engine's own answers, and the e2e job is where a cursor, a
-// page turn and a reflow ask for them.
+// page turn and a reflow ask for them. Nor the pairing a spread does
+// around the page a reflow lands on, which the view owns.

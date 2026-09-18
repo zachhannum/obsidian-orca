@@ -1,4 +1,10 @@
-import { paintPage, type Inspection, type NodeSource, type Warning } from "fleuron";
+import {
+  paintPage,
+  type Inspection,
+  type NodeSource,
+  type Page,
+  type Warning,
+} from "fleuron";
 import {
   ItemView,
   setIcon,
@@ -16,7 +22,15 @@ import {
   stepChapter,
   type Chapter,
 } from "@/book/pages";
-import { nodesOn, type Nodes } from "@/book/place";
+import {
+  anchorOf,
+  heldOn,
+  nodesOn,
+  pagesOf,
+  type Landed,
+  type Nodes,
+  type Written,
+} from "@/book/place";
 import { isGenerated } from "@/book/plan";
 import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
@@ -217,6 +231,19 @@ export class PreviewView extends ItemView {
    * first of them went, and no page crosses to answer it.
    */
   private painted: Nodes[] = [];
+  /**
+   * The page the reader turned to, counting from 0. A spread pairs that
+   * page with the one facing it, so this is the page they asked for
+   * rather than the page the span opens at.
+   */
+  private asked = 0;
+  /**
+   * The blocks that page set, and the bytes of each the page carried.
+   * After a render the engine is asked where those blocks went, and the
+   * page setting the most of their lines is the one the reader comes
+   * back to.
+   */
+  private blocks: Written[] = [];
   /** The folio the book opened at here, so a swap back knows it moved. */
   private openedAt: number | undefined;
   /** Stops watching this pane's book for renders. */
@@ -1147,6 +1174,7 @@ export class PreviewView extends ItemView {
     const session = this.session;
     if (session === undefined) return;
     const span = spanAt(this.mode, at, this.screenful);
+    const wanted = Math.max(at, 0);
     const turn = (this.turning += 1);
     let reading: Reading | undefined;
     try {
@@ -1163,10 +1191,15 @@ export class PreviewView extends ItemView {
     }
     this.message?.remove();
     this.message = undefined;
-    this.paint(session, reading, led);
+    this.paint(session, reading, wanted, led);
   }
 
-  private paint(session: Session, reading: Reading, led: boolean): void {
+  private paint(
+    session: Session,
+    reading: Reading,
+    wanted: number,
+    led: boolean,
+  ): void {
     const surface = this.surface;
     if (surface === undefined) return;
     const drawn = this.composed?.assets;
@@ -1188,6 +1221,15 @@ export class PreviewView extends ItemView {
       this.trim = { width: first.width, height: first.height };
     }
     this.painted = reading.pages.flatMap((page) => nodesOn(page) ?? []);
+    // The book can be shorter than the page asked for, and the read
+    // lands on the pages it has.
+    const on = Math.min(
+      Math.max(wanted - reading.at, 0),
+      Math.max(reading.pages.length - 1, 0),
+    );
+    this.asked = reading.at + on;
+    const read = reading.pages[on];
+    this.blocks = read === undefined ? [] : heldOn(read);
     showPages(surface, {
       mode: this.mode,
       leaves,
@@ -1477,16 +1519,44 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Turns to where the content on screen went. A render repaginates the
-   * book, so the page the reader was on now carries other words, and
-   * the earliest node the span named is the one they were reading. A
-   * span that opens on a page the engine wrote alone has no content of
-   * its own, and follows the nearest that has.
+   * Turns to where the page on screen went. A render repaginates the
+   * book, so the page the reader was on now carries other words. The
+   * blocks that page set are asked for again, and the reader comes back
+   * to whichever page now sets the most of their lines. A page the
+   * engine wrote alone set no blocks of its own, and stays where it is.
    */
   private async reflowed(): Promise<void> {
-    const node = this.painted[0]?.first;
-    const at = node === undefined ? undefined : await this.folioOfNode(node);
-    await this.turn(at ?? this.at);
+    await this.turn((await this.anchored()) ?? this.asked);
+  }
+
+  /**
+   * The page setting the most of what the reader's page set, counting
+   * from 0. Nothing where that page set no blocks of its own, or where
+   * the engine will not say where they went: it has its own reasons to
+   * refuse a question, and none of them are worth a page the reader did
+   * not ask for.
+   */
+  private async anchored(): Promise<number | undefined> {
+    const session = this.session;
+    const held = this.blocks;
+    if (session === undefined || held.length === 0) return undefined;
+    try {
+      const runs = await session.foliosOf(held.map((block) => block.node));
+      const landed: Landed[] = [];
+      for (const [index, block] of held.entries()) {
+        const on = runs[index];
+        if (on === undefined) continue;
+        landed.push(...(await pagesOf(block, on, (page) => this.pageAt(page))));
+      }
+      return anchorOf(landed);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** One page of the book as it stands, counting from 0. */
+  private async pageAt(at: number): Promise<Page | undefined> {
+    return (await this.session?.read(at, 1))?.pages[0];
   }
 
   /**
