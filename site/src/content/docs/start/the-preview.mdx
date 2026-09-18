@@ -5,6 +5,7 @@ description: See the book as the pages that it prints on.
 ---
 
 import Shot from '../../../components/Shot.astro';
+import Action from '../../../components/Action.astro';
 
 The preview shows the book as typeset pages.
 
@@ -18,7 +19,7 @@ The preview shows the book as typeset pages.
 />
 
 1. Open a note that is in a book.
-2. In the header, select `Open preview`.
+2. In the header, select <Action name="preview" />.
 
 The preview of the book opens in the pane, at the chapter that you were editing.
 
@@ -34,9 +35,9 @@ The preview of the book opens in the pane, at the chapter that you were editing.
 
 The preview has three actions in its header:
 
-1. `Inspect the page` toggles inspect mode. [The inspector](/design/inspect/) shows how to use it.
-2. `Open as markdown` shows the chapter markdown in the editor.
-3. `Export to PDF` opens the export dialog.
+1. <Action name="inspect" /> toggles inspect mode. [The inspector](/design/inspect/) shows how to use it.
+2. <Action name="markdown" /> shows the chapter markdown in the editor.
+3. <Action name="export" /> opens the export dialog.
 
 ## Warnings
 
@@ -50,7 +51,7 @@ The preview has three actions in its header:
 
 If fleuron gives a warning when it sets the book, the preview shows the count of warnings.
 
-1. To see each warning, select the count. The warnings are in groups. The warnings for your CSS are in the group `The book's CSS`, and the warnings for a note are in a group named after the note.
+1. To see each warning, select the dropdown. The warnings are in groups. The warnings for your CSS are in the group `The book's CSS`, and the warnings for a note are in a group named after the note.
 2. To go to the place of a warning, select its place. A warning against your CSS opens the CSS view of the design panel with the cursor on that line. A warning against a note opens that note with the cursor on that line.
 
 ## Design the book

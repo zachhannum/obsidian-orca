@@ -5,6 +5,7 @@ description: Change the design of the book in ways that the controls cannot.
 ---
 
 import Shot from '../../../components/Shot.astro';
+import Action from '../../../components/Action.astro';
 
 The controls of the design panel are limited in what they can style. To further customize the styling of a book, write your own CSS in the CSS view of the design panel.
 
@@ -13,7 +14,6 @@ The controls of the design panel are limited in what they can style. To further 
   alt="The CSS view of the design panel, with the rules that put a shell behind each chapter heading, beside the opening page of a chapter."
   caption="The CSS view, with the rules that put a shell behind each chapter heading."
   marks={['controls', 'wrap']}
-  numbered
 />
 
 ## Write CSS
@@ -25,11 +25,11 @@ The controls of the design panel are limited in what they can style. To further 
   marks={['css']}
 />
 
-1. In the header of the design panel, select the `CSS` icon. The CSS view opens.
+1. In the header of the design panel, select <Action name="css" />. The CSS view opens.
 2. Type your CSS. The preview shows each change as you type.
-3. To go back to the controls, select the `Controls` icon (1).
+3. To go back to the controls, select <Action name="controls" />.
 
-To wrap long lines in the editor, select the `Wrap long lines` icon (2).
+To wrap long lines in the editor, select <Action name="wrap" />.
 
 Orca writes your CSS to the book note one second after you stop typing. The CSS goes in a `css` code block at the end of the note. If the note has more than one `css` block, orca reads only the first. [The book note](/reference/the-book-note/) shows the block in a full note.
 

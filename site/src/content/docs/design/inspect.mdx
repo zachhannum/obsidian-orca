@@ -5,6 +5,7 @@ description: See which rules style an element of a page, and add a rule for it.
 ---
 
 import Shot from '../../../components/Shot.astro';
+import Action from '../../../components/Action.astro';
 
 The inspector shows the CSS rules that style an element of a page. Use it to find out why an element of the book looks the way it does, or to find the selector for a rule of your own.
 
@@ -18,7 +19,7 @@ The inspector shows the CSS rules that style an element of a page. Use it to fin
 ## Turn on inspect mode
 
 1. Open the preview.
-2. In the header of the preview, select the `Inspect the page` icon.
+2. In the header of the preview, select <Action name="inspect" />.
 
 You can also run the command `Inspect the page` from the command palette.
 
@@ -80,10 +81,10 @@ To remove the pin, do one of these:
 - Press Escape.
 - Select the pinned element again.
 - Select a place on the page where there is no element.
-- In the pane, select the `Take the pin off` icon.
+- In the pane, select <Action name="unpin" />.
 
 Inspect mode stays on when you remove the pin.
 
 ## Turn off inspect mode
 
-If no element is pinned, press Escape. You can also select the `Inspect the page` icon again, or open the manuscript. Escape works only while the preview has focus.
+If no element is pinned, press Escape. You can also select <Action name="inspect" /> again, or open the manuscript. Escape works only while the preview has focus.

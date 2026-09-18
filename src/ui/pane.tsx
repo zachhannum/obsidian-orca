@@ -10,6 +10,7 @@ import { Fragment, useEffect, useRef, useState, type JSX } from "react";
 import type { InspectedDeclaration, MatchedRule } from "fleuron";
 import type { PageUnit } from "@/style/design";
 import type { Layer } from "@/style/layers";
+import { ACTIONS } from "@/ui/actions";
 import type { Skipped } from "@/ui/editor";
 import { ownerSaid, type Owner } from "@/ui/groups";
 import { Icon } from "@/ui/icon";
@@ -128,12 +129,12 @@ export function InspectPane({
           type="button"
           className="clickable-icon orca-inspect-close"
           data-testid="orca-inspect-close"
-          aria-label="Take the pin off"
+          aria-label={ACTIONS.unpin.label}
           onClick={() => {
             acting.unpin();
           }}
         >
-          <Icon name="x" className="orca-inspect-icon" />
+          <Icon name={ACTIONS.unpin.icon} className="orca-inspect-icon" />
         </button>
       </div>
 

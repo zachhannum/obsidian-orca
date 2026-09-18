@@ -949,12 +949,41 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
     }
   }
 
-  // The components read the shots directory and nothing else.
-  for (const component of ["Shot", "Page"]) {
+  // The component reads the shots directory and nothing else.
+  for (const component of ["Shot"]) {
     const source = await read(`site/src/components/${component}.astro`);
     const globbed = [...source.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map((found) => found[1]);
     assert.ok(globbed.length > 0, `${component} reads no picture`);
     for (const pattern of globbed) assert.match(pattern, /^\.\.\/shots\//);
+  }
+});
+
+test("a button a docs page names is orca's own button, drawn with orca's icon", async () => {
+  const actions = await read("src/ui/actions.ts");
+  const component = await read("site/src/components/Action.astro");
+  const icons = [...actions.matchAll(/icon: "([^"]+)"/g)].map((found) => found[1]);
+  assert.ok(icons.length > 0, "ui/actions names no icon");
+  for (const icon of icons) {
+    assert.match(
+      component,
+      new RegExp(`lucide-static/icons/${icon}\\.svg`),
+      `Action.astro draws no ${icon}`,
+    );
+  }
+
+  for (const file of await docsPages()) {
+    const page = await read(`${DOCS}/${file}`);
+    const named = [...page.matchAll(/<Action name="([^"]+)"/g)].map((found) => found[1]);
+    for (const name of named) {
+      assert.match(
+        actions,
+        new RegExp(`\\n  ${name}: `),
+        `${file} names the button ${name}, which ui/actions does not hold`,
+      );
+    }
+    if (named.length > 0) {
+      assert.match(page, /^import Action from/m, `${file} draws a button it does not import`);
+    }
   }
 });
 
@@ -967,7 +996,9 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
 });
 
 // What this file does not cover: the pictures themselves, which the
-// screenshot spec takes and compares; whether a control the demo leaves
+// screenshot spec takes and compares; whether the glyph the site draws
+// for a button is the glyph Obsidian draws, since Obsidian ships a
+// Lucide build of its own; whether a control the demo leaves
 // out would change the page, since a book with a scene break or a facing
 // page would answer differently; whether a mark sits over the control it
 // names, which the spec measures; the default of a font variant, which

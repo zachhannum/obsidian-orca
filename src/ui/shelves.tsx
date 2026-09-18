@@ -39,6 +39,7 @@ import {
   type MouseEvent as Pointed,
   type RefObject,
 } from "react";
+import { ACTIONS } from "@/ui/actions";
 import type { Place } from "@/book/order";
 import { ROLES } from "@/book/roles";
 import {
@@ -305,8 +306,8 @@ export function Shelf({
       <div className="orca-nav-header">
         <span className="orca-nav-title">Books</span>
         <Action
-          icon="plus"
-          label="New book"
+          icon={ACTIONS.newBook.icon}
+          label={ACTIONS.newBook.label}
           onClick={() => {
             acting.newBook();
           }}

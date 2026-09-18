@@ -1,0 +1,41 @@
+---
+/** One of orca's buttons, drawn inline as the icon and the label orca
+    gives it. The pair comes from the plugin, so a button renamed there
+    is renamed here. A pair with no glyph below stops the build. */
+import { ACTIONS } from '@/ui/actions';
+import code from 'lucide-static/icons/code.svg?raw';
+import crosshair from 'lucide-static/icons/crosshair.svg?raw';
+import download from 'lucide-static/icons/download.svg?raw';
+import fileText from 'lucide-static/icons/file-text.svg?raw';
+import plus from 'lucide-static/icons/plus.svg?raw';
+import scanEye from 'lucide-static/icons/scan-eye.svg?raw';
+import slidersHorizontal from 'lucide-static/icons/sliders-horizontal.svg?raw';
+import wrapText from 'lucide-static/icons/wrap-text.svg?raw';
+import x from 'lucide-static/icons/x.svg?raw';
+
+interface Props {
+  name: keyof typeof ACTIONS;
+}
+
+const GLYPHS: Record<string, string> = {
+  code,
+  crosshair,
+  download,
+  'file-text': fileText,
+  plus,
+  'scan-eye': scanEye,
+  'sliders-horizontal': slidersHorizontal,
+  'wrap-text': wrapText,
+  x,
+};
+
+const { name } = Astro.props;
+const { icon, label } = ACTIONS[name];
+const glyph = GLYPHS[icon];
+if (glyph === undefined) throw new Error(`no ${icon}.svg in Action.astro`);
+const drawn = glyph
+  .replace('<svg', '<svg aria-hidden="true" focusable="false"')
+  .replace(/\s*\n\s*/g, ' ');
+---
+
+<span class="action"><Fragment set:html={drawn} />{label}</span>

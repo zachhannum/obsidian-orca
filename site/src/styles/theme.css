@@ -228,6 +228,26 @@ site-search button[data-open-modal] > kbd kbd {
   padding: 1px 5px;
   border-radius: 3px;
 }
+/* A button of orca's, named in a step: its icon beside its label, set
+   like inline code so a step reads as the thing on screen. */
+.sl-markdown-content .action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code);
+  color: var(--codetext);
+  padding: 1px 6px 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.sl-markdown-content .action svg {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  stroke-width: 1.75;
+}
 .sl-markdown-content pre {
   overflow-x: auto;
   font-family: var(--mono);
