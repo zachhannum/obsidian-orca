@@ -628,10 +628,14 @@ const swap = {
     height: var(--sea-lip);
     overflow: visible;
   }
+  /* The body reaches a pixel up under the lip. The two meet on a
+     fractional pixel, and a browser that rounds their edges apart shows
+     a hairline of sky between them. The gradient opens on the lip's own
+     colour, so the overlap does not read. */
   .sea .body {
     position: absolute;
     inset-inline: 0;
-    top: var(--sea-lip);
+    top: calc(var(--sea-lip) - 1px);
     bottom: 0;
     background: linear-gradient(
       to bottom,

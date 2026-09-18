@@ -458,6 +458,8 @@ test("the surface moves, runs through the second line of the title, and the titl
 test("the sea darkens from the surface to the end of the page", () => {
   const body = /\.sea \.body \{([\s\S]*?)\}/.exec(landingStyle)[1];
   assert.match(body, /bottom: 0/);
+  // The body reaches up under the lip, so no sky shows where they meet.
+  assert.match(body, /top: calc\(var\(--sea-lip\) - 1px\)/);
   assert.match(
     body.replace(/\s+/g, " "),
     /linear-gradient\( to bottom, var\(--sea-0\), var\(--sea-1\) 30%, var\(--sea-2\) 70%, var\(--sea-3\) \)/,
