@@ -5,7 +5,6 @@ description: Trim, margins, and the unit they are set in.
 ---
 
 import Shot from '../../../components/Shot.astro';
-import Page from '../../../components/Page.astro';
 
 The Page group in the design panel sets the trim and the margins around the text. The trim is the size of the page.
 
@@ -53,18 +52,3 @@ A number field takes a number and a unit: `pt`, `pc`, `in`, `mm`, `cm` or `em`. 
 ## Page measurements
 
 The `Page measurements` setting chooses the unit that the panel uses for the trim and the margins. The values are `Inches`, `Millimeters` and `Points`.
-
-## Example
-
-<Page n={10} alt="A left page of Twenty Thousand Leagues Under the Sea, with a wide inside margin and a deep bottom margin." caption="A left page of Twenty Thousand Leagues Under the Sea." />
-
-These keys set the page above:
-
-```yaml
-trim: 5.5in 8.5in
-margin-inside: 0.95in
-margin-outside: 0.7in
-margin-top: 0.8in
-margin-bottom: 1in
-mirrored: true
-```

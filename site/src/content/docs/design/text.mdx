@@ -5,7 +5,6 @@ description: The reading face, its size, and how it is set.
 ---
 
 import Shot from '../../../components/Shot.astro';
-import Page from '../../../components/Page.astro';
 
 The Text group in the design panel sets the font of the text, its size and line spacing, and the alignment of each paragraph.
 
@@ -42,18 +41,3 @@ The baseline is the line that the letters sit on. `Line spacing` is the distance
 ## Setting
 
 Justified text aligns on both the left and the right margin. Orca adjusts the space between the words so that each line fills the full width. Ragged right text aligns on the left margin only, so the right edge is uneven.
-
-## Example
-
-<Page n={11} alt="A right page of Twenty Thousand Leagues Under the Sea, set justified in EB Garamond with hyphens and indented paragraphs." caption="A right page of Twenty Thousand Leagues Under the Sea." />
-
-These keys set the text above:
-
-```yaml
-body-font: EB Garamond
-body-size: 10.5pt
-body-line-spacing: 14pt
-body-align: justify
-body-first-line-indent: 1.2em
-body-hyphens: true
-```

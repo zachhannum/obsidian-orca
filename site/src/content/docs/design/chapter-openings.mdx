@@ -5,7 +5,6 @@ description: Where a chapter begins, the space above its title, and its drop cap
 ---
 
 import Shot from '../../../components/Shot.astro';
-import Page from '../../../components/Page.astro';
 
 By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, and the drop cap.
 
@@ -33,15 +32,3 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 ## Space and drop cap
 
 `Space above` and `Space below` are counts of lines of text. A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
-
-## Example
-
-<Page n={9} alt="The first page of Chapter I, A Shifting Reef, with space above the title and a drop cap over three lines." caption="The opening of Chapter I of Twenty Thousand Leagues Under the Sea." />
-
-These keys set the opening above:
-
-```yaml
-chapter-begins: next-page
-chapter-space-above: 7
-chapter-drop-cap: 3
-```

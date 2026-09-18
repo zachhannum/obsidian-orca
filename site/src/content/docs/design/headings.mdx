@@ -5,7 +5,6 @@ description: Chapter titles and the headings under them.
 ---
 
 import Shot from '../../../components/Shot.astro';
-import Page from '../../../components/Page.astro';
 
 The Headings group in the design panel sets the font, size and alignment of each heading level. A chapter title is a level 1 heading.
 
@@ -35,16 +34,3 @@ In a key, `N` is the heading level, from 1 to 6.
 2. Change the controls under the level tabs.
 
 If a level has no font of its own, it uses the font from the Text group.
-
-## Example
-
-<Page n={14} alt="The first page of Chapter II, Pro and Con, with the chapter number and title centered over the text." caption="The opening of Chapter II. The chapter number is a level 2 heading, and the title is a level 1 heading." />
-
-These keys set the headings above:
-
-```yaml
-heading-1-size: 16pt
-heading-1-align: center
-heading-2-size: 9pt
-heading-2-align: center
-```

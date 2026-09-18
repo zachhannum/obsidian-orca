@@ -12,14 +12,13 @@ The inspector shows the CSS rules that style an element of a page. Use it to fin
   name="inspect"
   alt="A paragraph pinned on a page of the preview, beside the pane that shows the rules that style it, grouped as Book CSS, Design panel and Orca's theme."
   caption="The inspector, with a paragraph pinned."
-  marks={['inspect', 'unpin']}
-  numbered
+  marks={['inspect']}
 />
 
 ## Turn on inspect mode
 
 1. Open the preview.
-2. In the header of the preview, select the `Inspect the page` icon (1).
+2. In the header of the preview, select the `Inspect the page` icon.
 
 You can also run the command `Inspect the page` from the command palette.
 
@@ -66,11 +65,9 @@ Orca writes some rules for a role, and no control sets them. An example is the l
   alt="The foot of the inspector pane with Add a rule for and its selector, above the CSS view with the cursor on its last line."
   caption="Add a rule for, with the cursor at the end of your CSS."
   marks={['caret', 'add-rule']}
-  numbered
 />
 
-1. In the CSS view, put the cursor where the rule goes (1).
-2. In the pane, select `Add a rule for` (2). Orca puts an empty rule with that selector at the cursor.
+`Add a rule for` puts an empty rule with that selector in your CSS, at the cursor in the CSS view.
 
 The selector starts at the nearest section or other element with an id, and ends at the pinned element. To add a step of the path to the selector or take it out, select that step in the top row of the pane.
 
@@ -83,7 +80,7 @@ To remove the pin, do one of these:
 - Press Escape.
 - Select the pinned element again.
 - Select a place on the page where there is no element.
-- In the pane, select the `Take the pin off` icon (2).
+- In the pane, select the `Take the pin off` icon.
 
 Inspect mode stays on when you remove the pin.
 

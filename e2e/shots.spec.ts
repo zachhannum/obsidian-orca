@@ -1066,10 +1066,7 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
     await site.panel.unpinButton.scrollIntoViewIfNeeded();
     await site.obsidian.unhovered();
     taken.push(
-      await site.marks(await windowBox(site), {
-        inspect: inspect.action,
-        unpin: site.panel.unpinButton,
-      }),
+      await site.marks(await windowBox(site), { inspect: inspect.action }),
     );
     await expect(site.obsidian.page).toHaveScreenshot(`inspect-${scheme}.png`);
 
