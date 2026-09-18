@@ -1082,7 +1082,7 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
       PAD,
     );
     adding.push(
-      await site.marks(clip, { caret: site.panel.caretLine, "add-rule": site.panel.addRule }),
+      await site.marks(clip, { "add-rule": site.panel.addRule }),
     );
     await expect(site.obsidian.page).toHaveScreenshot(`inspect-add-${scheme}.png`, { clip });
   }
