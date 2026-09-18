@@ -1190,6 +1190,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
           if (leaf.view instanceof PreviewView) leaf.view.unpin();
         }
       },
+      pin: (node) => {
+        for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
+          if (leaf.view instanceof PreviewView) void leaf.view.pinNode(node);
+        }
+      },
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the

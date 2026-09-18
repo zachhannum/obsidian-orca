@@ -199,6 +199,7 @@ function leaves(count: number): Page[] {
     width: 432,
     height: 648,
     sections: [],
+    links: [],
     items: [
       {
         kind: "text" as const,
@@ -1023,6 +1024,7 @@ function margin(element: string, boxes: Inspection["boxes"]): Inspection {
   return {
     node: null,
     element,
+    elementNode: null,
     id: null,
     classes: [],
     ancestors: [],

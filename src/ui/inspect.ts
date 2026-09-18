@@ -291,6 +291,8 @@ export interface Crumb {
   faint: string | undefined;
   /** Its place in `ancestors`, for a crumb the author can add to the selector. */
   ancestor: number | undefined;
+  /** The node a click pins, for the element a pinned pseudo-element belongs to. */
+  pins?: number;
 }
 
 /**
@@ -310,13 +312,18 @@ export function crumbsOf(inspection: Inspection): Crumb[] {
     faint: faintOf(element),
     ancestor: at,
   }));
-  const leaf: Crumb[] = [
-    { name: nameOf(inspection), faint: faintOf(inspection), ancestor: undefined },
+  const element: Crumb = {
+    name: nameOf(inspection),
+    faint: faintOf(inspection),
+    ancestor: undefined,
+  };
+  if (inspection.pseudoElement === undefined) return [...chain, element];
+  if (inspection.elementNode !== null) element.pins = inspection.elementNode;
+  return [
+    ...chain,
+    element,
+    { name: inspection.pseudoElement, faint: undefined, ancestor: undefined },
   ];
-  if (inspection.pseudoElement !== undefined) {
-    leaf.push({ name: inspection.pseudoElement, faint: undefined, ancestor: undefined });
-  }
-  return [...chain, ...leaf];
 }
 
 /**

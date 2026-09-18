@@ -268,7 +268,7 @@
           <div style="margin-top: 2px"><div class="btn" style="height: auto; padding: 5px 10px; flex-wrap: wrap; row-gap: 3px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for <span class="mono" style="font-weight: 400; font-size: 11.5px">section#chapter-twelve &gt; p::first-letter</span></div></div>
         </div>
       </div>
-      <div class="step-note">A click on a drop cap pins the letter, not the paragraph it opens. The tag and the last crumb name it <span class="mono">p::first-letter</span>. The element and the pseudo-element make one leaf, so neither crumb comes out. The ancestors above them still toggle. A first line, a <span class="mono">::before</span> and an <span class="mono">::after</span> are picked the same way.</div>
+      <div class="step-note">A click on a drop cap pins the letter, not the paragraph it opens. The tag and the last crumb name it <span class="mono">p::first-letter</span>. The element and the pseudo-element make one leaf, so neither crumb comes out. A click on <span class="mono">p</span> pins the paragraph instead, and the ancestors above them still toggle. A first line, a <span class="mono">::before</span> and an <span class="mono">::after</span> are picked the same way.</div>
     </div>
 
     <div class="step" style="flex: 1; min-width: 0">
@@ -412,6 +412,6 @@
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
     <div class="callout"><div><span class="k">The engine's names.</span> The crumbs and the rules show the selectors the engine matches. A section is named by its id, as <span class="mono">section#chapter-twelve</span>, in your CSS and in the design panel's. Its class is its role, and shows in faint type beside the id.</div></div>
     <div class="callout"><div><span class="k">Where a rule came from.</span> Book CSS comes first and names its line, and a click puts the cursor on it. The design panel's rules name the control that wrote them. A declaration a later rule beat is struck through, and one the engine skipped keeps the warning's squiggle.</div></div>
-    <div class="callout"><div><span class="k">Waiting on the engine.</span> The box under a point, its fragments, the rules that matched it with their sheet and line, and its computed values all come from fleuron. Orca draws the answers and computes none of them. A pseudo-element answers for itself, and the engine has yet to name the element it belongs to by its id, so the crumb for that element does not pin it.</div></div>
+    <div class="callout"><div><span class="k">Waiting on the engine.</span> The box under a point, its fragments, the rules that matched it with their sheet and line, and its computed values all come from fleuron. Orca draws the answers and computes none of them. A pseudo-element answers for itself, and names the element it belongs to by its id, which is the crumb that pins that element.</div></div>
   </div>
 </div>

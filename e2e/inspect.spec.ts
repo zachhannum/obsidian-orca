@@ -794,6 +794,34 @@ test("the outline around a pinned drop cap is the letter, not the paragraph", as
   expect(Math.abs(letter.y - paragraph.y)).toBeLessThan(paragraph.height / 2);
 });
 
+test("the crumb for the element pins the element, and its rules replace the drop cap's", async ({
+  book,
+  inspect,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CHAPTER_TITLE);
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
+  await inspect.on();
+
+  const paragraph = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  await inspect.pinAt(await onTheCap(inspect), paragraph);
+  await caughtUp(book, inspect, panel);
+  await expect(panel.designRule(DROP_CAP_KEY)).toBeVisible();
+
+  // The crumb for the element is the one that carries a node to pin.
+  const element = panel.crumbs.nth(-2);
+  await expect(element).toHaveText("p");
+  await element.click();
+
+  await expect(inspect.surface).toHaveAttribute("data-inspected", paragraph);
+  await caughtUp(book, inspect, panel);
+  await expect(panel.crumbs.last()).toHaveText("p");
+  await expect(panel.selector).toHaveText(`${SECTION} > p`);
+  await expect(panel.designRule(DROP_CAP_KEY)).toHaveCount(0);
+});
+
 test("a click on a first line pins its `::first-line`, and the pane lists the rules that match it", async ({
   book,
   inspect,
@@ -977,7 +1005,5 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
 // the fixture has classes and no id, so a selector that names classes
 // is a Node test. No section in the fixture is set in columns, so a box
 // with two pieces on one page is a Node test too.
-// A crumb that pins the element a pseudo-element belongs to is not
-// driven, because the engine does not yet name that element by its id.
 // The fixture generates `a::after` on the contents page, and the specs
 // here reach `::before` through a rule of the author's own instead.

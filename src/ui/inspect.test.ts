@@ -27,6 +27,7 @@ function inspection(over: Partial<Inspection> = {}): Inspection {
   return {
     node: 12,
     element: "p",
+    elementNode: 12,
     id: null,
     classes: [],
     ancestors: [
@@ -238,6 +239,7 @@ test("a crumb names a section by its id with its class faint, and the box comes 
   ]);
   const head = inspection({
     node: null,
+    elementNode: null,
     element: "@top-left",
     ancestors: [],
     page: "@page :left",
@@ -313,9 +315,21 @@ test("the tag and the crumbs name a pseudo-element after its element", () => {
   assert.deepEqual(crumbsOf(cap), [
     { name: "book", faint: undefined, ancestor: 0 },
     { name: "section#the-harbor", faint: "chapter", ancestor: 1 },
-    { name: "p", faint: undefined, ancestor: undefined },
+    { name: "p", faint: undefined, ancestor: undefined, pins: 12 },
     { name: "::first-letter", faint: undefined, ancestor: undefined },
   ]);
+});
+
+test("the crumb for the element a pseudo-element belongs to pins that element", () => {
+  const cap = inspection({ node: 2147483690, pseudoElement: "::before" });
+  const crumbs = crumbsOf(cap);
+  assert.equal(crumbs.at(-2)?.pins, 12);
+  assert.equal(crumbs.filter((crumb) => crumb.pins !== undefined).length, 1);
+  // The element the pane already answers for pins nothing, and neither
+  // does a pseudo-element whose element the engine did not name.
+  assert.equal(crumbsOf(inspection()).at(-1)?.pins, undefined);
+  const loose = inspection({ node: 2147483690, elementNode: null, pseudoElement: "::before" });
+  assert.equal(crumbsOf(loose).at(-2)?.pins, undefined);
 });
 
 test("an added rule for a pseudo-element has a selector that ends with it", () => {

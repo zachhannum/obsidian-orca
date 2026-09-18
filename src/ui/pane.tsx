@@ -50,6 +50,8 @@ export interface PaneActing {
   add(text: string): void;
   /** Takes the pin off in the preview, which closes the pane. */
   unpin(): void;
+  /** Pins the box one node names, which replaces the pinned one. */
+  pin(node: number): void;
 }
 
 const LAYER_SAID: Readonly<Record<Layer, string>> = {
@@ -98,6 +100,7 @@ export function InspectPane({
         <div className="orca-inspect-crumbs">
           {crumbsOf(inspection).map((crumb, at) => {
             const ancestor = crumb.ancestor;
+            const pins = crumb.pins;
             const last = ancestor === undefined && at > 0;
             const on = last || (ancestor !== undefined && picked.includes(ancestor));
             return (
@@ -108,8 +111,13 @@ export function InspectPane({
                   className={on ? "orca-inspect-crumb is-active" : "orca-inspect-crumb"}
                   data-testid="orca-inspect-crumb"
                   data-picked={ancestor === undefined ? undefined : String(on)}
-                  disabled={ancestor === undefined}
+                  data-pins={pins === undefined ? undefined : String(pins)}
+                  disabled={ancestor === undefined && pins === undefined}
                   onClick={() => {
+                    if (pins !== undefined) {
+                      acting.pin(pins);
+                      return;
+                    }
                     if (ancestor === undefined) return;
                     setPicked(
                       picked.includes(ancestor)

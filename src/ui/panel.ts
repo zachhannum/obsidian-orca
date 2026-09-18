@@ -42,6 +42,8 @@ export interface Designing {
   unit(): PageUnit;
   /** Takes the pin off in every preview. */
   unpin(): void;
+  /** Pins the box one node names, in the preview the pin came from. */
+  pin(node: number): void;
   /** Told when the book being designed changes. */
   watch(again: () => void): () => void;
 }
@@ -124,6 +126,9 @@ export class DesignPanelView extends ItemView {
       },
       unpin: () => {
         this.designing.unpin();
+      },
+      pin: (node) => {
+        this.designing.pin(node);
       },
       reveal: (place) => {
         void this.reveal(place);
