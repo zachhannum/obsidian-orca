@@ -178,6 +178,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
               void this.inspected(pin, refreshed);
             },
             unit: () => this.limits.unit,
+            view: () => this.limits.view,
+            viewed: (view) => {
+              this.limit({ ...this.limits, view });
+            },
             exports: (book) => {
               this.exportBook(book);
             },

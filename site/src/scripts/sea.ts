@@ -128,6 +128,25 @@ export function surfaceAt(
   return y;
 }
 
+/** One run of samples, as a smooth path through every one of them. */
+function through(points: readonly [number, number][]): string {
+  const last = points.length - 1;
+  const round = (value: number) => value.toFixed(1);
+  const point = (i: number) => points[Math.min(Math.max(i, 0), last)] as [number, number];
+  let path = `M${round(point(0)[0])} ${round(point(0)[1])}`;
+  for (let i = 0; i < last; i += 1) {
+    const [ax, ay] = point(i - 1);
+    const [bx, by] = point(i);
+    const [cx, cy] = point(i + 1);
+    const [dx, dy] = point(i + 2);
+    path +=
+      `C${round(bx + (cx - ax) / 6)} ${round(by + (cy - ay) / 6)}` +
+      ` ${round(cx - (dx - bx) / 6)} ${round(cy - (dy - by) / 6)}` +
+      ` ${round(cx)} ${round(cy)}`;
+  }
+  return path;
+}
+
 /** The surface at one width and one moment, as an SVG path. */
 export function seaPath(
   wave: Wave,
@@ -142,21 +161,42 @@ export function seaPath(
     const x = i * step;
     points.push([x, surfaceAt(wave, width, t, x, touch, ripples)]);
   }
-
-  const round = (value: number) => value.toFixed(1);
-  const point = (i: number) => points[Math.min(Math.max(i, 0), SAMPLES)] as [number, number];
-  let path = `M0 ${round(point(0)[1])}`;
-  for (let i = 0; i < SAMPLES; i += 1) {
-    const [ax, ay] = point(i - 1);
-    const [bx, by] = point(i);
-    const [cx, cy] = point(i + 1);
-    const [dx, dy] = point(i + 2);
-    path +=
-      `C${round(bx + (cx - ax) / 6)} ${round(by + (cy - ay) / 6)}` +
-      ` ${round(cx - (dx - bx) / 6)} ${round(cy - (dy - by) / 6)}` +
-      ` ${round(cx)} ${round(cy)}`;
-  }
+  const path = through(points);
   return wave.kind === 'line' ? path : `${path}V${String(LIP)}H0Z`;
+}
+
+/** Where a box sits in the lip's own pixels, and how big it is. */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The water over a box, as a CSS clip path in the box's own pixels.
+ *
+ * A blend mode would read the sea out of the backdrop, and a browser
+ * drops the backdrop as soon as it puts an ancestor of the blended
+ * element on a layer of its own. Clipping a second copy of the title
+ * asks nothing of the backdrop, so the cut holds wherever it is drawn.
+ */
+export function seaClip(
+  wave: Wave,
+  width: number,
+  t: number,
+  box: Box,
+  touch?: Touch,
+  ripples: readonly Ripple[] = [],
+): string {
+  const step = box.width / SAMPLES;
+  const points: [number, number][] = [];
+  for (let i = 0; i <= SAMPLES; i += 1) {
+    const x = i * step;
+    points.push([x, surfaceAt(wave, width, t, box.x + x, touch, ripples) - box.y]);
+  }
+  const path = through(points);
+  return `path("${path}V${box.height.toFixed(1)}H0Z")`;
 }
 
 /** Reads one path's wave out of the attributes the markup carries. */
@@ -184,6 +224,10 @@ const MOST_RIPPLES = 8;
  * Moves the surface until the page is closed. With reduced motion on it
  * draws the surface once and leaves it there.
  *
+ * The cut element is clipped to the water on every frame. The title puts
+ * a second copy of itself there, so its letters turn over at the
+ * waterline.
+ *
  * Each path is its own surface to the mouse. A mouse that goes down
  * through a path plunges into it: the path sinks where it went in and
  * rings spread out to both sides, deeper the faster it went. Under a
@@ -191,7 +235,7 @@ const MOST_RIPPLES = 8;
  * back out pulls a smaller ripple up. A touch screen moves nothing,
  * because a finger scrolling the page is not reaching for the sea.
  */
-export function startSea(svg: SVGSVGElement): () => void {
+export function startSea(svg: SVGSVGElement, cut?: HTMLElement): () => void {
   const layers = [...svg.querySelectorAll<SVGPathElement>('path[data-kind]')].map((path) => ({
     path,
     wave: waveOf(path),
@@ -199,6 +243,7 @@ export function startSea(svg: SVGSVGElement): () => void {
     touch: { x: 0, force: 0 } as Touch,
     ripples: [] as Ripple[],
   }));
+  const body = layers.find((layer) => layer.wave.kind === 'body');
   let width = 0;
   let now = 0;
 
@@ -220,6 +265,17 @@ export function startSea(svg: SVGSVGElement): () => void {
         : seaPath(layer.wave, width || 1440, t);
       layer.path.setAttribute('d', d);
     }
+    if (cut === undefined || body === undefined) return;
+    const lip = svg.getBoundingClientRect();
+    const box = cut.getBoundingClientRect();
+    cut.style.clipPath = seaClip(
+      body.wave,
+      width || 1440,
+      t,
+      { x: box.left - lip.left, y: box.top - lip.top, width: box.width, height: box.height },
+      live ? body.touch : undefined,
+      live ? body.ripples : [],
+    );
   };
 
   const onMove = (event: PointerEvent) => {

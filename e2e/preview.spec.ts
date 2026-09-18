@@ -209,6 +209,21 @@ test("the switcher reads the book in single, spread and grid", async ({
   await expect(book.sheets).toHaveCount(1);
 });
 
+test("the view a switch chose is the view the next preview opens in", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.show("Spread", "spread");
+
+  // The pane is closed and the book opened again, which is what a
+  // window reopened on a workspace with no preview in it does.
+  await book.close();
+  await book.open();
+  await book.painted();
+  await expect(book.surface).toHaveAttribute("data-view", "spread");
+});
+
 test("the spread seats a recto right of the spine and a verso left of it", async ({
   book,
 }) => {
