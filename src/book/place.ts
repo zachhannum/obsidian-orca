@@ -53,11 +53,20 @@ export function writtenAt(text: string, line: number): number {
 
 /** The first line under a note's own frontmatter, which is no node of the book. */
 function underMatter(lines: string[]): number {
-  if (lines[0]?.trim() !== "---") return 0;
+  if (!fenced(lines[0])) return 0;
   for (let at = 1; at < lines.length; at += 1) {
-    if ((lines[at] ?? "").trim() === "---") return at + 1;
+    if (fenced(lines[at])) return at + 1;
   }
   return 0;
+}
+
+/**
+ * Whether a line closes frontmatter. The fence stands at the head of
+ * the line, so the indented `---` of a block a property holds is text
+ * the note wrote and not the end of its frontmatter.
+ */
+function fenced(line: string | undefined): boolean {
+  return /^---[ \t\r]*$/.test(line ?? "");
 }
 
 /**

@@ -35,7 +35,7 @@ export function readFrontmatter(text: string): Note {
   const lines = text.split("\n");
   if (fenced(lines, 0) !== true) return { properties: {}, body: text };
 
-  const end = lines.findIndex((line, at) => at > 0 && line.trim() === FENCE);
+  const end = lines.findIndex((_line, at) => at > 0 && fenced(lines, at));
   if (end < 0) return { properties: {}, body: text };
 
   const head = lines.slice(0, end + 1).join("\n");
@@ -121,6 +121,11 @@ function encode(value: Value, quote = false): string {
   return quote || !plain ? `"${value.replace(/"/g, '\\"')}"` : value;
 }
 
+/**
+ * Whether a line is a frontmatter fence. The fence stands at the head
+ * of the line, so the indented `---` of a block a property holds is
+ * part of that property and not the end of the frontmatter.
+ */
 function fenced(lines: string[], at: number): boolean {
-  return (lines[at] ?? "").replace(/\r$/, "") === FENCE;
+  return /^---[ \t\r]*$/.test(lines[at] ?? "");
 }

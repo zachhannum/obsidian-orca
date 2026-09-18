@@ -72,6 +72,28 @@ test("a value a parser would read as something else is written quoted", () => {
   );
 });
 
+test("an indented fence inside a property is not the end of the frontmatter", () => {
+  const text = [
+    "---",
+    "review: |-",
+    "  A note to the author.",
+    "",
+    "  ---",
+    "",
+    "  Another note.",
+    "---",
+    "",
+    "# Chapter Eight",
+    "",
+  ].join("\n");
+
+  const note = readFrontmatter(text);
+
+  // The fence the property holds is indented, so the frontmatter ends
+  // at the fence under it and the body is the chapter itself.
+  assert.equal(note.body, "\n\n# Chapter Eight\n");
+});
+
 // What this tier does not cover: a comment inside the fence, a block
 // scalar, and a nested map in an author's own property, whose keys are
 // read as one empty property.

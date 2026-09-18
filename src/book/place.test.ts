@@ -280,6 +280,28 @@ test("a section is asked about at the first byte anything was read from", () => 
   assert.equal(writtenBytes("# Loose\n")[0], 0);
 });
 
+test("a note whose properties hold an indented fence is read past all of them", () => {
+  const note = [
+    "---",
+    "review: |-",
+    "  A note to the author.",
+    "",
+    "  ---",
+    "",
+    "  Another note.",
+    "---",
+    "",
+    "# Chapter Eight",
+    "",
+    "Talking to Annet came easily.",
+  ].join("\n");
+  // The indented fence is text the property holds, so the frontmatter
+  // ends at the fence under it and the heading is the first line the
+  // note wrote.
+  assert.equal(writtenAt(note, 0), 9);
+  assert.equal(writtenBytes(note)[0], 68);
+});
+
 test("a chapter opening on a dropped block is asked about under it too", () => {
   const note = [
     "---",

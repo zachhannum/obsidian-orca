@@ -571,6 +571,31 @@ test("a chapter that opens on a block the book set nothing from turns", async ({
   await expect(book.chapterName).toHaveText(CHAPTER);
 });
 
+test("a chapter whose properties hold an indented fence turns", async ({
+  book,
+  navigator,
+  vault,
+}) => {
+  await book.open();
+  const painted = await book.painted();
+  await expect(book.chapterName).not.toHaveText(CHAPTER);
+  await navigator.reveal();
+
+  // The chapter carries a property whose text holds a fence of its
+  // own. The frontmatter ends at the fence under it, so the chapter is
+  // asked about at its heading rather than inside its properties.
+  const text = await vault.read(`${CHAPTER}.md`);
+  await vault.modify(
+    `${CHAPTER}.md`,
+    text.replace("---\ntitle:", "---\nreview: |-\n  A note.\n\n  ---\n\n  Another.\ntitle:"),
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await navigator.entry(BOOK, CHAPTER).click();
+
+  await expect(book.chapterName).toHaveText(CHAPTER);
+});
+
 test("opening a book note reveals the navigator", async ({
   navigator,
   note,
