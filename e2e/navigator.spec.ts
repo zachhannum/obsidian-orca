@@ -546,6 +546,31 @@ test("a click on a generated section turns the preview to it", async ({
   await expect(book.chapterName).toHaveText(TITLE_PAGE);
 });
 
+test("a chapter that opens on a block the book set nothing from turns", async ({
+  book,
+  navigator,
+  vault,
+}) => {
+  await book.open();
+  const painted = await book.painted();
+  await expect(book.chapterName).not.toHaveText(CHAPTER);
+  await navigator.reveal();
+
+  // The chapter now opens on an image the vault does not have. The
+  // book sets nothing from it, so the chapter's first written byte is
+  // on no page and the lines under it are what it opens by.
+  const text = await vault.read(`${CHAPTER}.md`);
+  await vault.modify(
+    `${CHAPTER}.md`,
+    text.replace(`# ${CHAPTER}`, `![[no such plate.png]]\n\n# ${CHAPTER}`),
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await navigator.entry(BOOK, CHAPTER).click();
+
+  await expect(book.chapterName).toHaveText(CHAPTER);
+});
+
 test("opening a book note reveals the navigator", async ({
   navigator,
   note,
