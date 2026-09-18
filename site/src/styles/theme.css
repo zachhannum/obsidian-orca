@@ -213,7 +213,8 @@ site-search button[data-open-modal] > kbd kbd {
 .sl-markdown-content :not(h1, h2, h3, h4, h5, h6, .sl-heading-wrapper) + .sl-heading-wrapper {
   margin-top: 6px;
 }
-.sl-markdown-content p {
+.sl-markdown-content :is(p, table),
+.sl-markdown-content > :is(ul, ol) {
   margin: 0 0 24px;
 }
 .sl-markdown-content a {
@@ -226,6 +227,26 @@ site-search button[data-open-modal] > kbd kbd {
   color: var(--codetext);
   padding: 1px 5px;
   border-radius: 3px;
+}
+/* A button of orca's, named in a step: its icon beside its label, set
+   like inline code so a step reads as the thing on screen. */
+.sl-markdown-content .action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code);
+  color: var(--codetext);
+  padding: 1px 6px 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.sl-markdown-content .action svg {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  stroke-width: 1.75;
 }
 .sl-markdown-content pre {
   overflow-x: auto;
@@ -264,6 +285,92 @@ site-search button[data-open-modal] > kbd kbd {
   font-family: var(--ui);
   font-size: 13px;
   color: var(--faint);
+}
+
+/* A picture comes in both schemes, and the root shows one. */
+.on-light {
+  display: none;
+}
+:root[data-theme='light'] .on-dark {
+  display: none;
+}
+:root[data-theme='light'] .on-light {
+  display: block;
+}
+
+.shot-desk {
+  padding: 26px;
+  background: var(--desk);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex;
+  justify-content: center;
+}
+/* Both pictures sit in one cell, so the frame the marks are placed in is
+   one picture tall. The img rule sets no display, which the scheme rules
+   above own. */
+.shot-frame {
+  position: relative;
+  display: grid;
+  width: 100%;
+}
+.shot-frame img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+.shot-page img {
+  border-radius: 0;
+  box-shadow: var(--o-page-shadow);
+}
+/* The marks are placed in percentages of the picture, so they scale with it. */
+.shot-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.shot-mark {
+  position: absolute;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.shot-mark.crowded {
+  outline-offset: -1px;
+}
+.shot-number {
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--button-text);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.shot-mark.crowded .shot-number {
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* A step's number is the number on its mark. */
+.sl-markdown-content ol > li::marker {
+  color: var(--accent);
+  font-family: var(--ui);
+  font-weight: 600;
+}
+@media (max-width: 30rem) {
+  .shot-desk {
+    padding: 16px;
+  }
 }
 
 /* The right sidebar: what is on this page. Starlight gives the reading

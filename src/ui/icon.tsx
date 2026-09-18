@@ -1,11 +1,12 @@
 import { setIcon } from "obsidian";
 import { useEffect, useRef, type JSX } from "react";
+import { ACTIONS } from "@/ui/actions";
 
 /**
  * The preview's icon. The book note's page draws a different one, and
  * Obsidian's reading view toggle, beside it on a note, draws `book-open`.
  */
-export const PREVIEW_ICON = "scan-eye";
+export const PREVIEW_ICON = ACTIONS.preview.icon;
 
 /** Draws an Obsidian icon into the node after the commit. */
 export function Icon({

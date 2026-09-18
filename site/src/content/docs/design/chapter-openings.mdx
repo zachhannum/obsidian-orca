@@ -4,25 +4,31 @@ eyebrow: Design
 description: Where a chapter begins, the space above its title, and its drop cap.
 ---
 
-import ChapterOpeningsFigure from '../../../components/ChapterOpeningsFigure.astro';
+import Shot from '../../../components/Shot.astro';
 
-A chapter opens on a new page, lower than the text around it. The Chapter openings
-group in the design panel sets where the chapter begins, the space above its title,
-and the drop cap.
+By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, and the drop cap.
 
-<ChapterOpeningsFigure />
+<Shot
+  name="panel-chapter-openings"
+  alt="The Chapter openings group of the design panel, with Begins on, Space above, Space below and Drop cap."
+  caption="The Chapter openings group."
+  marks={['chapter-begins', 'chapter-space-above', 'chapter-space-below', 'chapter-drop-cap']}
+  numbered
+/>
+
+## Controls
+
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Begins on | `Next page` | `chapter-begins` |
+| 2 | Space above | 0 lines | `chapter-space-above` |
+| 3 | Space below | 0 lines | `chapter-space-below` |
+| 4 | Drop cap | `None` | `chapter-drop-cap` |
 
 ## Where a chapter begins
 
-`Begins on` takes one of three values. `Next page` is the default. `Right page`
-leaves a blank page when a chapter falls on a left page. `Same page` runs the
-chapter on below the one before it.
+`Begins on` takes one of three values. `Next page` starts the chapter on a new page. `Right-hand page` starts the chapter on a right page. If the next page is a left page, orca leaves that page blank. `Same page` starts the chapter on the same page, below the chapter before it.
 
-## In the book note
+## Space and drop cap
 
-Each control that you change writes one key to the frontmatter of the book note.
-
-```yaml
-chapter-space-above: 7
-chapter-drop-cap: 3
-```
+`Space above` and `Space below` are counts of lines of text. A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.

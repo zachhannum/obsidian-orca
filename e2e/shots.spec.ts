@@ -2,12 +2,17 @@ import { execFileSync } from "node:child_process";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import type { Locator } from "@playwright/test";
+import { GROUPS as PANEL_GROUPS, atLevel } from "@/ui/groups";
 import { PREVIEW, type Book } from "./harness/book";
 import { Export } from "./harness/export";
 import { Inspect } from "./harness/inspect";
 import { DENSITY as DISPLAY, SAMPLE } from "./harness/launch";
+import { NAVIGATOR } from "./harness/navigator";
+import { BOOK as BOOK_PAGE, Note } from "./harness/note";
 import { Obsidian, type Scheme } from "./harness/obsidian";
-import type { Site } from "./harness/site";
+import type { Box, Marks, Site } from "./harness/site";
 import { expect, test } from "./harness/test";
 
 /** The folder the sample book keeps its notes in. */
@@ -20,8 +25,62 @@ const CHAPTER = "A Shifting Reef";
 /** The face the sample book is set in, which the vault carries. */
 const BODY = "EB Garamond";
 
-/** The group a docs picture crops to. */
-const GROUP = "Text";
+/** The groups of the design panel, in order. A docs picture crops to each. */
+const GROUPS = [
+  "Page",
+  "Text",
+  "Headings",
+  "Chapter openings",
+  "Scene breaks",
+  "Heads & folios",
+  "Page breaks",
+];
+
+/** The heading level the Headings picture shows. */
+const LEVEL = 1;
+
+/** The folder the site's pictures are written to. */
+const SHOTS = path.resolve(fileURLToPath(import.meta.url), "../../site/src/shots");
+
+/** The folder of notes the quickstart makes a book from, and its notes. */
+const DRAFT = "Draft";
+const DRAFTED: Record<string, string> = {
+  "Chapter One": "# Chapter One\n\nThe house stood at the end of the lane.\n",
+  "Chapter Two": "# Chapter Two\n\nBy morning the rain had stopped.\n",
+  "Chapter Three": "# Chapter Three\n\nShe opened the letter at the window.\n",
+};
+
+/** The book note the quickstart makes, beside the folder. */
+const MADE = `${DRAFT}.md`;
+
+/** The item on a folder's menu that makes a book from its notes. */
+const CREATE = "Create book from these notes";
+
+/**
+ * The window height the book note picture is taken at. It holds the
+ * details, the design and the start of the reading order, which is as
+ * much of a long book's order as the page needs.
+ */
+const BOOK_NOTE_HEIGHT = 1100;
+
+/** The ribbon action that shows the navigator. */
+const OPEN_ORCA = "Open Orca";
+
+/** The navigator's header action that makes a book with no notes. */
+const NEW_BOOK = "New book";
+
+/** The note of the new book that the navigator picture marks. */
+const FIRST_DRAFT = "Chapter One";
+
+/** The room around the rows and the menu in the menu picture. */
+const PAD = 16;
+
+/** The settings tab that lists the installed plugins, and orca's name there. */
+const PLUGINS_TAB = "community-plugins";
+const ORCA = "Orca";
+
+/** The preview's own action that turns on inspect mode. */
+const INSPECT_PAGE = "Inspect the page";
 
 /** The two schemes every picture is taken in. */
 const SCHEMES: Scheme[] = ["dark", "light"];
@@ -180,6 +239,79 @@ async function sized(site: Site, width: number, height: number): Promise<void> {
   );
 }
 
+/** The name a group gives its picture, as `heads-and-folios`. */
+function slug(group: string): string {
+  return group.replace(/ & /g, " and ").toLowerCase().replace(/ /g, "-");
+}
+
+/**
+ * The controls a group of the design panel draws, and the reset beside
+ * each row, by the key each one writes. The Headings group draws one
+ * level at a time, so its keys are the first level's.
+ */
+function targets(site: Site, group: string): Record<string, Locator> {
+  const drawn = PANEL_GROUPS.find((each) => each.name === group);
+  if (drawn === undefined) throw new Error(`no group called ${group}`);
+  const found: Record<string, Locator> = {};
+  for (const row of drawn.rows) {
+    for (const control of row.of) {
+      if (control.kind === "level") found["heading-level"] = site.panel.levels;
+      if (control.key === undefined) continue;
+      const key = atLevel(control.key, LEVEL);
+      found[key] = key === "body-font" ? site.panel.font : site.panel.control(key);
+      found[`reset-${key}`] = site.panel.reset(key);
+    }
+  }
+  return found;
+}
+
+/** A locator's box, once it has one. */
+async function measured(locator: Locator): Promise<Box> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("nothing to measure");
+  return box;
+}
+
+/**
+ * The smallest crop in whole pixels that holds every box with room
+ * around it, kept inside the window.
+ */
+async function around(site: Site, boxes: Box[], pad: number): Promise<Box> {
+  const window = await site.obsidian.page.evaluate(() => ({
+    width: innerWidth,
+    height: innerHeight,
+  }));
+  const x = Math.max(0, Math.floor(Math.min(...boxes.map((box) => box.x)) - pad));
+  const y = Math.max(0, Math.floor(Math.min(...boxes.map((box) => box.y)) - pad));
+  const right = Math.min(
+    window.width,
+    Math.ceil(Math.max(...boxes.map((box) => box.x + box.width)) + pad),
+  );
+  const bottom = Math.min(
+    window.height,
+    Math.ceil(Math.max(...boxes.map((box) => box.y + box.height)) + pad),
+  );
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+/**
+ * Writes a picture's marks beside it, once both schemes agree on them.
+ * The dark picture on disk is twice the size of the crop.
+ */
+async function sidecar(name: string, taken: Marks[]): Promise<void> {
+  const [marks, ...rest] = taken;
+  if (marks === undefined) throw new Error(`no marks for ${name}`);
+  for (const other of rest) expect(other).toEqual(marks);
+  const png = await readFile(path.join(SHOTS, `${name}-dark.png`));
+  expect(Math.abs(png.readUInt32BE(16) / DENSITY - marks.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(png.readUInt32BE(20) / DENSITY - marks.height)).toBeLessThanOrEqual(1);
+  // Playwright turns the dots in a snapshot name into dashes, and leaves
+  // the segments of a path as they are.
+  expect(Buffer.from(`${JSON.stringify(marks, null, 2)}\n`)).toMatchSnapshot([
+    `${name}.marks.json`,
+  ]);
+}
+
 test("the pictures are set in a copy of the sample vault", async ({ site }) => {
   // The window is on a copy: the pictures are taken of a vault orca
   // writes to, and the one checked in stays as it is.
@@ -268,6 +400,41 @@ test("the landing picture is the whole window, in both schemes, at three widths"
 
   await site.obsidian.moving();
 });
+
+test("the anatomy picture is the whole window, with the navigator, the preview and the panel marked", async ({
+  site,
+}) => {
+  await arrange(site);
+  await site.navigator.reveal();
+  await settled(site.book);
+
+  const taken: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await expect(site.navigator.pane).toBeVisible();
+    await expect(site.panel.panel).toBeVisible();
+    await expect(site.book.sheets).toHaveCount(2);
+    await site.obsidian.unhovered();
+    taken.push(
+      await site.marks(await windowBox(site), {
+        "open-orca": site.obsidian.ribbon(OPEN_ORCA),
+        navigator: site.obsidian.view(NAVIGATOR),
+        preview: site.book.panes,
+        panel: site.panel.leaf,
+      }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`anatomy-${scheme}.png`);
+  }
+  await sidecar("anatomy", taken);
+
+  await site.obsidian.moving();
+});
+
+/** The whole window as a box, which a picture of the page is cropped to. */
+async function windowBox(site: Site): Promise<Box> {
+  return site.obsidian.page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight }));
+}
 
 test("at phone width the picture is the preview pane alone", async ({
   site,
@@ -358,9 +525,23 @@ test("the swap pictures are one window, written and then set", async ({
   await expect.poll(async () => site.book.panes.boundingBox()).toMatchObject(pane);
 
   const editor = site.obsidian.view(EDITOR);
+  const read: Marks[] = [];
+  const write: Marks[] = [];
   for (const scheme of SCHEMES) {
+    // The hand-off to the editor and back opens a sidebar again, and the
+    // picture is of the pane alone, so both go away before each scheme.
+    await site.obsidian.put("left");
+    await site.obsidian.put("right");
+    await expect.poll(async () => site.book.panes.boundingBox()).toMatchObject(pane);
     await site.paint(scheme);
     await settled(site.book);
+    read.push(
+      await site.marks(site.book.panes, {
+        export: site.obsidian.actionIn(PREVIEW, EXPORT),
+        inspect: site.obsidian.actionIn(PREVIEW, INSPECT_PAGE),
+        "as-markdown": site.obsidian.actionIn(PREVIEW, AS_MARKDOWN),
+      }),
+    );
     await expect(site.book.panes).toHaveScreenshot(`read-${scheme}.png`);
 
     // The one leaf, handed to the editor and back by the actions in the
@@ -370,9 +551,16 @@ test("the swap pictures are one window, written and then set", async ({
     await expect(editor).toBeVisible();
     await site.obsidian.open(WRITING);
     await expect(editor).toContainText(CHAPTER);
+    write.push(
+      await site.marks(editor, {
+        "open-preview": site.obsidian.actionIn(EDITOR, OPEN_PREVIEW),
+      }),
+    );
     await expect(editor).toHaveScreenshot(`write-${scheme}.png`);
     await site.obsidian.actionIn(EDITOR, OPEN_PREVIEW).click();
   }
+  await sidecar("read", read);
+  await sidecar("write", write);
 
   await site.obsidian.moving();
   await site.obsidian.reopen(layout);
@@ -384,6 +572,7 @@ test("the export picture is the dialog on the sample book, with the preflight pa
   await arrange(site);
   const exporting = new Export(site.obsidian);
 
+  const taken: Marks[] = [];
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
     await settled(site.book);
@@ -392,27 +581,83 @@ test("the export picture is the dialog on the sample book, with the preflight pa
     // The dialog is cropped tight with its corners squared, like the other
     // pictures of a pane, and the page draws the frame.
     const clip = await site.obsidian.unframed(exporting.dialog);
+    taken.push(
+      await site.marks(clip, {
+        destination: exporting.destination,
+        choose: exporting.choose,
+        write: exporting.write,
+        fine: exporting.fine,
+      }),
+    );
     await expect(site.obsidian.page).toHaveScreenshot(`export-${scheme}.png`, { clip });
     await exporting.close();
   }
+  await sidecar("export", taken);
 
   await site.obsidian.moving();
 });
 
-test("a docs picture crops to one group of the design panel", async ({
+test("a docs picture crops to each group of the design panel", async ({
   site,
 }) => {
   await arrange(site);
-  const group = site.panel.leaf.locator(`[data-group="${GROUP}"]`);
+  expect(await site.panel.grouped()).toEqual(GROUPS);
 
+  const taken = new Map<string, Marks[]>();
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
-    await expect(group).toBeVisible();
-    await site.obsidian.unhovered();
-    await expect(group).toHaveScreenshot(`panel-${GROUP.toLowerCase()}-${scheme}.png`);
+    // The status bar floats over the foot of the panel, so it goes too.
+    await site.obsidian.still();
+    // The whole panel opens the Design pages, so it is taken from the top
+    // before any group is scrolled to.
+    await site.panel.leaf.locator(`[data-group="${GROUPS[0]}"]`).scrollIntoViewIfNeeded();
+    await expect(site.panel.leaf).toHaveScreenshot(`panel-${scheme}.png`);
+    for (const name of GROUPS) {
+      const group = site.panel.leaf.locator(`[data-group="${name}"]`);
+      const shot = `panel-${slug(name)}`;
+      await expect(group).toBeVisible();
+      // The picture scrolls a group into view, so the group is scrolled
+      // there first and the marks are measured where the picture is taken.
+      await group.scrollIntoViewIfNeeded();
+      const marks = await site.marks(group, targets(site, name));
+      taken.set(shot, [...(taken.get(shot) ?? []), marks]);
+      await expect(group).toHaveScreenshot(`${shot}-${scheme}.png`);
+    }
   }
+  for (const [shot, marks] of taken) await sidecar(shot, marks);
 
   await site.obsidian.moving();
+});
+
+test("the install picture is orca's row in the community plugins settings", async ({
+  site,
+}) => {
+  await arrange(site);
+  // Settings open in a window of their own by default, which CDP is not
+  // attached to, so they open as a modal for this test.
+  const had = await site.obsidian.openSettings(PLUGINS_TAB);
+  const toggle = site.obsidian.enabled(ORCA);
+  await expect(site.obsidian.installed(ORCA)).toBeVisible();
+  await site.obsidian.installed(ORCA).scrollIntoViewIfNeeded();
+  // Settings focus their search box on open, and its ring is not part of
+  // the step the picture shows.
+  await site.obsidian.page.evaluate(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+  });
+  await expect(site.obsidian.page.locator(":focus")).toHaveCount(0);
+
+  const taken: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(toggle).toBeVisible();
+    const clip = await site.obsidian.unframed(site.obsidian.settings());
+    taken.push(await site.marks(clip, { orca: toggle }));
+    await expect(site.obsidian.page).toHaveScreenshot(`install-${scheme}.png`, { clip });
+  }
+  await sidecar("install", taken);
+
+  await site.obsidian.moving();
+  await site.obsidian.closeSettings(had);
 });
 
 test("the flip-through's pages come from the book's own PDF", async ({
@@ -430,7 +675,22 @@ test("the flip-through's pages come from the book's own PDF", async ({
   await expect(exporting.destination).toHaveValue(EXPORTED);
   await exporting.write.click();
   await exporting.reaches("written");
+
+  // The dialog once the file is written is a picture too, taken of this
+  // one export in both schemes.
+  const done: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(exporting.openPdf).toBeVisible();
+    const clip = await site.obsidian.unframed(exporting.dialog);
+    done.push(await site.marks(clip, { open: exporting.openPdf }));
+    await expect(site.obsidian.page).toHaveScreenshot(`export-written-${scheme}.png`, {
+      clip,
+    });
+  }
+  await site.obsidian.moving();
   await exporting.close();
+  await sidecar("export-written", done);
 
   // The checked-in sample vault has no PDF, so the export comes back out.
   const exported = path.join(Obsidian.sample(), EXPORTED);
@@ -467,6 +727,300 @@ test("the flip-through's pages come from the book's own PDF", async ({
   }
 });
 
+// The make pictures come after the landing pictures, so those never
+// show the new book, and after the flip-through, so its export is of the
+// sample book alone.
+test("the make pictures are a folder of notes made into a book", async ({
+  site,
+}) => {
+  await arrange(site);
+  const layout = await site.obsidian.layout();
+  await site.obsidian.still();
+  await site.obsidian.sidebar(TREE_WIDTH, "left");
+  await site.obsidian.command(SHOW_TREE);
+  const tree = site.obsidian.view(EXPLORER);
+  await expect(tree).toContainText(FOLDER);
+  await site.obsidian.page.evaluate(
+    async ({ folder, notes }) => {
+      await window.app.vault.createFolder(folder);
+      for (const [name, text] of notes) {
+        await window.app.vault.create(`${folder}/${name}.md`, text);
+      }
+    },
+    { folder: DRAFT, notes: Object.entries(DRAFTED) },
+  );
+
+  // The menu is the real one Obsidian opens on a right-click, cropped to
+  // the folder's row, the rows around it and the menu.
+  const row = site.obsidian.treeItem(DRAFT);
+  const create = site.obsidian.item(CREATE);
+  await expect(row).toBeVisible();
+  const menu: Marks[] = [];
+  // The menu is opened once and stays open while the scheme changes. A
+  // second right-click on the row opens nothing.
+  await site.obsidian.contextMenu(row);
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(create).toBeVisible();
+    const folder = await measured(row);
+    const clip = await around(
+      site,
+      [{ ...folder, height: folder.height * 4 }, await measured(site.obsidian.menu())],
+      PAD,
+    );
+    const left = Math.floor((await measured(tree)).x);
+    const cropped = { ...clip, x: left, width: clip.x + clip.width - left };
+    menu.push(await site.marks(cropped, { create }));
+    await expect(site.obsidian.page).toHaveScreenshot(`make-menu-${scheme}.png`, {
+      clip: cropped,
+    });
+  }
+  await sidecar("make-menu", menu);
+
+  await site.obsidian.choose(CREATE);
+  await expect
+    .poll(async () =>
+      site.obsidian.page.evaluate(
+        (at) => window.app.vault.getFileByPath(at) !== null,
+        MADE,
+      ),
+    )
+    .toBe(true);
+  await expect(site.navigator.book(MADE)).toHaveCount(1);
+  const note = new Note(site.obsidian);
+  await note.painted();
+
+  // The navigator's header, with the action that makes a book with no
+  // notes. The crop ends under the header, so no book is in it.
+  await site.navigator.reveal();
+  const shelf = site.obsidian.view(NAVIGATOR);
+  const newBook = site.navigator.button(NEW_BOOK);
+  const header: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(newBook).toBeVisible();
+    const pane = await measured(shelf);
+    const button = await measured(newBook);
+    const clip = {
+      x: Math.floor(pane.x),
+      y: Math.floor(pane.y),
+      width: Math.floor(pane.width),
+      height: Math.ceil(button.y + button.height - pane.y + PAD / 2),
+    };
+    header.push(await site.marks(clip, { "new-book": newBook }));
+    await expect(site.obsidian.page).toHaveScreenshot(`make-new-${scheme}.png`, { clip });
+  }
+  await sidecar("make-new", header);
+
+  // The new book alone, and the book note open as its page.
+  const book = site.navigator.book(MADE);
+  const made = site.navigator.name(MADE);
+  const drafted = site.navigator.entry(MADE, FIRST_DRAFT);
+  const page = site.obsidian.view(BOOK_PAGE);
+  await book.scrollIntoViewIfNeeded();
+  const navigator: Marks[] = [];
+  const opened: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await expect(made).toBeVisible();
+    await expect(drafted).toBeVisible();
+    await expect(note.page).toBeVisible();
+    navigator.push(await site.marks(book, { book: made, note: drafted }));
+    await expect(book).toHaveScreenshot(`make-navigator-${scheme}.png`);
+    opened.push(
+      await site.marks(page, {
+        "as-markdown": site.obsidian.actionIn(BOOK_PAGE, AS_MARKDOWN),
+        "open-preview": site.obsidian.actionIn(BOOK_PAGE, OPEN_PREVIEW),
+      }),
+    );
+    await expect(page).toHaveScreenshot(`make-page-${scheme}.png`);
+  }
+  await sidecar("make-navigator", navigator);
+  await sidecar("make-page", opened);
+
+  // One app takes every picture, so the book and its folder go again.
+  await site.obsidian.moving();
+  await site.obsidian.reopen(layout);
+  await site.obsidian.page.evaluate(
+    async (paths) => {
+      for (const at of paths) {
+        const found = window.app.vault.getAbstractFileByPath(at);
+        if (found !== null) await window.app.vault.delete(found, true);
+      }
+    },
+    [MADE, DRAFT],
+  );
+  await expect(site.navigator.book(MADE)).toHaveCount(0);
+  await site.obsidian.asRendered();
+});
+
+/** The rule a CSS picture types: it overrides the indent control and holds a declaration fleuron skips. */
+const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;\n}";
+
+/** The control that rule overrides. */
+const OVERRIDDEN = "body-first-line-indent";
+
+test("the CSS pictures are the sample book's own CSS, a warning on a rule, and the control that rule overrides", async ({
+  site,
+}) => {
+  await arrange(site);
+  const own = await noteText(site);
+  await sized(site, INSPECT.width, INSPECT.height);
+  await site.obsidian.collapse("left");
+  const width = await site.obsidian.sidebar(INSPECT.panel);
+  await site.panel.toCss.click();
+  // The rules are wider than the panel, so the picture wraps them.
+  await site.panel.wrap.click();
+  await expect(site.panel.wrap).toHaveAttribute("aria-pressed", "true");
+  await settled(site.book);
+  await expect(site.panel.flags).toHaveCount(0);
+
+  const css: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await expect(site.panel.editor).toBeVisible();
+    await site.obsidian.unhovered();
+    css.push(
+      await site.marks(await windowBox(site), {
+        controls: site.panel.toControls,
+        wrap: site.panel.wrap,
+      }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`css-${scheme}.png`);
+  }
+  await sidecar("css", css);
+
+  await site.obsidian.moving();
+  await typed(site, own, OVERRIDING);
+  await expect(site.panel.flags).toHaveCount(1);
+  await expect(site.panel.warned).toBeVisible();
+
+  const warning: Marks[] = [];
+  const bar: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    // The card is the warning the picture shows, so the pointer rests on
+    // the mark rather than off the window.
+    await site.obsidian.moving();
+    await site.panel.flags.first().hover();
+    await expect(site.panel.card).toBeVisible();
+    const card = await around(
+      site,
+      [
+        await measured(site.panel.warned),
+        await measured(site.panel.editor),
+        await measured(site.panel.card),
+      ],
+      PAD,
+    );
+    warning.push(
+      await site.marks(card, { flag: site.panel.flags.first(), warned: site.panel.warned }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`css-warning-${scheme}.png`, {
+      clip: card,
+    });
+
+    await site.obsidian.unhovered();
+    await site.book.warnings.click();
+    await expect(site.book.issueOpens.first()).toBeVisible();
+    const list = site.obsidian.view(PREVIEW).getByTestId("orca-issues");
+    const opened = await around(
+      site,
+      [await measured(site.book.warnings), await measured(list)],
+      PAD,
+    );
+    bar.push(
+      await site.marks(opened, {
+        warnings: site.book.warnings,
+        place: site.book.issueOpens.first(),
+      }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`preview-warnings-${scheme}.png`, {
+      clip: opened,
+    });
+    await site.book.warnings.click();
+    await expect(list).toBeHidden();
+  }
+  await sidecar("css-warning", warning);
+  await sidecar("preview-warnings", bar);
+
+  await site.obsidian.moving();
+  await site.panel.wrap.click();
+  await site.panel.toControls.click();
+  await expect(site.panel.overridden(OVERRIDDEN)).toBeVisible();
+
+  const locked: Marks[] = [];
+  const header: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await site.obsidian.unhovered();
+
+    // The switch to the CSS view, cropped from the top of the panel's
+    // leaf to just under the switch. The row below scrolls the panel, so
+    // the panel goes back to its top first.
+    await site.panel.leaf.locator(`[data-group="${GROUPS[0]}"]`).scrollIntoViewIfNeeded();
+    const leaf = await measured(site.panel.leaf);
+    const button = await measured(site.panel.toCss);
+    const top = {
+      x: Math.ceil(leaf.x),
+      y: Math.ceil(leaf.y),
+      width: Math.floor(leaf.width),
+      height: Math.ceil(button.y + button.height + PAD - leaf.y),
+    };
+    header.push(await site.marks(top, { css: site.panel.toCss }));
+    await expect(site.obsidian.page).toHaveScreenshot(`css-switch-${scheme}.png`, { clip: top });
+
+    const row = site.panel.row(OVERRIDDEN);
+    await row.scrollIntoViewIfNeeded();
+    // The field of the row above sits close, so the crop pads by less.
+    const clip = await around(site, [await measured(row)], PAD / 2);
+    locked.push(await site.marks(clip, { lock: site.panel.overridden(OVERRIDDEN) }));
+    await expect(site.obsidian.page).toHaveScreenshot(`css-overridden-${scheme}.png`, { clip });
+  }
+  await sidecar("css-switch", header);
+  await sidecar("css-overridden", locked);
+
+  await site.obsidian.moving();
+  await site.panel.toCss.click();
+  await untyped(site, own);
+  await site.panel.toControls.click();
+  await site.obsidian.sidebar(width);
+});
+
+/**
+ * Types CSS at the end of the author's CSS, and waits for the editor to
+ * write it to the note. A note put back before that write is written
+ * over by it.
+ */
+async function typed(site: Site, own: string, css: string): Promise<void> {
+  await site.panel.typeCss(css);
+  await expect.poll(async () => noteText(site)).not.toEqual(own);
+}
+
+/** The book note's text as it is on disk. */
+async function noteText(site: Site): Promise<string> {
+  return site.obsidian.page.evaluate(async (at) => window.app.vault.adapter.read(at), BOOK);
+}
+
+/**
+ * Deletes what a picture typed at the end of the author's CSS, in the
+ * editor, and waits for the note to hold its own text again. The editor
+ * keeps its own copy of the CSS, so a note written from outside it is
+ * written over on the next edit.
+ */
+async function untyped(site: Site, own: string): Promise<void> {
+  const extra = (await noteText(site)).length - own.length;
+  await site.panel.code.click();
+  await site.panel.code.press("ControlOrMeta+End");
+  for (let at = 0; at < extra; at++) await site.panel.code.press("Shift+ArrowLeft");
+  await site.panel.code.press("Backspace");
+  await expect.poll(async () => noteText(site)).toEqual(own);
+  await settled(site.book);
+}
+
 // The inspect picture is taken last. Its rule is a change to the book
 // note, and a change to the note drops the book the flip-through reads.
 test("the inspect picture is a pinned paragraph beside the rules that set it", async ({
@@ -474,10 +1028,7 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
 }) => {
   await arrange(site);
   const inspect = new Inspect(site.obsidian);
-  const own = await site.obsidian.page.evaluate(
-    async (at) => window.app.vault.adapter.read(at),
-    BOOK,
-  );
+  const own = await noteText(site);
   await sized(site, INSPECT.width, INSPECT.height);
   // The page and the pane are the picture, so the navigator gives its
   // room to them, and the panel is wide enough to read a rule on one line.
@@ -498,49 +1049,85 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
   expect(section).toMatch(/^section#/);
   // The rule is typed over three lines, since one line is wider than the
   // editor and scrolls it sideways under its gutter.
-  await site.panel.typeCss(`${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
+  await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
   await expect(site.panel.rulesIn("own").first()).toContainText(OWN_INDENT);
   pin = await inspect.pinned();
   await site.panel.inspecting(pin.key, pin.generation);
   await expect(site.panel.ruleGroups).toHaveCount(3);
 
+  const taken: Marks[] = [];
+  const adding: Marks[] = [];
   for (const scheme of SCHEMES) {
     await site.paint(scheme);
     await settled(site.book);
     await expect(inspect.outline("pinned").getByTestId("orca-inspect-edge")).toBeVisible();
     await expect(site.panel.pane).toBeVisible();
+    // The pane scrolls, and its top row holds the pin's own icon.
+    await site.panel.unpinButton.scrollIntoViewIfNeeded();
     await site.obsidian.unhovered();
+    taken.push(
+      await site.marks(await windowBox(site), { inspect: inspect.action }),
+    );
     await expect(site.obsidian.page).toHaveScreenshot(`inspect-${scheme}.png`);
+
+    // "Add a rule" sits under the rules, past the foot of the pane, so
+    // its picture is the pane scrolled to it above the editor.
+    await site.obsidian.moving();
+    await site.panel.addRule.scrollIntoViewIfNeeded();
+    // The pane is scrolled, so its scrollbar would show in the picture.
+    await site.obsidian.still();
+    const clip = await around(
+      site,
+      [await measured(site.panel.pane), await measured(site.panel.editor)],
+      PAD,
+    );
+    adding.push(
+      await site.marks(clip, { "add-rule": site.panel.addRule }),
+    );
+    await expect(site.obsidian.page).toHaveScreenshot(`inspect-add-${scheme}.png`, { clip });
   }
+  await sidecar("inspect", taken);
+  await sidecar("inspect-add", adding);
 
   // One app takes every picture, so the note, the mode and the panel's
   // width are put back for the next.
   await site.obsidian.moving();
   await inspect.off();
+  await untyped(site, own);
   await site.panel.toControls.click();
   await site.obsidian.sidebar(width);
-  await site.obsidian.page.evaluate(
-    async ({ at, text }) => {
-      const note = window.app.vault.getFileByPath(at);
-      if (note === null) throw new Error(`no note at ${at}`);
-      await window.app.vault.modify(note, text);
-    },
-    { at: BOOK, text: own },
-  );
-  // The editor writes the note on a debounce, so the wait is on the note
-  // holding its own text and on the book painted from it.
-  await expect
-    .poll(async () =>
-      site.obsidian.page.evaluate(async (at) => window.app.vault.adapter.read(at), BOOK),
-    )
-    .toEqual(own);
-  await settled(site.book);
+});
+
+// The book note picture comes after every export. The note's page sets
+// the book again, and an export after it leaves out the book's CSS.
+test("the book note picture is the sample book's note open as its page", async ({
+  site,
+}) => {
+  await sized(site, WINDOW.width, BOOK_NOTE_HEIGHT);
+  const layout = await site.obsidian.layout();
+  const note = new Note(site.obsidian);
+  await note.open(BOOK);
+  await note.painted();
+  const page = site.obsidian.view(BOOK_PAGE);
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    // The status bar floats over the foot of the page, so it goes too.
+    await site.obsidian.still();
+    await expect(note.page).toBeVisible();
+    await expect(page).toHaveScreenshot(`book-note-${scheme}.png`);
+  }
+  await site.obsidian.moving();
+  await site.obsidian.reopen(layout);
+  await sized(site, WINDOW.width, WINDOW.height);
 });
 
 // What this spec does not cover: the pictures on any platform but the
 // one CI takes them on, since a run elsewhere sets the same pages and
-// rasterizes them differently; the export dialog, which orca has not
-// built, so the bytes come off the session the preview is reading;
-// whether the landing page uses the pictures, which the page answers;
-// and what the design panel holds while a chapter rather than a book is
-// being read, which is why the swap pictures are of the pane alone.
+// rasterizes them differently; whether the site uses the pictures and
+// draws each mark where its sidecar puts it, which the site's build
+// answers; heading levels past the first, which the Headings picture
+// does not show; installing orca, since the vault already has it; the
+// export written to a path outside the vault, which stops at a native
+// dialog; and what the design panel holds while a chapter rather than a
+// book is being read, which is why the swap pictures are of the pane
+// alone.

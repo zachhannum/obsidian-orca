@@ -1,0 +1,36 @@
+---
+title: Headings
+eyebrow: Design
+description: Chapter titles and the headings under them.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The Headings group in the design panel sets the font, size and alignment of each heading level. A chapter title is a level 1 heading.
+
+<Shot
+  name="panel-headings"
+  alt="The Headings group of the design panel, with the level tabs H1 to H6, and Font, Size and Alignment for the level."
+  caption="The Headings group."
+  marks={['heading-level', 'heading-1-font', 'heading-1-size', 'heading-1-align']}
+  numbered
+/>
+
+## Controls
+
+In a key, `N` is the heading level, from 1 to 6.
+
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Level | `H1` | none |
+| 2 | Font | `EB Garamond` | `heading-N-font` |
+|  | Variant | The default variant of the font | `heading-N-font-variant` |
+| 3 | Size | `19pt` | `heading-N-size` |
+| 4 | Alignment | `Left` | `heading-N-align` |
+
+## Pick a level
+
+1. Select a level in the level tabs, from `H1` to `H6`.
+2. Change the controls under the level tabs.
+
+If a level has no font of its own, it uses the font from the Text group.

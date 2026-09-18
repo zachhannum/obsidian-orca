@@ -1,0 +1,72 @@
+---
+title: The preview
+eyebrow: Start here
+description: See the book as the pages that it prints on.
+---
+
+import Shot from '../../../components/Shot.astro';
+import Action from '../../../components/Action.astro';
+
+The preview shows the book as typeset pages.
+
+## Open the preview
+
+<Shot
+  name="write"
+  alt="A chapter open in the Obsidian editor, with Open preview in the header."
+  caption="A chapter in the editor."
+  marks={['open-preview']}
+/>
+
+1. Open a note that is in a book.
+2. In the header, select <Action name="preview" />.
+
+The preview of the book opens in the pane, at the chapter that you were editing.
+
+## Preview pane actions
+
+<Shot
+  name="read"
+  alt="The preview of a chapter, with Inspect the page, Open as markdown and Export to PDF in the header."
+  caption="The preview, with its actions in the header."
+  marks={['inspect', 'as-markdown', 'export']}
+  numbered
+/>
+
+The preview has three actions in its header:
+
+1. <Action name="inspect" /> toggles inspect mode. [The inspector](/design/inspect/) shows how to use it.
+2. <Action name="markdown" /> shows the chapter markdown in the editor.
+3. <Action name="export" /> opens the export dialog.
+
+## Warnings
+
+<Shot
+  name="preview-warnings"
+  alt="The count of warnings in the preview, open on the list of warnings, with the warnings for the book's CSS and the place of each."
+  caption="The warnings, open from their count."
+  marks={['warnings', 'place']}
+  numbered
+/>
+
+If fleuron gives a warning when it sets the book, the preview shows the count of warnings.
+
+1. To see each warning, select the dropdown. The warnings are in groups. The warnings for your CSS are in the group `The book's CSS`, and the warnings for a note are in a group named after the note.
+2. To go to the place of a warning, select its place. A warning against your CSS opens the CSS view of the design panel with the cursor on that line. A warning against a note opens that note with the cursor on that line.
+
+## Design the book
+
+When the preview opens, the design panel opens in the right sidebar. The panel changes the design of the book, and the preview updates in realtime. [The design panel](/design/overview/) shows how to use it.
+
+## Commands
+
+Run these commands from the command palette. A command is available only when the active pane matches its `Available when` column.
+
+| Command | Available when | Result |
+| --- | --- | --- |
+| `Open preview to the right` | A note in a book is open | Opens the preview of the note in a new pane to the right. |
+| `Open manuscript to the left` | The preview is open | Opens the note of the previewed chapter in a new pane to the left. |
+| `Next chapter` | The preview is open | Moves the preview to the next chapter in reading order. |
+| `Previous chapter` | The preview is open | Moves the preview to the previous chapter in reading order. |
+
+[Export to PDF](/export/export-to-pdf/) shows how to write the book to a file.

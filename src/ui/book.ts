@@ -5,10 +5,10 @@ import { resolve, type Section } from "@/book/order";
 import type { Range } from "@/book/pages";
 import { countWords } from "@/book/words";
 import type { PageUnit } from "@/style/design";
+import { ACTIONS } from "@/ui/actions";
 import { Changed } from "@/ui/changed";
 import type { Composer, Typeset } from "@/ui/composer";
 import { save, type Edits } from "@/ui/edits";
-import { PREVIEW_ICON } from "@/ui/icon";
 import { cacheLinks } from "@/ui/notes";
 import { report, setField } from "@/ui/report";
 import { mountPage, type Mounted } from "@/ui/reports";
@@ -90,10 +90,10 @@ export class BookView extends FileView {
   }
 
   override onOpen(): Promise<void> {
-    this.addAction("file-text", "Open as markdown", () => {
+    this.addAction(ACTIONS.markdown.icon, ACTIONS.markdown.label, () => {
       this.handoff.asMarkdown(this);
     });
-    this.addAction(PREVIEW_ICON, "Open preview", () => {
+    this.addAction(ACTIONS.preview.icon, ACTIONS.preview.label, () => {
       if (this.file !== null) this.handoff.preview(this.file.path);
     });
     this.mounted = mountPage(this.contentEl, {

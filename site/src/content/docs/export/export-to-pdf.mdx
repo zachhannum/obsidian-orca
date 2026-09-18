@@ -1,0 +1,42 @@
+---
+title: Export to PDF
+eyebrow: Export
+description: Save the book as a PDF.
+---
+
+import Shot from '../../../components/Shot.astro';
+import Action from '../../../components/Action.astro';
+
+To export the book, select <Action name="export" /> in the header of the preview, or run the command `Export to PDF`.
+
+## Export the book
+
+<Shot
+  name="export"
+  alt="The Export to PDF dialog, with Save to, Choose, Preflight showing No errors, and Export."
+  caption="The Export to PDF dialog, ready to export."
+/>
+
+1. In `Save to`, edit the path of the file. By default, the file has the name of the book and is beside the book note.
+2. To save the file outside the vault, select `Choose…`.
+3. When `Preflight` shows `No errors`, select `Export`.
+
+## Preflight errors
+
+Preflight finds the errors that stop an export. You cannot export until you fix them.
+
+| Error | Action |
+| --- | --- |
+| `Missing font: <name>` | `Change font…` |
+| `Cannot read font file: <name>` | `Change font…` |
+| `Missing image: <url>` | `Go to line` |
+
+## The written file
+
+<Shot
+  name="export-written"
+  alt="The Export to PDF dialog after export, with the file name, page count and size, and Open PDF and Done."
+  caption="The dialog after orca writes the file."
+/>
+
+To open the file, select `Open PDF`.

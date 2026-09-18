@@ -62,6 +62,7 @@ import {
   type Owner,
   type Row as Listed,
 } from "@/ui/groups";
+import { ACTIONS } from "@/ui/actions";
 import { boxKey } from "@/ui/inspect";
 import { hyphenating } from "@/ui/language";
 import { InspectPane, type Inspecting } from "@/ui/pane";
@@ -221,26 +222,26 @@ export function Panel({
               : "clickable-icon orca-panel-action"
           }
           data-testid="orca-panel-wrap"
-          aria-label="Wrap long lines"
+          aria-label={ACTIONS.wrap.label}
           aria-pressed={shown.wrapping}
           onClick={() => {
             acting.wrap(!shown.wrapping);
           }}
         >
-          <Icon name="wrap-text" className="orca-panel-action-icon" />
+          <Icon name={ACTIONS.wrap.icon} className="orca-panel-action-icon" />
         </button>
       ) : null}
       <button
         type="button"
         className="clickable-icon orca-panel-action"
         data-testid={css ? "orca-panel-controls" : "orca-panel-css"}
-        aria-label={css ? "Controls" : "CSS"}
+        aria-label={css ? ACTIONS.controls.label : ACTIONS.css.label}
         onClick={() => {
           acting.view(css ? "controls" : "css");
         }}
       >
         <Icon
-          name={css ? "sliders-horizontal" : "code"}
+          name={css ? ACTIONS.controls.icon : ACTIONS.css.icon}
           className="orca-panel-action-icon"
         />
       </button>

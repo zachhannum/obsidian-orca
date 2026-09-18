@@ -17,6 +17,12 @@ export interface Source {
   text: string;
 }
 
+/** An image the book's CSS names, by that url, and where the site serves it. */
+export interface Served {
+  url: string;
+  src: string;
+}
+
 /** The page on screen, and the way to set it again. */
 export interface Typeset {
   /** Sets the page from a design and paints it. */
@@ -28,13 +34,16 @@ export interface Typeset {
 /**
  * Starts a session over one chapter and paints its first page into
  * `into`. The module is fetched on the first call, so a caller that
- * wants the page later starts this later.
+ * wants the page later starts this later. The book's own CSS rides last,
+ * as it does in the plugin, and every image it names crosses first.
  */
 export async function startTypeset(
   into: HTMLElement,
   source: Source,
   setting: Setting,
-  design: Design
+  design: Design,
+  css: string,
+  images: readonly Served[]
 ): Promise<Typeset> {
   const worker = new Worker(new URL('./typeset.worker.ts', import.meta.url), {
     type: 'module',
@@ -59,9 +68,18 @@ export async function startTypeset(
    * It crosses with the class and id the setting names it by.
    */
   const section = setting.sections[0];
+  const bytes = await Promise.all(
+    images.map(async ({ url, src }): Promise<Op> => {
+      const response = await fetch(src);
+      return { op: 'image', url, bytes: new Uint8Array(await response.arrayBuffer()) };
+    })
+  );
+  const served = new Map(images.map(({ url, src }) => [url, src]));
+  const styled = (sets: Design): Op => styleOp(designSheets(sets, setting, css));
   const opened = (sets: Design): Op[] => [
     { op: 'dialect', dialect: 'obsidian' },
     { op: 'split', level: 0 },
+    ...bytes,
     {
       op: 'book',
       sources: [
@@ -70,7 +88,7 @@ export async function startTypeset(
           : { ...source, attributes: { classes: [section.role], id: section.id } },
       ],
     },
-    styleOp(designSheets(sets, setting)),
+    styled(sets),
   ];
 
   const paint = async (): Promise<void> => {
@@ -78,7 +96,11 @@ export async function startTypeset(
     if (reading === undefined) return;
     const page = reading.pages[0];
     if (page === undefined) return;
-    into.innerHTML = paintPage(page, { fonts: reading.fonts, assets: reading.assets });
+    into.innerHTML = paintPage(page, {
+      fonts: reading.fonts,
+      assets: reading.assets,
+      asset: (asset) => served.get(asset.url),
+    });
     into.dataset['set'] = 'yes';
   };
 
@@ -89,7 +111,7 @@ export async function startTypeset(
     async set(next: Design): Promise<void> {
       // Only the styling changed, so the engine re-fragments over lines
       // it has already broken rather than reading the chapter again.
-      await session.render([styleOp(designSheets(next, setting))]);
+      await session.render([styled(next)]);
       await paint();
     },
     stop(): void {

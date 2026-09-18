@@ -1,0 +1,41 @@
+---
+title: The design panel
+eyebrow: Design
+description: Where you set the design of the book.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The design panel sets how the book looks: the page, the type, the headings and the space around them.
+
+<Shot
+  name="panel"
+  alt="The design panel in the right sidebar, with the Page and Text groups at the top."
+  caption="The design panel."
+/>
+
+## Open the panel
+
+The panel is the `Design` tab in the right sidebar. When you open the preview of a book, the panel opens too. To open the panel at another time, run the command `Open the design panel`.
+
+The panel shows a book only while the preview of that book is visible. When no book preview is actively visible, the pane shows `No book is open`.
+
+## Change the design
+
+Each control writes one key to the frontmatter of the book note. The preview shows each change in realtime. Each control that has been modified shows a reset button that can be used to change the value back to it's default setting.
+
+The controls are grouped into logical sections:
+
+| Group | Sets |
+| --- | --- |
+| [Page](/design/page/) | The trim and the margins |
+| [Text](/design/text/) | The font, size and alignment of the text |
+| [Headings](/design/headings/) | The font, size and alignment of each heading level |
+| [Chapter openings](/design/chapter-openings/) | Where a chapter begins, and its drop cap |
+| [Scene breaks](/design/scene-breaks/) | The mark between two scenes |
+| [Heads & folios](/design/heads-and-folios/) | Running heads and page numbers |
+| [Page breaks](/design/page-breaks/) | Orphans, widows and headings at the foot of a page |
+
+## Custom CSS
+
+To change the book's design in ways that the controls cannot, write your own CSS. [Custom CSS](/design/custom-css/) shows how.

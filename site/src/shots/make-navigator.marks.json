@@ -1,0 +1,18 @@
+{
+  "width": 268,
+  "height": 200,
+  "marks": {
+    "book": {
+      "x": 0,
+      "y": 0,
+      "width": 268,
+      "height": 26
+    },
+    "note": {
+      "x": 17,
+      "y": 90,
+      "width": 251,
+      "height": 26
+    }
+  }
+}

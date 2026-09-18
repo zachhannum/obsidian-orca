@@ -1,0 +1,18 @@
+{
+  "width": 424,
+  "height": 680,
+  "marks": {
+    "flag": {
+      "x": 63,
+      "y": 622,
+      "width": 79,
+      "height": 14
+    },
+    "warned": {
+      "x": 299,
+      "y": 17,
+      "width": 47,
+      "height": 14
+    }
+  }
+}

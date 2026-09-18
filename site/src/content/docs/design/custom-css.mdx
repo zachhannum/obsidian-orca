@@ -1,0 +1,105 @@
+---
+title: Custom CSS
+eyebrow: Design
+description: Change the design of the book in ways that the controls cannot.
+---
+
+import Shot from '../../../components/Shot.astro';
+import Action from '../../../components/Action.astro';
+
+The controls of the design panel are limited in what they can style. To further customize the styling of a book, write your own CSS in the CSS view of the design panel.
+
+<Shot
+  name="css"
+  alt="The CSS view of the design panel, with the rules that put a shell behind each chapter heading, beside the opening page of a chapter."
+  caption="The CSS view, with the rules that put a shell behind each chapter heading."
+  marks={['controls', 'wrap']}
+/>
+
+## Write CSS
+
+<Shot
+  name="css-switch"
+  alt="The header of the design panel, with the CSS icon."
+  caption="The CSS icon in the header of the design panel."
+  marks={['css']}
+/>
+
+1. In the header of the design panel, select <Action name="css" />. The CSS view opens.
+2. Type your CSS. The preview shows each change as you type.
+3. To go back to the controls, select <Action name="controls" />.
+
+To wrap long lines in the editor, select <Action name="wrap" />.
+
+Orca writes your CSS to the book note one second after you stop typing. The CSS goes in a `css` code block at the end of the note. If the note has more than one `css` block, orca reads only the first. [The book note](/reference/the-book-note/) shows the block in a full note.
+
+## What CSS you can use
+
+Orca typesets the book with fleuron, which supports a subset of CSS. The [fleuron CSS subset](https://fleuron.typeworks.dev/css-subset/) lists the properties and selectors that you can use.
+
+If fleuron cannot use a declaration, it skips that declaration. The CSS view shows a warning for it.
+
+## Warnings
+
+<Shot
+  name="css-warning"
+  alt="A declaration in the CSS view with a wavy line under it, the card that names the warning, and the count of warnings in the header."
+  caption="A warning on a declaration that fleuron skips."
+  marks={['flag', 'warned']}
+  numbered
+/>
+
+1. A wavy line marks the declaration that fleuron skipped, and its line number changes color. Hover over the mark to read the warning and its place, for example `book.css:4:3`.
+2. The header of the panel shows the count of warnings.
+
+The preview also shows the count. [The preview](/start/the-preview/#warnings) shows how to open each warning from there.
+
+## How your CSS applies
+
+Orca sends fleuron four sheets, in this order:
+
+| Sheet | Holds |
+| --- | --- |
+| `orca.css` | Orca's theme |
+| `faces.css` | The fonts that the controls use |
+| `design.css` | The CSS that the controls write |
+| `book.css` | Your CSS |
+
+Your CSS comes last. If your rule and a rule from the controls set the same property with the same specificity, your rule takes precedence. If the rule from the controls is more specific, it takes precedence.
+
+Most controls use plain selectors, for example `p + p` for the first-line indent. Some controls select each section by its id, for example the controls for chapter openings, for example `section#a-shifting-reef`. To change a property that one of these controls sets, use a selector that is at least as specific. The inspector shows the selector of each rule. [The inspector](/design/inspect/) shows how to use it.
+
+## Overridden controls
+
+<Shot
+  name="css-overridden"
+  alt="The First-line indent row of the Text group, dimmed, with a lock beside it."
+  caption="A control that your CSS overrides."
+  marks={['lock']}
+/>
+
+If your CSS sets a property that a control also sets, with the same selector, the control shows a lock. Hover over the lock to see the property, the value that overrides it and its place in your CSS. Select the lock to open the CSS view with the cursor on that line.
+
+## Selectors
+
+Each entry of the reading order is a `section`. Its class is its role, for example `chapter` or `part`. Its id comes from the name of the entry, for example `a-shifting-reef`. The id stays the same when you move the entry.
+
+| Part of the book | Selector |
+| --- | --- |
+| Every section of a role | `section.chapter`, `section.copyright` |
+| One section | `section#a-shifting-reef` |
+| The heading that opens each chapter | `section.chapter > h1:first-child` |
+| The first letter of each chapter | `section.chapter > h1:first-child + p::first-letter` |
+| A paragraph after a paragraph | `p + p` |
+| A scene break | `hr` |
+| An entry of the contents | `section#contents p.entry` |
+| A page number in the contents | `section#contents p.folio` |
+| A part in the contents | `section#contents p.part` |
+
+Each role sets its own named page, for example `@page chapter` or `@page chapter:first`. `@page :left` and `@page :right` set the left and right pages. The running heads and the page numbers are margin boxes of those rules, for example `@top-left` and `@bottom-center`.
+
+## Images and fonts
+
+A `url()` in your CSS can name an image in the vault. Orca finds the image from the book note, in the same way as a link. Orca does not load images from the web.
+
+`font-family` can name a font that a control of the design panel uses. Orca does not load a font that only your CSS names, and it does not load the files in an `@font-face` rule.

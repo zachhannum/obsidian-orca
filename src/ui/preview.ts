@@ -20,6 +20,7 @@ import { nodesOn, type Nodes } from "@/book/place";
 import { isGenerated } from "@/book/plan";
 import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
+import { ACTIONS } from "@/ui/actions";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
@@ -358,11 +359,11 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
-    this.exportAction ??= this.addAction("download", "Export to PDF", () => {
+    this.exportAction ??= this.addAction(ACTIONS.export.icon, ACTIONS.export.label, () => {
       const book = this.state.book;
       if (book !== undefined) this.handoff.exports(book);
     });
-    this.inspectAction ??=this.addAction("crosshair", "Inspect the page", () => {
+    this.inspectAction ??= this.addAction(ACTIONS.inspect.icon, ACTIONS.inspect.label, () => {
       this.toggleInspect();
     });
     this.inspectAction.setAttribute("aria-pressed", "false");
@@ -638,7 +639,7 @@ export class PreviewView extends ItemView {
 
   /** Puts the way to markdown in the view's header. */
   private attach(): void {
-    this.edit ??= this.addAction("file-text", "Open as markdown", () => {
+    this.edit ??= this.addAction(ACTIONS.markdown.icon, ACTIONS.markdown.label, () => {
       void this.toMarkdown();
     });
     this.ordersActions();

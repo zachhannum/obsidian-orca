@@ -70,17 +70,21 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Start here',
-          items: ['start/install', 'start/make-a-book', 'start/write-with-the-preview'],
+          items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/the-preview'],
         },
         {
           label: 'Design',
           items: [
+            'design/overview',
             'design/page',
             'design/text',
             'design/headings',
             'design/chapter-openings',
             'design/scene-breaks',
             'design/heads-and-folios',
+            'design/page-breaks',
+            'design/custom-css',
+            'design/inspect',
           ],
         },
         { label: 'Export', items: ['export/export-to-pdf'] },
