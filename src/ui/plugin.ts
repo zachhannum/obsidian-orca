@@ -1,4 +1,4 @@
-import { ViewPlugin } from "@codemirror/view";
+import { ViewPlugin, type EditorView } from "@codemirror/view";
 import {
   MarkdownView,
   Notice,
@@ -28,7 +28,7 @@ import { PREVIEW_ICON } from "@/ui/icon";
 import { bookFromFolder, emptyBook } from "@/ui/make";
 import { bookCss, withCss } from "@/book/css";
 import { writeDesign, type Design, type FontUse } from "@/style/design";
-import { byteOf, offsetOf, writtenAt } from "@/book/place";
+import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
 import {
@@ -842,7 +842,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     member: Member,
   ): Promise<void> {
     const view = leaf.view;
-    const at = view instanceof MarkdownView ? scrolledTo(view) : undefined;
+    const over = view instanceof MarkdownView ? scrolledOver(view) : undefined;
     const left = this.manuscript.get(leaf);
     // The book decides whether that page still stands: it is the side
     // that knows whether the pane is scrolled inside it.
@@ -859,7 +859,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
         book: member.book,
         note: file.path,
         folio,
-        at,
+        over,
       } satisfies PreviewState,
       active: true,
     });
@@ -881,7 +881,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
         book: member.book,
         note: file.path,
         linked: true,
-        at: from instanceof MarkdownView ? scrolledTo(from) : undefined,
+        over: from instanceof MarkdownView ? scrolledOver(from) : undefined,
       } satisfies PreviewState,
       active: false,
     });
@@ -924,9 +924,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
     return leaf;
   }
 
-  /** Turns every linked preview to the page this note is scrolled to. */
+  /** Turns every linked preview to the page this note is showing most of. */
   private turned(file: TFile): void {
-    this.follow(file.path, this.readAt(file.path));
+    this.follow(file.path, this.readOver(file.path));
   }
 
   /**
@@ -936,31 +936,31 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * showing it has nowhere to turn.
    */
   private scrolled(path: string): void {
-    this.follow(path, this.readAt(path));
+    this.follow(path, this.readOver(path));
   }
 
   /**
    * Turns every linked preview of this note's book to the page the
    * pane is scrolled to. A note no book lists turns none of them.
    */
-  private follow(path: string, byte: number | undefined): void {
+  private follow(path: string, over: Shown[] | undefined): void {
     const member = this.members.get(path);
     if (member === undefined) return;
     for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
       const view = leaf.view;
       if (!(view instanceof PreviewView)) continue;
       if (view.linked && view.book === member.book) {
-        void view.turnTo(path, byte);
+        void view.turnTo(path, over);
       }
     }
   }
 
-  /** The byte of a note the pane showing it is scrolled to. */
-  private readAt(path: string): number | undefined {
+  /** The blocks of a note the pane showing it is showing. */
+  private readOver(path: string): Shown[] | undefined {
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       const view = leaf.view;
       if (view instanceof MarkdownView && view.file?.path === path) {
-        return scrolledTo(view);
+        return scrolledOver(view);
       }
     }
     return undefined;
@@ -1445,14 +1445,45 @@ function scrolledLine(view: MarkdownView): number | undefined {
   return Number.isFinite(line) ? Math.max(line, 0) : undefined;
 }
 
-/** The byte of its note a manuscript pane is scrolled to. */
-function scrolledTo(view: MarkdownView): number | undefined {
-  const line = scrolledLine(view);
-  if (line === undefined) return undefined;
-  const { editor } = view;
-  const text = editor.getValue();
-  const at = { line: writtenAt(text, line), ch: 0 };
-  return byteOf(text, editor.posToOffset(at));
+/**
+ * The blocks of its note a manuscript pane is showing, and how much of
+ * each. What the panes follow is what is on screen, so this is the whole
+ * pane rather than the line at the top of it.
+ */
+function scrolledOver(view: MarkdownView): Shown[] | undefined {
+  const seen = seenLines(view);
+  if (seen === undefined) return undefined;
+  return shownOver(view.editor.getValue(), seen);
+}
+
+/**
+ * The lines a manuscript pane is showing, with the pixels of each on
+ * screen. Where a pane is scrolled to in pixels is CodeMirror's own
+ * answer, and Obsidian does not name it in the editor it hands out, so a
+ * pane that answers with none shows the one line orca can still ask for.
+ */
+function seenLines(view: MarkdownView): Seen[] | undefined {
+  const top = scrolledLine(view);
+  if (top === undefined) return undefined;
+  const cm = (view.editor as unknown as { cm?: EditorView }).cm;
+  if (cm === undefined) return [{ line: top, pixels: 1 }];
+  const box = cm.scrollDOM.getBoundingClientRect();
+  const from = cm.posAtCoords({ x: box.left + 1, y: box.top + 1 }, false);
+  const to = cm.posAtCoords({ x: box.left + 1, y: box.bottom - 1 }, false);
+  const seen: Seen[] = [];
+  const last = Math.max(from, to);
+  // A row that ends where the walk stands is an empty line, so the step
+  // is always forward and the bound is what ends the walk.
+  for (let at = Math.min(from, to); at <= last; ) {
+    const row = cm.lineBlockAt(at);
+    const pixels =
+      Math.min(row.bottom + cm.documentTop, box.bottom) -
+      Math.max(row.top + cm.documentTop, box.top);
+    const line = cm.state.doc.lineAt(row.from).number - 1;
+    if (pixels > 0) seen.push({ line, pixels });
+    at = Math.max(row.to + 1, at + 1);
+  }
+  return seen.length === 0 ? [{ line: top, pixels: 1 }] : seen;
 }
 
 /** Compares two designs by the properties they write into a note. */

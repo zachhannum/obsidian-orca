@@ -179,11 +179,15 @@ export interface Runs {
   count: number;
 }
 
-/** A page one block of the reader's page landed on, and the lines it sets of it. */
+/**
+ * A page, and how much of the reader's place it carries. The caller
+ * settles what is counted: a reflow counts the lines a page sets of the
+ * page before it, and a manuscript counts the pixels it is showing.
+ */
 export interface Landed {
   /** Place in the book, counting from 0. */
   at: number;
-  lines: number;
+  holds: number;
 }
 
 /**
@@ -211,7 +215,7 @@ export async function pagesOf(
       (line) => line.node === block.node && overlaps(block, line),
     ).length;
     if (lines === 0) break;
-    landed.push({ at, lines });
+    landed.push({ at, holds: lines });
   }
   return landed;
 }
@@ -239,28 +243,76 @@ async function opensAt(
 }
 
 /**
- * The page the reader comes back to: the one setting the most of the
- * lines they were reading, and the earliest of them where two set as
- * many. Nothing where nothing landed.
+ * The page carrying the most of the reader's place, and the earliest of
+ * them where two carry as much. Nothing where nothing landed.
  *
- * Lines are counted rather than blocks. A page inside one long paragraph
- * sets one block, and so does every page around it, so a count of blocks
- * would settle nothing.
+ * What is carried is counted rather than the blocks it is in. A page
+ * inside one long paragraph carries one block, and so does every page
+ * around it, so a count of blocks would settle nothing.
  */
 export function anchorOf(landed: Landed[]): number | undefined {
-  const lines = new Map<number, number>();
+  const held = new Map<number, number>();
   for (const on of landed) {
-    lines.set(on.at, (lines.get(on.at) ?? 0) + on.lines);
+    held.set(on.at, (held.get(on.at) ?? 0) + on.holds);
   }
   let found: number | undefined;
   let most = 0;
-  for (const [at, count] of [...lines].sort(([one], [two]) => one - two)) {
+  for (const [at, count] of [...held].sort(([one], [two]) => one - two)) {
     if (count > most) {
       most = count;
       found = at;
     }
   }
   return found;
+}
+
+/** A line of a note a pane is showing, and the pixels of it on screen. */
+export interface Seen {
+  /** The line of the note's own text, counting from 0. */
+  line: number;
+  pixels: number;
+}
+
+/** A block of a note a pane is showing, and the pixels of it on screen. */
+export interface Shown {
+  /** The byte its own text begins at. */
+  at: number;
+  pixels: number;
+}
+
+/**
+ * The blocks these lines are in, each with the pixels of it on screen.
+ * A blank line ends a block, so a heading and the paragraph under it are
+ * two blocks, and a paragraph the pane wraps over many rows is one. A
+ * note's own frontmatter is no block of the book and is in none of them.
+ *
+ * A block scrolled half off the top of a pane carries the half that is
+ * on screen, because the pixels are counted rather than the block.
+ */
+export function shownOver(text: string, seen: Seen[]): Shown[] {
+  const lines = text.split("\n");
+  const first = underMatter(lines);
+  const encoder = new TextEncoder();
+  const opens = new Map<number, number>();
+  let open: number | undefined;
+  let at = 0;
+  for (const [line, said] of lines.entries()) {
+    if (said.trim() === "") open = undefined;
+    else if (line >= first) {
+      open ??= at;
+      opens.set(line, open);
+    }
+    at += encoder.encode(said).length + 1;
+  }
+  const shown = new Map<number, number>();
+  for (const on of seen) {
+    const block = opens.get(on.line);
+    if (block === undefined || on.pixels <= 0) continue;
+    shown.set(block, (shown.get(block) ?? 0) + on.pixels);
+  }
+  return [...shown]
+    .sort(([one], [two]) => one - two)
+    .map(([opened, pixels]) => ({ at: opened, pixels }));
 }
 
 /** Whether a line sets any of the bytes a block holds. */

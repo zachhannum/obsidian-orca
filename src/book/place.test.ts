@@ -9,11 +9,13 @@ import {
   offsetOf,
   opensOn,
   pagesOf,
+  shownOver,
   writtenAt,
   writtenByte,
   type Landed,
   type ReadPage,
   type Runs,
+  type Seen,
   type Written,
 } from "@/book/place";
 
@@ -154,8 +156,8 @@ test("a page inside one long paragraph comes back to a page of it, not to its fi
     sheet(70 + at, lined(30, at * 1480, 40, 37)),
   );
   assert.deepEqual(await landed(held, pages), [
-    { at: 2, lines: 4 },
-    { at: 3, lines: 35 },
+    { at: 2, holds: 4 },
+    { at: 3, holds: 35 },
   ]);
   assert.equal(anchorOf(await landed(held, pages)), 3);
 
@@ -184,8 +186,8 @@ test("a page opens at the block it begins, not at the sliver carried over above 
 });
 
 test("two blocks landing on one page count their lines together, and a tie goes to the earlier", () => {
-  assert.equal(anchorOf([{ at: 9, lines: 4 }, { at: 8, lines: 3 }, { at: 8, lines: 2 }]), 8);
-  assert.equal(anchorOf([{ at: 9, lines: 3 }, { at: 8, lines: 3 }]), 8);
+  assert.equal(anchorOf([{ at: 9, holds: 4 }, { at: 8, holds: 3 }, { at: 8, holds: 2 }]), 8);
+  assert.equal(anchorOf([{ at: 9, holds: 3 }, { at: 8, holds: 3 }]), 8);
 });
 
 test("a byte of a note and the character it falls in name each other", () => {
@@ -198,6 +200,51 @@ test("a byte of a note and the character it falls in name each other", () => {
   assert.equal(offsetOf(text, 10), 9);
   assert.equal(offsetOf(text, 0), 0);
   assert.equal(offsetOf(text, 1000), text.length);
+});
+
+test("a pane counts the pixels of each block it shows, not the blocks", () => {
+  const note = [
+    "---",
+    "title: Pride and Prejudice",
+    "---",
+    "",
+    "# Chapter Twelve",
+    "",
+    "In consequence of an agreement",
+    "between the sisters, Elizabeth",
+    "wrote the next morning.",
+    "",
+    "Her answer was not propitious.",
+  ].join("\n");
+
+  /** Lines `from` to `to`, each showing `pixels` of itself. */
+  const seen = (from: number, to: number, pixels: number): Seen[] =>
+    Array.from({ length: to - from + 1 }, (_, at) => ({
+      line: from + at,
+      pixels,
+    }));
+
+  // The heading, the paragraph under it and the one under that, each
+  // carrying the rows it is set over.
+  assert.deepEqual(shownOver(note, seen(4, 10, 20)), [
+    { at: 36, pixels: 20 },
+    { at: 54, pixels: 60 },
+    { at: 141, pixels: 20 },
+  ]);
+
+  // A heading with a sliver of it left at the top carries that sliver,
+  // and loses to the paragraph filling the rest of the pane.
+  assert.deepEqual(
+    shownOver(note, [{ line: 4, pixels: 3 }, ...seen(6, 8, 20)]),
+    [
+      { at: 36, pixels: 3 },
+      { at: 54, pixels: 60 },
+    ],
+  );
+
+  // A blank line is in no block, and the note's own frontmatter is no
+  // block of the book.
+  assert.deepEqual(shownOver(note, seen(0, 3, 20)), []);
 });
 
 test("a scroll that stops on a blank line reads the line under it", () => {

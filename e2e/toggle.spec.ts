@@ -1,4 +1,4 @@
-import { NOWHERE, SPLIT } from "./harness/book";
+import { NOWHERE, SPLIT, type Book } from "./harness/book";
 import { expect, test } from "./harness/test";
 import type { Vault } from "./harness/vault";
 
@@ -20,6 +20,9 @@ const HEADING = 5;
 
 /** The pages into the chapter a swap back is made from. */
 const INTO = 3;
+
+/** The paragraphs a chapter of short ones is given. */
+const SHORTS = 200;
 
 /**
  * The chapter with paragraphs enough to run over several pages, so a
@@ -50,6 +53,30 @@ async function pagedOut(vault: Vault): Promise<string> {
   await vault.modify(CHAPTER, text);
   await vault.modify(BOOK, await vault.read(BOOK));
   return text;
+}
+
+/**
+ * The same, with paragraphs short enough that a pane shows one row of
+ * each. A pane opening on one of them shows a row of the page it ends
+ * and a paneful of the page after.
+ */
+async function pagedShort(vault: Vault): Promise<string> {
+  const said = Array.from(
+    { length: SHORTS },
+    (_, at) => `Paragraph ${String(at + 1)}. And so the evening passed.`,
+  );
+  const parts = (await vault.read(CHAPTER)).split("\n\n");
+  const text = `${parts.slice(0, 2).join("\n\n")}\n\n${said.join("\n\n")}\n`;
+  await vault.modify(CHAPTER, text);
+  await vault.modify(BOOK, await vault.read(BOOK));
+  return text;
+}
+
+/** The paragraphs the page on screen sets, by the number each opens with. */
+async function paragraphsOn(book: Book): Promise<number[]> {
+  return [...(await book.words(0)).matchAll(/Paragraph (\d+)\./g)].map((found) =>
+    Number(found[1]),
+  );
 }
 
 test("the icon opens a note as the book, and only a note that belongs to one", async ({
@@ -484,6 +511,35 @@ test("a swap from a page that opens mid-paragraph leads to the paragraph that pa
   await expect
     .poll(async () => (await manuscript.caret())?.line)
     .toBe(lineOf(text, begins));
+});
+
+test("a manuscript showing one row of a page over the page after turns to the page after", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  const text = await pagedShort(vault);
+
+  await manuscript.open(CHAPTER);
+  await book.split();
+  await book.painted();
+  const opens = await book.reading();
+
+  // A page that opens on a paragraph of its own, so the paragraph above
+  // it is the last of the page before.
+  await book.next.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(opens + 1));
+  const first = (await paragraphsOn(book))[0] ?? 0;
+  expect(first).toBeGreaterThan(1);
+
+  // The pane opens on that last paragraph, one row of it, with the page
+  // after filling the rest of the pane.
+  await manuscript.scrollTo(lineOf(text, `Paragraph ${String(first - 1)}.`));
+
+  await expect
+    .poll(async () => paragraphsOn(book))
+    .not.toContain(first - 1);
+  expect((await paragraphsOn(book))[0]).toBeGreaterThanOrEqual(first);
 });
 
 // What this spec does not cover: a book long enough for the wait to be

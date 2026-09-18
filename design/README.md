@@ -54,18 +54,18 @@ its editor around these files and returns a URL. The artboard list and
   paragraph. What the panes follow is what is scrolled into view, not
   the caret: reading a draft is scrolling, and a caret that never
   moves would turn nothing. Scrolling the manuscript turns the preview
-  to the page the line at the top of the pane is set on, and turning a
-  page scrolls the manuscript to the line that page opens at. A note
-  the book does not list, and a page of generated matter, move neither
-  pane. The link stops at the paragraph, because a byte of markdown
+  to the page the pane is showing most of, and turning a page scrolls
+  the manuscript to the line that page opens at. A block half off the
+  top of the pane counts for the half on screen, so a sliver of a
+  heading does not outweigh the page under it. A note the book does not
+  list, and a page of generated matter, move neither pane. The link stops at the paragraph, because a byte of markdown
   and a byte of set text are not the same byte. `Open manuscript to
   the left` is the same split from the book's side.
 - The preview keeps the page it is on, so a swap to the manuscript and
   back opens on it, mid-chapter included, and a workspace reopened at
   startup opens the preview where it was closed.
 - `Open preview` on a note opens the book at the page the manuscript is
-  scrolled to, unless the pane is still scrolled inside the page the
-  book was left on. A reader who paged through the book comes back to
+  showing most of, unless that is still the page the book was left on. A reader who paged through the book comes back to
   the line that page opens at, with the caret on it. One who turned no
   page comes back to the line they were writing on.
 - One ribbon icon, the orca tail. A click on it shows the navigator.
