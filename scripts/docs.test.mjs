@@ -437,11 +437,22 @@ test("the surface moves, runs through the second line of the title, and the titl
   assert.ok(band[0] > title + leading, `the surface runs above the second line at ${band[0]}`);
   assert.ok(band[1] < title + leading * 2, `the surface runs under the second line at ${band[1]}`);
 
-  // One ink for the title in both schemes, and a difference blend, so
-  // the letters turn over where the surface crosses them.
-  assert.match(landingStyle, /mix-blend-mode: difference/);
-  assert.match(landingStyle, /color: var\(--title-ink\)/);
-  assert.equal(landingStyle.match(/--title-ink:/g).length, 1);
+  // The title is set twice from the one string, in the sky's reading ink
+  // and the sea's, and the sea's copy is clipped to the water. A blend
+  // mode would read the sea out of the backdrop, and a browser drops the
+  // backdrop once an ancestor of the blended element is on a layer of
+  // its own, which leaves the title in one flat ink.
+  assert.doesNotMatch(landingStyle, /mix-blend-mode/);
+  const h1 = /<h1>([\s\S]*?)<\/h1>/.exec(landing)[1];
+  assert.equal(h1.match(/set:html=\{title\}/g).length, 2);
+  assert.match(h1, /class="sunk"[^>]*data-sea-cut/);
+  assert.match(/\n  h1 \{([\s\S]*?)\n  \}/.exec(landingStyle)[1], /color: var\(--sky-text\)/);
+  const sunk = /\n  h1 \.sunk \{([\s\S]*?)\n  \}/.exec(landingStyle)[1];
+  assert.match(sunk, /color: var\(--text\)/);
+  assert.match(sunk, /clip-path:/);
+
+  // The level cut the page falls back to is the line the module rests on.
+  assert.equal(metric("sea-rest"), REST);
 });
 
 test("the sea darkens from the surface to the end of the page", () => {

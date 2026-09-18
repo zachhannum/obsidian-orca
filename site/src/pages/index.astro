@@ -212,6 +212,9 @@ const demo = {
   images,
 };
 
+/** The page title. The sky's copy and the sea's are both set from it. */
+const title = 'A book designer<br /><i>inside Obsidian.</i>';
+
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
@@ -287,7 +290,10 @@ const swap = {
 
       <main>
         <section class="hero">
-          <h1>A book designer<br /><i>inside Obsidian.</i></h1>
+          <h1>
+            <span set:html={title} />
+            <span class="sunk" data-sea-cut aria-hidden="true" set:html={title} />
+          </h1>
           <p class="lede">
             Each chapter is a Markdown note. One book note stores the book details and the design.
             Preview the typeset book and export it to PDF, all without leaving Obsidian.
@@ -557,7 +563,8 @@ const swap = {
       import { startSea } from '../scripts/sea';
 
       const sea = document.querySelector<SVGSVGElement>('[data-sea]');
-      if (sea !== null) startSea(sea);
+      const cut = document.querySelector<HTMLElement>('[data-sea-cut]');
+      if (sea !== null) startSea(sea, cut ?? undefined);
       const flip = document.querySelector<HTMLElement>('[data-flip]');
       if (flip !== null) startFlip(flip);
       // The book the demo sets is written into the page as JSON, so the
@@ -599,9 +606,9 @@ const swap = {
       var(--header-h) + var(--hero-pad) + var(--title-size) * var(--title-leading) *
         var(--title-dip) - 63px
     );
-    /* The title is the light colour in both schemes. A difference blend
-       then turns its letters over where the sea runs through them. */
-    --title-ink: #eef0ec;
+    /* The line the sea module rests its surface on, measured down from
+       the top of the lip. It matches REST there. */
+    --sea-rest: 72px;
     position: relative;
     overflow: hidden;
   }
@@ -716,17 +723,34 @@ const swap = {
     position: relative;
     padding: var(--hero-pad) var(--gutter) 0;
   }
+  /* The title is set twice, in the sky's reading colour and the sea's,
+     and the sea's copy is clipped to the water. The module moves that
+     clip with the surface. */
   h1 {
+    position: relative;
     margin: 0;
     font-family: var(--display);
     font-size: var(--title-size);
     line-height: var(--title-leading);
     letter-spacing: -0.02em;
     font-weight: 700;
-    color: var(--title-ink);
-    mix-blend-mode: difference;
+    color: var(--sky-text);
   }
-  h1 i {
+  h1 .sunk {
+    position: absolute;
+    inset: 0;
+    color: var(--text);
+    /* The surface before the module runs, and the surface with the page
+       read without scripts: the rest line, level. */
+    clip-path: inset(
+      calc(var(--sea-top) + var(--sea-rest) - var(--header-h) - var(--hero-pad)) 0 0 0
+    );
+    user-select: none;
+  }
+  /* Both copies of the title are written in, so their letters carry no
+     scope class and the selector reaches them globally. The h1 ahead of
+     it is scoped, so the rule stays on this page. */
+  h1 :global(i) {
     font-style: italic;
     font-weight: 500;
   }
