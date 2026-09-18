@@ -61,15 +61,31 @@ function underMatter(lines: string[]): number {
 }
 
 /**
- * The byte a note's own content begins at, past its frontmatter and the
- * blank lines under it. The engine read those into no node, so this is
- * the byte a section with no caret in it is asked about.
+ * The count of a note's content lines a section is asked about. The
+ * lines go to the engine together, and only where the first of them
+ * set nothing, so the count is what a chapter opening on dropped
+ * blocks costs rather than what every turn costs.
  */
-export function writtenByte(text: string): number {
-  const line = writtenAt(text, 0);
+const PROBED = 32;
+
+/**
+ * The bytes a note's own content begins at, past its frontmatter and
+ * the blank lines under it, in reading order. The first is where a
+ * section with no caret in it is asked about. The rest are what a
+ * chapter opening on blocks the engine set nothing from is found by,
+ * such as an image that would not read, a rule, or a comment.
+ */
+export function writtenBytes(text: string): number[] {
   const lines = text.split("\n");
-  const before = lines.slice(0, line).reduce((at, on) => at + on.length + 1, 0);
-  return byteOf(text, before);
+  const first = writtenAt(text, 0);
+  const bytes: number[] = [];
+  let before = lines.slice(0, first).reduce((at, on) => at + on.length + 1, 0);
+  for (let at = first; at < lines.length && bytes.length < PROBED; at += 1) {
+    const line = lines[at] ?? "";
+    if (line.trim() !== "") bytes.push(byteOf(text, before));
+    before += line.length + 1;
+  }
+  return bytes;
 }
 
 /** The byte of `text` the character at `offset` starts at. */

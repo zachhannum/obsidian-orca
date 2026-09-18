@@ -289,6 +289,36 @@ test("a section says where it opens now, asked of the engine at the ask", async 
   assert.equal(await book.opens(0), 0);
 });
 
+test("a chapter opening on a block that set nothing opens under it", async () => {
+  const client = new DroppedOpening();
+  const composer = new Composer(await setting(client));
+
+  const book = await composer.open(BOOK);
+
+  // The chapter opens on an image the engine would not read, so its
+  // first written byte is on no page. The lines under it are asked
+  // about too, and the chapter opens where its content landed.
+  assert.equal(await book.opens(5), 10);
+  // A section the book did not set is still on no page at all.
+  assert.equal(await book.opens(6), undefined);
+});
+
+/**
+ * A book whose every chapter opens on a block the engine set nothing
+ * from: the first byte of a source was read into no node, and the
+ * lines under it were.
+ */
+class DroppedOpening extends FakeClient {
+  /** The first byte each source was asked about. */
+  private readonly opening = new Map<string, number>();
+
+  override nodeAt(source: string, byte: number): Promise<number | null> {
+    const first = this.opening.get(source) ?? byte;
+    this.opening.set(source, first);
+    return first === byte ? Promise.resolve(null) : super.nodeAt(source, byte);
+  }
+}
+
 test("a book being set reports the sections it has read and the entry it opens at", async () => {
   const client = new FakeClient();
   const composer = new Composer(await setting(client));

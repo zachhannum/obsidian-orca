@@ -21,7 +21,7 @@ import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { sectionRanges, sourceNamed, type Range as Folio } from "@/book/pages";
-import { writtenByte } from "@/book/place";
+import { writtenBytes } from "@/book/place";
 import {
   bookImages,
   cssImages,
@@ -177,20 +177,36 @@ export class Typeset {
 
   /**
    * The page a section opens on now, counting from 0. The engine is
-   * asked where the section's first written byte was set, so the answer
-   * is the book as it stands rather than the book it was opened as.
+   * asked where the section's written bytes were set, so the answer is
+   * the book as it stands rather than the book it was opened as.
+   *
+   * A chapter can open on a block the engine set nothing from: an image
+   * that would not read, a rule, a comment. Its first byte is on no
+   * page, so the lines under it are asked about too and the chapter
+   * opens where its content did.
    */
   async opens(at: number): Promise<number | undefined> {
     const source = sourceNamed(this.sections, at);
     if (source === undefined) return undefined;
     const text = this.sent.get(source);
-    const node = await this.session.nodeAt(
-      source,
-      text === undefined ? 0 : writtenByte(text),
+    const bytes = text === undefined ? [0] : writtenBytes(text);
+    const opens = await this.setOn(source, bytes.slice(0, 1));
+    return opens ?? (await this.setOn(source, bytes.slice(1)));
+  }
+
+  /** The page the first of these bytes of a source that reached one is set on. */
+  private async setOn(
+    source: string,
+    bytes: number[],
+  ): Promise<number | undefined> {
+    if (bytes.length === 0) return undefined;
+    const nodes = await Promise.all(
+      bytes.map((byte) => this.session.nodeAt(source, byte)),
     );
-    if (node === undefined) return undefined;
-    const [folios] = await this.session.foliosOf([node]);
-    return folios?.at;
+    const read = nodes.flatMap((node) => (node === undefined ? [] : [node]));
+    if (read.length === 0) return undefined;
+    const folios = await this.session.foliosOf(read);
+    return folios.find((set) => set !== undefined)?.at;
   }
 
   /**

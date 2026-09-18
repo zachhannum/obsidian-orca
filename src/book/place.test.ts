@@ -11,7 +11,7 @@ import {
   pagesOf,
   shownOver,
   writtenAt,
-  writtenByte,
+  writtenBytes,
   type Landed,
   type ReadPage,
   type Runs,
@@ -276,8 +276,29 @@ test("a section is asked about at the first byte anything was read from", () => 
   ].join("\n");
   // Byte 0 is the frontmatter, which the engine read into no node, so
   // the question is asked at the heading instead.
-  assert.equal(writtenByte(note), 36);
-  assert.equal(writtenByte("# Loose\n"), 0);
+  assert.equal(writtenBytes(note)[0], 36);
+  assert.equal(writtenBytes("# Loose\n")[0], 0);
+});
+
+test("a chapter opening on a dropped block is asked about under it too", () => {
+  const note = [
+    "---",
+    "title: Pride and Prejudice",
+    "---",
+    "",
+    "![[plate.png]]",
+    "",
+    "# Chapter Twelve",
+    "",
+    "In consequence of an agreement.",
+  ].join("\n");
+  // The image, the heading and the paragraph, in reading order. An
+  // image the engine would not read is set on no page, and the chapter
+  // opens where the heading under it landed.
+  assert.deepEqual(writtenBytes(note), [36, 52, 70]);
+  // Every line is asked about as the bytes the engine answers in.
+  assert.deepEqual(writtenBytes("# Héading\n\nA note.\n"), [0, 12]);
+  assert.deepEqual(writtenBytes("---\ntitle: X\n---\n"), []);
 });
 
 // What this tier does not cover: the node a byte was read into, the

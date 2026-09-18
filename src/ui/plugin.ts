@@ -1397,12 +1397,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.openPanel();
   }
 
-  private turnPreview(book: string, at: number): boolean {
+  private async turnPreview(book: string, at: number): Promise<boolean> {
     const { workspace } = this.app;
     const view = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
     if (!(view instanceof PreviewView) || view.book !== book) return false;
-    void view.turnToSection(at);
-    return true;
+    return await view.turnToSection(at);
   }
 
   private async openPreview(state: PreviewState): Promise<void> {
