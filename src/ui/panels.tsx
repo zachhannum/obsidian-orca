@@ -89,6 +89,8 @@ export interface Acting {
   add(text: string): void;
   /** Takes the pin off in the preview. */
   unpin(): void;
+  /** Pins the box one node names in the preview, which replaces the pinned one. */
+  pin(node: number): void;
   /** Opens the author's CSS with the caret at a place in it. */
   reveal(place: Place): void;
 }
@@ -271,6 +273,9 @@ export function Panel({
               },
               unpin: () => {
                 acting.unpin();
+              },
+              pin: (node) => {
+                acting.pin(node);
               },
               open: (owner) => {
                 if (owner.level !== undefined) choose(owner.level);

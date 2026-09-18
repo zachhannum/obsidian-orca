@@ -96,6 +96,7 @@ function leaves(count: number): Page[] {
     width: 432,
     height: 648,
     sections: [],
+    links: [],
     items: [],
   }));
 }

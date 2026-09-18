@@ -239,11 +239,40 @@
     </div>
   </div>
 
-  <!-- 3. Generated matter: the title page and a running head. -->
+  <!-- 3. A pseudo-element pinned, and generated matter: the title page. -->
   <div style="display: flex; gap: 16px; height: 470px">
 
     <div class="step" style="flex: 1; min-width: 0">
-      <div class="step-n"><b>5</b>Generated matter: the title page</div>
+      <div class="step-n"><b>5</b>A pseudo-element: the drop cap</div>
+      <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 24px; padding: 0 20px">
+        <!-- A close-up of the chapter opening. The letter carries the box, so the outline is the letter. -->
+        <div class="paper" style="width: 290px; height: 190px; padding: 26px 24px">
+          <div class="chaphead"><div class="chapnum" style="font-size: 11px">Chapter Twelve</div></div>
+          <div class="body" style="margin-top: 26px; font-size: 13px">
+            <p class="first"><span class="dropcap" style="position: relative; font-size: 50px">I<span class="insp insp-content insp-edge is-pinned" style="inset: 0 5px 0 0"></span><span class="insp-tag" style="top: -23px; left: -2px"><b>p::first-letter</b><i>chapter</i><i>0.21 × 0.58in</i></span></span>n consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent.</p>
+          </div>
+        </div>
+        <div style="width: 330px; flex: none; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); padding: 10px; display: flex; flex-direction: column; gap: 7px">
+          <div class="crumbs"><span class="crumb">book</span>›<span class="crumb is-active">section#chapter-twelve<i>chapter</i></span>›<span class="crumb is-active">p</span>›<span class="crumb is-active">::first-letter</span></div>
+          <div class="note">page 147. The letter has no line of its own in the note.</div>
+          <div class="origin">Design panel</div>
+          <div class="rule">
+            <div class="rule-h"><span class="sel">section#chapter-twelve &gt; h1 + p::first-letter</span><span class="src">Drop cap</span></div>
+            <div class="decl"><span class="p">initial-letter</span>: <span class="v">3</span>;</div>
+          </div>
+          <div class="origin">Computed</div>
+          <div class="computed">
+            <span>Sinks</span><span>3 lines</span>
+            <span>Box</span><span>0.21 × 0.58in</span>
+          </div>
+          <div style="margin-top: 2px"><div class="btn" style="height: auto; padding: 5px 10px; flex-wrap: wrap; row-gap: 3px"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add a rule for <span class="mono" style="font-weight: 400; font-size: 11.5px">section#chapter-twelve &gt; p::first-letter</span></div></div>
+        </div>
+      </div>
+      <div class="step-note">A click on a drop cap pins the letter, not the paragraph it opens. The tag and the last crumb name it <span class="mono">p::first-letter</span>. The element and the pseudo-element make one leaf, so neither crumb comes out. A click on <span class="mono">p</span> pins the paragraph instead, and the ancestors above them still toggle. A first line, a <span class="mono">::before</span> and an <span class="mono">::after</span> are picked the same way.</div>
+    </div>
+
+    <div class="step" style="flex: 1; min-width: 0">
+      <div class="step-n"><b>6</b>Generated matter: the title page</div>
       <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 24px; padding: 0 20px">
         <div class="paper" style="width: 232px; height: 358px; padding: 42px 30px 40px; text-align: center">
           <div style="padding-top: 58px; font-size: 7.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #6a6355">The Novels of Jane Austen</div>
@@ -283,8 +312,13 @@
       <div class="step-note">A rule orca lays out with no control behind it names its page in faint type and goes nowhere. A rule a control wrote names the control, and a click turns the panel to its controls view at that row. The theme's rules name nothing.</div>
     </div>
 
+  </div>
+
+  <!-- 4. Generated matter: a running head, and adding the rule. -->
+  <div style="display: flex; gap: 16px; height: 470px">
+
     <div class="step" style="flex: 1; min-width: 0">
-      <div class="step-n"><b>6</b>Generated matter: a running head</div>
+      <div class="step-n"><b>7</b>Generated matter: a running head</div>
       <div class="step-frame" style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 24px; padding: 0 20px">
         <div class="paper" style="width: 232px; height: 358px; padding: 42px 26px 40px 40px">
           <div style="position: absolute; top: 12px; left: 40px; width: 166px; height: 26px">
@@ -320,13 +354,9 @@
       </div>
       <div class="step-note">The pointer finds the margin boxes as well as the book's own elements. A page that opens a chapter prints no head, so there is nothing to pick there.</div>
     </div>
-  </div>
 
-  <!-- 4. Adding the rule, and leaving. -->
-  <div style="display: flex; gap: 16px; height: 330px">
-
-    <div class="step" style="width: 470px">
-      <div class="step-n"><b>7</b>Add a rule</div>
+    <div class="step" style="flex: 1; min-width: 0">
+      <div class="step-n"><b>8</b>Add a rule</div>
       <div class="step-frame" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px">
         <div class="crumbs"><span class="crumb">book</span>›<span class="crumb is-active">section#chapter-twelve<i>chapter</i></span>›<span class="crumb is-active">p</span></div>
         <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); overflow: hidden">
@@ -342,8 +372,13 @@
       <div class="step-note">The rule goes in at the cursor, and the cursor lands inside it. The selector starts with each ancestor up to the nearest one with an id, and names an element by its id or its classes. A click on a crumb takes it out of the selector or puts it back. A section's id matches the same section after the reading order moves.</div>
     </div>
 
+  </div>
+
+  <!-- 5. Leaving inspect mode. -->
+  <div style="display: flex; gap: 16px; height: 330px">
+
     <div class="step" style="flex: 1; min-width: 0">
-      <div class="step-n"><b>8</b>Leaving inspect mode</div>
+      <div class="step-n"><b>9</b>Leaving inspect mode</div>
       <div class="step-frame" style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
         <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; align-items: center">
           <div style="align-self: stretch; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted)">Pointer leaves the pages</div>
@@ -377,6 +412,6 @@
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
     <div class="callout"><div><span class="k">The engine's names.</span> The crumbs and the rules show the selectors the engine matches. A section is named by its id, as <span class="mono">section#chapter-twelve</span>, in your CSS and in the design panel's. Its class is its role, and shows in faint type beside the id.</div></div>
     <div class="callout"><div><span class="k">Where a rule came from.</span> Book CSS comes first and names its line, and a click puts the cursor on it. The design panel's rules name the control that wrote them. A declaration a later rule beat is struck through, and one the engine skipped keeps the warning's squiggle.</div></div>
-    <div class="callout"><div><span class="k">Waiting on the engine.</span> The box under a point, its fragments, the rules that matched it with their sheet and line, and its computed values all come from fleuron. Orca draws the answers and computes none of them.</div></div>
+    <div class="callout"><div><span class="k">Waiting on the engine.</span> The box under a point, its fragments, the rules that matched it with their sheet and line, and its computed values all come from fleuron. Orca draws the answers and computes none of them. A pseudo-element answers for itself, and names the element it belongs to by its id, which is the crumb that pins that element.</div></div>
   </div>
 </div>

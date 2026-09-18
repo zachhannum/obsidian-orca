@@ -149,6 +149,7 @@ class FakeClient implements EngineClient {
       width: 432,
       height: 648,
       sections: [Math.floor(at / SPREAD) * 10 + 5],
+      links: [],
       items: [],
     }));
   }

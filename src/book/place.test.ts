@@ -47,6 +47,7 @@ function page(number: number, nodes: number[]): Page {
     width: 432,
     height: 648,
     sections: [],
+    links: [],
     items: [run(undefined), ...nodes.map((node) => run(node))],
   };
 }

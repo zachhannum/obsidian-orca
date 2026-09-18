@@ -163,6 +163,14 @@ its editor around these files and returns a URL. The artboard list and
   the selector or puts it back.
 - A box split across two pages is outlined on both pages. A running
   head is picked as a margin box of its `@page` rule.
+- A click on a drop cap pins the paragraph's `::first-letter`, and the
+  outline is the letter alone. A first line, a `::before` and an
+  `::after` are pinned the same way. The tag and the last crumb name
+  the pseudo-element, and the crumb before it names the element it
+  belongs to. The two are the leaf of the selector, so neither comes
+  out of it, and only the ancestors above them toggle. A click on the
+  crumb for the element pins the element, and its rules take the place
+  of the pseudo-element's.
 - The first Escape removes the pin. The second Escape turns inspect
   mode off. A click on the pinned box again, a click where there is no
   box, and the pane's close button each remove the pin too. The action and a swap to the manuscript also turn it off.

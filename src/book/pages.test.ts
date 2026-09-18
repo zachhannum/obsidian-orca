@@ -42,6 +42,7 @@ function page(number: number, sections: number[]): Page {
     height: 648,
     sections,
     items: [],
+    links: [],
   };
 }
 

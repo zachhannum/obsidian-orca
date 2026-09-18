@@ -21,6 +21,14 @@ export interface Point {
   y: number;
 }
 
+/** A rectangle on the screen, in pixels from the top-left of the window. */
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export class Inspect {
   /** The header action, which is pressed while inspect mode is on. */
   readonly action: Locator;
@@ -130,20 +138,42 @@ export class Inspect {
     return this.sheet(page).locator("text[data-selection-line]").filter({ hasText: said });
   }
 
-  /** A point just inside the start of a line, on the screen. */
-  private async startOf(line: Locator): Promise<{ x: number; y: number }> {
-    // A bounding box waits for its element with no bound of its own.
-    // A repaint can put a new line in the place of the one found visible,
-    // so the box is read again until a painted line answers.
-    const found: { box?: { x: number; y: number; width: number; height: number } } = {};
+  /**
+   * The screen rectangle of something painted. A bounding box waits for
+   * its element with no bound of its own, and a repaint can put a new
+   * element in the place of the one found visible, so the box is read
+   * again until a painted one answers.
+   */
+  async rectOf(painted: Locator): Promise<Rect> {
+    const found: { box?: Rect } = {};
     await expect(async () => {
-      const read = await line.first().boundingBox();
+      const read = await painted.first().boundingBox();
       expect(read).not.toBeNull();
       if (read !== null) found.box = read;
     }).toPass();
     const box = found.box;
-    if (box === undefined) throw new Error("the line is not painted");
+    if (box === undefined) throw new Error("nothing is painted there");
+    return box;
+  }
+
+  /** A point just inside the start of a line, on the screen. */
+  private async startOf(line: Locator): Promise<{ x: number; y: number }> {
+    const box = await this.rectOf(line);
     return { x: box.x + Math.min(12, box.width / 2), y: box.y + box.height / 2 };
+  }
+
+  /**
+   * Clicks a point on the screen rather than on a page, and waits for
+   * the pin. `was` is the key already pinned, which the wait is for the
+   * preview to leave. It answers the pinned key.
+   */
+  async pinAt(at: { x: number; y: number }, was?: string): Promise<string> {
+    await this.obsidian.page.mouse.click(at.x, at.y);
+    await expect(this.surface).toHaveAttribute("data-inspected", /.+/);
+    if (was !== undefined) {
+      await expect(this.surface).not.toHaveAttribute("data-inspected", was);
+    }
+    return (await this.surface.getAttribute("data-inspected")) ?? "";
   }
 
   /** Moves the pointer onto a line, and waits for the preview to outline what it hovered. */

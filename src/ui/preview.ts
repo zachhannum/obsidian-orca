@@ -57,6 +57,7 @@ import {
   escape,
   mapAnchor,
   pointOn,
+  sameBox,
   stillPinned,
   targetKey,
   targetOf,
@@ -738,6 +739,34 @@ export class PreviewView extends ItemView {
     this.setInspecting({ on: this.inspecting.on, pin: undefined });
   }
 
+  /**
+   * Pins the box one node names, for the pane's crumb for the element a
+   * pinned pseudo-element belongs to. Nothing where the engine no
+   * longer answers for that node.
+   */
+  async pinNode(node: number): Promise<void> {
+    const session = this.session;
+    if (session === undefined || !this.inspecting.on) return;
+    const turn = (this.clicking += 1);
+    const generation = session.generation;
+    let inspection;
+    try {
+      inspection = await session.inspect(node);
+    } catch {
+      return;
+    }
+    if (inspection === undefined || turn !== this.clicking || !this.inspecting.on) return;
+    const anchor = await this.anchorOf(node);
+    if (turn !== this.clicking || !this.inspecting.on) return;
+    const pin: Pin = { target: { kind: "node", node }, inspection, generation };
+    if (anchor !== undefined) pin.anchor = anchor;
+    this.pinning += 1;
+    this.inspecting = { on: true, pin };
+    this.pinText = anchor === undefined ? undefined : this.composed?.textOf(anchor.source);
+    this.drawsOverlay();
+    this.handoff.inspected(this, pin, true);
+  }
+
   /** Whether inspect mode is on. */
   get inspectOn(): boolean {
     return this.inspecting.on;
@@ -957,7 +986,7 @@ export class PreviewView extends ItemView {
     }
     if (anchor === undefined) {
       const inspection = await session.inspect(target.node);
-      return inspection?.element === pin.inspection.element
+      return inspection !== undefined && sameBox(inspection, pin.inspection)
         ? { target, anchor: undefined, inspection, text: undefined }
         : undefined;
     }
@@ -981,7 +1010,7 @@ export class PreviewView extends ItemView {
       }
       const found =
         candidate === inspection.node ? inspection : await session.inspect(candidate);
-      if (found?.element !== pin.inspection.element) continue;
+      if (found === undefined || !sameBox(found, pin.inspection)) continue;
       return { target: { kind: "node", node: candidate }, anchor: source, inspection: found, text };
     }
     return undefined;
