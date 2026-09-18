@@ -717,6 +717,164 @@ test("the pane: Add a rule inserts an empty rule for the selector at the caret",
   await vault.modify(BOOK, own);
 });
 
+/** The design key that writes the chapter's drop cap, which the fixture sets to 3 lines. */
+const DROP_CAP_KEY = "chapter-drop-cap";
+
+/** A rule of the author's own for the opening line of every paragraph in the chapter. */
+const FIRST_LINE_RULE = `\n${SECTION} p::first-line { color: #333333; }`;
+
+/** A rule of the author's own that puts a box above the chapter's title, with words in it. */
+const GENERATED = "Set apart";
+const BEFORE_RULE = `\n${SECTION} h1::before { content: "${GENERATED}"; }`;
+
+/**
+ * A point on the drop cap of a pinned paragraph. The letter is set at
+ * the top left corner of the paragraph's box, so a point just inside
+ * that corner is on the letter.
+ */
+async function onTheCap(inspect: Inspect): Promise<{ x: number; y: number }> {
+  const box = await inspect.rectOf(
+    inspect.outline("pinned").getByTestId("orca-inspect-edge").first(),
+  );
+  return { x: box.x + 3, y: box.y + 3 };
+}
+
+test("a click on a drop cap pins its `::first-letter`, and the pane lists the rules that match it", async ({
+  book,
+  inspect,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CHAPTER_TITLE);
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
+  await inspect.on();
+
+  // The paragraph is pinned first, because its box says where the letter is.
+  const paragraph = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  const cap = await inspect.pinAt(await onTheCap(inspect), paragraph);
+  expect(cap).not.toBe(paragraph);
+  await caughtUp(book, inspect, panel);
+  // The tag and the crumbs name the pseudo-element after its element.
+  await expect(inspect.outline("pinned").getByTestId("orca-inspect-tag").locator("b")).toHaveText(
+    "p::first-letter",
+  );
+  await expect(panel.crumbs.last()).toHaveText("::first-letter");
+  await expect(panel.crumbs.nth(-2)).toHaveText("p");
+  // The drop cap comes from the design panel's control, and that is the
+  // rule the pane lists. "Add a rule" names the pseudo-element too.
+  const rule = panel.designRule(DROP_CAP_KEY);
+  await expect(rule).toBeVisible();
+  await expect(rule).toContainText("::first-letter");
+  await expect(rule).toContainText("initial-letter");
+  await expect(panel.selector).toHaveText(`${SECTION} > p::first-letter`);
+});
+
+test("the outline around a pinned drop cap is the letter, not the paragraph", async ({
+  book,
+  inspect,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CHAPTER_TITLE);
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
+  await inspect.on();
+
+  const pinned = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  const edge = inspect.outline("pinned").getByTestId("orca-inspect-edge");
+  const paragraph = await inspect.rectOf(edge.first());
+
+  await inspect.pinAt(await onTheCap(inspect), pinned);
+  const letter = await inspect.rectOf(edge.first());
+
+  expect(letter.width).toBeLessThan(paragraph.width);
+  expect(letter.height).toBeLessThan(paragraph.height);
+  // The letter sits at the corner the paragraph starts at.
+  expect(Math.abs(letter.x - paragraph.x)).toBeLessThan(paragraph.width / 4);
+  expect(Math.abs(letter.y - paragraph.y)).toBeLessThan(paragraph.height / 2);
+});
+
+test("a click on a first line pins its `::first-line`, and the pane lists the rules that match it", async ({
+  book,
+  inspect,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await pinSecond(book, inspect, panel);
+  await typeRule(book, inspect, panel, vault, FIRST_LINE_RULE);
+
+  // The words of the opening line start after the drop cap, and they
+  // are the rest of `::first-line`.
+  await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  await caughtUp(book, inspect, panel);
+
+  await expect(panel.crumbs.last()).toHaveText("::first-line");
+  await expect(panel.selector).toHaveText(`${SECTION} > p::first-line`);
+  await expect(panel.rulesIn("own").filter({ hasText: "::first-line" })).toHaveCount(1);
+
+  await panel.close();
+  vault.touch(BOOK);
+  await vault.modify(BOOK, own);
+});
+
+test("a click on the text of a generated box pins its `::before`, and the pane lists its rules", async ({
+  book,
+  inspect,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await pinSecond(book, inspect, panel);
+  await typeRule(book, inspect, panel, vault, BEFORE_RULE);
+
+  await inspect.pinLine(inspect.line(OPENING, GENERATED));
+  await caughtUp(book, inspect, panel);
+
+  await expect(panel.crumbs.last()).toHaveText("::before");
+  await expect(panel.crumbs.nth(-2)).toHaveText("h1");
+  await expect(panel.selector).toHaveText(`${SECTION} > h1::before`);
+  await expect(panel.rulesIn("own").filter({ hasText: "::before" })).toHaveCount(1);
+
+  await panel.close();
+  vault.touch(BOOK);
+  await vault.modify(BOOK, own);
+});
+
+test("an edit to the CSS that takes a pseudo-element away takes the pin off", async ({
+  book,
+  inspect,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await pinSecond(book, inspect, panel);
+  await typeRule(book, inspect, panel, vault, BEFORE_RULE);
+  await inspect.pinLine(inspect.line(OPENING, GENERATED));
+  await caughtUp(book, inspect, panel);
+  const pin = await inspect.pinned();
+
+  // Backing the rule out leaves the engine with no `::before` to answer for.
+  await panel.code.click();
+  await panel.code.press("ControlOrMeta+End");
+  for (let at = 0; at < BEFORE_RULE.length; at += 1) {
+    await panel.code.press("Backspace");
+  }
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("::before");
+
+  await expect.poll(async () => book.painted()).toBeGreaterThan(pin.generation);
+  await inspect.unpinned();
+  await expect(inspect.outline("pinned")).toHaveCount(0);
+  await expect(inspect.surface).toHaveAttribute("data-inspect", "on");
+
+  await panel.close();
+  vault.touch(BOOK);
+  await vault.modify(BOOK, own);
+});
+
 test("the pane: a running head and a title page element show their selectors and rules", async ({
   book,
   inspect,
@@ -819,3 +977,7 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
 // the fixture has classes and no id, so a selector that names classes
 // is a Node test. No section in the fixture is set in columns, so a box
 // with two pieces on one page is a Node test too.
+// A crumb that pins the element a pseudo-element belongs to is not
+// driven, because the engine does not yet name that element by its id.
+// The fixture generates `a::after` on the contents page, and the specs
+// here reach `::before` through a rule of the author's own instead.
