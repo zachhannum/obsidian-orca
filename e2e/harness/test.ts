@@ -65,6 +65,7 @@ export const test = base.extend<Fixtures, Shared>({
     const book = new Book(obsidian);
     await use(book);
     await book.close();
+    await book.reset();
   },
 
   exporting: async ({ obsidian }, use) => {

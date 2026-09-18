@@ -10,8 +10,8 @@ test("the ceiling is a setting, saved and read back in whole books", () => {
   assert.deepEqual(readLimits({}), LIMITS);
   assert.deepEqual(readLimits({ books: "four" }), LIMITS);
 
-  assert.deepEqual(readLimits({ books: 4 }), { books: 4, unit: "in" });
-  assert.deepEqual(readLimits({ books: 4.5 }), { books: 4, unit: "in" });
+  assert.deepEqual(readLimits({ books: 4 }), { ...LIMITS, books: 4 });
+  assert.deepEqual(readLimits({ books: 4.5 }), { ...LIMITS, books: 4 });
 
   // A reader with the memory for it raises the ceiling. Nobody sets the
   // ceiling to no books at all.
@@ -26,9 +26,19 @@ test("pages are measured in inches until the author picks another unit", () => {
   assert.equal(readLimits({ books: 2, unit: "mm" }).unit, "mm");
   assert.equal(readLimits({ books: 2, unit: "px" }).unit, "in");
   // A unit saved without a ceiling reads back with the default ceiling.
-  assert.deepEqual(readLimits({ unit: "pt" }), { books: LIMITS.books, unit: "pt" });
+  assert.deepEqual(readLimits({ unit: "pt" }), { ...LIMITS, unit: "pt" });
+});
+
+test("the view the last switch chose is the view the next preview opens in", () => {
+  assert.equal(LIMITS.view, "single");
+  assert.equal(readLimits({ view: "spread" }).view, "spread");
+  assert.equal(readLimits({ view: "grid" }).view, "grid");
+  // A file something else wrote, and a view orca does not have.
+  assert.equal(readLimits({}).view, "single");
+  assert.equal(readLimits({ view: "facing" }).view, "single");
 });
 
 // What this tier does not cover: the tab the ceiling sits in, which is
-// Obsidian's own `Setting` rows around these, and the memory of a
-// machine, which is what a reader raises the ceiling against.
+// Obsidian's own `Setting` rows around these, the memory of a machine,
+// which is what a reader raises the ceiling against, and the switch
+// that saves a view, which the e2e suite presses in real Obsidian.

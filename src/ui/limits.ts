@@ -7,15 +7,21 @@
 
 import { CEILING } from "@/engine/pool";
 import { PAGE_UNITS, type PageUnit } from "@/style/design";
+import { isViewMode, type ViewMode } from "@/ui/page";
 
 export interface Limits {
   /** The most books orca keeps on engines at once. */
   books: number;
   /** The unit the design panel draws the margins and a custom trim in. */
   unit: PageUnit;
+  /**
+   * The view the last preview was switched to, which the next one
+   * opens in. A pane restored with the workspace keeps its own.
+   */
+  view: ViewMode;
 }
 
-export const LIMITS: Limits = { books: CEILING, unit: "in" };
+export const LIMITS: Limits = { books: CEILING, unit: "in", view: "single" };
 
 /** The most books the setting offers to keep on engines. */
 export const MOST_BOOKS = 8;
@@ -25,9 +31,11 @@ export function readLimits(saved: unknown): Limits {
   if (typeof saved !== "object" || saved === null) return { ...LIMITS };
   const books = "books" in saved ? saved.books : undefined;
   const unit = "unit" in saved ? saved.unit : undefined;
+  const view = "view" in saved ? saved.view : undefined;
   return {
     books: typeof books === "number" ? bookCount(books) : LIMITS.books,
     unit: isPageUnit(unit) ? unit : LIMITS.unit,
+    view: isViewMode(view) ? view : LIMITS.view,
   };
 }
 
