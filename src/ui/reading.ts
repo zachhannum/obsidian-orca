@@ -68,57 +68,120 @@ function runText(section: Section, mark: Drawn): string | undefined {
 
 /**
  * Takes a run's text out of the drawn section and puts the chip where
- * it was. A span run's brackets come off with it.
+ * it was. The run is cut across every node it falls in, because
+ * Obsidian draws an `#id` inside it as a tag of its own. A span run's
+ * brackets come out with it, and the words between them stay.
  */
 function replaceRun(element: HTMLElement, said: string, mark: Drawn): void {
-  const trimmed = said.trim();
-  for (const text of textNodes(element)) {
-    const value = text.nodeValue ?? "";
-    const at = value.indexOf(trimmed);
-    if (at < 0) continue;
-    const after = text.splitText(at);
-    after.nodeValue = (after.nodeValue ?? "").slice(trimmed.length);
-    if (mark.names !== undefined) {
-      after.parentNode?.insertBefore(chipElement(mark.names, mark.form), after);
-    }
-    // A span run's text keeps its place and the brackets come off.
-    if (mark.form === "span") unbracket(text);
-    return;
-  }
+  const run = said.trim();
+  const whole = drawnText(element);
+  const at = whole.indexOf(run);
+  if (at < 0 || mark.names === undefined) return;
+  const chip = chipElement(mark.names, mark.form);
+  // A span run closes a bracket, and the bracket comes out with it.
+  const opens = mark.form === "span" && whole[at - 1] === "]" ? at - 1 : at;
+  place(element, takeOut(element, opens, at + run.length), chip);
+  if (mark.form !== "span") return;
+  // The text taken out and the chip put in both sit after this
+  // bracket, so the place it was found at is the place it is still at.
+  const bracket = whole.lastIndexOf("[", at);
+  if (bracket >= 0) takeOut(element, bracket, bracket + 1);
+}
+
+/** The text an element draws, as one string. */
+function drawnText(element: HTMLElement): string {
+  return textNodes(element)
+    .map((node) => node.nodeValue ?? "")
+    .join("");
 }
 
 /**
- * Takes the brackets off the text a span run closes. The run sat
- * directly after the `]`, so the text before it ends on one.
+ * Takes the text between two places out of an element, and answers
+ * with the node the text after it begins in. Nothing where the run
+ * ran to the end of what the element draws.
  */
-function unbracket(before: Text): void {
-  const value = before.nodeValue ?? "";
-  if (!value.endsWith("]")) return;
-  const open = value.lastIndexOf("[");
-  if (open < 0) return;
-  before.nodeValue =
-    value.slice(0, open) + value.slice(open + 1, value.length - 1);
+function takeOut(element: HTMLElement, from: number, to: number): Node | undefined {
+  // The later place is split first, so the earlier one is still the
+  // place it was found at when it is split in turn.
+  const tail = splitAt(textNodes(element), to);
+  const head = splitAt(textNodes(element), from);
+  if (head === undefined) return undefined;
+  const nodes = textNodes(element);
+  const opens = nodes.indexOf(head);
+  if (opens < 0) return undefined;
+  const gone: Text[] = [];
+  for (const node of nodes.slice(opens)) {
+    if (node === tail) break;
+    gone.push(node);
+  }
+  for (const node of gone) {
+    const above = node.parentNode;
+    above?.removeChild(node);
+    // The tag Obsidian drew for an `#id` is left with no text, and it
+    // goes with the run it was part of.
+    if (above !== null && above !== element) prune(above, element);
+  }
+  return tail ?? undefined;
+}
+
+/** Puts the chip where the run was, or at the end where nothing follows it. */
+function place(element: HTMLElement, after: Node | undefined, chip: HTMLElement): void {
+  if (after?.parentNode == null) element.appendChild(chip);
+  else after.parentNode.insertBefore(chip, after);
+}
+
+/**
+ * Splits the text of an element at a place in the text it draws, and
+ * answers with the node the text from there on begins in.
+ */
+function splitAt(nodes: readonly Text[], at: number): Text | undefined {
+  let seen = 0;
+  for (const node of nodes) {
+    const width = (node.nodeValue ?? "").length;
+    if (at <= seen + width) return node.splitText(at - seen);
+    seen += width;
+  }
+  return undefined;
+}
+
+/** Takes an emptied element out, and the one around it when that is emptied too. */
+function prune(node: Node, stop: HTMLElement): void {
+  let at: Node | null = node;
+  while (at !== null && at !== stop && (at.textContent ?? "") === "") {
+    const above: Node | null = at.parentNode;
+    above?.removeChild(at);
+    at = above;
+  }
 }
 
 /**
  * Draws the lines above a setext underline as the heading they make,
  * and takes the underline out. Obsidian draws a heading of more than
- * one line as a paragraph, and a row of dashes as a rule.
+ * one line as a paragraph, and the row of dashes under it as a rule.
  */
 function redrawSetext(element: HTMLElement, section: Section, mark: Drawn): void {
   const from = offsetOf(section.text, mark.open ?? mark.from);
   const to = offsetOf(section.text, mark.from);
   const said = section.text.slice(from, to).trimEnd();
   if (said === "") return;
-  const level = mark.level ?? 2;
-  const heading = element.doc.createElement(`h${String(level)}`);
+  const heading = element.doc.createElement(`h${String(mark.level ?? 2)}`);
   heading.dataset["testid"] = "orca-setext";
   for (const [at, line] of said.split("\n").entries()) {
     if (at > 0) heading.createEl("br");
     heading.appendText(line);
   }
+  // Obsidian drew the lines above the underline as a paragraph of
+  // their own, and the underline as the rule it takes it for. The
+  // heading takes the place of the rule, so the paragraph goes.
+  const above = element.previousElementSibling;
+  if (above !== null && flat(above.textContent) === flat(said)) above.remove();
   element.empty();
   element.appendChild(heading);
+}
+
+/** One line of text, with every run of blanks made one space. */
+function flat(said: string | null): string {
+  return (said ?? "").replace(/\s+/g, " ").trim();
 }
 
 /** Every text node under an element, in the order they are drawn. */
