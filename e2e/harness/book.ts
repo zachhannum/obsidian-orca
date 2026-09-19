@@ -7,7 +7,7 @@
  */
 
 import { expect, type Locator, type Worker } from "@playwright/test";
-import { engineName } from "@/engine/pool";
+import { GRACE, engineName } from "@/engine/pool";
 import type { Stages } from "@/engine/session";
 import { PLUGIN } from "./launch";
 import { FLOATING, type Obsidian } from "./obsidian";
@@ -66,6 +66,9 @@ export interface Notice {
   /** The pages on screen under it. */
   pages: number;
 }
+
+/** The time a wait on a stopped engine allows over the grace itself. */
+const SLACK = 30_000;
 
 /** The trim the page is photographed at, in whole pixels. */
 const POSE = { width: 360, height: 540 };
@@ -240,6 +243,17 @@ export class Book {
       if ((await named(worker)) === engineName(book)) running += 1;
     }
     return running;
+  }
+
+  /**
+   * Waits until no worker is running this book. An engine outlives the
+   * last pane on its book by one grace, so the wait covers that and
+   * what a loaded runner adds to it.
+   */
+  async stopped(book: string): Promise<void> {
+    await expect
+      .poll(async () => this.engines(book), { timeout: GRACE + SLACK })
+      .toBe(0);
   }
 
   /** The worker this book's engine runs in, of every worker the page has. */

@@ -239,6 +239,17 @@ export class Manuscript {
    * The caret is where {@link Manuscript.place} left it.
    */
   async type(text: string): Promise<void> {
+    await this.focus();
+    await this.obsidian.page.keyboard.type(text);
+  }
+
+  /** Presses a key at the caret, the way a writer takes a letter back. */
+  async press(key: string): Promise<void> {
+    await this.focus();
+    await this.obsidian.page.keyboard.press(key);
+  }
+
+  private async focus(): Promise<void> {
     await this.obsidian.page.evaluate((type) => {
       const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
         | MarkdownView
@@ -246,7 +257,6 @@ export class Manuscript {
       if (view?.editor === undefined) throw new Error("no manuscript is open");
       view.editor.focus();
     }, MARKDOWN);
-    await this.obsidian.page.keyboard.type(text);
   }
 
   /** The caret in the first manuscript pane, or nothing when none is open. */
