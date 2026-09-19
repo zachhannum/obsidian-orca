@@ -3,6 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PREVIEW } from "./harness/book";
+import type { Obsidian } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 import type { Vault } from "./harness/vault";
 
@@ -31,6 +32,7 @@ const FOLIO = /^\d+(–\d+)?$/;
 
 /** The note that chapter is read from. */
 const CHAPTER_NOTE = "Chapter Twelve.md";
+const LOOSE_NOTE = "Loose.md";
 
 /** The font the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FONT = "Alegreya";
@@ -948,7 +950,7 @@ test("opening a preview reveals the design panel", async ({
   await expect.poll(async () => obsidian.collapsed("right")).toEqual(false);
 });
 
-test("the panel shows a book only while a preview of it is visible", async ({
+test("a chapter note in front of the preview keeps the panel on the book", async ({
   book,
   obsidian,
   panel,
@@ -958,13 +960,11 @@ test("the panel shows a book only while a preview of it is visible", async ({
   await panel.open();
   await expect(panel.panel).toBeVisible();
 
-  // A note in a tab in front of the preview hides it.
-  await obsidian.page.evaluate(async (at) => {
-    const note = window.app.vault.getFileByPath(at);
-    if (note === null) throw new Error(`${at} is not in the vault`);
-    await window.app.workspace.getLeaf("tab").openFile(note);
-  }, CHAPTER_NOTE);
-  await expect(panel.empty).toHaveText("No book is open");
+  // A note in a tab in front of the preview hides it. The note is the
+  // book on screen, so the panel designs it still.
+  await opensInTab(obsidian, CHAPTER_NOTE);
+  await expect(panel.panel).toBeVisible();
+  await expect(panel.panel).toContainText("Pride and Prejudice");
 
   await obsidian.page.evaluate(async (type) => {
     const leaf = window.app.workspace.getLeavesOfType(type)[0];
@@ -975,6 +975,48 @@ test("the panel shows a book only while a preview of it is visible", async ({
   await expect(panel.panel).toBeVisible();
   await obsidian.detach("markdown");
 });
+
+test("a note no book reads shows the panel no book", async ({
+  book,
+  obsidian,
+  panel,
+  vault,
+}) => {
+  await vault.write(LOOSE_NOTE, "# Loose\n\nA note no book reads.\n");
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await expect(panel.panel).toBeVisible();
+
+  await opensInTab(obsidian, LOOSE_NOTE);
+  await expect(panel.empty).toHaveText("No book is open");
+
+  await obsidian.detach("markdown");
+  await vault.remove(LOOSE_NOTE);
+});
+
+test("a chapter note sets the book the panel designs, with no preview open", async ({
+  obsidian,
+  panel,
+}) => {
+  await panel.open();
+  await expect(panel.empty).toHaveText("No book is open");
+
+  await opensInTab(obsidian, CHAPTER_NOTE);
+  await expect(panel.panel).toBeVisible();
+  await expect(panel.panel).toContainText("Pride and Prejudice");
+
+  await obsidian.detach("markdown");
+});
+
+/** Opens a note in a tab of its own, in front of whatever that pane held. */
+async function opensInTab(obsidian: Obsidian, at: string): Promise<void> {
+  await obsidian.page.evaluate(async (path) => {
+    const note = window.app.vault.getFileByPath(path);
+    if (note === null) throw new Error(`${path} is not in the vault`);
+    await window.app.workspace.getLeaf("tab").openFile(note);
+  }, at);
+}
 
 test("a click low in the panel leaves it scrolled where it was", async ({
   book,

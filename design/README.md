@@ -93,9 +93,12 @@ its editor around these files and returns a URL. The artboard list and
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
 - The design panel is in the right sidebar, and it does not open or
-  close with a book. It shows a book only while a preview of that book
-  is visible. With no preview visible, it shows "No book is open". The
-  book note's own page shows the design read-only.
+  close with a book. It shows the book on screen: a preview of it, and
+  with no preview drawn, a note of it. The active note names the book,
+  and otherwise the first note on screen does. A note of a book with no
+  session sets that book, and the panel holds it while it designs it.
+  With no preview and no note of a book on screen, it shows "No book is
+  open". The book note's own page shows the design read-only.
 - The panel draws margins and a custom trim in the unit from orca's
   settings. That unit is inches unless the author picks millimeters or
   points.

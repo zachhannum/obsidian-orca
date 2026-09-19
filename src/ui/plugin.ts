@@ -26,6 +26,7 @@ import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
 import { bookFromFolder, emptyBook } from "@/ui/make";
+import { notedBook } from "@/ui/manuscript";
 import { bookCss, withCss } from "@/book/css";
 import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
@@ -114,6 +115,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private previews: Previews | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
+  /**
+   * The book the panel designs from a note on screen, and the hold that
+   * keeps its engine while it does. A book reached this way has no view
+   * of its own to hold it.
+   */
+  private noted: { book: string; release: () => void } | undefined;
   /**
    * The book notes orca is writing a design into. The engine has the
    * sheet already, so the write is not a reason to set the book again,
@@ -422,6 +429,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       if (leaf.view instanceof MarkdownView) this.release(leaf.view);
     }
+    this.noted?.release();
+    this.noted = undefined;
     this.engines?.close();
     this.engines = undefined;
   }
@@ -1203,9 +1212,15 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const on = [
           this.app.workspace.on("active-leaf-change", again),
           this.app.workspace.on("layout-change", again),
+          this.app.workspace.on("file-open", () => {
+            again();
+          }),
         ];
         return () => {
           for (const ref of on) this.app.workspace.offref(ref);
+          // A panel that closed designs nothing, so the book it reached
+          // from a note goes back to having no hold on it.
+          this.holdsNote(undefined);
         };
       },
     };
@@ -1241,7 +1256,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
       drawn.find((pane) => pane === active) ??
       drawn.find((pane) => pane.typeset !== undefined) ??
       drawn[0];
-    if (view === undefined) return undefined;
+    if (view === undefined) return this.designedNote();
+    this.holdsNote(undefined);
     const reading = view.typeset;
     if (reading !== undefined) return reading;
     // A pane still setting its book has none yet, so the run it is
@@ -1254,6 +1270,52 @@ export default class OrcaPlugin extends Plugin implements Limited {
       // The preview reports a book that will not set, not the panel.
       return undefined;
     }
+  }
+
+  /**
+   * The book a note on screen puts there, set on an engine. With no
+   * preview drawn, a note of a book is that book on screen, and the
+   * panel designs it. The panel holds it, because a book reached from a
+   * note has no view of its own to hold it.
+   */
+  private async designedNote(): Promise<Typeset | undefined> {
+    const { workspace } = this.app;
+    const index = this.notes();
+    const active = workspace.getActiveViewOfType(MarkdownView);
+    const book = notedBook(
+      workspace.getLeavesOfType(MARKDOWN_VIEW).map((leaf) => {
+        const view = leaf.view;
+        const file = view instanceof MarkdownView ? view.file : null;
+        return {
+          book:
+            file === null
+              ? undefined
+              : isBook(index, file)
+                ? file.path
+                : this.members.get(file.path)?.book,
+          shown: view.containerEl.isShown(),
+          active: view === active,
+        };
+      }),
+    );
+    this.holdsNote(book);
+    if (book === undefined || this.composer === undefined) return undefined;
+    try {
+      return await this.composer.reading(book);
+    } catch {
+      // The note reports a book that will not set, not the panel.
+      return undefined;
+    }
+  }
+
+  /** Holds the book the panel designs from a note, and drops the one it left. */
+  private holdsNote(book: string | undefined): void {
+    if (this.noted?.book === book) return;
+    this.noted?.release();
+    this.noted =
+      book === undefined || this.composer === undefined
+        ? undefined
+        : { book, release: this.composer.hold(book) };
   }
 
   /**
