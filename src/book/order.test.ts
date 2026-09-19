@@ -67,6 +67,7 @@ test("an entry's role is its own tag, and a heading names none", async () => {
       ["Volume the First", "part"],
       ["Chapter Twelve", "chapter"],
       ["Chapter Four", "chapter"],
+      ["Chapter Fifteen", "chapter"],
       ["Acknowledgements", "back-matter"],
     ],
   );
@@ -127,10 +128,11 @@ test("a book borrows its notes: adding never copies, removing never deletes", as
     "Volume the First",
     "Chapter Twelve",
     "Chapter Four",
+    "Chapter Fifteen",
     "Chapter Thirteen",
     "Acknowledgements",
   ]);
-  assert.match(writeOrder(grown), /- \[\[Chapter Four\]\]\n- \[\[Chapter Thirteen\]\]\n/);
+  assert.match(writeOrder(grown), /- \[\[Chapter Fifteen\]\]\n- \[\[Chapter Thirteen\]\]\n/);
 
   // The same note sits in a second book, whose body is one link and
   // nothing else.
@@ -166,6 +168,7 @@ test("a note that is gone keeps its entry, and the rest of the book is set witho
     "A note on the text.md",
     "Volume the First.md",
     "Chapter Twelve.md",
+    "Chapter Fifteen.md",
     "Acknowledgements.md",
   ]);
   assert.deepEqual(
@@ -188,7 +191,7 @@ test("every route into the list writes the same line, at the end of the body", a
   const picked = add(book, "Chapter Thirteen");
   const pasted = add(book, linksIn("meet me at [[Chapter Thirteen]] tonight")[0] ?? "");
   assert.equal(writeOrder(picked), writeOrder(pasted));
-  assert.match(writeOrder(picked), /- \[\[Chapter Four\]\]\n- \[\[Chapter Thirteen\]\]\n/);
+  assert.match(writeOrder(picked), /- \[\[Chapter Fifteen\]\]\n- \[\[Chapter Thirteen\]\]\n/);
 
   // The body is the group the book opens its chapters with, and not
   // the heading the author's css sits under.
@@ -254,7 +257,7 @@ test("a drag reorders the list, and an entry carries its role across a heading",
     groups(book).map((group) => [group.heading, group.entries.length]),
     [
       ["Front matter", 4],
-      ["Body", 3],
+      ["Body", 4],
       ["Back matter", 1],
       ["The book's css", 0],
     ],
@@ -316,7 +319,7 @@ test("a section is made, renamed, moved and taken out, and its entries stay", as
   // reads as one break rather than two.
   assert.equal(
     writeOrder(gone).includes(
-      "- [[Chapter Four]]\n\n- [[Acknowledgements]] `back-matter`\n\n# The book's css",
+      "- [[Chapter Fifteen]]\n\n- [[Acknowledgements]] `back-matter`\n\n# The book's css",
     ),
     true,
   );

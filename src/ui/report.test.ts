@@ -47,19 +47,20 @@ test("word counts come from the notes, and an entry with no note has none", asyn
       [4, "Volume the First", 3],
       [5, "Chapter Twelve", 674],
       [6, "Chapter Four", undefined],
-      [7, "Acknowledgements", 22],
+      [7, "Chapter Fifteen", 222],
+      [8, "Acknowledgements", 22],
     ],
   );
-  assert.equal(made.words, 16 + 21 + 3 + 674 + 22);
-  // The two entries in the default role, the missing one included.
-  assert.equal(made.chapters, 2);
+  assert.equal(made.words, 16 + 21 + 3 + 674 + 222 + 22);
+  // The three entries in the default role, the missing one included.
+  assert.equal(made.chapters, 3);
 
   // A note not yet counted is drawn without a count, and the sum leaves
   // it out.
   const uncounted = report(book, { links: pathLinks([]), words: () => undefined });
   assert.deepEqual(
     uncounted.lines.map((line) => line.kind),
-    Array.from({ length: 8 }, (_, at) => (at === 0 || at === 3 ? "generated" : "missing")),
+    Array.from({ length: 9 }, (_, at) => (at === 0 || at === 3 ? "generated" : "missing")),
   );
   assert.equal(uncounted.words, 0);
 });
@@ -113,9 +114,9 @@ test("every property orca owns is a field, and an emptied one comes off the note
 test("an entry's page range is what the run placed it at, and one it missed has none", async () => {
   const book = { path: BOOK, name: "PP draft", model: await model() };
 
-  // The 7 present sections, as the engine placed them: the missing
-  // "Chapter Four" crossed at all, and the run has not reached
-  // "Acknowledgements" yet.
+  // The 8 present sections, as the engine placed them: the missing
+  // "Chapter Four" never crossed at all, and the run has not reached
+  // "Chapter Fifteen" or "Acknowledgements" yet.
   const ranges = new Map([
     [0, { first: 1, last: 1 }],
     [1, { first: 2, last: 2 }],
@@ -137,6 +138,7 @@ test("an entry's page range is what the run placed it at, and one it missed has 
       ["Volume the First", { first: 4, last: 4 }],
       ["Chapter Twelve", { first: 5, last: 6 }],
       ["Chapter Four", undefined],
+      ["Chapter Fifteen", undefined],
       ["Acknowledgements", undefined],
     ],
   );

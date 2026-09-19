@@ -14,6 +14,7 @@ test("the fixture directory is a vault every read goes through", async () => {
     files: [
       "A note on the text.md",
       "Acknowledgements.md",
+      "Chapter Fifteen.md",
       "Chapter Twelve.md",
       "Copyright.md",
       "Pride and Prejudice.md",

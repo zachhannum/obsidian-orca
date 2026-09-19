@@ -72,7 +72,8 @@ test("a note that is gone keeps its row, and the row says the note is missing", 
       [4, "Volume the First", "note"],
       [5, "Chapter Twelve", "note"],
       [6, "Chapter Four", "missing"],
-      [7, "Acknowledgements", "note"],
+      [7, "Chapter Fifteen", "note"],
+      [8, "Acknowledgements", "note"],
     ],
   );
   // A chip says the role, and the default role is not worth saying.
@@ -89,7 +90,7 @@ test("a note that is gone keeps its row, and the row says the note is missing", 
   );
   assert.deepEqual(
     rows.filter((row) => !row.named).map((row) => row.name),
-    ["Chapter Twelve", "Chapter Four"],
+    ["Chapter Twelve", "Chapter Four", "Chapter Fifteen"],
   );
 });
 

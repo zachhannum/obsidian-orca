@@ -115,16 +115,18 @@ test("a role reaches the sheet as a page name and as the ids of the sections tha
     { role: "contents", id: "contents" },
     { role: "part", id: "volume-the-first" },
     { role: "chapter", id: "chapter-twelve" },
+    { role: "chapter", id: "chapter-fifteen" },
     { role: "back-matter", id: "acknowledgements" },
   ]);
   assert.match(css, /section#title-page \{\n {2}page: title-page;\n\}/);
+  // Two sections take the chapter role, so one rule names both ids.
   assert.match(
     css,
-    /section#chapter-twelve \{\n {2}page: chapter;\n {2}break-before: recto;\n\}/,
+    /:is\(section#chapter-twelve, section#chapter-fifteen\) \{\n {2}page: chapter;\n {2}break-before: recto;\n\}/,
   );
   assert.match(
     css,
-    /section#chapter-twelve > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n\}/,
+    /:is\(section#chapter-twelve, section#chapter-fifteen\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n\}/,
   );
 });
 
@@ -205,7 +207,10 @@ test("a book reordered generates the sheet again, and each section keeps its id"
 
   assert.equal(after.sections[0]?.role, "chapter");
   assert.deepEqual(ids(after), ids(before));
-  assert.match(css, /section#chapter-twelve \{\n {2}page: chapter;/);
+  assert.match(
+    css,
+    /:is\(section#chapter-twelve, section#chapter-fifteen\) \{\n {2}page: chapter;/,
+  );
   assert.notEqual(generatedCss(model.book.design, before), css);
 });
 

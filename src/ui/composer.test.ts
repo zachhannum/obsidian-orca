@@ -267,7 +267,7 @@ test("a book is set from its reading order, and no page of it comes back to say 
   const book = await composer.open(BOOK);
 
   assert.equal(book.name, "Pride and Prejudice");
-  assert.equal(book.sections.length, 8);
+  assert.equal(book.sections.length, 9);
   // Setting the book asks for the window the first view paints, not
   // for every page of it to work out where the sections landed.
   assert.deepEqual(client.ranges, [{ first: 0, count: 2 }]);
@@ -334,11 +334,11 @@ test("a book being set reports the sections it has read and the entry it opens a
   const last = told.at(-1);
   assert.ok(first && last);
   assert.equal(first.name, "Pride and Prejudice");
-  assert.equal(first.of, 7);
+  assert.equal(first.of, 8);
   // A generated section is written rather than read, so it is done
   // before the first note is opened.
   assert.equal(first.read, 2);
-  assert.equal(last.read, 7);
+  assert.equal(last.read, 8);
   assert.equal(last.opening, "Chapter Twelve");
 });
 

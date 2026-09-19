@@ -119,6 +119,7 @@ test("the resolved order crosses as one book op, split into one section per sour
       `${GENERATED_ORIGIN}:3`,
       "Volume the First.md",
       "Chapter Twelve.md",
+      "Chapter Fifteen.md",
       "Acknowledgements.md",
     ],
   );
@@ -142,7 +143,9 @@ test("the contents links each part and chapter in reading order, under a name no
     "# Contents\n\n" +
       "{.part}\n\n[Volume the First](Volume%20the%20First.md#Volume%20the%20First)\n\n" +
       "{.entry}\n\n[Chapter Twelve](Chapter%20Twelve.md#Chapter%20Twelve)\n\n" +
-      "{.folio}\n\n[](Chapter%20Twelve.md#Chapter%20Twelve)",
+      "{.folio}\n\n[](Chapter%20Twelve.md#Chapter%20Twelve)\n\n" +
+      "{.entry}\n\n[Chapter Fifteen](Chapter%20Fifteen.md#Chapter%20Fifteen)\n\n" +
+      "{.folio}\n\n[](Chapter%20Fifteen.md#Chapter%20Fifteen)",
   );
   assert.ok(!(await paths()).includes(sources[0]?.name ?? ""));
 });
@@ -295,11 +298,15 @@ test("layout reads the header for the size and decodes nothing", async () => {
   const placed = output.pages
     .flatMap((page) => page.items)
     .filter((item) => item.kind === "image");
-  assert.equal(placed.length, 1);
-  assert.equal(placed[0]?.asset, 0);
-  // Points, from the header's own pixels and resolution.
-  assert.equal(placed[0]?.w, 165);
-  assert.equal(placed[0]?.h, 99);
+  // Two notes embed the one image, and both placements name the asset
+  // the header was read for.
+  assert.equal(placed.length, 2);
+  for (const item of placed) {
+    assert.equal(item.asset, 0);
+    // Points, from the header's own pixels and resolution.
+    assert.equal(item.w, 165);
+    assert.equal(item.h, 99);
+  }
 });
 
 test("an embed with no file behind it is a warning, and the book still sets", async () => {
@@ -714,6 +721,7 @@ test("every source in the book op carries its names, and generated matter is nam
       { classes: ["contents"], id: "contents" },
       { classes: ["part"], id: "volume-the-first" },
       { classes: ["chapter"], id: "chapter-twelve" },
+      { classes: ["chapter"], id: "chapter-fifteen" },
       { classes: ["back-matter"], id: "acknowledgements" },
     ],
   );
@@ -925,7 +933,7 @@ test("in the exported fixture book, each contents entry prints the page its chap
   assert.ok(contents.includes("Volume the First"), "the contents lists no part");
   assert.deepEqual(
     entries.map((entry) => entry.label),
-    ["Chapter Twelve"],
+    ["Chapter Twelve", "Chapter Fifteen"],
   );
 
   for (const { label, folio } of entries) {
