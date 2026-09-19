@@ -11,7 +11,7 @@
 import type { MarkdownPostProcessorContext } from "obsidian";
 import { byteOf, offsetOf } from "@/book/place";
 import { chipElement } from "@/ui/chip";
-import type { Marking } from "@/ui/manuscript";
+import type { Marking } from "@/ui/marks";
 import type { Drawn } from "@/ui/runs";
 
 /** One section of a note, as Obsidian drew it. */

@@ -1,7 +1,6 @@
 /**
- * A book's notes as the writer has them: the chips the editor draws
- * over fleuron's attribute runs, and the headings it draws over a
- * setext underline.
+ * The marks the editor draws over a note of a book: the chips over
+ * fleuron's attribute runs, and the headings over a setext underline.
  *
  * The marks come from the engine's parse of the note, which arrives
  * after the keystroke that changed it. A chip already on the text is

@@ -31,7 +31,7 @@ import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
-import { runExtensions, type Marking, type Settled } from "@/ui/manuscript";
+import { runExtensions, type Marking, type Settled } from "@/ui/marks";
 import { readingProcessor } from "@/ui/reading";
 import { candidates, drawn } from "@/ui/runs";
 import {
