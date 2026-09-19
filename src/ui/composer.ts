@@ -541,6 +541,13 @@ export interface Opening {
   note?: string | undefined;
   /** Told what the book is waiting on, until it is set. */
   told?: ((progress: Progress) => void) | undefined;
+  /**
+   * Whether this open forgives the deaths the book already left. A
+   * reader's own action does. An open orca makes on the reader's
+   * behalf, which a keystroke can repeat, does not: forgiving there
+   * would start a worker for a book that dies on load over and over.
+   */
+  retry?: boolean | undefined;
 }
 
 export class Composer {
@@ -566,7 +573,9 @@ export class Composer {
     // A reader opening a book that stopped is asking for another try.
     // Orca sets a book again after a death. Asking a third time is the
     // reader's own call rather than orca's.
-    if (carried === undefined) this.vault.engines.retry(path);
+    if (carried === undefined && opening.retry !== false) {
+      this.vault.engines.retry(path);
+    }
     const composing = this.compose(path, opening, carried);
     this.books.set(path, composing);
     // A run that fails is not kept, so the next open typesets the book
@@ -598,9 +607,9 @@ export class Composer {
    * one that was dropped is set again, so every surface reads the book's
    * one session.
    */
-  async reading(path: string): Promise<Typeset> {
-    const typeset = await this.open(path);
-    return typeset.dropped ? this.open(path) : typeset;
+  async reading(path: string, opening: Opening = {}): Promise<Typeset> {
+    const typeset = await this.open(path, opening);
+    return typeset.dropped ? this.open(path, opening) : typeset;
   }
 
   /**

@@ -862,6 +862,27 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   assert.deepEqual(book.unread, []);
 });
 
+test("an open orca makes for a reader forgives no death, and the reader's own open does", async () => {
+  const forgiven: string[] = [];
+  const composer = new Composer({
+    ...(await setting(new FakeClient())),
+    engines: {
+      client: () => Promise.resolve(new FakeClient()),
+      hold: () => () => undefined,
+      retry: (book) => {
+        forgiven.push(book);
+      },
+    },
+  });
+
+  await composer.reading(BOOK, { retry: false });
+  assert.deepEqual(forgiven, [], "drawing a note forgave the book's deaths");
+
+  composer.forget(BOOK);
+  await composer.reading(BOOK);
+  assert.deepEqual(forgiven, [BOOK]);
+});
+
 /** The design after a font pick, as the panel passes it to `restyle`. */
 function refonted(design: Design, font: string): Design {
   return { ...design, body: { ...design.body, font } };
