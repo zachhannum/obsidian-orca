@@ -33,6 +33,9 @@ const FOLIO = /^\d+(–\d+)?$/;
 /** The note that chapter is read from. */
 const CHAPTER_NOTE = "Chapter Twelve.md";
 const LOOSE_NOTE = "Loose.md";
+const SECOND_BOOK = "The Bennet Novels.md";
+const SECOND_NAME = "The Second Chapter";
+const SECOND_CHAPTER = `${SECOND_NAME}.md`;
 
 /** The font the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FONT = "Alegreya";
@@ -995,6 +998,40 @@ test("a note no book reads shows the panel no book", async ({
   await vault.remove(LOOSE_NOTE);
 });
 
+
+test("a drawn preview wins over a note of another book", async ({
+  book,
+  obsidian,
+  panel,
+  vault,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await expect(panel.panel).toContainText("Pride and Prejudice");
+
+  // A second book, written once the preview is up: a vault with two of
+  // them asks which one to open.
+  await vault.write(SECOND_CHAPTER, "# One\n\nThe second book's only chapter.\n");
+  await vault.write(
+    SECOND_BOOK,
+    `---\norca-book: 1\ntitle: The Bennet Novels\n---\n\n# Body\n\n- [[${SECOND_NAME}]]\n`,
+  );
+
+  // The second book's chapter beside the preview, so both are drawn.
+  await obsidian.page.evaluate(async (at) => {
+    const note = window.app.vault.getFileByPath(at);
+    if (note === null) throw new Error(`${at} is not in the vault`);
+    await window.app.workspace.getLeaf("split").openFile(note);
+  }, SECOND_CHAPTER);
+
+  // The book the writer can see is the book the panel designs.
+  await expect(panel.panel).toContainText("Pride and Prejudice");
+
+  await obsidian.detach("markdown");
+  await vault.remove(SECOND_BOOK);
+  await vault.remove(SECOND_CHAPTER);
+});
 
 /** Opens a note in a tab of its own, in front of whatever that pane held. */
 async function opensInTab(obsidian: Obsidian, at: string): Promise<void> {
