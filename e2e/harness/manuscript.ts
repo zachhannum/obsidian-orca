@@ -19,10 +19,56 @@ export class Manuscript {
   readonly pane: Locator;
   /** The icon in a note's header that swaps the pane for the book. */
   readonly asBook: Locator;
+  /** Every chip orca draws over one of fleuron's attribute runs. */
+  readonly runs: Locator;
+  /** Every heading orca draws over a setext underline in reading view. */
+  readonly setext: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.pane = this.obsidian.view(MARKDOWN);
     this.asBook = this.obsidian.action(OPEN_PREVIEW);
+    this.runs = this.pane.getByTestId("orca-run");
+    this.setext = this.pane.getByTestId("orca-setext");
+  }
+
+  /**
+   * Reads the note the way the writer does, or the way the reader
+   * does. The mode is the note's own, so it stays until it is set
+   * back.
+   */
+  async read(mode: "source" | "preview"): Promise<void> {
+    await this.obsidian.page.evaluate(
+      async ({ type, as }) => {
+        const leaf = window.app.workspace.getLeavesOfType(type)[0];
+        if (leaf === undefined) throw new Error("no manuscript is open");
+        const state = leaf.getViewState();
+        await leaf.setViewState({
+          ...state,
+          state: { ...state.state, mode: as, source: false },
+        });
+      },
+      { type: MARKDOWN, as: mode },
+    );
+  }
+
+  /**
+   * Every chip in the pane, as `#id .class` and in the order they are
+   * drawn. A run the engine read and cannot use reads as it was
+   * written.
+   */
+  async chips(): Promise<string[]> {
+    return this.runs.evaluateAll((chips) =>
+      chips.map((chip) =>
+        [...chip.children].map((part) => part.textContent ?? "").join(" ").trim(),
+      ),
+    );
+  }
+
+  /** The line each setext heading holds, joined by a space. */
+  async headings(): Promise<string[]> {
+    return this.setext.evaluateAll((found) =>
+      found.map((heading) => `${heading.tagName.toLowerCase()}:${(heading.textContent ?? "").trim()}`),
+    );
   }
 
   /** Opens a note in the active pane. */
