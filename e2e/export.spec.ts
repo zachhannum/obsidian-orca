@@ -12,7 +12,7 @@ const BOOK = "Pride and Prejudice.md";
 const FILE = "Pride and Prejudice.pdf";
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 736;
+const BOOK_WORDS = 958;
 
 /**
  * The words the pages print that no note holds: the title page, the
@@ -24,8 +24,11 @@ const PRINTED_WORDS = 160;
 /** A folio, or a span of them. */
 const FOLIO = /^\d+(–\d+)?$/;
 
-/** The note that embeds the fixture's one image. */
+/** The note an embed that will not read is written into. */
 const EMBEDS = "Acknowledgements.md";
+
+/** The count of notes the fixture book reads that embed an image. */
+const EMBEDDED = 2;
 
 /**
  * A rule that puts the fixture's image behind every page, once. The url
@@ -168,10 +171,11 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
     const written = path.join(folder, FILE);
     await writeFile(written, await vault.bytes(FILE));
     // Two heading lines, then one line for each image a page draws: the
-    // background on every page, and the embed on the last.
+    // background on every page, and the embed each of the two notes
+    // that carry one draws.
     const listed = execFileSync("pdfimages", ["-list", written], { encoding: "utf8" });
     const drawn = listed.trim().split("\n").slice(2);
-    expect(drawn.length).toBe(pages + 1);
+    expect(drawn.length).toBe(pages + EMBEDDED);
   } finally {
     await rm(folder, { recursive: true, force: true });
   }

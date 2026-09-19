@@ -13,7 +13,7 @@ const LAST = "Acknowledgements.md";
 const OUTSIDE = "Loose.md";
 
 /** The sections the fixture book is set from: eight entries, one with no note. */
-const SECTIONS = 7;
+const SECTIONS = 8;
 
 /** The line the fixture chapter's own heading is on, counting from 0. */
 const HEADING = 5;

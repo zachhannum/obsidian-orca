@@ -14,6 +14,7 @@ test("and the next spec opens on the vault as it is checked in", async ({
   expect((await vault.notes()).sort()).toEqual([
     "A note on the text.md",
     "Acknowledgements.md",
+    "Chapter Fifteen.md",
     "Chapter Twelve.md",
     "Copyright.md",
     "Pride and Prejudice.md",

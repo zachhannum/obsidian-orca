@@ -91,7 +91,7 @@ test("the quick pick, `Add to book` and a pasted wikilink write the same line", 
   await expect
     .poll(async () => vault.read(BOOK))
     .toContain(
-      "- [[Chapter Four]]\n- [[Route One]]\n- [[Route Two]]\n- [[Route Three]]\n",
+      "- [[Chapter Fifteen]]\n- [[Route One]]\n- [[Route Two]]\n- [[Route Three]]\n",
     );
 });
 
@@ -111,7 +111,7 @@ test("`New chapter` makes a note in the book's folder and appends it in one step
   expect(await vault.read("New chapter.md")).toContain("# New chapter");
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("- [[Chapter Four]]\n- [[New chapter]]\n");
+    .toContain("- [[Chapter Fifteen]]\n- [[New chapter]]\n");
 });
 
 test("a drag reorders the list, an entry keeps its role across a section, and the menu sets one", async ({
@@ -131,6 +131,7 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     "Volume the First",
     "Chapter Twelve",
     "Chapter Four",
+    "Chapter Fifteen",
     "Acknowledgements",
   ]);
 
@@ -210,7 +211,7 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   );
   await vault.modify(BOOK, long);
   await navigator.repainted(drawn);
-  await expect(navigator.entries(BOOK)).toHaveCount(48);
+  await expect(navigator.entries(BOOK)).toHaveCount(49);
   const tall = await navigator.reach();
   expect(tall.most).toBeGreaterThan(0);
 
@@ -227,10 +228,10 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   });
 
   // The row moved, and it is the same one row: a drop that lost it or
-  // wrote it twice would leave the count somewhere other than 48. The
+  // wrote it twice would leave the count somewhere other than 49. The
   // wait is on the paint that read the drop's write back.
   await navigator.repainted(dropping);
-  await expect(navigator.entries(BOOK)).toHaveCount(48);
+  await expect(navigator.entries(BOOK)).toHaveCount(49);
   expect((await vault.read(BOOK)).match(/\[\[Chapter 0\]\]/g)).toHaveLength(1);
   expect((await navigator.reach()).height).toBe(tall.height);
 });
@@ -333,7 +334,7 @@ test("a generated section is added by its role, and reads as one", async ({
   // It goes where a chapter would, and carries no link at all.
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("- [[Chapter Four]]\n- `title-page`\n");
+    .toContain("- [[Chapter Fifteen]]\n- `title-page`\n");
   const made = navigator.entries(BOOK).filter({ hasText: "Title page" });
   await expect(made).toHaveCount(2);
   await expect(made.last()).toHaveAttribute("data-kind", "generated");

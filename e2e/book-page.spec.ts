@@ -6,12 +6,12 @@ import { BOOK as BOOK_VIEW } from "./harness/note";
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
-/** The one chapter the fixture has a note for, and its words. */
+/** The longer of the two chapters the fixture has a note for, and its words. */
 const CHAPTER = "Chapter Twelve";
 const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 736;
+const BOOK_WORDS = 958;
 
 test("the page's `Open preview` opens its book, under an icon of the preview's own", async ({
   book,
@@ -88,7 +88,7 @@ test("the reading order is read-only on the page, and clicking an entry focuses 
   // Nothing on the page can move a row: there is no sortable, and every
   // entry is a button.
   await expect(note.order.locator("[aria-roledescription]")).toHaveCount(0);
-  await expect(note.order.getByRole("button")).toHaveCount(8);
+  await expect(note.order.getByRole("button")).toHaveCount(9);
   await expect(note.entry("Title page")).toContainText("generated");
   await expect(note.entry("Volume the First")).toContainText("part");
 
@@ -133,7 +133,7 @@ test("word counts come from the notes, and follow a note as it is written", asyn
   // A generated section and a missing note have no words to count.
   await expect(note.words("Title page")).toHaveText("—");
   await expect(note.words("Chapter Four")).toHaveText("—");
-  await expect(note.line).toContainText("2 chapters");
+  await expect(note.line).toContainText("3 chapters");
   await expect(note.line).toContainText(`${BOOK_WORDS} words`);
 
   const chapter = await vault.read(`${CHAPTER}.md`);

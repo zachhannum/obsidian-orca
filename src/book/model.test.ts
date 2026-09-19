@@ -38,6 +38,7 @@ test("with the plugin disabled the note is an index of the book, with working li
     "- [[Volume the First]] `part`",
     "- [[Chapter Twelve]]",
     "- [[Chapter Four]]",
+    "- [[Chapter Fifteen]]",
     "- [[Acknowledgements]] `back-matter`",
   ]);
 
@@ -54,7 +55,7 @@ test("with the plugin disabled the note is an index of the book, with working li
   // The author's css sits in the note in a fence, and is neither an
   // entry nor rewritten.
   assert.match(note, /\n```css\n[\s\S]*\n```\n$/);
-  assert.equal(entries(model.order).length, 8);
+  assert.equal(entries(model.order).length, 9);
   assert.equal(writeModel(model), note);
 });
 
@@ -68,7 +69,7 @@ test("a body written back leaves the properties byte for byte as the note has th
     grown.slice(0, note.indexOf("\n\n# Front matter")),
     note.slice(0, note.indexOf("\n\n# Front matter")),
   );
-  assert.match(grown, /- \[\[Chapter Four\]\]\n- \[\[Chapter Thirteen\]\]\n/);
+  assert.match(grown, /- \[\[Chapter Fifteen\]\]\n- \[\[Chapter Thirteen\]\]\n/);
   assert.equal(readFrontmatter(grown).properties["status"], "drafting");
 });
 

@@ -6,7 +6,7 @@
 import { expect, type Locator } from "@playwright/test";
 import type { MarkdownView } from "obsidian";
 import { MARKDOWN, OPEN_PREVIEW } from "./note";
-import type { Obsidian } from "./obsidian";
+import { SCROLLER, type Obsidian } from "./obsidian";
 
 /** The caret in a manuscript, as the editor keeps it. */
 export interface Caret {
@@ -19,10 +19,134 @@ export class Manuscript {
   readonly pane: Locator;
   /** The icon in a note's header that swaps the pane for the book. */
   readonly asBook: Locator;
+  /** The note as the reader has it. A pane holds the markup of both views. */
+  readonly reader: Locator;
+  /** Every chip orca draws over one of fleuron's attribute runs. */
+  readonly runs: Locator;
+  /** Every heading orca draws over a setext underline in reading view. */
+  readonly setext: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.pane = this.obsidian.view(MARKDOWN);
     this.asBook = this.obsidian.action(OPEN_PREVIEW);
+    this.reader = this.pane.locator(SCROLLER.preview);
+    this.runs = this.pane.getByTestId("orca-run");
+    this.setext = this.pane.getByTestId("orca-setext");
+  }
+
+  /**
+   * Reads the note the way the writer does, or the way the reader
+   * does. The mode is the note's own, so it stays until it is set
+   * back.
+   */
+  async read(mode: "source" | "preview"): Promise<void> {
+    await this.obsidian.page.evaluate(
+      async ({ type, as }) => {
+        const leaf = window.app.workspace.getLeavesOfType(type)[0];
+        if (leaf === undefined) throw new Error("no manuscript is open");
+        const state = leaf.getViewState();
+        await leaf.setViewState({
+          ...state,
+          state: { ...state.state, mode: as, source: false },
+        });
+      },
+      { type: MARKDOWN, as: mode },
+    );
+  }
+
+  /**
+   * Every chip in the pane, as `#id .class` and in the order they are
+   * drawn. A run the engine read and cannot use reads as it was
+   * written.
+   */
+  async chips(): Promise<string[]> {
+    return this.runs.evaluateAll((chips) =>
+      chips.map((chip) =>
+        [...chip.children].map((part) => part.textContent ?? "").join(" ").trim(),
+      ),
+    );
+  }
+
+  /**
+   * Every chip in the note, gathered by reading down it a pane at a
+   * time. Both views draw only the part of a note they have on
+   * screen, so the pane is scrolled through the note and the marks
+   * are gathered as they are drawn.
+   */
+  async chipsThrough(): Promise<string[]> {
+    return (await this.sweep()).chips;
+  }
+
+  /**
+   * Every line of a setext heading in the note, as `level:text`, and
+   * every underline as `under:text`, in the order they are written.
+   */
+  async setextThrough(): Promise<string[]> {
+    return (await this.sweep()).setext;
+  }
+
+  /** The marks drawn over the whole note, read a pane at a time. */
+  private async sweep(): Promise<{ chips: string[]; setext: string[] }> {
+    return this.obsidian.page.evaluate(
+      async ({ type, scroller }) => {
+        const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+          | MarkdownView
+          | undefined;
+        if (view === undefined) throw new Error("no note is open");
+        const pane = view.containerEl.querySelector(
+          view.getMode() === "preview" ? scroller.preview : scroller.source,
+        );
+        if (pane === null) throw new Error("the note is drawn in no pane");
+        const chips: string[] = [];
+        const setext: string[] = [];
+        const keep = (into: string[], said: string): void => {
+          if (!into.includes(said)) into.push(said);
+        };
+        const gather = (): void => {
+          for (const chip of pane.querySelectorAll("[data-testid='orca-run']")) {
+            keep(
+              chips,
+              [...chip.children].map((part) => part.textContent ?? "").join(" ").trim(),
+            );
+          }
+          // One query, so the lines come back in the order they are
+          // written rather than grouped by what they are.
+          for (const line of pane.querySelectorAll(
+            ".cm-line.orca-setext, .cm-line.orca-setext-under",
+          )) {
+            const level = /orca-setext-(\d)/.exec(line.className)?.[1] ?? "under";
+            keep(setext, `${level}:${(line.textContent ?? "").trim()}`);
+          }
+        };
+        // The pane measures what it draws on the next frame, so each
+        // step waits for one before it reads.
+        const painted = async (): Promise<void> => {
+          await new Promise((settle) => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(settle);
+            });
+          });
+        };
+        const step = Math.max(pane.clientHeight / 2, 1);
+        for (let at = 0; at < pane.scrollHeight + step; at += step) {
+          pane.scrollTop = at;
+          await painted();
+          gather();
+        }
+        pane.scrollTop = 0;
+        await painted();
+        gather();
+        return { chips, setext };
+      },
+      { type: MARKDOWN, scroller: SCROLLER },
+    );
+  }
+
+  /** The line each setext heading holds, joined by a space. */
+  async headings(): Promise<string[]> {
+    return this.setext.evaluateAll((found) =>
+      found.map((heading) => `${heading.tagName.toLowerCase()}:${(heading.textContent ?? "").trim()}`),
+    );
   }
 
   /** Opens a note in the active pane. */

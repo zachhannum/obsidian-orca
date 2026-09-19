@@ -120,12 +120,26 @@ const CHROME = {
   installed: ".setting-item",
   installedName: ".setting-item-name",
   toggle: ".checkbox-container",
+  /** The box a note scrolls in, as the editor draws it. */
+  editorScroller: ".cm-scroller",
+  /** The box a note scrolls in, as the reader draws it. */
+  readerScroller: ".markdown-preview-view",
 };
 
 export type Side = "left" | "right";
 
 /** The chrome that floats over a pane, which a photograph of one drops. */
 export const FLOATING = CHROME.status;
+
+/**
+ * The box a note scrolls in, by the view it is read in. A pane holds
+ * the markup of both views, so the one being read is the one to
+ * scroll.
+ */
+export const SCROLLER = {
+  source: CHROME.editorScroller,
+  preview: CHROME.readerScroller,
+};
 
 /** The chrome that appears under the pointer, which a picture drops too. */
 const HOVERED = CHROME.tooltip;
