@@ -868,16 +868,22 @@ test("a caller that joins a run in flight is told how far along it is, and hears
   const first: Progress[] = [];
   const joined: Progress[] = [];
 
+  // The run reads the book note and its chapters from disk before it
+  // lays anything out, so the test waits on the first thing it says
+  // rather than on a number of turns.
+  let said: (() => void) | undefined;
+  const says = new Promise<void>((resolve) => {
+    said = resolve;
+  });
+
   client.hold();
   const opening = composer.open(BOOK, {
     told: (progress) => {
       first.push(progress);
+      said?.();
     },
   });
-  // The run reads the book note and its chapters before it lays
-  // anything out, and the paused client holds it at the layout.
-  for (let at = 0; at < 50 && first.length === 0; at += 1) await drain();
-  assert.ok(first.length > 0, "the caller that started the run was told nothing");
+  await says;
   const sofar = first[first.length - 1];
 
   // A second surface joins the run the first one started.
