@@ -145,9 +145,10 @@ export function readingProcessor(marking: Marking) {
     // The bytes are counted in the text the section was drawn from, so
     // a parse older than the note draws nothing and Obsidian's own
     // drawing stands.
-    const settled = await marking
-      .marksIn(context.sourcePath, info.text)
-      .catch(() => undefined);
+    const held = marking.marksNow(context.sourcePath, info.text);
+    const settled =
+      held ??
+      (await marking.marksIn(context.sourcePath, info.text).catch(() => undefined));
     if (settled === undefined || settled.marks.length === 0) return;
     drawSection(element, info, settled.marks);
   };

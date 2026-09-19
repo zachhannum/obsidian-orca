@@ -58,23 +58,16 @@ test("Live Preview draws a setext heading at the level of its underline", async 
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
 
-  /** The level each line of a setext heading is drawn at. */
-  const level = async (said: string): Promise<string[]> =>
-    manuscript.pane
-      .locator(".cm-line.orca-setext", { hasText: said })
-      .evaluateAll((lines) =>
-        lines.map((line) => (/orca-setext-\d/.exec(line.className) ?? [""])[0]),
-      );
-
   // One line over `=` is a heading of level 1, and two lines over `-`
-  // are one heading of level 2. Both are near the top of the note,
-  // which the sweep left the pane at.
-  await expect.poll(async () => level("The Parsonage")).toEqual(["orca-setext-1"]);
-  await expect
-    .poll(async () => level("Longbourn, in the Spring"))
-    .toEqual(["orca-setext-2"]);
-  // The underline is still a line to type on.
-  await expect(manuscript.pane.locator(".cm-line.orca-setext-under")).toHaveCount(1);
+  // are one heading of level 2. The underline is still a line to type
+  // on, so the editor keeps it.
+  await expect.poll(async () => manuscript.setextThrough()).toEqual([
+    "1:The Parsonage",
+    "under:=============",
+    "2:A Morning Call",
+    "2:Longbourn, in the Spring",
+    "under:------------------------",
+  ]);
 });
 
 test("reading view draws the same chips, and the setext heading with no underline", async ({

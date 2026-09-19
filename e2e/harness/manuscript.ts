@@ -66,25 +66,53 @@ export class Manuscript {
 
   /**
    * Every chip in the note, gathered by reading down it a pane at a
-   * time. Both
-   * views draw only the part of a note they have on screen, so the
-   * pane is scrolled through the note and the chips are gathered as
-   * they are drawn.
+   * time. Both views draw only the part of a note they have on
+   * screen, so the pane is scrolled through the note and the marks
+   * are gathered as they are drawn.
    */
   async chipsThrough(): Promise<string[]> {
+    return (await this.sweep()).chips;
+  }
+
+  /**
+   * Every line of a setext heading in the note, as `level:text`, and
+   * every underline as `under:text`, in the order they are written.
+   */
+  async setextThrough(): Promise<string[]> {
+    return (await this.sweep()).setext;
+  }
+
+  /** The marks drawn over the whole note, read a pane at a time. */
+  private async sweep(): Promise<{ chips: string[]; setext: string[] }> {
     return this.obsidian.page.evaluate(
       async ({ type, scroller }) => {
-        const leaf = window.app.workspace.getLeavesOfType(type)[0];
-        const pane = leaf?.view.containerEl.querySelector(scroller);
-        if (pane === null || pane === undefined) throw new Error("no note is open");
-        const seen: string[] = [];
+        const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
+          | MarkdownView
+          | undefined;
+        if (view === undefined) throw new Error("no note is open");
+        const pane = view.containerEl.querySelector(
+          view.getMode() === "preview" ? scroller.preview : scroller.source,
+        );
+        if (pane === null) throw new Error("the note is drawn in no pane");
+        const chips: string[] = [];
+        const setext: string[] = [];
+        const keep = (into: string[], said: string): void => {
+          if (!into.includes(said)) into.push(said);
+        };
         const gather = (): void => {
           for (const chip of pane.querySelectorAll("[data-testid='orca-run']")) {
-            const said = [...chip.children]
-              .map((part) => part.textContent ?? "")
-              .join(" ")
-              .trim();
-            if (!seen.includes(said)) seen.push(said);
+            keep(
+              chips,
+              [...chip.children].map((part) => part.textContent ?? "").join(" ").trim(),
+            );
+          }
+          // One query, so the lines come back in the order they are
+          // written rather than grouped by what they are.
+          for (const line of pane.querySelectorAll(
+            ".cm-line.orca-setext, .cm-line.orca-setext-under",
+          )) {
+            const level = /orca-setext-(\d)/.exec(line.className)?.[1] ?? "under";
+            keep(setext, `${level}:${(line.textContent ?? "").trim()}`);
           }
         };
         // The pane measures what it draws on the next frame, so each
@@ -104,7 +132,8 @@ export class Manuscript {
         }
         pane.scrollTop = 0;
         await painted();
-        return seen;
+        gather();
+        return { chips, setext };
       },
       { type: MARKDOWN, scroller: SCROLLER },
     );

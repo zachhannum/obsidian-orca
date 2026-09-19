@@ -47,6 +47,12 @@ export interface Marking {
    * was read from.
    */
   marksIn(note: string, against: string): Promise<Settled | undefined>;
+  /**
+   * The marks already settled for a note, without asking again.
+   * Reading view draws a section the moment it is built, so a section
+   * scrolled back into view is drawn from the parse already held.
+   */
+  marksNow(note: string, against: string): Settled | undefined;
   /** Told when the book's parse of a note moved on, so the editor asks again. */
   watch(note: string, parsed: () => void): () => void;
 }

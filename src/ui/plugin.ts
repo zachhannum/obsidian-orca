@@ -120,6 +120,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
 
   /** The editors waiting to be told a note's book is known, or set again. */
   private readonly redraw = new Set<() => void>();
+
+  /** The marks each note was last settled with, by the text they count bytes in. */
+  private readonly marked = new Map<string, Settled>();
   /**
    * The book notes orca is writing a design into. The engine has the
    * sheet already, so the write is not a reason to set the book again,
@@ -503,12 +506,22 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * editor to tell, so its panes are drawn again instead.
    */
   private remark(): void {
+    this.marked.clear();
     for (const ask of [...this.redraw]) ask();
+    this.reread();
+  }
+
+  /**
+   * Draws a note again in every pane reading it, or every note when
+   * none is named. The drawing takes the marks already held, so it
+   * asks the engine nothing and cannot bring itself round again.
+   */
+  private reread(note?: string): void {
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
-      if (view instanceof MarkdownView && view.getMode() === "preview") {
-        view.previewMode.rerender(true);
-      }
+      if (!(view instanceof MarkdownView) || view.getMode() !== "preview") continue;
+      if (note !== undefined && view.file?.path !== note) continue;
+      view.previewMode.rerender(true);
     }
   }
 
@@ -519,7 +532,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   private marking(): Marking {
     return {
+      marksNow: (note, against) => {
+        const held = this.marked.get(note);
+        return held?.against === against ? held : undefined;
+      },
       marksIn: async (note, against) => {
+        const held = this.marked.get(note);
+        if (held?.against === against) return held;
         const typeset = await this.setting(note);
         if (typeset?.textOf(note) !== against) return undefined;
         const asked = candidates(against);
@@ -531,6 +550,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
           }),
         );
         const settled: Settled = { against, marks: drawn(against, asked, answers) };
+        this.marked.set(note, settled);
+        // A reader drew this note before its parse arrived, and
+        // Obsidian keeps what it drew. The parse is held now, so the
+        // drawing that follows takes it without asking again.
+        this.reread(note);
         return settled;
       },
       watch: (note, parsed) => {
