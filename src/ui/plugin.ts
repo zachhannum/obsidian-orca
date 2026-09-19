@@ -116,12 +116,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
   /**
-   * The book the panel designs from a note on screen, and the hold that
-   * keeps its engine while it does. A book reached this way has no view
-   * of its own to hold it.
-   */
-  private noted: { book: string; release: () => void } | undefined;
-  /**
    * The book notes orca is writing a design into. The engine has the
    * sheet already, so the write is not a reason to set the book again,
    * and the render the pick asked for is not dropped under it.
@@ -429,8 +423,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       if (leaf.view instanceof MarkdownView) this.release(leaf.view);
     }
-    this.noted?.release();
-    this.noted = undefined;
     this.engines?.close();
     this.engines = undefined;
   }
@@ -1218,9 +1210,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
         ];
         return () => {
           for (const ref of on) this.app.workspace.offref(ref);
-          // A panel that closed designs nothing, so the book it reached
-          // from a note goes back to having no hold on it.
-          this.holdsNote(undefined);
         };
       },
     };
@@ -1257,7 +1246,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
       drawn.find((pane) => pane.typeset !== undefined) ??
       drawn[0];
     if (view === undefined) return this.designedNote();
-    this.holdsNote(undefined);
     const reading = view.typeset;
     if (reading !== undefined) return reading;
     // A pane still setting its book has none yet, so the run it is
@@ -1275,11 +1263,15 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /**
    * The book a note on screen puts there, set on an engine. With no
    * preview drawn, a note of a book is that book on screen, and the
-   * panel designs it. The panel holds it, because a book reached from a
-   * note has no view of its own to hold it.
+   * panel designs it. The panel holds nothing: it is not a view on the
+   * book, so the book it sets is the first the pool stops.
    */
   private async designedNote(): Promise<Typeset | undefined> {
     const { workspace } = this.app;
+    // A panel nobody can see designs nothing, so it sets nothing. A
+    // collapsed sidebar would otherwise start an engine for every book
+    // whose note the writer opens.
+    if (!this.panelDrawn()) return undefined;
     const index = this.notes();
     const active = workspace.getActiveViewOfType(MarkdownView);
     const book = notedBook(
@@ -1298,7 +1290,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
         };
       }),
     );
-    this.holdsNote(book);
     if (book === undefined || this.composer === undefined) return undefined;
     try {
       return await this.composer.reading(book);
@@ -1308,14 +1299,19 @@ export default class OrcaPlugin extends Plugin implements Limited {
     }
   }
 
-  /** Holds the book the panel designs from a note, and drops the one it left. */
-  private holdsNote(book: string | undefined): void {
-    if (this.noted?.book === book) return;
-    this.noted?.release();
-    this.noted =
-      book === undefined || this.composer === undefined
-        ? undefined
-        : { book, release: this.composer.hold(book) };
+  /**
+   * Whether a design panel is drawn. A sidebar collapses to no width
+   * rather than to nothing, so the leaf reports itself shown inside one
+   * and the sidebar is asked as well.
+   */
+  private panelDrawn(): boolean {
+    const { workspace } = this.app;
+    return workspace.getLeavesOfType(PANEL_VIEW).some((leaf) => {
+      const root = leaf.getRoot();
+      if (root === workspace.leftSplit && workspace.leftSplit.collapsed) return false;
+      if (root === workspace.rightSplit && workspace.rightSplit.collapsed) return false;
+      return leaf.view.containerEl.isShown();
+    });
   }
 
   /**

@@ -474,19 +474,29 @@ test("a note the book does not list, and a page orca wrote, turn neither pane", 
 test("a cold session says what the book is waiting on rather than showing an empty pane", async ({
   book,
   manuscript,
+  obsidian,
   vault,
 }) => {
+  // A design panel on screen sets the book of the note beside it, so
+  // the sidebar goes away before the chapter opens. A book the panel
+  // already set is not a cold one.
+  await obsidian.put("right");
   // A book is typeset once a session, so the run puts this one back on
   // the shelf before asking for the state that only a cold one shows. A
   // chapter's words are an edit to the book on the engine, so it is the
   // book note that takes it off the shelf.
   await vault.modify(BOOK, await vault.read(BOOK));
 
-  const said = await book.settings(async () => {
-    await manuscript.open(CHAPTER);
-    await manuscript.asBook.click();
-    await book.painted();
-  });
+  let said: string[];
+  try {
+    said = await book.settings(async () => {
+      await manuscript.open(CHAPTER);
+      await manuscript.asBook.click();
+      await book.painted();
+    });
+  } finally {
+    await obsidian.show("right");
+  }
 
   const last = said.at(-1) ?? "";
   expect(said.length).toBeGreaterThan(0);
