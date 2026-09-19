@@ -512,16 +512,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Draws a note again in every pane reading it, or every note when
-   * none is named. The drawing takes the marks already held, so it
-   * asks the engine nothing and cannot bring itself round again.
+   * Draws every note a reader has open again. A section already drawn
+   * keeps what it was drawn with, so this is how a note whose book
+   * changed under it takes the new marks.
    */
-  private reread(note?: string): void {
+  private reread(): void {
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
-      if (!(view instanceof MarkdownView) || view.getMode() !== "preview") continue;
-      if (note !== undefined && view.file?.path !== note) continue;
-      view.previewMode.rerender(true);
+      if (view instanceof MarkdownView && view.getMode() === "preview") {
+        view.previewMode.rerender(true);
+      }
     }
   }
 
@@ -551,10 +551,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
         );
         const settled: Settled = { against, marks: drawn(against, asked, answers) };
         this.marked.set(note, settled);
-        // A reader drew this note before its parse arrived, and
-        // Obsidian keeps what it drew. The parse is held now, so the
-        // drawing that follows takes it without asking again.
-        this.reread(note);
         return settled;
       },
       watch: (note, parsed) => {

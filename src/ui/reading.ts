@@ -77,15 +77,14 @@ function replaceRun(element: HTMLElement, said: string, mark: Drawn): void {
   const whole = drawnText(element);
   const at = whole.indexOf(run);
   if (at < 0 || mark.names === undefined) return;
-  const chip = chipElement(mark.names, mark.form);
   // A span run closes a bracket, and the bracket comes out with it.
   const opens = mark.form === "span" && whole[at - 1] === "]" ? at - 1 : at;
-  place(element, takeOut(element, opens, at + run.length), chip);
+  takeOut(element, opens, at + run.length, chipElement(mark.names, mark.form));
   if (mark.form !== "span") return;
   // The text taken out and the chip put in both sit after this
   // bracket, so the place it was found at is the place it is still at.
   const bracket = whole.lastIndexOf("[", at);
-  if (bracket >= 0) takeOut(element, bracket, bracket + 1);
+  if (bracket >= 0) takeOut(element, bracket, bracket + 1, undefined);
 }
 
 /** The text an element draws, as one string. */
@@ -96,24 +95,31 @@ function drawnText(element: HTMLElement): string {
 }
 
 /**
- * Takes the text between two places out of an element, and answers
- * with the node the text after it begins in. Nothing where the run
- * ran to the end of what the element draws.
+ * Takes the text between two places out of an element, and puts the
+ * chip where it was.
  */
-function takeOut(element: HTMLElement, from: number, to: number): Node | undefined {
+function takeOut(
+  element: HTMLElement,
+  from: number,
+  to: number,
+  chip: HTMLElement | undefined,
+): void {
   // The later place is split first, so the earlier one is still the
   // place it was found at when it is split in turn.
   const tail = splitAt(textNodes(element), to);
   const head = splitAt(textNodes(element), from);
-  if (head === undefined) return undefined;
+  if (head === undefined) return;
   const nodes = textNodes(element);
   const opens = nodes.indexOf(head);
-  if (opens < 0) return undefined;
+  if (opens < 0) return;
   const gone: Text[] = [];
   for (const node of nodes.slice(opens)) {
     if (node === tail) break;
     gone.push(node);
   }
+  // The chip goes in before the text comes out, so the element that
+  // held the run still holds something and does not go with it.
+  if (chip !== undefined) place(element, tail, chip);
   for (const node of gone) {
     const above = node.parentNode;
     above?.removeChild(node);
@@ -121,7 +127,6 @@ function takeOut(element: HTMLElement, from: number, to: number): Node | undefin
     // goes with the run it was part of.
     if (above !== null && above !== element) prune(above, element);
   }
-  return tail ?? undefined;
 }
 
 /** Puts the chip where the run was, or at the end where nothing follows it. */
