@@ -19,8 +19,10 @@ const CHIPS = [
 ];
 
 test("Live Preview draws a chip over every run, and the run's own text comes off", async ({
+  book,
   manuscript,
 }) => {
+  await book.open();
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
 
@@ -37,8 +39,10 @@ test("Live Preview draws a chip over every run, and the run's own text comes off
 });
 
 test("the cursor shows the line it is on, and the rest of the note keeps its chips", async ({
+  book,
   manuscript,
 }) => {
+  await book.open();
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
@@ -52,8 +56,10 @@ test("the cursor shows the line it is on, and the rest of the note keeps its chi
 });
 
 test("Live Preview draws a setext heading at the level of its underline", async ({
+  book,
   manuscript,
 }) => {
+  await book.open();
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
@@ -71,8 +77,10 @@ test("Live Preview draws a setext heading at the level of its underline", async 
 });
 
 test("reading view draws the same chips, and the setext heading with no underline", async ({
+  book,
   manuscript,
 }) => {
+  await book.open();
   await manuscript.open(CHAPTER);
 
   await manuscript.read("preview");
@@ -88,9 +96,11 @@ test("reading view draws the same chips, and the setext heading with no underlin
 });
 
 test("a note no book lists is drawn as Obsidian draws it", async ({
+  book,
   manuscript,
   vault,
 }) => {
+  await book.open();
   await vault.write(OUTSIDE, "{.epigraph}\n\nA paragraph.\n\nOne\n===\n");
   await manuscript.open(OUTSIDE);
   await manuscript.read("source");
@@ -100,9 +110,11 @@ test("a note no book lists is drawn as Obsidian draws it", async ({
 });
 
 test("a run the engine does not read stays the prose the author typed", async ({
+  book,
   manuscript,
   vault,
 }) => {
+  await book.open();
   // An element answers to one name, so a second id is no run at all.
   await vault.modify(CHAPTER, "{#one #two}\n\nA paragraph.\n");
   await manuscript.open(CHAPTER);
@@ -113,9 +125,11 @@ test("a run the engine does not read stays the prose the author typed", async ({
 });
 
 test("a chip stays on its run while the author types, before the next parse", async ({
+  book,
   manuscript,
   vault,
 }) => {
+  await book.open();
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await manuscript.read("source");

@@ -338,6 +338,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
         this.swap();
+        // A preview opened here is a book the editors can draw from.
+        this.nudge();
       }),
     );
     // A writer moving between panes has opened no file, so the linked
@@ -507,8 +509,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   private remark(): void {
     this.marked.clear();
-    for (const ask of [...this.redraw]) ask();
+    this.nudge();
     this.reread();
+  }
+
+  /**
+   * Asks every open note for its marks again. A book set since the
+   * last ask is a book the notes in it can be drawn from now.
+   */
+  private nudge(): void {
+    for (const ask of [...this.redraw]) ask();
   }
 
   /**
@@ -573,15 +583,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * The book a note belongs to, set. Drawing a note's marks needs the
-   * engine's parse of it, so opening a chapter sets the book it is in.
+   * The book a note belongs to, as the engine already holds it. The
+   * marks are read off a book that is set rather than setting one, so
+   * opening a chapter costs the engine nothing.
    */
   private async setting(note: string): Promise<Typeset | undefined> {
     const member = this.members.get(note);
-    if (member === undefined || this.composer === undefined) return undefined;
+    if (member === undefined) return undefined;
     // A book that will not set is the preview's report, not the
     // editor's: the note is drawn as Obsidian draws it.
-    return this.composer.reading(member.book).catch(() => undefined);
+    return this.composer?.opened(member.book)?.catch(() => undefined);
   }
 
   /** Every markdown note, and its properties as the metadata cache has them. */
