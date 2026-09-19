@@ -543,12 +543,26 @@ export default class OrcaPlugin extends Plugin implements Limited {
       member: (note) => this.members.get(note)?.book,
       open: (book) => this.setting(book),
       retype: (book, note, text) => {
-        this.composer?.retype(book, note, text);
+        // The ask carried the text the note had when it was made, and
+        // the author may have typed since. Sending that text back
+        // would put the engine behind the writer.
+        this.composer?.retype(book, note, this.written(note) ?? text);
       },
       redrawn: (book) => {
         this.reread(book);
       },
     });
+  }
+
+  /** The text a note is open as, from the view that is its only writer. */
+  private written(note: string): string | undefined {
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file?.path === note) {
+        return view.editor.getValue();
+      }
+    }
+    return undefined;
   }
 
   /**

@@ -3,6 +3,9 @@ import { expect, test } from "./harness/test";
 /** The chapter the fixture has a note for. */
 const CHAPTER = "Chapter Twelve.md";
 
+/** The book that lists the chapter, which a stage count starts from quiet. */
+const BOOK = "Pride and Prejudice.md";
+
 /** The words typed into it, as one burst. */
 const TYPED = "Kitty had a cough.";
 
@@ -14,7 +17,7 @@ test("a burst of keystrokes is one render, and the pages last painted stay until
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await book.split();
-  const painted = await book.painted();
+  const painted = await book.settled(BOOK);
   const opens = await book.reading();
   await manuscript.place({ line: 2, ch: 0 });
 
@@ -45,7 +48,7 @@ test("the note written after the keystrokes that made it renders nothing a secon
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await book.split();
-  const painted = await book.painted();
+  const painted = await book.settled(BOOK);
   await manuscript.place({ line: 2, ch: 0 });
 
   await manuscript.type(TYPED);
@@ -65,7 +68,7 @@ test("typing in one chapter costs that chapter, and leaves the rest of the book 
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await book.split();
-  const painted = await book.painted();
+  const painted = await book.settled(BOOK);
   const before = await book.stages();
   await manuscript.place({ line: 2, ch: 0 });
 

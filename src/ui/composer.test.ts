@@ -862,6 +862,41 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   assert.deepEqual(book.unread, []);
 });
 
+test("a caller that joins a run in flight is told how far along it is, and hears the rest", async () => {
+  const client = new PausedClient();
+  const composer = new Composer(await setting(client));
+  const first: Progress[] = [];
+  const joined: Progress[] = [];
+
+  client.hold();
+  const opening = composer.open(BOOK, {
+    told: (progress) => {
+      first.push(progress);
+    },
+  });
+  // The run reads the book note and its chapters before it lays
+  // anything out, and the paused client holds it at the layout.
+  for (let at = 0; at < 50 && first.length === 0; at += 1) await drain();
+  assert.ok(first.length > 0, "the caller that started the run was told nothing");
+  const sofar = first[first.length - 1];
+
+  // A second surface joins the run the first one started.
+  composer.open(BOOK, {
+    note: "Chapter Twelve.md",
+    told: (progress) => {
+      joined.push(progress);
+    },
+  });
+
+  // It hears where the run had got to rather than waiting in the dark.
+  assert.deepEqual(joined[0], sofar);
+
+  client.release();
+  await opening;
+
+  assert.deepEqual(joined[joined.length - 1], first[first.length - 1]);
+});
+
 test("an open orca makes for a reader forgives no death, and the reader's own open does", async () => {
   const forgiven: string[] = [];
   const composer = new Composer({

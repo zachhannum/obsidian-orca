@@ -535,6 +535,12 @@ export interface Composing {
   faces: FaceSet;
 }
 
+/** Everyone waiting on one book's run, and the last thing it said. */
+interface Telling {
+  listeners: Set<(progress: Progress) => void>;
+  last: Progress | undefined;
+}
+
 /** The place a book is asked to open at, and who is told while it sets. */
 export interface Opening {
   /** The note the writer came from, if they came from one. */
@@ -554,6 +560,8 @@ export class Composer {
   private readonly books = new Map<string, Promise<Typeset>>();
   /** The replay each book that died left behind, by its path. */
   private readonly again = new Map<string, Replay>();
+  /** Everyone waiting to hear how a book is setting, by the path of the book. */
+  private readonly telling = new Map<string, Telling>();
 
   constructor(
     private readonly vault: Composing,
@@ -567,7 +575,15 @@ export class Composer {
    */
   open(path: string, opening: Opening = {}): Promise<Typeset> {
     const existing = this.books.get(path);
-    if (existing !== undefined) return existing;
+    if (existing !== undefined) {
+      // A caller that joins a run someone else started is told how far
+      // along it is, and hears the rest of it. Otherwise a pane that
+      // opened second watches an empty box until the book lands.
+      this.joins(path, opening.told);
+      return existing;
+    }
+    this.telling.set(path, { listeners: new Set(), last: undefined });
+    this.joins(path, opening.told);
     const carried = this.again.get(path);
     this.again.delete(path);
     // A reader opening a book that stopped is asking for another try.
@@ -583,7 +599,32 @@ export class Composer {
     composing.catch(() => {
       if (this.books.get(path) === composing) this.books.delete(path);
     });
+    // The run is over either way, so nothing is told about it again.
+    void composing.then(
+      () => this.telling.delete(path),
+      () => this.telling.delete(path),
+    );
     return composing;
+  }
+
+  /**
+   * Adds a listener to a run, and hands it what the run has said so
+   * far, so a caller that joins late is not a pane with nothing in it.
+   */
+  private joins(path: string, told: ((progress: Progress) => void) | undefined): void {
+    if (told === undefined) return;
+    const telling = this.telling.get(path);
+    if (telling === undefined) return;
+    telling.listeners.add(told);
+    if (telling.last !== undefined) told(telling.last);
+  }
+
+  /** Says how far along a book is, to everyone waiting on it. */
+  private tell(path: string, progress: Progress): void {
+    const telling = this.telling.get(path);
+    if (telling === undefined) return;
+    telling.last = progress;
+    for (const told of [...telling.listeners]) told(progress);
   }
 
   /**
@@ -689,7 +730,7 @@ export class Composer {
       of: present.length,
       opening: from === undefined ? undefined : entryName(from.entry),
     };
-    opening.told?.(progress);
+    this.tell(path, progress);
 
     const sent = new Map<string, string>();
     const assets = new Registry(this.vault.files);
@@ -706,7 +747,7 @@ export class Composer {
         const text = carried?.sent.get(at) ?? (await this.vault.read(at));
         sent.set(at, text);
         read += 1;
-        opening.told?.({ ...progress, read });
+        this.tell(path, { ...progress, read });
         return text;
       },
       (at) => assets.take(at),
