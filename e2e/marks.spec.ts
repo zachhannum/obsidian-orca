@@ -93,6 +93,11 @@ test("reading view draws the same chips, and the setext heading with no underlin
   // editor keeps is read for in the reader's own box.
   await expect(manuscript.reader).not.toContainText("=============");
   await expect(manuscript.reader).not.toContainText("{.plain #entail}");
+  // The lines above a setext underline are drawn in the heading, and
+  // the paragraph Obsidian drew them as goes.
+  await expect(
+    manuscript.reader.locator("p", { hasText: "Longbourn, in the Spring" }),
+  ).toHaveCount(0);
 });
 
 test("a note no book lists is drawn as Obsidian draws it", async ({

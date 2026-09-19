@@ -29,12 +29,36 @@ export interface Section {
  * into offsets of the section's own text.
  */
 export function marksOn(section: Section, marks: readonly Drawn[]): Drawn[] {
+  const { from, to } = boundsOf(section);
+  return marks.filter((mark) => mark.from >= from && mark.to <= to);
+}
+
+/** The bytes of the note a section was drawn from. */
+function boundsOf(section: Section): { from: number; to: number } {
   const lines = section.text.split("\n");
   const before = lines.slice(0, section.lineStart).join("\n");
-  const from = byteOf(section.text, before.length === 0 && section.lineStart === 0 ? 0 : before.length + 1);
+  const opens =
+    before.length === 0 && section.lineStart === 0 ? 0 : before.length + 1;
   const through = lines.slice(0, section.lineEnd + 1).join("\n");
-  const to = byteOf(section.text, through.length);
-  return marks.filter((mark) => mark.from >= from && mark.to <= to);
+  return { from: byteOf(section.text, opens), to: byteOf(section.text, through.length) };
+}
+
+/**
+ * The lines a setext heading is written on, where the section holds
+ * them and not the underline. Obsidian draws those lines as a
+ * paragraph of their own, and the heading drawn at the underline says
+ * the same words, so the paragraph comes out.
+ */
+export function repeatedOn(section: Section, marks: readonly Drawn[]): boolean {
+  const { from, to } = boundsOf(section);
+  return marks.some(
+    (mark) =>
+      mark.form === "setext" &&
+      mark.open !== undefined &&
+      mark.open < to &&
+      mark.from > from &&
+      to < mark.to,
+  );
 }
 
 /**
@@ -47,6 +71,10 @@ export function drawSection(
   section: Section,
   marks: readonly Drawn[],
 ): void {
+  if (repeatedOn(section, marks)) {
+    element.empty();
+    return;
+  }
   for (const mark of marksOn(section, marks)) {
     if (mark.form === "setext") {
       redrawSetext(element, section, mark);
@@ -175,18 +203,8 @@ function redrawSetext(element: HTMLElement, section: Section, mark: Drawn): void
     if (at > 0) heading.createEl("br");
     heading.appendText(line);
   }
-  // Obsidian drew the lines above the underline as a paragraph of
-  // their own, and the underline as the rule it takes it for. The
-  // heading takes the place of the rule, so the paragraph goes.
-  const above = element.previousElementSibling;
-  if (above !== null && flat(above.textContent) === flat(said)) above.remove();
   element.empty();
   element.appendChild(heading);
-}
-
-/** One line of text, with every run of blanks made one space. */
-function flat(said: string | null): string {
-  return (said ?? "").replace(/\s+/g, " ").trim();
 }
 
 /** Every text node under an element, in the order they are drawn. */

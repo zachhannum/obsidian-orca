@@ -61,7 +61,7 @@ export interface Marking {
  * The parts of a mark that move with the text: the run itself, a
  * bracket a span run closes, and the line a setext heading opens on.
  */
-type Part = "run" | "bracket" | "head";
+type Part = "run" | "bracket" | "head" | "text";
 
 /** One part of a mark as it sits on the text now, moved with every edit since. */
 class Mark extends RangeValue {
@@ -126,11 +126,12 @@ function decorations(state: EditorState): DecorationSet {
     open.add(state.doc.lineAt(range.head).number);
     open.add(state.doc.lineAt(range.anchor).number);
   }
-  const placed: { at: number; value: Mark }[] = [];
-  for (let at = state.field(marks).iter(); at.value !== null; at.next()) {
-    const from = Math.min(at.from, state.doc.length);
-    if (from > Math.min(at.to, state.doc.length)) continue;
-    placed.push({ at: from, value: at.value });
+  const placed: { at: number; to: number; value: Mark }[] = [];
+  for (let sits = state.field(marks).iter(); sits.value !== null; sits.next()) {
+    const at = Math.min(sits.from, state.doc.length);
+    const to = Math.min(sits.to, state.doc.length);
+    if (at > to) continue;
+    placed.push({ at, to, value: sits.value });
   }
   // A setext heading opens above its underline, and both places moved
   // with the text.
@@ -138,7 +139,7 @@ function decorations(state: EditorState): DecorationSet {
   for (const { at, value } of placed) {
     if (value.part === "head") heads.set(value.mark, at);
   }
-  for (const { at, value } of placed) {
+  for (const { at, to, value } of placed) {
     const { mark, part } = value;
     if (part === "head") continue;
     if (mark.form === "setext") {
@@ -146,11 +147,16 @@ function decorations(state: EditorState): DecorationSet {
       continue;
     }
     if (open.has(state.doc.lineAt(at).number)) continue;
-    const to = Math.min(at + (mark.to - mark.from), state.doc.length);
     // The bracket a span run closes comes off with the run, so the
     // words keep their place and the brackets around them do not.
     if (part === "bracket") {
-      found.push({ from: at, to: at + 1, value: Decoration.replace({}) });
+      found.push({ from: at, to, value: Decoration.replace({}) });
+      continue;
+    }
+    // The brackets are gone, and Obsidian colours what they held the
+    // way it colours a link. The words are prose, so they read as it.
+    if (part === "text") {
+      found.push({ from: at, to, value: Decoration.mark({ class: "orca-span" }) });
       continue;
     }
     if (mark.names === undefined) continue;
@@ -217,6 +223,7 @@ export function marked(state: EditorState, settled: Settled): TransactionSpec | 
     // the text is the character before the run.
     return [
       new Mark(mark, "bracket").range(opens, opens + 1),
+      new Mark(mark, "text").range(opens + 1, from - 1),
       new Mark(mark, "bracket").range(from - 1, from),
       ...found,
     ];
