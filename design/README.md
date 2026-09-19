@@ -1,7 +1,7 @@
 # The v1 design
 
-Thirteen artboards draw the plugin: ten screens and three flows. Five
-more draw the docs site. They show orca as it is meant to look and
+Fourteen artboards draw the plugin: eleven screens and three flows.
+Five more draw the docs site. They show orca as it is meant to look and
 behave. They are HTML rather than pictures, so they can be edited and
 rebuilt instead of redrawn.
 
@@ -176,6 +176,32 @@ its editor around these files and returns a URL. The artboard list and
   box, and the pane's close button each remove the pin too. The action and a swap to the manuscript also turn it off.
 - Inspect mode waits on fleuron to find the box under a point and to
   return the rules that matched it and its computed values.
+- A book's notes carry fleuron's markdown, and the editor draws the
+  marks Obsidian draws as prose: an attribute run, and a setext
+  heading of more than one line. Everything else a note is written in
+  is Obsidian's own, unmarked, because the engine is the only linter.
+- A run is drawn as a chip that names it the way inspect names a box:
+  the id first, as `#opening`, then each class in written order, as
+  `.epigraph`, with the id accented and the classes faint. The braces
+  are not drawn, because the chip is where they were. A run the engine
+  reads and cannot use is drawn as it was written.
+- A chip sits where its run was written. An attribute line's chip is
+  on that line, above the block it names. A heading's is at the end of
+  the heading, in body size. An image's is under the image. A span's
+  is at the end of the span, and the brackets around its text come
+  off.
+- The line the cursor is on shows its source, the way Live Preview
+  shows every other mark. The rest of the note keeps its chips.
+- A setext heading is drawn at the level of its underline. The editor
+  keeps the underline, faint, because the line is still there to type
+  on. Reading view draws no underline at all.
+- Where a run is comes from the engine's parse of the note, so orca
+  has no markdown parser of its own and a run the engine did not read
+  stays prose. Obsidian's outline and heading search use Obsidian's
+  parse, so a setext heading of more than one line is in neither.
+- Opening a chapter sets the book it is in, because drawing a note's
+  marks is reading the engine's parse of it. A note no book lists is
+  drawn as Obsidian draws it.
 
 ## What the site settles
 
