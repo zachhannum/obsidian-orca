@@ -203,11 +203,16 @@ its editor around these files and returns a URL. The artboard list and
   has no markdown parser of its own and a run the engine did not read
   stays prose. Obsidian's outline and heading search use Obsidian's
   parse, so a setext heading of more than one line is in neither.
-- The marks are read off a book the engine already holds, so opening a
-  chapter costs the engine nothing and sets no book. A chapter of a
-  book with no preview open is drawn as Obsidian draws it, and takes
-  its chips once the book is set. A note no book lists never takes
-  them.
+- A note of a book sets that book, and the session it sets is the one
+  the preview, the panel and the export read. A chapter draws its
+  marks with no preview anywhere. A pane holds the book while a note
+  of it is open, and the grace and the ceiling stop that book as they
+  stop any other. A note no book lists sets nothing and takes no
+  marks.
+- An ask against text the engine has not read yet answers nothing and
+  sends that text, and the note is drawn again when the parse lands. A
+  mark is bytes of the text it was read from, so drawing one against
+  other text would eat the wrong characters.
 
 ## What the site settles
 

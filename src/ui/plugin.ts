@@ -32,9 +32,9 @@ import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
-import { runExtensions, type Marking, type Settled } from "@/ui/marks";
+import { runExtensions } from "@/ui/marks";
+import { Marks, type Read } from "@/ui/marking";
 import { readingProcessor } from "@/ui/reading";
-import { candidates, drawn } from "@/ui/runs";
 import {
   documentPreviews,
   fontPlaces,
@@ -119,11 +119,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
 
-  /** The editors waiting to be told a note's book is known, or set again. */
-  private readonly redraw = new Set<() => void>();
-
-  /** The marks each note was last settled with, by the text they count bytes in. */
-  private readonly marked = new Map<string, Settled>();
+  /** The marks every open note takes, and the books they set. */
+  private marks: Marks | undefined;
+  /** Drops the hold a manuscript has on each book, by the path of the book. */
+  private readonly manuscripts = new Map<string, () => void>();
   /**
    * The book notes orca is writing a design into. The engine has the
    * sheet already, so the write is not a reason to set the book again,
@@ -339,8 +338,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
         this.swap();
-        // A preview opened here is a book the editors can draw from.
-        this.nudge();
       }),
     );
     // A writer moving between panes has opened no file, so the linked
@@ -383,10 +380,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
     // The marks fleuron reads and Obsidian draws as prose, in both of
     // the views a note is read in.
-    const marking = this.marking();
-    this.registerEditorExtension(runExtensions(marking));
+    const marks = this.marking();
+    this.marks = marks;
+    this.registerEditorExtension(runExtensions(marks));
     this.registerMarkdownPostProcessor((element, context) => {
-      void readingProcessor(marking)(element, context);
+      void readingProcessor(marks)(element, context);
     });
     this.watchBooks();
     this.registerEvent(
@@ -441,6 +439,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       if (leaf.view instanceof MarkdownView) this.release(leaf.view);
     }
+    this.marks?.unload();
+    this.marks = undefined;
+    this.hold(new Set());
     this.engines?.close();
     this.engines = undefined;
   }
@@ -505,95 +506,60 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * Tells every open note to draw its marks again. Reading view has no
-   * editor to tell, so its panes are drawn again instead.
+   * Tells every open note to draw its marks again, from the book it
+   * now belongs to.
    */
   private remark(): void {
-    this.marked.clear();
-    this.nudge();
+    this.marks?.clear();
     this.reread();
   }
 
   /**
-   * Asks every open note for its marks again. A book set since the
-   * last ask is a book the notes in it can be drawn from now.
+   * Draws the notes a reader has open in reading view again. Reading
+   * view has no editor to tell, so its panes are drawn again instead.
+   * A section already drawn keeps what it was drawn with.
    */
-  private nudge(): void {
-    for (const ask of [...this.redraw]) ask();
-  }
-
-  /**
-   * Draws every note a reader has open again. A section already drawn
-   * keeps what it was drawn with, so this is how a note whose book
-   * changed under it takes the new marks.
-   */
-  private reread(): void {
-    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+  private reread(book?: string): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       const view = leaf.view;
-      if (view instanceof MarkdownView && view.getMode() === "preview") {
-        view.previewMode.rerender(true);
+      if (!(view instanceof MarkdownView)) continue;
+      if (view.getMode() !== "preview") continue;
+      const path = view.file?.path;
+      // A render of one book does not redraw the notes of another.
+      if (book !== undefined && (path === undefined || this.members.get(path)?.book !== book)) {
+        continue;
       }
+      view.previewMode.rerender(true);
     }
   }
 
   /**
-   * The marks of a book's notes, as the engine settles them. A note
-   * the book has not crossed yet takes none, and the editor asks
-   * again when the render that carries it lands.
+   * The marks every open note takes. A note of a book sets that book,
+   * so a chapter draws its chips with no preview anywhere, and the
+   * session it sets is the one every other surface reads.
    */
-  private marking(): Marking {
-    return {
-      marksNow: (note, against) => {
-        const held = this.marked.get(note);
-        return held?.against === against ? held : undefined;
+  private marking(): Marks {
+    return new Marks({
+      member: (note) => this.members.get(note)?.book,
+      open: (book) => this.setting(book),
+      retype: (book, note, text) => {
+        this.composer?.retype(book, note, text);
       },
-      marksIn: async (note, against) => {
-        const held = this.marked.get(note);
-        if (held?.against === against) return held;
-        const typeset = await this.setting(note);
-        if (typeset?.textOf(note) !== against) return undefined;
-        const asked = candidates(against);
-        const answers = await Promise.all(
-          asked.map(async (candidate) => {
-            const node = await typeset.session.nodeAt(note, candidate.byte);
-            if (node === undefined) return undefined;
-            return typeset.session.sourceOf(node);
-          }),
-        );
-        const settled: Settled = { against, marks: drawn(against, asked, answers) };
-        this.marked.set(note, settled);
-        return settled;
+      redrawn: (book) => {
+        this.reread(book);
       },
-      watch: (note, parsed) => {
-        // A note opened before the vault has been read belongs to no
-        // book yet, so the editor is told when it does.
-        this.redraw.add(parsed);
-        let drop: (() => void) | undefined;
-        let dropped = false;
-        void this.setting(note).then((typeset) => {
-          if (dropped) return;
-          drop = typeset?.watch(parsed);
-        });
-        return () => {
-          dropped = true;
-          this.redraw.delete(parsed);
-          drop?.();
-        };
-      },
-    };
+    });
   }
 
   /**
-   * The book a note belongs to, as the engine already holds it. The
-   * marks are read off a book that is set rather than setting one, so
-   * opening a chapter costs the engine nothing.
+   * This book, set for drawing a note of it. Drawing is orca's own
+   * open rather than the reader's, so it forgives no death the book
+   * already left behind.
    */
-  private async setting(note: string): Promise<Typeset | undefined> {
-    const member = this.members.get(note);
-    if (member === undefined) return undefined;
-    // A book that will not set is the preview's report, not the
-    // editor's: the note is drawn as Obsidian draws it.
-    return this.composer?.opened(member.book)?.catch(() => undefined);
+  private async setting(book: string): Promise<Read> {
+    const composer = this.composer;
+    if (composer === undefined) throw new EngineError("orca is still loading");
+    return composer.reading(book, { retry: false });
   }
 
   /** Every markdown note, and its properties as the metadata cache has them. */
@@ -717,6 +683,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   private swap(): void {
     const index = this.notes();
+    const held = new Set<string>();
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW)) {
       const view = leaf.view;
       if (!(view instanceof MarkdownView)) continue;
@@ -741,9 +708,31 @@ export default class OrcaPlugin extends Plugin implements Limited {
         this.release(view);
         continue;
       }
+      held.add(member.book);
       this.attach(view, `page:${file.path}`, () => {
         void this.openAsPreview(leaf, file, member);
       });
+    }
+    this.hold(held);
+  }
+
+  /**
+   * Holds every book a manuscript is open on, and drops the hold on
+   * every book none is. The hold is what keeps a book on its engine
+   * while a reader writes into it with no preview anywhere; the grace
+   * stops it one grace after the last pane closes, and the ceiling
+   * stops it like any other book.
+   */
+  private hold(books: ReadonlySet<string>): void {
+    for (const [book, drop] of [...this.manuscripts]) {
+      if (books.has(book)) continue;
+      drop();
+      this.manuscripts.delete(book);
+    }
+    for (const book of books) {
+      if (this.manuscripts.has(book)) continue;
+      const drop = this.composer?.hold(book);
+      if (drop !== undefined) this.manuscripts.set(book, drop);
     }
   }
 
