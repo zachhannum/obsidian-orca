@@ -95,10 +95,9 @@ its editor around these files and returns a URL. The artboard list and
 - The design panel is in the right sidebar, and it does not open or
   close with a book. It shows the book on screen: a preview of it, and
   with no preview drawn, a note of it. The active note names the book,
-  and otherwise the first note on screen does. A note of a book with no
-  session sets that book. A panel the sidebar hides sets nothing, and
-  the panel holds no engine: the book it sets is the first the pool
-  stops.
+  and otherwise the first note on screen does. The panel reads the
+  session the book already has. It sets no book and holds no engine,
+  because a book is set by a view that reads it.
   With no preview and no note of a book on screen, it shows "No book is
   open". The book note's own page shows the design read-only.
 - The panel draws margins and a custom trim in the unit from orca's

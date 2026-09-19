@@ -995,18 +995,6 @@ test("a note no book reads shows the panel no book", async ({
   await vault.remove(LOOSE_NOTE);
 });
 
-test("a chapter note sets the book the panel designs, with no preview open", async ({
-  obsidian,
-  panel,
-}) => {
-  // No preview has set this book, so the note on screen is what sets
-  // it. The panel opens on the book rather than on "No book is open".
-  await opensInTab(obsidian, CHAPTER_NOTE);
-  await panel.open();
-  await expect(panel.panel).toContainText("Pride and Prejudice");
-
-  await obsidian.detach("markdown");
-});
 
 /** Opens a note in a tab of its own, in front of whatever that pane held. */
 async function opensInTab(obsidian: Obsidian, at: string): Promise<void> {

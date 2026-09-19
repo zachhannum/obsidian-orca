@@ -1261,17 +1261,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * The book a note on screen puts there, set on an engine. With no
-   * preview drawn, a note of a book is that book on screen, and the
-   * panel designs it. The panel holds nothing: it is not a view on the
-   * book, so the book it sets is the first the pool stops.
+   * The book a note on screen puts there. With no preview drawn, a note
+   * of a book is that book on screen, and the panel designs the session
+   * that book already has. The panel starts none and holds none: a book
+   * is set by a view that reads it, and the panel is not one.
    */
   private async designedNote(): Promise<Typeset | undefined> {
     const { workspace } = this.app;
-    // A panel nobody can see designs nothing, so it sets nothing. A
-    // collapsed sidebar would otherwise start an engine for every book
-    // whose note the writer opens.
-    if (!this.panelDrawn()) return undefined;
     const index = this.notes();
     const active = workspace.getActiveViewOfType(MarkdownView);
     const book = notedBook(
@@ -1292,26 +1288,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
     );
     if (book === undefined || this.composer === undefined) return undefined;
     try {
-      return await this.composer.reading(book);
+      return await this.composer.opened(book);
     } catch {
-      // The note reports a book that will not set, not the panel.
+      // The view reading the book reports a book that will not set.
       return undefined;
     }
-  }
-
-  /**
-   * Whether a design panel is drawn. A sidebar collapses to no width
-   * rather than to nothing, so the leaf reports itself shown inside one
-   * and the sidebar is asked as well.
-   */
-  private panelDrawn(): boolean {
-    const { workspace } = this.app;
-    return workspace.getLeavesOfType(PANEL_VIEW).some((leaf) => {
-      const root = leaf.getRoot();
-      if (root === workspace.leftSplit && workspace.leftSplit.collapsed) return false;
-      if (root === workspace.rightSplit && workspace.rightSplit.collapsed) return false;
-      return leaf.view.containerEl.isShown();
-    });
   }
 
   /**

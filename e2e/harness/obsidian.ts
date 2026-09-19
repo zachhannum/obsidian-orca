@@ -620,21 +620,6 @@ export class Obsidian {
     }, side);
   }
 
-  /** Opens a sidebar and waits for it to be on screen. */
-  async show(side: Side): Promise<void> {
-    await this.page.evaluate((on) => {
-      const { leftSplit, rightSplit } = window.app.workspace;
-      const split = (on === "left" ? leftSplit : rightSplit) as unknown as {
-        expand(): void;
-      };
-      split.expand();
-    }, side);
-    await this.page.waitForFunction((on) => {
-      const { leftSplit, rightSplit } = window.app.workspace;
-      return !(on === "left" ? leftSplit : rightSplit).collapsed;
-    }, side);
-  }
-
   /** Whether that sidebar is collapsed. */
   async collapsed(side: Side = "left"): Promise<boolean> {
     return this.page.evaluate((on) => {
