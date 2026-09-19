@@ -67,6 +67,8 @@ export class Marks implements Marking {
   private readonly watching = new Map<string, Watch>();
   /** The books that would not set, which are asked about once. */
   private readonly refused = new Set<string>();
+  /** The notes whose text was sent to the book as it stands, as `book|note`. */
+  private readonly sent = new Set<string>();
   /** Every editor waiting to be told the parse under it moved on. */
   private readonly editors = new Set<() => void>();
 
@@ -84,11 +86,17 @@ export class Marks implements Marking {
     if (book === undefined || this.refused.has(book)) return undefined;
     const typeset = await this.setting(book);
     if (typeset === undefined) return undefined;
-    // The engine holds older text, so it is sent. The watch on the
-    // book tells the editor when the parse of it lands, which is what
-    // bounds an absent answer to one render.
     if (typeset.textOf(note) !== against) {
-      this.shelf.retype(book, note, against);
+      // A book just set holds the notes as the vault has them, and a
+      // note open with unsaved words is newer than that. It is sent
+      // once, because every keystroke after this one reaches the book
+      // on its own and sending here again would cost a second render
+      // for the one the writer already paid for.
+      const once = `${book}|${note}`;
+      if (!this.sent.has(once)) {
+        this.sent.add(once);
+        this.shelf.retype(book, note, against);
+      }
       return undefined;
     }
     const asked = candidates(against);
@@ -119,6 +127,7 @@ export class Marks implements Marking {
   clear(): void {
     this.parsed.clear();
     this.refused.clear();
+    this.sent.clear();
     for (const watch of this.watching.values()) watch.drop();
     this.watching.clear();
     this.told();
@@ -151,6 +160,10 @@ export class Marks implements Marking {
     const held = this.watching.get(book);
     if (held?.typeset !== typeset) {
       held?.drop();
+      // A second session holds the notes as the vault has them again.
+      for (const once of [...this.sent]) {
+        if (once.startsWith(`${book}|`)) this.sent.delete(once);
+      }
       this.watching.set(book, {
         typeset,
         drop: typeset.watch(() => {

@@ -138,6 +138,14 @@ test("an ask the engine has older text for sends that text, and the render draws
   assert.deepEqual(shelf.typed, [{ book: BOOK, note: NOTE, text: edited }]);
   assert.equal(told, 0);
 
+  // A second ask against newer text sends nothing: the keystroke that
+  // made it reaches the book on its own, and sending here again would
+  // cost a render the writer already paid for.
+  book.held.set(NOTE, TEXT);
+  assert.equal(await marks.marksIn(NOTE, `${edited}\n`), undefined);
+  assert.equal(shelf.typed.length, 1);
+  book.held.set(NOTE, edited);
+
   book.paint();
 
   assert.equal(told, 1, "the editor was told the parse moved on");
