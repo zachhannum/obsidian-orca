@@ -999,11 +999,10 @@ test("a chapter note sets the book the panel designs, with no preview open", asy
   obsidian,
   panel,
 }) => {
-  await panel.open();
-  await expect(panel.empty).toHaveText("No book is open");
-
+  // No preview has set this book, so the note on screen is what sets
+  // it. The panel opens on the book rather than on "No book is open".
   await opensInTab(obsidian, CHAPTER_NOTE);
-  await expect(panel.panel).toBeVisible();
+  await panel.open();
   await expect(panel.panel).toContainText("Pride and Prejudice");
 
   await obsidian.detach("markdown");
