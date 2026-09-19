@@ -57,17 +57,22 @@ export interface Marking {
   watch(note: string, parsed: () => void): () => void;
 }
 
-/** A mark as it sits on the text now, moved with every edit since. */
+/**
+ * The parts of a mark that move with the text: the run itself, a
+ * bracket a span run closes, and the line a setext heading opens on.
+ */
+type Part = "run" | "bracket" | "head";
+
+/** One part of a mark as it sits on the text now, moved with every edit since. */
 class Mark extends RangeValue {
   constructor(
     readonly mark: Drawn,
-    /** True for the bracket a span run closes, which comes off with it. */
-    readonly bracket: boolean,
+    readonly part: Part,
   ) {
     super();
   }
   override eq(other: Mark): boolean {
-    return other.mark === this.mark && other.bracket === this.bracket;
+    return other.mark === this.mark && other.part === this.part;
   }
 }
 
@@ -121,25 +126,36 @@ function decorations(state: EditorState): DecorationSet {
     open.add(state.doc.lineAt(range.head).number);
     open.add(state.doc.lineAt(range.anchor).number);
   }
+  const placed: { at: number; value: Mark }[] = [];
   for (let at = state.field(marks).iter(); at.value !== null; at.next()) {
-    const { mark } = at.value;
     const from = Math.min(at.from, state.doc.length);
-    const to = Math.min(at.to, state.doc.length);
-    if (from > to) continue;
+    if (from > Math.min(at.to, state.doc.length)) continue;
+    placed.push({ at: from, value: at.value });
+  }
+  // A setext heading opens above its underline, and both places moved
+  // with the text.
+  const heads = new Map<Drawn, number>();
+  for (const { at, value } of placed) {
+    if (value.part === "head") heads.set(value.mark, at);
+  }
+  for (const { at, value } of placed) {
+    const { mark, part } = value;
+    if (part === "head") continue;
     if (mark.form === "setext") {
-      found.push(...heading(state, mark, from, to));
+      found.push(...heading(state, mark, at, heads.get(mark) ?? at));
       continue;
     }
-    if (open.has(state.doc.lineAt(from).number)) continue;
+    if (open.has(state.doc.lineAt(at).number)) continue;
+    const to = Math.min(at + (mark.to - mark.from), state.doc.length);
     // The bracket a span run closes comes off with the run, so the
     // words keep their place and the brackets around them do not.
-    if (at.value.bracket) {
-      found.push({ from, to, value: Decoration.replace({}) });
+    if (part === "bracket") {
+      found.push({ from: at, to: at + 1, value: Decoration.replace({}) });
       continue;
     }
     if (mark.names === undefined) continue;
     found.push({
-      from,
+      from: at,
       to,
       value: Decoration.replace({ widget: new Chip(mark.names, mark.form) }),
     });
@@ -154,14 +170,14 @@ function decorations(state: EditorState): DecorationSet {
 function heading(
   state: EditorState,
   mark: Drawn,
-  from: number,
-  to: number,
+  under: number,
+  opens: number,
 ): { from: number; to: number; value: Decoration }[] {
   const level = mark.level ?? 2;
   const found: { from: number; to: number; value: Decoration }[] = [];
-  const under = state.doc.lineAt(from);
-  const opens = state.doc.lineAt(Math.min(mark.open ?? from, state.doc.length));
-  for (let line = opens.number; line < under.number; line += 1) {
+  const last = state.doc.lineAt(under);
+  const first = state.doc.lineAt(Math.min(opens, state.doc.length));
+  for (let line = first.number; line < last.number; line += 1) {
     const at = state.doc.line(line).from;
     found.push({
       from: at,
@@ -170,11 +186,10 @@ function heading(
     });
   }
   found.push({
-    from: under.from,
-    to: under.from,
+    from: last.from,
+    to: last.from,
     value: Decoration.line({ class: "orca-setext-under" }),
   });
-  void to;
   return found;
 }
 
@@ -188,20 +203,21 @@ function heading(
 export function marked(state: EditorState, settled: Settled): TransactionSpec | undefined {
   if (state.doc.toString() !== settled.against) return undefined;
   const ranges = settled.marks.flatMap((mark) => {
-    const found = [
-      new Mark(mark, false).range(
-        offsetOf(settled.against, mark.from),
-        offsetOf(settled.against, mark.to),
-      ),
-    ];
-    if (mark.form !== "span" || mark.open === undefined) return found;
+    const from = offsetOf(settled.against, mark.from);
+    const found = [new Mark(mark, "run").range(from, offsetOf(settled.against, mark.to))];
+    if (mark.open === undefined) return found;
+    const opens = offsetOf(settled.against, mark.open);
+    // A setext heading opens above its underline, and the line it
+    // opens on moves with the text like the underline does.
+    if (mark.form === "setext") {
+      return [new Mark(mark, "head").range(opens, opens), ...found];
+    }
+    if (mark.form !== "span") return found;
     // The run sat directly after the `]`, so the bracket that closes
     // the text is the character before the run.
-    const opens = offsetOf(settled.against, mark.open);
-    const closes = offsetOf(settled.against, mark.from) - 1;
     return [
-      new Mark(mark, true).range(opens, opens + 1),
-      new Mark(mark, true).range(closes, closes + 1),
+      new Mark(mark, "bracket").range(opens, opens + 1),
+      new Mark(mark, "bracket").range(from - 1, from),
       ...found,
     ];
   });
