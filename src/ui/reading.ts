@@ -220,6 +220,8 @@ function textNodes(element: HTMLElement): Text[] {
 /**
  * The post processor a book's notes are read through. A note no book
  * lists takes no marks, so reading view draws it as Obsidian draws it.
+ * A note whose parse the engine has not caught up with takes none
+ * either, and the pane is drawn again when that parse lands.
  */
 export function readingProcessor(marking: Marking) {
   return async (

@@ -40,10 +40,14 @@ export interface Settled {
 /** The parse the editor draws a note from, as the plugin answers it. */
 export interface Marking {
   /**
-   * The marks of a note a book reads, counted in `against`. Nothing
-   * for a note no book lists, and nothing while the engine holds
-   * other text than `against`, because a mark is bytes of the text it
-   * was read from.
+   * The marks of a note a book reads, counted in `against`. The book
+   * is set if it is not already, so the answer does not depend on
+   * which pane the reader visited last.
+   *
+   * Nothing for a note no book lists. Nothing yet where the engine
+   * holds other text than `against`, because a mark is bytes of the
+   * text it was read from: that text is sent, and `watch` tells the
+   * editor when the parse of it lands.
    */
   marksIn(note: string, against: string): Promise<Settled | undefined>;
   /**
