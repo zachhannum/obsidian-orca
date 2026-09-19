@@ -248,26 +248,34 @@ test("the preview opened after the chapter reads the chapter's own session", asy
   expect(await book.engines(BOOK)).toBe(1);
 });
 
-test("a book only a manuscript holds stops once the pane closes", async ({
+test("a manuscript holds the book it draws, and the close hands it to the grace", async ({
   book,
   manuscript,
+  note,
   vault,
 }) => {
-  // The engine outlives the last pane on the book by one grace, and
-  // the spec sits through it.
-  test.slow();
+  // This spec begins from a workspace where nothing else holds the
+  // book, because a preview or a book page left open anywhere holds
+  // its engine too. The fixtures put the panes back when it ends.
+  await book.close();
+  await note.close();
   await shelved(vault);
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
-  await expect.poll(async () => book.engines(BOOK)).toBe(1);
+
+  await expect.poll(async () => book.holds(BOOK)).toBe(1);
 
   await manuscript.close();
 
-  await book.stopped(BOOK);
+  // Nothing holds the book now, so the pool has it on the grace and
+  // stops it at the end of one.
+  await expect.poll(async () => book.holds(BOOK)).toBe(0);
 });
 
 // What this suite does not cover: a book that will not set, which is
 // asked about once and then drawn as plain text, since every book in
-// the fixture sets; and the ceiling stopping a book under an open
-// chapter, which the pool tests reach by lowering the ceiling.
+// the fixture sets; the grace itself and the ceiling, which run on a
+// clock and are proven in the pool tests against an injected one, so
+// what a spec here reads is the hold rather than the worker that
+// outlives it.

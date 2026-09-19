@@ -7,7 +7,7 @@
  */
 
 import { expect, type Locator, type Worker } from "@playwright/test";
-import { GRACE, engineName } from "@/engine/pool";
+import { engineName } from "@/engine/pool";
 import type { Stages } from "@/engine/session";
 import { PLUGIN } from "./launch";
 import { FLOATING, type Obsidian } from "./obsidian";
@@ -66,9 +66,6 @@ export interface Notice {
   /** The pages on screen under it. */
   pages: number;
 }
-
-/** The time a wait on a stopped engine allows over the grace itself. */
-const SLACK = 30_000;
 
 /** The trim the page is photographed at, in whole pixels. */
 const POSE = { width: 360, height: 540 };
@@ -246,14 +243,21 @@ export class Book {
   }
 
   /**
-   * Waits until no worker is running this book. An engine outlives the
-   * last pane on its book by one grace, so the wait covers that and
-   * what a loaded runner adds to it.
+   * The number of views holding this book on its engine. A book no
+   * view holds is on the grace, and the pool stops it at the end of
+   * one. The grace itself runs on a clock, so what a spec reads is
+   * the hold rather than the worker that outlives it.
    */
-  async stopped(book: string): Promise<void> {
-    await expect
-      .poll(async () => this.engines(book), { timeout: GRACE + SLACK })
-      .toBe(0);
+  async holds(book: string): Promise<number> {
+    return this.obsidian.page.evaluate(
+      ([id, path]) => {
+        const orca = window.app.plugins.plugins[id] as unknown as {
+          engines?: { held?: Map<string, number> };
+        };
+        return orca.engines?.held?.get(path) ?? 0;
+      },
+      [PLUGIN, book] as const,
+    );
   }
 
   /** The worker this book's engine runs in, of every worker the page has. */
