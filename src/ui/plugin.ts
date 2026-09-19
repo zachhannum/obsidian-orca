@@ -26,6 +26,7 @@ import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
 import { bookFromFolder, emptyBook } from "@/ui/make";
+import { notedBook } from "@/ui/manuscript";
 import { bookCss, withCss } from "@/book/css";
 import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
@@ -1314,6 +1315,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const on = [
           this.app.workspace.on("active-leaf-change", again),
           this.app.workspace.on("layout-change", again),
+          this.app.workspace.on("file-open", () => {
+            again();
+          }),
         ];
         return () => {
           for (const ref of on) this.app.workspace.offref(ref);
@@ -1352,7 +1356,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       drawn.find((pane) => pane === active) ??
       drawn.find((pane) => pane.typeset !== undefined) ??
       drawn[0];
-    if (view === undefined) return undefined;
+    if (view === undefined) return this.designedNote();
     const reading = view.typeset;
     if (reading !== undefined) return reading;
     // A pane still setting its book has none yet, so the run it is
@@ -1363,6 +1367,41 @@ export default class OrcaPlugin extends Plugin implements Limited {
       return await this.composer.opened(path);
     } catch {
       // The preview reports a book that will not set, not the panel.
+      return undefined;
+    }
+  }
+
+  /**
+   * The book a note on screen puts there. With no preview drawn, a note
+   * of a book is that book on screen, and the panel designs the session
+   * that book already has. The panel starts none and holds none: a book
+   * is set by a view that reads it, and the panel is not one.
+   */
+  private async designedNote(): Promise<Typeset | undefined> {
+    const { workspace } = this.app;
+    const index = this.notes();
+    const active = workspace.getActiveViewOfType(MarkdownView);
+    const book = notedBook(
+      workspace.getLeavesOfType(MARKDOWN_VIEW).map((leaf) => {
+        const view = leaf.view;
+        const file = view instanceof MarkdownView ? view.file : null;
+        return {
+          book:
+            file === null
+              ? undefined
+              : isBook(index, file)
+                ? file.path
+                : this.members.get(file.path)?.book,
+          shown: view.containerEl.isShown(),
+          active: view === active,
+        };
+      }),
+    );
+    if (book === undefined || this.composer === undefined) return undefined;
+    try {
+      return await this.composer.opened(book);
+    } catch {
+      // The view reading the book reports a book that will not set.
       return undefined;
     }
   }
