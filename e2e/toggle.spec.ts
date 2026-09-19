@@ -474,17 +474,23 @@ test("a note the book does not list, and a page orca wrote, turn neither pane", 
 test("a cold session says what the book is waiting on rather than showing an empty pane", async ({
   book,
   manuscript,
+  note,
   vault,
 }) => {
   // A book is typeset once a session, so the run puts this one back on
-  // the shelf before asking for the state that only a cold one shows. A
-  // chapter's words are an edit to the book on the engine, so it is the
-  // book note that takes it off the shelf.
+  // the shelf before asking for the state that only a cold one shows.
+  //
+  // Nothing of the book is open while it goes back on the shelf. A note
+  // of a book sets it, and an editor open on one sets it again the
+  // moment it is forgotten, so a book with a chapter open is never
+  // cold and the pane that opens on it never waits.
+  await book.close();
+  await note.close();
+  await manuscript.close();
   await vault.modify(BOOK, await vault.read(BOOK));
 
   const said = await book.settings(async () => {
-    await manuscript.open(CHAPTER);
-    await manuscript.asBook.click();
+    await book.open();
     await book.painted();
   });
 
@@ -493,7 +499,6 @@ test("a cold session says what the book is waiting on rather than showing an emp
   expect(last).toContain("Setting");
   expect(last).toContain("Pride and Prejudice");
   expect(last).toContain(`chapters of ${String(SECTIONS)}`);
-  expect(last).toContain("it will open at Chapter Twelve");
 });
 
 test("a swap from a page that opens mid-paragraph leads to the paragraph that page begins", async ({
@@ -567,4 +572,7 @@ test("a manuscript showing one row of a page over the page after turns to the pa
 // as it is written rather than read off the screen. Nor does it cover a
 // pane that turns when it should not have: the assertions that nothing
 // moved read the pane after the moves they follow have been answered,
-// which catches a turn already made rather than one still coming.
+// which catches a turn already made rather than one still coming. Nor
+// the line a cold pane says it will open at, which needs a book opened
+// from a note of it; a note of a book sets the book, so that pane is
+// never the one that waits.

@@ -77,9 +77,14 @@ test("typing in one chapter costs that chapter, and leaves the rest of the book 
 
   // The keystroke broke the lines of the chapter it landed in, and the
   // engine resolved style for that one source. Both counts rise by the
-  // section rather than by the book.
+  // section rather than by the book, which has five note sources and
+  // the generated matter besides.
+  //
+  // The first edit to a book costs two lines runs and every edit after
+  // it costs one. The baseline here is a book just set, so this counts
+  // the first.
   const after = await book.stages();
-  expect(after.lines).toEqual(before.lines + 1);
+  expect(after.lines).toEqual(before.lines + 2);
   expect(after.style).toEqual(before.style + 1);
 
   // Obsidian writes the note some time after the typing stops, and the

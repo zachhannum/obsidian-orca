@@ -209,10 +209,17 @@ its editor around these files and returns a URL. The artboard list and
   of it is open, and the grace and the ceiling stop that book as they
   stop any other. A note no book lists sets nothing and takes no
   marks.
-- An ask against text the engine has not read yet answers nothing and
-  sends that text, and the note is drawn again when the parse lands. A
-  mark is bytes of the text it was read from, so drawing one against
-  other text would eat the wrong characters.
+- An ask against text the engine has not read yet answers nothing. A
+  note open with unsaved words crosses once, because every keystroke
+  after that reaches the book on its own. The note is drawn again when
+  the parse lands. A mark is bytes of the text it was read from, so
+  drawing one against other text would eat the wrong characters.
+- A pane that opens on a book another surface is still setting is told
+  where that run got to, and hears the rest of it.
+- A reader turning from a chapter to the book waits for nothing, so
+  that pane says nothing about setting one. The book was set when the
+  chapter was drawn. A cold pane is what opening a book no note of is
+  open shows.
 
 ## What the site settles
 

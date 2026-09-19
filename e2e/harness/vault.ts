@@ -6,8 +6,9 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import type { EventRef } from "obsidian";
+import { PLUGIN } from "./launch";
 
 declare global {
   interface Window {
@@ -15,6 +16,33 @@ declare global {
     orcaWrites?: { at: string; count: number; ref: EventRef | undefined };
   }
 }
+
+/** The part of the plugin the restore asks what the engine has taken in. */
+interface Absorbing {
+  /** The book each note belongs to, by the note's vault path. */
+  members?: Map<string, { book: string }>;
+  composer?: {
+    /** The book at each path, set or still setting. */
+    books?: Map<string, Taking>;
+  };
+}
+
+/** One book on the engine, with the run that set it tagged once it lands. */
+type Taking = Promise<Took> & {
+  /** The book once its run ended: the typeset, or null for a run that failed. */
+  orcaTook?: Took | null | undefined;
+};
+
+/** One book the engine holds, as much of it as the restore reads. */
+interface Took {
+  /** True when no edit is waiting and no render is in flight. */
+  quiet: boolean;
+  /** The text a note last crossed as, which the restore makes match the fixture. */
+  textOf(note: string): string | undefined;
+}
+
+/** The state the restore waits out, which is every other answer than this one. */
+const QUIET = "quiet";
 
 export class Vault {
   private readonly touched = new Set<string>();
@@ -128,41 +156,33 @@ export class Vault {
 
   /**
    * Puts back every file the spec touched, and returns once Obsidian
-   * has indexed each one. A write the vault sees late is a change the
-   * next spec gets: the book note parses as no book for a moment, and a
-   * chapter crosses to the engine as an edit.
+   * has indexed each one and the engine has taken it in. A write the
+   * vault sees late is a change the next spec gets: the book note
+   * parses as no book for a moment, and a chapter crosses to the engine
+   * as an edit. The edit is coalesced, so the render it costs lands one
+   * wait after the write, inside the next spec unless it is waited out
+   * here.
+   *
+   * Obsidian writes a note it has open some time after the keystrokes
+   * that made it, and that write can land after the put-back. The
+   * put-back and the wait therefore run together until the vault and
+   * the engine both hold the fixture.
    */
   async restore(): Promise<void> {
+    const want = new Map<string, string | undefined>();
     for (const file of this.touched) {
-      const text = await readFile(path.join(this.fixture, file), "utf8").catch(
-        () => undefined,
+      want.set(
+        file,
+        await readFile(path.join(this.fixture, file), "utf8").catch(() => undefined),
       );
-      await this.page.evaluate(
-        async ({ at, text }) => {
-          const { vault, metadataCache } = window.app;
-          const { adapter } = vault;
-          const had = (await adapter.exists(at)) ? await adapter.read(at) : undefined;
-          if (had === text) return;
-          const indexed = new Promise<void>((resolve) => {
-            const ref: EventRef =
-              text === undefined
-                ? vault.on("delete", (gone) => {
-                    if (gone.path !== at) return;
-                    vault.offref(ref);
-                    resolve();
-                  })
-                : metadataCache.on("changed", (note, data) => {
-                    if (note.path !== at || data !== text) return;
-                    metadataCache.offref(ref);
-                    resolve();
-                  });
-          });
-          if (text === undefined) await adapter.remove(at);
-          else await adapter.write(at, text);
-          await indexed;
-        },
-        { at: file, text },
-      );
+    }
+    if (want.size > 0) {
+      await expect
+        .poll(async () => {
+          for (const [file, text] of want) await this.putBack(file, text);
+          return this.absorbed(want);
+        })
+        .toBe(QUIET);
     }
     for (const folder of this.folders) {
       await this.page.evaluate(async (at) => {
@@ -172,5 +192,88 @@ export class Vault {
     }
     this.touched.clear();
     this.folders.clear();
+  }
+
+  /**
+   * Writes one file back as the fixture has it, and returns once
+   * Obsidian has indexed it. A file already as the fixture has it is
+   * left alone, so running this again costs a read.
+   */
+  private async putBack(file: string, text: string | undefined): Promise<void> {
+    await this.page.evaluate(
+      async ({ at, text }) => {
+        const { vault, metadataCache } = window.app;
+        const { adapter } = vault;
+        const had = (await adapter.exists(at)) ? await adapter.read(at) : undefined;
+        if (had === text) return;
+        const indexed = new Promise<void>((resolve) => {
+          const ref: EventRef =
+            text === undefined
+              ? vault.on("delete", (gone) => {
+                  if (gone.path !== at) return;
+                  vault.offref(ref);
+                  resolve();
+                })
+              : metadataCache.on("changed", (note, data) => {
+                  if (note.path !== at || data !== text) return;
+                  metadataCache.offref(ref);
+                  resolve();
+                });
+        });
+        if (text === undefined) await adapter.remove(at);
+        else await adapter.write(at, text);
+        await indexed;
+      },
+      { at: file, text },
+    );
+  }
+
+  /**
+   * The state every book on the engine is in, which is {@link QUIET}
+   * once each one has crossed the notes the put-back wrote and has
+   * nothing waiting or rendering. Any other answer names the book or
+   * the note it is still waiting on, so a wait that runs out says what
+   * it was waiting for.
+   *
+   * A book still setting is read off a tag on its own run rather than
+   * waited on here, so one book that never lands is a wait that ends
+   * rather than a page call that hangs.
+   */
+  private async absorbed(want: Map<string, string | undefined>): Promise<string> {
+    return this.page.evaluate(
+      ({ id, notes, quiet }) => {
+        const orca = window.app.plugins.plugins[id] as Absorbing | undefined;
+        const books = orca?.composer?.books;
+        if (books === undefined) return quiet;
+        for (const [at, run] of books) {
+          if (!("orcaTook" in run)) {
+            run.orcaTook = undefined;
+            void run.then(
+              (took) => {
+                run.orcaTook = took;
+              },
+              () => {
+                run.orcaTook = null;
+              },
+            );
+          }
+          const took = run.orcaTook;
+          if (took === undefined) return `setting ${at}`;
+          // A run that failed set no book, so it holds nothing to wait on.
+          if (took === null) continue;
+          for (const [note, text] of notes) {
+            if (text === undefined) continue;
+            if (orca?.members?.get(note)?.book !== at) continue;
+            const crossed = took.textOf(note);
+            // A note this book never sent is a note it does not read.
+            if (crossed === undefined || crossed === text) continue;
+            return `stale ${note}`;
+          }
+          if (!took.quiet) return `rendering ${at}`;
+        }
+        return quiet;
+      },
+      { id: PLUGIN, notes: [...want], quiet: QUIET },
+    );
   }
 }
