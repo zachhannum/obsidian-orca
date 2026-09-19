@@ -6,7 +6,7 @@
 import { expect, type Locator } from "@playwright/test";
 import type { MarkdownView } from "obsidian";
 import { MARKDOWN, OPEN_PREVIEW } from "./note";
-import type { Obsidian } from "./obsidian";
+import { SCROLLER, type Obsidian } from "./obsidian";
 
 /** The caret in a manuscript, as the editor keeps it. */
 export interface Caret {
@@ -61,6 +61,52 @@ export class Manuscript {
       chips.map((chip) =>
         [...chip.children].map((part) => part.textContent ?? "").join(" ").trim(),
       ),
+    );
+  }
+
+  /**
+   * Every chip in the note, gathered by reading down it a pane at a
+   * time. Both
+   * views draw only the part of a note they have on screen, so the
+   * pane is scrolled through the note and the chips are gathered as
+   * they are drawn.
+   */
+  async chipsThrough(): Promise<string[]> {
+    return this.obsidian.page.evaluate(
+      async ({ type, scroller }) => {
+        const leaf = window.app.workspace.getLeavesOfType(type)[0];
+        const pane = leaf?.view.containerEl.querySelector(scroller);
+        if (pane === null || pane === undefined) throw new Error("no note is open");
+        const seen: string[] = [];
+        const gather = (): void => {
+          for (const chip of pane.querySelectorAll("[data-testid='orca-run']")) {
+            const said = [...chip.children]
+              .map((part) => part.textContent ?? "")
+              .join(" ")
+              .trim();
+            if (!seen.includes(said)) seen.push(said);
+          }
+        };
+        // The pane measures what it draws on the next frame, so each
+        // step waits for one before it reads.
+        const painted = async (): Promise<void> => {
+          await new Promise((settle) => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(settle);
+            });
+          });
+        };
+        const step = Math.max(pane.clientHeight / 2, 1);
+        for (let at = 0; at < pane.scrollHeight + step; at += step) {
+          pane.scrollTop = at;
+          await painted();
+          gather();
+        }
+        pane.scrollTop = 0;
+        await painted();
+        return seen;
+      },
+      { type: MARKDOWN, scroller: SCROLLER },
     );
   }
 

@@ -28,6 +28,7 @@ import {
 } from "@codemirror/view";
 import { editorInfoField } from "obsidian";
 import { offsetOf } from "@/book/place";
+import { chipElement } from "@/ui/chip";
 import type { Drawn, Form, Names } from "@/ui/runs";
 
 /** The marks of one note, and the text the engine counted their bytes in. */
@@ -52,11 +53,15 @@ export interface Marking {
 
 /** A mark as it sits on the text now, moved with every edit since. */
 class Mark extends RangeValue {
-  constructor(readonly mark: Drawn) {
+  constructor(
+    readonly mark: Drawn,
+    /** True for the bracket a span run closes, which comes off with it. */
+    readonly bracket: boolean,
+  ) {
     super();
   }
   override eq(other: Mark): boolean {
-    return other.mark === this.mark;
+    return other.mark === this.mark && other.bracket === this.bracket;
   }
 }
 
@@ -98,22 +103,6 @@ class Chip extends WidgetType {
   }
 }
 
-/** The chip's own markup, which reading view draws too. */
-export function chipElement(names: Names, form: Form): HTMLElement {
-  const chip = document.createElement("span");
-  chip.className = "orca-run";
-  chip.dataset["testid"] = "orca-run";
-  chip.dataset["form"] = form;
-  if (names.id === undefined && names.classes.length === 0) {
-    const said = chip.createEl("em");
-    said.setText(names.said);
-    return chip;
-  }
-  if (names.id !== undefined) chip.createEl("b").setText(`#${names.id}`);
-  for (const found of names.classes) chip.createEl("i").setText(`.${found}`);
-  return chip;
-}
-
 /**
  * The decorations for the marks on the text, with the cursor's own
  * line left as source. Live Preview shows the line the cursor is on
@@ -136,13 +125,13 @@ function decorations(state: EditorState): DecorationSet {
       continue;
     }
     if (open.has(state.doc.lineAt(from).number)) continue;
-    if (mark.names === undefined) continue;
-    // A span run's brackets are the mark's own text too: the words
-    // keep their place and the brackets around them come off.
-    if (mark.form === "span" && mark.open !== undefined) {
-      const bracket = Math.min(offsetOf(state.doc.toString(), mark.open), state.doc.length);
-      found.push({ from: bracket, to: bracket + 1, value: Decoration.replace({}) });
+    // The bracket a span run closes comes off with the run, so the
+    // words keep their place and the brackets around them do not.
+    if (at.value.bracket) {
+      found.push({ from, to, value: Decoration.replace({}) });
+      continue;
     }
+    if (mark.names === undefined) continue;
     found.push({
       from,
       to,
@@ -192,12 +181,24 @@ function heading(
  */
 export function marked(state: EditorState, settled: Settled): TransactionSpec | undefined {
   if (state.doc.toString() !== settled.against) return undefined;
-  const ranges = settled.marks.map((mark) =>
-    new Mark(mark).range(
-      offsetOf(settled.against, mark.from),
-      offsetOf(settled.against, mark.to),
-    ),
-  );
+  const ranges = settled.marks.flatMap((mark) => {
+    const found = [
+      new Mark(mark, false).range(
+        offsetOf(settled.against, mark.from),
+        offsetOf(settled.against, mark.to),
+      ),
+    ];
+    if (mark.form !== "span" || mark.open === undefined) return found;
+    // The run sat directly after the `]`, so the bracket that closes
+    // the text is the character before the run.
+    const opens = offsetOf(settled.against, mark.open);
+    const closes = offsetOf(settled.against, mark.from) - 1;
+    return [
+      new Mark(mark, true).range(opens, opens + 1),
+      new Mark(mark, true).range(closes, closes + 1),
+      ...found,
+    ];
+  });
   return { effects: remark.of(RangeSet.of(ranges, true)) };
 }
 

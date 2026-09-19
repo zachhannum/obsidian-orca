@@ -117,6 +117,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private previews: Previews | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
+
+  /** The editors waiting to be told a note's book is known, or set again. */
+  private readonly redraw = new Set<() => void>();
   /**
    * The book notes orca is writing a design into. The engine has the
    * sheet already, so the write is not a reason to set the book again,
@@ -496,6 +499,20 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
+   * Tells every open note to draw its marks again. Reading view has no
+   * editor to tell, so its panes are drawn again instead.
+   */
+  private remark(): void {
+    for (const ask of [...this.redraw]) ask();
+    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.getMode() === "preview") {
+        view.previewMode.rerender(true);
+      }
+    }
+  }
+
+  /**
    * The marks of a book's notes, as the engine settles them. A note
    * the book has not crossed yet takes none, and the editor asks
    * again when the render that carries it lands.
@@ -517,6 +534,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
         return settled;
       },
       watch: (note, parsed) => {
+        // A note opened before the vault has been read belongs to no
+        // book yet, so the editor is told when it does.
+        this.redraw.add(parsed);
         let drop: (() => void) | undefined;
         let dropped = false;
         void this.setting(note).then((typeset) => {
@@ -525,6 +545,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
         });
         return () => {
           dropped = true;
+          this.redraw.delete(parsed);
           drop?.();
         };
       },
@@ -581,6 +602,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (this.unloaded) return;
     this.members = membership(shelf, cacheLinks(this.app));
     this.swap();
+    this.remark();
   }
 
   /**

@@ -10,7 +10,8 @@
 
 import type { MarkdownPostProcessorContext } from "obsidian";
 import { byteOf, offsetOf } from "@/book/place";
-import { chipElement, type Marking } from "@/ui/manuscript";
+import { chipElement } from "@/ui/chip";
+import type { Marking } from "@/ui/manuscript";
 import type { Drawn } from "@/ui/runs";
 
 /** One section of a note, as Obsidian drew it. */
@@ -86,12 +87,17 @@ function replaceRun(element: HTMLElement, said: string, mark: Drawn): void {
   }
 }
 
-/** Takes the brackets off the text a span run closes. */
+/**
+ * Takes the brackets off the text a span run closes. The run sat
+ * directly after the `]`, so the text before it ends on one.
+ */
 function unbracket(before: Text): void {
   const value = before.nodeValue ?? "";
+  if (!value.endsWith("]")) return;
   const open = value.lastIndexOf("[");
   if (open < 0) return;
-  before.nodeValue = value.slice(0, open) + value.slice(open + 1);
+  before.nodeValue =
+    value.slice(0, open) + value.slice(open + 1, value.length - 1);
 }
 
 /**
