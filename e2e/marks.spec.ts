@@ -81,7 +81,10 @@ test("reading view draws the same chips, and the setext heading with no underlin
   await expect
     .poll(async () => manuscript.headings())
     .toEqual(["h1:The Parsonage", "h2:A Morning CallLongbourn, in the Spring"]);
-  await expect(manuscript.pane).not.toContainText("=============");
+  // The pane holds the markup of both views, so the underline the
+  // editor keeps is read for in the reader's own box.
+  await expect(manuscript.reader).not.toContainText("=============");
+  await expect(manuscript.reader).not.toContainText("{.plain #entail}");
 });
 
 test("a note no book lists is drawn as Obsidian draws it", async ({

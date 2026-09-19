@@ -19,6 +19,8 @@ export class Manuscript {
   readonly pane: Locator;
   /** The icon in a note's header that swaps the pane for the book. */
   readonly asBook: Locator;
+  /** The note as the reader has it. A pane holds the markup of both views. */
+  readonly reader: Locator;
   /** Every chip orca draws over one of fleuron's attribute runs. */
   readonly runs: Locator;
   /** Every heading orca draws over a setext underline in reading view. */
@@ -27,6 +29,7 @@ export class Manuscript {
   constructor(private readonly obsidian: Obsidian) {
     this.pane = this.obsidian.view(MARKDOWN);
     this.asBook = this.obsidian.action(OPEN_PREVIEW);
+    this.reader = this.pane.locator(SCROLLER.preview);
     this.runs = this.pane.getByTestId("orca-run");
     this.setext = this.pane.getByTestId("orca-setext");
   }
