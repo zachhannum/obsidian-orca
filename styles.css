@@ -2184,3 +2184,86 @@ input.orca-panel-filter {
   font-style: normal;
   color: #8a8a8a;
 }
+
+/* The chips over fleuron's attribute runs, in the editor and in
+   reading view. The book's own pages are set by the engine and take
+   none of this. */
+
+.orca-run {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--background-modifier-hover);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.orca-run b {
+  font-weight: var(--font-normal);
+  color: var(--text-accent);
+}
+
+.orca-run i {
+  font-style: normal;
+  color: var(--text-faint);
+}
+
+/* A run the engine read and cannot use is drawn as it was written. */
+.orca-run em {
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+/* An image's run names the picture above it rather than the prose
+   beside it. */
+.orca-run[data-form="image"] {
+  display: flex;
+  width: fit-content;
+  margin-top: 5px;
+}
+
+.orca-run[data-form="line"] {
+  display: flex;
+  width: fit-content;
+}
+
+.orca-run[data-form="heading"],
+.orca-run[data-form="span"] {
+  margin-left: 4px;
+}
+
+/* A setext heading, which Obsidian draws as a paragraph once it runs
+   to more than one line. */
+.cm-line.orca-setext {
+  line-height: 1.3;
+}
+
+.cm-line.orca-setext-1 {
+  font-family: var(--h1-font);
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+  font-style: var(--h1-style);
+  color: var(--h1-color);
+}
+
+.cm-line.orca-setext-2 {
+  font-family: var(--h2-font);
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+  font-style: var(--h2-style);
+  color: var(--h2-color);
+}
+
+/* The underline stays, because the line is still there to type on. */
+.cm-line.orca-setext-under {
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
+  color: var(--text-faint);
+}

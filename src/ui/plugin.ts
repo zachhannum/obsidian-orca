@@ -31,6 +31,9 @@ import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
+import { runExtensions, type Marking, type Settled } from "@/ui/manuscript";
+import { readingProcessor } from "@/ui/reading";
+import { candidates, drawn } from "@/ui/runs";
 import {
   documentPreviews,
   fontPlaces,
@@ -369,6 +372,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
         };
       }),
     );
+    // The marks fleuron reads and Obsidian draws as prose, in both of
+    // the views a note is read in.
+    const marking = this.marking();
+    this.registerEditorExtension(runExtensions(marking));
+    this.registerMarkdownPostProcessor((element, context) => {
+      void readingProcessor(marking)(element, context);
+    });
     this.watchBooks();
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file, _source, leaf) => {
@@ -483,6 +493,54 @@ export default class OrcaPlugin extends Plugin implements Limited {
     this.folio ??= this.addStatusBarItem();
     this.folio.dataset["testid"] = "orca-status";
     this.folio.setText(text);
+  }
+
+  /**
+   * The marks of a book's notes, as the engine settles them. A note
+   * the book has not crossed yet takes none, and the editor asks
+   * again when the render that carries it lands.
+   */
+  private marking(): Marking {
+    return {
+      marksIn: async (note, against) => {
+        const typeset = await this.setting(note);
+        if (typeset?.textOf(note) !== against) return undefined;
+        const asked = candidates(against);
+        const answers = await Promise.all(
+          asked.map(async (candidate) => {
+            const node = await typeset.session.nodeAt(note, candidate.byte);
+            if (node === undefined) return undefined;
+            return typeset.session.sourceOf(node);
+          }),
+        );
+        const settled: Settled = { against, marks: drawn(against, asked, answers) };
+        return settled;
+      },
+      watch: (note, parsed) => {
+        let drop: (() => void) | undefined;
+        let dropped = false;
+        void this.setting(note).then((typeset) => {
+          if (dropped) return;
+          drop = typeset?.watch(parsed);
+        });
+        return () => {
+          dropped = true;
+          drop?.();
+        };
+      },
+    };
+  }
+
+  /**
+   * The book a note belongs to, set. Drawing a note's marks needs the
+   * engine's parse of it, so opening a chapter sets the book it is in.
+   */
+  private async setting(note: string): Promise<Typeset | undefined> {
+    const member = this.members.get(note);
+    if (member === undefined || this.composer === undefined) return undefined;
+    // A book that will not set is the preview's report, not the
+    // editor's: the note is drawn as Obsidian draws it.
+    return this.composer.reading(member.book).catch(() => undefined);
   }
 
   /** Every markdown note, and its properties as the metadata cache has them. */
