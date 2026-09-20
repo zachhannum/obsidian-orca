@@ -1,6 +1,6 @@
 /**
- * The marks orca draws over a note: fleuron's attribute runs and its
- * setext headings.
+ * The marks orca draws over a note: fleuron's attribute runs, its
+ * setext headings, and the commands it breaks a page or a column at.
  *
  * A mark is a rule about a block, so the note is parsed and the rules
  * are matched against blocks rather than scanned out of lines. The
@@ -12,7 +12,14 @@ import type { SyntaxNode } from "@lezer/common";
 import { notes } from "@/book/dialect";
 
 /** The marks the editor draws. */
-export type Form = "line" | "heading" | "image" | "span" | "setext";
+export type Form =
+  | "line"
+  | "heading"
+  | "image"
+  | "span"
+  | "setext"
+  | "pagebreak"
+  | "columnbreak";
 
 /** The names a run gives the block it is written on. */
 export interface Names {
@@ -31,10 +38,10 @@ export interface Names {
 /** A mark, as characters of the note. */
 export interface Drawn {
   form: Form;
-  /** The mark's own text: the run, or a setext heading's underline. */
+  /** The mark's own text: the run, a setext underline, or a break's command. */
   from: number;
   to: number;
-  /** The names the chip draws, on every form but a setext heading. */
+  /** The names the chip draws, on the run forms alone. */
   names: Names | undefined;
   /** The heading's level, on a setext heading alone. */
   level: 1 | 2 | undefined;
@@ -47,6 +54,9 @@ export interface Drawn {
 
 /** The blocks nothing inside is read as prose. */
 const OPAQUE = new Set(["Frontmatter", "FencedCode", "CodeBlock", "HTMLBlock", "Comment"]);
+
+/** The commands fleuron breaks a page or a column at. */
+const BREAK = /^\\(pagebreak|columnbreak)[ \t]*$/;
 
 /** The blocks a run can be written on. */
 const PROSE = new Set(["Paragraph", "TableCell"]);
@@ -98,6 +108,11 @@ export function marksIn(text: string): Drawn[] {
  */
 function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
   const said = text.slice(node.from, node.to);
+  const broke = breaks(text, node, said);
+  if (broke !== undefined) {
+    found.push(broke);
+    return;
+  }
   const run = onlyRun(said);
   if (run !== undefined) {
     // An attribute line is a paragraph whose whole content is one
@@ -128,6 +143,26 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
     return;
   }
   found.push(...spansIn(text, node));
+}
+
+/**
+ * The break a paragraph is, where the paragraph is one command at the
+ * head of its own line. A command written anywhere else is prose, and
+ * fleuron paints it as the text it was written as.
+ */
+function breaks(text: string, node: SyntaxNode, said: string): Drawn | undefined {
+  if (node.name !== "Paragraph") return undefined;
+  if (node.from > 0 && text[node.from - 1] !== "\n") return undefined;
+  const command = BREAK.exec(said)?.[1];
+  if (command === undefined) return undefined;
+  return {
+    form: command === "pagebreak" ? "pagebreak" : "columnbreak",
+    from: node.from,
+    to: node.from + said.trimEnd().length,
+    names: undefined,
+    level: undefined,
+    open: undefined,
+  };
 }
 
 /** The run an image alone on its line takes, which names that image. */

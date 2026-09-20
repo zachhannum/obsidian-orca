@@ -1,7 +1,7 @@
 /**
  * A book's notes as the reader has them. Reading view draws the same
- * chips the editor draws, over the same marks, so a chapter reads the
- * same whichever view it is open in.
+ * marks the editor draws, so a chapter reads the same whichever view
+ * it is open in.
  *
  * Obsidian hands over one section of the note at a time, with the
  * lines it was drawn from. The note is parsed here and now, so a
@@ -10,7 +10,7 @@
 
 import type { MarkdownPostProcessorContext } from "obsidian";
 import { marksIn, type Drawn } from "@/book/marks";
-import { chipElement } from "@/ui/chip";
+import { breakElement, chipElement } from "@/ui/chip";
 import type { Marking } from "@/ui/marks";
 
 /** One section of a note, as Obsidian drew it. */
@@ -58,8 +58,9 @@ export function repeatedOn(section: Section, marks: readonly Drawn[]): boolean {
 
 /**
  * Draws a section's marks. The chip goes where the run was written,
- * the run's own text comes off, and a setext underline is not drawn
- * at all, because reading view has no line to type on.
+ * the run's own text comes off, a break takes the place of the
+ * command, and a setext underline is not drawn at all, because
+ * reading view has no line to type on.
  */
 export function drawSection(
   element: HTMLElement,
@@ -75,11 +76,23 @@ export function drawSection(
       redrawSetext(element, section, mark);
       continue;
     }
+    if (mark.form === "pagebreak" || mark.form === "columnbreak") {
+      redrawBreak(element, section, mark);
+      continue;
+    }
     if (mark.names === undefined) continue;
     const said = runText(section, mark);
     if (said === undefined) continue;
     replaceRun(element, said, mark);
   }
+}
+
+/** Puts the rule a break draws where Obsidian drew the command as text. */
+function redrawBreak(element: HTMLElement, section: Section, mark: Drawn): void {
+  const said = section.text.slice(mark.from, mark.to).trim();
+  const at = drawnText(element).indexOf(said);
+  if (at < 0) return;
+  takeOut(element, at, at + said.length, breakElement(mark.form));
 }
 
 /** The run's own text, as it was written in the note. */

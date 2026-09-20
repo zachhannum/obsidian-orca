@@ -1,6 +1,7 @@
 /**
- * The chip that names an attribute run. One drawing serves both of a
- * note's views, so a chapter reads the same whichever it is open in.
+ * The marks a note draws: the chip that names an attribute run, and
+ * the rule a break command draws. One drawing serves both of a note's
+ * views, so a chapter reads the same whichever it is open in.
  */
 
 import type { Form, Names } from "@/book/marks";
@@ -22,4 +23,17 @@ export function chipElement(names: Names, form: Form): HTMLElement {
   if (names.id !== undefined) chip.createEl("b").setText(`#${names.id}`);
   for (const found of names.classes) chip.createEl("i").setText(`.${found}`);
   return chip;
+}
+
+/**
+ * The rule a break draws across the measure, named for the command it
+ * was written as.
+ */
+export function breakElement(form: Form): HTMLElement {
+  const rule = document.createElement("span");
+  rule.className = "orca-break";
+  rule.dataset["testid"] = "orca-break";
+  rule.dataset["form"] = form;
+  rule.createEl("i").setText(form === "pagebreak" ? "page break" : "column break");
+  return rule;
 }

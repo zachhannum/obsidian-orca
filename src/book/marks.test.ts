@@ -63,6 +63,28 @@ test("a setext heading is drawn at the level of its underline", () => {
   assert.deepEqual(covers("Chapter One\n---\n"), ['setext "---"']);
 });
 
+test("a break command alone on its line is the break fleuron reads", () => {
+  assert.deepEqual(covers("A paragraph.\n\n\\pagebreak\n\nAnother.\n"), [
+    'pagebreak "\\\\pagebreak"',
+  ]);
+  assert.deepEqual(covers("A paragraph.\n\n\\columnbreak\n\nAnother.\n"), [
+    'columnbreak "\\\\columnbreak"',
+  ]);
+});
+
+test("a break command on the last line of a note with no newline is a break", () => {
+  assert.deepEqual(covers("A paragraph.\n\n\\pagebreak"), ['pagebreak "\\\\pagebreak"']);
+});
+
+test("a break command indented four spaces is the code it is", () => {
+  assert.deepEqual(covers("A paragraph.\n\n    \\pagebreak\n"), []);
+});
+
+test("a break command written inside a paragraph is prose", () => {
+  assert.deepEqual(covers("A paragraph \\pagebreak and more.\n"), []);
+  assert.deepEqual(covers("A paragraph.\n\\pagebreak\nAnd more.\n"), []);
+});
+
 test("a brace run over a row of dashes names the scene break under it", () => {
   assert.deepEqual(covers("A paragraph.\n\n{.scene}\n---\n"), ['line "{.scene}"']);
 });
@@ -212,8 +234,25 @@ function candidates(text: string): Candidate[] {
   return found;
 }
 
-/** The candidates a whole line makes: an attribute line, an underline, an image run, a heading run. */
+/** The candidates a whole line makes: a break, an attribute line, an underline, an image run, a heading run. */
 function onLine(line: Line): Candidate[] {
+  const command = /^\\(?:pagebreak|columnbreak)[ \t]*$/.exec(line.text)?.[0];
+  if (command !== undefined) {
+    // The ask is made where the line opens, because a command under
+    // four spaces is a code block whose own span begins at the
+    // command and would read as a break.
+    return [
+      {
+        form: command.trimEnd() === "\\pagebreak" ? "pagebreak" : "columnbreak",
+        byte: line.from,
+        from: line.from,
+        to: byteIn(line, line.text.trimEnd().length),
+        level: undefined,
+        open: undefined,
+        inside: "",
+      },
+    ];
+  }
   // A blockquote holds attribute lines too, so the markers come off
   // before the shape is read.
   const opened = /^[\s>]*/.exec(line.text)?.[0].length ?? 0;
@@ -363,6 +402,14 @@ function settled(text: string, candidate: Candidate, span: NodeSource): Drawn | 
       return span.start <= candidate.byte && span.end >= to && span.start < from
         ? { form, from, to, names: names(), level: undefined, open: undefined }
         : undefined;
+    // A break's node is the command and the newline after it. A
+    // command on the last line of a note has no newline to cover, so
+    // its span ends where the command does.
+    case "pagebreak":
+    case "columnbreak":
+      return span.start === from && span.end >= to
+        ? { form, from, to, names: undefined, level: undefined, open: undefined }
+        : undefined;
     // A span run's node is the bracketed text and the run together.
     case "span":
       return span.start === candidate.open && span.end === to
@@ -418,7 +465,17 @@ test("orca and the engine agree on the forms the fixture chapter is written in",
   assert.deepEqual(read, await engineMarks(name, text));
   assert.deepEqual(
     read.map(([form]) => form),
-    ["line", "setext", "heading", "setext", "span", "line", "image"],
+    [
+      "line",
+      "setext",
+      "heading",
+      "pagebreak",
+      "setext",
+      "span",
+      "line",
+      "columnbreak",
+      "image",
+    ],
   );
 });
 
@@ -491,6 +548,12 @@ test("orca and the engine agree on every shape written awkwardly", async () => {
     "| a | b |\n| - | - |\n| [one]{.a} | 2 |\n",
     "A paragraph with {.one} inside.\n",
     "{.one} at the head of a paragraph.\n",
+    "A paragraph.\n\n\\pagebreak\n\nAnother.\n",
+    "A paragraph.\n\n\\columnbreak\n\nAnother.\n",
+    "A paragraph.\n\n\\pagebreak",
+    "A paragraph.\n\n    \\pagebreak\n",
+    "A paragraph \\pagebreak and more.\n",
+    "\\pagebreak\n\nA paragraph.\n",
   ];
 
   const apart: string[] = [];
@@ -521,10 +584,12 @@ test("a run on the line below an image is a block of its own", () => {
   assert.deepEqual(covers("![A plate](plate.png)\n{.full}\n"), []);
 });
 
-// What this file does not cover: `\\pagebreak` and `\\columnbreak`,
-// which issue 169 draws. Three shapes the oracle cannot judge are
-// pinned above as orca's own behavior instead, because a span alone
-// does not tell a heading from a paragraph that opens with a hash.
+// What this file does not cover: a break command indented under four
+// spaces, or written inside a blockquote or a list item, which
+// fleuron reads as a break and orca leaves as the text it was written
+// as. Three shapes the oracle cannot judge are pinned above as orca's
+// own behavior instead, because a span alone does not tell a heading
+// from a paragraph that opens with a hash.
 // The attributes of a setext heading whose whole text is one brace
 // run take no chip, and neither does a second run held above a block
 // the first one already named.
