@@ -3,7 +3,7 @@
  * note's views, so a chapter reads the same whichever it is open in.
  */
 
-import type { Form, Names } from "@/ui/runs";
+import type { Form, Names } from "@/book/marks";
 
 /**
  * The chip's markup: the id, then each class in written order. A run

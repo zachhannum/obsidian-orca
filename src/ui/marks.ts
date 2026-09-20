@@ -2,21 +2,13 @@
  * The marks the editor draws over a note of a book: the chips over
  * fleuron's attribute runs, and the headings over a setext underline.
  *
- * The marks come from the engine's parse of the note, which arrives
- * after the keystroke that changed it. A chip already on the text is
- * moved with the typing until the next parse lands, so a label does
- * not flicker off while the author writes.
+ * The marks are orca's own parse of the text the editor holds, so a
+ * chip is drawn on the keystroke that made it. Nothing is counted in
+ * other text than the text it was read from, and nothing waits on a
+ * render.
  */
 
-import {
-  RangeSet,
-  RangeValue,
-  StateEffect,
-  StateField,
-  type EditorState,
-  type Extension,
-  type TransactionSpec,
-} from "@codemirror/state";
+import { StateEffect, StateField, type EditorState, type Extension } from "@codemirror/state";
 import {
   Decoration,
   EditorView,
@@ -26,70 +18,23 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { editorInfoField } from "obsidian";
-import { offsetOf } from "@/book/place";
+import { marksIn, type Drawn, type Form, type Names } from "@/book/marks";
 import { chipElement } from "@/ui/chip";
-import type { Drawn, Form, Names } from "@/ui/runs";
 
-/** The marks of one note, and the text the engine counted their bytes in. */
-export interface Settled {
-  /** The text the note last crossed to the engine as. */
-  against: string;
-  marks: readonly Drawn[];
-}
-
-/** The parse the editor draws a note from, as the plugin answers it. */
+/** The books a note is drawn against, as much of them as the editor reads. */
 export interface Marking {
-  /**
-   * The marks of a note a book reads, counted in `against`. Nothing
-   * for a note no book lists, and nothing while the engine holds
-   * other text than `against`, because a mark is bytes of the text it
-   * was read from.
-   */
-  marksIn(note: string, against: string): Promise<Settled | undefined>;
-  /**
-   * The marks already settled for a note, without asking again.
-   * Reading view draws a section the moment it is built, so a section
-   * scrolled back into view is drawn from the parse already held.
-   */
-  marksNow(note: string, against: string): Settled | undefined;
-  /** Told when the book's parse of a note moved on, so the editor asks again. */
-  watch(note: string, parsed: () => void): () => void;
+  /** Whether a book lists this note. A note no book lists takes no marks. */
+  member(note: string): boolean;
+  /** Told when the books changed, so every open note is read again. */
+  watch(reread: () => void): () => void;
 }
 
-/**
- * The parts of a mark that move with the text: the run itself, a
- * bracket a span run closes, and the line a setext heading opens on.
- */
-type Part = "run" | "bracket" | "head" | "text";
-
-/** One part of a mark as it sits on the text now, moved with every edit since. */
-class Mark extends RangeValue {
-  constructor(
-    readonly mark: Drawn,
-    readonly part: Part,
-  ) {
-    super();
-  }
-  override eq(other: Mark): boolean {
-    return other.mark === this.mark && other.part === this.part;
-  }
+/** A placed decoration, before the set is built. */
+interface Placed {
+  from: number;
+  to: number;
+  value: Decoration;
 }
-
-/** Replaces every mark with the marks of a parse. */
-const remark = StateEffect.define<RangeSet<Mark>>();
-
-/**
- * The marks on the text. A parse replaces them; anything else moves
- * them with the edit, so a chip stays on its run while the author
- * types.
- */
-const marks = StateField.define<RangeSet<Mark>>({
-  create: () => RangeSet.empty,
-  update(set, tr) {
-    for (const effect of tr.effects) if (effect.is(remark)) return effect.value;
-    return set.map(tr.changes);
-  },
-});
 
 /** The chip that names a run, drawn where the run was written. */
 class Chip extends WidgetType {
@@ -114,57 +59,77 @@ class Chip extends WidgetType {
 }
 
 /**
- * The decorations for the marks on the text, with the cursor's own
- * line left as source. Live Preview shows the line the cursor is on
- * as it was written, and a chip is a mark like any other.
+ * The editor extension a book's notes are drawn with. A note no book
+ * lists takes no marks, so it is drawn as Obsidian draws it.
  */
-function decorations(state: EditorState): DecorationSet {
-  const found: { from: number; to: number; value: Decoration }[] = [];
+export function runExtensions(marking: Marking): Extension[] {
+  /** Reads the note again, for a note whose books changed under it. */
+  const reread = StateEffect.define<void>();
+
+  const read = (state: EditorState): readonly Drawn[] => {
+    const note = state.field(editorInfoField, false)?.file?.path;
+    if (note === undefined || !marking.member(note)) return [];
+    return marksIn(state.doc.toString());
+  };
+
+  const marks = StateField.define<readonly Drawn[]>({
+    create: read,
+    update(held, tr) {
+      if (tr.docChanged || tr.effects.some((effect) => effect.is(reread))) {
+        return read(tr.state);
+      }
+      return held;
+    },
+  });
+
+  return [
+    marks,
+    EditorView.decorations.compute([marks, "selection"], (state) =>
+      decorations(state, state.field(marks)),
+    ),
+    ViewPlugin.define((view) => new Drawing(view, marking, () => view.dispatch({ effects: reread.of() }))),
+  ];
+}
+
+/**
+ * The decorations for a note's marks, with the cursor's own line left
+ * as source. Live Preview shows the line the cursor is on as it was
+ * written, and a chip is a mark like any other.
+ */
+function decorations(state: EditorState, marks: readonly Drawn[]): DecorationSet {
+  const found: Placed[] = [];
   const open = new Set<number>();
   for (const range of state.selection.ranges) {
     open.add(state.doc.lineAt(range.head).number);
     open.add(state.doc.lineAt(range.anchor).number);
   }
-  const placed: { at: number; to: number; value: Mark }[] = [];
-  for (let sits = state.field(marks).iter(); sits.value !== null; sits.next()) {
-    const at = Math.min(sits.from, state.doc.length);
-    const to = Math.min(sits.to, state.doc.length);
-    if (at > to) continue;
-    placed.push({ at, to, value: sits.value });
-  }
-  // A setext heading opens above its underline, and both places moved
-  // with the text.
-  const heads = new Map<Drawn, number>();
-  for (const { at, value } of placed) {
-    if (value.part === "head") heads.set(value.mark, at);
-  }
-  for (const { at, to, value } of placed) {
-    const { mark, part } = value;
-    if (part === "head") continue;
+  for (const mark of marks) {
+    if (mark.to > state.doc.length) continue;
     if (mark.form === "setext") {
-      found.push(...heading(state, mark, at, heads.get(mark) ?? at));
+      found.push(...heading(state, mark));
       continue;
     }
-    if (open.has(state.doc.lineAt(at).number)) continue;
-    // The bracket a span run closes comes off with the run, so the
-    // words keep their place and the brackets around them do not.
-    if (part === "bracket") {
-      found.push({ from: at, to, value: Decoration.replace({}) });
-      continue;
-    }
-    // The brackets are gone, and Obsidian colours what they held the
-    // way it colours a link. The words are prose, so they read as it.
-    if (part === "text") {
-      found.push({ from: at, to, value: Decoration.mark({ class: "orca-span" }) });
-      continue;
+    if (open.has(state.doc.lineAt(mark.from).number)) continue;
+    if (mark.form === "span" && mark.open !== undefined) {
+      // The brackets come off with the run, so the words keep their
+      // place. Obsidian colours what the brackets held the way it
+      // colours a link, and the words are prose, so they read as it.
+      found.push({ from: mark.open, to: mark.open + 1, value: Decoration.replace({}) });
+      found.push({
+        from: mark.open + 1,
+        to: mark.from - 1,
+        value: Decoration.mark({ class: "orca-span" }),
+      });
+      found.push({ from: mark.from - 1, to: mark.from, value: Decoration.replace({}) });
     }
     if (mark.names === undefined) continue;
     found.push({
-      from: at,
-      to,
+      from: mark.from,
+      to: mark.to,
       value: Decoration.replace({ widget: new Chip(mark.names, mark.form) }),
     });
   }
+  found.sort((one, two) => one.from - two.from || one.to - two.to);
   return Decoration.set(
     found.map(({ from, to, value }) => value.range(from, to)),
     true,
@@ -172,16 +137,11 @@ function decorations(state: EditorState): DecorationSet {
 }
 
 /** The lines a setext heading is drawn over, and its underline. */
-function heading(
-  state: EditorState,
-  mark: Drawn,
-  under: number,
-  opens: number,
-): { from: number; to: number; value: Decoration }[] {
+function heading(state: EditorState, mark: Drawn): Placed[] {
   const level = mark.level ?? 2;
-  const found: { from: number; to: number; value: Decoration }[] = [];
-  const last = state.doc.lineAt(under);
-  const first = state.doc.lineAt(Math.min(opens, state.doc.length));
+  const found: Placed[] = [];
+  const last = state.doc.lineAt(mark.from);
+  const first = state.doc.lineAt(Math.min(mark.open ?? mark.from, state.doc.length));
   for (let line = first.number; line < last.number; line += 1) {
     const at = state.doc.line(line).from;
     found.push({
@@ -199,115 +159,35 @@ function heading(
 }
 
 /**
- * The transaction that puts a parse's marks on the text. The bytes
- * are counted in the text the note crossed to the engine as, so the
- * marks go on only while the editor holds that text. Otherwise the
- * author typed past the parse, and the marks already on the text stay
- * until the parse for the new text lands.
+ * Reads a note again when the books changed under it, or when the
+ * pane turns to another note. The text's own changes are read by the
+ * field, which the editor updates before it paints.
  */
-export function marked(state: EditorState, settled: Settled): TransactionSpec | undefined {
-  if (state.doc.toString() !== settled.against) return undefined;
-  const ranges = settled.marks.flatMap((mark) => {
-    const from = offsetOf(settled.against, mark.from);
-    const found = [new Mark(mark, "run").range(from, offsetOf(settled.against, mark.to))];
-    if (mark.open === undefined) return found;
-    const opens = offsetOf(settled.against, mark.open);
-    // A setext heading opens above its underline, and the line it
-    // opens on moves with the text like the underline does.
-    if (mark.form === "setext") {
-      return [new Mark(mark, "head").range(opens, opens), ...found];
-    }
-    if (mark.form !== "span") return found;
-    // The run sat directly after the `]`, so the bracket that closes
-    // the text is the character before the run.
-    return [
-      new Mark(mark, "bracket").range(opens, opens + 1),
-      new Mark(mark, "text").range(opens + 1, from - 1),
-      new Mark(mark, "bracket").range(from - 1, from),
-      ...found,
-    ];
-  });
-  return { effects: remark.of(RangeSet.of(ranges, true)) };
-}
-
-/**
- * The editor extension a book's notes are drawn with. A note no book
- * lists takes no marks, so it is drawn as Obsidian draws it.
- */
-export function runExtensions(marking: Marking): Extension[] {
-  return [
-    marks,
-    EditorView.decorations.compute([marks, "selection", "doc"], decorations),
-    ViewPlugin.define((view) => new Drawing(view, marking)),
-  ];
-}
-
-/** Asks the engine for a note's marks, and puts each answer on the text. */
 class Drawing {
   private note: string | undefined;
-  private asking = false;
-  private again = false;
-  private drop: (() => void) | undefined;
+  private readonly drop: () => void;
 
   constructor(
-    private readonly view: EditorView,
-    private readonly marking: Marking,
+    view: EditorView,
+    marking: Marking,
+    private readonly again: () => void,
   ) {
-    this.turned();
+    this.note = view.state.field(editorInfoField, false)?.file?.path;
+    this.drop = marking.watch(() => {
+      this.again();
+    });
   }
 
   update(update: ViewUpdate): void {
     const note = update.state.field(editorInfoField, false)?.file?.path;
-    if (note !== this.note) {
-      this.turned();
-      return;
-    }
-    if (update.docChanged) this.ask();
+    if (note === this.note) return;
+    this.note = note;
+    // The pane turned to another note, and the field was made against
+    // the one before it.
+    this.again();
   }
 
   destroy(): void {
-    this.drop?.();
-  }
-
-  /** Follows the note the pane now holds, and asks about it. */
-  private turned(): void {
-    const note = this.view.state.field(editorInfoField, false)?.file?.path;
-    this.note = note;
-    this.drop?.();
-    this.drop = undefined;
-    if (note !== undefined) {
-      this.drop = this.marking.watch(note, () => {
-        this.ask();
-      });
-    }
-    this.ask();
-  }
-
-  private ask(): void {
-    if (this.asking) {
-      this.again = true;
-      return;
-    }
-    this.asking = true;
-    void this.asked().finally(() => {
-      this.asking = false;
-      if (this.again) {
-        this.again = false;
-        this.ask();
-      }
-    });
-  }
-
-  private async asked(): Promise<void> {
-    const note = this.view.state.field(editorInfoField, false)?.file?.path;
-    this.note = note;
-    if (note === undefined) return;
-    const against = this.view.state.doc.toString();
-    const settled = await this.marking
-      .marksIn(note, against)
-      .catch(() => undefined);
-    if (settled === undefined) return;
-    const spec = marked(this.view.state, settled);
-    if (spec !== undefined) this.view.dispatch(spec);
+    this.drop();
   }
 }
