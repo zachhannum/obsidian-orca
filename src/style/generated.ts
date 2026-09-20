@@ -350,10 +350,10 @@ function boxes(content: ReadonlyMap<Box, Content>, headers: HeaderDesign): Decla
   return BOXES.flatMap((box) => {
     const found = content.get(box);
     if (found === undefined) return [];
-    const printed = boxed(box, "content", found.content, found.keys);
+    const prints = boxed(box, "content", found.content, found.keys);
     return found.content === "none"
-      ? [printed]
-      : [printed, ...inBox(box, headLines(headers))];
+      ? [prints]
+      : [prints, ...inBox(box, headLines(headers))];
   });
 }
 
