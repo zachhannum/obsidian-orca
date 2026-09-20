@@ -203,8 +203,7 @@ its editor around these files and returns a URL. The artboard list and
 - `\pagebreak` and `\columnbreak` at the head of a line of their own
   are drawn as a rule across the measure, named for the command they
   came from. The page break's rule is solid and the column break's is
-  dashed, because a column break moves the text to the next column
-  rather than the next page.
+  dashed, so the two read apart at a glance.
 - A break command indented four spaces is the code block it is, and
   one written inside a paragraph is the prose fleuron paints.
 - Where a run is comes from orca's own parse of the note, which reads

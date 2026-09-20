@@ -2301,8 +2301,7 @@ input.orca-panel-filter {
   white-space: nowrap;
 }
 
-/* A column break is the lighter of the two, because it moves the
-   text to the next column rather than the next page. */
+/* The two rules read apart at a glance. */
 .orca-break[data-form="columnbreak"]::before,
 .orca-break[data-form="columnbreak"]::after {
   border-top-style: dashed;

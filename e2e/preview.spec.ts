@@ -2,7 +2,7 @@ import { NEXT_CHAPTER, PREVIOUS_CHAPTER } from "./harness/book";
 import { expect, test } from "./harness/test";
 
 /** The pages the fixture book sets to. */
-const PAGES = 17;
+const PAGES = 19;
 
 /** The book's title, which its title page prints. */
 const OPENING = "Pride and Prejudice";
@@ -27,7 +27,7 @@ const FIRST = "Title page";
 const LAST = "Acknowledgements";
 
 /** The page the fixture's last section opens on. */
-const BACK = 17;
+const BACK = 19;
 
 /** A page late in the second chapter, two turns before the last section. */
 const LATE = BACK - 2;
