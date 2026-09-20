@@ -30,6 +30,10 @@ wins and the quick fix waits for its own PR.
 - The three invariants (see README): the panel never writes the
   author's CSS; the engine is the only linter; preview and export come
   from one session.
+- `book/` parses a note to draw the editor's marks, and that parse
+  settles no page. The engine reads the book, and a chip that
+  disagrees with it is wrong in the editor alone. A test holds the two
+  parses against each other over the fixture vault.
 - Work an engine change blocks carries `blocked: fleuron` and names the
   fleuron issue it waits on. Orca does not work around a missing engine
   feature by growing a second implementation of it.
