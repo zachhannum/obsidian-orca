@@ -2273,3 +2273,36 @@ input.orca-panel-filter {
 .cm-line .orca-span {
   color: var(--text-normal);
 }
+
+/* The rule a break command draws across the measure, named for the
+   command it came from in the chips' own vocabulary. */
+
+.orca-break {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  color: var(--text-faint);
+}
+
+.orca-break::before,
+.orca-break::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.orca-break i {
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* The two rules read apart at a glance. */
+.orca-break[data-form="columnbreak"]::before,
+.orca-break[data-form="columnbreak"]::after {
+  border-top-style: dashed;
+}

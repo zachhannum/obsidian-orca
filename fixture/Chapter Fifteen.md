@@ -27,6 +27,8 @@ marry; and in seeking a reconciliation with the Longbourn family he had a
 wife in view, as he meant to choose one of the daughters, if he found
 them as handsome and amiable as they were represented by common report.
 
+\pagebreak
+
 A Morning Call
 Longbourn, in the Spring
 ------------------------
@@ -39,5 +41,7 @@ table.
 {.epigraph}
 > The business of her life was to get her daughters married; its solace
 > was visiting and news.
+
+\columnbreak
 
 ![[device.png]]{.plate}

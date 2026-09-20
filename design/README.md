@@ -181,9 +181,10 @@ its editor around these files and returns a URL. The artboard list and
 - Inspect mode waits on fleuron to find the box under a point and to
   return the rules that matched it and its computed values.
 - A book's notes carry fleuron's markdown, and the editor draws the
-  marks Obsidian draws as prose: an attribute run, and a setext
-  heading of more than one line. Everything else a note is written in
-  is Obsidian's own, unmarked, because the engine is the only linter.
+  marks Obsidian draws as prose: an attribute run, a setext heading of
+  more than one line, and a break command. Everything else a note is
+  written in is Obsidian's own, unmarked, because the engine is the
+  only linter.
 - A run is drawn as a chip that names it the way inspect names a box:
   the id first, as `#opening`, then each class in written order, as
   `.epigraph`, with the id accented and the classes faint. The braces
@@ -199,6 +200,12 @@ its editor around these files and returns a URL. The artboard list and
 - A setext heading is drawn at the level of its underline. The editor
   keeps the underline, faint, because the line is still there to type
   on. Reading view draws no underline at all.
+- `\pagebreak` and `\columnbreak` at the head of a line of their own
+  are drawn as a rule across the measure, named for the command they
+  came from. The page break's rule is solid and the column break's is
+  dashed, so the two read apart at a glance.
+- A break command indented four spaces is the code block it is, and
+  one written inside a paragraph is the prose fleuron paints.
 - Where a run is comes from orca's own parse of the note, which reads
   the markdown fleuron reads. A run orca cannot place stays prose.
   Obsidian's outline and heading search use Obsidian's parse, so a

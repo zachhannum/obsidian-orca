@@ -11,7 +11,7 @@ const CHAPTER = "Chapter Twelve";
 const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 958;
+const BOOK_WORDS = 960;
 
 test("the page's `Open preview` opens its book, under an icon of the preview's own", async ({
   book,

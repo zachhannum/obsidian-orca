@@ -1,6 +1,7 @@
 /**
  * The marks the editor draws over a note of a book: the chips over
- * fleuron's attribute runs, and the headings over a setext underline.
+ * fleuron's attribute runs, the headings over a setext underline, and
+ * the rules over its break commands.
  *
  * The marks are orca's own parse of the text the editor holds, so a
  * chip is drawn on the keystroke that made it. Nothing is counted in
@@ -19,7 +20,7 @@ import {
 } from "@codemirror/view";
 import { editorInfoField } from "obsidian";
 import { marksIn, type Drawn, type Form, type Names } from "@/book/marks";
-import { chipElement } from "@/ui/chip";
+import { breakElement, chipElement } from "@/ui/chip";
 
 /** The books a note is drawn against, as much of them as the editor reads. */
 export interface Marking {
@@ -51,6 +52,25 @@ class Chip extends WidgetType {
 
   override toDOM(): HTMLElement {
     return chipElement(this.names, this.form);
+  }
+
+  override ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+/** The rule a break draws, in place of the command it was written as. */
+class Rule extends WidgetType {
+  constructor(private readonly form: Form) {
+    super();
+  }
+
+  override eq(other: Rule): boolean {
+    return other.form === this.form;
+  }
+
+  override toDOM(): HTMLElement {
+    return breakElement(this.form);
   }
 
   override ignoreEvent(): boolean {
@@ -110,6 +130,14 @@ function decorations(state: EditorState, marks: readonly Drawn[]): DecorationSet
       continue;
     }
     if (open.has(state.doc.lineAt(mark.from).number)) continue;
+    if (mark.form === "pagebreak" || mark.form === "columnbreak") {
+      found.push({
+        from: mark.from,
+        to: mark.to,
+        value: Decoration.replace({ widget: new Rule(mark.form) }),
+      });
+      continue;
+    }
     if (mark.form === "span" && mark.open !== undefined) {
       // The brackets come off with the run, so the words keep their
       // place. Obsidian colours what the brackets held the way it
