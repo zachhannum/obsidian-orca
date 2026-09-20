@@ -125,6 +125,32 @@ test("a book that sets nothing opens a chapter on the next page, inside margins 
   assert.equal(properties["header-position"], "outside");
 });
 
+test("a book on the defaults sets no capitals, no tracking and no slope", () => {
+  const { chapter, headers } = DEFAULTS;
+
+  assert.deepEqual(
+    [chapter.openingCaps, chapter.firstLineCaps, headers.caps],
+    ["normal", "normal", "normal"],
+  );
+  assert.deepEqual(
+    [
+      chapter.openingLetterSpacing?.value,
+      chapter.firstLineLetterSpacing?.value,
+      headers.letterSpacing?.value,
+    ],
+    [0, 0, 0],
+  );
+  assert.equal(headers.italic, false);
+
+  const css = designSheets(emptyDesign(), {
+    sections: [{ role: "chapter", id: "chapter-one" }],
+    title: "Pride and Prejudice",
+  })
+    .map((sheet) => sheet.css)
+    .join("\n");
+  assert.doesNotMatch(css, /font-variant-caps|text-transform|letter-spacing|font-style/);
+});
+
 async function moduleBytes(): Promise<Buffer> {
   const require = createRequire(import.meta.url);
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));

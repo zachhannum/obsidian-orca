@@ -17,7 +17,13 @@
 @page :left {
   margin-left: 0.7in;
   margin-right: 0.95in;
-  @top-left { content: string(author); }
+  @top-left {
+    content: string(author);
+    font-variant-caps: small-caps;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-style: italic;
+  }
   @bottom-left { content: counter(page, decimal); }
 }
 
@@ -62,6 +68,16 @@ section > :is(h1, h2, h3, h4, h5, h6):first-child {
   font-size: 17pt;
   text-align: center;
   break-after: avoid;
+  font-variant-caps: small-caps;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The engine sets no family, no weight and no slope on a first line. */
+section > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-line {
+  font-variant-caps: small-caps;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 section > p:first-of-type::first-letter {

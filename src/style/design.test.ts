@@ -23,6 +23,7 @@ import {
   mergeDesign,
   parseCount,
   parseLength,
+  propertiesOf,
   readDesign,
   stepCount,
   stepLength,
@@ -90,7 +91,13 @@ test("the schema has no preset and no heading weight or slope", () => {
   }
   assert.ok(!DESIGN_KEYS.includes("preset"));
   assert.ok(!DESIGN_PROPERTIES.includes("font-weight"));
-  assert.ok(!DESIGN_PROPERTIES.includes("font-style"));
+  // The running heads take a slope, because a margin box prints a
+  // generated string and no markdown reaches it. Text a note holds
+  // takes its slope from the note.
+  for (const key of DESIGN_KEYS) {
+    if (key === "header-italic") continue;
+    assert.ok(!propertiesOf(key).includes("font-style"), `\`${key}\` sets a slope`);
+  }
   // A note that still carries these keys reads as a design that sets
   // nothing.
   assert.deepEqual(
@@ -320,6 +327,10 @@ function whole(): Design {
       spaceAbove: 7,
       spaceBelow: 2,
       dropCap: 3,
+      openingCaps: "small-caps",
+      openingLetterSpacing: len(0.08, "em"),
+      firstLineCaps: "all-caps",
+      firstLineLetterSpacing: len(0.04, "em"),
     },
     scene: {
       mark: "ornament",
@@ -334,6 +345,9 @@ function whole(): Design {
       position: "center",
       pageNumber: "bottom",
       pageNumberFormat: "arabic",
+      caps: "small-caps",
+      letterSpacing: len(0.06, "em"),
+      italic: true,
       suppressOnOpenings: true,
     },
   };

@@ -28,7 +28,12 @@ import {
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
-import { generatedCss, generatedRules, type Setting } from "@/style/generated";
+import {
+  generatedCss,
+  generatedRules,
+  type GeneratedRule,
+  type Setting,
+} from "@/style/generated";
 import { designRuleAt, designSheet } from "@/style/sheet";
 import { DEFAULTS } from "@/style/theme";
 
@@ -774,6 +779,112 @@ test("a heading set in a variant names the family that variant is registered und
   );
 });
 
+test("a chapter's opening is set in the capitals and the tracking the design gives it", async () => {
+  const design = emptyDesign();
+  design.chapter.openingCaps = "all-caps";
+  design.chapter.openingLetterSpacing = { value: 0.08, unit: "em" };
+  const sections = named(["chapter"]);
+  const rule = ruleFor(generatedRules(design, { sections }), "chapter-opening-caps");
+
+  // Every point a section's text can start at, so a label over a title
+  // is set the same way the title is.
+  assert.match(rule.selector, /:first-child,.+\+ :is\(h1(?:, h[2-6])+\) \+ :is\(h1(?:, h[2-6])+\)$/s);
+  assert.match(rule.css, /\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.08em;\n/);
+
+  const text = sentence("It is a truth universally acknowledged.");
+  const output = await rendered(
+    generatedCss(design, { sections }),
+    [{ name: "one.md", text: `# Chapter I\n\n${text}` }],
+    sections,
+  );
+  assert.deepEqual(output.warnings, []);
+  assert.ok(output.pages.flatMap(texts).includes("CHAPTER I"));
+});
+
+test("a chapter's first line is set on its first line alone", async () => {
+  const design = emptyDesign();
+  design.chapter.firstLineCaps = "all-caps";
+  design.chapter.firstLineLetterSpacing = { value: 0.04, unit: "em" };
+  const sections = named(["chapter"]);
+  const rule = ruleFor(generatedRules(design, { sections }), "chapter-first-line-caps");
+
+  assert.match(rule.selector, /\+ p::first-line$/);
+  assert.match(rule.css, /\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.04em;\n/);
+
+  const text = sentence("It is a truth universally acknowledged.");
+  const output = await rendered(
+    generatedCss(design, { sections }),
+    [{ name: "one.md", text: `# Chapter I\n\n${text}` }],
+    sections,
+  );
+  assert.deepEqual(output.warnings, []);
+  const lines = output.pages.flatMap(texts).filter((line) => /truth/i.test(line));
+  const [first, ...rest] = lines;
+  assert.ok(first !== undefined && first === first.toUpperCase(), "the first line is not in capitals");
+  assert.ok(
+    rest.some((line) => line !== line.toUpperCase()),
+    "the rest of the paragraph is in capitals too",
+  );
+});
+
+test("the running heads and the folio are set in the type the design gives them", async () => {
+  const design = emptyDesign();
+  design.headers.leftPage = "author";
+  design.headers.rightPage = "book-title";
+  design.headers.pageNumber = "bottom";
+  design.headers.caps = "small-caps";
+  design.headers.letterSpacing = { value: 0.06, unit: "em" };
+  design.headers.italic = true;
+  const sections = named(ROLES);
+  const at = { sections, title: "Pride and Prejudice", author: "Jane Austen" };
+  const css = generatedCss(design, at);
+
+  assert.match(
+    css,
+    /@top-left \{ content: "Jane Austen"; font-variant-caps: small-caps; letter-spacing: 0.06em; font-style: italic; \}/,
+  );
+  // The folio carries the same band of type as the heads.
+  assert.match(
+    css,
+    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: small-caps; letter-spacing: 0.06em; font-style: italic; \}/,
+  );
+  // A page that opens a section prints none of it.
+  assert.match(css, /@page chapter:first \{\n(?: {2}@[a-z-]+ \{ content: none; \}\n)+\}/);
+
+  const output = await rendered(css, BROKEN, sections);
+  assert.deepEqual(output.warnings, []);
+  assert.ok(output.pages.flatMap(texts).includes("Pride and Prejudice"));
+});
+
+test("a design that sets every new key renders with no warning from the pinned engine", async () => {
+  const design = emptyDesign();
+  design.chapter.openingCaps = "small-caps";
+  design.chapter.openingLetterSpacing = { value: 0.08, unit: "em" };
+  design.chapter.firstLineCaps = "small-caps";
+  design.chapter.firstLineLetterSpacing = { value: 0.04, unit: "em" };
+  design.headers.leftPage = "author";
+  design.headers.rightPage = "book-title";
+  design.headers.caps = "all-caps";
+  design.headers.letterSpacing = { value: 0.06, unit: "em" };
+  design.headers.italic = true;
+  const sections = named(ROLES);
+  const css = generatedCss(design, { sections, title: "Pride and Prejudice", author: "Jane Austen" });
+
+  const output = await rendered(css, BROKEN, sections);
+
+  assert.deepEqual(output.warnings, []);
+});
+
+/** The one generated rule a setting key writes. */
+function ruleFor(rules: readonly GeneratedRule[], key: string): GeneratedRule {
+  const found = rules.filter((rule) => rule.from.keys.includes(key));
+  assert.equal(found.length, 1, `\`${key}\` writes ${found.length} rules`);
+  const [rule] = found;
+  assert.ok(rule);
+  return rule;
+}
+
 // What this tier does not cover: the author's own layer over this one,
-// which waits on the note's css fence, and the warning a control can
-// raise, which the panel's own controls answer for.
+// which waits on the note's css fence, the warning a control can
+// raise, which the panel's own controls answer for, and a slope on a
+// first line, which the engine does not set.

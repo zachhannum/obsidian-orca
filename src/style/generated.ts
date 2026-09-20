@@ -16,9 +16,11 @@ import {
   LEVELS,
   written,
   type Begins,
+  type Caps,
   type Design,
   type HeaderDesign,
   type HeaderSlot,
+  type Length,
   type Level,
   type NumberFormat,
   type SceneDesign,
@@ -201,10 +203,10 @@ function pageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   for (const [box, content] of placed.both) rootBoxes.set(box, content);
 
   return [
-    block("@page", [...root, ...boxes(rootBoxes)]),
-    block("@page :left", [...left, ...boxes(placed.left)]),
-    block("@page :right", [...right, ...boxes(placed.right)]),
-    ...frontPages(placed, setting),
+    block("@page", [...root, ...boxes(rootBoxes, headers)]),
+    block("@page :left", [...left, ...boxes(placed.left, headers)]),
+    block("@page :right", [...right, ...boxes(placed.right, headers)]),
+    ...frontPages(headers, placed, setting),
     ...openingPages(headers, placed, setting),
   ];
 }
@@ -274,7 +276,11 @@ function placement(headers: HeaderDesign, setting: Setting): Placement {
  * the boxes of the `:left` or `:right` rule, so only the folio's boxes
  * are set again. An opening's rule still clears them.
  */
-function frontPages(placed: Placement, setting: Setting): (Rule | undefined)[] {
+function frontPages(
+  headers: HeaderDesign,
+  placed: Placement,
+  setting: Setting,
+): (Rule | undefined)[] {
   if (placed.folio.size === 0) return [];
   const roman = (pages: ReadonlyMap<Box, Content>): Declaration[] =>
     boxes(
@@ -289,6 +295,7 @@ function frontPages(placed: Placement, setting: Setting): (Rule | undefined)[] {
             },
           ]),
       ),
+      headers,
     );
   return front(roles(setting)).flatMap((role) => [
     block(`@page ${role}`, roman(placed.both), role),
@@ -315,7 +322,7 @@ function openingPages(
     block(
       `@page ${role}:first`,
       cleared.map((box) =>
-        boxed(box, "none", [
+        boxed(box, "content", "none", [
           ...suppress,
           ...[placed.both, placed.left, placed.right].flatMap(
             (pages) => pages.get(box)?.keys ?? [],
@@ -334,12 +341,55 @@ function printed(placed: Placement): Box[] {
   );
 }
 
-/** The margin boxes of one page rule, in the order the rule sets them. */
-function boxes(content: ReadonlyMap<Box, Content>): Declaration[] {
+/**
+ * The margin boxes of one page rule, in the order the rule sets them. A
+ * box that prints is set in the type the heads are set in. A box that
+ * prints nothing takes none of it.
+ */
+function boxes(content: ReadonlyMap<Box, Content>, headers: HeaderDesign): Declaration[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
-    return found === undefined ? [] : [boxed(box, found.content, found.keys)];
+    if (found === undefined) return [];
+    const printed = boxed(box, "content", found.content, found.keys);
+    return found.content === "none"
+      ? [printed]
+      : [printed, ...inBox(box, headLines(headers))];
   });
+}
+
+/** The type the running heads and the folio are set in. Upright declares nothing. */
+function headLines(headers: HeaderDesign): Declaration[] {
+  return [
+    ...typeset(headers.caps, headers.letterSpacing, "header"),
+    ...set("font-style", headers.italic === true ? "italic" : undefined, ["header-italic"]),
+  ];
+}
+
+/**
+ * The case and the letter spacing one place is set in. Small caps is
+ * the font's feature and all caps the text transformed, so one key
+ * sets either. A normal case and no spacing declare nothing.
+ */
+function typeset(
+  caps: Caps | undefined,
+  spacing: Length | undefined,
+  key: string,
+): Declaration[] {
+  const lines: Declaration[] = [];
+  if (caps === "small-caps") {
+    lines.push(declared("font-variant-caps", "small-caps", [`${key}-caps`]));
+  }
+  if (caps === "all-caps") {
+    lines.push(declared("text-transform", "uppercase", [`${key}-caps`]));
+  }
+  lines.push(
+    ...set(
+      "letter-spacing",
+      spacing === undefined || spacing.value === 0 ? undefined : written(spacing),
+      [`${key}-letter-spacing`],
+    ),
+  );
+  return lines;
 }
 
 /**
@@ -471,11 +521,19 @@ function restart(setting: Setting): (Rule | undefined)[] {
 function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const chapters = sectionsOf(setting.sections, "chapter");
   if (chapters === undefined) return [];
-  const { dropCap } = design.chapter;
+  const { chapter } = design;
+  const { dropCap } = chapter;
+  const starts = (suffix: string): string =>
+    TEXT_START.map((start) => `${chapters} > ${start}${suffix}`).join(",\n");
   return [
     block(`${chapters} > ${OPENING}`, openingSpace(design), "chapter"),
     block(
-      TEXT_START.map((start) => `${chapters} > ${start} + p::first-letter`).join(",\n"),
+      starts(""),
+      typeset(chapter.openingCaps, chapter.openingLetterSpacing, "chapter-opening"),
+      "chapter",
+    ),
+    block(
+      starts(" + p::first-letter"),
       [
         ...set(
           "initial-letter",
@@ -483,6 +541,11 @@ function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
           ["chapter-drop-cap"],
         ),
       ],
+      "chapter",
+    ),
+    block(
+      starts(" + p::first-line"),
+      typeset(chapter.firstLineCaps, chapter.firstLineLetterSpacing, "chapter-first-line"),
       "chapter",
     ),
   ];
@@ -785,8 +848,18 @@ function declared(
   return { text: `${property}: ${value};`, property, keys };
 }
 
-function boxed(box: string, content: string, keys: readonly string[]): Declaration {
-  return { text: `@${box} { content: ${content}; }`, property: "content", box, keys };
+function boxed(
+  box: string,
+  property: string,
+  value: string,
+  keys: readonly string[],
+): Declaration {
+  return { text: `${property}: ${value};`, property, box, keys };
+}
+
+/** The declarations of one margin box, each carrying the box it sits in. */
+function inBox(box: string, lines: readonly Declaration[]): Declaration[] {
+  return lines.map((line) => ({ ...line, box }));
 }
 
 /**
@@ -801,13 +874,35 @@ function block(
   if (selector === "" || lines.length === 0) return undefined;
   const keys = [...new Set(lines.flatMap((line) => line.keys))];
   return {
-    css: `${selector} {\n${lines.map((line) => `  ${line.text}`).join("\n")}\n}\n`,
+    css: `${selector} {\n${ruleLines(lines).join("\n")}\n}\n`,
     from: role === undefined ? { keys } : { keys, role },
     selector,
     declarations: lines.map(({ property, box, keys: read }) =>
       box === undefined ? { property, keys: read } : { property, box, keys: read },
     ),
   };
+}
+
+/** The lines of a rule. The declarations of one margin box are written as that box. */
+function ruleLines(lines: readonly Declaration[]): string[] {
+  const out: string[] = [];
+  for (let at = 0; at < lines.length; ) {
+    const line = lines[at];
+    if (line === undefined) break;
+    if (line.box === undefined) {
+      out.push(`  ${line.text}`);
+      at += 1;
+      continue;
+    }
+    const box = line.box;
+    const held: string[] = [];
+    for (; at < lines.length && lines[at]?.box === box; at += 1) {
+      const each = lines[at];
+      if (each !== undefined) held.push(each.text);
+    }
+    out.push(`  @${box} { ${held.join(" ")} }`);
+  }
+  return out;
 }
 
 function trimmed(value: number): string {
