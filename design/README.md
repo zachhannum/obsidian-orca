@@ -199,15 +199,18 @@ its editor around these files and returns a URL. The artboard list and
 - A setext heading is drawn at the level of its underline. The editor
   keeps the underline, faint, because the line is still there to type
   on. Reading view draws no underline at all.
-- Where a run is comes from the engine's parse of the note, so orca
-  has no markdown parser of its own and a run the engine did not read
-  stays prose. Obsidian's outline and heading search use Obsidian's
-  parse, so a setext heading of more than one line is in neither.
-- The marks are read off a book the engine already holds, so opening a
-  chapter costs the engine nothing and sets no book. A chapter of a
-  book with no preview open is drawn as Obsidian draws it, and takes
-  its chips once the book is set. A note no book lists never takes
-  them.
+- Where a run is comes from orca's own parse of the note, which reads
+  the markdown fleuron reads. A run orca cannot place stays prose.
+  Obsidian's outline and heading search use Obsidian's parse, so a
+  setext heading of more than one line is in neither.
+- A chip is what the editor draws, and the engine still settles the
+  page. A chip that disagrees with the book is wrong in the editor and
+  not in what was set. A test holds the two parses against each other
+  over every note of the fixture vault.
+- Drawing a chapter starts no engine and lays out no pages. A note is
+  drawn from the text in front of it, so a chip lands on the keystroke
+  that made it and a chapter with no preview open takes its marks. A
+  note no book lists takes none.
 
 ## What the site settles
 

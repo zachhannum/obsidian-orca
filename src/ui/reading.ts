@@ -4,15 +4,14 @@
  * same whichever view it is open in.
  *
  * Obsidian hands over one section of the note at a time, with the
- * lines it was drawn from. The marks are the engine's, and the bytes
- * of the note they name are what places each chip.
+ * lines it was drawn from. The note is parsed here and now, so a
+ * section is drawn the moment it is built.
  */
 
 import type { MarkdownPostProcessorContext } from "obsidian";
-import { byteOf, offsetOf } from "@/book/place";
+import { marksIn, type Drawn } from "@/book/marks";
 import { chipElement } from "@/ui/chip";
 import type { Marking } from "@/ui/marks";
-import type { Drawn } from "@/ui/runs";
 
 /** One section of a note, as Obsidian drew it. */
 export interface Section {
@@ -24,23 +23,19 @@ export interface Section {
   lineEnd: number;
 }
 
-/**
- * The marks that fall inside a section, with each one's bytes turned
- * into offsets of the section's own text.
- */
+/** The marks that fall inside a section. */
 export function marksOn(section: Section, marks: readonly Drawn[]): Drawn[] {
   const { from, to } = boundsOf(section);
   return marks.filter((mark) => mark.from >= from && mark.to <= to);
 }
 
-/** The bytes of the note a section was drawn from. */
+/** The characters of the note a section was drawn from. */
 function boundsOf(section: Section): { from: number; to: number } {
   const lines = section.text.split("\n");
   const before = lines.slice(0, section.lineStart).join("\n");
   const opens =
     before.length === 0 && section.lineStart === 0 ? 0 : before.length + 1;
-  const through = lines.slice(0, section.lineEnd + 1).join("\n");
-  return { from: byteOf(section.text, opens), to: byteOf(section.text, through.length) };
+  return { from: opens, to: lines.slice(0, section.lineEnd + 1).join("\n").length };
 }
 
 /**
@@ -89,9 +84,7 @@ export function drawSection(
 
 /** The run's own text, as it was written in the note. */
 function runText(section: Section, mark: Drawn): string | undefined {
-  const from = offsetOf(section.text, mark.from);
-  const to = offsetOf(section.text, mark.to);
-  return to > from ? section.text.slice(from, to) : undefined;
+  return mark.to > mark.from ? section.text.slice(mark.from, mark.to) : undefined;
 }
 
 /**
@@ -193,9 +186,7 @@ function prune(node: Node, stop: HTMLElement): void {
  * one line as a paragraph, and the row of dashes under it as a rule.
  */
 function redrawSetext(element: HTMLElement, section: Section, mark: Drawn): void {
-  const from = offsetOf(section.text, mark.open ?? mark.from);
-  const to = offsetOf(section.text, mark.from);
-  const said = section.text.slice(from, to).trimEnd();
+  const said = section.text.slice(mark.open ?? mark.from, mark.from).trimEnd();
   if (said === "") return;
   const heading = element.doc.createElement(`h${String(mark.level ?? 2)}`);
   heading.dataset["testid"] = "orca-setext";
@@ -222,20 +213,11 @@ function textNodes(element: HTMLElement): Text[] {
  * lists takes no marks, so reading view draws it as Obsidian draws it.
  */
 export function readingProcessor(marking: Marking) {
-  return async (
-    element: HTMLElement,
-    context: MarkdownPostProcessorContext,
-  ): Promise<void> => {
+  return (element: HTMLElement, context: MarkdownPostProcessorContext): void => {
     const info = context.getSectionInfo(element);
-    if (info === null) return;
-    // The bytes are counted in the text the section was drawn from, so
-    // a parse older than the note draws nothing and Obsidian's own
-    // drawing stands.
-    const held = marking.marksNow(context.sourcePath, info.text);
-    const settled =
-      held ??
-      (await marking.marksIn(context.sourcePath, info.text).catch(() => undefined));
-    if (settled === undefined || settled.marks.length === 0) return;
-    drawSection(element, info, settled.marks);
+    if (info === null || !marking.member(context.sourcePath)) return;
+    const marks = marksIn(info.text);
+    if (marks.length === 0) return;
+    drawSection(element, info, marks);
   };
 }

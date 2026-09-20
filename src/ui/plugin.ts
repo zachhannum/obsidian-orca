@@ -32,9 +32,8 @@ import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
 import { membership, type Member } from "@/ui/member";
-import { runExtensions, type Marking, type Settled } from "@/ui/marks";
+import { runExtensions, type Marking } from "@/ui/marks";
 import { readingProcessor } from "@/ui/reading";
-import { candidates, drawn } from "@/ui/runs";
 import {
   documentPreviews,
   fontPlaces,
@@ -122,8 +121,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** The editors waiting to be told a note's book is known, or set again. */
   private readonly redraw = new Set<() => void>();
 
-  /** The marks each note was last settled with, by the text they count bytes in. */
-  private readonly marked = new Map<string, Settled>();
   /**
    * The book notes orca is writing a design into. The engine has the
    * sheet already, so the write is not a reason to set the book again,
@@ -509,7 +506,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * editor to tell, so its panes are drawn again instead.
    */
   private remark(): void {
-    this.marked.clear();
     this.nudge();
     this.reread();
   }
@@ -537,63 +533,22 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
-   * The marks of a book's notes, as the engine settles them. A note
-   * the book has not crossed yet takes none, and the editor asks
-   * again when the render that carries it lands.
+   * The books a note is drawn against. orca parses the note itself,
+   * so what the editor asks the plugin is only whether a book lists
+   * it.
    */
   private marking(): Marking {
     return {
-      marksNow: (note, against) => {
-        const held = this.marked.get(note);
-        return held?.against === against ? held : undefined;
-      },
-      marksIn: async (note, against) => {
-        const held = this.marked.get(note);
-        if (held?.against === against) return held;
-        const typeset = await this.setting(note);
-        if (typeset?.textOf(note) !== against) return undefined;
-        const asked = candidates(against);
-        const answers = await Promise.all(
-          asked.map(async (candidate) => {
-            const node = await typeset.session.nodeAt(note, candidate.byte);
-            if (node === undefined) return undefined;
-            return typeset.session.sourceOf(node);
-          }),
-        );
-        const settled: Settled = { against, marks: drawn(against, asked, answers) };
-        this.marked.set(note, settled);
-        return settled;
-      },
-      watch: (note, parsed) => {
+      member: (note) => this.members.has(note),
+      watch: (reread) => {
         // A note opened before the vault has been read belongs to no
         // book yet, so the editor is told when it does.
-        this.redraw.add(parsed);
-        let drop: (() => void) | undefined;
-        let dropped = false;
-        void this.setting(note).then((typeset) => {
-          if (dropped) return;
-          drop = typeset?.watch(parsed);
-        });
+        this.redraw.add(reread);
         return () => {
-          dropped = true;
-          this.redraw.delete(parsed);
-          drop?.();
+          this.redraw.delete(reread);
         };
       },
     };
-  }
-
-  /**
-   * The book a note belongs to, as the engine already holds it. The
-   * marks are read off a book that is set rather than setting one, so
-   * opening a chapter costs the engine nothing.
-   */
-  private async setting(note: string): Promise<Typeset | undefined> {
-    const member = this.members.get(note);
-    if (member === undefined) return undefined;
-    // A book that will not set is the preview's report, not the
-    // editor's: the note is drawn as Obsidian draws it.
-    return this.composer?.opened(member.book)?.catch(() => undefined);
   }
 
   /** Every markdown note, and its properties as the metadata cache has them. */

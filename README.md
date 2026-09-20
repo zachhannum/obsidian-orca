@@ -9,7 +9,7 @@ Desktop only.
 ## Three invariants
 
 1. The panel never writes the author's CSS. Settings are data; the CSS they imply is generated at render time and never lands in the vault.
-2. The engine is the only linter. Every squiggle in the CSS editor comes from a fleuron warning.
+2. The engine is the only linter. Every squiggle in the CSS editor comes from a fleuron warning. Orca parses a note to draw the chips over its attribute runs, and that parse settles no page.
 3. Preview and export come from one session. The PDF is drawn from the pages already on screen.
 
 ## Building

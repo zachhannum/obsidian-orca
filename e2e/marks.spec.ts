@@ -6,6 +6,9 @@ const CHAPTER = "Chapter Fifteen.md";
 /** A note the fixture book does not list. */
 const OUTSIDE = "A note on the text.md";
 
+/** The book that lists the chapter. */
+const BOOK = "Pride and Prejudice.md";
+
 /** The line the chapter's attribute line is written on, counting from 0. */
 const ATTRIBUTE_LINE = 5;
 
@@ -19,10 +22,8 @@ const CHIPS = [
 ];
 
 test("Live Preview draws a chip over every run, and the run's own text comes off", async ({
-  book,
   manuscript,
 }) => {
-  await book.open();
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
 
@@ -39,10 +40,8 @@ test("Live Preview draws a chip over every run, and the run's own text comes off
 });
 
 test("the cursor shows the line it is on, and the rest of the note keeps its chips", async ({
-  book,
   manuscript,
 }) => {
-  await book.open();
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
@@ -56,10 +55,8 @@ test("the cursor shows the line it is on, and the rest of the note keeps its chi
 });
 
 test("Live Preview draws a setext heading at the level of its underline", async ({
-  book,
   manuscript,
 }) => {
-  await book.open();
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
@@ -77,10 +74,8 @@ test("Live Preview draws a setext heading at the level of its underline", async 
 });
 
 test("reading view draws the same chips, and the setext heading with no underline", async ({
-  book,
   manuscript,
 }) => {
-  await book.open();
   await manuscript.open(CHAPTER);
 
   await manuscript.read("preview");
@@ -101,11 +96,9 @@ test("reading view draws the same chips, and the setext heading with no underlin
 });
 
 test("a note no book lists is drawn as Obsidian draws it", async ({
-  book,
   manuscript,
   vault,
 }) => {
-  await book.open();
   await vault.write(OUTSIDE, "{.epigraph}\n\nA paragraph.\n\nOne\n===\n");
   await manuscript.open(OUTSIDE);
   await manuscript.read("source");
@@ -114,12 +107,10 @@ test("a note no book lists is drawn as Obsidian draws it", async ({
   await expect(manuscript.runs).toHaveCount(0);
 });
 
-test("a run the engine does not read stays the prose the author typed", async ({
-  book,
+test("a run fleuron cannot use stays the prose the author typed", async ({
   manuscript,
   vault,
 }) => {
-  await book.open();
   // An element answers to one name, so a second id is no run at all.
   await vault.modify(CHAPTER, "{#one #two}\n\nA paragraph.\n");
   await manuscript.open(CHAPTER);
@@ -129,21 +120,36 @@ test("a run the engine does not read stays the prose the author typed", async ({
   await expect(manuscript.runs).toHaveCount(0);
 });
 
-test("a chip stays on its run while the author types, before the next parse", async ({
-  book,
+test("a chip follows the run while the author types", async ({
   manuscript,
   vault,
 }) => {
-  await book.open();
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await manuscript.read("source");
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
 
-  // The typing is ahead of the engine, and the chips already on the
-  // text move with it rather than flickering off.
+  // The note is parsed again on the keystroke, so the chips are drawn
+  // where the typing left them rather than flickering off.
   await manuscript.place({ line: 8, ch: 0 });
   await manuscript.type("A new opening sentence. ");
 
   await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
+});
+
+test("a chapter takes its marks with no engine running for its book", async ({
+  book,
+  manuscript,
+}) => {
+  // The suite is one app, so a spec before this one may still hold the
+  // book inside the pool's grace. What this reads is whether drawing a
+  // chapter starts an engine of its own.
+  const before = await book.engines(BOOK);
+
+  await manuscript.open(CHAPTER);
+  await manuscript.read("source");
+
+  await expect.poll(async () => manuscript.chipsThrough()).toEqual(CHIPS);
+
+  expect(await book.engines(BOOK)).toBe(before);
 });

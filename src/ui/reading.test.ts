@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { marksOn, repeatedOn, type Section } from "@/ui/reading";
-import type { Drawn } from "@/ui/runs";
+import type { Drawn } from "@/book/marks";
 
 /** A note whose sections a reader is handed one at a time. */
 const NOTE = ["{.epigraph}", "> A quote.", "", "A paragraph.", ""].join("\n");
