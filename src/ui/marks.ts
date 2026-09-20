@@ -115,11 +115,15 @@ function decorations(state: EditorState, marks: readonly Drawn[]): DecorationSet
       // place. Obsidian colours what the brackets held the way it
       // colours a link, and the words are prose, so they read as it.
       found.push({ from: mark.open, to: mark.open + 1, value: Decoration.replace({}) });
-      found.push({
-        from: mark.open + 1,
-        to: mark.from - 1,
-        value: Decoration.mark({ class: "orca-span" }),
-      });
+      // A span with no words between its brackets marks nothing, and
+      // an empty mark decoration is not a range CodeMirror takes.
+      if (mark.open + 1 < mark.from - 1) {
+        found.push({
+          from: mark.open + 1,
+          to: mark.from - 1,
+          value: Decoration.mark({ class: "orca-span" }),
+        });
+      }
       found.push({ from: mark.from - 1, to: mark.from, value: Decoration.replace({}) });
     }
     if (mark.names === undefined) continue;
