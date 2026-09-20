@@ -751,6 +751,30 @@ test("a key the book does not set is drawn at its default, in faint type", async
   await expect(panel.reset("chapter-drop-cap")).toBeVisible();
 });
 
+test("picking capitals writes the key and repaints the pages", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  const caps = panel.control("chapter-opening-caps");
+  await expect(caps).toHaveAttribute("data-default", "true");
+  await caps.selectOption({ label: "Small caps" });
+
+  await expect(caps).toHaveAttribute("data-default", "false");
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("chapter-opening-caps: small-caps");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await written(vault, own);
+});
+
 test("the reset takes a key out of the note, and the field shows the default", async ({
   book,
   panel,

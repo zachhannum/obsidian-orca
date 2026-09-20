@@ -1,7 +1,7 @@
 ---
 title: Heads & folios
 eyebrow: Design
-description: Running heads and page numbers.
+description: Running heads, the type they are set in, and page numbers.
 ---
 
 import Shot from '../../../components/Shot.astro';
@@ -10,9 +10,9 @@ A running head is the line at the top of a page. A folio is the page number. The
 
 <Shot
   name="panel-heads-and-folios"
-  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format and a switch."
+  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format, Capitals, Tracking and two switches."
   caption="The Heads & folios group."
-  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'suppress-head-on-openings']}
+  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
   numbered
 />
 
@@ -25,11 +25,20 @@ A running head is the line at the top of a page. A folio is the page number. The
 | 3 | Header position | `Outside` | `header-position` |
 | 4 | Page number | `Bottom` | `page-number-position` |
 | 5 | Number format | `1, 2, 3` | `page-number-format` |
-| 6 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+| 6 | Capitals | `Normal` | `header-caps` |
+| 7 | Tracking | `None` | `header-letter-spacing` |
+| 8 | Set the running heads in italic | off | `header-italic` |
+| 9 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
 
 ## Running heads
 
 `Left-page header` and `Right-page header` each take `Nothing`, `Author`, `Book title` or `Chapter title`. `Header position` puts the running head at the outside edge of the page or in the center.
+
+## The type the heads are set in
+
+`Capitals` sets the heads in small caps or in full capitals, and `Tracking` sets the space between their letters. Small caps with a little tracking is the usual setting for a novel. `Set the running heads in italic` sets them in the italic of the book's font.
+
+The three controls set the folio as well, so the band of type at the head of the page and the number at the foot agree. Capitals and tracking change no digit.
 
 ## Page numbers
 

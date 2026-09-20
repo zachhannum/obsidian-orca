@@ -1,18 +1,18 @@
 ---
 title: Chapter openings
 eyebrow: Design
-description: Where a chapter begins, the space above its title, and its drop cap.
+description: Where a chapter begins, the space above its title, its capitals and its drop cap.
 ---
 
 import Shot from '../../../components/Shot.astro';
 
-By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, and the drop cap.
+By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, the type the title and the first line are set in, and the drop cap.
 
 <Shot
   name="panel-chapter-openings"
-  alt="The Chapter openings group of the design panel, with Begins on, Space above, Space below and Drop cap."
+  alt="The Chapter openings group of the design panel, with Begins on, Space above, Space below, Capitals, Tracking, Drop cap and First line."
   caption="The Chapter openings group."
-  marks={['chapter-begins', 'chapter-space-above', 'chapter-space-below', 'chapter-drop-cap']}
+  marks={['chapter-begins', 'chapter-space-above', 'chapter-space-below', 'chapter-opening-caps', 'chapter-opening-letter-spacing', 'chapter-drop-cap', 'chapter-first-line-caps', 'chapter-first-line-letter-spacing']}
   numbered
 />
 
@@ -23,7 +23,11 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 | 1 | Begins on | `Next page` | `chapter-begins` |
 | 2 | Space above | 0 lines | `chapter-space-above` |
 | 3 | Space below | 0 lines | `chapter-space-below` |
-| 4 | Drop cap | `None` | `chapter-drop-cap` |
+| 4 | Capitals | `Normal` | `chapter-opening-caps` |
+| 5 | Tracking | `None` | `chapter-opening-letter-spacing` |
+| 6 | Drop cap | `None` | `chapter-drop-cap` |
+| 7 | First line, capitals | `Normal` | `chapter-first-line-caps` |
+| 8 | First line, tracking | `None` | `chapter-first-line-letter-spacing` |
 
 ## Where a chapter begins
 
@@ -32,3 +36,11 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 ## Space and drop cap
 
 `Space above` and `Space below` are counts of lines of text. A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
+
+## Capitals and tracking
+
+`Capitals` sets the chapter's label and its title in small caps or in full capitals. Small caps are the small capital letters the font carries. Tracking is the space between letters, and books often open on letters set further apart than the text under them.
+
+The `First line` row sets the same two things on the first line of the chapter. The line is measured after the text is broken, so a wider page takes more words into capitals.
+
+Italic on a title comes from the manuscript: write `# *Chapter One*` in the note. The engine sets no slope on a first line, so the first line takes capitals and tracking alone.

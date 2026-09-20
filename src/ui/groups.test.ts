@@ -286,6 +286,36 @@ test("a row the author's CSS overrides is named by the line that overrides it", 
   assert.equal(overriddenAt([], new Map([["body-size", top]])), undefined);
 });
 
+test("the capitals and the tracking rows sit with the places they set", () => {
+  const openings = GROUPS.find((group) => group.name === "Chapter openings");
+  const heads = GROUPS.find((group) => group.name === "Heads & folios");
+  assert.ok(openings !== undefined && heads !== undefined);
+
+  assert.deepEqual(keysOf(openings), [
+    "chapter-begins",
+    "chapter-space-above",
+    "chapter-space-below",
+    "chapter-opening-caps",
+    "chapter-opening-letter-spacing",
+    "chapter-drop-cap",
+    "chapter-first-line-caps",
+    "chapter-first-line-letter-spacing",
+  ]);
+  assert.deepEqual(keysOf(heads).slice(5), [
+    "header-caps",
+    "header-letter-spacing",
+    "header-italic",
+    "suppress-head-on-openings",
+  ]);
+
+  // The first line takes two controls on one row, each said under it.
+  assert.deepEqual(controlOf({ keys: ["chapter-first-line-caps"] }), {
+    group: "Chapter openings",
+    row: "First line",
+    key: "chapter-first-line-caps",
+  });
+});
+
 // What this tier does not cover: the drawing itself. The e2e suite
 // reads it off the mounted panel. It checks which control a row draws
 // and whether a default is drawn faint. It checks whether a switch

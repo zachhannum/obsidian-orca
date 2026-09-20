@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 302,
+  "height": 496,
   "marks": {
     "chapter-begins": {
       "x": 0,
@@ -10,7 +10,31 @@
     },
     "chapter-drop-cap": {
       "x": 0,
+      "y": 382,
+      "width": 220,
+      "height": 30
+    },
+    "chapter-first-line-caps": {
+      "x": 0,
+      "y": 445,
+      "width": 106,
+      "height": 17
+    },
+    "chapter-first-line-letter-spacing": {
+      "x": 114,
+      "y": 445,
+      "width": 106,
+      "height": 17
+    },
+    "chapter-opening-caps": {
+      "x": 0,
       "y": 256,
+      "width": 220,
+      "height": 30
+    },
+    "chapter-opening-letter-spacing": {
+      "x": 0,
+      "y": 319,
       "width": 220,
       "height": 30
     },
@@ -34,7 +58,7 @@
     },
     "reset-chapter-drop-cap": {
       "x": 228,
-      "y": 259,
+      "y": 385,
       "width": 24,
       "height": 24
     },

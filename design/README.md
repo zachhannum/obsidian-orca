@@ -127,6 +127,11 @@ its editor around these files and returns a URL. The artboard list and
   with one asks the author which version to keep.
 - Chapter openings default to the next page. The right-hand page and
   the same page are the other choices.
+- A chapter's opening, its first line and the running heads each take
+  capitals and tracking. The running heads also take a slope, because a
+  margin box prints a generated string. A title takes its slope from
+  the note, and a first line takes none, because the engine sets no
+  slope there.
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.

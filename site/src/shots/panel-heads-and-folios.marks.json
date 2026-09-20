@@ -1,10 +1,28 @@
 {
   "width": 252,
-  "height": 408,
+  "height": 572,
   "marks": {
+    "header-caps": {
+      "x": 0,
+      "y": 382,
+      "width": 220,
+      "height": 30
+    },
+    "header-italic": {
+      "x": 0,
+      "y": 491,
+      "width": 36,
+      "height": 16
+    },
     "header-left-page": {
       "x": 0,
       "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "header-letter-spacing": {
+      "x": 0,
+      "y": 444,
       "width": 220,
       "height": 30
     },
@@ -22,7 +40,7 @@
     },
     "page-number-format": {
       "x": 0,
-      "y": 318,
+      "y": 319,
       "width": 220,
       "height": 30
     },
@@ -52,15 +70,15 @@
     },
     "reset-suppress-head-on-openings": {
       "x": 228,
-      "y": 364,
+      "y": 528,
       "width": 24,
       "height": 24
     },
     "suppress-head-on-openings": {
       "x": 0,
-      "y": 367,
-      "width": 34,
-      "height": 19
+      "y": 532,
+      "width": 36,
+      "height": 16
     }
   }
 }

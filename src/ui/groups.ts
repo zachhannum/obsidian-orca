@@ -103,6 +103,20 @@ const DROP_CAPS: readonly Choice[] = [
   { value: "4", label: "4 lines" },
 ];
 
+const CAPITALS: readonly Choice[] = [
+  { value: "normal", label: "Normal" },
+  { value: "small-caps", label: "Small caps" },
+  { value: "all-caps", label: "All caps" },
+];
+
+/** Tracking is a select of named amounts, since a length steps an em too far. */
+const TRACKING: readonly Choice[] = [
+  { value: "0em", label: "None" },
+  { value: "0.04em", label: "Slight" },
+  { value: "0.08em", label: "Open" },
+  { value: "0.12em", label: "Wide" },
+];
+
 const ALIGNMENTS: readonly Choice[] = [
   { value: "left", label: "Left" },
   { value: "center", label: "Center" },
@@ -264,8 +278,36 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "count", key: "chapter-space-below", said: "lines" }],
       },
       {
+        label: "Capitals",
+        of: [{ kind: "select", key: "chapter-opening-caps", choices: CAPITALS }],
+      },
+      {
+        label: "Tracking",
+        of: [
+          { kind: "select", key: "chapter-opening-letter-spacing", choices: TRACKING },
+        ],
+      },
+      {
         label: "Drop cap",
         of: [{ kind: "select", key: "chapter-drop-cap", choices: DROP_CAPS }],
+      },
+      {
+        label: "First line",
+        grid: true,
+        of: [
+          {
+            kind: "select",
+            key: "chapter-first-line-caps",
+            choices: CAPITALS,
+            said: "capitals",
+          },
+          {
+            kind: "select",
+            key: "chapter-first-line-letter-spacing",
+            choices: TRACKING,
+            said: "tracking",
+          },
+        ],
       },
     ],
   },
@@ -312,6 +354,24 @@ export const GROUPS: readonly Group[] = [
       {
         label: "Number format",
         of: [{ kind: "segment", key: "page-number-format", choices: FORMATS }],
+      },
+      {
+        label: "Capitals",
+        of: [{ kind: "select", key: "header-caps", choices: CAPITALS }],
+      },
+      {
+        label: "Tracking",
+        of: [{ kind: "select", key: "header-letter-spacing", choices: TRACKING }],
+      },
+      {
+        label: "",
+        of: [
+          {
+            kind: "flag",
+            key: "header-italic",
+            said: "Set the running heads in italic",
+          },
+        ],
       },
       {
         label: "",
