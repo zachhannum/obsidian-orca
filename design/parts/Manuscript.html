@@ -2,7 +2,7 @@
 
   <div class="title-block">
     <h2>The marks Obsidian does not draw</h2>
-    <div class="sub">A chapter carries five forms that fleuron's <span class="mono" style="font-size: 12px">obsidian</span> dialect reads and Obsidian draws as prose. Orca draws each one as a chip that names the run, in the editor and in reading view alike, so a mark the book is set by is visible in the note it lives in. The chip names a run the way inspect mode names a box: the id, then the classes, and never the braces.</div>
+    <div class="sub">A chapter carries five run forms and two break commands that fleuron's <span class="mono" style="font-size: 12px">obsidian</span> dialect reads and Obsidian draws as prose. Orca draws a run as a chip that names it and a break as a rule across the measure, in the editor and in reading view alike, so a mark the book is set by is visible in the note it lives in. The chip names a run the way inspect mode names a box: the id, then the classes, and never the braces.</div>
   </div>
 
   <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 470px 470px 1fr; gap: 16px">
@@ -38,6 +38,9 @@
 
           <p>Having now a good house and a very sufficient income, he intended to marry; and in seeking a reconciliation with the Longbourn family he had a wife in view.</p>
 
+          <!-- a break command: a rule across the measure, named for the command -->
+          <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--text-faint)"><span style="flex: 1; height: 1px; background: var(--divider-color)"></span><span class="mono" style="font-size: 11px; white-space: nowrap">page break</span><span style="flex: 1; height: 1px; background: var(--divider-color)"></span></div>
+
           <!-- setext H2: two lines, one heading -->
           <h2 style="font-size: 16px; margin: 16px 0 0; line-height: 1.3">A Morning Call<br>Longbourn, in the Spring</h2>
           <div class="mono" style="font-size: 12px; color: var(--text-faint); opacity: 0.7; margin-bottom: 8px">------------------------</div>
@@ -48,6 +51,8 @@
           <div style="margin-bottom: 3px"><span style="white-space: nowrap; font-family: var(--font-monospace); font-size: 11px; background: var(--background-modifier-hover); border-radius: 9px; padding: 0 7px"><span style="color: var(--text-faint)">.epigraph</span></span></div>
           <p style="border-left: 2px solid var(--background-modifier-border); padding-left: 12px; color: var(--text-muted)">The business of her life was to get her daughters married; its solace was visiting and news.</p>
 
+          <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--text-faint)"><span style="flex: 1; height: 1px; background: repeating-linear-gradient(to right, var(--divider-color) 0 4px, transparent 4px 8px)"></span><span class="mono" style="font-size: 11px; white-space: nowrap">column break</span><span style="flex: 1; height: 1px; background: repeating-linear-gradient(to right, var(--divider-color) 0 4px, transparent 4px 8px)"></span></div>
+
           <!-- image run: the chip under the image, on its left edge -->
           <div style="width: 128px">
             <div style="height: 64px; border-radius: var(--radius-s); background: var(--background-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-muted)">
@@ -57,7 +62,7 @@
           </div>
         </div>
       </div>
-      <div class="step-note">Every run in the note is drawn where it was written: a line of its own becomes a chip on that line, a run at the end of a heading becomes a chip at the end of the heading, and a run on an image sits under the image. A setext underline is the one mark the editor keeps, because the line is still there to type on.</div>
+      <div class="step-note">Every run in the note is drawn where it was written: a line of its own becomes a chip on that line, a run at the end of a heading becomes a chip at the end of the heading, and a run on an image sits under the image. A setext underline is the one mark the editor keeps, because the line is still there to type on. A break command is a rule across the measure, named for the command it came from.</div>
     </div>
 
     <!-- 2. Reading view: the same note, the same chips, nothing of the source -->
@@ -88,12 +93,16 @@
 
           <p>Having now a good house and a very sufficient income, he intended to marry; and in seeking a reconciliation with the Longbourn family he had a wife in view.</p>
 
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--text-faint)"><span style="flex: 1; height: 1px; background: var(--divider-color)"></span><span class="mono" style="font-size: 11px; white-space: nowrap">page break</span><span style="flex: 1; height: 1px; background: var(--divider-color)"></span></div>
+
           <h2 style="font-size: 16px; margin: 16px 0 8px; line-height: 1.3">A Morning Call<br>Longbourn, in the Spring</h2>
 
           <p>Elizabeth<span style="white-space: nowrap; font-family: var(--font-monospace); font-size: 11px; background: var(--background-modifier-hover); border-radius: 9px; padding: 0 7px; margin-left: 4px"><span style="color: var(--text-faint)">.character</span></span>, equally next to Jane in birth and beauty, succeeded her of course. Mrs. Bennet had been strongly inclined to ask them to stay and dine there that day.</p>
 
           <div style="margin-bottom: 3px"><span style="white-space: nowrap; font-family: var(--font-monospace); font-size: 11px; background: var(--background-modifier-hover); border-radius: 9px; padding: 0 7px"><span style="color: var(--text-faint)">.epigraph</span></span></div>
           <p style="border-left: 2px solid var(--background-modifier-border); padding-left: 12px; color: var(--text-muted)">The business of her life was to get her daughters married; its solace was visiting and news.</p>
+
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--text-faint)"><span style="flex: 1; height: 1px; background: repeating-linear-gradient(to right, var(--divider-color) 0 4px, transparent 4px 8px)"></span><span class="mono" style="font-size: 11px; white-space: nowrap">column break</span><span style="flex: 1; height: 1px; background: repeating-linear-gradient(to right, var(--divider-color) 0 4px, transparent 4px 8px)"></span></div>
 
           <div style="width: 128px">
             <div style="height: 64px; border-radius: var(--radius-s); background: var(--background-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-muted)">
@@ -135,14 +144,17 @@
 
           <p>Having now a good house and a very sufficient income, he intended to marry; and in seeking a reconciliation with the Longbourn family he had a wife in view.</p>
 
+<div style="display: flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--text-faint)"><span style="flex: 1; height: 1px; background: var(--divider-color)"></span><span class="mono" style="font-size: 11px; white-space: nowrap">page break</span><span style="flex: 1; height: 1px; background: var(--divider-color)"></span></div>
+
           <p>Elizabeth<span style="white-space: nowrap; font-family: var(--font-monospace); font-size: 11px; background: var(--background-modifier-hover); border-radius: 9px; padding: 0 7px; margin-left: 4px"><span style="color: var(--text-faint)">.character</span></span>, equally next to Jane in birth and beauty, succeeded her of course.</p>
         </div>
       </div>
-      <div class="step-note">The line the caret is on shows its source, the way Live Preview shows every other mark. The rest of the note keeps its chips, so moving the caret reveals one run and disturbs nothing around it.</div>
+      <div class="step-note">The line the caret is on shows its source, the way Live Preview shows every other mark. The rest of the note keeps its marks, so moving the caret reveals one line and disturbs nothing around it. A break command reads the same way: the caret on its line shows <span class="mono">\pagebreak</span>, and the rule comes back when the caret leaves.</div>
     </div>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+    <div class="callout"><div><span class="k">A break is a rule.</span> <span class="mono">\pagebreak</span> and <span class="mono">\columnbreak</span> at the head of a line of their own draw a rule across the measure, named for the command. The page break's rule is solid and the column break's is dashed. A command indented four spaces is the code block it is, and one written inside a paragraph is the prose fleuron paints.</div></div>
     <div class="callout"><div><span class="k">A chip names its run.</span> The id first, as <span class="mono">#fifteen</span>, then each class in written order, as <span class="mono">.chapter-opening</span>. The id is accented and the classes are faint, which is how inspect mode tells them apart on a page. A run with no id shows its classes alone, and a run with no class shows its id alone. The braces are not drawn, because the chip is where they were.</div></div>
     <div class="callout"><div><span class="k">Only in a book's note.</span> The editor draws these marks in a note a book reads. A note no book lists is a note, and Obsidian draws it as Obsidian draws it: the run stays the prose it always was, in both views.</div></div>
     <div class="callout"><div><span class="k">The engine says where a run is.</span> The marks come from fleuron's parse of the note, so orca has no markdown parser of its own and a run the engine did not read stays prose. <span class="mono">==highlight==</span>, <span class="mono">%% comment %%</span>, <span class="mono">#tag</span> and <span class="mono">$math$</span> are drawn exactly as Obsidian draws them, with no mark and no warning, because the engine is the only linter.</div></div>

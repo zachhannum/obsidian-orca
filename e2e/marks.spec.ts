@@ -1,3 +1,4 @@
+import type { Locator } from "@playwright/test";
 import { expect, test } from "./harness/test";
 
 /** The fixture chapter written in every form an attribute run takes. */
@@ -11,6 +12,18 @@ const BOOK = "Pride and Prejudice.md";
 
 /** The line the chapter's attribute line is written on, counting from 0. */
 const ATTRIBUTE_LINE = 5;
+
+/** The line the chapter's page break is written on, counting from 0. */
+const BREAK_LINE = 29;
+
+/** The chapter as the book's reading order names it. */
+const NAMED = "Chapter Fifteen";
+
+/** Both rules the chapter carries, in the order the note writes them. */
+const BREAKS = ["pagebreak:page break", "columnbreak:column break"];
+
+/** A folio, or a span of them. */
+const FOLIO = /^\d+(–\d+)?$/;
 
 /** Every chip the chapter carries, in the order the note writes them. */
 const CHIPS = [
@@ -93,6 +106,69 @@ test("reading view draws the same chips, and the setext heading with no underlin
   await expect(
     manuscript.reader.locator("p", { hasText: "Longbourn, in the Spring" }),
   ).toHaveCount(0);
+});
+
+test("Live Preview draws a rule over each break command", async ({
+  manuscript,
+}) => {
+  await manuscript.open(CHAPTER);
+  await manuscript.read("source");
+
+  await expect.poll(async () => manuscript.breaksThrough()).toEqual(BREAKS);
+
+  await expect(manuscript.pane).not.toContainText("\\pagebreak");
+  await expect(manuscript.pane).not.toContainText("\\columnbreak");
+});
+
+test("the cursor shows the break command it was written as", async ({
+  manuscript,
+}) => {
+  await manuscript.open(CHAPTER);
+  await manuscript.read("source");
+  await expect.poll(async () => manuscript.breaksThrough()).toEqual(BREAKS);
+
+  await manuscript.place({ line: BREAK_LINE, ch: 0 });
+
+  await expect(manuscript.pane).toContainText("\\pagebreak");
+  await expect
+    .poll(async () => manuscript.breaksThrough())
+    .toEqual(BREAKS.filter((rule) => !rule.startsWith("pagebreak")));
+});
+
+test("reading view draws the same rules", async ({ manuscript }) => {
+  await manuscript.open(CHAPTER);
+
+  await manuscript.read("preview");
+
+  await expect.poll(async () => manuscript.breaksThrough()).toEqual(BREAKS);
+  await expect(manuscript.reader).not.toContainText("\\pagebreak");
+  await expect(manuscript.reader).not.toContainText("\\columnbreak");
+});
+
+/** The pages a folio range covers, once the range is drawn. */
+async function spanOf(pages: Locator): Promise<number> {
+  await expect(pages).toHaveText(FOLIO);
+  const [first = "", last = first] = ((await pages.textContent()) ?? "").split(
+    "–",
+  );
+  return Number(last) - Number(first) + 1;
+}
+
+test("the chapter's page break sets a page of the book", async ({
+  note,
+  vault,
+}) => {
+  await note.open(BOOK);
+  const broken = await spanOf(note.pages(NAMED));
+
+  const text = await vault.read(CHAPTER);
+  await vault.modify(CHAPTER, text.replace("\\pagebreak\n\n", ""));
+
+  // The command is what set the page, so the chapter sets to one
+  // fewer without it.
+  await expect
+    .poll(async () => spanOf(note.pages(NAMED)))
+    .toBe(broken - 1);
 });
 
 test("a note no book lists is drawn as Obsidian draws it", async ({

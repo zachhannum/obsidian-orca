@@ -25,6 +25,8 @@ export class Manuscript {
   readonly runs: Locator;
   /** Every heading orca draws over a setext underline in reading view. */
   readonly setext: Locator;
+  /** Every rule orca draws over a break command. */
+  readonly breaks: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.pane = this.obsidian.view(MARKDOWN);
@@ -32,6 +34,7 @@ export class Manuscript {
     this.reader = this.pane.locator(SCROLLER.preview);
     this.runs = this.pane.getByTestId("orca-run");
     this.setext = this.pane.getByTestId("orca-setext");
+    this.breaks = this.pane.getByTestId("orca-break");
   }
 
   /**
@@ -85,8 +88,20 @@ export class Manuscript {
     return (await this.sweep()).setext;
   }
 
+  /**
+   * Every break in the note, as `form:name`, in the order they are
+   * written.
+   */
+  async breaksThrough(): Promise<string[]> {
+    return (await this.sweep()).breaks;
+  }
+
   /** The marks drawn over the whole note, read a pane at a time. */
-  private async sweep(): Promise<{ chips: string[]; setext: string[] }> {
+  private async sweep(): Promise<{
+    chips: string[];
+    setext: string[];
+    breaks: string[];
+  }> {
     return this.obsidian.page.evaluate(
       async ({ type, scroller }) => {
         const view = window.app.workspace.getLeavesOfType(type)[0]?.view as
@@ -99,6 +114,7 @@ export class Manuscript {
         if (pane === null) throw new Error("the note is drawn in no pane");
         const chips: string[] = [];
         const setext: string[] = [];
+        const breaks: string[] = [];
         const keep = (into: string[], said: string): void => {
           if (!into.includes(said)) into.push(said);
         };
@@ -116,6 +132,10 @@ export class Manuscript {
           )) {
             const level = /orca-setext-(\d)/.exec(line.className)?.[1] ?? "under";
             keep(setext, `${level}:${(line.textContent ?? "").trim()}`);
+          }
+          for (const rule of pane.querySelectorAll("[data-testid='orca-break']")) {
+            const form = rule.getAttribute("data-form") ?? "";
+            keep(breaks, `${form}:${(rule.textContent ?? "").trim()}`);
           }
         };
         // The pane measures what it draws on the next frame, so each
@@ -136,7 +156,7 @@ export class Manuscript {
         pane.scrollTop = 0;
         await painted();
         gather();
-        return { chips, setext };
+        return { chips, setext, breaks };
       },
       { type: MARKDOWN, scroller: SCROLLER },
     );
