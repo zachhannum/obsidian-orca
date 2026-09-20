@@ -257,6 +257,14 @@ export const GROUPS: readonly Group[] = [
       { label: "Variant", of: [{ kind: "variant", key: `${LEVELED}font-variant` }] },
       { label: "Size", of: [{ kind: "length", key: `${LEVELED}size` }] },
       {
+        label: "Capitals",
+        of: [{ kind: "select", key: `${LEVELED}caps`, choices: CAPITALS }],
+      },
+      {
+        label: "Tracking",
+        of: [{ kind: "select", key: `${LEVELED}letter-spacing`, choices: TRACKING }],
+      },
+      {
         label: "Alignment",
         of: [{ kind: "segment", key: `${LEVELED}align`, choices: ALIGNMENTS }],
       },
@@ -276,16 +284,6 @@ export const GROUPS: readonly Group[] = [
       {
         label: "Space below",
         of: [{ kind: "count", key: "chapter-space-below", said: "lines" }],
-      },
-      {
-        label: "Capitals",
-        of: [{ kind: "select", key: "chapter-opening-caps", choices: CAPITALS }],
-      },
-      {
-        label: "Tracking",
-        of: [
-          { kind: "select", key: "chapter-opening-letter-spacing", choices: TRACKING },
-        ],
       },
       {
         label: "Drop cap",

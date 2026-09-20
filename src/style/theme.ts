@@ -71,8 +71,6 @@ export const DEFAULTS: Design = frozen({
     spaceAbove: 0,
     spaceBelow: 0,
     dropCap: 0,
-    openingCaps: "normal",
-    openingLetterSpacing: ems(0),
     firstLineCaps: "normal",
     firstLineLetterSpacing: ems(0),
   },
@@ -110,7 +108,7 @@ export function effective(design: Design): Design {
 }
 
 function heading(): TypeSpec {
-  return { size: points(19), align: "left" };
+  return { size: points(19), caps: "normal", letterSpacing: ems(0), align: "left" };
 }
 
 function points(value: number): Length {

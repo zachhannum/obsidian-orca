@@ -779,16 +779,14 @@ test("a heading set in a variant names the family that variant is registered und
   );
 });
 
-test("a chapter's opening is set in the capitals and the tracking the design gives it", async () => {
+test("a heading level is set in the capitals and the tracking the design gives it", async () => {
   const design = emptyDesign();
-  design.chapter.openingCaps = "all-caps";
-  design.chapter.openingLetterSpacing = { value: 0.08, unit: "em" };
+  design.headings[1].caps = "all-caps";
+  design.headings[1].letterSpacing = { value: 0.08, unit: "em" };
   const sections = named(["chapter"]);
-  const rule = ruleFor(generatedRules(design, { sections }), "chapter-opening-caps");
+  const rule = ruleFor(generatedRules(design, { sections }), "heading-1-caps");
 
-  // Every point a section's text can start at, so a label over a title
-  // is set the same way the title is.
-  assert.match(rule.selector, /:first-child,.+\+ :is\(h1(?:, h[2-6])+\) \+ :is\(h1(?:, h[2-6])+\)$/s);
+  assert.equal(rule.selector, "h1");
   assert.match(rule.css, /\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.08em;\n/);
 
   const text = sentence("It is a truth universally acknowledged.");
@@ -858,8 +856,8 @@ test("the running heads and the folio are set in the type the design gives them"
 
 test("a design that sets every new key renders with no warning from the pinned engine", async () => {
   const design = emptyDesign();
-  design.chapter.openingCaps = "small-caps";
-  design.chapter.openingLetterSpacing = { value: 0.08, unit: "em" };
+  design.headings[1].caps = "small-caps";
+  design.headings[1].letterSpacing = { value: 0.08, unit: "em" };
   design.chapter.firstLineCaps = "small-caps";
   design.chapter.firstLineLetterSpacing = { value: 0.04, unit: "em" };
   design.headers.leftPage = "author";

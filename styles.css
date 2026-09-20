@@ -1566,6 +1566,12 @@ select.orca-panel-select {
   text-overflow: ellipsis;
 }
 
+/* A cell stacks its control over its word, so the select keeps its own
+   height rather than taking the cell's. */
+.orca-panel-cell > select.orca-panel-select {
+  flex: none;
+}
+
 select.orca-panel-select.is-default {
   color: var(--text-faint);
 }

@@ -762,14 +762,14 @@ test("picking capitals writes the key and repaints the pages", async ({
   const painted = await book.painted();
   await panel.open();
 
-  const caps = panel.control("chapter-opening-caps");
+  const caps = panel.control("heading-1-caps");
   await expect(caps).toHaveAttribute("data-default", "true");
   await caps.selectOption({ label: "Small caps" });
 
   await expect(caps).toHaveAttribute("data-default", "false");
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("chapter-opening-caps: small-caps");
+    .toContain("heading-1-caps: small-caps");
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
   await written(vault, own);

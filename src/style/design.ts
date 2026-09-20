@@ -106,6 +106,9 @@ export interface BodyDesign {
 
 export type Alignment = "left" | "center" | "right";
 
+/** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
+export type Caps = "normal" | "small-caps" | "all-caps";
+
 /**
  * The type a heading is set in. Bold and italic inside a heading come
  * from the markdown, so a spec sets neither.
@@ -115,6 +118,10 @@ export interface TypeSpec {
   /** The font's variant, by name. A font's default variant is stored as absent. */
   fontVariant?: string;
   size?: Length;
+  /** The case the level is set in. */
+  caps?: Caps;
+  /** The letter spacing on the level. */
+  letterSpacing?: Length;
   align?: Alignment;
 }
 
@@ -128,9 +135,6 @@ export type Headings = Record<Level, TypeSpec>;
 
 export type Begins = "right-page" | "next-page" | "same-page";
 
-/** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
-export type Caps = "normal" | "small-caps" | "all-caps";
-
 export interface ChapterDesign {
   begins?: Begins;
   /** The blank space above a chapter's title, in lines of body text. */
@@ -139,10 +143,6 @@ export interface ChapterDesign {
   spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
-  /** The case a chapter's label and title are set in. */
-  openingCaps?: Caps;
-  /** The letter spacing on a chapter's label and title. */
-  openingLetterSpacing?: Length;
   /** The case a chapter's first line is set in. */
   firstLineCaps?: Caps;
   /** The letter spacing on a chapter's first line. */
@@ -465,24 +465,6 @@ const CHAPTER: readonly Field[] = [
     write: ({ chapter }, value) => {
       const lines = asCount(value);
       if (lines !== undefined) chapter.spaceBelow = lines;
-    },
-  },
-  {
-    key: "chapter-opening-caps",
-    property: CAPS_PROPERTIES,
-    read: ({ chapter }) => chapter.openingCaps,
-    write: ({ chapter }, value) => {
-      const caps = asWord(value, CAPS);
-      if (caps !== undefined) chapter.openingCaps = caps;
-    },
-  },
-  {
-    key: "chapter-opening-letter-spacing",
-    property: "letter-spacing",
-    read: ({ chapter }) => written(chapter.openingLetterSpacing),
-    write: ({ chapter }, value) => {
-      const spacing = asLength(value);
-      if (spacing !== undefined) chapter.openingLetterSpacing = spacing;
     },
   },
   {
@@ -842,6 +824,24 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const size = asLength(value);
         if (size !== undefined) headings[level].size = size;
+      },
+    },
+    {
+      key: `heading-${level}-caps`,
+      property: CAPS_PROPERTIES,
+      read: ({ headings }) => headings[level].caps,
+      write: ({ headings }, value) => {
+        const caps = asWord(value, CAPS);
+        if (caps !== undefined) headings[level].caps = caps;
+      },
+    },
+    {
+      key: `heading-${level}-letter-spacing`,
+      property: "letter-spacing",
+      read: ({ headings }) => written(headings[level].letterSpacing),
+      write: ({ headings }, value) => {
+        const spacing = asLength(value);
+        if (spacing !== undefined) headings[level].letterSpacing = spacing;
       },
     },
     {

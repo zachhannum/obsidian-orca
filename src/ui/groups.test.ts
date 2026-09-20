@@ -50,7 +50,7 @@ test("the panel offers every group a book designer works in", () => {
   }
 });
 
-test("the Headings group sets font, variant, size and alignment at every level, and chapter openings set none", () => {
+test("the Headings group sets font, variant, size, capitals, tracking and alignment at every level, and chapter openings set none", () => {
   const headings = GROUPS.find((group) => group.name === "Headings");
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
   assert.ok(headings !== undefined && openings !== undefined);
@@ -59,7 +59,7 @@ test("the Headings group sets font, variant, size and alignment at every level, 
     new Set(keysOf(headings)),
     new Set(
       LEVELS.flatMap((level) =>
-        ["font", "font-variant", "size", "align"].map(
+        ["font", "font-variant", "size", "caps", "letter-spacing", "align"].map(
           (part) => `heading-${String(level)}-${part}`,
         ),
       ),
@@ -288,19 +288,29 @@ test("a row the author's CSS overrides is named by the line that overrides it", 
 
 test("the capitals and the tracking rows sit with the places they set", () => {
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
+  const headings = GROUPS.find((group) => group.name === "Headings");
   const heads = GROUPS.find((group) => group.name === "Heads & folios");
-  assert.ok(openings !== undefined && heads !== undefined);
+  assert.ok(openings !== undefined && headings !== undefined && heads !== undefined);
 
   assert.deepEqual(keysOf(openings), [
     "chapter-begins",
     "chapter-space-above",
     "chapter-space-below",
-    "chapter-opening-caps",
-    "chapter-opening-letter-spacing",
     "chapter-drop-cap",
     "chapter-first-line-caps",
     "chapter-first-line-letter-spacing",
   ]);
+  assert.deepEqual(
+    keysOf(headings).filter((key) => key.startsWith("heading-1-")),
+    [
+      "heading-1-font",
+      "heading-1-font-variant",
+      "heading-1-size",
+      "heading-1-caps",
+      "heading-1-letter-spacing",
+      "heading-1-align",
+    ],
+  );
   assert.deepEqual(keysOf(heads).slice(5), [
     "header-caps",
     "header-letter-spacing",

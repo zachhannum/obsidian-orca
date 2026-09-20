@@ -1,18 +1,18 @@
 ---
 title: Headings
 eyebrow: Design
-description: Chapter titles and the headings under them.
+description: Chapter titles, the type they are set in, and the headings under them.
 ---
 
 import Shot from '../../../components/Shot.astro';
 
-The Headings group in the design panel sets the font, size and alignment of each heading level. A chapter title is a level 1 heading.
+The Headings group in the design panel sets the font, the size, the capitals, the tracking and the alignment of each heading level. A chapter title is a level 1 heading.
 
 <Shot
   name="panel-headings"
-  alt="The Headings group of the design panel, with the level tabs H1 to H6, and Font, Size and Alignment for the level."
+  alt="The Headings group of the design panel, with the level tabs H1 to H6, and Font, Size, Capitals, Tracking and Alignment for the level."
   caption="The Headings group."
-  marks={['heading-level', 'heading-1-font', 'heading-1-size', 'heading-1-align']}
+  marks={['heading-level', 'heading-1-font', 'heading-1-size', 'heading-1-caps', 'heading-1-letter-spacing', 'heading-1-align']}
   numbered
 />
 
@@ -26,7 +26,9 @@ In a key, `N` is the heading level, from 1 to 6.
 | 2 | Font | `EB Garamond` | `heading-N-font` |
 |  | Variant | The default variant of the font | `heading-N-font-variant` |
 | 3 | Size | `19pt` | `heading-N-size` |
-| 4 | Alignment | `Left` | `heading-N-align` |
+| 4 | Capitals | `Normal` | `heading-N-caps` |
+| 5 | Tracking | `None` | `heading-N-letter-spacing` |
+| 6 | Alignment | `Left` | `heading-N-align` |
 
 ## Pick a level
 
@@ -34,3 +36,9 @@ In a key, `N` is the heading level, from 1 to 6.
 2. Change the controls under the level tabs.
 
 If a level has no font of its own, it uses the font from the Text group.
+
+## Capitals and tracking
+
+`Capitals` sets the level in small caps or in full capitals. Small caps are the small capital letters the font carries. Tracking is the space between letters, and titles in capitals are usually set with more of it.
+
+The two controls set every heading at that level, a chapter title and a part title alike. Italic comes from the manuscript: write `# *Chapter One*` in the note.

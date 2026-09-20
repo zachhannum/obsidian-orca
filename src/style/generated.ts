@@ -474,6 +474,7 @@ function typeLines(
     );
   }
   lines.push(...set("font-size", written(type.size), [`heading-${level}-size`]));
+  lines.push(...typeset(type.caps, type.letterSpacing, `heading-${level}`));
   lines.push(...set("text-align", type.align, [`heading-${level}-align`]));
   return lines;
 }
@@ -527,11 +528,6 @@ function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
     TEXT_START.map((start) => `${chapters} > ${start}${suffix}`).join(",\n");
   return [
     block(`${chapters} > ${OPENING}`, openingSpace(design), "chapter"),
-    block(
-      starts(""),
-      typeset(chapter.openingCaps, chapter.openingLetterSpacing, "chapter-opening"),
-      "chapter",
-    ),
     block(
       starts(" + p::first-letter"),
       [

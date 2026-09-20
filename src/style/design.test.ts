@@ -327,8 +327,6 @@ function whole(): Design {
       spaceAbove: 7,
       spaceBelow: 2,
       dropCap: 3,
-      openingCaps: "small-caps",
-      openingLetterSpacing: len(0.08, "em"),
       firstLineCaps: "all-caps",
       firstLineLetterSpacing: len(0.04, "em"),
     },
@@ -356,6 +354,8 @@ function whole(): Design {
       font: "EB Garamond",
       fontVariant: "Semibold",
       size: len(18 - level, "pt"),
+      caps: "small-caps",
+      letterSpacing: len(0.08, "em"),
       align: "center",
     };
   }

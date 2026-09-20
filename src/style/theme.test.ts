@@ -126,15 +126,15 @@ test("a book that sets nothing opens a chapter on the next page, inside margins 
 });
 
 test("a book on the defaults sets no capitals, no tracking and no slope", () => {
-  const { chapter, headers } = DEFAULTS;
+  const { chapter, headers, headings } = DEFAULTS;
 
   assert.deepEqual(
-    [chapter.openingCaps, chapter.firstLineCaps, headers.caps],
+    [headings[1].caps, chapter.firstLineCaps, headers.caps],
     ["normal", "normal", "normal"],
   );
   assert.deepEqual(
     [
-      chapter.openingLetterSpacing?.value,
+      headings[1].letterSpacing?.value,
       chapter.firstLineLetterSpacing?.value,
       headers.letterSpacing?.value,
     ],
