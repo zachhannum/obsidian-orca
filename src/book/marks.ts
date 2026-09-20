@@ -104,18 +104,24 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
     // brace run, which is what makes it a line and not a tail of
     // prose. A table cell of one run is prose, because the cell is
     // not a block the run can name.
-    if (node.name === "Paragraph") {
-      found.push(line(node.from + run.from, node.from + run.to, run.inside));
+    const names = reads(run.inside);
+    // A line names the block under it, inside whatever holds them
+    // both. A run with nothing under it there names nothing, and
+    // fleuron leaves it as the prose it was written as.
+    const under = node.nextSibling !== null;
+    if (node.name === "Paragraph" && names !== undefined && under) {
+      found.push(line(node.from + run.from, node.from + run.to, names));
       return;
     }
   }
   const image = imaged(text, node);
-  if (image !== undefined) {
+  const named = image === undefined ? undefined : reads(image.inside);
+  if (image !== undefined && named !== undefined) {
     found.push({
       form: "image",
       from: image.from,
       to: image.to,
-      names: namesOf(image.inside),
+      names: named,
       level: undefined,
       open: undefined,
     });
@@ -134,6 +140,9 @@ function imaged(
   const after = text.slice(first.to, node.to);
   const run = onlyRun(after);
   if (run === undefined) return undefined;
+  // The run has to be written on the image's own line. A run on the
+  // line below is a block of its own, and fleuron reads it as one.
+  if (after.slice(0, run.from).includes("\n")) return undefined;
   // The run's chip sits where the run was written, and the blanks
   // between the image and the brace come off with it.
   return { from: first.to, to: first.to + run.to, inside: run.inside };
@@ -166,9 +175,10 @@ function onSetext(text: string, node: SyntaxNode, level: 1 | 2, found: Drawn[]):
   const broke = said.lastIndexOf("\n");
   if (broke < 0) return;
   const above = said.slice(0, broke);
-  const run = onlyRun(above);
-  if (run !== undefined && level === 2) {
-    found.push(line(node.from + run.from, node.from + run.to, run.inside));
+  const run = above.length === 0 ? undefined : onlyRun(above);
+  const names = run === undefined ? undefined : reads(run.inside);
+  if (run !== undefined && names !== undefined && level === 2) {
+    found.push(line(node.from + run.from, node.from + run.to, names));
     return;
   }
   found.push({
@@ -189,12 +199,14 @@ function spansIn(text: string, node: SyntaxNode): Drawn[] {
   for (const match of said.matchAll(/\[([^\][\n]*)\]\{([^}\n]*)\}/g)) {
     const at = node.from + match.index;
     if (covered(node, at)) continue;
+    const names = reads(match[2] ?? "");
+    if (names === undefined) continue;
     const opened = at + (match[1]?.length ?? 0) + 2;
     found.push({
       form: "span",
       from: opened,
       to: at + match[0].length,
-      names: namesOf(match[2] ?? ""),
+      names,
       level: undefined,
       open: at,
     });
@@ -221,8 +233,8 @@ function covered(node: SyntaxNode, at: number): boolean {
 }
 
 /** An attribute line's mark, which the chip draws in place of. */
-function line(from: number, to: number, inside: string): Drawn {
-  return { form: "line", from, to, names: namesOf(inside), level: undefined, open: undefined };
+function line(from: number, to: number, names: Names): Drawn {
+  return { form: "line", from, to, names, level: undefined, open: undefined };
 }
 
 /** A block whose whole content is one brace run, as the characters of that run. */
@@ -249,23 +261,39 @@ function trailing(said: string): { from: number; to: number; inside: string } | 
 }
 
 /**
- * The names a run gives. A run that yields neither an id nor a class
- * is one fleuron reads and cannot use, and it is drawn as it was
- * written.
+ * The names a run gives, or nothing for a run fleuron rejects.
+ *
+ * A rejected run is prose everywhere but on a heading, where the
+ * heading is still a heading and the run is drawn as it was written.
  */
-export function namesOf(inside: string): Names {
+function reads(inside: string): Names | undefined {
   const said = inside.trim();
   const classes: string[] = [];
-  const ids: string[] = [];
-  const words = said.split(/\s+/).filter((word) => word !== "");
-  for (const word of words) {
-    if (word.length < 2) continue;
-    if (word.startsWith(".")) classes.push(word.slice(1));
-    else if (word.startsWith("#")) ids.push(word.slice(1));
+  let id: string | undefined;
+  for (const word of said.split(/\s+/).filter((word) => word !== "")) {
+    const name = identifier(word.slice(1));
+    if (name === undefined) return undefined;
+    if (word.startsWith(".")) classes.push(name);
+    else if (word.startsWith("#") && id === undefined) id = name;
+    else return undefined;
   }
-  const named = classes.length + ids.length;
-  const read = named > 0 && named === words.length;
-  return read && ids.length <= 1
-    ? { id: ids[0], classes, said }
-    : { id: undefined, classes: [], said };
+  return { id, classes, said };
+}
+
+/**
+ * A name a selector can reach a block back by: letters, digits, `-`
+ * and `_`, not opening with a digit.
+ */
+function identifier(word: string): string | undefined {
+  const opens = word[0];
+  if (opens === undefined || (opens >= "0" && opens <= "9")) return undefined;
+  return /^[\p{L}\p{N}_-]+$/u.test(word) ? word : undefined;
+}
+
+/**
+ * The names a run gives a heading. A run fleuron reads and cannot use
+ * is drawn as it was written.
+ */
+export function namesOf(inside: string): Names {
+  return reads(inside) ?? { id: undefined, classes: [], said: inside.trim() };
 }
