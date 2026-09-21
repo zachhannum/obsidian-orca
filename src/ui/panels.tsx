@@ -783,7 +783,13 @@ function Fonts({
         <span className="orca-panel-name">{FONTS_GROUP}</span>
       </div>
       {fonts.map((font) => (
-        <Row key={font} label="" grid={false} under={[]} reset={null}>
+        <Row
+          key={font}
+          label=""
+          grid={false}
+          under={[]}
+          reset={<Drop font={font} drop={acting.dropFont.bind(acting)} />}
+        >
           <span
             className="orca-panel-field is-added"
             data-testid="orca-panel-font-added"
@@ -794,24 +800,6 @@ function Fonts({
           >
             {font}
           </span>
-          <div
-            className="clickable-icon orca-panel-reset"
-            role="button"
-            tabIndex={0}
-            aria-label={`Take ${font} out of the book`}
-            data-testid="orca-panel-font-drop"
-            data-font={font}
-            onClick={() => {
-              acting.dropFont(font);
-            }}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" && event.key !== " ") return;
-              event.preventDefault();
-              acting.dropFont(font);
-            }}
-          >
-            <Icon name="x" className="orca-panel-icon" />
-          </div>
         </Row>
       ))}
       <Row label="" grid={false} under={[]} reset={null}>
@@ -825,6 +813,36 @@ function Fonts({
           }}
         />
       </Row>
+    </div>
+  );
+}
+
+/** Takes a font the book added back out, at the end of its row. */
+function Drop({
+  font,
+  drop,
+}: {
+  font: string;
+  drop: (font: string) => void;
+}): JSX.Element {
+  return (
+    <div
+      className="clickable-icon orca-panel-reset"
+      role="button"
+      tabIndex={0}
+      aria-label={`Take ${font} out of the book`}
+      data-testid="orca-panel-font-drop"
+      data-font={font}
+      onClick={() => {
+        drop(font);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        drop(font);
+      }}
+    >
+      <Icon name="x" className="orca-panel-icon" />
     </div>
   );
 }

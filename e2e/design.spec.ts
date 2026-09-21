@@ -1207,6 +1207,7 @@ test("a font added to the book sets the text its CSS names, and survives the boo
   vault,
 }) => {
   const own = await vault.read(BOOK);
+  vault.touch(BOOK);
   await book.open();
   await book.painted();
   await panel.open();
@@ -1232,6 +1233,8 @@ test("a font added to the book sets the text its CSS names, and survives the boo
   await panel.toCss.click();
   await expect(panel.editor).toBeVisible();
   await panel.typeCss(`\n.chapter-opening h1 { font-family: "${VARIED}"; }`);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`font-family: "${VARIED}"`);
+  await book.choose(CHAPTER_NAME);
   await expect
     .poll(async () => book.facesOf(BOOK, HEADING_WORD))
     .toContainEqual(expect.stringMatching(/^Junicode/));
@@ -1240,6 +1243,7 @@ test("a font added to the book sets the text its CSS names, and survives the boo
   // the note. The face crosses to that session too.
   await vault.modify(BOOK, await vault.read(BOOK));
   await panel.focus();
+  await book.choose(CHAPTER_NAME);
   await expect
     .poll(async () => book.facesOf(BOOK, HEADING_WORD))
     .toContainEqual(expect.stringMatching(/^Junicode/));
