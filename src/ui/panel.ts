@@ -1,8 +1,8 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
+  bookUses,
   designFonts,
-  designUses,
   type Design,
   type FontUse,
   type PageUnit,
@@ -17,7 +17,12 @@ import { groupRules } from "@/style/layers";
 import type { ResolvedUse } from "@/ui/fonts";
 import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
 import type { Inspecting } from "@/ui/pane";
-import { missingFont, missingFonts, missingVariants } from "@/ui/picker";
+import {
+  missingAdded,
+  missingFont,
+  missingFonts,
+  missingVariants,
+} from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -30,6 +35,8 @@ export interface Designing {
   book(): Promise<Typeset | undefined>;
   /** Writes the design into the book's own frontmatter, where it lives. */
   setDesign(book: string, design: Design): Promise<void>;
+  /** Writes the fonts the book adds into its own frontmatter, where they live. */
+  setFonts(book: string, fonts: readonly string[]): Promise<void>;
   /** Writes the author's own CSS into the book note's css fence. */
   setCss(book: string, css: string): Promise<void>;
   /** The fonts the machine has. The scan runs once for the session. */
@@ -106,6 +113,15 @@ export class DesignPanelView extends ItemView {
       },
       variant: (key, variant) => {
         void this.redesign(key, (design) => withVariant(design, key, variant));
+      },
+      addFont: (family) => {
+        void this.refont((added) => [...added, family.name]);
+      },
+      dropFont: (font) => {
+        const gone = font.toLowerCase();
+        void this.refont((added) =>
+          added.filter((each) => each.toLowerCase() !== gone),
+        );
       },
       preview: (family) => {
         void this.designing.preview(family);
@@ -204,6 +220,7 @@ export class DesignPanelView extends ItemView {
       editor.wrap(this.wrapping);
       this.editor = editor;
     } else editor.show(typeset.css);
+    editor.fonts(typeset.families);
     editor.flag(cssFlags(typeset.session.warnings), typeset.cssWarned);
   }
 
@@ -221,7 +238,7 @@ export class DesignPanelView extends ItemView {
     const typeset = await this.designing.book();
     if (typeset === undefined) return;
     const design = withFont(typeset.design, key, font.name);
-    const resolved = await this.resolve(design);
+    const resolved = await this.resolve(design, typeset.added);
     const want = font.name.toLowerCase();
     this.unread = resolved.some((each) => each.unread && each.use.font.toLowerCase() === want)
       ? font.name
@@ -242,12 +259,29 @@ export class DesignPanelView extends ItemView {
     if (typeset === undefined) return;
     const design = edited(typeset.design);
     const fonted = key.endsWith("-font") || key.endsWith("-font-variant");
-    await this.settle(typeset, design, fonted ? await this.resolve(design) : []);
+    const resolved = fonted ? await this.resolve(design, typeset.added) : [];
+    await this.settle(typeset, design, resolved);
   }
 
-  /** The faces of every font and variant a design uses. A read that fails sends none. */
-  private async resolve(design: Design): Promise<readonly ResolvedUse[]> {
-    const uses = designUses(design);
+  /**
+   * Sets the book under the fonts it adds, and writes them into the
+   * note. The faces of a font newly added cross with the sheets.
+   */
+  private async refont(edited: (added: readonly string[]) => string[]): Promise<void> {
+    const typeset = await this.designing.book();
+    if (typeset === undefined) return;
+    const added = edited(typeset.added);
+    typeset.refont(added, await this.resolve(typeset.design, added));
+    await this.repaint();
+    await this.designing.setFonts(typeset.path, added);
+  }
+
+  /** The faces of every font and variant a book uses. A read that fails sends none. */
+  private async resolve(
+    design: Design,
+    added: readonly string[],
+  ): Promise<readonly ResolvedUse[]> {
+    const uses = bookUses(design, added);
     if (uses.length === 0) return [];
     try {
       return await this.designing.fonts(uses);
@@ -369,7 +403,8 @@ export class DesignPanelView extends ItemView {
       index,
       unit: this.designing.unit(),
       language: typeset.language,
-      missing: this.warnings(index, typeset.design),
+      fonts: typeset.added,
+      missing: this.warnings(index, typeset.design, typeset.added),
       warned: flags.length,
       inspecting: this.inspecting(typeset),
       overridden: typeset.overridden(refused),
@@ -402,10 +437,17 @@ export class DesignPanelView extends ItemView {
     return { pin, layers, caret: editor?.caret().line };
   }
 
-  /** The warnings for the fonts and variants a design asks for, the body's and each heading level's. */
-  private warnings(index: FontIndex, design: Design): string[] {
+  /**
+   * The warnings for the fonts and variants a book asks for: the body's,
+   * each heading level's and each font the book adds.
+   */
+  private warnings(index: FontIndex, design: Design, added: readonly string[]): string[] {
     const unread = this.unread;
-    const missing = [...missingFonts(index, design), ...missingVariants(index, design)];
+    const missing = [
+      ...missingFonts(index, design),
+      ...missingVariants(index, design),
+      ...missingAdded(index, design, added),
+    ];
     if (unread === undefined || !designFonts(design).includes(unread)) {
       return missing;
     }

@@ -121,6 +121,16 @@ its editor around these files and returns a URL. The artboard list and
   variant shows none. A book with no variant picked sets in the
   family's default variant, and each variant row is set in its own
   face.
+- The Fonts group follows Headings and adds a font the design names
+  nowhere. The picker is the Font control's, and a font added this way
+  registers a face, so the author's CSS can set text in it by name. The
+  row is set in that font, and the cross at its end takes it back out.
+  A font the machine no longer has warns the way a missing design font
+  warns.
+- A `font-family` value in the CSS view completes from the fonts the
+  book carries, the design's and the added ones. A name goes in quoted.
+  Nothing else in the CSS completes, because the engine is the only
+  linter.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view

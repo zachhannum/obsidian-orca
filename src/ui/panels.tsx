@@ -15,6 +15,7 @@
 
 import { createRoot } from "react-dom/client";
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -77,6 +78,10 @@ export interface Acting {
   set(key: string, value: Written | undefined): void;
   /** Sets a font's variant key. The faces of the variant go to the engine with the sheet. */
   variant(key: string, variant: Variant): void;
+  /** Adds a font to the book, which no design key names. Its faces go to the engine with the sheet. */
+  addFont(font: Family): void;
+  /** Takes a font the book added back out, by the name the note holds. */
+  dropFont(font: string): void;
   /** Registers a face of each variant of a family with the document, so each variant row draws in its own face. */
   preview(family: Family): void;
   /** Switches the panel between its controls and the author's own CSS. */
@@ -110,6 +115,8 @@ export type Shown =
       /** The design as the book note holds it. */
       design: Design;
       index: FontIndex;
+      /** The fonts the book adds, which no design key names. */
+      fonts: readonly string[];
       /** The unit for drawing and stepping the margins and a custom trim. */
       unit: PageUnit;
       /** The language that the book sets. The hyphenation patterns depend on it. */
@@ -134,6 +141,19 @@ export interface Mounted {
 
 /** The font that the engine carries. A book is set in it until the author picks a font. */
 export const CARRIED = "EB Garamond";
+
+/** The group that adds a font to the book without a design key naming it. */
+export const FONTS_GROUP = "Fonts";
+
+/**
+ * The group the Fonts group follows. It closes the groups that set
+ * type, and a picker there is not the last thing in the panel, so the
+ * menu it opens hangs over rows rather than over the end of the scroll.
+ */
+const FONTS_AFTER = "Headings";
+
+/** The picker that adds a font reads this until a font is picked. */
+const ADD_A_FONT = "Add a font";
 
 /**
  * Mounts the panel under a view's element. The view owns the root and
@@ -305,36 +325,40 @@ export function Panel({
     >
       {header}
       {GROUPS.map((group) => (
-        <div
-          key={group.name}
-          className="orca-panel-group"
-          data-testid="orca-panel-group"
-          data-group={group.name}
-        >
-          <div className="orca-panel-heading">
-            <span className="orca-panel-name">{group.name}</span>
+        <Fragment key={group.name}>
+          <div
+            className="orca-panel-group"
+            data-testid="orca-panel-group"
+            data-group={group.name}
+          >
+            <div className="orca-panel-heading">
+              <span className="orca-panel-name">{group.name}</span>
+            </div>
+            {group.rows.map((line, at) => {
+              const levels = line.of.find((control) => control.kind === "level");
+              if (levels !== undefined) {
+                return (
+                  <Tabs
+                    key={at}
+                    value={String(level)}
+                    choices={levels.choices ?? []}
+                    testid="orca-panel-heading-level"
+                    choose={(chosen) => {
+                      const found = LEVELS.find((each) => String(each) === chosen);
+                      if (found !== undefined) choose(found);
+                    }}
+                  />
+                );
+              }
+              return drawn(line, drawing) ? (
+                <Line key={at} line={line} drawing={drawing} />
+              ) : null;
+            })}
           </div>
-          {group.rows.map((line, at) => {
-            const levels = line.of.find((control) => control.kind === "level");
-            if (levels !== undefined) {
-              return (
-                <Tabs
-                  key={at}
-                  value={String(level)}
-                  choices={levels.choices ?? []}
-                  testid="orca-panel-heading-level"
-                  choose={(chosen) => {
-                    const found = LEVELS.find((each) => String(each) === chosen);
-                    if (found !== undefined) choose(found);
-                  }}
-                />
-              );
-            }
-            return drawn(line, drawing) ? (
-              <Line key={at} line={line} drawing={drawing} />
-            ) : null;
-          })}
-        </div>
+          {group.name === FONTS_AFTER ? (
+            <Fonts fonts={shown.fonts} index={shown.index} acting={acting} />
+          ) : null}
+        </Fragment>
       ))}
       {shown.missing.map((said) => (
         <Warning key={said} said={said} testid="orca-panel-missing" />
@@ -744,6 +768,94 @@ function saidUnder(
   return line.of.some((control) => control.key === "body-hyphens")
     ? hyphenating(shown.language)
     : undefined;
+}
+
+/**
+ * The fonts the book carries beyond the ones its design names. A font
+ * here registers a face, so the author's CSS can name it. The picker
+ * offers the same index the design's font pickers do.
+ */
+function Fonts({
+  fonts,
+  index,
+  acting,
+}: {
+  fonts: readonly string[];
+  index: FontIndex;
+  acting: Acting;
+}): JSX.Element {
+  return (
+    <div
+      className="orca-panel-group"
+      data-testid="orca-panel-group"
+      data-group={FONTS_GROUP}
+    >
+      <div className="orca-panel-heading">
+        <span className="orca-panel-name">{FONTS_GROUP}</span>
+      </div>
+      {fonts.map((font) => (
+        <Row
+          key={font}
+          label=""
+          grid={false}
+          under={[]}
+          reset={<Drop font={font} drop={acting.dropFont.bind(acting)} />}
+        >
+          <span
+            className="orca-panel-field is-added"
+            data-testid="orca-panel-font-added"
+            data-font={font}
+            style={{
+              fontFamily: `"${previewFamily(font)}", "${font}", var(--font-text)`,
+            }}
+          >
+            {font}
+          </span>
+        </Row>
+      ))}
+      <Row label="" grid={false} under={[]} reset={null}>
+        <Picker
+          index={index}
+          font={ADD_A_FONT}
+          faint
+          testid="orca-panel-font-add"
+          pick={(font) => {
+            acting.addFont(font);
+          }}
+        />
+      </Row>
+    </div>
+  );
+}
+
+/** Takes a font the book added back out, at the end of its row. */
+function Drop({
+  font,
+  drop,
+}: {
+  font: string;
+  drop: (font: string) => void;
+}): JSX.Element {
+  return (
+    <div
+      className="clickable-icon orca-panel-reset"
+      role="button"
+      tabIndex={0}
+      aria-label={`Take ${font} out of the book`}
+      data-testid="orca-panel-font-drop"
+      data-font={font}
+      onClick={() => {
+        drop(font);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        drop(font);
+      }}
+    >
+      <Icon name="x" className="orca-panel-icon" />
+    </div>
+  );
 }
 
 /**

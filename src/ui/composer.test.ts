@@ -862,6 +862,70 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   assert.deepEqual(book.unread, []);
 });
 
+/** The faces sheet of the last style op in a run of ops. */
+function facesCss(ops: readonly Op[]): string {
+  const style = ops.filter((op) => op.op === "style").at(-1);
+  assert.ok(style?.op === "style");
+  return style.sheets.find((sheet) => sheet.name === FACES_SHEET)?.css ?? "";
+}
+
+test("a font the book adds crosses as a face, and crosses again on a new engine", async () => {
+  const index = await readFontIndex(PLACES);
+  const junicode = familyNamed(index, "Junicode");
+  assert.ok(junicode, "the fixture vault carries no Junicode");
+  const regular = junicode.variants.find((each) => each.isDefault);
+  assert.ok(regular, "Junicode has no default variant");
+  const urls = await Promise.all(
+    regular.faces.map(async (face) => {
+      const file = new Uint8Array(await vault.readBinary(face.path));
+      return fontUrl(await contentKey(faceBytes(file, face.face)));
+    }),
+  );
+  const use: FontUse = { font: "Junicode", variant: undefined };
+
+  const clock = new Steps();
+  const clients = new Clients();
+  const base = await setting(new FakeClient());
+  const composer = new Composer(
+    {
+      ...base,
+      engines: clients.engines,
+      model: async (at) => {
+        const model = await base.model(at);
+        if (model !== undefined) model.book.fonts = ["Junicode"];
+        return model;
+      },
+      fonts: (uses) => Promise.all(uses.map((each) => resolveUse(PLACES, index, each))),
+    },
+    clock,
+  );
+
+  const book = await composer.open(BOOK);
+
+  // No design key names the font, and its faces cross all the same.
+  assert.deepEqual(book.fonts, []);
+  assert.deepEqual(book.added, ["Junicode"]);
+  assert.deepEqual(book.families, ["Junicode"]);
+  assert.deepEqual(book.unloaded, []);
+  const opened = clients.started[0]?.rendered[0] ?? [];
+  assert.deepEqual(new Set(sentUrls(opened)), new Set(urls));
+  assert.match(facesCss(opened), /font-family: "Junicode";/);
+
+  // A face is registered for one session. The book set anew carries the
+  // font it added, so the faces cross to the new engine too.
+  composer.died(BOOK);
+  await drain();
+  const again = await composer.open(BOOK);
+  assert.deepEqual(again.added, ["Junicode"]);
+  assert.deepEqual(new Set(sentUrls(clients.started[1]?.rendered[0] ?? [])), new Set(urls));
+
+  // A font taken back out drops out of the faces sheet.
+  again.refont([], [await resolveUse(PLACES, index, use)]);
+  clock.tick();
+  await drain();
+  assert.doesNotMatch(facesCss(clients.started[1]?.rendered.at(-1) ?? []), /Junicode/);
+});
+
 /** The design after a font pick, as the panel passes it to `restyle`. */
 function refonted(design: Design, font: string): Design {
   return { ...design, body: { ...design.body, font } };

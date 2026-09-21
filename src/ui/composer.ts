@@ -37,7 +37,13 @@ import {
 import { Loop, timers, type Clock } from "@/engine/loop";
 import type { Engines } from "@/engine/pool";
 import { Session, type FaceSet } from "@/engine/session";
-import { designFonts, designUses, useKey, type Design, type FontUse } from "@/style/design";
+import {
+  bookUses,
+  designFonts,
+  useKey,
+  type Design,
+  type FontUse,
+} from "@/style/design";
 import type { Registered } from "@/style/faces";
 import type { RuleFrom, Setting } from "@/style/generated";
 import type { Place } from "@/style/origin";
@@ -59,6 +65,8 @@ export interface Replay {
   sent: Map<string, string>;
   /** The design its sheets were generated from. */
   design: Design;
+  /** The fonts the book adds, which no design key names. */
+  fonts: readonly string[];
   /** The author's own CSS, which may be newer than the note's fence. */
   css: string;
   /** The order and the names those sheets were generated against. */
@@ -101,6 +109,8 @@ export class Typeset {
   private embeds = 0;
   private loaded: Loaded;
   private designed: Design;
+  /** The fonts the book adds, which no design key names. */
+  private addedFonts: readonly string[];
   /** The fonts and variants the faces sheet registers, one for each use the design sets. */
   private registered: Registered[];
   /** The uses whose font files would not read, by their key. */
@@ -137,6 +147,8 @@ export class Typeset {
       links: Links;
       /** The design the sheets were generated from. */
       design: Design;
+      /** The fonts the book adds, which no design key names. */
+      fonts?: readonly string[];
       /** The faces the sheets register, for the uses the design sets. */
       registered: Registered[];
       /** Each use the design sets as it resolved, loaded or not. */
@@ -164,6 +176,7 @@ export class Typeset {
     this.links = book.links;
     this.loaded = { sheets: book.sheets };
     this.designed = book.design;
+    this.addedFonts = book.fonts ?? [];
     this.registered = book.registered;
     for (const each of book.resolved ?? []) {
       if (each.unread) this.unreadFaces.add(useKey(each.use));
@@ -284,19 +297,29 @@ export class Typeset {
     return designFonts(this.designed);
   }
 
+  /** The fonts the book adds, which no design key names. */
+  get added(): readonly string[] {
+    return this.addedFonts;
+  }
+
+  /** The families the faces sheet registers, which the author's CSS can name. */
+  get families(): string[] {
+    return [...new Set(this.registered.map((each) => each.family))];
+  }
+
   /** The design the book is set under, which the book note holds. */
   get design(): Design {
     return this.designed;
   }
 
   /**
-   * The uses the design sets that registered no face, so the PDF has
-   * none of theirs to embed. `unread` is set when the font was found
-   * and its files would not read.
+   * The uses the book sets that registered no face, so the PDF has none
+   * of theirs to embed. `unread` is set when the font was found and its
+   * files would not read.
    */
   get unloaded(): Unloaded[] {
     const held = new Set(this.registered.map(useKey));
-    return designUses(this.designed).flatMap((use) => {
+    return bookUses(this.designed, this.addedFonts).flatMap((use) => {
       const key = useKey(use);
       return held.has(key) ? [] : [{ use, unread: this.unreadFaces.has(key) }];
     });
@@ -312,13 +335,27 @@ export class Typeset {
    * generated layer again, and crosses any face a use newly resolved.
    * A face crosses the first time a variant is picked and stays
    * registered for the session, so picking it again sends the sheets
-   * alone. A use the design no longer sets drops out of the faces sheet.
+   * alone. A use the book no longer sets drops out of the faces sheet.
    *
    * The plan keys an edit that carries faces by those faces. A later
    * edit coalesces with it, so the faces still cross.
    */
   restyle(design: Design, resolved: readonly ResolvedUse[] = []): void {
     this.designed = design;
+    this.settle(resolved);
+  }
+
+  /**
+   * Sets the fonts the book adds, and crosses any face they newly
+   * resolved. A font taken out drops out of the faces sheet unless a
+   * design key still names it.
+   */
+  refont(added: readonly string[], resolved: readonly ResolvedUse[] = []): void {
+    this.addedFonts = added;
+    this.settle(resolved);
+  }
+
+  private settle(resolved: readonly ResolvedUse[]): void {
     const held = new Map(this.registered.map((each) => [useKey(each), each]));
     for (const each of resolved) {
       const key = useKey(each.use);
@@ -327,7 +364,7 @@ export class Typeset {
       if (each.unread) this.unreadFaces.add(key);
       else this.unreadFaces.delete(key);
     }
-    const uses = new Set(designUses(design).map(useKey));
+    const uses = new Set(bookUses(this.designed, this.addedFonts).map(useKey));
     this.registered = [...held].flatMap(([key, each]) => (uses.has(key) ? [each] : []));
     const sheets = designSheets(this.designed, this.setting, this.own, this.registered);
     // Only a face not yet sent keys the edit. An edit keyed by faces that
@@ -442,6 +479,7 @@ export class Typeset {
     return {
       sent: new Map(this.sent),
       design: this.designed,
+      fonts: this.addedFonts,
       css: this.own,
       setting: this.setting,
       sheets: this.loaded.sheets,
@@ -709,6 +747,7 @@ export class Composer {
     const client = await this.vault.engines.client(path);
     const session = new Session(client, this.vault.faces);
     const design: Design = carried?.design ?? model.book.design;
+    const fonts = carried?.fonts ?? model.book.fonts;
     const { title, author, publisher, language } = model.book.metadata;
     const setting: Setting = carried?.setting ?? {
       sections: sectionIds(sections),
@@ -716,7 +755,7 @@ export class Composer {
       author,
       publisher,
     };
-    const resolved = await this.resolve(designUses(design));
+    const resolved = await this.resolve(bookUses(design, fonts));
     const registered = resolved.flatMap((each) => each.registered ?? []);
     const sheets = [
       ...(carried?.sheets ?? designSheets(design, setting, css, registered)),
@@ -738,6 +777,7 @@ export class Composer {
         assets,
         links: this.vault.links,
         design,
+        fonts,
         registered,
         resolved,
         images,

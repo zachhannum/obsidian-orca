@@ -30,6 +30,7 @@ const GROUPS = [
   "Page",
   "Text",
   "Headings",
+  "Fonts",
   "Chapter openings",
   "Scene breaks",
   "Heads & folios",
@@ -247,11 +248,12 @@ function slug(group: string): string {
 /**
  * The controls a group of the design panel draws, and the reset beside
  * each row, by the key each one writes. The Headings group draws one
- * level at a time, so its keys are the first level's.
+ * level at a time, so its keys are the first level's. A group that
+ * writes no design key, such as Fonts, marks nothing.
  */
 function targets(site: Site, group: string): Record<string, Locator> {
   const drawn = PANEL_GROUPS.find((each) => each.name === group);
-  if (drawn === undefined) throw new Error(`no group called ${group}`);
+  if (drawn === undefined) return {};
   const found: Record<string, Locator> = {};
   for (const row of drawn.rows) {
     for (const control of row.of) {

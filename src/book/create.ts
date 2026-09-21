@@ -44,7 +44,7 @@ export function newBook(
     lines.push("");
   }
   return {
-    book: { format: FORMAT, metadata, design: emptyDesign(), own: {} },
+    book: { format: FORMAT, metadata, fonts: [], design: emptyDesign(), own: {} },
     order: readOrder(lines.join("\n")),
   };
 }

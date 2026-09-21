@@ -148,6 +148,61 @@ test("picking the font the book is set in again keeps the book in it", async ({
   await written(vault, own);
 });
 
+test("a font added to the book sets the text its CSS names", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The picker that adds a font reads the same index the design's own
+  // pickers read.
+  await panel.addFont.click();
+  await expect(panel.filter).toBeVisible();
+  await panel.type(FIXTURE_FONT);
+  await expect(panel.option(FIXTURE_FONT)).toBeVisible();
+  await panel.option(FIXTURE_FONT).click();
+  await expect(panel.added(FIXTURE_FONT)).toBeVisible();
+
+  // The note holds it, so it outlives the session.
+  await expect.poll(async () => vault.read(BOOK)).toContain(`- ${FIXTURE_FONT}`);
+  // No design key names it, so the body is still set in the font the
+  // engine carries.
+  await expect(panel.font).toContainText(CARRIED);
+  await expect(panel.missing).toHaveCount(0);
+
+  // The author's CSS names it. The heading is set in its face, and the
+  // body, which the CSS does not name, is not.
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await panel.typeCss(`\nh1 { font-family: "${FIXTURE_FONT}"; }`);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`font-family: "${FIXTURE_FONT}"`);
+  await book.choose(CHAPTER_NAME);
+  await expect
+    .poll(async () => {
+      const heading = await book.facesOf(BOOK, HEADING_WORD);
+      const body = await book.facesOf(BOOK, BODY_WORDS);
+      return (
+        heading.some((name) => name.startsWith(FIXTURE_FONT)) &&
+        !body.some((name) => name.startsWith(FIXTURE_FONT))
+      );
+    })
+    .toBe(true);
+
+  // The cross takes it back out, and the book is set in the carried
+  // face again.
+  await panel.toControls.click();
+  await panel.dropFromBook(FIXTURE_FONT);
+  await expect.poll(async () => vault.read(BOOK)).not.toContain(`- ${FIXTURE_FONT}`);
+
+  await written(vault, own);
+  await book.settled(BOOK);
+});
+
 test("a book note written while a pane reads it leaves the panel designing that book", async ({
   book,
   panel,
@@ -495,6 +550,7 @@ test("the panel offers every group a book designer works in", async ({
     "Page",
     "Text",
     "Headings",
+    "Fonts",
     "Chapter openings",
     "Scene breaks",
     "Heads & folios",

@@ -66,6 +66,10 @@ export class Controls {
   readonly nothing: Locator;
   /** The warning for a font the machine does not have. */
   readonly missing: Locator;
+  /** The picker that adds a font to the book, which no design key names. */
+  readonly addFont: Locator;
+  /** The fonts the book adds, each carrying its name. */
+  readonly addedFonts: Locator;
   /** The header icon that opens the author's own CSS. */
   readonly toCss: Locator;
   /** The header icon that goes back to the controls. */
@@ -118,6 +122,8 @@ export class Controls {
     this.options = root.getByTestId("orca-panel-option");
     this.nothing = root.getByTestId("orca-panel-nothing");
     this.missing = root.getByTestId("orca-panel-missing");
+    this.addFont = root.getByTestId("orca-panel-font-add");
+    this.addedFonts = root.getByTestId("orca-panel-font-added");
     this.toCss = root.getByTestId("orca-panel-css");
     this.toControls = root.getByTestId("orca-panel-controls");
     this.wrap = root.getByTestId("orca-panel-wrap");
@@ -385,6 +391,29 @@ export class Controls {
     return this.root
       .getByTestId("orca-panel-variant")
       .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-variant") ?? ""));
+  }
+
+  /** Adds a family to the book, through the filter, and waits for its row. */
+  async addToBook(family: string): Promise<void> {
+    await this.addFont.click();
+    await expect(this.filter).toBeVisible();
+    await this.type(family);
+    await this.option(family).click();
+    await expect(this.added(family)).toBeVisible();
+  }
+
+  /** The row of a font the book adds. */
+  added(family: string): Locator {
+    return this.addedFonts.and(this.root.locator(`[data-font="${family}"]`));
+  }
+
+  /** Takes a font the book added back out, and waits for its row to go. */
+  async dropFromBook(family: string): Promise<void> {
+    await this.root
+      .getByTestId("orca-panel-font-drop")
+      .and(this.root.locator(`[data-font="${family}"]`))
+      .click();
+    await expect(this.added(family)).toHaveCount(0);
   }
 
   /** Picks a family for a font key, through the filter, and waits for the field to show it. */

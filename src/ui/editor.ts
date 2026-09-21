@@ -5,6 +5,11 @@
  * the editor sits beside the React panel and never inside it.
  */
 
+import {
+  autocompletion,
+  type CompletionContext,
+  type CompletionResult,
+} from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { cssLanguage } from "@codemirror/lang-css";
 import {
@@ -36,8 +41,10 @@ import {
   tooltips,
   type DecorationSet,
 } from "@codemirror/view";
+import type { SyntaxNode } from "@lezer/common";
 import { classHighlighter } from "@lezer/highlight";
 import type { Place } from "@/style/origin";
+import { quoted } from "@/style/quoted";
 
 /** The editor over the fence, held by the panel view. */
 export interface CssEditor {
@@ -51,6 +58,8 @@ export interface CssEditor {
   reveal(line: number, column: number): void;
   /** Puts text in at the caret, as typing does, so it reaches the note. */
   insert(text: string): void;
+  /** Sets the families a `font-family` value completes from. See {@link fontCompletion}. */
+  fonts(families: readonly string[]): void;
   /** The line and column of the caret, both counted from 1. */
   caret(): { line: number; column: number };
   /** The warnings inside the rule that starts at a line and column. */
@@ -87,6 +96,90 @@ const wrapping = new Compartment();
 
 /** Replaces every flag with a render's. */
 const reflag = StateEffect.define<DecorationSet>();
+
+/** Replaces the families a `font-family` value completes from. */
+const refamilies = StateEffect.define<readonly string[]>();
+
+const families = StateField.define<readonly string[]>({
+  create: () => [],
+  update(names, tr) {
+    for (const effect of tr.effects) if (effect.is(refamilies)) return effect.value;
+    return names;
+  },
+});
+
+/** The transaction that sets the families a `font-family` value completes from. */
+export function fonted(names: readonly string[]): TransactionSpec {
+  return { effects: refamilies.of(names) };
+}
+
+/** The `font-family` value being written, and the text typed into it so far. */
+interface Naming {
+  from: number;
+  to: number;
+  typed: string;
+}
+
+/**
+ * The families the book registers, offered inside a `font-family`
+ * value and nowhere else. A name goes in quoted, so one of several
+ * words reads as one family. Nothing else completes, because the engine
+ * is the only linter and a property it refuses is a warning rather than
+ * a missing option.
+ */
+export function fontCompletion(context: CompletionContext): CompletionResult | null {
+  const at = naming(context.state, context.pos);
+  if (at === undefined) return null;
+  const typed = at.typed.replace(/^["']/, "").trim().toLowerCase();
+  const offered = context.state
+    .field(families)
+    .filter((name) => name.toLowerCase().includes(typed));
+  if (offered.length === 0) return null;
+  return {
+    from: at.from,
+    to: at.to,
+    // The typed text can open with a quote, which matches no family
+    // name, so the options are filtered here rather than by the label.
+    filter: false,
+    options: offered.map((name) => ({
+      label: name,
+      type: "constant",
+      apply: quoted(name),
+    })),
+  };
+}
+
+/**
+ * The extent of the one family a place in the text is writing, or
+ * nothing where that place is not in a `font-family` value. A comma
+ * splits a stack, so only the family under the caret is replaced.
+ */
+function naming(state: EditorState, pos: number): Naming | undefined {
+  let back = pos;
+  while (back > 0 && /\s/.test(state.sliceDoc(back - 1, back))) back -= 1;
+  const inner = syntaxTree(state).resolveInner(back, -1);
+  let node: SyntaxNode | null = inner;
+  while (node !== null && node.name !== "Declaration") node = node.parent;
+  if (node === null) return undefined;
+  const property = node.getChild("PropertyName");
+  const colon = node.getChild(":");
+  if (property === null || colon === null || pos < colon.to) return undefined;
+  if (state.sliceDoc(property.from, property.to).trim().toLowerCase() !== "font-family") {
+    return undefined;
+  }
+  let from = colon.to;
+  const comma = state.sliceDoc(from, pos).lastIndexOf(",");
+  if (comma >= 0) from += comma + 1;
+  while (from < pos && /\s/.test(state.sliceDoc(from, from + 1))) from += 1;
+  let to = pos;
+  // A quoted name is replaced whole, quotes and all, so the completion
+  // never leaves a stray quote behind it.
+  if (inner.name === "StringLiteral" && inner.from <= from) {
+    from = inner.from;
+    to = Math.max(to, inner.to);
+  }
+  return { from, to, typed: state.sliceDoc(from, pos) };
+}
 
 const flags = StateField.define<DecorationSet>({
   create: () => Decoration.none,
@@ -125,13 +218,16 @@ const flagHover = hoverTooltip((view, pos) => {
 });
 
 /**
- * The editor's extensions: the CSS grammar and the engine's warnings
- * on the text. Nothing here lints or completes. Every flag comes from a
- * render, because the engine is the only linter.
+ * The editor's extensions: the CSS grammar, the engine's warnings on
+ * the text, and the book's families under `font-family`. Nothing here
+ * lints. Every flag comes from a render, because the engine is the only
+ * linter.
  */
 export function cssExtensions(changed: (css: string) => void): Extension[] {
   return [
     cssLanguage,
+    families,
+    autocompletion({ override: [fontCompletion] }),
     syntaxHighlighting(classHighlighter),
     lineNumbers(),
     highlightActiveLine(),
@@ -401,6 +497,9 @@ export function mountEditor(
     insert(text) {
       view.dispatch(inserted(view.state, text));
       view.focus();
+    },
+    fonts(names) {
+      view.dispatch(fonted(names));
     },
     caret() {
       const head = view.state.selection.main.head;

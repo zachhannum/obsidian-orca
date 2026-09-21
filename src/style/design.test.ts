@@ -417,7 +417,7 @@ test("a variant survives a trip through the properties and through the note, byt
     }
 
     assert.deepEqual(readDesign(writeDesign(design)), design);
-    const text = writeNote({ format: FORMAT, metadata: {}, design, own: {} }, "\n");
+    const text = writeNote({ format: FORMAT, metadata: {}, fonts: [], design, own: {} }, "\n");
     const { properties, body } = readFrontmatter(text);
     assert.equal(writeNote(readBook(properties), body), text);
     assert.deepEqual(readBook(properties).design, design);

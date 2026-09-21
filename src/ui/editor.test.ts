@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { language } from "@codemirror/language";
+import { CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
 import { EditorState } from "@codemirror/state";
 import { OWN_SHEET } from "@/style/sheet";
 import {
   cssExtensions,
   flagged,
+  fontCompletion,
+  fonted,
   flagsAt,
   flagsIn,
   inserted,
@@ -49,11 +52,34 @@ test("the editor sets its text in the CSS grammar", () => {
   assert.equal(editing().facet(language)?.name, "css");
 });
 
-test("the editor carries a CSS language mode and nothing more", () => {
-  const state = editing();
-  for (const at of [0, 6, state.doc.length]) {
-    assert.deepEqual(state.languageDataAt("autocomplete", at), []);
-  }
+test("a font-family value completes from the fonts the book carries", () => {
+  const doc = 'h1 {\n  font-family: ;\n  font-size: ;\n}\n';
+  const state = editing(doc).update(fonted(["Junicode", "Junicode Cond", "Alegreya"])).state;
+  const complete = (at: number): CompletionResult | null =>
+    fontCompletion(new CompletionContext(state, at, true));
+
+  const offered = complete(doc.indexOf("font-family: ") + "font-family: ".length);
+  assert.deepEqual(offered?.options.map((option) => option.label), [
+    "Junicode",
+    "Junicode Cond",
+    "Alegreya",
+  ]);
+  // A name of more than one word goes in quoted, so it reads as one family.
+  assert.equal(offered?.options[1]?.apply, '"Junicode Cond"');
+  // Only font-family completes. The engine is the only linter, so a
+  // property it refuses is a warning rather than a missing option.
+  assert.equal(complete(doc.indexOf("font-size: ") + "font-size: ".length), null);
+  assert.equal(complete(0), null);
+
+  // A partly typed name narrows the list, quote and all, and the
+  // completion replaces the whole family it sits in.
+  const into = doc.indexOf("font-family: ") + "font-family: ".length;
+  const typing = state.update({ changes: { from: into, insert: '"Junicode C' } }).state;
+  const narrowed = fontCompletion(
+    new CompletionContext(typing, into + '"Junicode C'.length, true),
+  );
+  assert.deepEqual(narrowed?.options.map((option) => option.label), ["Junicode Cond"]);
+  assert.equal(typing.sliceDoc(narrowed?.from, narrowed?.to), '"Junicode C');
 });
 
 test("every flag in the editor comes from a warning the engine sent", () => {
@@ -138,4 +164,6 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
 
 // What this tier does not cover: the editor on a page, which has no
 // DOM here, and the card a hover draws. The e2e suite types into it in
-// Obsidian and waits on the write, the render, the squiggle and its card.
+// Obsidian and waits on the write, the render, the squiggle and its
+// card. Nor the font the engine carries, which no face registers and
+// the completion does not offer.

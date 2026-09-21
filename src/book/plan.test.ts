@@ -178,6 +178,7 @@ test("a title page with no metadata falls back to its role's own name", async ()
   const book: Book = {
     format: FORMAT,
     metadata: {},
+    fonts: [],
     design: emptyDesign(),
     own: {},
   };

@@ -1247,6 +1247,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     return {
       book: () => this.designed(),
       setDesign: (book, design) => this.setDesign(book, design),
+      setFonts: (book, fonts) => this.setFonts(book, fonts),
       setCss: (book, css) => this.setCss(book, css),
       index: () => this.fontIndex(),
       fonts: (uses) => this.resolved(uses),
@@ -1462,6 +1463,21 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.edits.edit(book, (current) => ({
       ...current,
       book: { ...current.book, design },
+    }));
+  }
+
+  /**
+   * Writes the fonts the book adds into its own frontmatter. The engine
+   * already has their faces.
+   */
+  private async setFonts(book: string, fonts: readonly string[]): Promise<void> {
+    const model = await this.edits.model(book);
+    if (model === undefined) return;
+    if (model.book.fonts.join("\n") === fonts.join("\n")) return;
+    this.designWrites.add(book);
+    await this.edits.edit(book, (current) => ({
+      ...current,
+      book: { ...current.book, fonts: [...fonts] },
     }));
   }
 
