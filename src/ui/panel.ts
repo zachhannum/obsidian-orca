@@ -17,7 +17,12 @@ import { groupRules } from "@/style/layers";
 import type { ResolvedUse } from "@/ui/fonts";
 import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
 import type { Inspecting } from "@/ui/pane";
-import { missingFont, missingFonts, missingVariants } from "@/ui/picker";
+import {
+  missingAdded,
+  missingFont,
+  missingFonts,
+  missingVariants,
+} from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -441,7 +446,7 @@ export class DesignPanelView extends ItemView {
     const missing = [
       ...missingFonts(index, design),
       ...missingVariants(index, design),
-      ...addedMissing(index, design, added),
+      ...missingAdded(index, design, added),
     ];
     if (unread === undefined || !designFonts(design).includes(unread)) {
       return missing;
@@ -451,21 +456,6 @@ export class DesignPanelView extends ItemView {
       ...missing.filter((said) => said !== missingFont(index, unread)),
     ];
   }
-}
-
-/**
- * The warnings for the fonts the book adds that the machine does not
- * have. A font a design key also names warns once, under the design.
- */
-function addedMissing(
-  index: FontIndex,
-  design: Design,
-  added: readonly string[],
-): string[] {
-  const named = new Set(designFonts(design).map((font) => font.trim().toLowerCase()));
-  return added.flatMap((font) =>
-    named.has(font.trim().toLowerCase()) ? [] : (missingFont(index, font) ?? []),
-  );
 }
 
 /** The warning for a font whose files would not read. */

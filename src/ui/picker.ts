@@ -61,6 +61,22 @@ export function missingFonts(index: FontIndex, design: Design): string[] {
 }
 
 /**
+ * The warnings for the fonts a book adds that the machine does not
+ * have, one per family. A font a design key also names warns under the
+ * design instead, so it warns once.
+ */
+export function missingAdded(
+  index: FontIndex,
+  design: Design,
+  added: readonly string[],
+): string[] {
+  const named = new Set(designFonts(design).map((font) => font.trim().toLowerCase()));
+  return added.flatMap((font) =>
+    named.has(font.trim().toLowerCase()) ? [] : (missingFont(index, font) ?? []),
+  );
+}
+
+/**
  * The warning for a stored variant the family on this machine does not
  * have. The book sets in the family's default variant. A font the
  * machine lacks gets the missing-font warning instead.

@@ -8,6 +8,7 @@ import { familyVariants } from "@/assets/variants";
 import { emptyDesign } from "@/style/design";
 import { readFontIndex, resolveUse, vaultFonts } from "@/ui/fonts";
 import {
+  missingAdded,
   missingFont,
   missingFonts,
   missingVariant,
@@ -132,6 +133,24 @@ test("a stored variant the machine does not have warns and sets in the family's 
   const regular = familyNamed(fixture, "Junicode")?.variants.find((each) => each.isDefault);
   assert.equal(regular?.name, "Regular");
   assert.equal(resolved.faces.length, regular.faces.length);
+});
+
+test("a font the book adds that the machine no longer has warns the way a design font warns", () => {
+  const design = emptyDesign();
+  design.body.font = "Charter";
+
+  // The warning is the one a design font gets, word for word.
+  assert.deepEqual(missingAdded(INDEX, design, ["Junicode"]), [
+    missingFont(INDEX, "Junicode"),
+  ]);
+  assert.deepEqual(missingAdded(INDEX, design, ["Alegreya"]), []);
+  // A font a design key also names warns under the design, so it warns
+  // once however it is capitalized.
+  assert.deepEqual(missingAdded(INDEX, emptyDesign(), ["Junicode"]), [
+    missingFont(INDEX, "Junicode"),
+  ]);
+  design.headings[2].font = "junicode";
+  assert.deepEqual(missingAdded(INDEX, design, ["Junicode"]), []);
 });
 
 // What this tier does not cover: the panel's drawing, which is React
