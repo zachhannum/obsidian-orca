@@ -28,6 +28,7 @@ import {
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
+import type { Registered } from "@/style/faces";
 import {
   generatedCss,
   generatedRules,
@@ -63,8 +64,8 @@ test("every generated rule sits at its line, reads only real setting keys, and m
   centered.page.mirrored = true;
   centered.headers.position = "center";
   centered.headers.pageNumber = "top";
-  centered.scene.mark = "word";
-  centered.scene.word = "Fin";
+  centered.scene.mark = "ornament";
+  centered.scene.font = "Junicode";
   designs.push(centered);
 
   for (const design of designs) {
@@ -297,7 +298,7 @@ test("the generated layer sets the pages it describes, and the engine warns abou
 });
 
 
-test("a scene break sets as a blank line, an ornament or a word on its own line", () => {
+test("a scene break sets as a blank line or as a glyph on its own line", () => {
   const scene = (over: Design["scene"]): string => {
     const design = emptyDesign();
     design.scene = over;
@@ -306,15 +307,37 @@ test("a scene break sets as a blank line, an ornament or a word on its own line"
 
   assert.equal(scene({ mark: "space", ornament: "\u2042" }), "hr {\n  content: none;\n}\n");
   assert.equal(
-    scene({ mark: "word", word: "Later" }),
-    'hr {\n  content: "Later";\n  text-align: center;\n}\n',
-  );
-  assert.equal(
     scene({ mark: "ornament", ornament: "\u2042" }),
     'hr {\n  content: "\u2042";\n}\n',
   );
   // A design with no mark set keeps its ornament.
   assert.equal(scene({ ornament: "\u2042" }), 'hr {\n  content: "\u2042";\n}\n');
+  // The glyph the author types is the mark, whatever it is.
+  assert.equal(scene({ mark: "ornament", ornament: "*" }), 'hr {\n  content: "*";\n}\n');
+});
+
+test("a scene break set in a font of its own names that family on `hr`", () => {
+  const design = emptyDesign();
+  design.scene = { mark: "ornament", ornament: "\u2042", font: "Junicode" };
+  const registered: Registered[] = [
+    {
+      font: "Junicode",
+      variant: "Regular",
+      family: "Junicode",
+      faces: [{ url: "orca-font:junicode-regular" }],
+    },
+  ];
+
+  assert.equal(
+    generatedCss(design, { sections: named([]) }, registered),
+    'hr {\n  font-family: "Junicode", serif;\n  content: "\u2042";\n}\n',
+  );
+  // A scene break with no font of its own declares none, so it takes the body's.
+  design.scene.font = undefined;
+  assert.equal(
+    generatedCss(design, { sections: named([]) }, registered),
+    'hr {\n  content: "\u2042";\n}\n',
+  );
 });
 
 test("the panel's own controls generate their declarations, and the engine warns about none of them", async () => {
@@ -623,8 +646,9 @@ function whole(): Design {
   design.headings[1].align = "center";
   design.chapter.spaceAbove = 2;
   design.chapter.spaceBelow = 1;
-  design.scene.mark = "word";
-  design.scene.word = "Later";
+  design.scene.mark = "ornament";
+  design.scene.ornament = "\u2042";
+  design.scene.font = "Junicode";
   design.scene.spaceAbove = 1;
   design.scene.spaceBelow = 1;
   design.headers.leftPage = "author";

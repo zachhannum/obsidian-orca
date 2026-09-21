@@ -261,6 +261,7 @@ section#contents p.part {
 }
 
 hr {
+  font-family: "Junicode", serif;
   content: "⁂";
   margin-top: 14pt;
   margin-bottom: 14pt;

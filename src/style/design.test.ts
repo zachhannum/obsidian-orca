@@ -333,7 +333,7 @@ function whole(): Design {
     scene: {
       mark: "ornament",
       ornament: "⁂",
-      word: "Later",
+      font: "Junicode",
       spaceAbove: 1,
       spaceBelow: 1,
     },

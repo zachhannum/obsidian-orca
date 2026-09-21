@@ -892,7 +892,12 @@ test("a font the book adds crosses as a face, and crosses again on a new engine"
       engines: clients.engines,
       model: async (at) => {
         const model = await base.model(at);
-        if (model !== undefined) model.book.fonts = ["Junicode"];
+        if (model !== undefined) {
+          model.book.fonts = ["Junicode"];
+          // The fixture sets its scene break in Junicode, and this test
+          // is about a font no design key names.
+          model.book.design.scene.font = undefined;
+        }
         return model;
       },
       fonts: (uses) => Promise.all(uses.map((each) => resolveUse(PLACES, index, each))),

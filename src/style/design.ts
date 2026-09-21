@@ -149,15 +149,15 @@ export interface ChapterDesign {
   firstLineLetterSpacing?: Length;
 }
 
-export type SceneMark = "space" | "ornament" | "word";
+export type SceneMark = "space" | "ornament";
 
 export interface SceneDesign {
   /** The kind of mark between two scenes. A space leaves a blank line. */
   mark?: SceneMark;
   /** The mark between two scenes, as the glyph itself. */
   ornament?: string;
-  /** The word between two scenes, as the author writes it. */
-  word?: string;
+  /** The face the mark is set in. A scene break with no font of its own takes the body's. */
+  font?: string;
   /** The blank space above a scene break, in lines of body text. */
   spaceAbove?: number;
   /** The blank space below a scene break, in lines of body text. */
@@ -215,14 +215,16 @@ export function emptyDesign(): Design {
 }
 
 /**
- * Every font a design names, the body's first and then each heading
- * level's. A family two places name is listed once, however it is
- * capitalized, because the index matches a name without case.
+ * Every font a design names, the body's first, then each heading
+ * level's, then the scene break's. A family two places name is listed
+ * once, however it is capitalized, because the index matches a name
+ * without case.
  */
 export function designFonts(design: Design): string[] {
   const named = [
     design.body.font,
     ...LEVELS.map((level) => design.headings[level].font),
+    design.scene.font,
   ];
   const seen = new Set<string>();
   const fonts: string[] = [];
@@ -243,18 +245,20 @@ export interface FontUse {
 }
 
 /**
- * Every font and variant a design sets, the body's first and then each
- * heading level's. A level with no font of its own takes the body's
- * font and variant as a pair. A level with its own font and no variant
- * takes that font's default. A pair two places set is listed once,
- * however it is capitalized.
+ * Every font and variant a design sets, the body's first, then each
+ * heading level's, then the scene break's. A level with no font of its
+ * own takes the body's font and variant as a pair. A level or a scene
+ * break with its own font and no variant takes that font's default. A
+ * pair two places set is listed once, however it is capitalized.
  */
 export function designUses(design: Design): FontUse[] {
   const { font, fontVariant } = design.body;
   const body = font === undefined ? undefined : { font, variant: fontVariant };
+  const scene = design.scene.font;
   const named = [
     body,
     ...LEVELS.map((level) => headingUse(design.headings[level], body)),
+    scene === undefined ? undefined : { font: scene, variant: undefined },
   ];
   const seen = new Set<string>();
   const uses: FontUse[] = [];
@@ -535,12 +539,12 @@ const SCENE: readonly Field[] = [
     },
   },
   {
-    key: "scene-break-word",
-    property: "content",
-    read: ({ scene }) => scene.word,
+    key: "scene-break-font",
+    property: "font-family",
+    read: ({ scene }) => scene.font,
     write: ({ scene }, value) => {
-      const word = asText(value);
-      if (word !== undefined) scene.word = word;
+      const font = asText(value);
+      if (font !== undefined) scene.font = font;
     },
   },
   {
@@ -798,7 +802,7 @@ const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
 
-const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
+const MARKS: readonly SceneMark[] = ["space", "ornament"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
   "author",
