@@ -268,6 +268,25 @@ export function designUses(design: Design): FontUse[] {
   return uses;
 }
 
+/**
+ * Every font and variant a book registers faces for: the uses the
+ * design sets, then each font the book adds. An added font registers
+ * its default variant, so the author's CSS names it by the family's
+ * own name. A pair two places set is listed once.
+ */
+export function bookUses(design: Design, added: readonly string[]): FontUse[] {
+  const uses = designUses(design);
+  const seen = new Set(uses.map(useKey));
+  for (const font of added) {
+    const use: FontUse = { font, variant: undefined };
+    const key = useKey(use);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uses.push(use);
+  }
+  return uses;
+}
+
 /** The font and variant a heading level is set in, given the body's. */
 export function headingUse(
   type: TypeSpec,
