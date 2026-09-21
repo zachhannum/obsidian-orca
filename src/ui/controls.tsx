@@ -313,7 +313,10 @@ export function Select({
   );
 }
 
-/** Draws a word picked from a few choices, as one control. */
+/**
+ * Draws a word picked from a few choices, as one control. A choice
+ * with an icon draws the icon, and its word names it.
+ */
 export function Segment({
   value,
   faint,
@@ -347,11 +350,17 @@ export function Segment({
             )}
             data-testid={`${testid}-${choice.value}`}
             aria-pressed={on}
+            aria-label={choice.icon === undefined ? undefined : choice.label}
+            title={choice.icon === undefined ? undefined : choice.label}
             onClick={() => {
               settle(choice.value);
             }}
           >
-            {choice.label}
+            {choice.icon === undefined ? (
+              choice.label
+            ) : (
+              <Icon name={choice.icon} className="orca-panel-icon" />
+            )}
           </button>
         );
       })}
