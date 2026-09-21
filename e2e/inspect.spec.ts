@@ -283,6 +283,7 @@ test("a pin survives an edit to the CSS", async ({
 test("an edit to the manuscript that removes the pinned box takes the pin off", async ({
   book,
   inspect,
+  panel,
   vault,
 }) => {
   vault.touch(CHAPTER_NOTE);
@@ -292,7 +293,7 @@ test("an edit to the manuscript that removes the pinned box takes the pin off", 
   await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
   await inspect.on();
 
-  await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  await pinParagraph(book, inspect, panel);
   const pinnedAt = Number(await inspect.surface.getAttribute("data-inspected-generation"));
 
   const note = await vault.read(CHAPTER_NOTE);
@@ -728,6 +729,24 @@ const GENERATED = "Set apart";
 const BEFORE_RULE = `\n${SECTION} h1::before { content: "${GENERATED}"; }`;
 
 /**
+ * The chapter's opening paragraph, pinned. The design sets the chapter's
+ * first line, so a click on that line pins `::first-line`, and the crumb
+ * for the element is the way to the paragraph under it.
+ */
+async function pinParagraph(book: Book, inspect: Inspect, panel: Panel): Promise<string> {
+  await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  await caughtUp(book, inspect, panel);
+  const element = panel.crumbs.nth(-2);
+  await expect(element).toHaveText("p");
+  await element.click();
+  await expect(inspect.surface).toHaveAttribute("data-inspected", /\d+/);
+  await caughtUp(book, inspect, panel);
+  const pinned = await inspect.surface.getAttribute("data-inspected");
+  expect(pinned).not.toBeNull();
+  return pinned ?? "";
+}
+
+/**
  * A point on the drop cap of a pinned paragraph. The letter is set at
  * the top left corner of the paragraph's box, so a point just inside
  * that corner is on the letter.
@@ -751,7 +770,7 @@ test("a click on a drop cap pins its `::first-letter`, and the pane lists the ru
   await inspect.on();
 
   // The paragraph is pinned first, because its box says where the letter is.
-  const paragraph = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  const paragraph = await pinParagraph(book, inspect, panel);
   const cap = await inspect.pinAt(await onTheCap(inspect), paragraph);
   expect(cap).not.toBe(paragraph);
   await caughtUp(book, inspect, panel);
@@ -773,6 +792,7 @@ test("a click on a drop cap pins its `::first-letter`, and the pane lists the ru
 test("the outline around a pinned drop cap is the letter, not the paragraph", async ({
   book,
   inspect,
+  panel,
 }) => {
   await book.open();
   await book.painted();
@@ -780,7 +800,7 @@ test("the outline around a pinned drop cap is the letter, not the paragraph", as
   await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
   await inspect.on();
 
-  const pinned = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  const pinned = await pinParagraph(book, inspect, panel);
   const edge = inspect.outline("pinned").getByTestId("orca-inspect-edge");
   const paragraph = await inspect.rectOf(edge.first());
 
@@ -805,7 +825,7 @@ test("the crumb for the element pins the element, and its rules replace the drop
   await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
   await inspect.on();
 
-  const paragraph = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  const paragraph = await pinParagraph(book, inspect, panel);
   await inspect.pinAt(await onTheCap(inspect), paragraph);
   await caughtUp(book, inspect, panel);
   await expect(panel.designRule(DROP_CAP_KEY)).toBeVisible();

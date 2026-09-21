@@ -90,6 +90,15 @@ test("an author rule beats the capitals and the tracking a control sets, and nam
     "header-letter-spacing",
   ]);
   assert.deepEqual(beaten["header-letter-spacing"], at(8, 15, "letter-spacing", "0"));
+
+  // A row at its default declares that default, so it is beaten the
+  // same way a row the book sets is.
+  const beatenDefault = designOverridden(
+    emptyDesign(),
+    setting,
+    `${firstLine.selector} {\n  font-variant-caps: small-caps;\n}\n`,
+  );
+  assert.deepEqual([...beatenDefault.keys()], ["chapter-first-line-caps"]);
 });
 
 // What this tier does not cover: an author rule on a different selector

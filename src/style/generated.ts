@@ -357,18 +357,20 @@ function boxes(content: ReadonlyMap<Box, Content>, headers: HeaderDesign): Decla
   });
 }
 
-/** The type the running heads and the folio are set in. Upright declares nothing. */
+/** The type the running heads and the folio are set in. */
 function headLines(headers: HeaderDesign): Declaration[] {
   return [
     ...typeset(headers.caps, headers.letterSpacing, "header"),
-    ...set("font-style", headers.italic === true ? "italic" : undefined, ["header-italic"]),
+    ...set("font-style", flagged(headers.italic, "italic", "normal"), ["header-italic"]),
   ];
 }
 
 /**
  * The case and the letter spacing one place is set in. Small caps is
  * the font's feature and all caps the text transformed, so one key
- * sets either. A normal case and no spacing declare nothing.
+ * sets both properties, the normal case included. A control that
+ * declared nothing at its default would leave the place to whatever
+ * else sets it, and the panel would go on saying Normal.
  */
 function typeset(
   caps: Caps | undefined,
@@ -376,19 +378,15 @@ function typeset(
   key: string,
 ): Declaration[] {
   const lines: Declaration[] = [];
-  if (caps === "small-caps") {
-    lines.push(declared("font-variant-caps", "small-caps", [`${key}-caps`]));
+  if (caps !== undefined) {
+    lines.push(
+      declared("font-variant-caps", caps === "small-caps" ? "small-caps" : "normal", [
+        `${key}-caps`,
+      ]),
+      declared("text-transform", caps === "all-caps" ? "uppercase" : "none", [`${key}-caps`]),
+    );
   }
-  if (caps === "all-caps") {
-    lines.push(declared("text-transform", "uppercase", [`${key}-caps`]));
-  }
-  lines.push(
-    ...set(
-      "letter-spacing",
-      spacing === undefined || spacing.value === 0 ? undefined : written(spacing),
-      [`${key}-letter-spacing`],
-    ),
-  );
+  lines.push(...set("letter-spacing", written(spacing), [`${key}-letter-spacing`]));
   return lines;
 }
 

@@ -787,7 +787,10 @@ test("a heading level is set in the capitals and the tracking the design gives i
   const rule = ruleFor(generatedRules(design, { sections }), "heading-1-caps");
 
   assert.equal(rule.selector, "h1");
-  assert.match(rule.css, /\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.08em;\n/);
+  assert.match(
+    rule.css,
+    /\n {2}font-variant-caps: normal;\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.08em;\n/,
+  );
 
   const text = sentence("It is a truth universally acknowledged.");
   const output = await rendered(
@@ -807,7 +810,10 @@ test("a chapter's first line is set on its first line alone", async () => {
   const rule = ruleFor(generatedRules(design, { sections }), "chapter-first-line-caps");
 
   assert.match(rule.selector, /\+ p::first-line$/);
-  assert.match(rule.css, /\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.04em;\n/);
+  assert.match(
+    rule.css,
+    /\n {2}font-variant-caps: normal;\n {2}text-transform: uppercase;\n {2}letter-spacing: 0.04em;\n/,
+  );
 
   const text = sentence("It is a truth universally acknowledged.");
   const output = await rendered(
@@ -839,12 +845,12 @@ test("the running heads and the folio are set in the type the design gives them"
 
   assert.match(
     css,
-    /@top-left \{ content: "Jane Austen"; font-variant-caps: small-caps; letter-spacing: 0.06em; font-style: italic; \}/,
+    /@top-left \{ content: "Jane Austen"; font-variant-caps: small-caps; text-transform: none; letter-spacing: 0.06em; font-style: italic; \}/,
   );
   // The folio carries the same band of type as the heads.
   assert.match(
     css,
-    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: small-caps; letter-spacing: 0.06em; font-style: italic; \}/,
+    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: small-caps; text-transform: none; letter-spacing: 0.06em; font-style: italic; \}/,
   );
   // A page that opens a section prints none of it.
   assert.match(css, /@page chapter:first \{\n(?: {2}@[a-z-]+ \{ content: none; \}\n)+\}/);
