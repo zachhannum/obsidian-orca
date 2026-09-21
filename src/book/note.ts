@@ -18,6 +18,9 @@ import {
 /** Frontmatter key that makes a note a book. Its value is the format. */
 export const BOOK_KEY = "orca-book";
 
+/** Frontmatter key that holds the fonts the book adds. Its value is a list of family names. */
+export const FONTS_KEY = "fonts";
+
 /** The format orca writes. A note above it does not open. */
 export const FORMAT = 1;
 
@@ -45,6 +48,12 @@ export interface Book {
   /** The format the note is written in, which is below `FORMAT` for a note orca has migrated. */
   format: number;
   metadata: BookMetadata;
+  /**
+   * The fonts the book adds, in the order they were added. No design
+   * key names one, and each registers a face, so the author's CSS can
+   * name it. A name is listed once, however it is capitalized.
+   */
+  fonts: string[];
   /** The design, which is this note's own frontmatter. */
   design: Design;
   /** The author's own properties, which orca keeps and does not read. */
@@ -121,12 +130,13 @@ export function readBook(properties: Properties): Book {
   const metadata: BookMetadata = {};
   const own: Properties = {};
   for (const [key, value] of Object.entries(migrated)) {
-    if (key === BOOK_KEY || DESIGN_KEYS.includes(key)) continue;
+    if (key === BOOK_KEY || key === FONTS_KEY || DESIGN_KEYS.includes(key)) continue;
     const field = FIELDS.find((named) => named.key === key);
     if (field === undefined) own[key] = value;
     else if (value !== null) metadata[field.key] = readValue(value, field.kind);
   }
-  return { format, metadata, design: readDesign(migrated), own };
+  const fonts = readFonts(migrated[FONTS_KEY]);
+  return { format, metadata, fonts, design: readDesign(migrated), own };
 }
 
 /**
@@ -140,6 +150,7 @@ export function writeBook(book: Book): Properties {
     const value = book.metadata[key];
     if (value !== undefined) properties[key] = value;
   }
+  if (book.fonts.length > 0) properties[FONTS_KEY] = [...book.fonts];
   return { ...properties, ...writeDesign(book.design), ...book.own };
 }
 
@@ -155,6 +166,8 @@ export function applyBook(properties: Properties, book: Book): void {
     if (value === undefined) delete properties[key];
     else properties[key] = value;
   }
+  if (book.fonts.length > 0) properties[FONTS_KEY] = [...book.fonts];
+  else delete properties[FONTS_KEY];
   const design = writeDesign(book.design);
   for (const key of DESIGN_KEYS) {
     const value = design[key];
@@ -166,6 +179,25 @@ export function applyBook(properties: Properties, book: Book): void {
 /** A book note as text, which is how a new one is created. */
 export function writeNote(book: Book, body: string): string {
   return writeFrontmatter({ properties: writeBook(book), body }, QUOTED);
+}
+
+/**
+ * The fonts a note adds. One name written bare reads as a list of one,
+ * and a name the list repeats is kept once, however it is capitalized.
+ */
+function readFonts(value: Value | undefined): string[] {
+  const listed = Array.isArray(value) ? value : [value];
+  const seen = new Set<string>();
+  const fonts: string[] = [];
+  for (const each of listed) {
+    if (typeof each !== "string") continue;
+    const name = each.trim();
+    const key = name.toLowerCase();
+    if (name === "" || seen.has(key)) continue;
+    seen.add(key);
+    fonts.push(name);
+  }
+  return fonts;
 }
 
 /**

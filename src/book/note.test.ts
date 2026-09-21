@@ -9,6 +9,7 @@ import {
   BOOK_KEY,
   BookError,
   FIELD_KEYS,
+  FONTS_KEY,
   FORMAT,
   applyBook,
   bookFormat,
@@ -58,7 +59,13 @@ test("an enum is quoted on write and coerced on read, and a length keeps its uni
   assert.equal(readValue(1813, "text"), "1813");
 
   const written = writeNote(
-    { format: FORMAT, metadata: { language: "no" }, design: emptyDesign(), own: {} },
+    {
+      format: FORMAT,
+      metadata: { language: "no" },
+      fonts: [],
+      design: emptyDesign(),
+      own: {},
+    },
     "\n",
   );
 
@@ -142,6 +149,7 @@ test("the book's own frontmatter is the design, one key per line", () => {
   const book: Book = {
     format: FORMAT,
     metadata: { title: "Pride and Prejudice" },
+    fonts: [],
     design,
     own: {},
   };
@@ -187,6 +195,30 @@ test("a design key the book no longer sets is taken off the note", () => {
   // A design key is orca's own, so it is not kept a second time as the
   // author's.
   assert.deepEqual(book.own, {});
+});
+
+test("the note holds the fonts the book adds", () => {
+  const properties = { [BOOK_KEY]: FORMAT, [FONTS_KEY]: ["Junicode", " junicode ", "Alegreya"] };
+  const book = readBook(properties);
+
+  // A name the list repeats is kept once, and the author's own keys do
+  // not pick the list up.
+  assert.deepEqual(book.fonts, ["Junicode", "Alegreya"]);
+  assert.deepEqual(book.own, {});
+
+  const text = writeNote({ ...book, fonts: ["Junicode"] }, "\n");
+  assert.match(text, /^---\norca-book: 1\nfonts:\n  - Junicode\n---\n$/);
+  assert.deepEqual(readBook(readFrontmatter(text).properties).fonts, ["Junicode"]);
+
+  applyBook(properties, { ...book, fonts: [] });
+  assert.deepEqual(properties, { [BOOK_KEY]: FORMAT });
+});
+
+test("a note that adds fonts is written back byte for byte", () => {
+  const text = `---\norca-book: 1\ntitle: Emma\nfonts:\n  - Junicode\n  - Alegreya\nbody-size: 11pt\nstatus: drafting\n---\n\n# Body\n`;
+  const { properties, body } = readFrontmatter(text);
+
+  assert.equal(writeNote(readBook(properties), body), text);
 });
 
 // What this tier does not cover: the view the note opens in and the way
