@@ -653,6 +653,100 @@ test("a long line in the CSS view scrolls sideways until the author wraps it", a
   await written(vault, own);
 });
 
+test("the CSS view's gutter takes the editor's own background, and a scrolled line passes behind it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+
+  const paint = await panel.gutterPaint();
+  expect(paint.gutter).toBe(paint.host);
+  expect(paint.gutter).not.toMatch(/,\s*0\)$/);
+
+  const long = `\n/* ${"a long comment ".repeat(20)}*/`;
+  await panel.typeCss(long);
+  await expect(panel.wrap).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(async () => panel.scrollsSideways()).toBe(true);
+
+  // Typing scrolled the line to its end. At the start of the line
+  // nothing is behind the numbers, so the gutter there is what the
+  // author must still see once the line passes behind it.
+  expect(await panel.scrollSideways("start")).toBe(0);
+  const clear = await panel.gutters.screenshot();
+  expect(await panel.scrollSideways("end")).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await panel.gutters.screenshot()).equals(clear))
+    .toBe(true);
+
+  await panel.toControls.click();
+  await expect.poll(async () => vault.read(BOOK)).toContain(long);
+  await written(vault, own);
+});
+
+test("the active line gutter keeps its color over the gutter's background", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+
+  await panel.code.click();
+  await panel.code.press("ControlOrMeta+End");
+  await expect(panel.caretLine).toHaveText(
+    (await panel.lineNumbers.last().textContent()) ?? "",
+  );
+
+  // The line the caret is on is muted, and the rest stay faint.
+  await expect(panel.caretLine).toHaveCSS("color", await panel.resolves("--text-muted"));
+  await expect(panel.lineNumbers.first()).toHaveCSS(
+    "color",
+    await panel.resolves("--text-faint"),
+  );
+
+  await panel.toControls.click();
+});
+
+test("a flagged line number keeps its color over the gutter's background", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await expect(panel.flaggedLines).toHaveCount(0);
+
+  const typed = "\np { float: left; }";
+  await panel.typeCss(typed);
+  await expect(panel.flaggedLines).toHaveCount(1);
+
+  await expect(panel.flaggedLines).toHaveCSS(
+    "color",
+    await panel.resolves("--color-orange"),
+  );
+  await expect(panel.lineNumbers.first()).toHaveCSS(
+    "color",
+    await panel.resolves("--text-faint"),
+  );
+
+  await panel.toControls.click();
+  await written(vault, own);
+});
+
 test("a declaration the engine cannot set is flagged on its line in the CSS view, and listed in the preview", async ({
   book,
   panel,
