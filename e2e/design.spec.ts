@@ -1242,7 +1242,8 @@ test("a glyph the author types marks the scene break, and a space takes both row
 
   await expect(glyphs).toHaveAttribute("data-on", "*");
   await expect(typed).toHaveValue("*");
-  await expect.poll(async () => vault.read(BOOK)).toContain("scene-break-ornament: *");
+  // A glyph YAML reads as a token of its own is written quoted.
+  await expect.poll(async () => vault.read(BOOK)).toContain('scene-break-ornament: "*"');
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
   // A scene break marked with a space prints no glyph, so the glyph and
