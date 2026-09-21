@@ -15,6 +15,7 @@
 
 import { createRoot } from "react-dom/client";
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -143,6 +144,13 @@ export const CARRIED = "EB Garamond";
 
 /** The group that adds a font to the book without a design key naming it. */
 export const FONTS_GROUP = "Fonts";
+
+/**
+ * The group the Fonts group follows. It closes the groups that set
+ * type, and a picker there is not the last thing in the panel, so the
+ * menu it opens hangs over rows rather than over the end of the scroll.
+ */
+const FONTS_AFTER = "Headings";
 
 /** The picker that adds a font reads this until a font is picked. */
 const ADD_A_FONT = "Add a font";
@@ -317,38 +325,41 @@ export function Panel({
     >
       {header}
       {GROUPS.map((group) => (
-        <div
-          key={group.name}
-          className="orca-panel-group"
-          data-testid="orca-panel-group"
-          data-group={group.name}
-        >
-          <div className="orca-panel-heading">
-            <span className="orca-panel-name">{group.name}</span>
+        <Fragment key={group.name}>
+          <div
+            className="orca-panel-group"
+            data-testid="orca-panel-group"
+            data-group={group.name}
+          >
+            <div className="orca-panel-heading">
+              <span className="orca-panel-name">{group.name}</span>
+            </div>
+            {group.rows.map((line, at) => {
+              const levels = line.of.find((control) => control.kind === "level");
+              if (levels !== undefined) {
+                return (
+                  <Tabs
+                    key={at}
+                    value={String(level)}
+                    choices={levels.choices ?? []}
+                    testid="orca-panel-heading-level"
+                    choose={(chosen) => {
+                      const found = LEVELS.find((each) => String(each) === chosen);
+                      if (found !== undefined) choose(found);
+                    }}
+                  />
+                );
+              }
+              return drawn(line, drawing) ? (
+                <Line key={at} line={line} drawing={drawing} />
+              ) : null;
+            })}
           </div>
-          {group.rows.map((line, at) => {
-            const levels = line.of.find((control) => control.kind === "level");
-            if (levels !== undefined) {
-              return (
-                <Tabs
-                  key={at}
-                  value={String(level)}
-                  choices={levels.choices ?? []}
-                  testid="orca-panel-heading-level"
-                  choose={(chosen) => {
-                    const found = LEVELS.find((each) => String(each) === chosen);
-                    if (found !== undefined) choose(found);
-                  }}
-                />
-              );
-            }
-            return drawn(line, drawing) ? (
-              <Line key={at} line={line} drawing={drawing} />
-            ) : null;
-          })}
-        </div>
+          {group.name === FONTS_AFTER ? (
+            <Fonts fonts={shown.fonts} index={shown.index} acting={acting} />
+          ) : null}
+        </Fragment>
       ))}
-      <Fonts fonts={shown.fonts} index={shown.index} acting={acting} />
       {shown.missing.map((said) => (
         <Warning key={said} said={said} testid="orca-panel-missing" />
       ))}

@@ -546,11 +546,11 @@ test("the panel offers every group a book designer works in", async ({
     "Page",
     "Text",
     "Headings",
+    "Fonts",
     "Chapter openings",
     "Scene breaks",
     "Heads & folios",
     "Page breaks",
-    "Fonts",
   ]);
 });
 
