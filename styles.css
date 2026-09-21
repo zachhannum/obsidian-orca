@@ -1723,7 +1723,8 @@ button.orca-panel-step:hover {
   min-width: 0;
 }
 
-button.orca-panel-glyph {
+button.orca-panel-glyph,
+input.orca-panel-glyph {
   width: 34px;
   height: var(--input-height);
   padding: 0;
@@ -1737,13 +1738,22 @@ button.orca-panel-glyph {
   cursor: pointer;
 }
 
-button.orca-panel-glyph.is-on {
+button.orca-panel-glyph.is-on,
+input.orca-panel-glyph.is-on {
   box-shadow: 0 0 0 1.5px var(--color-accent);
 }
 
-button.orca-panel-glyph.is-on.is-default {
+button.orca-panel-glyph.is-on.is-default,
+input.orca-panel-glyph.is-on.is-default {
   box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-accent) 40%, transparent);
   color: var(--text-muted);
+}
+
+/* The glyph the author types sits in the row beside the ornaments on
+   offer, and is centered like them. */
+input.orca-panel-typed {
+  text-align: center;
+  cursor: text;
 }
 
 /* The book note's page shows the design read-only, one row per line,

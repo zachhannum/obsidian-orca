@@ -410,7 +410,8 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
   }
 
   // The default for a key that the book sets is the value the key takes
-  // once cleared. For a heading level's font, that is the body's font.
+  // once cleared. For a heading level's font and a scene break's, that
+  // is the body's font.
   const defaults = set.map(({ control, key }) => {
     const cleared = writeDesign(
       effective(withKey(drawing.shown.design, key, undefined)),
@@ -418,7 +419,9 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
     const value =
       control.kind === "variant"
         ? String(cleared[key] ?? defaultVariant(drawing.shown.index, cleared[fontKeyOf(key)]) ?? "none")
-        : defaultSaid(control, cleared[key], drawing.shown.unit);
+        : control.kind === "font"
+          ? (stringOf(cleared[key]) ?? carried(cleared))
+          : defaultSaid(control, cleared[key], drawing.shown.unit);
     return keyed.length > 1 && control.said !== undefined
       ? `${control.said} ${value}`
       : value;
@@ -554,7 +557,7 @@ function Drawn({
       return (
         <Picker
           index={shown.index}
-          font={text ?? CARRIED}
+          font={text ?? carried(full)}
           faint={faint}
           testid={key === "body-font" ? "orca-panel-font" : testid}
           pick={(family) => {
@@ -622,16 +625,6 @@ function Drawn({
           faint={faint}
           glyphs={GLYPHS}
           testid={testid}
-          settle={settle}
-        />
-      );
-    case "word":
-      return (
-        <Field
-          value={text ?? ""}
-          faint={faint}
-          testid={testid}
-          wrong={wrong(key)}
           settle={settle}
         />
       );
@@ -740,9 +733,9 @@ function sized(
 }
 
 /**
- * Decides if the panel draws a row. The glyphs and the word both write
- * the scene break mark, so the panel draws only the one that the mark is
- * set to.
+ * Decides if the panel draws a row. The glyph and its font set the mark
+ * a scene break prints, so a design that breaks a scene with a space
+ * draws neither.
  */
 function drawn(line: Listed, drawing: Drawing): boolean {
   // A Variant row shows only for a family with more than one variant. A
@@ -752,12 +745,12 @@ function drawn(line: Listed, drawing: Drawing): boolean {
     const font = drawing.full[fontKeyOf(atLevel(variant.key, drawing.level))];
     return offeredVariants(drawing.shown.index, stringOf(font)) !== undefined;
   }
+  const ornamental = line.of.some(
+    (control) => control.kind === "glyph" || control.key === "scene-break-font",
+  );
+  if (!ornamental) return true;
   const mark = drawing.own["scene-break-mark"] ?? drawing.full["scene-break-mark"];
-  const glyphs = line.of.some((control) => control.kind === "glyph");
-  const word = line.of.some((control) => control.kind === "word");
-  if (glyphs) return mark === undefined || mark === "ornament";
-  if (word) return mark === "word";
-  return true;
+  return mark !== "space";
 }
 
 /** The line under a row. Only the hyphenation switch has one, which names the language. */
@@ -1099,6 +1092,15 @@ function VariantPicker({
       )}
     </div>
   );
+}
+
+/**
+ * The face a font row draws. A scene break with no font of its own is
+ * set in the body's face, and a design that names no body font is set
+ * in the face the engine carries.
+ */
+function carried(full: Readonly<Record<string, Written>>): string {
+  return stringOf(full["body-font"]) ?? CARRIED;
 }
 
 /** The font key a variant key sits beside. */

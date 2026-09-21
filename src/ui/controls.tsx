@@ -602,7 +602,11 @@ export function Field({
   );
 }
 
-/** Draws the ornaments on offer. */
+/**
+ * Draws the ornaments on offer and a field for a glyph of the author's
+ * own. The field holds the mark when it is none of the ornaments
+ * offered, so the row shows the mark whatever it is.
+ */
 export function Glyphs({
   value,
   faint,
@@ -616,8 +620,27 @@ export function Glyphs({
   testid: string;
   settle: Settle;
 }): JSX.Element {
-  const offered =
-    value === undefined || glyphs.includes(value) ? glyphs : [...glyphs, value];
+  const own = value !== undefined && !glyphs.includes(value) ? value : "";
+  const [text, setText] = useState<string | undefined>(undefined);
+  const field = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (document.activeElement !== field.current) setText(undefined);
+    // Only a new value resets the field to the glyph drawn.
+  }, [own]);
+
+  // A mark is one glyph, so a longer paste settles on its first.
+  const commit = (): void => {
+    if (text === undefined) return;
+    const glyph = [...text.trim()][0];
+    setText(undefined);
+    if (glyph === undefined) {
+      if (!faint) settle(undefined);
+    } else if (faint || glyph !== value) {
+      settle(glyph);
+    }
+  };
+
   return (
     <div
       className="orca-panel-glyphs"
@@ -625,7 +648,7 @@ export function Glyphs({
       data-on={value ?? ""}
       data-default={String(faint)}
     >
-      {offered.map((glyph) => {
+      {glyphs.map((glyph) => {
         const on = glyph === value;
         return (
           <button
@@ -646,6 +669,33 @@ export function Glyphs({
           </button>
         );
       })}
+      <input
+        ref={field}
+        type="text"
+        className={classes(
+          "orca-panel-glyph",
+          "orca-panel-typed",
+          own !== "" && "is-on",
+          own !== "" && faint && "is-default",
+        )}
+        data-testid={`${testid}-typed`}
+        aria-label="A glyph of your own"
+        spellCheck={false}
+        value={text ?? own}
+        onChange={(event) => {
+          setText(event.target.value);
+        }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commit();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            setText(undefined);
+          }
+        }}
+      />
     </div>
   );
 }

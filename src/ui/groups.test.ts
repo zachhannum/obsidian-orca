@@ -90,14 +90,15 @@ test("every word the panel draws is spelled the American way", () => {
   }
 });
 
-test("every key the panel writes has a default, except the word a scene break is marked with and a font's variant", () => {
+test("every key the panel writes has a default, except the face a scene break is set in and a font's variant", () => {
   const defaults = writeDesign(effective(emptyDesign()));
   for (const key of PANEL_KEYS) {
-    // A font's default variant is written as absent.
-    if (key === "scene-break-word" || key.endsWith("-font-variant")) continue;
+    // A font's default variant is written as absent, and a scene break
+    // with no font of its own is set in the body's.
+    if (key === "scene-break-font" || key.endsWith("-font-variant")) continue;
     assert.notEqual(defaults[key], undefined, `\`${key}\` has no default`);
   }
-  assert.equal(defaults["scene-break-word"], undefined);
+  assert.equal(defaults["scene-break-font"], undefined);
 });
 
 test("a reset names the default in the words the control draws it with", () => {
