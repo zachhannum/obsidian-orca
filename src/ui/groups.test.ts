@@ -137,6 +137,20 @@ test("a chapter begins on the next page unless the book says otherwise, and that
   assert.equal(writeDesign(effective(emptyDesign()))["chapter-begins"], "next-page");
 });
 
+test("a scene break is marked with a space or a glyph, and the glyph is set in a face under it", () => {
+  assert.deepEqual(
+    control("scene-break-mark").choices?.map((choice) => choice.value),
+    ["space", "ornament"],
+  );
+
+  const group = GROUPS.find((each) => each.name === "Scene breaks");
+  assert.deepEqual(
+    group?.rows.map((row) => row.label),
+    ["Mark", "Glyph", "Font", "Space above", "Space below"],
+  );
+  assert.equal(control("scene-break-font").kind, "font");
+});
+
 test("every word a select or a segment offers is a value the schema reads back", () => {
   for (const each of GROUPS.flatMap((group) => group.rows).flatMap((row) => row.of)) {
     if (each.key === undefined || each.kind === "level") continue;
