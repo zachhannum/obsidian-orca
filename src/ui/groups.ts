@@ -316,6 +316,7 @@ export const GROUPS: readonly Group[] = [
       },
       { label: "Glyph", of: [{ kind: "glyph", key: "scene-break-ornament" }] },
       { label: "Font", of: [{ kind: "font", key: "scene-break-font" }] },
+      { label: "Size", of: [{ kind: "length", key: "scene-break-size" }] },
       {
         label: "Space above",
         of: [{ kind: "count", key: "scene-break-space-above", said: "lines" }],

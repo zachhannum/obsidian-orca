@@ -334,6 +334,7 @@ function whole(): Design {
       mark: "ornament",
       ornament: "⁂",
       font: "Junicode",
+      size: len(9.5, "pt"),
       spaceAbove: 1,
       spaceBelow: 1,
     },

@@ -425,7 +425,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
         ? String(cleared[key] ?? defaultVariant(drawing.shown.index, cleared[fontKeyOf(key)]) ?? "none")
         : control.kind === "font"
           ? (stringOf(cleared[key]) ?? carried(cleared))
-          : defaultSaid(control, cleared[key], drawing.shown.unit);
+          : defaultSaid(control, cleared[key] ?? inherited(key, cleared), drawing.shown.unit);
     return keyed.length > 1 && control.said !== undefined
       ? `${control.said} ${value}`
       : value;
@@ -644,11 +644,14 @@ function Drawn({
     case "count":
     case "length": {
       const unit = control.page === true ? shown.unit : undefined;
+      // A key the design leaves to the body draws the body's value, the
+      // way a scene break with no font of its own draws the body's face.
+      const drawn = text ?? stringOf(inherited(key, full)) ?? "";
       return (
         <Field
           measure={control.kind}
           unit={unit}
-          value={unit === undefined ? (text ?? "") : inUnit(text ?? "", unit)}
+          value={unit === undefined ? drawn : inUnit(drawn, unit)}
           faint={faint}
           testid={testid}
           wrong={wrong(key)}
@@ -759,7 +762,10 @@ function drawn(line: Listed, drawing: Drawing): boolean {
     return offeredVariants(drawing.shown.index, stringOf(font)) !== undefined;
   }
   const ornamental = line.of.some(
-    (control) => control.kind === "glyph" || control.key === "scene-break-font",
+    (control) =>
+      control.kind === "glyph" ||
+      control.key === "scene-break-font" ||
+      control.key === "scene-break-size",
   );
   if (!ornamental) return true;
   const mark = drawing.own["scene-break-mark"] ?? drawing.full["scene-break-mark"];
@@ -1105,6 +1111,18 @@ function VariantPicker({
       )}
     </div>
   );
+}
+
+/**
+ * The value a row inherits when the key it writes is cleared. A scene
+ * break with no size of its own prints at the body's size, so the row
+ * draws that rather than "none".
+ */
+function inherited(
+  key: string,
+  cleared: Readonly<Record<string, Written>>,
+): Written | undefined {
+  return key === "scene-break-size" ? cleared["body-size"] : undefined;
 }
 
 /**

@@ -23,6 +23,7 @@ A scene break is the space between two scenes in a chapter. The Scene breaks gro
 | 1 | Mark | `Ornament` | `scene-break-mark` |
 | 2 | Glyph | `❧` | `scene-break-ornament` |
 |  | Font | none | `scene-break-font` |
+|  | Size | none | `scene-break-size` |
 | 3 | Space above | 1 line | `scene-break-space-above` |
 | 4 | Space below | 1 line | `scene-break-space-below` |
 
@@ -44,5 +45,7 @@ Each cell is drawn in the face the browser read, so the grid shows what the face
 The field above the grid narrows it. Type part of a block name, a code point in hex such as `2766`, `U+2766` or `0x2766`, or paste the glyph itself.
 
 `Font` sets the font family the glyph is set in. A scene break with no font of its own is set in the body font, and the browser then lists the body font's code points. Pick an ornamental font first, and the browser lists that font's ornaments.
+
+`Size` sets the size the glyph prints at. A scene break with no size of its own prints at the body size. Write the size in points, such as `14pt`, or against the body size, such as `1.5em`. Ornaments often draw small for their point size, so a glyph that reads well in a specimen can want a size above the body's.
 
 `Space above` and `Space below` are counts of lines of text.

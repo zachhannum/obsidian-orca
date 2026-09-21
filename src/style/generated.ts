@@ -674,7 +674,7 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   ];
 }
 
-/** A scene break with no font of its own declares none, so it inherits the body's family whole. */
+/** A scene break with no font or size of its own declares neither, so it inherits the body's. */
 function sceneRules(design: Design, registered: readonly Registered[]): (Rule | undefined)[] {
   const { scene } = design;
   const lines: Declaration[] = [];
@@ -683,6 +683,7 @@ function sceneRules(design: Design, registered: readonly Registered[]): (Rule | 
       declared("font-family", family(scene.font, undefined, registered), ["scene-break-font"]),
     );
   }
+  lines.push(...set("font-size", written(scene.size), ["scene-break-size"]));
   lines.push(...set("content", sceneContent(scene), sceneKeys(scene)));
   lines.push(
     ...set(

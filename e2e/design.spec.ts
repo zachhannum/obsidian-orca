@@ -44,6 +44,10 @@ const FIXTURE_FONT = "Alegreya";
 const ORNAMENT = "Noto Sans Symbols 2";
 const ORNAMENT_GLYPHS = 194;
 
+/** The fixture body's size, which a scene break prints at until it takes one, and a size of its own. */
+const BODY_SIZE = "10.5pt";
+const ORNAMENT_SIZE = "18pt";
+
 /** A font no machine installs, so the filter matches nothing. */
 const NOWHERE = "Zzyzx Grotesque";
 
@@ -1271,6 +1275,40 @@ test("the glyph browser lists the face's own code points, and picking one marks 
   await panel.choice("scene-break-mark", "space").click();
   await expect(panel.row("scene-break-ornament")).toHaveCount(0);
   await expect(panel.row("scene-break-font")).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("a scene break takes a size of its own, and prints at the body's size until it does", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture sets no size on its scene break, so the row draws the
+  // body's size faint.
+  const size = panel.control("scene-break-size");
+  await expect(size).toHaveValue(BODY_SIZE);
+  await expect(size).toHaveAttribute("data-default", "true");
+
+  await size.fill(ORNAMENT_SIZE);
+  await size.press("Enter");
+
+  await expect(size).toHaveAttribute("data-default", "false");
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `scene-break-size: ${ORNAMENT_SIZE}`,
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // The size belongs to the glyph, so a scene break marked with a space
+  // does not ask for it.
+  await panel.choice("scene-break-mark", "space").click();
+  await expect(panel.row("scene-break-size")).toHaveCount(0);
 
   await written(vault, own);
 });

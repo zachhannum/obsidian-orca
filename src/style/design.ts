@@ -158,6 +158,8 @@ export interface SceneDesign {
   ornament?: string;
   /** The face the mark is set in. A scene break with no font of its own takes the body's. */
   font?: string;
+  /** The size the mark is set at. A scene break with no size of its own takes the body's. */
+  size?: Length;
   /** The blank space above a scene break, in lines of body text. */
   spaceAbove?: number;
   /** The blank space below a scene break, in lines of body text. */
@@ -545,6 +547,15 @@ const SCENE: readonly Field[] = [
     write: ({ scene }, value) => {
       const font = asText(value);
       if (font !== undefined) scene.font = font;
+    },
+  },
+  {
+    key: "scene-break-size",
+    property: "font-size",
+    read: ({ scene }) => written(scene.size),
+    write: ({ scene }, value) => {
+      const size = asLength(value);
+      if (size !== undefined) scene.size = size;
     },
   },
   {

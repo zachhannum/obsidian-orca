@@ -66,6 +66,7 @@ test("every generated rule sits at its line, reads only real setting keys, and m
   centered.headers.pageNumber = "top";
   centered.scene.mark = "ornament";
   centered.scene.font = "Junicode";
+  centered.scene.size = { value: 12, unit: "pt" };
   designs.push(centered);
 
   for (const design of designs) {
@@ -336,6 +337,22 @@ test("a scene break set in a font of its own names that family on `hr`", () => {
   design.scene.font = undefined;
   assert.equal(
     generatedCss(design, { sections: named([]) }, registered),
+    'hr {\n  content: "\u2042";\n}\n',
+  );
+});
+
+test("a scene break set at a size of its own writes that size on `hr`", () => {
+  const design = emptyDesign();
+  design.scene = { mark: "ornament", ornament: "\u2042", size: { value: 14, unit: "pt" } };
+
+  assert.equal(
+    generatedCss(design, { sections: named([]) }),
+    'hr {\n  font-size: 14pt;\n  content: "\u2042";\n}\n',
+  );
+  // A scene break with no size of its own declares none, so it takes the body's.
+  design.scene.size = undefined;
+  assert.equal(
+    generatedCss(design, { sections: named([]) }),
     'hr {\n  content: "\u2042";\n}\n',
   );
 });
@@ -649,6 +666,7 @@ function whole(): Design {
   design.scene.mark = "ornament";
   design.scene.ornament = "\u2042";
   design.scene.font = "Junicode";
+  design.scene.size = { value: 12, unit: "pt" };
   design.scene.spaceAbove = 1;
   design.scene.spaceBelow = 1;
   design.headers.leftPage = "author";
