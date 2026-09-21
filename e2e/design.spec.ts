@@ -148,6 +148,57 @@ test("picking the font the book is set in again keeps the book in it", async ({
   await written(vault, own);
 });
 
+test("a font added to the book sets the text its CSS names, and survives the book being set again", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The picker that adds a font reads the same index the design's own
+  // pickers read.
+  await panel.addFont.click();
+  await expect(panel.filter).toBeVisible();
+  await panel.type(VARIED);
+  await expect(panel.option(VARIED)).toBeVisible();
+  await panel.option(VARIED).click();
+  await expect(panel.added(VARIED)).toBeVisible();
+
+  // The note holds it, so it outlives the session.
+  await expect.poll(async () => vault.read(BOOK)).toContain(`- ${VARIED}`);
+  // No design key names it, so the body is still set in the font the
+  // engine carries.
+  await expect(panel.font).toContainText(CARRIED);
+  await expect(panel.missing).toHaveCount(0);
+
+  // The author's CSS names it, and the heading is set in its face
+  // rather than in the one the engine carries.
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await panel.typeCss(`\nh1 { font-family: "${VARIED}"; }`);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`font-family: "${VARIED}"`);
+  await book.choose(CHAPTER_NAME);
+  await expect
+    .poll(async () => book.facesOf(BOOK, HEADING_WORD))
+    .toContainEqual(expect.stringMatching(/^Junicode/));
+
+  // A write takes the book off the composer, which sets it again from
+  // the note. The face crosses to that session too.
+  await vault.modify(BOOK, await vault.read(BOOK));
+  await panel.focus();
+  await book.choose(CHAPTER_NAME);
+  await expect
+    .poll(async () => book.facesOf(BOOK, HEADING_WORD))
+    .toContainEqual(expect.stringMatching(/^Junicode/));
+
+  await panel.toControls.click();
+  await written(vault, own);
+});
+
 test("a book note written while a pane reads it leaves the panel designing that book", async ({
   book,
   panel,
@@ -1200,56 +1251,6 @@ test("the panel is not a mode, so it stays when the book it designed closes", as
   // The leaf stays in the sidebar with no book. It does not close with
   // the pane that had the book.
   await expect(panel.empty).toBeVisible();
-});
-
-test("a font added to the book sets the text its CSS names, and survives the book being set again", async ({
-  book,
-  panel,
-  vault,
-}) => {
-  const own = await vault.read(BOOK);
-  vault.touch(BOOK);
-  await book.open();
-  await book.painted();
-  await panel.open();
-
-  // The picker that adds a font reads the same index the design's own
-  // pickers read.
-  await panel.addFont.click();
-  await expect(panel.filter).toBeVisible();
-  await panel.type(VARIED);
-  await expect(panel.option(VARIED)).toBeVisible();
-  await panel.option(VARIED).click();
-  await expect(panel.added(VARIED)).toBeVisible();
-
-  // The note holds it, so it outlives the session.
-  await expect.poll(async () => vault.read(BOOK)).toContain(`- ${VARIED}`);
-  // No design key names it, so the body is still set in the font the
-  // engine carries.
-  await expect(panel.font).toContainText(CARRIED);
-  await expect(panel.missing).toHaveCount(0);
-
-  // The author's CSS names it, and the heading is set in its face
-  // rather than in the one the engine carries.
-  await panel.toCss.click();
-  await expect(panel.editor).toBeVisible();
-  await panel.typeCss(`\nh1 { font-family: "${VARIED}"; }`);
-  await expect.poll(async () => vault.read(BOOK)).toContain(`font-family: "${VARIED}"`);
-  await book.choose(CHAPTER_NAME);
-  await expect
-    .poll(async () => book.facesOf(BOOK, HEADING_WORD))
-    .toContainEqual(expect.stringMatching(/^Junicode/));
-
-  // A write takes the book off the composer, which sets it again from
-  // the note. The face crosses to that session too.
-  await vault.modify(BOOK, await vault.read(BOOK));
-  await panel.focus();
-  await book.choose(CHAPTER_NAME);
-  await expect
-    .poll(async () => book.facesOf(BOOK, HEADING_WORD))
-    .toContainEqual(expect.stringMatching(/^Junicode/));
-
-  await written(vault, own);
 });
 
 /**
