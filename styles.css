@@ -1618,18 +1618,15 @@ button.orca-panel-choice.is-on {
   color: var(--text-normal);
 }
 
-/* A choice drawn as an icon centers it, and the icon takes the colour
+button.orca-panel-choice.is-on.is-default {
+  color: var(--text-faint);
+}
+
+/* A choice drawn as an icon centers it, and the icon takes the color
    of the word it stands for. */
 button.orca-panel-choice > .orca-panel-icon {
   display: flex;
-  align-items: center;
-  justify-content: center;
   margin: 0 auto;
-  color: currentColor;
-}
-
-button.orca-panel-choice.is-on.is-default {
-  color: var(--text-faint);
 }
 
 .orca-panel-switch {
