@@ -30,6 +30,7 @@ const GROUPS = [
   "Page",
   "Text",
   "Headings",
+  "Fonts",
   "Chapter openings",
   "Scene breaks",
   "Heads & folios",
