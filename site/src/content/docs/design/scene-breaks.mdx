@@ -10,7 +10,7 @@ A scene break is the space between two scenes in a chapter. The Scene breaks gro
 
 <Shot
   name="panel-scene-breaks"
-  alt="The Scene breaks group of the design panel, with Mark, Glyph, Space above and Space below."
+  alt="The Scene breaks group of the design panel, with Mark, Glyph, Font, Space above and Space below."
   caption="The Scene breaks group."
   marks={['scene-break-mark', 'scene-break-ornament', 'scene-break-space-above', 'scene-break-space-below']}
   numbered
@@ -22,16 +22,23 @@ A scene break is the space between two scenes in a chapter. The Scene breaks gro
 | --- | --- | --- | --- |
 | 1 | Mark | `Ornament` | `scene-break-mark` |
 | 2 | Glyph | `❧` | `scene-break-ornament` |
-|  | Word | none | `scene-break-word` |
+|  | Font | none | `scene-break-font` |
 | 3 | Space above | 1 line | `scene-break-space-above` |
 | 4 | Space below | 1 line | `scene-break-space-below` |
 
 ## Mark
 
-`Mark` takes one of three values:
+`Mark` takes one of two values:
 
 - `Space` leaves the space empty.
-- `Ornament` sets a glyph in the space. The `Glyph` row shows the glyphs `❧`, `⁂`, `§` and `✦`.
-- `Word` sets a word in the space. When you select `Word`, the `Word` row replaces the `Glyph` row. Type the word in that row.
+- `Ornament` sets a glyph in the space.
+
+When the mark is `Space`, the `Glyph` row and the `Font` row are hidden.
+
+## Glyph and font
+
+The `Glyph` row offers the glyphs `❧`, `⁂`, `§` and `✦`, and a field for a glyph of your own. Type a character in that field to set it as the mark.
+
+`Font` sets the font family the glyph is set in. A scene break with no font of its own is set in the body font. Pick a font when the glyph you want lives in another face.
 
 `Space above` and `Space below` are counts of lines of text.

@@ -1219,6 +1219,77 @@ test("setting a key draws its reset without moving the control", async ({
   await written(vault, own);
 });
 
+test("a glyph the author types marks the scene break, and a space takes both rows away", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture marks its scene breaks with one of the glyphs on offer,
+  // so the field for a glyph of the author's own starts empty.
+  const glyphs = panel.control("scene-break-ornament");
+  const typed = panel.control("scene-break-ornament-typed");
+  await expect(glyphs).toHaveAttribute("data-on", "\u2042");
+  await expect(typed).toHaveValue("");
+
+  await typed.fill("*");
+  await typed.press("Enter");
+
+  await expect(glyphs).toHaveAttribute("data-on", "*");
+  await expect(typed).toHaveValue("*");
+  await expect.poll(async () => vault.read(BOOK)).toContain("scene-break-ornament: *");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // A scene break marked with a space prints no glyph, so the glyph and
+  // its font are not asked for.
+  await panel.choice("scene-break-mark", "space").click();
+  await expect(panel.row("scene-break-ornament")).toHaveCount(0);
+  await expect(panel.row("scene-break-font")).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("a scene break is set in a face of its own, picked from the fonts the body row offers", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture sets its scene break in a face of its own.
+  const font = panel.control("scene-break-font");
+  await expect(font).toContainText(VARIED);
+
+  await panel.pick();
+  const body = await panel.offered();
+  await panel.filter.press("Escape");
+  await font.click();
+  expect(await panel.offered()).toEqual(body);
+  await panel.type(FIXTURE_FONT);
+  await panel.option(FIXTURE_FONT).click();
+
+  await expect(font).toContainText(FIXTURE_FONT);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `scene-break-font: ${FIXTURE_FONT}`,
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  // The face crosses to the engine, which sets the scene break in it.
+  await expect
+    .poll(async () => book.faces(BOOK))
+    .toContainEqual(expect.stringMatching(new RegExp(`^${FIXTURE_FONT}`)));
+
+  await written(vault, own);
+});
+
 test("with pages measured in millimeters, a margin field reads in millimeters", async ({
   book,
   panel,

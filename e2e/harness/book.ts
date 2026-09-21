@@ -456,6 +456,19 @@ export class Book {
     return Number(await this.surface.getAttribute("data-generation"));
   }
 
+  /** Every face the session the pane reads holds, by the name the engine's font table gives it. */
+  async faces(book: string): Promise<string[]> {
+    const table = await this.obsidian.page.evaluate(
+      async ({ id, at }) => {
+        const orca = window.app.plugins.plugins[id] as Holding | undefined;
+        const typeset = await orca?.composer?.opened(at);
+        return typeset?.session.faces.map((face) => face.name);
+      },
+      { id: PLUGIN, at: book },
+    );
+    return table ?? [];
+  }
+
   /**
    * The face each painted run matching the words is set in, by the name
    * the engine's font table gives it. A run names its face by font id, so
