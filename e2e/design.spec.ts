@@ -1232,7 +1232,7 @@ test("a font added to the book sets the text its CSS names, and survives the boo
   // rather than in the one the engine carries.
   await panel.toCss.click();
   await expect(panel.editor).toBeVisible();
-  await panel.typeCss(`\n.chapter-opening h1 { font-family: "${VARIED}"; }`);
+  await panel.typeCss(`\nh1 { font-family: "${VARIED}"; }`);
   await expect.poll(async () => vault.read(BOOK)).toContain(`font-family: "${VARIED}"`);
   await book.choose(CHAPTER_NAME);
   await expect
