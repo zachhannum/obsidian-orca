@@ -40,6 +40,10 @@ const SECOND_CHAPTER = `${SECOND_NAME}.md`;
 /** The font the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FONT = "Alegreya";
 
+/** The fixture's ornamental face, and the code points it covers. */
+const ORNAMENT = "Noto Sans Symbols 2";
+const ORNAMENT_GLYPHS = 194;
+
 /** A font no machine installs, so the filter matches nothing. */
 const NOWHERE = "Zzyzx Grotesque";
 
@@ -1219,7 +1223,7 @@ test("setting a key draws its reset without moving the control", async ({
   await written(vault, own);
 });
 
-test("a glyph the author types marks the scene break, and a space takes both rows away", async ({
+test("the glyph browser lists the face's own code points, and picking one marks the scene break", async ({
   book,
   panel,
   vault,
@@ -1230,20 +1234,36 @@ test("a glyph the author types marks the scene break, and a space takes both row
   const painted = await book.painted();
   await panel.open();
 
-  // The fixture marks its scene breaks with one of the glyphs on offer,
-  // so the field for a glyph of the author's own starts empty.
+  // The fixture marks its scene breaks with one of the ornaments the
+  // row offers, and nothing on the row is typed into.
   const glyphs = panel.control("scene-break-ornament");
-  const typed = panel.control("scene-break-ornament-typed");
-  await expect(glyphs).toHaveAttribute("data-on", "\u2042");
-  await expect(typed).toHaveValue("");
+  await expect(glyphs).toHaveAttribute("data-on", "⁂");
+  await expect(panel.control("scene-break-ornament-typed")).toHaveCount(0);
 
-  await typed.fill("*");
-  await typed.press("Enter");
+  // The browser reads the face the scene break is set in, so setting it
+  // in the vault's ornamental face is what the browser then lists.
+  await panel.chooseFont("scene-break-font", ORNAMENT);
+  expect(await panel.browseGlyphs()).toEqual(ORNAMENT_GLYPHS);
+  // The face carries a space as well as its ornaments, and the browser
+  // groups that under the block it sits in like any other code point.
+  expect(await panel.glyphGroups()).toEqual([
+    "Basic Latin",
+    "Dingbats",
+    "Ornamental Dingbats",
+  ]);
 
-  await expect(glyphs).toHaveAttribute("data-on", "*");
-  await expect(typed).toHaveValue("*");
-  // A glyph YAML reads as a token of its own is written quoted.
-  await expect.poll(async () => vault.read(BOOK)).toContain('scene-break-ornament: "*"');
+  // The filter narrows by the name of a block.
+  await panel.glyphFilter.fill("ornamental");
+  expect(await panel.glyphGroups()).toEqual(["Ornamental Dingbats"]);
+
+  // And by a code point written in hex.
+  await panel.glyphFilter.fill("U+2766");
+  await expect(panel.glyphCells).toHaveCount(1);
+  await panel.glyphCell("U+2766").click();
+
+  await expect(panel.glyphBrowser).toHaveCount(0);
+  await expect(glyphs).toHaveAttribute("data-on", "❦");
+  await expect.poll(async () => vault.read(BOOK)).toContain("scene-break-ornament: ❦");
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
   // A scene break marked with a space prints no glyph, so the glyph and
@@ -1251,6 +1271,27 @@ test("a glyph the author types marks the scene break, and a space takes both row
   await panel.choice("scene-break-mark", "space").click();
   await expect(panel.row("scene-break-ornament")).toHaveCount(0);
   await expect(panel.row("scene-break-font")).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("every cell of the glyph browser draws in the face the browser read", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await panel.open();
+
+  await panel.chooseFont("scene-break-font", ORNAMENT);
+  await panel.browseGlyphs();
+
+  // A cell drawn in a face the browser fell back to would show a glyph
+  // the ornamental face does not have.
+  const drawn = await panel.drawnIn(panel.glyphCell("U+2766"));
+  expect(drawn).toEqual({ family: `orca-preview ${ORNAMENT}`, loaded: true });
 
   await written(vault, own);
 });

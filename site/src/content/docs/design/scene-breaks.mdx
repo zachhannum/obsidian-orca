@@ -37,8 +37,12 @@ When the mark is `Space`, the `Glyph` row and the `Font` row are hidden.
 
 ## Glyph and font
 
-The `Glyph` row offers the glyphs `❧`, `⁂`, `§` and `✦`, and a field for a glyph of your own. Type a character in that field to set it as the mark.
+The `Glyph` row offers the glyphs `❧`, `⁂`, `§` and `✦`, and a browser over the face the scene break is set in. The browser lists every code point that face covers, under the name of the Unicode block the code point sits in. Click a cell to set that glyph as the mark.
 
-`Font` sets the font family the glyph is set in. A scene break with no font of its own is set in the body font. Pick a font when the glyph you want lives in another face.
+Each cell is drawn in the face the browser read, so the grid shows what the face holds rather than what another face would put in its place. Ornamental fonts are made for this work, and they hold their ornaments where they like: some in Dingbats, some in the private use area, some on the letter keys. The browser hides no block.
+
+The field above the grid narrows it. Type part of a block name, a code point in hex such as `2766`, `U+2766` or `0x2766`, or paste the glyph itself.
+
+`Font` sets the font family the glyph is set in. A scene break with no font of its own is set in the body font, and the browser then lists the body font's code points. Pick an ornamental font first, and the browser lists that font's ornaments.
 
 `Space above` and `Space below` are counts of lines of text.
