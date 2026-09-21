@@ -80,7 +80,11 @@ export interface PageDesign {
   mirrored?: boolean;
 }
 
-export type Align = "justify" | "left";
+/** Alignment is where the lines of a text block sit between the margins. */
+export type Alignment = "left" | "center" | "right" | "justify";
+
+/** A heading is never justified, so it takes the other three. */
+export type HeadingAlignment = Exclude<Alignment, "justify">;
 
 export interface BodyDesign {
   /** The font the book is set in, by the name its file carries. */
@@ -89,7 +93,7 @@ export interface BodyDesign {
   fontVariant?: string;
   size?: Length;
   lineSpacing?: Length;
-  align?: Align;
+  align?: Alignment;
   /** The indent on a paragraph's first line. */
   indent?: Length;
   /** When true, the first paragraph after a scene break takes the first-line indent. */
@@ -103,8 +107,6 @@ export interface BodyDesign {
   /** A heading keeps the text under it on the same page. */
   keepHeadings?: boolean;
 }
-
-export type Alignment = "left" | "center" | "right";
 
 /** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
 export type Caps = "normal" | "small-caps" | "all-caps";
@@ -122,7 +124,7 @@ export interface TypeSpec {
   caps?: Caps;
   /** The letter spacing on the level. */
   letterSpacing?: Length;
-  align?: Alignment;
+  align?: HeadingAlignment;
 }
 
 /** The heading levels markdown writes, which are the ones a design sets. */
@@ -370,7 +372,7 @@ const BODY: readonly Field[] = [
     property: "text-align",
     read: ({ body }) => body.align,
     write: ({ body }, value) => {
-      const align = asWord(value, ALIGNS);
+      const align = asWord(value, ALIGNMENTS);
       if (align !== undefined) body.align = align;
     },
   },
@@ -774,8 +776,8 @@ export function stepCount(count: number, by: 1 | -1, times = 1): number {
   return Math.max(0, count + by * times);
 }
 
-const ALIGNS: readonly Align[] = ["justify", "left"];
-const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
+const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right", "justify"];
+const HEADING_ALIGNMENTS: readonly HeadingAlignment[] = ["left", "center", "right"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
 
@@ -849,7 +851,7 @@ function heading(level: Level): Field[] {
       property: "text-align",
       read: ({ headings }) => headings[level].align,
       write: ({ headings }, value) => {
-        const align = asWord(value, ALIGNMENTS);
+        const align = asWord(value, HEADING_ALIGNMENTS);
         if (align !== undefined) headings[level].align = align;
       },
     },
