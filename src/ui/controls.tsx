@@ -14,6 +14,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type JSX,
@@ -21,6 +22,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { covered, type Cover } from "@/assets/cmap";
 import type { Unit, Written } from "@/style/design";
 import type { Place } from "@/style/origin";
 import type { Override } from "@/style/overrides";
@@ -33,6 +35,8 @@ import {
   type Typed,
 } from "@/ui/groups";
 import { Icon } from "@/ui/icon";
+import { browsing, glyphName, COLUMNS } from "@/ui/glyphs";
+import { previewFamily } from "@/ui/picker";
 
 /** A control calls it with the value it settles on. */
 export type Settle = (value: Written | undefined) => void;
@@ -602,44 +606,164 @@ export function Field({
   );
 }
 
+/** The cells the browser draws before it offers more. A face of forty thousand code points draws no forty thousand buttons. */
+const CELLS = 512;
+
 /**
- * Draws the ornaments on offer and a field for a glyph of the author's
- * own. The field holds the mark when it is none of the ornaments
- * offered, so the row shows the mark whatever it is.
+ * Draws the ornaments on offer and the browser over the face the scene
+ * break is set in. The browser lists every code point that face covers,
+ * so an ornamental font's own ornaments are picked by eye. Its opener
+ * holds the mark when the mark is none of the ornaments offered, so the
+ * row shows the mark whatever it is.
  */
 export function Glyphs({
   value,
   faint,
   glyphs,
+  family,
+  read,
   testid,
   settle,
 }: {
   value: string | undefined;
   faint: boolean;
   glyphs: readonly string[];
+  /** The family the browser reads, which is the face the scene break sets in. */
+  family: string;
+  read: (family: string) => Promise<readonly Cover[]>;
   testid: string;
   settle: Settle;
 }): JSX.Element {
   const own = value !== undefined && !glyphs.includes(value) ? value : "";
-  const [text, setText] = useState<string | undefined>(undefined);
-  const field = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [spans, setSpans] = useState<readonly Cover[] | undefined>(undefined);
+  const [text, setText] = useState("");
+  const [at, setAt] = useState(0);
+  const [budget, setBudget] = useState(CELLS);
+  const filter = useRef<HTMLInputElement>(null);
+  const browser = useRef<HTMLDivElement>(null);
+  const reader = useRef(read);
+  const found = useMemo(() => browsing(spans ?? [], text, at), [spans, text, at]);
 
   useEffect(() => {
-    if (document.activeElement !== field.current) setText(undefined);
-    // Only a new value resets the field to the glyph drawn.
-  }, [own]);
+    reader.current = read;
+  });
 
-  // A mark is one glyph, so a longer paste settles on its first.
-  const commit = (): void => {
-    if (text === undefined) return;
-    const glyph = [...text.trim()][0];
-    setText(undefined);
-    if (glyph === undefined) {
-      if (!faint) settle(undefined);
-    } else if (faint || glyph !== value) {
-      settle(glyph);
+  useEffect(() => {
+    if (!open) return;
+    filter.current?.focus();
+    let live = true;
+    void reader.current(family).then((covers) => {
+      if (live) setSpans(covers);
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, family]);
+
+  useEffect(() => {
+    // An arrow key past the last cell drawn brings more cells in.
+    if (found.at >= budget) setBudget(budget + CELLS);
+  }, [found.at, budget]);
+
+  useEffect(() => {
+    const el = browser.current;
+    if (el === null) return;
+    // React commits when it chooses, so a count written during a render
+    // could be read before the paint that reports it.
+    el.dataset["covered"] = spans === undefined ? "" : String(covered(spans));
+    el.dataset["offered"] = String(found.offered);
+    el.dataset["shown"] = String(budget);
+  });
+
+  const close = (): void => {
+    setOpen(false);
+    setText("");
+    setAt(0);
+    setBudget(CELLS);
+  };
+
+  const commit = (code: number | undefined): void => {
+    if (code === undefined) return;
+    settle(String.fromCodePoint(code));
+    close();
+  };
+
+  const keyed = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setAt(found.at + 1);
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setAt(Math.max(found.at - 1, 0));
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setAt(found.at + COLUMNS);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setAt(Math.max(found.at - COLUMNS, 0));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setAt(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setAt(found.offered - 1);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      commit(found.commits);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      close();
     }
   };
+
+  const set = value === undefined ? undefined : value.codePointAt(0);
+  let cell = 0;
+  const drawn: ReactNode[] = [];
+  for (const section of found.sections) {
+    if (cell >= budget) break;
+    const cells: ReactNode[] = [];
+    for (const span of section.spans) {
+      for (let code = span.from; code <= span.to && cell < budget; code += 1) {
+        const here = cell;
+        cell += 1;
+        cells.push(
+          <button
+            key={code}
+            type="button"
+            className={classes(
+              "orca-panel-glyph-cell",
+              here === found.at && "is-at",
+              code === set && "is-on",
+            )}
+            data-testid="orca-panel-glyph-cell"
+            data-code={glyphName(code)}
+            title={glyphName(code)}
+            aria-label={glyphName(code)}
+            // The cell draws in the face the coverage was read from. A
+            // face the browser fell back to would show a glyph this one
+            // does not have.
+            style={{ fontFamily: `"${previewFamily(family)}"` }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              commit(code);
+            }}
+          >
+            {String.fromCodePoint(code)}
+          </button>,
+        );
+      }
+    }
+    const first = section.spans[0]?.from ?? 0;
+    drawn.push(
+      <div key={`${section.name} ${first}`} className="orca-panel-glyph-block">
+        <div className="orca-panel-glyph-name" data-testid="orca-panel-glyph-block">
+          {section.name}
+        </div>
+        <div className="orca-panel-glyph-grid">{cells}</div>
+      </div>,
+    );
+  }
 
   return (
     <div
@@ -648,54 +772,100 @@ export function Glyphs({
       data-on={value ?? ""}
       data-default={String(faint)}
     >
-      {glyphs.map((glyph) => {
-        const on = glyph === value;
-        return (
-          <button
-            key={glyph}
-            type="button"
-            className={classes(
-              "orca-panel-glyph",
-              on && "is-on",
-              on && faint && "is-default",
-            )}
-            data-testid={`${testid}-${glyph}`}
-            aria-pressed={on}
-            onClick={() => {
-              if (faint || !on) settle(glyph);
+      <div className="orca-panel-glyph-row">
+        {glyphs.map((glyph) => {
+          const on = glyph === value;
+          return (
+            <button
+              key={glyph}
+              type="button"
+              className={classes(
+                "orca-panel-glyph",
+                on && "is-on",
+                on && faint && "is-default",
+              )}
+              data-testid={`${testid}-${glyph}`}
+              aria-pressed={on}
+              onClick={() => {
+                if (faint || !on) settle(glyph);
+              }}
+            >
+              {glyph}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className={classes(
+            "orca-panel-glyph",
+            own !== "" && "is-on",
+            own !== "" && faint && "is-default",
+          )}
+          data-testid={`${testid}-browse`}
+          aria-label={`Browse the glyphs in ${family}`}
+          aria-expanded={open}
+          style={own === "" ? undefined : { fontFamily: `"${previewFamily(family)}"` }}
+          onClick={() => {
+            if (open) close();
+            else setOpen(true);
+          }}
+        >
+          {own === "" ? <Icon name="layout-grid" className="orca-panel-icon" /> : own}
+        </button>
+      </div>
+      {!open ? null : (
+        <div
+          ref={browser}
+          className="orca-panel-menu"
+          data-testid={`${testid}-browser`}
+        >
+          <input
+            ref={filter}
+            type="text"
+            className="orca-panel-filter"
+            data-testid="orca-panel-glyph-filter"
+            placeholder="Block, hex or glyph"
+            spellCheck={false}
+            value={text}
+            onChange={(event) => {
+              setText(event.target.value);
+              setAt(0);
+              setBudget(CELLS);
             }}
-          >
-            {glyph}
-          </button>
-        );
-      })}
-      <input
-        ref={field}
-        type="text"
-        className={classes(
-          "orca-panel-glyph",
-          "orca-panel-typed",
-          own !== "" && "is-on",
-          own !== "" && faint && "is-default",
-        )}
-        data-testid={`${testid}-typed`}
-        aria-label="A glyph of your own"
-        spellCheck={false}
-        value={text ?? own}
-        onChange={(event) => {
-          setText(event.target.value);
-        }}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            commit();
-          } else if (event.key === "Escape") {
-            event.preventDefault();
-            setText(undefined);
-          }
-        }}
-      />
+            onKeyDown={keyed}
+            onBlur={close}
+          />
+          <div className="orca-panel-rows" data-testid="orca-panel-glyph-rows">
+            {drawn}
+            {spans === undefined ? (
+              <div className="orca-panel-none">Reading {family}</div>
+            ) : found.offered > 0 ? null : (
+              <div className="orca-panel-none" data-testid="orca-panel-glyph-nothing">
+                {covered(spans) === 0
+                  ? `orca has no file for ${family}`
+                  : "No glyph there"}
+              </div>
+            )}
+            {found.offered <= budget ? null : (
+              <div
+                className="orca-panel-glyph-more"
+                data-testid="orca-panel-glyph-more"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  setBudget(budget + CELLS);
+                }}
+              >
+                Show more
+              </div>
+            )}
+          </div>
+          {spans === undefined ? null : (
+            <div className="orca-panel-glyph-count">
+              {covered(spans)} code points in {family}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

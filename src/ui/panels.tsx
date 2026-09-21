@@ -23,7 +23,8 @@ import {
   type JSX,
   type KeyboardEvent,
 } from "react";
-import type { Family, FontIndex } from "@/assets/fonts";
+import type { Cover } from "@/assets/cmap";
+import { familyNamed, type Family, type FontIndex } from "@/assets/fonts";
 import { usedVariant, variantFamily, type Variant } from "@/assets/variants";
 import {
   LEVELS,
@@ -67,6 +68,7 @@ import { ACTIONS } from "@/ui/actions";
 import { boxKey } from "@/ui/inspect";
 import { hyphenating } from "@/ui/language";
 import { InspectPane, type Inspecting } from "@/ui/pane";
+import { browsedFamily } from "@/ui/glyphs";
 import { offeredVariants, picking, previewFamily } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
@@ -84,6 +86,8 @@ export interface Acting {
   dropFont(font: string): void;
   /** Registers a face of each variant of a family with the document, so each variant row draws in its own face. */
   preview(family: Family): void;
+  /** The code points a family's default face covers, with that face registered so the browser draws them. */
+  coverage(family: Family): Promise<readonly Cover[]>;
   /** Switches the panel between its controls and the author's own CSS. */
   view(viewing: Viewing): void;
   /** Switches the CSS view between wrapping long lines and scrolling them sideways. */
@@ -624,6 +628,15 @@ function Drawn({
           value={text}
           faint={faint}
           glyphs={GLYPHS}
+          family={browsedFamily(
+            stringOf(full["scene-break-font"]),
+            stringOf(full["body-font"]),
+            CARRIED,
+          )}
+          read={(family) => {
+            const found = familyNamed(shown.index, family);
+            return found === undefined ? Promise.resolve([]) : acting.coverage(found);
+          }}
           testid={testid}
           settle={settle}
         />

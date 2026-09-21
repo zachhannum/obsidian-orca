@@ -31,7 +31,7 @@ test("a face's code points group under the name of the block each sits in", () =
 
 test("a span that crosses a block boundary splits into one section each side", () => {
   const across: Cover[] = [{ from: 0x2fe, to: 0x301 }];
-  assert.deepEqual(named(across), ["Latin Extended-B", "IPA Extensions"]);
+  assert.deepEqual(named(across), ["Spacing Modifier Letters", "Combining Diacritical Marks"]);
 });
 
 test("a code point in no block falls under Other", () => {
