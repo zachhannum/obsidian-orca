@@ -125,6 +125,36 @@ test("a book that sets nothing opens a chapter on the next page, inside margins 
   assert.equal(properties["header-position"], "outside");
 });
 
+test("a book on the defaults declares its capitals, its tracking and its slope", () => {
+  const { chapter, headers, headings } = DEFAULTS;
+
+  assert.deepEqual(
+    [headings[1].caps, chapter.firstLineCaps, headers.caps],
+    ["normal", "normal", "normal"],
+  );
+  assert.deepEqual(
+    [
+      headings[1].letterSpacing?.value,
+      chapter.firstLineLetterSpacing?.value,
+      headers.letterSpacing?.value,
+    ],
+    [0, 0, 0],
+  );
+  assert.equal(headers.italic, false);
+
+  // A control that declared nothing at its default would leave the
+  // place to whatever else sets it, and the panel would go on saying
+  // Normal.
+  const css = designSheets(emptyDesign(), {
+    sections: [{ role: "chapter", id: "chapter-one" }],
+    title: "Pride and Prejudice",
+  })
+    .map((sheet) => sheet.css)
+    .join("\n");
+  assert.match(css, /h1 \{\n(?: {2}.+\n)* {2}font-variant-caps: normal;\n {2}text-transform: none;\n {2}letter-spacing: 0em;\n/);
+  assert.match(css, /p::first-line,?\n?(?:.+\n)*\{?\n? {2}font-variant-caps: normal;/);
+});
+
 async function moduleBytes(): Promise<Buffer> {
   const require = createRequire(import.meta.url);
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));

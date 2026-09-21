@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { emptyDesign } from "@/style/design";
+import { generatedRules, type Setting } from "@/style/generated";
 import { designOverridden, type Override } from "@/style/overrides";
 import { OWN_SHEET } from "@/style/sheet";
 
@@ -66,6 +67,38 @@ test("the overrides layer beats a generated declaration of the same property und
   assert.deepEqual(beaten(twice, [{ line: 3, column: 3 }]), {
     "body-first-line-indent": at(2, 3, "text-indent", "0"),
   });
+});
+
+test("an author rule beats the capitals and the tracking a control sets, and names the line that beat it", () => {
+  const design = emptyDesign();
+  design.chapter.firstLineCaps = "small-caps";
+  design.headers.leftPage = "author";
+  design.headers.letterSpacing = { value: 0.06, unit: "em" };
+  const setting: Setting = {
+    sections: [{ role: "chapter", id: "chapter-one" }],
+    author: "Jane Austen",
+  };
+  const rules = generatedRules(design, setting);
+  const firstLine = rules.find((rule) => rule.selector.includes("::first-line"));
+  assert.ok(firstLine);
+
+  const css = `${firstLine.selector} {\n  font-variant-caps: normal;\n}\n\n@page :left {\n  @top-left { letter-spacing: 0; }\n}\n`;
+  const beaten = Object.fromEntries(designOverridden(design, setting, css, [], []));
+
+  assert.deepEqual(Object.keys(beaten).sort(), [
+    "chapter-first-line-caps",
+    "header-letter-spacing",
+  ]);
+  assert.deepEqual(beaten["header-letter-spacing"], at(8, 15, "letter-spacing", "0"));
+
+  // A row at its default declares that default, so it is beaten the
+  // same way a row the book sets is.
+  const beatenDefault = designOverridden(
+    emptyDesign(),
+    setting,
+    `${firstLine.selector} {\n  font-variant-caps: small-caps;\n}\n`,
+  );
+  assert.deepEqual([...beatenDefault.keys()], ["chapter-first-line-caps"]);
 });
 
 // What this tier does not cover: an author rule on a different selector

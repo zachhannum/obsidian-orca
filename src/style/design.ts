@@ -106,6 +106,9 @@ export interface BodyDesign {
 
 export type Alignment = "left" | "center" | "right";
 
+/** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
+export type Caps = "normal" | "small-caps" | "all-caps";
+
 /**
  * The type a heading is set in. Bold and italic inside a heading come
  * from the markdown, so a spec sets neither.
@@ -115,6 +118,10 @@ export interface TypeSpec {
   /** The font's variant, by name. A font's default variant is stored as absent. */
   fontVariant?: string;
   size?: Length;
+  /** The case the level is set in. */
+  caps?: Caps;
+  /** The letter spacing on the level. */
+  letterSpacing?: Length;
   align?: Alignment;
 }
 
@@ -136,6 +143,10 @@ export interface ChapterDesign {
   spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
+  /** The case a chapter's first line is set in. */
+  firstLineCaps?: Caps;
+  /** The letter spacing on a chapter's first line. */
+  firstLineLetterSpacing?: Length;
 }
 
 export type SceneMark = "space" | "ornament" | "word";
@@ -171,6 +182,12 @@ export interface HeaderDesign {
   position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
+  /** The case the running heads are set in. */
+  caps?: Caps;
+  /** The letter spacing on the running heads. */
+  letterSpacing?: Length;
+  /** When true, the running heads are set in italic. A margin box takes no markdown. */
+  italic?: boolean;
   /** When true, the page a section opens on has no running head and no folio. */
   suppressOnOpenings?: boolean;
 }
@@ -273,11 +290,14 @@ export type Written = string | number | boolean;
 
 interface Field {
   key: string;
-  /** The CSS property this field sets. `subset.css` declares it. */
-  property: string;
+  /** The CSS properties this field sets, each declared in `subset.css`. */
+  property: string | readonly string[];
   read(design: Design): Written | undefined;
   write(design: Design, value: unknown): void;
 }
+
+/** Small caps is a font feature and all caps a transform, so one key sets either. */
+const CAPS_PROPERTIES: readonly string[] = ["font-variant-caps", "text-transform"];
 
 const PAGE: readonly Field[] = [
   {
@@ -456,6 +476,24 @@ const CHAPTER: readonly Field[] = [
       if (lines !== undefined) chapter.dropCap = lines;
     },
   },
+  {
+    key: "chapter-first-line-caps",
+    property: CAPS_PROPERTIES,
+    read: ({ chapter }) => chapter.firstLineCaps,
+    write: ({ chapter }, value) => {
+      const caps = asWord(value, CAPS);
+      if (caps !== undefined) chapter.firstLineCaps = caps;
+    },
+  },
+  {
+    key: "chapter-first-line-letter-spacing",
+    property: "letter-spacing",
+    read: ({ chapter }) => written(chapter.firstLineLetterSpacing),
+    write: ({ chapter }, value) => {
+      const spacing = asLength(value);
+      if (spacing !== undefined) chapter.firstLineLetterSpacing = spacing;
+    },
+  },
 ];
 
 const SCENE: readonly Field[] = [
@@ -537,6 +575,33 @@ const HEADERS: readonly Field[] = [
     },
   },
   {
+    key: "header-caps",
+    property: CAPS_PROPERTIES,
+    read: ({ headers }) => headers.caps,
+    write: ({ headers }, value) => {
+      const caps = asWord(value, CAPS);
+      if (caps !== undefined) headers.caps = caps;
+    },
+  },
+  {
+    key: "header-letter-spacing",
+    property: "letter-spacing",
+    read: ({ headers }) => written(headers.letterSpacing),
+    write: ({ headers }, value) => {
+      const spacing = asLength(value);
+      if (spacing !== undefined) headers.letterSpacing = spacing;
+    },
+  },
+  {
+    key: "header-italic",
+    property: "font-style",
+    read: ({ headers }) => headers.italic,
+    write: ({ headers }, value) => {
+      const flag = asFlag(value);
+      if (flag !== undefined) headers.italic = flag;
+    },
+  },
+  {
     key: "suppress-head-on-openings",
     property: "content",
     read: ({ headers }) => headers.suppressOnOpenings,
@@ -562,8 +627,14 @@ export const DESIGN_KEYS: readonly string[] = FIELDS.map((field) => field.key);
 
 /** The CSS properties a design sets, each declared in `subset.css`. */
 export const DESIGN_PROPERTIES: readonly string[] = [
-  ...new Set(FIELDS.map((field) => field.property)),
+  ...new Set(FIELDS.flatMap((field) => field.property)),
 ];
+
+/** The properties one key sets, and nothing for a key the schema does not have. */
+export function propertiesOf(key: string): readonly string[] {
+  const field = FIELDS.find((each) => each.key === key);
+  return field === undefined ? [] : [field.property].flat();
+}
 
 /**
  * The design in a note's properties. A key the schema does not have is
@@ -706,6 +777,8 @@ export function stepCount(count: number, by: 1 | -1, times = 1): number {
 const ALIGNS: readonly Align[] = ["justify", "left"];
 const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
+export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
+
 const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
@@ -751,6 +824,24 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const size = asLength(value);
         if (size !== undefined) headings[level].size = size;
+      },
+    },
+    {
+      key: `heading-${level}-caps`,
+      property: CAPS_PROPERTIES,
+      read: ({ headings }) => headings[level].caps,
+      write: ({ headings }, value) => {
+        const caps = asWord(value, CAPS);
+        if (caps !== undefined) headings[level].caps = caps;
+      },
+    },
+    {
+      key: `heading-${level}-letter-spacing`,
+      property: "letter-spacing",
+      read: ({ headings }) => written(headings[level].letterSpacing),
+      write: ({ headings }, value) => {
+        const spacing = asLength(value);
+        if (spacing !== undefined) headings[level].letterSpacing = spacing;
       },
     },
     {

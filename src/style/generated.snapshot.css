@@ -6,36 +6,36 @@
   @top-center { content: none; }
   @top-right { content: none; }
   @bottom-left { content: none; }
-  @bottom-center { content: counter(page, decimal); }
+  @bottom-center { content: counter(page, decimal); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
   @bottom-right { content: none; }
 }
 
 @page :left {
   margin-left: 0.7in;
   margin-right: 0.95in;
-  @top-left { content: "Jane Austen"; }
+  @top-left { content: "Jane Austen"; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page :right {
   margin-left: 0.95in;
   margin-right: 0.7in;
-  @top-right { content: "Pride and Prejudice"; }
+  @top-right { content: "Pride and Prejudice"; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page title-page {
-  @bottom-center { content: counter(page, lower-roman); }
+  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page copyright {
-  @bottom-center { content: counter(page, lower-roman); }
+  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page epigraph {
-  @bottom-center { content: counter(page, lower-roman); }
+  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page contents {
-  @bottom-center { content: counter(page, lower-roman); }
+  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page title-page:first {
@@ -105,31 +105,49 @@ hr + p {
 
 h1 {
   font-size: 17pt;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
   text-align: center;
 }
 
 h2 {
   font-size: 13pt;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
   text-align: left;
 }
 
 h3 {
   font-size: 19pt;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
   text-align: left;
 }
 
 h4 {
   font-size: 19pt;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
   text-align: left;
 }
 
 h5 {
   font-size: 19pt;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
   text-align: left;
 }
 
 h6 {
   font-size: 19pt;
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
   text-align: left;
 }
 
@@ -175,6 +193,14 @@ section#volume-the-first {
 :is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + p::first-letter,
 :is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) + p::first-letter {
   initial-letter: 3;
+}
+
+:is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-line,
+:is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + p::first-line,
+:is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) + p::first-line {
+  font-variant-caps: normal;
+  text-transform: none;
+  letter-spacing: 0em;
 }
 
 section#title-page > * {

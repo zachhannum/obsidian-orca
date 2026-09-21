@@ -66,7 +66,14 @@ export const DEFAULTS: Design = frozen({
     5: heading(),
     6: heading(),
   },
-  chapter: { begins: "next-page", spaceAbove: 0, spaceBelow: 0, dropCap: 0 },
+  chapter: {
+    begins: "next-page",
+    spaceAbove: 0,
+    spaceBelow: 0,
+    dropCap: 0,
+    firstLineCaps: "normal",
+    firstLineLetterSpacing: ems(0),
+  },
   scene: { mark: "ornament", ornament: "❧", spaceAbove: 1, spaceBelow: 1 },
   headers: {
     leftPage: "none",
@@ -74,6 +81,9 @@ export const DEFAULTS: Design = frozen({
     position: "outside",
     pageNumber: "bottom",
     pageNumberFormat: "arabic",
+    caps: "normal",
+    letterSpacing: ems(0),
+    italic: false,
     suppressOnOpenings: true,
   },
 });
@@ -98,11 +108,15 @@ export function effective(design: Design): Design {
 }
 
 function heading(): TypeSpec {
-  return { size: points(19), align: "left" };
+  return { size: points(19), caps: "normal", letterSpacing: ems(0), align: "left" };
 }
 
 function points(value: number): Length {
   return { value, unit: "pt" };
+}
+
+function ems(value: number): Length {
+  return { value, unit: "em" };
 }
 
 function inches(value: number): Length {

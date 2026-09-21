@@ -1,8 +1,14 @@
 {
   "width": 252,
-  "height": 280,
+  "height": 405,
   "marks": {
     "heading-1-align": {
+      "x": 0,
+      "y": 359,
+      "width": 220,
+      "height": 30
+    },
+    "heading-1-caps": {
       "x": 0,
       "y": 233,
       "width": 220,
@@ -11,6 +17,12 @@
     "heading-1-font": {
       "x": 0,
       "y": 107,
+      "width": 220,
+      "height": 30
+    },
+    "heading-1-letter-spacing": {
+      "x": 0,
+      "y": 296,
       "width": 220,
       "height": 30
     },
@@ -28,7 +40,7 @@
     },
     "reset-heading-1-align": {
       "x": 228,
-      "y": 236,
+      "y": 362,
       "width": 24,
       "height": 24
     },
