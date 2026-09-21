@@ -41,10 +41,10 @@ import {
   tooltips,
   type DecorationSet,
 } from "@codemirror/view";
-import { classHighlighter } from "@lezer/highlight";
 import type { SyntaxNode } from "@lezer/common";
-import { quoted } from "@/style/quoted";
+import { classHighlighter } from "@lezer/highlight";
 import type { Place } from "@/style/origin";
+import { quoted } from "@/style/quoted";
 
 /** The editor over the fence, held by the panel view. */
 export interface CssEditor {
