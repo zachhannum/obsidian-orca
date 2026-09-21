@@ -79,6 +79,7 @@ export default defineConfig({
             'design/page',
             'design/text',
             'design/headings',
+            'design/fonts',
             'design/chapter-openings',
             'design/scene-breaks',
             'design/heads-and-folios',

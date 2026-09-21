@@ -1,0 +1,53 @@
+---
+title: Fonts
+eyebrow: Design
+description: Add a font to the book so that your CSS can set text in it.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The Fonts group in the design panel adds a font that no control names. Orca loads the font for the book, so your own CSS can set text in it.
+
+<Shot
+  name="panel-fonts"
+  alt="The Fonts group of the design panel, with the Add a font picker under the heading."
+  caption="The Fonts group, with no font added yet."
+/>
+
+A control loads the font it uses. A font in this group is for your CSS alone, and it changes nothing until your CSS names it.
+
+## Add a font
+
+1. In the Fonts group, select `Add a font`.
+2. Type part of the name of the font. The list shows the fonts on this machine.
+3. Select the font in the list.
+
+The font gets a row in the group, and the row is set in that font. Orca loads the default variant of the family and writes the name to the `fonts` key of the book note. [The book note](/reference/the-book-note/) shows the frontmatter of a full note.
+
+## Set text in the font
+
+In the CSS view of the panel, name the font in a `font-family` value:
+
+```css
+section.dedication p {
+  font-family: "Alegreya";
+}
+```
+
+The value completes from the fonts the book carries: the fonts the controls use and the fonts of this group. Type part of a name and select it in the list. Orca puts the name in quotes, so a name of several words reads as one family.
+
+Orca loads no other font. If your CSS names a font that neither a control nor this group loads, that text sets in the font orca carries. [Custom CSS](/design/custom-css/) shows how to write the rest of the sheet.
+
+## Take a font out
+
+Select the cross at the end of the row. Orca takes the font out of the book and out of the note. Text that your CSS sets in that font then sets in the font orca carries.
+
+## A font this machine does not have
+
+If you open the book on a machine without an added font, the panel shows a warning under the groups:
+
+```text
+Alegreya is not a font this machine has. The book is set in the one orca carries.
+```
+
+The name stays in the note. The warning goes when you open the book on a machine that has the font.
