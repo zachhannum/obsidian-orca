@@ -215,6 +215,7 @@ export class DesignPanelView extends ItemView {
       editor.wrap(this.wrapping);
       this.editor = editor;
     } else editor.show(typeset.css);
+    editor.fonts(typeset.families);
     editor.flag(cssFlags(typeset.session.warnings), typeset.cssWarned);
   }
 
