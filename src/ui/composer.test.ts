@@ -522,7 +522,7 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   const cut: Face = { key: "spectral-regular", bytes: new Uint8Array([1, 2, 3]) };
   const composer = new Composer(
     {
-      ...(await setting(new FakeClient())),
+      ...plain(await setting(new FakeClient())),
       engines: clients.engines,
       fonts: (uses) => Promise.resolve(uses.map((use) => resolvedOf(use, [cut]))),
     },
@@ -575,6 +575,22 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
   const styled = opened.at(-1);
   assert.equal(styled?.op, "style");
 });
+
+/**
+ * The fixture book with no font of its own. The fixture sets its drop
+ * cap in a font, and a spec about the fonts a book asks for names them
+ * itself.
+ */
+function plain(composing: Composing): Composing {
+  return {
+    ...composing,
+    model: async (at) => {
+      const model = await composing.model(at);
+      if (model !== undefined) delete model.book.design.chapter.dropCapFont;
+      return model;
+    },
+  };
+}
 
 /** The styles of each font the headed book names, by family. */
 const CUTS: Record<string, Face[]> = {
@@ -769,7 +785,7 @@ test("a book opens sending only the faces of the variants it uses", async () => 
   };
   const clock = new Steps();
   const client = new FakeClient();
-  const base = await setting(client);
+  const base = plain(await setting(client));
   const composer = new Composer(
     {
       ...base,
@@ -836,7 +852,7 @@ test("two font edits before the render still send the faces the first one planne
 test("a book keeps the uses that loaded no face and the embeds that brought no bytes", async () => {
   const clock = new Steps();
   const client = new FakeClient();
-  const composer = new Composer(await setting(client), clock);
+  const composer = new Composer(plain(await setting(client)), clock);
   const book = await composer.open(BOOK);
 
   // The fixture's one embed resolves, and its design names no font.
@@ -885,7 +901,7 @@ test("a font the book adds crosses as a face, and crosses again on a new engine"
 
   const clock = new Steps();
   const clients = new Clients();
-  const base = await setting(new FakeClient());
+  const base = plain(await setting(new FakeClient()));
   const composer = new Composer(
     {
       ...base,

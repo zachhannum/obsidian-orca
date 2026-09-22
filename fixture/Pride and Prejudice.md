@@ -27,6 +27,7 @@ heading-2-size: 13pt
 chapter-begins: right-page
 chapter-space-above: 7
 chapter-drop-cap: 3
+chapter-drop-cap-font: Alegreya
 scene-break-ornament: ⁂
 header-left-page: author
 header-right-page: book-title
