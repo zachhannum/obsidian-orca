@@ -129,6 +129,14 @@ const MARKS: readonly Choice[] = [
   { value: "word", label: "Word" },
 ];
 
+/** The marks a bulleted list offers. A numbered list keeps its numbers. */
+const MARKERS: readonly Choice[] = [
+  { value: "disc", label: "Bullet" },
+  { value: "circle", label: "Open circle" },
+  { value: "square", label: "Square" },
+  { value: "none", label: "None" },
+];
+
 const SLOTS: readonly Choice[] = [
   { value: "none", label: "Nothing" },
   { value: "author", label: "Author" },
@@ -326,6 +334,46 @@ export const GROUPS: readonly Group[] = [
         label: "Space below",
         of: [{ kind: "count", key: "scene-break-space-below", said: "lines" }],
       },
+    ],
+  },
+  {
+    name: "Quote",
+    rows: [
+      { label: "Font", of: [{ kind: "font", key: "quote-font" }] },
+      { label: "Variant", of: [{ kind: "variant", key: "quote-font-variant" }] },
+      { label: "Size", of: [{ kind: "length", key: "quote-size" }] },
+      {
+        label: "Indent",
+        grid: true,
+        of: [
+          { kind: "length", key: "quote-indent-left", said: "left" },
+          { kind: "length", key: "quote-indent-right", said: "right" },
+        ],
+      },
+      { label: "Space above", of: [{ kind: "length", key: "quote-space-above" }] },
+      { label: "Space below", of: [{ kind: "length", key: "quote-space-below" }] },
+    ],
+  },
+  {
+    name: "List",
+    rows: [
+      {
+        label: "Marker",
+        of: [{ kind: "select", key: "list-marker", choices: MARKERS }],
+      },
+      { label: "Indent", of: [{ kind: "length", key: "list-indent" }] },
+      {
+        label: "Space between",
+        of: [{ kind: "length", key: "list-space-between" }],
+      },
+    ],
+  },
+  {
+    name: "Image",
+    rows: [
+      { label: "Width", of: [{ kind: "length", key: "image-width", page: true }] },
+      { label: "Space above", of: [{ kind: "length", key: "image-space-above" }] },
+      { label: "Space below", of: [{ kind: "length", key: "image-space-below" }] },
     ],
   },
   {

@@ -553,9 +553,47 @@ test("the panel offers every group a book designer works in", async ({
     "Fonts",
     "Chapter openings",
     "Scene breaks",
+    "Quote",
+    "List",
+    "Image",
     "Heads & folios",
     "Page breaks",
   ]);
+});
+
+test("a quote, a list and an image are set from their groups, and the pages are painted again", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture sets none of the three groups, so each row draws the
+  // default the engine's own sheet already gave the block.
+  for (const [key, value] of [
+    ["quote-indent-left", "2em"],
+    ["quote-space-above", "1em"],
+    ["list-indent", "1.5em"],
+    ["image-space-above", "0em"],
+  ] as const) {
+    await expect(panel.control(key)).toHaveValue(value);
+    await expect(panel.control(key)).toHaveAttribute("data-default", "true");
+  }
+  await expect(panel.control("list-marker")).toHaveValue("disc");
+  await expect(panel.control("image-width")).toHaveValue("");
+
+  await panel.control("image-width").fill("2.5in");
+  await panel.control("image-width").blur();
+
+  await expect.poll(async () => vault.read(BOOK)).toContain("image-width: 2.5in");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  await expect(panel.control("image-width")).toHaveAttribute("data-default", "false");
+
+  await written(vault, own);
 });
 
 test("a click on a switch flips it, and the note is written", async ({

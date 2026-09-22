@@ -1,0 +1,35 @@
+---
+title: Image
+eyebrow: Design
+description: The width an image is drawn at, and the space around it.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+An image is a picture a chapter places in the text. You write one in markdown as an embedded link to the file, and the file sits in the vault. The Image group in the design panel sets the width every image in the book is drawn at, and the space around it.
+
+<Shot
+  name="panel-image"
+  alt="The Image group of the design panel, with Width, Space above and Space below."
+  caption="The Image group."
+  marks={['image-width', 'image-space-above', 'image-space-below']}
+  numbered
+/>
+
+## Controls
+
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Width | none | `image-width` |
+| 2 | Space above | `0em` | `image-space-above` |
+| 3 | Space below | `0em` | `image-space-below` |
+
+## Width
+
+`Width` is a length on the page, so the row draws it in the unit you measure pages in. An image with no width set is drawn at its own width, which is the size of the file.
+
+`Space above` and `Space below` set the space over and under an image. Both are `0em` by default, so an image sits in the text where you wrote it until you open the space around it.
+
+## The caption
+
+The panel sets no caption. The engine prints no caption under an image, so the alt text of an image reaches no page. To put words under an image, write them as a paragraph after it and style that paragraph in [Custom CSS](/design/custom-css/).

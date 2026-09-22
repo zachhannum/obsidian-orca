@@ -94,3 +94,30 @@ hr {
 hr + p {
   text-indent: 0;
 }
+
+blockquote {
+  font-family: "EB Garamond", serif;
+  font-size: 10pt;
+  margin-left: 2em;
+  margin-right: 2em;
+  margin-top: 14pt;
+  margin-bottom: 14pt;
+}
+
+ul {
+  list-style-type: square;
+}
+
+:is(ul, ol) {
+  padding-left: 1.5em;
+}
+
+li + li {
+  margin-top: 7pt;
+}
+
+img {
+  width: 3in;
+  margin-top: 14pt;
+  margin-bottom: 14pt;
+}

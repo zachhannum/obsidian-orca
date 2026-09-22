@@ -48,26 +48,32 @@ test("a book that sets nothing sets one font in two sizes, with nothing the engi
   }
 });
 
-test("every design key has a default but a heading's font, each font's variant and the scene-break word", () => {
+test("every design key has a default but a font of its own, each font's variant, the scene-break word and an image's width", () => {
   const variant = (key: string) => key.endsWith("-font-variant");
-  const optional = (key: string) =>
-    /^heading-\d-font$/.test(key) || variant(key) || key === "scene-break-word";
+  const inherits = (key: string) =>
+    /^heading-\d-font$/.test(key) || key === "quote-font" || key === "quote-size";
+  // A scene break with no word set is marked by its ornament, and an
+  // image with no width set is drawn at its own width.
+  const unset = (key: string) => key === "scene-break-word" || key === "image-width";
+  const optional = (key: string) => inherits(key) || variant(key) || unset(key);
 
   assert.deepEqual(
     Object.keys(writeDesign(DEFAULTS)),
     DESIGN_KEYS.filter((key) => !optional(key)),
   );
-  // The panel draws the effective design, where a heading with no font
-  // of its own shows the body font. The default variant is stored as
+  // The panel draws the effective design, where a place with no font of
+  // its own shows the body font. The default variant is stored as
   // absent.
   const shown = writeDesign(effective(emptyDesign()));
   assert.deepEqual(
     Object.keys(shown),
-    DESIGN_KEYS.filter((key) => key !== "scene-break-word" && !variant(key)),
+    DESIGN_KEYS.filter((key) => !unset(key) && !variant(key)),
   );
   for (const level of LEVELS) {
     assert.equal(shown[`heading-${level}-font`], "EB Garamond");
   }
+  assert.equal(shown["quote-font"], "EB Garamond");
+  assert.equal(shown["quote-size"], shown["body-size"]);
 });
 
 test("a book's own keys win over the defaults, and a heading follows the body font", () => {

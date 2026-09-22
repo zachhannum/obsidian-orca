@@ -337,6 +337,25 @@ function whole(): Design {
       spaceAbove: 1,
       spaceBelow: 1,
     },
+    quote: {
+      font: "Alegreya",
+      fontVariant: "SC",
+      size: len(9.5, "pt"),
+      indentLeft: len(2, "em"),
+      indentRight: len(2, "em"),
+      spaceAbove: len(1, "em"),
+      spaceBelow: len(1, "em"),
+    },
+    list: {
+      marker: "square",
+      indent: len(1.5, "em"),
+      spaceBetween: len(0.25, "em"),
+    },
+    image: {
+      width: len(3, "in"),
+      spaceAbove: len(1, "em"),
+      spaceBelow: len(1, "em"),
+    },
     headers: {
       leftPage: "author",
       rightPage: "book-title",

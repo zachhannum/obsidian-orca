@@ -1,0 +1,41 @@
+---
+title: Quote
+eyebrow: Design
+description: The type a block quote is set in, and the space around it.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+A block quote is a passage a chapter sets apart from the narration: a letter, an epigraph, or words the narrator quotes. You write one in markdown with a `>` before each line. The Quote group in the design panel sets the type of every block quote in the book, and the space around it.
+
+<Shot
+  name="panel-quote"
+  alt="The Quote group of the design panel, with Font, Size, Indent, Space above and Space below."
+  caption="The Quote group."
+  marks={['quote-font', 'quote-size', 'quote-indent-left', 'quote-space-above', 'quote-space-below']}
+  numbered
+/>
+
+## Controls
+
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Font | `EB Garamond` | `quote-font` |
+|  | Variant | the default variant of the font | `quote-font-variant` |
+| 2 | Size | 11pt | `quote-size` |
+| 3 | Indent, left | `2em` | `quote-indent-left` |
+|  | Indent, right | `2em` | `quote-indent-right` |
+| 4 | Space above | `1em` | `quote-space-above` |
+| 5 | Space below | `1em` | `quote-space-below` |
+
+## Font and size
+
+A quote that sets no font of its own is set in the body font, and a quote that sets no size of its own is set at the body size. Both rows show that inherited value faint. If you set either one, the quote keeps it and the body no longer decides it.
+
+The `Variant` row shows only for a font whose faces come in more than one variant.
+
+## Indent and space
+
+`Indent, left` and `Indent, right` set the indent on each side of a quote. A quote indented on both sides sits narrower than the text around it, which is how a quote reads as a quote.
+
+`Space above` and `Space below` set the space over and under a quote. A space in `em` is measured against the size of the quote, so a smaller quote keeps a smaller space around it.
