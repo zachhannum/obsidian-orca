@@ -143,6 +143,11 @@ its editor around these files and returns a URL. The artboard list and
   take a slope, because a margin box prints a generated string. A title
   takes its slope from the note, and a first line takes none, because
   the engine sets no slope there.
+- The running heads take a font of their own, and the folios take
+  another, because a head is usually set in another face than the text
+  and a folio in another face again. Neither row has a Variant row, so
+  each sets in its family's default variant. A head or a folio with no
+  font of its own is set in the book's font.
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.

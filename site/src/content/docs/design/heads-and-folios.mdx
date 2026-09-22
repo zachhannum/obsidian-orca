@@ -10,9 +10,9 @@ A running head is the line at the top of a page. A folio is the page number. The
 
 <Shot
   name="panel-heads-and-folios"
-  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format, Capitals, Tracking and two switches."
+  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format, Header font, Folio font, Capitals, Tracking and two switches."
   caption="The Heads & folios group."
-  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
+  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'header-font', 'folio-font', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
   numbered
 />
 
@@ -25,14 +25,22 @@ A running head is the line at the top of a page. A folio is the page number. The
 | 3 | Header position | `Outside` | `header-position` |
 | 4 | Page number | `Bottom` | `page-number-position` |
 | 5 | Number format | `1, 2, 3` | `page-number-format` |
-| 6 | Capitals | `Normal` | `header-caps` |
-| 7 | Tracking | `None` | `header-letter-spacing` |
-| 8 | Set the running heads in italic | off | `header-italic` |
-| 9 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+| 6 | Header font | none | `header-font` |
+| 7 | Folio font | none | `folio-font` |
+| 8 | Capitals | `Normal` | `header-caps` |
+| 9 | Tracking | `None` | `header-letter-spacing` |
+| 10 | Set the running heads in italic | off | `header-italic` |
+| 11 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
 
 ## Running heads
 
 `Left-page header` and `Right-page header` each take `Nothing`, `Author`, `Book title` or `Chapter title`. `Header position` puts the running head at the outside edge of the page or in the center.
+
+## The fonts they are set in
+
+`Header font` sets the running heads in a font of their own, and `Folio font` sets the page numbers in one. A head or a folio with no font of its own is set in the book's font.
+
+A running head is usually set in another face than the text, and a folio in another face again. Both pickers offer the fonts the text picker offers.
 
 ## The type the heads are set in
 
