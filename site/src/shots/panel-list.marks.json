@@ -1,0 +1,24 @@
+{
+  "width": 252,
+  "height": 239,
+  "marks": {
+    "list-indent": {
+      "x": 0,
+      "y": 130,
+      "width": 60,
+      "height": 30
+    },
+    "list-marker": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "list-space-between": {
+      "x": 0,
+      "y": 193,
+      "width": 60,
+      "height": 30
+    }
+  }
+}

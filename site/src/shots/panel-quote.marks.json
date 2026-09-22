@@ -1,0 +1,42 @@
+{
+  "width": 252,
+  "height": 383,
+  "marks": {
+    "quote-font": {
+      "x": 0,
+      "y": 67,
+      "width": 220,
+      "height": 30
+    },
+    "quote-indent-left": {
+      "x": 0,
+      "y": 193,
+      "width": 88,
+      "height": 30
+    },
+    "quote-indent-right": {
+      "x": 114,
+      "y": 193,
+      "width": 88,
+      "height": 30
+    },
+    "quote-size": {
+      "x": 0,
+      "y": 130,
+      "width": 60,
+      "height": 30
+    },
+    "quote-space-above": {
+      "x": 0,
+      "y": 273,
+      "width": 60,
+      "height": 30
+    },
+    "quote-space-below": {
+      "x": 0,
+      "y": 336,
+      "width": 60,
+      "height": 30
+    }
+  }
+}
