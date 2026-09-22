@@ -147,7 +147,8 @@ its editor around these files and returns a URL. The artboard list and
   another, because a head is usually set in another face than the text
   and a folio in another face again. Neither row has a Variant row, so
   each sets in its family's default variant. A head or a folio with no
-  font of its own is set in the book's font.
+  font of its own is set in the book's font, and its row shows that
+  font the way a heading's Font row does.
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.
