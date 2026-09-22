@@ -28,6 +28,11 @@ chapter-begins: right-page
 chapter-space-above: 7
 chapter-drop-cap: 3
 scene-break-ornament: ⁂
+quote-size: 9.5pt
+quote-indent-left: 2em
+quote-indent-right: 2em
+list-marker: square
+image-width: 2.5in
 header-left-page: author
 header-right-page: book-title
 page-number-position: bottom

@@ -265,3 +265,29 @@ hr {
   margin-top: 14pt;
   margin-bottom: 14pt;
 }
+
+blockquote {
+  font-size: 9.5pt;
+  margin-left: 2em;
+  margin-right: 2em;
+  margin-top: 14pt;
+  margin-bottom: 14pt;
+}
+
+ul {
+  list-style-type: square;
+}
+
+:is(ul, ol) {
+  padding-left: 1.5em;
+}
+
+li + li {
+  margin-top: 0pt;
+}
+
+img {
+  width: 2.5in;
+  margin-top: 14pt;
+  margin-bottom: 14pt;
+}

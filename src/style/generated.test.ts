@@ -24,6 +24,7 @@ import {
   DESIGN_KEYS,
   emptyDesign,
   mergeDesign,
+  readDesign,
   type Design,
   type HeaderPosition,
   type PageNumberPosition,
@@ -707,6 +708,20 @@ const BROKEN: Source[] = SOURCES.map((source, index) =>
     : source,
 );
 
+/**
+ * The sources of `ROLES`, with a quote and both kinds of list inside
+ * the last chapter. No image, because the engine warns about a picture
+ * whose bytes the book has not sent.
+ */
+const BLOCKED: Source[] = SOURCES.map((source, index) =>
+  index === SOURCES.length - 1
+    ? {
+        ...source,
+        text: `${source.text}\n> She said nothing more that evening.\n\n- first\n- second\n\n1. first\n`,
+      }
+    : source,
+);
+
 async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
 }
@@ -877,6 +892,66 @@ test("a design that sets every new key renders with no warning from the pinned e
   const output = await rendered(css, BROKEN, sections);
 
   assert.deepEqual(output.warnings, []);
+});
+
+test("a quote, a list and an image each take their group's rules, which the engine sets without a warning", async () => {
+  const design = readDesign({
+    "body-line-spacing": "14pt",
+    "quote-font": "Alegreya",
+    "quote-size": "9.5pt",
+    "quote-indent-left": "2em",
+    "quote-indent-right": "3em",
+    "quote-space-above": 1,
+    "quote-space-below": 2,
+    "list-marker": "square",
+    "list-indent": "1.5em",
+    "list-space-between": 1,
+    "image-width": "2.5in",
+    "image-space-above": 1,
+    "image-space-below": 1,
+  });
+  const sections = named(ROLES);
+  const rules = generatedRules(design, { sections });
+
+  assert.equal(
+    ruleFor(rules, "quote-size").css,
+    [
+      "blockquote {",
+      '  font-family: "Alegreya", serif;',
+      "  font-size: 9.5pt;",
+      "  margin-left: 2em;",
+      "  margin-right: 3em;",
+      "  margin-top: 14pt;",
+      "  margin-bottom: 28pt;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  assert.equal(ruleFor(rules, "list-marker").css, "ul {\n  list-style-type: square;\n}\n");
+  assert.equal(
+    ruleFor(rules, "list-indent").css,
+    ":is(ul, ol) {\n  padding-left: 1.5em;\n}\n",
+  );
+  assert.equal(
+    ruleFor(rules, "list-space-between").css,
+    "li + li {\n  margin-top: 14pt;\n}\n",
+  );
+  assert.equal(
+    ruleFor(rules, "image-width").css,
+    "img {\n  width: 2.5in;\n  margin-top: 14pt;\n  margin-bottom: 14pt;\n}\n",
+  );
+
+  const output = await rendered(generatedCss(design, { sections }), BLOCKED, sections);
+
+  assert.deepEqual(output.warnings, []);
+});
+
+test("a quote with no font of its own declares none, so it is set in the body's", () => {
+  const design = readDesign({ "quote-size": "9.5pt" });
+
+  const rules = generatedRules(design, { sections: named(ROLES) });
+
+  assert.equal(ruleFor(rules, "quote-size").css, "blockquote {\n  font-size: 9.5pt;\n}\n");
 });
 
 /** The one generated rule a setting key writes. */
