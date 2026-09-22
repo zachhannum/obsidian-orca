@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DESIGN_KEYS, LEVELS, emptyDesign, writeDesign } from "@/style/design";
+import {
+  DESIGN_KEYS,
+  LEVELS,
+  emptyDesign,
+  readDesign,
+  writeDesign,
+} from "@/style/design";
+import { designOverridden } from "@/style/overrides";
 import type { Variant } from "@/assets/variants";
 import { effective } from "@/style/theme";
 import {
@@ -41,6 +48,9 @@ test("the panel offers every group a book designer works in", () => {
       "Headings",
       "Chapter openings",
       "Scene breaks",
+      "Quote",
+      "List",
+      "Image",
       "Heads & folios",
       "Page breaks",
     ],
@@ -90,14 +100,17 @@ test("every word the panel draws is spelled the American way", () => {
   }
 });
 
-test("every key the panel writes has a default, except the word a scene break is marked with and a font's variant", () => {
+test("every key the panel writes has a default, except the word a scene break is marked with, a font's variant and an image's width", () => {
   const defaults = writeDesign(effective(emptyDesign()));
   for (const key of PANEL_KEYS) {
-    // A font's default variant is written as absent.
-    if (key === "scene-break-word" || key.endsWith("-font-variant")) continue;
+    // A font's default variant is written as absent, and an image with
+    // no width set is drawn at its own.
+    if (key === "scene-break-word" || key === "image-width") continue;
+    if (key.endsWith("-font-variant")) continue;
     assert.notEqual(defaults[key], undefined, `\`${key}\` has no default`);
   }
   assert.equal(defaults["scene-break-word"], undefined);
+  assert.equal(defaults["image-width"], undefined);
 });
 
 test("a reset names the default in the words the control draws it with", () => {
@@ -324,6 +337,85 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     row: "First line",
     key: "chapter-first-line-caps",
   });
+});
+
+test("the Quote group sets the font, the variant, the size, the indent on each side and the space above and below", () => {
+  const quote = GROUPS.find((group) => group.name === "Quote");
+  assert.ok(quote !== undefined);
+
+  assert.deepEqual(keysOf(quote), [
+    "quote-font",
+    "quote-font-variant",
+    "quote-size",
+    "quote-indent-left",
+    "quote-indent-right",
+    "quote-space-above",
+    "quote-space-below",
+  ]);
+  // The two indents sit on one row, each said under it.
+  const indent = quote.rows.find((row) => row.label === "Indent");
+  assert.equal(indent?.grid, true);
+  assert.deepEqual(
+    indent?.of.map((control) => control.said),
+    ["left", "right"],
+  );
+  assert.equal(control("quote-space-above").kind, "count");
+  assert.equal(control("quote-space-below").said, "lines");
+});
+
+test("the List group sets the marker, the indent and the space between items", () => {
+  const list = GROUPS.find((group) => group.name === "List");
+  assert.ok(list !== undefined);
+
+  assert.deepEqual(keysOf(list), ["list-marker", "list-indent", "list-space-between"]);
+  assert.deepEqual(
+    control("list-marker").choices?.map((choice) => choice.value),
+    ["disc", "circle", "square", "none"],
+  );
+  assert.equal(control("list-indent").kind, "length");
+  assert.equal(control("list-space-between").kind, "count");
+});
+
+test("the Image group sets the width and the space above and below", () => {
+  const image = GROUPS.find((group) => group.name === "Image");
+  assert.ok(image !== undefined);
+
+  assert.deepEqual(keysOf(image), [
+    "image-width",
+    "image-space-above",
+    "image-space-below",
+  ]);
+  // A width is a length on the page, so it is drawn in the unit the
+  // author measures pages in.
+  assert.equal(control("image-width").page, true);
+  assert.equal(defaultSaid(control("image-width"), "180pt", "in"), "2.5in");
+  assert.equal(control("image-space-above").said, "lines");
+});
+
+test("an author rule on a quote, a list or an image overrides its control, which then shows its lock and no reset", () => {
+  const design = readDesign({
+    "quote-indent-left": "2em",
+    "list-indent": "1.5em",
+    "image-width": "2.5in",
+  });
+  const css = [
+    "blockquote { margin-left: 0 }",
+    ":is(ul, ol) { padding-left: 0 }",
+    "img { width: 100% }",
+  ].join("\n");
+
+  const beaten = designOverridden(design, { sections: [] }, css);
+
+  for (const key of ["quote-indent-left", "list-indent", "image-width"]) {
+    const found = overriddenAt([key], beaten);
+    assert.ok(found !== undefined, `\`${key}\` is not overridden`);
+    assert.equal(found.key, key);
+    assert.equal(found.overrides[0]?.sheet, "book.css");
+  }
+  assert.deepEqual(
+    overriddenAt(["quote-indent-left"], beaten)?.overrides.map((each) => each.property),
+    ["margin-left"],
+  );
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite
