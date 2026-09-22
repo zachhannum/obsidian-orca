@@ -49,7 +49,7 @@ export function missingFont(
   font: string | undefined,
 ): string | undefined {
   if (font === undefined || has(index, font)) return undefined;
-  return `${font} is not a font this machine has. The book is set in the one orca carries.`;
+  return `Missing font: ${font}`;
 }
 
 /**
