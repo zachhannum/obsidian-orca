@@ -139,7 +139,8 @@ its editor around these files and returns a URL. The artboard list and
   the same page are the other choices.
 - A heading level, a chapter's first line and the running heads each
   take capitals and tracking. A title's own type sits with the level it
-  is written at, not with the chapter's layout. The running heads also
+  is written at, not with the chapter's layout, and so does the space
+  above and below it. The running heads also
   take a slope, because a margin box prints a generated string. A title
   takes its slope from the note, and a first line takes none, because
   the engine sets no slope there.

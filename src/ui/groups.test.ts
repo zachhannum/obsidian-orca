@@ -50,7 +50,7 @@ test("the panel offers every group a book designer works in", () => {
   }
 });
 
-test("the Headings group sets font, variant, size, capitals, tracking and alignment at every level, and chapter openings set none", () => {
+test("the Headings group sets the type and the space at every level, and chapter openings set none", () => {
   const headings = GROUPS.find((group) => group.name === "Headings");
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
   assert.ok(headings !== undefined && openings !== undefined);
@@ -59,7 +59,16 @@ test("the Headings group sets font, variant, size, capitals, tracking and alignm
     new Set(keysOf(headings)),
     new Set(
       LEVELS.flatMap((level) =>
-        ["font", "font-variant", "size", "caps", "letter-spacing", "align"].map(
+        [
+          "font",
+          "font-variant",
+          "size",
+          "caps",
+          "letter-spacing",
+          "align",
+          "space-above",
+          "space-below",
+        ].map(
           (part) => `heading-${String(level)}-${part}`,
         ),
       ),

@@ -324,12 +324,10 @@ test("the panel's own controls generate their declarations, and the engine warns
   const design = whole();
   const css = generatedCss(design, { sections: named(ROLES) });
 
-  // A heading's alignment, and the blank space around a chapter's title.
-  assert.match(css, /h1 \{\n {2}text-align: center;\n\}/);
-  assert.match(
-    css,
-    /:is\(section#chapter-3, section#chapter-4\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}padding-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
-  );
+  // A heading's alignment, and the blank space around each level.
+  assert.match(css, /h1 \{\n {2}text-align: center;\n {2}margin-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/);
+  assert.match(css, /section > h1:first-child \{\n {2}padding-top: 28pt;\n {2}margin-top: 0;\n\}/);
+  assert.match(css, /h2 \{\n {2}margin-top: 14pt;\n {2}margin-bottom: 14pt;\n\}/);
   // A heading keeps the text under it, and the paragraph after a scene
   // break takes no indent.
   assert.match(css, /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/);
