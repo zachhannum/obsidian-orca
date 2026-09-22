@@ -998,12 +998,14 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
   await inspect.on();
 
   // The chapter's title is matched by the design panel's rule for the
-  // section's opening, which reaches the section by its id.
+  // heading that opens a section. The section's own id reaches the pane
+  // through the crumbs, and the rule the author adds.
   await inspect.pinLine(inspect.line(OPENING, CHAPTER_TITLE));
   const pin = await inspect.pinned();
   await panel.inspecting(pin.key, pin.generation);
   await expect(panel.crumbs.filter({ hasText: SECTION })).toHaveCount(1);
-  await expect(panel.rulesIn("design").filter({ hasText: SECTION }).first()).toBeVisible();
+  const opening = panel.rulesIn("design").filter({ hasText: "section > h1:first-child" });
+  await expect(opening.first()).toBeVisible();
   await expect(panel.pane).not.toContainText(":nth-child");
 
   await panel.code.click();
