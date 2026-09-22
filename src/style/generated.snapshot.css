@@ -192,8 +192,8 @@ section#volume-the-first {
 :is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter,
 :is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + p::first-letter,
 :is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) + p::first-letter {
-  font-family: "Alegreya", serif;
   initial-letter: 3;
+  font-family: "Alegreya", serif;
 }
 
 :is(section#chapter-twelve, section#chapter-fifteen) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-line,

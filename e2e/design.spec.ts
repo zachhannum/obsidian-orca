@@ -901,6 +901,33 @@ test("a key the book does not set is drawn at its default, in faint type", async
   await expect(panel.reset("chapter-drop-cap")).toBeVisible();
 });
 
+test("the drop cap font row dims while the chapter has no drop cap", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture opens its chapters on a drop cap, so the row is live.
+  const row = panel.row("chapter-drop-cap-font");
+  await expect(row).not.toHaveAttribute("data-dim", "");
+  await panel.chooseFont("chapter-drop-cap-font", VARIED);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `chapter-drop-cap-font: ${VARIED}`,
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // A chapter with no drop cap has no letter to set, so the row dims.
+  await panel.control("chapter-drop-cap").selectOption({ label: "None" });
+  await expect(row).toHaveAttribute("data-dim", "");
+
+  await written(vault, own);
+});
+
 test("picking capitals writes the key and repaints the pages", async ({
   book,
   panel,

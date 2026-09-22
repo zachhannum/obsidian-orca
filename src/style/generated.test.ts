@@ -131,7 +131,7 @@ test("a role reaches the sheet as a page name and as the ids of the sections tha
   );
   assert.match(
     css,
-    /:is\(section#chapter-twelve, section#chapter-fifteen\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}font-family: "Alegreya", serif;\n {2}initial-letter: 3;\n\}/,
+    /:is\(section#chapter-twelve, section#chapter-fifteen\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n {2}font-family: "Alegreya", serif;\n\}/,
   );
 });
 
@@ -163,7 +163,7 @@ test("the drop cap is set in the font of its own the design gives it", () => {
   const css = generatedCss(design, { sections: named(["chapter"]) }, registered);
   assert.match(
     css,
-    /p::first-letter \{\n {2}font-family: "Junicode", serif;\n {2}initial-letter: 3;\n\}/,
+    /p::first-letter \{\n {2}initial-letter: 3;\n {2}font-family: "Junicode", serif;\n\}/,
   );
 
   // The font sets the letter the drop cap makes, so a chapter with no

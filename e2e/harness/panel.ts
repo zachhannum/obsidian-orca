@@ -167,10 +167,10 @@ export class Controls {
     );
   }
 
-  /** The design panel rule a control wrote, by a key the control writes. */
+  /** The design panel rule a control wrote, by one of the keys the rule reads. */
   designRule(key: string): Locator {
     return this.pane.locator(
-      `[data-testid="orca-inspect-rule"][data-layer="design"][data-keys="${key}"]`,
+      `[data-testid="orca-inspect-rule"][data-layer="design"][data-keys~="${key}"]`,
     );
   }
 

@@ -539,16 +539,16 @@ function chapterRules(
     block(
       starts(" + p::first-letter"),
       [
+        ...set("initial-letter", falls ? String(dropCap) : undefined, [
+          "chapter-drop-cap",
+        ]),
         ...set(
           "font-family",
           !falls || dropCapFont === undefined
             ? undefined
             : family(dropCapFont, undefined, registered),
-          ["chapter-drop-cap-font", "chapter-drop-cap"],
+          ["chapter-drop-cap-font"],
         ),
-        ...set("initial-letter", falls ? String(dropCap) : undefined, [
-          "chapter-drop-cap",
-        ]),
       ],
       "chapter",
     ),
