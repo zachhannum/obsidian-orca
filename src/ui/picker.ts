@@ -85,9 +85,9 @@ export function missingVariant(index: FontIndex, use: FontUse): string | undefin
   if (use.variant === undefined) return undefined;
   const family = familyNamed(index, use.font);
   if (family === undefined || family.variants.length === 0) return undefined;
-  const { variant, fellBack } = usedVariant(family, use.variant);
+  const { fellBack } = usedVariant(family, use.variant);
   if (!fellBack) return undefined;
-  return `${use.variant} is not a variant of ${family.name} this machine has. The book is set in ${family.name} ${variant.name}.`;
+  return `Missing variant: ${family.name} ${use.variant}`;
 }
 
 /** The warnings for every variant a design sets that its family lacks, one per font and variant. */
