@@ -110,7 +110,7 @@ test("a stored variant the machine does not have warns and sets in the family's 
   assert.equal(missingVariant(index, { font: "Junicode", variant: undefined }), undefined);
   assert.equal(
     missingVariant(index, { font: "Junicode", variant: "SmExp" }),
-    "SmExp is not a variant of Junicode this machine has. The book is set in Junicode Regular.",
+    "Missing variant: Junicode SmExp",
   );
   // A font the machine lacks is warned about as a missing font, not a missing variant.
   assert.equal(missingVariant(index, { font: "Zzyzx Grotesque", variant: "Cond" }), undefined);

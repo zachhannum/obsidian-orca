@@ -61,7 +61,7 @@ Orca sends fleuron four sheets, in this order:
 | Sheet | Holds |
 | --- | --- |
 | `orca.css` | Orca's theme |
-| `faces.css` | The fonts that the controls use |
+| `faces.css` | The fonts that the book loads |
 | `design.css` | The CSS that the controls write |
 | `book.css` | Your CSS |
 
@@ -102,4 +102,4 @@ Each role sets its own named page, for example `@page chapter` or `@page chapter
 
 A `url()` in your CSS can name an image in the vault. Orca finds the image from the book note, in the same way as a link. Orca does not load images from the web.
 
-`font-family` can name a font that a control of the design panel uses. Orca does not load a font that only your CSS names, and it does not load the files in an `@font-face` rule.
+`font-family` can name a font that a control of the design panel uses, or a font that the Fonts group adds. Orca loads no other font, and it does not load the files in an `@font-face` rule. [Fonts](/design/fonts/) shows how to add a font.

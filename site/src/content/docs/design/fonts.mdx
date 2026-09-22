@@ -1,0 +1,39 @@
+---
+title: Fonts
+eyebrow: Design
+description: Add a font to the book so that custom CSS can use it.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+The Fonts group in the design panel adds fonts to the book. Orca loads these fonts into the engine. Your custom CSS can then set text in them.
+
+<Shot
+  name="panel-fonts"
+  alt="The Fonts group of the design panel, with the Add a font picker under the heading."
+  caption="The Fonts group, with no font added yet."
+/>
+
+## Add a font
+
+1. In the Fonts group, select `Add a font`.
+2. Type part of the name of the font. The list shows the fonts on this machine.
+3. Select the font in the list.
+
+## Set text in the font
+
+In the CSS view of the panel, set `font-family` to the font:
+
+```css
+section.dedication p {
+  font-family: "Alegreya";
+}
+```
+
+## A font this machine does not have
+
+If you open the book on a machine without an added font, the panel shows a warning under the groups:
+
+```text
+Missing font: Alegreya
+```
