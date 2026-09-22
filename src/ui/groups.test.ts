@@ -90,14 +90,19 @@ test("every word the panel draws is spelled the American way", () => {
   }
 });
 
-test("every key the panel writes has a default, except the word a scene break is marked with and a font's variant", () => {
+test("every key the panel writes has a default, except the word a scene break is marked with, a font's variant and the head's and the folio's fonts", () => {
   const defaults = writeDesign(effective(emptyDesign()));
+  // A head and a folio with no font of their own take the font the
+  // page is set in, so neither carries a default of its own.
+  const inherits = ["header-font", "folio-font"];
   for (const key of PANEL_KEYS) {
     // A font's default variant is written as absent.
     if (key === "scene-break-word" || key.endsWith("-font-variant")) continue;
+    if (inherits.includes(key)) continue;
     assert.notEqual(defaults[key], undefined, `\`${key}\` has no default`);
   }
   assert.equal(defaults["scene-break-word"], undefined);
+  for (const key of inherits) assert.equal(defaults[key], undefined);
 });
 
 test("a reset names the default in the words the control draws it with", () => {
@@ -312,6 +317,8 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     ],
   );
   assert.deepEqual(keysOf(heads).slice(5), [
+    "header-font",
+    "folio-font",
     "header-caps",
     "header-letter-spacing",
     "header-italic",

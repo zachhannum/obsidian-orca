@@ -6,36 +6,36 @@
   @top-center { content: none; }
   @top-right { content: none; }
   @bottom-left { content: none; }
-  @bottom-center { content: counter(page, decimal); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @bottom-center { content: counter(page, decimal); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
   @bottom-right { content: none; }
 }
 
 @page :left {
   margin-left: 0.7in;
   margin-right: 0.95in;
-  @top-left { content: "Jane Austen"; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @top-left { content: "Jane Austen"; font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page :right {
   margin-left: 0.95in;
   margin-right: 0.7in;
-  @top-right { content: "Pride and Prejudice"; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @top-right { content: "Pride and Prejudice"; font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page title-page {
-  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page copyright {
-  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page epigraph {
-  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page contents {
-  @bottom-center { content: counter(page, lower-roman); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
+  @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; }
 }
 
 @page title-page:first {

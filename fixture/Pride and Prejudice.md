@@ -32,6 +32,8 @@ header-left-page: author
 header-right-page: book-title
 page-number-position: bottom
 page-number-format: arabic
+header-font: Alegreya
+folio-font: Alegreya
 tags:
   - novel
 status: drafting

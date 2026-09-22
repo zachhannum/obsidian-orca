@@ -353,6 +353,8 @@ export const GROUPS: readonly Group[] = [
         label: "Number format",
         of: [{ kind: "segment", key: "page-number-format", choices: FORMATS }],
       },
+      { label: "Header font", of: [{ kind: "font", key: "header-font" }] },
+      { label: "Folio font", of: [{ kind: "font", key: "folio-font" }] },
       {
         label: "Capitals",
         of: [{ kind: "select", key: "header-caps", choices: CAPITALS }],
