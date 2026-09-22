@@ -102,6 +102,9 @@ export function generatedRules(
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
     ...sceneRules(design),
+    ...quoteRules(design, registered),
+    ...listRules(design),
+    ...imageRules(design),
   ].filter((rule) => rule !== undefined);
   let line = 1;
   return rules.map(({ css, from, selector, declarations }) => {
@@ -719,6 +722,78 @@ function sceneKeys(scene: SceneDesign): string[] {
   return [...mark, "scene-break-ornament"];
 }
 
+/**
+ * A quote's type and the space around it. A quote with no font of its
+ * own declares none, so it inherits the body's family whole.
+ */
+function quoteRules(design: Design, registered: readonly Registered[]): (Rule | undefined)[] {
+  const { quote } = design;
+  const lines: Declaration[] = [];
+  if (quote.font !== undefined) {
+    lines.push(
+      declared("font-family", family(quote.font, quote.fontVariant, registered), [
+        "quote-font",
+        ...(quote.fontVariant === undefined ? [] : ["quote-font-variant"]),
+      ]),
+    );
+  }
+  lines.push(...set("font-size", written(quote.size), ["quote-size"]));
+  lines.push(...set("margin-left", written(quote.indentLeft), ["quote-indent-left"]));
+  lines.push(...set("margin-right", written(quote.indentRight), ["quote-indent-right"]));
+  lines.push(
+    ...set("margin-top", spaced(quote.spaceAbove, design), [
+      "quote-space-above",
+      ...spacing(design),
+    ]),
+  );
+  lines.push(
+    ...set("margin-bottom", spaced(quote.spaceBelow, design), [
+      "quote-space-below",
+      ...spacing(design),
+    ]),
+  );
+  return [block("blockquote", lines)];
+}
+
+/**
+ * A list's marks, its indent and the space between its items. The mark
+ * is set on a bulleted list alone, so a numbered list keeps its
+ * numbers. The space sits above every item but the first.
+ */
+function listRules(design: Design): (Rule | undefined)[] {
+  const { list } = design;
+  return [
+    block("ul", [...set("list-style-type", list.marker, ["list-marker"])]),
+    block(":is(ul, ol)", [
+      ...set("padding-left", written(list.indent), ["list-indent"]),
+    ]),
+    block("li + li", [
+      ...set("margin-top", spaced(list.spaceBetween, design), [
+        "list-space-between",
+        ...spacing(design),
+      ]),
+    ]),
+  ];
+}
+
+/** An image's width and the space around it. An image with no width takes its own. */
+function imageRules(design: Design): (Rule | undefined)[] {
+  const { image } = design;
+  return [
+    block("img", [
+      ...set("width", written(image.width), ["image-width"]),
+      ...set("margin-top", spaced(image.spaceAbove, design), [
+        "image-space-above",
+        ...spacing(design),
+      ]),
+      ...set("margin-bottom", spaced(image.spaceBelow, design), [
+        "image-space-below",
+        ...spacing(design),
+      ]),
+    ]),
+  ];
+}
+
 /** The sections a role sits in, as one selector by id, or nothing when it sits nowhere. */
 function sectionsOf(sections: readonly Named[], role: Role): string | undefined {
   const found = sections.flatMap((each) =>
@@ -800,6 +875,11 @@ function sideMargins(left: Side, right: Side): Declaration[] {
     ...set("margin-left", left.value, left.keys),
     ...set("margin-right", right.value, right.keys),
   ];
+}
+
+/** A count of body lines as a length, and nothing for a count the design does not set. */
+function spaced(count: number | undefined, design: Design): string | undefined {
+  return count === undefined ? undefined : bodyLines(count, design);
 }
 
 function bodyLines(count: number, design: Design): string {
