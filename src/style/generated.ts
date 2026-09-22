@@ -353,8 +353,9 @@ function printed(placed: Placement): Box[] {
 
 /**
  * The margin boxes of one page rule, in the order the rule sets them. A
- * box that prints is set in the type the heads are set in. A box that
- * prints nothing takes none of it.
+ * box that prints is set in the type the heads are set in, in the head's
+ * font or the folio's by what it holds. A box that prints nothing takes
+ * none of it.
  */
 function boxes(
   content: ReadonlyMap<Box, Content>,
