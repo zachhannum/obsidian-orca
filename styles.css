@@ -1718,13 +1718,19 @@ button.orca-panel-step:hover {
 }
 
 .orca-panel-glyphs {
+  position: relative;
+  min-width: 0;
+}
+
+.orca-panel-glyph-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-4-1);
   min-width: 0;
 }
 
-button.orca-panel-glyph {
+button.orca-panel-glyph,
+input.orca-panel-glyph {
   width: 34px;
   height: var(--input-height);
   padding: 0;
@@ -1738,13 +1744,66 @@ button.orca-panel-glyph {
   cursor: pointer;
 }
 
-button.orca-panel-glyph.is-on {
+button.orca-panel-glyph.is-on,
+input.orca-panel-glyph.is-on {
   box-shadow: 0 0 0 1.5px var(--color-accent);
 }
 
-button.orca-panel-glyph.is-on.is-default {
+button.orca-panel-glyph.is-on.is-default,
+input.orca-panel-glyph.is-on.is-default {
   box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-accent) 40%, transparent);
   color: var(--text-muted);
+}
+
+/* The browser's grid holds a fixed number of columns, because the
+   arrow keys step by that number. */
+.orca-panel-glyph-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--size-4-1);
+}
+
+.orca-panel-glyph-block + .orca-panel-glyph-block {
+  margin-top: var(--size-4-2);
+}
+
+.orca-panel-glyph-name {
+  padding: var(--size-4-1) var(--size-2-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+button.orca-panel-glyph-cell {
+  height: var(--input-height);
+  padding: 0;
+  border-radius: var(--input-radius);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  cursor: pointer;
+}
+
+button.orca-panel-glyph-cell.is-at {
+  background: var(--background-modifier-hover);
+}
+
+button.orca-panel-glyph-cell.is-on {
+  box-shadow: 0 0 0 1.5px var(--color-accent);
+}
+
+.orca-panel-glyph-more {
+  padding: var(--size-4-2);
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.orca-panel-glyph-count {
+  padding: var(--size-4-1) var(--size-4-2) 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
 }
 
 /* The book note's page shows the design read-only, one row per line,

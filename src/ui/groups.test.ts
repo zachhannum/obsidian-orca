@@ -23,6 +23,9 @@ import {
   type Control,
 } from "@/ui/groups";
 
+/** The keys a scene break takes from the body when it sets none of its own. */
+const SCENE_INHERITS = ["scene-break-font", "scene-break-size"];
+
 /** The control that writes `key`. */
 function control(key: string): Control {
   const found = GROUPS.flatMap((group) => group.rows)
@@ -90,14 +93,15 @@ test("every word the panel draws is spelled the American way", () => {
   }
 });
 
-test("every key the panel writes has a default, except the word a scene break is marked with and a font's variant", () => {
+test("every key the panel writes has a default, except what a scene break takes from the body and a font's variant", () => {
   const defaults = writeDesign(effective(emptyDesign()));
   for (const key of PANEL_KEYS) {
-    // A font's default variant is written as absent.
-    if (key === "scene-break-word" || key.endsWith("-font-variant")) continue;
+    // A font's default variant is written as absent, and a scene break
+    // with no face or size of its own takes the body's.
+    if (SCENE_INHERITS.includes(key) || key.endsWith("-font-variant")) continue;
     assert.notEqual(defaults[key], undefined, `\`${key}\` has no default`);
   }
-  assert.equal(defaults["scene-break-word"], undefined);
+  for (const key of SCENE_INHERITS) assert.equal(defaults[key], undefined);
 });
 
 test("a reset names the default in the words the control draws it with", () => {
@@ -134,6 +138,21 @@ test("a chapter begins on the next page unless the book says otherwise, and that
   const begins = control("chapter-begins");
   assert.equal(begins.choices?.[0]?.value, "next-page");
   assert.equal(writeDesign(effective(emptyDesign()))["chapter-begins"], "next-page");
+});
+
+test("a scene break is marked with a space or a glyph, and the glyph is set in a face and a size under it", () => {
+  assert.deepEqual(
+    control("scene-break-mark").choices?.map((choice) => choice.value),
+    ["space", "ornament"],
+  );
+
+  const group = GROUPS.find((each) => each.name === "Scene breaks");
+  assert.deepEqual(
+    group?.rows.map((row) => row.label),
+    ["Mark", "Glyph", "Font", "Size", "Space above", "Space below"],
+  );
+  assert.equal(control("scene-break-font").kind, "font");
+  assert.equal(control("scene-break-size").kind, "length");
 });
 
 test("every word a select or a segment offers is a value the schema reads back", () => {

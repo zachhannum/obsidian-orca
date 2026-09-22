@@ -101,7 +101,7 @@ export function generatedRules(
     ...sectionRules(design, setting),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
-    ...sceneRules(design),
+    ...sceneRules(design, registered),
   ].filter((rule) => rule !== undefined);
   let line = 1;
   return rules.map(({ css, from, selector, declarations }) => {
@@ -674,12 +674,17 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   ];
 }
 
-function sceneRules(design: Design): (Rule | undefined)[] {
+/** A scene break with no font or size of its own declares neither, so it inherits the body's. */
+function sceneRules(design: Design, registered: readonly Registered[]): (Rule | undefined)[] {
   const { scene } = design;
-  const lines = [...set("content", sceneContent(scene), sceneKeys(scene))];
-  if (scene.mark === "word" && scene.word !== undefined) {
-    lines.push(declared("text-align", "center", ["scene-break-mark", "scene-break-word"]));
+  const lines: Declaration[] = [];
+  if (scene.font !== undefined) {
+    lines.push(
+      declared("font-family", family(scene.font, undefined, registered), ["scene-break-font"]),
+    );
   }
+  lines.push(...set("font-size", written(scene.size), ["scene-break-size"]));
+  lines.push(...set("content", sceneContent(scene), sceneKeys(scene)));
   lines.push(
     ...set(
       "margin-top",
@@ -706,16 +711,14 @@ function sceneRules(design: Design): (Rule | undefined)[] {
  * ornament.
  */
 function sceneContent(scene: SceneDesign): string | undefined {
-  const { mark, ornament, word } = scene;
+  const { mark, ornament } = scene;
   if (mark === "space") return "none";
-  if (mark === "word") return word === undefined ? undefined : quoted(word);
   return ornament === undefined ? undefined : quoted(ornament);
 }
 
 function sceneKeys(scene: SceneDesign): string[] {
   const mark = scene.mark === undefined ? [] : ["scene-break-mark"];
   if (scene.mark === "space") return mark;
-  if (scene.mark === "word") return [...mark, "scene-break-word"];
   return [...mark, "scene-break-ornament"];
 }
 

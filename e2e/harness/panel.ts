@@ -476,6 +476,48 @@ export class Controls {
     await expect(field).toContainText(name);
   }
 
+  /** The glyph browser, once the Glyph row's opener has been clicked. */
+  get glyphBrowser(): Locator {
+    return this.root.getByTestId("orca-panel-scene-break-ornament-browser");
+  }
+
+  /** The browser's filter, which narrows by block name, by hex and by a pasted glyph. */
+  get glyphFilter(): Locator {
+    return this.root.getByTestId("orca-panel-glyph-filter");
+  }
+
+  /** The cells the browser draws, in code point order. */
+  get glyphCells(): Locator {
+    return this.root.getByTestId("orca-panel-glyph-cell");
+  }
+
+  /** The block headings the browser draws, in code point order. */
+  get glyphBlocks(): Locator {
+    return this.root.getByTestId("orca-panel-glyph-block");
+  }
+
+  /** One cell of the browser, named by its code point. */
+  glyphCell(code: string): Locator {
+    return this.glyphCells.and(this.root.locator(`[data-code="${code}"]`));
+  }
+
+  /**
+   * Opens the glyph browser and waits for the face to be read. The
+   * count the browser carries is written after the paint that draws
+   * the cells, so a spec that waits on it never waits on a clock.
+   */
+  async browseGlyphs(): Promise<number> {
+    await this.root.getByTestId("orca-panel-scene-break-ornament-browse").click();
+    await expect(this.glyphBrowser).toBeVisible();
+    await expect(this.glyphBrowser).not.toHaveAttribute("data-covered", "");
+    return Number(await this.glyphBrowser.getAttribute("data-covered"));
+  }
+
+  /** The blocks the browser groups the face's code points under, in order. */
+  async glyphGroups(): Promise<string[]> {
+    return this.glyphBlocks.allTextContents();
+  }
+
   /**
    * The first family a row is drawn in, and whether the document holds
    * a loaded face under that family. A family the document does not hold

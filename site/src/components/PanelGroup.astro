@@ -40,7 +40,6 @@ const DRAWN = new Set([
   'flag',
   'segment',
   'glyph',
-  'word',
   'select',
   'trim',
   'level',
@@ -113,17 +112,6 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                   </option>
                 ))}
               </select>
-            )}
-            {control.kind === 'word' && (
-              <input
-                class="o-field o-grow"
-                type="text"
-                aria-label={row.label}
-                data-key={keyOf(control)}
-                data-level={leveled(control)}
-                data-kind={control.kind}
-                value={set(control)}
-              />
             )}
             {(control.kind === 'length' || control.kind === 'count') && (
               <div class="o-num">

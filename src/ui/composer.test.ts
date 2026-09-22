@@ -571,7 +571,7 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
     opened.filter((op) => op.op === "font").map((op) => [...op.bytes]),
     [[1, 2, 3]],
   );
-  assert.deepEqual(again.fonts, ["Spectral"]);
+  assert.deepEqual(again.fonts, ["Spectral", "Junicode"]);
   const styled = opened.at(-1);
   assert.equal(styled?.op, "style");
 });
@@ -618,11 +618,13 @@ test("a book opens with the faces of every font its design names, each family on
 
   const book = await composer.open(BOOK);
 
-  assert.deepEqual(asked, ["Alegreya", "Spectral"]);
+  // The fixture's scene break is set in a face of its own, so the book
+  // opens in three families.
+  assert.deepEqual(asked, ["Alegreya", "Spectral", "Junicode"]);
   const opened = client.rendered[0] ?? [];
   assert.deepEqual(sentFaces(opened), [[1], [2]]);
   assert.equal(opened.at(-1)?.op, "style");
-  assert.deepEqual(book.fonts, ["Alegreya", "Spectral"]);
+  assert.deepEqual(book.fonts, ["Alegreya", "Spectral", "Junicode"]);
 });
 
 test("a book set again on a new engine after its engine stops keeps its heading fonts", async () => {
@@ -839,9 +841,11 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   const composer = new Composer(await setting(client), clock);
   const book = await composer.open(BOOK);
 
-  // The fixture's one embed resolves, and its design names no font.
+  // The fixture's one embed resolves, and the face its scene break names
+  // loads no cut from this setting.
+  const scene = { font: "Junicode", variant: undefined };
   assert.deepEqual(book.unread, []);
-  assert.deepEqual(book.unloaded, []);
+  assert.deepEqual(book.unloaded, [{ use: scene, unread: false }]);
 
   const note = "Copyright.md";
   const text = `${await readText(vault, note)}\n\n![[nowhere.png]]\n`;
@@ -854,7 +858,10 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   book.restyle(refonted(book.design, use.font), [
     { use, registered: undefined, faces: [], fellBack: false, unread: true },
   ]);
-  assert.deepEqual(book.unloaded, [{ use, unread: true }]);
+  assert.deepEqual(book.unloaded, [
+    { use, unread: true },
+    { use: scene, unread: false },
+  ]);
 
   // An embed taken back out of the note stops standing.
   composer.retype(BOOK, note, `${text}.`.replace("![[nowhere.png]]", ""));
@@ -892,7 +899,12 @@ test("a font the book adds crosses as a face, and crosses again on a new engine"
       engines: clients.engines,
       model: async (at) => {
         const model = await base.model(at);
-        if (model !== undefined) model.book.fonts = ["Junicode"];
+        if (model !== undefined) {
+          model.book.fonts = ["Junicode"];
+          // The fixture sets its scene break in Junicode, and this test
+          // is about a font no design key names.
+          model.book.design.scene.font = undefined;
+        }
         return model;
       },
       fonts: (uses) => Promise.all(uses.map((each) => resolveUse(PLACES, index, each))),

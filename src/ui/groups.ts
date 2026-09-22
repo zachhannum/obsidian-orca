@@ -52,7 +52,6 @@ export type Kind =
   | "select"
   | "segment"
   | "glyph"
-  | "word"
   | "level";
 
 /** One control, and the design key it writes. */
@@ -126,7 +125,6 @@ const ALIGNMENTS: readonly Choice[] = [
 const MARKS: readonly Choice[] = [
   { value: "space", label: "Space" },
   { value: "ornament", label: "Ornament" },
-  { value: "word", label: "Word" },
 ];
 
 const SLOTS: readonly Choice[] = [
@@ -317,7 +315,8 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "segment", key: "scene-break-mark", choices: MARKS }],
       },
       { label: "Glyph", of: [{ kind: "glyph", key: "scene-break-ornament" }] },
-      { label: "Word", of: [{ kind: "word", key: "scene-break-word" }] },
+      { label: "Font", of: [{ kind: "font", key: "scene-break-font" }] },
+      { label: "Size", of: [{ kind: "length", key: "scene-break-size" }] },
       {
         label: "Space above",
         of: [{ kind: "count", key: "scene-break-space-above", said: "lines" }],

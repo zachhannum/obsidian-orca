@@ -23,7 +23,8 @@ import {
   type JSX,
   type KeyboardEvent,
 } from "react";
-import type { Family, FontIndex } from "@/assets/fonts";
+import type { Cover } from "@/assets/cmap";
+import { familyNamed, type Family, type FontIndex } from "@/assets/fonts";
 import { usedVariant, variantFamily, type Variant } from "@/assets/variants";
 import {
   LEVELS,
@@ -67,6 +68,7 @@ import { ACTIONS } from "@/ui/actions";
 import { boxKey } from "@/ui/inspect";
 import { hyphenating } from "@/ui/language";
 import { InspectPane, type Inspecting } from "@/ui/pane";
+import { browsedFamily } from "@/ui/glyphs";
 import { offeredVariants, picking, previewFamily } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
@@ -84,6 +86,8 @@ export interface Acting {
   dropFont(font: string): void;
   /** Registers a face of each variant of a family with the document, so each variant row draws in its own face. */
   preview(family: Family): void;
+  /** The code points a family's default face covers, with that face registered so the browser draws them. */
+  coverage(family: Family): Promise<readonly Cover[]>;
   /** Switches the panel between its controls and the author's own CSS. */
   view(viewing: Viewing): void;
   /** Switches the CSS view between wrapping long lines and scrolling them sideways. */
@@ -410,7 +414,8 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
   }
 
   // The default for a key that the book sets is the value the key takes
-  // once cleared. For a heading level's font, that is the body's font.
+  // once cleared. For a heading level's font and a scene break's, that
+  // is the body's font.
   const defaults = set.map(({ control, key }) => {
     const cleared = writeDesign(
       effective(withKey(drawing.shown.design, key, undefined)),
@@ -418,7 +423,9 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
     const value =
       control.kind === "variant"
         ? String(cleared[key] ?? defaultVariant(drawing.shown.index, cleared[fontKeyOf(key)]) ?? "none")
-        : defaultSaid(control, cleared[key], drawing.shown.unit);
+        : control.kind === "font"
+          ? (stringOf(cleared[key]) ?? carried(cleared))
+          : defaultSaid(control, cleared[key] ?? inherited(key, cleared), drawing.shown.unit);
     return keyed.length > 1 && control.said !== undefined
       ? `${control.said} ${value}`
       : value;
@@ -554,7 +561,7 @@ function Drawn({
       return (
         <Picker
           index={shown.index}
-          font={text ?? CARRIED}
+          font={text ?? carried(full)}
           faint={faint}
           testid={key === "body-font" ? "orca-panel-font" : testid}
           pick={(family) => {
@@ -621,28 +628,30 @@ function Drawn({
           value={text}
           faint={faint}
           glyphs={GLYPHS}
+          family={browsedFamily(
+            stringOf(full["scene-break-font"]),
+            stringOf(full["body-font"]),
+            CARRIED,
+          )}
+          read={(family) => {
+            const found = familyNamed(shown.index, family);
+            return found === undefined ? Promise.resolve([]) : acting.coverage(found);
+          }}
           testid={testid}
-          settle={settle}
-        />
-      );
-    case "word":
-      return (
-        <Field
-          value={text ?? ""}
-          faint={faint}
-          testid={testid}
-          wrong={wrong(key)}
           settle={settle}
         />
       );
     case "count":
     case "length": {
       const unit = control.page === true ? shown.unit : undefined;
+      // A key the design leaves to the body draws the body's value, the
+      // way a scene break with no font of its own draws the body's face.
+      const drawn = text ?? stringOf(inherited(key, full)) ?? "";
       return (
         <Field
           measure={control.kind}
           unit={unit}
-          value={unit === undefined ? (text ?? "") : inUnit(text ?? "", unit)}
+          value={unit === undefined ? drawn : inUnit(drawn, unit)}
           faint={faint}
           testid={testid}
           wrong={wrong(key)}
@@ -740,9 +749,9 @@ function sized(
 }
 
 /**
- * Decides if the panel draws a row. The glyphs and the word both write
- * the scene break mark, so the panel draws only the one that the mark is
- * set to.
+ * Decides if the panel draws a row. The glyph and its font set the mark
+ * a scene break prints, so a design that breaks a scene with a space
+ * draws neither.
  */
 function drawn(line: Listed, drawing: Drawing): boolean {
   // A Variant row shows only for a family with more than one variant. A
@@ -752,12 +761,15 @@ function drawn(line: Listed, drawing: Drawing): boolean {
     const font = drawing.full[fontKeyOf(atLevel(variant.key, drawing.level))];
     return offeredVariants(drawing.shown.index, stringOf(font)) !== undefined;
   }
+  const ornamental = line.of.some(
+    (control) =>
+      control.kind === "glyph" ||
+      control.key === "scene-break-font" ||
+      control.key === "scene-break-size",
+  );
+  if (!ornamental) return true;
   const mark = drawing.own["scene-break-mark"] ?? drawing.full["scene-break-mark"];
-  const glyphs = line.of.some((control) => control.kind === "glyph");
-  const word = line.of.some((control) => control.kind === "word");
-  if (glyphs) return mark === undefined || mark === "ornament";
-  if (word) return mark === "word";
-  return true;
+  return mark !== "space";
 }
 
 /** The line under a row. Only the hyphenation switch has one, which names the language. */
@@ -1099,6 +1111,27 @@ function VariantPicker({
       )}
     </div>
   );
+}
+
+/**
+ * The value a row inherits when the key it writes is cleared. A scene
+ * break with no size of its own prints at the body's size, so the row
+ * draws that rather than "none".
+ */
+function inherited(
+  key: string,
+  cleared: Readonly<Record<string, Written>>,
+): Written | undefined {
+  return key === "scene-break-size" ? cleared["body-size"] : undefined;
+}
+
+/**
+ * The face a font row draws. A scene break with no font of its own is
+ * set in the body's face, and a design that names no body font is set
+ * in the face the engine carries.
+ */
+function carried(full: Readonly<Record<string, Written>>): string {
+  return stringOf(full["body-font"]) ?? CARRIED;
 }
 
 /** The font key a variant key sits beside. */
