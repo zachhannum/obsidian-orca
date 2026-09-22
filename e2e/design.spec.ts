@@ -926,6 +926,12 @@ test("a control writes its key into the note, and the book is set again under it
     "aria-label",
     "Justified",
   );
+  // Obsidian draws the word from the label, so the browser has no
+  // tooltip of its own to double it with.
+  await expect(panel.choice("body-align", "justify")).not.toHaveAttribute(
+    "title",
+    /./,
+  );
   await expect(panel.choice("body-align", "left").locator("svg")).toBeVisible();
   // A heading takes the same control, without justify.
   await expect(panel.control("heading-1-align").locator("button")).toHaveCount(3);
