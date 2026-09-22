@@ -572,22 +572,26 @@ test("a quote, a list and an image are set from their groups, and the pages are 
   const painted = await book.painted();
   await panel.open();
 
-  // The fixture sets the quote and the marker, and leaves the space
-  // between items at its default.
-  await expect(panel.control("quote-size")).toHaveValue("9.5pt");
-  await expect(panel.control("quote-indent-left")).toHaveValue("2em");
-  await expect(panel.control("list-marker")).toHaveValue("square");
-  await expect(panel.control("image-width")).toHaveValue("2.5in");
-  const between = panel.control("list-space-between");
-  await expect(between).toHaveAttribute("data-default", "true");
+  // The fixture sets none of the three groups, so each row draws the
+  // default the engine's own sheet already gave the block.
+  for (const [key, value] of [
+    ["quote-indent-left", "2em"],
+    ["quote-space-above", "1em"],
+    ["list-indent", "1.5em"],
+    ["image-space-above", "0em"],
+  ] as const) {
+    await expect(panel.control(key)).toHaveValue(value);
+    await expect(panel.control(key)).toHaveAttribute("data-default", "true");
+  }
+  await expect(panel.control("list-marker")).toHaveValue("disc");
+  await expect(panel.control("image-width")).toHaveValue("");
 
-  await panel.up("list-space-between").click();
+  await panel.control("image-width").fill("2.5in");
+  await panel.control("image-width").blur();
 
-  await expect(between).toHaveValue("1");
-  await expect.poll(async () => vault.read(BOOK)).toContain(
-    "list-space-between: 1",
-  );
+  await expect.poll(async () => vault.read(BOOK)).toContain("image-width: 2.5in");
   await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  await expect(panel.control("image-width")).toHaveAttribute("data-default", "false");
 
   await written(vault, own);
 });

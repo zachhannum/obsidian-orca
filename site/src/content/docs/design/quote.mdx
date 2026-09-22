@@ -25,8 +25,8 @@ A block quote is a passage a chapter sets apart from the narration: a letter, an
 | 2 | Size | 11pt | `quote-size` |
 | 3 | Indent, left | `2em` | `quote-indent-left` |
 |  | Indent, right | `2em` | `quote-indent-right` |
-| 4 | Space above | 1 line | `quote-space-above` |
-| 5 | Space below | 1 line | `quote-space-below` |
+| 4 | Space above | `1em` | `quote-space-above` |
+| 5 | Space below | `1em` | `quote-space-below` |
 
 ## Font and size
 
@@ -38,4 +38,4 @@ The `Variant` row shows only for a font whose faces come in more than one varian
 
 `Indent, left` and `Indent, right` set the indent on each side of a quote. A quote indented on both sides sits narrower than the text around it, which is how a quote reads as a quote.
 
-`Space above` and `Space below` are counts of lines of body text, so a quote stays on the same rhythm as the text around it.
+`Space above` and `Space below` set the space over and under a quote. A space in `em` is measured against the size of the quote, so a smaller quote keeps a smaller space around it.

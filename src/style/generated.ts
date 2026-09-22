@@ -740,18 +740,8 @@ function quoteRules(design: Design, registered: readonly Registered[]): (Rule | 
   lines.push(...set("font-size", written(quote.size), ["quote-size"]));
   lines.push(...set("margin-left", written(quote.indentLeft), ["quote-indent-left"]));
   lines.push(...set("margin-right", written(quote.indentRight), ["quote-indent-right"]));
-  lines.push(
-    ...set("margin-top", spaced(quote.spaceAbove, design), [
-      "quote-space-above",
-      ...spacing(design),
-    ]),
-  );
-  lines.push(
-    ...set("margin-bottom", spaced(quote.spaceBelow, design), [
-      "quote-space-below",
-      ...spacing(design),
-    ]),
-  );
+  lines.push(...set("margin-top", written(quote.spaceAbove), ["quote-space-above"]));
+  lines.push(...set("margin-bottom", written(quote.spaceBelow), ["quote-space-below"]));
   return [block("blockquote", lines)];
 }
 
@@ -760,36 +750,23 @@ function quoteRules(design: Design, registered: readonly Registered[]): (Rule | 
  * is set on a bulleted list alone, so a numbered list keeps its
  * numbers. The space sits above every item but the first.
  */
-function listRules(design: Design): (Rule | undefined)[] {
-  const { list } = design;
+function listRules({ list }: Design): (Rule | undefined)[] {
   return [
     block("ul", [...set("list-style-type", list.marker, ["list-marker"])]),
-    block(":is(ul, ol)", [
-      ...set("padding-left", written(list.indent), ["list-indent"]),
-    ]),
+    block(":is(ul, ol)", [...set("padding-left", written(list.indent), ["list-indent"])]),
     block("li + li", [
-      ...set("margin-top", spaced(list.spaceBetween, design), [
-        "list-space-between",
-        ...spacing(design),
-      ]),
+      ...set("margin-top", written(list.spaceBetween), ["list-space-between"]),
     ]),
   ];
 }
 
 /** An image's width and the space around it. An image with no width takes its own. */
-function imageRules(design: Design): (Rule | undefined)[] {
-  const { image } = design;
+function imageRules({ image }: Design): (Rule | undefined)[] {
   return [
     block("img", [
       ...set("width", written(image.width), ["image-width"]),
-      ...set("margin-top", spaced(image.spaceAbove, design), [
-        "image-space-above",
-        ...spacing(design),
-      ]),
-      ...set("margin-bottom", spaced(image.spaceBelow, design), [
-        "image-space-below",
-        ...spacing(design),
-      ]),
+      ...set("margin-top", written(image.spaceAbove), ["image-space-above"]),
+      ...set("margin-bottom", written(image.spaceBelow), ["image-space-below"]),
     ]),
   ];
 }
@@ -875,11 +852,6 @@ function sideMargins(left: Side, right: Side): Declaration[] {
     ...set("margin-left", left.value, left.keys),
     ...set("margin-right", right.value, right.keys),
   ];
-}
-
-/** A count of body lines as a length, and nothing for a count the design does not set. */
-function spaced(count: number | undefined, design: Design): string | undefined {
-  return count === undefined ? undefined : bodyLines(count, design);
 }
 
 function bodyLines(count: number, design: Design): string {

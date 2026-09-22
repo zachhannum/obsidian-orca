@@ -76,14 +76,18 @@ export const DEFAULTS: Design = frozen({
     firstLineLetterSpacing: ems(0),
   },
   scene: { mark: "ornament", ornament: "❧", spaceAbove: 1, spaceBelow: 1 },
+  // The engine's own sheet sets `blockquote { margin: 1em 2em }` and
+  // `ul, ol { padding-left: 1.5em }`, and no margin on an item or an
+  // image. These defaults repeat it, so a book that sets none of these
+  // groups is set the same way as before the panel offered them.
   quote: {
     indentLeft: ems(2),
     indentRight: ems(2),
-    spaceAbove: 1,
-    spaceBelow: 1,
+    spaceAbove: ems(1),
+    spaceBelow: ems(1),
   },
-  list: { marker: "disc", indent: ems(1.5), spaceBetween: 0 },
-  image: { spaceAbove: 1, spaceBelow: 1 },
+  list: { marker: "disc", indent: ems(1.5), spaceBetween: ems(0) },
+  image: { spaceAbove: ems(0), spaceBelow: ems(0) },
   headers: {
     leftPage: "none",
     rightPage: "none",

@@ -26,6 +26,7 @@ import {
   mergeDesign,
   readDesign,
   type Design,
+  type Written,
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
@@ -743,6 +744,13 @@ async function paths(folder = "/"): Promise<string[]> {
  * The snapshot as it is on disk, written first when `ORCA_SNAPSHOTS` is
  * set. A snapshot is read like code, so it is updated on purpose.
  */
+/** One of the block snapshots, written first when `ORCA_SNAPSHOTS` is set. */
+async function snapshotAt(file: string, css: string): Promise<string> {
+  const at = path.join(root, file);
+  if (process.env["ORCA_SNAPSHOTS"] !== undefined) await writeFile(at, css);
+  return readFile(at, "utf8");
+}
+
 async function snapshot(css: string): Promise<string> {
   const file = path.join(root, SNAPSHOT);
   if (process.env["ORCA_SNAPSHOTS"] !== undefined) await writeFile(file, css);
@@ -894,54 +902,49 @@ test("a design that sets every new key renders with no warning from the pinned e
   assert.deepEqual(output.warnings, []);
 });
 
-test("a quote, a list and an image each take their group's rules, which the engine sets without a warning", async () => {
-  const design = readDesign({
-    "body-line-spacing": "14pt",
+/** The snapshots beside this spec, one per group the panel offers for a block. */
+const BLOCK_SNAPSHOTS: Readonly<Record<string, string>> = {
+  quote: "src/style/quote.snapshot.css",
+  list: "src/style/list.snapshot.css",
+  image: "src/style/image.snapshot.css",
+};
+
+/** A design that sets every key of one group and nothing else. */
+const BLOCK_DESIGNS: Readonly<Record<string, Record<string, Written>>> = {
+  quote: {
     "quote-font": "Alegreya",
+    "quote-font-variant": "SC",
     "quote-size": "9.5pt",
     "quote-indent-left": "2em",
     "quote-indent-right": "3em",
-    "quote-space-above": 1,
-    "quote-space-below": 2,
+    "quote-space-above": "1.5em",
+    "quote-space-below": "2em",
+  },
+  list: {
     "list-marker": "square",
-    "list-indent": "1.5em",
-    "list-space-between": 1,
+    "list-indent": "2em",
+    "list-space-between": "0.25em",
+  },
+  image: {
     "image-width": "2.5in",
-    "image-space-above": 1,
-    "image-space-below": 1,
-  });
+    "image-space-above": "1em",
+    "image-space-below": "1em",
+  },
+};
+
+test("each group the panel offers for a block generates the sheet checked in beside this spec", async () => {
   const sections = named(ROLES);
-  const rules = generatedRules(design, { sections });
+  for (const [group, file] of Object.entries(BLOCK_SNAPSHOTS)) {
+    const design = readDesign(BLOCK_DESIGNS[group] ?? {});
+    const css = generatedCss(design, { sections: named([]) });
 
-  assert.equal(
-    ruleFor(rules, "quote-size").css,
-    [
-      "blockquote {",
-      '  font-family: "Alegreya", serif;',
-      "  font-size: 9.5pt;",
-      "  margin-left: 2em;",
-      "  margin-right: 3em;",
-      "  margin-top: 14pt;",
-      "  margin-bottom: 28pt;",
-      "}",
-      "",
-    ].join("\n"),
-  );
-  assert.equal(ruleFor(rules, "list-marker").css, "ul {\n  list-style-type: square;\n}\n");
-  assert.equal(
-    ruleFor(rules, "list-indent").css,
-    ":is(ul, ol) {\n  padding-left: 1.5em;\n}\n",
-  );
-  assert.equal(
-    ruleFor(rules, "list-space-between").css,
-    "li + li {\n  margin-top: 14pt;\n}\n",
-  );
-  assert.equal(
-    ruleFor(rules, "image-width").css,
-    "img {\n  width: 2.5in;\n  margin-top: 14pt;\n  margin-bottom: 14pt;\n}\n",
-  );
+    assert.equal(css, await snapshotAt(file, css), `the ${group} sheet moved`);
+  }
 
-  const output = await rendered(generatedCss(design, { sections }), BLOCKED, sections);
+  // Every one of those sheets is CSS the pinned engine sets without a
+  // warning, over a book that holds a quote and both kinds of list.
+  const whole = readDesign(Object.assign({}, ...Object.values(BLOCK_DESIGNS)));
+  const output = await rendered(generatedCss(whole, { sections }), BLOCKED, sections);
 
   assert.deepEqual(output.warnings, []);
 });

@@ -350,14 +350,8 @@ export const GROUPS: readonly Group[] = [
           { kind: "length", key: "quote-indent-right", said: "right" },
         ],
       },
-      {
-        label: "Space above",
-        of: [{ kind: "count", key: "quote-space-above", said: "lines" }],
-      },
-      {
-        label: "Space below",
-        of: [{ kind: "count", key: "quote-space-below", said: "lines" }],
-      },
+      { label: "Space above", of: [{ kind: "length", key: "quote-space-above" }] },
+      { label: "Space below", of: [{ kind: "length", key: "quote-space-below" }] },
     ],
   },
   {
@@ -370,7 +364,7 @@ export const GROUPS: readonly Group[] = [
       { label: "Indent", of: [{ kind: "length", key: "list-indent" }] },
       {
         label: "Space between",
-        of: [{ kind: "count", key: "list-space-between", said: "lines" }],
+        of: [{ kind: "length", key: "list-space-between" }],
       },
     ],
   },
@@ -378,14 +372,8 @@ export const GROUPS: readonly Group[] = [
     name: "Image",
     rows: [
       { label: "Width", of: [{ kind: "length", key: "image-width", page: true }] },
-      {
-        label: "Space above",
-        of: [{ kind: "count", key: "image-space-above", said: "lines" }],
-      },
-      {
-        label: "Space below",
-        of: [{ kind: "count", key: "image-space-below", said: "lines" }],
-      },
+      { label: "Space above", of: [{ kind: "length", key: "image-space-above" }] },
+      { label: "Space below", of: [{ kind: "length", key: "image-space-below" }] },
     ],
   },
   {

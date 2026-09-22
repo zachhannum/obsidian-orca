@@ -53,7 +53,7 @@ test("every design key has a default but a font of its own, each font's variant,
   const inherits = (key: string) =>
     /^heading-\d-font$/.test(key) || key === "quote-font" || key === "quote-size";
   // A scene break with no word set is marked by its ornament, and an
-  // image with no width set is drawn at its own.
+  // image with no width set is drawn at its own width.
   const unset = (key: string) => key === "scene-break-word" || key === "image-width";
   const optional = (key: string) => inherits(key) || variant(key) || unset(key);
 

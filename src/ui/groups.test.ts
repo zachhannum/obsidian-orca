@@ -359,8 +359,10 @@ test("the Quote group sets the font, the variant, the size, the indent on each s
     indent?.of.map((control) => control.said),
     ["left", "right"],
   );
-  assert.equal(control("quote-space-above").kind, "count");
-  assert.equal(control("quote-space-below").said, "lines");
+  // The space is a length, so a quote keeps the engine's own 1em by
+  // default however the body is sized.
+  assert.equal(control("quote-space-above").kind, "length");
+  assert.equal(defaultSaid(control("quote-space-above"), "1em", "in"), "1em");
 });
 
 test("the List group sets the marker, the indent and the space between items", () => {
@@ -373,7 +375,7 @@ test("the List group sets the marker, the indent and the space between items", (
     ["disc", "circle", "square", "none"],
   );
   assert.equal(control("list-indent").kind, "length");
-  assert.equal(control("list-space-between").kind, "count");
+  assert.equal(control("list-space-between").kind, "length");
 });
 
 test("the Image group sets the width and the space above and below", () => {
@@ -389,7 +391,7 @@ test("the Image group sets the width and the space above and below", () => {
   // author measures pages in.
   assert.equal(control("image-width").page, true);
   assert.equal(defaultSaid(control("image-width"), "180pt", "in"), "2.5in");
-  assert.equal(control("image-space-above").said, "lines");
+  assert.equal(control("image-space-above").kind, "length");
 });
 
 test("an author rule on a quote, a list or an image overrides its control, which then shows its lock and no reset", () => {

@@ -21,14 +21,14 @@ An image is a picture a chapter places in the text. You write one in markdown as
 | # | Control | Default | Key |
 | --- | --- | --- | --- |
 | 1 | Width | none | `image-width` |
-| 2 | Space above | 1 line | `image-space-above` |
-| 3 | Space below | 1 line | `image-space-below` |
+| 2 | Space above | `0em` | `image-space-above` |
+| 3 | Space below | `0em` | `image-space-below` |
 
 ## Width
 
 `Width` is a length on the page, so the row draws it in the unit you measure pages in. An image with no width set is drawn at its own width, which is the size of the file.
 
-`Space above` and `Space below` are counts of lines of body text, so an image stays on the same rhythm as the text around it.
+`Space above` and `Space below` set the space over and under an image. Both are `0em` by default, so an image sits in the text where you wrote it until you open the space around it.
 
 ## The caption
 

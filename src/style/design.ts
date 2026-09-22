@@ -177,10 +177,10 @@ export interface QuoteDesign {
   indentLeft?: Length;
   /** The indent on the right of a quote. */
   indentRight?: Length;
-  /** The blank space above a quote, in lines of body text. */
-  spaceAbove?: number;
-  /** The blank space below a quote, in lines of body text. */
-  spaceBelow?: number;
+  /** The blank space above a quote. */
+  spaceAbove?: Length;
+  /** The blank space below a quote. */
+  spaceBelow?: Length;
 }
 
 /** The mark before each item of a bulleted list. A numbered list keeps its numbers. */
@@ -191,17 +191,17 @@ export interface ListDesign {
   marker?: Marker;
   /** The indent of a list, which its marks hang in. */
   indent?: Length;
-  /** The blank space between two items, in lines of body text. */
-  spaceBetween?: number;
+  /** The blank space between two items. */
+  spaceBetween?: Length;
 }
 
 export interface ImageDesign {
   /** The width an image is drawn at. An image with no width set takes its own. */
   width?: Length;
-  /** The blank space above an image, in lines of body text. */
-  spaceAbove?: number;
-  /** The blank space below an image, in lines of body text. */
-  spaceBelow?: number;
+  /** The blank space above an image. */
+  spaceAbove?: Length;
+  /** The blank space below an image. */
+  spaceBelow?: Length;
 }
 
 export type HeaderSlot = "none" | "author" | "book-title" | "chapter-title";
@@ -668,19 +668,19 @@ const QUOTE: readonly Field[] = [
   {
     key: "quote-space-above",
     property: "margin-top",
-    read: ({ quote }) => quote.spaceAbove,
+    read: ({ quote }) => written(quote.spaceAbove),
     write: ({ quote }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) quote.spaceAbove = lines;
+      const space = asLength(value);
+      if (space !== undefined) quote.spaceAbove = space;
     },
   },
   {
     key: "quote-space-below",
     property: "margin-bottom",
-    read: ({ quote }) => quote.spaceBelow,
+    read: ({ quote }) => written(quote.spaceBelow),
     write: ({ quote }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) quote.spaceBelow = lines;
+      const space = asLength(value);
+      if (space !== undefined) quote.spaceBelow = space;
     },
   },
 ];
@@ -707,10 +707,10 @@ const LIST: readonly Field[] = [
   {
     key: "list-space-between",
     property: "margin-top",
-    read: ({ list }) => list.spaceBetween,
+    read: ({ list }) => written(list.spaceBetween),
     write: ({ list }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) list.spaceBetween = lines;
+      const space = asLength(value);
+      if (space !== undefined) list.spaceBetween = space;
     },
   },
 ];
@@ -728,19 +728,19 @@ const IMAGE: readonly Field[] = [
   {
     key: "image-space-above",
     property: "margin-top",
-    read: ({ image }) => image.spaceAbove,
+    read: ({ image }) => written(image.spaceAbove),
     write: ({ image }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) image.spaceAbove = lines;
+      const space = asLength(value);
+      if (space !== undefined) image.spaceAbove = space;
     },
   },
   {
     key: "image-space-below",
     property: "margin-bottom",
-    read: ({ image }) => image.spaceBelow,
+    read: ({ image }) => written(image.spaceBelow),
     write: ({ image }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) image.spaceBelow = lines;
+      const space = asLength(value);
+      if (space !== undefined) image.spaceBelow = space;
     },
   },
 ];
