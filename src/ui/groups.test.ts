@@ -9,6 +9,7 @@ import {
   atLevel,
   controlOf,
   defaultSaid,
+  dimmed,
   ownerSaid,
   inUnit,
   keysOf,
@@ -297,6 +298,7 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     "chapter-space-above",
     "chapter-space-below",
     "chapter-drop-cap",
+    "chapter-drop-cap-font",
     "chapter-first-line-caps",
     "chapter-first-line-letter-spacing",
   ]);
@@ -324,6 +326,25 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     row: "First line",
     key: "chapter-first-line-caps",
   });
+});
+
+test("the drop cap font row sits under the drop cap row, and dims while the drop cap is None", () => {
+  const openings = GROUPS.find((group) => group.name === "Chapter openings");
+  assert.ok(openings !== undefined);
+  const at = openings.rows.findIndex((row) =>
+    row.of.some((control) => control.key === "chapter-drop-cap"),
+  );
+  const font = openings.rows[at + 1];
+  assert.ok(font !== undefined);
+  assert.deepEqual(font.of, [{ kind: "font", key: "chapter-drop-cap-font" }]);
+
+  assert.equal(dimmed(font, { "chapter-drop-cap": 0 }), true);
+  assert.equal(dimmed(font, {}), true);
+  assert.equal(dimmed(font, { "chapter-drop-cap": 3 }), false);
+  // Every other row is drawn as it always was.
+  const cap = openings.rows[at];
+  assert.ok(cap !== undefined);
+  assert.equal(dimmed(cap, { "chapter-drop-cap": 0 }), false);
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite

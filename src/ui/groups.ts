@@ -290,6 +290,10 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "select", key: "chapter-drop-cap", choices: DROP_CAPS }],
       },
       {
+        label: "Drop cap font",
+        of: [{ kind: "font", key: "chapter-drop-cap-font" }],
+      },
+      {
         label: "First line",
         grid: true,
         of: [
@@ -407,6 +411,22 @@ export const GROUPS: readonly Group[] = [
     ],
   },
 ];
+
+/** The design key the drop cap font row writes. */
+const DROP_CAP_FONT = "chapter-drop-cap-font";
+
+/**
+ * True when a row is drawn dim, because the key it writes sets nothing
+ * until another key is set. The drop cap font is the one such row: a
+ * chapter with no drop cap has no letter to set.
+ */
+export function dimmed(
+  row: Row,
+  values: Readonly<Record<string, Written | undefined>>,
+): boolean {
+  if (!row.of.some((control) => control.key === DROP_CAP_FONT)) return false;
+  return Number(values["chapter-drop-cap"] ?? 0) < 2;
+}
 
 /** The key a font's variant is written under. Setting or clearing the font clears it. */
 export function variantKey(fontKey: string): string {

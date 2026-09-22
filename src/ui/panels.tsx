@@ -55,6 +55,7 @@ import {
   GROUPS,
   atLevel,
   defaultSaid,
+  dimmed,
   inUnit,
   overriddenAt,
   trims,
@@ -449,6 +450,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
       reset={reset}
       under={under}
       keys={keyed.map(({ key }) => key)}
+      dim={dimmed(line, { ...drawing.full, ...own })}
       overridden={
         override === undefined
           ? undefined

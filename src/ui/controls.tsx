@@ -180,6 +180,7 @@ export function Row({
   reset,
   under,
   keys = [],
+  dim = false,
   overridden,
   children,
 }: {
@@ -189,6 +190,8 @@ export function Row({
   under: readonly Under[];
   /** The design keys the row writes. The inspect pane finds the row by these keys. */
   keys?: readonly string[];
+  /** True when the row sets nothing until another row is set. */
+  dim?: boolean;
   /** Set when the author's CSS has overridden the row. */
   overridden?: Overridden | undefined;
   children: ReactNode;
@@ -205,8 +208,13 @@ export function Row({
   return (
     <div
       ref={row}
-      className={classes("orca-panel-line", overridden !== undefined && "mod-overridden")}
+      className={classes(
+        "orca-panel-line",
+        overridden !== undefined && "mod-overridden",
+        dim && "mod-dim",
+      )}
       data-keys={keys.length === 0 ? undefined : keys.join(" ")}
+      data-dim={dim ? "" : undefined}
     >
       <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
         <span

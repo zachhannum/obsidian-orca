@@ -1456,6 +1456,11 @@ button.orca-panel-tab.is-on {
   opacity: 0.42;
 }
 
+/* A row that sets nothing until another row is set dims whole. */
+.orca-panel-line.mod-dim {
+  opacity: 0.42;
+}
+
 /* A name for assistive technology that draws nothing. */
 .orca-visually-hidden {
   position: absolute;
