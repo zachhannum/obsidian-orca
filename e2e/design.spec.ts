@@ -553,9 +553,43 @@ test("the panel offers every group a book designer works in", async ({
     "Fonts",
     "Chapter openings",
     "Scene breaks",
+    "Quote",
+    "List",
+    "Image",
     "Heads & folios",
     "Page breaks",
   ]);
+});
+
+test("a quote, a list and an image are set from their groups, and the pages are painted again", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture sets the quote and the marker, and leaves the space
+  // between items at its default.
+  await expect(panel.control("quote-size")).toHaveValue("9.5pt");
+  await expect(panel.control("quote-indent-left")).toHaveValue("2em");
+  await expect(panel.control("list-marker")).toHaveValue("square");
+  await expect(panel.control("image-width")).toHaveValue("2.5in");
+  const between = panel.control("list-space-between");
+  await expect(between).toHaveAttribute("data-default", "true");
+
+  await panel.up("list-space-between").click();
+
+  await expect(between).toHaveValue("1");
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    "list-space-between: 1",
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await written(vault, own);
 });
 
 test("a click on a switch flips it, and the note is written", async ({
