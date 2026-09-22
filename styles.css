@@ -915,9 +915,10 @@ button.orca-nav-action:hover {
   line-height: 1.8;
 }
 
+/* The gutter is opaque, so a line scrolled sideways passes behind it. */
 .orca-editor-host .cm-gutters {
   border: none;
-  background: transparent;
+  background: var(--background-primary);
   color: var(--text-faint);
 }
 

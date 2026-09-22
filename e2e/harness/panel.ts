@@ -25,6 +25,9 @@ const CODEMIRROR_SCROLLER = ".cm-scroller";
 /** CodeMirror's own class for one line number. */
 const CODEMIRROR_LINE_NUMBER = ".cm-lineNumbers .cm-gutterElement";
 
+/** CodeMirror's own class for the box the line numbers sit in. */
+const CODEMIRROR_GUTTERS = ".cm-gutters";
+
 /** CodeMirror's own class for the gutter of the line the caret is on. */
 const CODEMIRROR_CARET_LINE = ".cm-activeLineGutter";
 
@@ -84,6 +87,8 @@ export class Controls {
   readonly flags: Locator;
   /** The line numbers of the editor, the empty spacer CodeMirror keeps aside. */
   readonly lineNumbers: Locator;
+  /** The box the line numbers sit in, which the text scrolls behind. */
+  readonly gutters: Locator;
   /** The line numbers a squiggle colours. */
   readonly flaggedLines: Locator;
   /** The number of the line the caret is on. */
@@ -131,6 +136,7 @@ export class Controls {
     this.code = this.editor.locator(CODEMIRROR_CONTENT);
     this.flags = this.editor.getByTestId("orca-editor-flag");
     this.lineNumbers = this.editor.locator(CODEMIRROR_LINE_NUMBER).filter({ hasText: /\d/ });
+    this.gutters = this.editor.locator(CODEMIRROR_GUTTERS);
     this.flaggedLines = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}.orca-editor-flagged`);
     this.caretLine = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}${CODEMIRROR_CARET_LINE}`);
     this.warned = root.getByTestId("orca-panel-warned");
@@ -234,6 +240,42 @@ export class Controls {
       const scroller = editor.querySelector(selector);
       return scroller !== null && scroller.scrollWidth > scroller.clientWidth;
     }, CODEMIRROR_SCROLLER);
+  }
+
+  /** The background the gutter paints, and the editor's own, as the browser resolves them. */
+  async gutterPaint(): Promise<{ gutter: string; host: string }> {
+    return this.editor.evaluate((editor, selector) => {
+      const gutters = editor.querySelector(selector);
+      return {
+        gutter: gutters === null ? "" : getComputedStyle(gutters).backgroundColor,
+        host: getComputedStyle(editor).backgroundColor,
+      };
+    }, CODEMIRROR_GUTTERS);
+  }
+
+  /** Scrolls the editor's text to one end of a line, and answers where it stopped. */
+  async scrollSideways(to: "start" | "end"): Promise<number> {
+    return this.editor.evaluate(
+      (editor, [selector, where]) => {
+        const scroller = editor.querySelector(selector);
+        if (scroller === null) return -1;
+        scroller.scrollLeft = where === "end" ? scroller.scrollWidth : 0;
+        return scroller.scrollLeft;
+      },
+      [CODEMIRROR_SCROLLER, to] as const,
+    );
+  }
+
+  /** Resolves a theme variable to the color the browser computes for it. */
+  async resolves(variable: string): Promise<string> {
+    return this.editor.evaluate((editor, name) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${name})`;
+      editor.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    }, variable);
   }
 
   /** Whether the editor sits under the panel's React root, which it must not. */
