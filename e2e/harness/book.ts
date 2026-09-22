@@ -266,6 +266,20 @@ export class Book {
     await this.folio.press("Enter");
   }
 
+  /**
+   * Turns to `folio` and comes back once the surface opens on it. A
+   * book still settling from the spec before paints again and comes
+   * back to page 1, so the folio is typed again at the new generation.
+   */
+  async turnTo(folio: number): Promise<void> {
+    await expect
+      .poll(async () => {
+        await this.type(String(folio));
+        return this.surface.getAttribute("data-first");
+      })
+      .toBe(String(folio));
+  }
+
   /** Turns to a chapter by name, the way a reader picks one off the bar. */
   async choose(name: string): Promise<void> {
     await this.chapter.selectOption({ label: name });
