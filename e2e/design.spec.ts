@@ -792,12 +792,12 @@ test("a key the book does not set is drawn at its default, in faint type", async
   await book.painted();
   await panel.open();
 
-  // The fixture sets no space below a chapter's title.
-  const below = panel.control("chapter-space-below");
+  // The fixture sets no space below a level 1 heading.
+  const below = panel.control("heading-1-space-below");
   await expect(below).toHaveValue("0");
   await expect(below).toHaveAttribute("data-default", "true");
   await expect(below).toHaveClass(/is-default/);
-  await expect(panel.reset("chapter-space-below")).toHaveCount(0);
+  await expect(panel.reset("heading-1-space-below")).toHaveCount(0);
 
   // A key the fixture sets shows its own value and a reset.
   await expect(panel.control("chapter-drop-cap")).toHaveAttribute(
@@ -869,17 +869,17 @@ test("the stepper moves a count by one line, and the note is written", async ({
   await book.painted();
   await panel.open();
 
-  await expect(panel.control("chapter-space-above")).toHaveValue("7");
-  await expect(panel.up("chapter-space-above")).toHaveAttribute(
+  await expect(panel.control("heading-1-space-above")).toHaveValue("7");
+  await expect(panel.up("heading-1-space-above")).toHaveAttribute(
     "aria-label",
     "Increase by 1 line",
   );
-  await panel.up("chapter-space-above").click();
+  await panel.up("heading-1-space-above").click();
 
   await expect.poll(async () => vault.read(BOOK)).toContain(
-    "chapter-space-above: 8",
+    "heading-1-space-above: 8",
   );
-  await expect(panel.control("chapter-space-above")).toHaveValue("8");
+  await expect(panel.control("heading-1-space-above")).toHaveValue("8");
 
   await written(vault, own);
 });

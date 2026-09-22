@@ -191,6 +191,9 @@ test("the title page is set centered and down the page, with the publisher apart
   const line = 14;
   const outside = 0.7 * 72;
   assert.ok(series.y > TOP_MARGIN + 6 * line, `the series sits at ${String(series.y)}`);
+  // The page takes no margin, so the space the fixture sets above a
+  // level 1 heading leaves the title where orca puts it.
+  assert.ok(title.y - series.y < 3 * line, `the title sits at ${String(title.y)}`);
   assert.ok(publisher.y - author.y > 10 * line, "the publisher sits under the author");
   for (const each of [series, title, author, publisher]) {
     assert.ok(each.x > outside + 2 * line, `\`${each.text}\` starts at ${String(each.x)}`);
@@ -436,11 +439,11 @@ test("centered heads print in the middle of the page, with the folio at the outs
   for (const page of openings) assert.deepEqual(heads(page), []);
 });
 
-test("the space above a chapter's title shows on the page, as padding over the title", async () => {
+test("a heading that opens a section takes its space above as padding, so the engine keeps it", async () => {
   const sunk = (lines: number) => {
     const design = emptyDesign();
     design.body.lineSpacing = { value: 14, unit: "pt" };
-    design.chapter.spaceAbove = lines;
+    design.headings[1].spaceAbove = lines;
     return generatedCss(design, { sections: named(["chapter"]), author: "Jane Austen" });
   };
   const top = async (css: string) => {
@@ -452,8 +455,9 @@ test("the space above a chapter's title shows on the page, as padding over the t
     return found.y;
   };
 
-  assert.match(sunk(4), /:first-child \{\n {2}padding-top: 56pt;\n/);
-  assert.doesNotMatch(sunk(4), /margin-top/);
+  // The margin goes with the padding, so a section that opens below the
+  // one before it takes the space once.
+  assert.match(sunk(4), /section > h1:first-child \{\n {2}padding-top: 56pt;\n {2}margin-top: 0;\n\}/);
   // Four lines of 14pt sink the title 56pt.
   assert.ok(Math.abs((await top(sunk(4))) - (await top(sunk(0))) - 56) < 0.01);
 });
@@ -546,18 +550,27 @@ test("a contents folio rises half a body line, and a part keeps a line above and
   assert.match(bare, /margin-top: 1em;\n {2}margin-bottom: 0\.5em;/);
 });
 
-test("the contents title sinks as far as a chapter's, and takes no sink the design does not set", () => {
+test("the contents opens on the space its own heading level sets", async () => {
   const roles: Role[] = ["contents", "chapter"];
-  const design = emptyDesign();
-  design.body.lineSpacing = { value: 14, unit: "pt" };
-  design.chapter.spaceAbove = 7;
-  design.chapter.spaceBelow = 2;
-  const css = generatedCss(design, { sections: named(roles) });
-  const opening = (id: string) =>
-    new RegExp(`section#${id} > :is\\(h1(?:, h[2-6])+\\):first-child \\{\\n {2}padding-top: 98pt;\\n {2}margin-bottom: 28pt;\\n\\}`);
+  const sunk = (lines: number) => {
+    const design = emptyDesign();
+    design.body.lineSpacing = { value: 14, unit: "pt" };
+    design.headings[1].spaceAbove = lines;
+    design.headings[1].spaceBelow = 2;
+    return generatedCss(design, { sections: named(roles) });
+  };
+  const title = async (css: string) => {
+    const output = await rendered(css, CONTENTS, named(roles));
+    const found = output.pages[0]?.items.find(
+      (item) => item.kind === "text" && item.text === "Contents",
+    );
+    assert.ok(found?.kind === "text", "the contents title did not set");
+    return found.y;
+  };
 
-  assert.match(css, opening("contents-1"));
-  assert.match(css, opening("chapter-2"));
+  assert.match(sunk(7), /h1 \{\n {2}margin-top: 98pt;\n {2}margin-bottom: 28pt;\n\}/);
+  // Seven lines of 14pt sink the title 98pt, the same as a chapter's.
+  assert.ok(Math.abs((await title(sunk(7))) - (await title(sunk(0))) - 98) < 0.01);
   assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(roles) }), /padding-top/);
 });
 
@@ -565,13 +578,7 @@ test("a contents folio sets flush right on its title's line", async () => {
   const design = emptyDesign();
   design.body.lineSpacing = { value: 14, unit: "pt" };
   const css = generatedCss(design, { sections: named(["contents", "chapter"]) });
-  const output = await rendered(css, [
-    {
-      name: "contents.md",
-      text: "# Contents\n\n{.entry}\n\n[Chapter One](one.md#Chapter%20One)\n\n{.folio}\n\n[](one.md#Chapter%20One)\n",
-    },
-    { name: "one.md", text: "# Chapter One\n\nIt is a truth universally acknowledged.\n" },
-  ], named(["contents", "chapter"]));
+  const output = await rendered(css, CONTENTS, named(["contents", "chapter"]));
   const items = (output.pages[0]?.items ?? []).flatMap((item) => (item.kind === "text" ? [item] : []));
   const title = items.find((item) => item.text.startsWith("Chapter"));
   const folio = items.find((item) => /^\d+$/.test(item.text));
@@ -607,6 +614,15 @@ function partition(
   return [head, folio];
 }
 
+/** A contents of one entry, then the chapter it lands on. */
+const CONTENTS: Source[] = [
+  {
+    name: "contents.md",
+    text: "# Contents\n\n{.entry}\n\n[Chapter One](one.md#Chapter%20One)\n\n{.folio}\n\n[](one.md#Chapter%20One)\n",
+  },
+  { name: "one.md", text: "# Chapter One\n\nIt is a truth universally acknowledged.\n" },
+];
+
 /** Three short paragraphs under a heading. */
 const INDENTED: Source = {
   name: "indented.md",
@@ -621,8 +637,10 @@ function whole(): Design {
   design.body.indentAfterBreak = false;
   design.body.keepHeadings = true;
   design.headings[1].align = "center";
-  design.chapter.spaceAbove = 2;
-  design.chapter.spaceBelow = 1;
+  design.headings[1].spaceAbove = 2;
+  design.headings[1].spaceBelow = 1;
+  design.headings[2].spaceAbove = 1;
+  design.headings[2].spaceBelow = 1;
   design.scene.mark = "word";
   design.scene.word = "Later";
   design.scene.spaceAbove = 1;

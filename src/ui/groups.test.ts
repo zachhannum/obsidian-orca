@@ -294,8 +294,6 @@ test("the capitals and the tracking rows sit with the places they set", () => {
 
   assert.deepEqual(keysOf(openings), [
     "chapter-begins",
-    "chapter-space-above",
-    "chapter-space-below",
     "chapter-drop-cap",
     "chapter-first-line-caps",
     "chapter-first-line-letter-spacing",
@@ -309,6 +307,8 @@ test("the capitals and the tracking rows sit with the places they set", () => {
       "heading-1-caps",
       "heading-1-letter-spacing",
       "heading-1-align",
+      "heading-1-space-above",
+      "heading-1-space-below",
     ],
   );
   assert.deepEqual(keysOf(heads).slice(5), [

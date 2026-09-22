@@ -68,8 +68,6 @@ export const DEFAULTS: Design = frozen({
   },
   chapter: {
     begins: "next-page",
-    spaceAbove: 0,
-    spaceBelow: 0,
     dropCap: 0,
     firstLineCaps: "normal",
     firstLineLetterSpacing: ems(0),
@@ -108,7 +106,14 @@ export function effective(design: Design): Design {
 }
 
 function heading(): TypeSpec {
-  return { size: points(19), caps: "normal", letterSpacing: ems(0), align: "left" };
+  return {
+    size: points(19),
+    caps: "normal",
+    letterSpacing: ems(0),
+    align: "left",
+    spaceAbove: 0,
+    spaceBelow: 0,
+  };
 }
 
 function points(value: number): Length {
