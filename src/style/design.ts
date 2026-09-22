@@ -82,7 +82,6 @@ export interface PageDesign {
 
 export type Alignment = "left" | "center" | "right" | "justify";
 
-/** A heading is not justified. */
 export type HeadingAlignment = Exclude<Alignment, "justify">;
 
 export interface BodyDesign {

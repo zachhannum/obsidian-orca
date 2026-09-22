@@ -345,7 +345,7 @@ test("body text and every heading level share one alignment control, drawn with 
     "right align-right",
     "justify align-justify",
   ]);
-  // A heading is never justified, so it takes the other three.
+  // The heading row drops justify and keeps the order of the rest.
   assert.deepEqual(drawn(heading), drawn(body).slice(0, 3));
   // The icon stands in for the word, and the word still names the value.
   assert.equal(defaultSaid(body, "center", "in"), "Center");
