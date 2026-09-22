@@ -39,7 +39,7 @@ import type { Override } from "@/style/overrides";
 export interface Choice {
   value: string;
   label: string;
-  /** An Obsidian icon a segment draws in place of the label, which the label then names. */
+  /** An Obsidian icon a segment draws in place of the label. The label is then the button's name. */
   icon?: string;
 }
 
@@ -114,11 +114,7 @@ const TRACKING: readonly Choice[] = [
   { value: "0.12em", label: "Wide" },
 ];
 
-/**
- * Alignment is one control wherever orca sets text, drawn as the four
- * alignment icons. A heading is never justified, so its row offers the
- * first three.
- */
+/** Body text and a heading are aligned with one control. */
 const ALIGNMENTS: readonly Choice[] = [
   { value: "left", label: "Left", icon: "align-left" },
   { value: "center", label: "Center", icon: "align-center" },

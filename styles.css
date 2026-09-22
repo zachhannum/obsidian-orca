@@ -1622,8 +1622,7 @@ button.orca-panel-choice.is-on.is-default {
   color: var(--text-faint);
 }
 
-/* A choice drawn as an icon centers it, and the icon takes the color
-   of the word it stands for. */
+/* A button fills its share of the segment, so the icon centers inside it. */
 button.orca-panel-choice > .orca-panel-icon {
   display: flex;
   margin: 0 auto;

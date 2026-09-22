@@ -313,10 +313,7 @@ export function Select({
   );
 }
 
-/**
- * Draws a word picked from a few choices, as one control. A choice
- * with an icon draws the icon, and its word names it.
- */
+/** Draws a word picked from a few choices, as one control. */
 export function Segment({
   value,
   faint,

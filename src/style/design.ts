@@ -80,10 +80,9 @@ export interface PageDesign {
   mirrored?: boolean;
 }
 
-/** Alignment is where the lines of a text block sit between the margins. */
 export type Alignment = "left" | "center" | "right" | "justify";
 
-/** A heading is never justified, so it takes the other three. */
+/** A heading is not justified. */
 export type HeadingAlignment = Exclude<Alignment, "justify">;
 
 export interface BodyDesign {
