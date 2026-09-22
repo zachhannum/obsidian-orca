@@ -98,7 +98,7 @@ export function generatedRules(
     ...pageRules(design, setting),
     ...bodyRules(design, registered),
     ...headingRules(design, registered),
-    ...sectionRules(design, setting),
+    ...sectionRules(design, setting, registered),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
     ...sceneRules(design),
@@ -477,7 +477,11 @@ function typeLines(
   return lines;
 }
 
-function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
+function sectionRules(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[],
+): (Rule | undefined)[] {
   const rules = used(roles(setting)).map((role) => {
     const lines = [declared("page", role)];
     if (role === "chapter" && design.chapter.begins !== undefined) {
@@ -485,7 +489,7 @@ function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
     }
     return block(sectionsOf(setting.sections, role) ?? "", lines, role);
   });
-  return [...rules, ...restart(setting), ...chapterRules(design, setting)];
+  return [...rules, ...restart(setting), ...chapterRules(design, setting, registered)];
 }
 
 /**
@@ -509,7 +513,8 @@ function restart(setting: Setting): (Rule | undefined)[] {
 /**
  * The chapter openings. The drop cap falls on the paragraph the
  * opening headings lead into, so a note with text before its first
- * heading takes no drop cap.
+ * heading takes no drop cap. A chapter with no drop cap sets no font on
+ * its first letter, since the font is the cap's.
  *
  * A sink is the blank space above a chapter's title, written in lines
  * of body text. Where the design sets a line height, a sink is that
@@ -517,11 +522,16 @@ function restart(setting: Setting): (Rule | undefined)[] {
  * ems. A sink is padding, since the engine drops the top margin of a
  * box that starts a page.
  */
-function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
+function chapterRules(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[],
+): (Rule | undefined)[] {
   const chapters = sectionsOf(setting.sections, "chapter");
   if (chapters === undefined) return [];
   const { chapter } = design;
-  const { dropCap } = chapter;
+  const { dropCap, dropCapFont } = chapter;
+  const falls = dropCap !== undefined && dropCap >= 2;
   const starts = (suffix: string): string =>
     TEXT_START.map((start) => `${chapters} > ${start}${suffix}`).join(",\n");
   return [
@@ -530,10 +540,15 @@ function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
       starts(" + p::first-letter"),
       [
         ...set(
-          "initial-letter",
-          dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),
-          ["chapter-drop-cap"],
+          "font-family",
+          !falls || dropCapFont === undefined
+            ? undefined
+            : family(dropCapFont, undefined, registered),
+          ["chapter-drop-cap-font", "chapter-drop-cap"],
         ),
+        ...set("initial-letter", falls ? String(dropCap) : undefined, [
+          "chapter-drop-cap",
+        ]),
       ],
       "chapter",
     ),

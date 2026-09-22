@@ -91,7 +91,8 @@ export const DEFAULTS: Design = frozen({
 /**
  * Fills in every default under a design. A heading level with no font
  * of its own takes the body's font and variant as a pair. A level with
- * its own font and no variant keeps that font's default.
+ * its own font and no variant keeps that font's default. A drop cap
+ * with no font of its own takes the body's font, and sets no variant.
  */
 export function effective(design: Design): Design {
   const merged = mergeDesign(structuredClone(DEFAULTS), design);
@@ -104,6 +105,7 @@ export function effective(design: Design): Design {
     if (fontVariant === undefined) delete type.fontVariant;
     else type.fontVariant = fontVariant;
   }
+  merged.chapter.dropCapFont ??= font;
   return merged;
 }
 

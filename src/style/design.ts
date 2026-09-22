@@ -143,6 +143,8 @@ export interface ChapterDesign {
   spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
+  /** The font the drop cap is set in. A chapter with none set takes the body's font. */
+  dropCapFont?: string;
   /** The case a chapter's first line is set in. */
   firstLineCaps?: Caps;
   /** The letter spacing on a chapter's first line. */
@@ -215,14 +217,16 @@ export function emptyDesign(): Design {
 }
 
 /**
- * Every font a design names, the body's first and then each heading
- * level's. A family two places name is listed once, however it is
- * capitalized, because the index matches a name without case.
+ * Every font a design names, the body's first, then each heading
+ * level's, then the drop cap's. A family two places name is listed
+ * once, however it is capitalized, because the index matches a name
+ * without case.
  */
 export function designFonts(design: Design): string[] {
   const named = [
     design.body.font,
     ...LEVELS.map((level) => design.headings[level].font),
+    design.chapter.dropCapFont,
   ];
   const seen = new Set<string>();
   const fonts: string[] = [];
@@ -243,18 +247,21 @@ export interface FontUse {
 }
 
 /**
- * Every font and variant a design sets, the body's first and then each
- * heading level's. A level with no font of its own takes the body's
- * font and variant as a pair. A level with its own font and no variant
- * takes that font's default. A pair two places set is listed once,
- * however it is capitalized.
+ * Every font and variant a design sets, the body's first, then each
+ * heading level's, then the drop cap's. A level with no font of its own
+ * takes the body's font and variant as a pair. A level with its own
+ * font and no variant takes that font's default. The drop cap sets no
+ * variant, so it takes its font's default. A pair two places set is
+ * listed once, however it is capitalized.
  */
 export function designUses(design: Design): FontUse[] {
   const { font, fontVariant } = design.body;
   const body = font === undefined ? undefined : { font, variant: fontVariant };
+  const { dropCapFont } = design.chapter;
   const named = [
     body,
     ...LEVELS.map((level) => headingUse(design.headings[level], body)),
+    dropCapFont === undefined ? undefined : { font: dropCapFont, variant: undefined },
   ];
   const seen = new Set<string>();
   const uses: FontUse[] = [];
@@ -493,6 +500,15 @@ const CHAPTER: readonly Field[] = [
     write: ({ chapter }, value) => {
       const lines = asCount(value);
       if (lines !== undefined) chapter.dropCap = lines;
+    },
+  },
+  {
+    key: "chapter-drop-cap-font",
+    property: "font-family",
+    read: ({ chapter }) => chapter.dropCapFont,
+    write: ({ chapter }, value) => {
+      const font = asText(value);
+      if (font !== undefined) chapter.dropCapFont = font;
     },
   },
   {
