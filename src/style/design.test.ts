@@ -305,7 +305,6 @@ function whole(): Design {
         top: len(0.8, "in"),
         bottom: len(1, "in"),
       },
-      mirrored: true,
     },
     body: {
       font: "Alegreya",

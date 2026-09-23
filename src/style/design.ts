@@ -76,8 +76,6 @@ export interface Margins {
 export interface PageDesign {
   trim?: Trim;
   margins: Margins;
-  /** Inside and outside swap sides on a left-hand page. */
-  mirrored?: boolean;
 }
 
 export type Alignment = "left" | "center" | "right" | "justify";
@@ -354,15 +352,6 @@ const PAGE: readonly Field[] = [
   margin("margin-outside", "outside", "margin-right"),
   margin("margin-top", "top", "margin-top"),
   margin("margin-bottom", "bottom", "margin-bottom"),
-  {
-    key: "mirrored",
-    property: "margin-left",
-    read: ({ page }) => page.mirrored,
-    write: ({ page }, value) => {
-      const flag = asFlag(value);
-      if (flag !== undefined) page.mirrored = flag;
-    },
-  },
 ];
 
 const BODY: readonly Field[] = [

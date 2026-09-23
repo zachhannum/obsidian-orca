@@ -53,6 +53,24 @@ test("the panel offers every group a book designer works in", () => {
   }
 });
 
+test("the Page group offers the trim and the four margins, and no switch", () => {
+  const page = GROUPS.find((group) => group.name === "Page");
+  assert.ok(page !== undefined);
+
+  assert.deepEqual(keysOf(page), [
+    "trim",
+    "margin-inside",
+    "margin-outside",
+    "margin-top",
+    "margin-bottom",
+  ]);
+  // The side margins always mirror, so the group has nothing to switch.
+  assert.deepEqual(
+    page.rows.flatMap((row) => row.of).filter((control) => control.kind === "flag"),
+    [],
+  );
+});
+
 test("the Headings group sets the type and the space at every level, and chapter openings set none", () => {
   const headings = GROUPS.find((group) => group.name === "Headings");
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
@@ -114,7 +132,7 @@ test("every key the panel writes has a default, except what a scene break takes 
 });
 
 test("a reset names the default in the words the control draws it with", () => {
-  assert.equal(defaultSaid(control("mirrored"), true, "in"), "on");
+  assert.equal(defaultSaid(control("body-hyphens"), true, "in"), "on");
   assert.equal(defaultSaid(control("body-align"), "justify", "in"), "Justified");
   assert.equal(defaultSaid(control("body-size"), "11pt", "in"), "11pt");
   assert.equal(defaultSaid(control("trim"), "6in 9in", "in"), "US trade (6 × 9 in)");
@@ -275,11 +293,11 @@ test("a generated rule names the control that wrote it", () => {
     key: "body-first-line-indent",
   });
   // A row with no label uses the words of its switch.
-  assert.equal(controlOf({ keys: ["mirrored"] })?.row, "Mirror the margins on facing pages");
+  assert.equal(controlOf({ keys: ["body-hanging-punctuation"] })?.row, "Hanging punctuation");
   // Keys across rows of one group name the group.
-  assert.deepEqual(controlOf({ keys: ["margin-inside", "mirrored"] }), {
+  assert.deepEqual(controlOf({ keys: ["trim", "margin-inside"] }), {
     group: "Page",
-    key: "margin-inside",
+    key: "trim",
   });
   // A heading key names its level.
   const heading = controlOf({ keys: ["heading-1-size", "heading-1-align"] });

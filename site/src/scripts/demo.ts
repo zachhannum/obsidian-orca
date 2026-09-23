@@ -37,10 +37,10 @@ export interface Demo {
  * The controls the demo offers: the ones that change the page it shows.
  *
  * The panel offers more, and the rest are no use here. A scene break
- * needs a scene break in the chapter, mirrored margins and a running
- * head need the facing page, and a chapter that begins on the right
- * needs a chapter before it. A test sets the page with each of these
- * changed and fails on one the page does not answer.
+ * needs a scene break in the chapter, a running head needs the facing
+ * page, and a chapter that begins on the right needs a chapter before
+ * it. A test sets the page with each of these changed and fails on one
+ * the page does not answer.
  */
 export const WORKS: readonly string[] = [
   'trim',

@@ -131,7 +131,6 @@ test("a book that sets nothing opens a chapter on the next page, inside margins 
   assert.equal(properties["margin-outside"], "0.6in");
   assert.equal(properties["margin-top"], "0.75in");
   assert.equal(properties["margin-bottom"], "0.75in");
-  assert.equal(properties["mirrored"], true);
   assert.equal(properties["header-position"], "outside");
 });
 
