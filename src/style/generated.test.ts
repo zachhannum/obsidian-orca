@@ -902,6 +902,77 @@ test("the running heads and the folio are set in the type the design gives them"
   assert.ok(output.pages.flatMap(texts).includes("Pride and Prejudice"));
 });
 
+test("the running heads are set in the font the design gives them", () => {
+  const design = headed("outside", "bottom");
+  design.headers.font = "Junicode";
+  const at = { sections: named(["chapter"]), author: "Jane Austen" };
+
+  const css = generatedCss(design, at);
+
+  assert.match(
+    css,
+    /@page :left \{\n {2}@top-left \{ content: "Jane Austen"; font-family: "Junicode", serif; \}\n\}/,
+  );
+  assert.match(
+    css,
+    /@page :right \{\n {2}@top-right \{ content: string\(chapter\); font-family: "Junicode", serif; \}\n\}/,
+  );
+  // The folio sets no font of its own, so it takes none.
+  assert.match(css, /@bottom-center \{ content: counter\(page, decimal\); \}/);
+
+  // A head set in a font a face is registered for names that family.
+  const registered = [
+    { font: "Junicode", variant: undefined, family: "Junicode Cond", faces: [] },
+  ];
+  assert.match(
+    generatedCss(design, at, registered),
+    /@top-left \{ content: "Jane Austen"; font-family: "Junicode Cond", serif; \}/,
+  );
+});
+
+test("the folio is set in the font the design gives it", () => {
+  const design = headed("outside", "bottom");
+  design.headers.folioFont = "Alegreya";
+
+  const at = { sections: named(["copyright", "chapter"]), author: "Jane Austen" };
+
+  const css = generatedCss(design, at);
+
+  assert.match(
+    css,
+    /@bottom-center \{ content: counter\(page, decimal\); font-family: "Alegreya", serif; \}/,
+  );
+  // The front matter numbers in roman in the same font.
+  assert.match(
+    css,
+    /@page copyright \{\n {2}@bottom-center \{ content: counter\(page, lower-roman\); font-family: "Alegreya", serif; \}\n\}/,
+  );
+  // The heads set no font of their own, so they take none.
+  assert.match(css, /@top-left \{ content: "Jane Austen"; \}/);
+});
+
+test("a head in the center and a folio at the outside corner each take their own font", () => {
+  const design = headed("center", "top");
+  design.headers.font = "Junicode";
+  design.headers.folioFont = "Alegreya";
+
+  const css = generatedCss(design, { sections: named(["chapter"]), author: "Jane Austen" });
+
+  assert.match(
+    css,
+    /@page :left \{\n {2}@top-left \{ content: counter\(page, decimal\); font-family: "Alegreya", serif; \}\n {2}@top-center \{ content: "Jane Austen"; font-family: "Junicode", serif; \}\n\}/,
+  );
+  assert.match(
+    css,
+    /@page :right \{\n {2}@top-center \{ content: string\(chapter\); font-family: "Junicode", serif; \}\n {2}@top-right \{ content: counter\(page, decimal\); font-family: "Alegreya", serif; \}\n\}/,
+  );
+  // An opening clears all three boxes, and sets the type in none of them.
+  assert.match(
+    css,
+    /@page chapter:first \{\n {2}@top-left \{ content: none; \}\n {2}@top-center \{ content: none; \}\n {2}@top-right \{ content: none; \}\n\}/,
+  );
+});
+
 test("a design that sets every new key renders with no warning from the pinned engine", async () => {
   const design = emptyDesign();
   design.headings[1].caps = "small-caps";
@@ -913,6 +984,8 @@ test("a design that sets every new key renders with no warning from the pinned e
   design.headers.caps = "all-caps";
   design.headers.letterSpacing = { value: 0.06, unit: "em" };
   design.headers.italic = true;
+  design.headers.font = "EB Garamond";
+  design.headers.folioFont = "EB Garamond";
   const sections = named(ROLES);
   const css = generatedCss(design, { sections, title: "Pride and Prejudice", author: "Jane Austen" });
 

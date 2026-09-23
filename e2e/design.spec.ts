@@ -54,6 +54,12 @@ const NOWHERE = "Zzyzx Grotesque";
 /** The font the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
 
+/** The author, which the fixture prints as the running head on a verso. */
+const AUTHOR = "Jane Austen";
+
+/** A verso of set text inside a chapter, which carries a head and a folio. */
+const HEAD_PAGE = 12;
+
 /** A right sidebar narrower than the panel's artboard, in pixels. */
 const NARROW = 260;
 
@@ -339,6 +345,38 @@ test("a heading font picked in the panel is still the headings' font after Obsid
   await panel.open();
   await expect(panel.control("heading-1-font")).toContainText(FIXTURE_FONT);
   await expect(panel.missing).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("the heads and the folios are set in the fonts their own rows pick", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The fixture sets both in the font its vault ships.
+  await expect(panel.control("header-font")).toContainText(FIXTURE_FONT);
+  await expect(panel.control("folio-font")).toContainText(FIXTURE_FONT);
+
+  await panel.chooseFont("header-font", VARIED);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`header-font: ${VARIED}`);
+
+  // The head on a verso takes the picked face.
+  await book.type(String(HEAD_PAGE));
+  await expect(book.surface).toHaveAttribute("data-first", String(HEAD_PAGE));
+  await expect
+    .poll(async () => book.facesOf(BOOK, AUTHOR))
+    .toContainEqual(expect.stringMatching(new RegExp(`^${VARIED}`, "i")));
+
+  // The folio is set from a row of its own, which the pick left alone.
+  await expect(panel.control("folio-font")).toContainText(FIXTURE_FONT);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`folio-font: ${FIXTURE_FONT}`);
 
   await written(vault, own);
 });

@@ -331,6 +331,8 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     ],
   );
   assert.deepEqual(keysOf(heads).slice(5), [
+    "header-font",
+    "folio-font",
     "header-caps",
     "header-letter-spacing",
     "header-italic",

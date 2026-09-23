@@ -19,6 +19,7 @@
   margin-right: 0.95in;
   @top-left {
     content: string(author);
+    font-family: "EB Garamond", serif;
     font-variant-caps: small-caps;
     text-transform: uppercase;
     letter-spacing: 0.06em;

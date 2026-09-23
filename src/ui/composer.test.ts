@@ -4,7 +4,7 @@ import process from "node:process";
 import { test } from "node:test";
 import type { Folios, LayoutOutput, NodeSource, Op, Page, Sheet } from "fleuron";
 import { directoryVault } from "@/assets/directory";
-import { VAULT_FONTS, familyNamed } from "@/assets/fonts";
+import { VAULT_FONTS, familyNamed, type FontIndex } from "@/assets/fonts";
 import { contentKey, fontUrl } from "@/assets/registry";
 import { faceBytes } from "@/assets/sfnt";
 import { readText } from "@/assets/vault";
@@ -571,7 +571,9 @@ test("a book whose engine died is set again from what crossed, cuts and all", as
     opened.filter((op) => op.op === "font").map((op) => [...op.bytes]),
     [[1, 2, 3]],
   );
-  assert.deepEqual(again.fonts, ["Spectral", "Junicode"]);
+  // The body is set in Spectral, and the fixture sets its scene break
+  // in Junicode and its heads and folios in Alegreya.
+  assert.deepEqual(again.fonts, ["Spectral", "Junicode", "Alegreya"]);
   const styled = opened.at(-1);
   assert.equal(styled?.op, "style");
 });
@@ -790,7 +792,10 @@ test("a book opens sending only the faces of the variants it uses", async () => 
   const opened = client.rendered[0] ?? [];
   const regular = await urlsOf("Regular");
   assert.equal(regular.length, 3);
-  assert.deepEqual(new Set(sentUrls(opened)), new Set(regular));
+  // The fixture's heads and folios are set in Alegreya, so its face
+  // crosses beside the body's.
+  const heads = await defaultUrls(index, "Alegreya");
+  assert.deepEqual(new Set(sentUrls(opened)), new Set([...regular, ...heads]));
   const faces = (sheets: readonly Op[]): string => {
     const style = sheets.filter((op) => op.op === "style").at(-1);
     assert.ok(style?.op === "style");
@@ -841,11 +846,16 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   const composer = new Composer(await setting(client), clock);
   const book = await composer.open(BOOK);
 
-  // The fixture's one embed resolves, and the face its scene break names
-  // loads no cut from this setting.
+  // The fixture's one embed resolves. Its design sets the scene break
+  // in one font and the heads and folios in another, and this composer
+  // registers no face for either, so both uses stand.
   const scene = { font: "Junicode", variant: undefined };
+  const head = { font: "Alegreya", variant: undefined };
   assert.deepEqual(book.unread, []);
-  assert.deepEqual(book.unloaded, [{ use: scene, unread: false }]);
+  assert.deepEqual(book.unloaded, [
+    { use: scene, unread: false },
+    { use: head, unread: false },
+  ]);
 
   const note = "Copyright.md";
   const text = `${await readText(vault, note)}\n\n![[nowhere.png]]\n`;
@@ -861,6 +871,7 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
   assert.deepEqual(book.unloaded, [
     { use, unread: true },
     { use: scene, unread: false },
+    { use: head, unread: false },
   ]);
 
   // An embed taken back out of the note stops standing.
@@ -878,16 +889,10 @@ function facesCss(ops: readonly Op[]): string {
 
 test("a font the book adds crosses as a face, and crosses again on a new engine", async () => {
   const index = await readFontIndex(PLACES);
-  const junicode = familyNamed(index, "Junicode");
-  assert.ok(junicode, "the fixture vault carries no Junicode");
-  const regular = junicode.variants.find((each) => each.isDefault);
-  assert.ok(regular, "Junicode has no default variant");
-  const urls = await Promise.all(
-    regular.faces.map(async (face) => {
-      const file = new Uint8Array(await vault.readBinary(face.path));
-      return fontUrl(await contentKey(faceBytes(file, face.face)));
-    }),
-  );
+  const urls = await defaultUrls(index, "Junicode");
+  // The fixture's heads and folios are set in Alegreya, which crosses
+  // beside the font the book adds.
+  const heads = await defaultUrls(index, "Alegreya");
   const use: FontUse = { font: "Junicode", variant: undefined };
 
   const clock = new Steps();
@@ -915,12 +920,12 @@ test("a font the book adds crosses as a face, and crosses again on a new engine"
   const book = await composer.open(BOOK);
 
   // No design key names the font, and its faces cross all the same.
-  assert.deepEqual(book.fonts, []);
+  assert.deepEqual(book.fonts, ["Alegreya"]);
   assert.deepEqual(book.added, ["Junicode"]);
-  assert.deepEqual(book.families, ["Junicode"]);
+  assert.deepEqual(book.families, ["Alegreya", "Junicode"]);
   assert.deepEqual(book.unloaded, []);
   const opened = clients.started[0]?.rendered[0] ?? [];
-  assert.deepEqual(new Set(sentUrls(opened)), new Set(urls));
+  assert.deepEqual(new Set(sentUrls(opened)), new Set([...urls, ...heads]));
   assert.match(facesCss(opened), /font-family: "Junicode";/);
 
   // A face is registered for one session. The book set anew carries the
@@ -929,7 +934,10 @@ test("a font the book adds crosses as a face, and crosses again on a new engine"
   await drain();
   const again = await composer.open(BOOK);
   assert.deepEqual(again.added, ["Junicode"]);
-  assert.deepEqual(new Set(sentUrls(clients.started[1]?.rendered[0] ?? [])), new Set(urls));
+  assert.deepEqual(
+    new Set(sentUrls(clients.started[1]?.rendered[0] ?? [])),
+    new Set([...urls, ...heads]),
+  );
 
   // A font taken back out drops out of the faces sheet.
   again.refont([], [await resolveUse(PLACES, index, use)]);
@@ -937,6 +945,20 @@ test("a font the book adds crosses as a face, and crosses again on a new engine"
   await drain();
   assert.doesNotMatch(facesCss(clients.started[1]?.rendered.at(-1) ?? []), /Junicode/);
 });
+
+/** The urls the faces of one family's default variant cross as. */
+async function defaultUrls(index: FontIndex, name: string): Promise<string[]> {
+  const family = familyNamed(index, name);
+  assert.ok(family, `the fixture vault carries no ${name}`);
+  const variant = family.variants.find((each) => each.isDefault);
+  assert.ok(variant, `${name} has no default variant`);
+  return Promise.all(
+    variant.faces.map(async (face) => {
+      const file = new Uint8Array(await vault.readBinary(face.path));
+      return fontUrl(await contentKey(faceBytes(file, face.face)));
+    }),
+  );
+}
 
 /** The design after a font pick, as the panel passes it to `restyle`. */
 function refonted(design: Design, font: string): Design {

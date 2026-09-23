@@ -48,22 +48,26 @@ test("a book that sets nothing sets one font in two sizes, with nothing the engi
   }
 });
 
-test("every design key has a default but a heading's font, a scene break's font and size, and each font's variant", () => {
+test("every design key has a default but a heading's, a head's and a folio's font, a scene break's font and size, and each font's variant", () => {
   const variant = (key: string) => key.endsWith("-font-variant");
+  // A heading, a running head and a folio take the body's font, so
+  // none of them carries a default of its own.
+  const follows = (key: string) =>
+    /^heading-\d-font$/.test(key) || key === "header-font" || key === "folio-font";
   // A scene break with no font or size of its own takes the body's, so
   // neither key has a default.
   const inherited = (key: string) =>
     key === "scene-break-font" || key === "scene-break-size";
   const optional = (key: string) =>
-    /^heading-\d-font$/.test(key) || variant(key) || inherited(key);
+    follows(key) || variant(key) || inherited(key);
 
   assert.deepEqual(
     Object.keys(writeDesign(DEFAULTS)),
     DESIGN_KEYS.filter((key) => !optional(key)),
   );
-  // The panel draws the effective design, where a heading with no font
-  // of its own shows the body font. The default variant is stored as
-  // absent.
+  // The panel draws the effective design, where a heading, a running
+  // head and a folio with no font of their own show the body font. The
+  // default variant is stored as absent.
   const shown = writeDesign(effective(emptyDesign()));
   assert.deepEqual(
     Object.keys(shown),
@@ -72,6 +76,8 @@ test("every design key has a default but a heading's font, a scene break's font 
   for (const level of LEVELS) {
     assert.equal(shown[`heading-${level}-font`], "EB Garamond");
   }
+  assert.equal(shown["header-font"], "EB Garamond");
+  assert.equal(shown["folio-font"], "EB Garamond");
 });
 
 test("a book's own keys win over the defaults, and a heading follows the body font", () => {

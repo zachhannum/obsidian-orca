@@ -184,6 +184,10 @@ export interface HeaderDesign {
   position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
+  /** The font the running heads are set in, by the name its file carries. */
+  font?: string;
+  /** The font the folio is set in, by the name its file carries. */
+  folioFont?: string;
   /** The case the running heads are set in. */
   caps?: Caps;
   /** The letter spacing on the running heads. */
@@ -218,15 +222,17 @@ export function emptyDesign(): Design {
 
 /**
  * Every font a design names, the body's first, then each heading
- * level's, then the scene break's. A family two places name is listed
- * once, however it is capitalized, because the index matches a name
- * without case.
+ * level's, then the scene break's, then the running heads' and the
+ * folio's. A family two places name is listed once, however it is
+ * capitalized, because the index matches a name without case.
  */
 export function designFonts(design: Design): string[] {
   const named = [
     design.body.font,
     ...LEVELS.map((level) => design.headings[level].font),
     design.scene.font,
+    design.headers.font,
+    design.headers.folioFont,
   ];
   const seen = new Set<string>();
   const fonts: string[] = [];
@@ -248,10 +254,12 @@ export interface FontUse {
 
 /**
  * Every font and variant a design sets, the body's first, then each
- * heading level's, then the scene break's. A level with no font of its
- * own takes the body's font and variant as a pair. A level or a scene
- * break with its own font and no variant takes that font's default. A
- * pair two places set is listed once, however it is capitalized.
+ * heading level's, then the scene break's, then the running heads' and
+ * the folio's. A level with no font of its own takes the body's font
+ * and variant as a pair. A level with its own font and no variant
+ * takes that font's default. A scene break, a head and a folio each
+ * set a font alone, so each takes that font's default variant. A pair
+ * two places set is listed once, however it is capitalized.
  */
 export function designUses(design: Design): FontUse[] {
   const { font, fontVariant } = design.body;
@@ -260,7 +268,9 @@ export function designUses(design: Design): FontUse[] {
   const named = [
     body,
     ...LEVELS.map((level) => headingUse(design.headings[level], body)),
-    scene === undefined ? undefined : { font: scene, variant: undefined },
+    ...[scene, design.headers.font, design.headers.folioFont].map((each) =>
+      each === undefined ? undefined : { font: each, variant: undefined },
+    ),
   ];
   const seen = new Set<string>();
   const uses: FontUse[] = [];
@@ -606,6 +616,24 @@ const HEADERS: readonly Field[] = [
     write: ({ headers }, value) => {
       const format = asWord(value, FORMATS);
       if (format !== undefined) headers.pageNumberFormat = format;
+    },
+  },
+  {
+    key: "header-font",
+    property: "font-family",
+    read: ({ headers }) => headers.font,
+    write: ({ headers }, value) => {
+      const font = asText(value);
+      if (font !== undefined) headers.font = font;
+    },
+  },
+  {
+    key: "folio-font",
+    property: "font-family",
+    read: ({ headers }) => headers.folioFont,
+    write: ({ headers }, value) => {
+      const font = asText(value);
+      if (font !== undefined) headers.folioFont = font;
     },
   },
   {

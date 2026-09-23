@@ -344,6 +344,8 @@ function whole(): Design {
       position: "center",
       pageNumber: "bottom",
       pageNumberFormat: "arabic",
+      font: "Junicode",
+      folioFont: "Alegreya",
       caps: "small-caps",
       letterSpacing: len(0.06, "em"),
       italic: true,
