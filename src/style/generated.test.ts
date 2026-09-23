@@ -62,7 +62,7 @@ test("the fixture's design generates the sheet checked in beside this spec", asy
   assert.doesNotMatch(root, /margin-(?:left|right)/);
 });
 
-test("the side margins are written into `@page :left` and `@page :right`, each swapped", () => {
+test("the side margins always write `@page :left` and `@page :right`, swapped", () => {
   const design = readDesign({ "margin-inside": "1in", "margin-outside": "0.5in" });
 
   const css = generatedCss(design, { sections: named([]) });
