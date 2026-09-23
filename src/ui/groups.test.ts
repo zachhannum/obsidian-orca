@@ -345,6 +345,32 @@ test("the capitals and the tracking rows sit with the places they set", () => {
   });
 });
 
+test("body text and every heading level share one alignment control, drawn with the alignment icons", () => {
+  const drawn = (each: Control): string[] =>
+    (each.choices ?? []).map((choice) => `${choice.value} ${choice.icon ?? "no icon"}`);
+  const body = control("body-align");
+  const heading = control("heading-N-align");
+
+  // Every text block orca sets is aligned in the same control.
+  assert.deepEqual(
+    PANEL_KEYS.filter((key) => key.endsWith("-align")),
+    ["body-align", ...LEVELS.map((level) => `heading-${String(level)}-align`)],
+  );
+  assert.equal(body.kind, "segment");
+  assert.equal(heading.kind, "segment");
+  assert.deepEqual(drawn(body), [
+    "left align-left",
+    "center align-center",
+    "right align-right",
+    "justify align-justify",
+  ]);
+  // The heading row drops justify and keeps the order of the rest.
+  assert.deepEqual(drawn(heading), drawn(body).slice(0, 3));
+  // The icon stands in for the word, and the word still names the value.
+  assert.equal(defaultSaid(body, "center", "in"), "Center");
+  assert.equal(defaultSaid(heading, "left", "in"), "Left");
+});
+
 // What this tier does not cover: the drawing itself. The e2e suite
 // reads it off the mounted panel. It checks which control a row draws
 // and whether a default is drawn faint. It checks whether a switch

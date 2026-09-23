@@ -351,11 +351,16 @@ export function Segment({
             )}
             data-testid={`${testid}-${choice.value}`}
             aria-pressed={on}
+            aria-label={choice.icon === undefined ? undefined : choice.label}
             onClick={() => {
               settle(choice.value);
             }}
           >
-            {choice.label}
+            {choice.icon === undefined ? (
+              choice.label
+            ) : (
+              <Icon name={choice.icon} className="orca-panel-icon" />
+            )}
           </button>
         );
       })}

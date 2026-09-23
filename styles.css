@@ -1623,6 +1623,12 @@ button.orca-panel-choice.is-on.is-default {
   color: var(--text-faint);
 }
 
+/* A button fills its share of the segment, so the icon centers inside it. */
+button.orca-panel-choice > .orca-panel-icon {
+  display: flex;
+  margin: 0 auto;
+}
+
 .orca-panel-switch {
   flex: none;
 }

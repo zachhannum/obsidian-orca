@@ -1072,12 +1072,27 @@ test("a control writes its key into the note, and the book is set again under it
   const painted = await book.painted();
   await panel.open();
 
-  // The fixture is set justified, so ragged right is a change the
-  // pages show.
+  // The fixture is set justified, so aligning left is a change the
+  // pages show. The control is the alignment icons, and each icon
+  // carries the word it stands for.
   await expect(panel.control("body-align")).toHaveAttribute(
     "data-on",
     "justify",
   );
+  await expect(panel.control("body-align").locator("button")).toHaveCount(4);
+  await expect(panel.choice("body-align", "justify")).toHaveAttribute(
+    "aria-label",
+    "Justified",
+  );
+  // Obsidian draws the word from the label, so the browser has no
+  // tooltip of its own to double it with.
+  await expect(panel.choice("body-align", "justify")).not.toHaveAttribute(
+    "title",
+    /./,
+  );
+  await expect(panel.choice("body-align", "left").locator("svg")).toBeVisible();
+  // A heading takes the same control, without justify.
+  await expect(panel.control("heading-1-align").locator("button")).toHaveCount(3);
   await panel.choice("body-align", "left").click();
 
   await expect(panel.control("body-align")).toHaveAttribute("data-on", "left");

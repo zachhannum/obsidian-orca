@@ -449,6 +449,21 @@ test("a design sets each font and variant once, and a level with no font takes t
   ]);
 });
 
+test("body text takes all four alignments, and a heading takes every one but justify", () => {
+  for (const align of ["left", "center", "right", "justify"]) {
+    const written = writeDesign(readDesign({ "body-align": align }));
+    assert.equal(written["body-align"], align);
+  }
+  for (const align of ["left", "center", "right"]) {
+    const written = writeDesign(readDesign({ "heading-2-align": align }));
+    assert.equal(written["heading-2-align"], align);
+  }
+  // The schema does not read justify at a heading, so the key is left
+  // to the layer under it.
+  const justified = writeDesign(readDesign({ "heading-2-align": "justify" }));
+  assert.equal(justified["heading-2-align"], undefined);
+});
+
 // What this tier does not cover: the declarations a design turns into,
 // which belong to the generated layer. The theme's tier covers the
 // defaults a book that sets nothing gets. The words the panel shows for
