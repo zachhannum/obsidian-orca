@@ -38,8 +38,10 @@ import type { Place } from "@/style/origin";
 import type { Override } from "@/style/overrides";
 import { effective } from "@/style/theme";
 import {
+  classes,
   Field,
   Glyphs,
+  inactive,
   Reset,
   Row,
   Segment,
@@ -56,6 +58,7 @@ import {
   GROUPS,
   atLevel,
   defaultSaid,
+  dimmed,
   inUnit,
   overriddenAt,
   trims,
@@ -456,6 +459,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
       reset={reset}
       under={under}
       keys={keyed.map(({ key }) => key)}
+      dim={dimmed(line, { ...drawing.full, ...own })}
       overridden={
         override === undefined
           ? undefined
@@ -517,8 +521,9 @@ function Beside({
       </span>
     );
   if (grid) {
+    const cell = inactive(overridden ? "overridden" : undefined);
     return (
-      <div className={overridden ? "orca-panel-cell is-overridden" : "orca-panel-cell"}>
+      <div {...cell} className={classes("orca-panel-cell", cell.className)}>
         {drawn}
         {said}
       </div>

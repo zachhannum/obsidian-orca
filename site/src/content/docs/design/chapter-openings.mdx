@@ -6,13 +6,13 @@ description: Where a chapter begins, its drop cap and its first line.
 
 import Shot from '../../../components/Shot.astro';
 
-By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the drop cap, and the type the first line is set in. The space above a chapter title is set in [Headings](/design/headings/).
+By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where a chapter begins, its drop cap and its first line. The space above a chapter title is set in [Headings](/design/headings/).
 
 <Shot
   name="panel-chapter-openings"
-  alt="The Chapter openings group of the design panel, with Begins on, Drop cap and First line."
+  alt="The Chapter openings group of the design panel, with Begins on, Drop cap, Drop cap font and First line."
   caption="The Chapter openings group."
-  marks={['chapter-begins', 'chapter-drop-cap', 'chapter-first-line-caps', 'chapter-first-line-letter-spacing']}
+  marks={['chapter-begins', 'chapter-drop-cap', 'chapter-drop-cap-font', 'chapter-first-line-caps', 'chapter-first-line-letter-spacing']}
   numbered
 />
 
@@ -22,8 +22,9 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 | --- | --- | --- | --- |
 | 1 | Begins on | `Next page` | `chapter-begins` |
 | 2 | Drop cap | `None` | `chapter-drop-cap` |
-| 3 | First line, capitals | `Normal` | `chapter-first-line-caps` |
-| 4 | First line, tracking | `None` | `chapter-first-line-letter-spacing` |
+| 3 | Drop cap font | `EB Garamond` | `chapter-drop-cap-font` |
+| 4 | First line, capitals | `Normal` | `chapter-first-line-caps` |
+| 5 | First line, tracking | `None` | `chapter-first-line-letter-spacing` |
 
 ## Where a chapter begins
 
@@ -32,6 +33,8 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 ## The drop cap
 
 A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
+
+`Drop cap font` sets the font of the drop cap. If no font is set, the drop cap takes the body font.
 
 ## The first line
 

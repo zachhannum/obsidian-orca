@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 257,
+  "height": 320,
   "marks": {
     "chapter-begins": {
       "x": 0,
@@ -14,15 +14,21 @@
       "width": 220,
       "height": 30
     },
-    "chapter-first-line-caps": {
+    "chapter-drop-cap-font": {
       "x": 0,
       "y": 193,
+      "width": 220,
+      "height": 30
+    },
+    "chapter-first-line-caps": {
+      "x": 0,
+      "y": 256,
       "width": 106,
       "height": 30
     },
     "chapter-first-line-letter-spacing": {
       "x": 114,
-      "y": 193,
+      "y": 256,
       "width": 106,
       "height": 30
     },

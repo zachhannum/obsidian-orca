@@ -325,6 +325,7 @@ function whole(): Design {
     chapter: {
       begins: "right-page",
       dropCap: 3,
+      dropCapFont: "Junicode",
       firstLineCaps: "all-caps",
       firstLineLetterSpacing: len(0.04, "em"),
     },
@@ -378,14 +379,17 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-test("a design names the body font and each heading level's font, each family once", () => {
+test("a design names the body font, each heading level's font and the drop cap's, each family once", () => {
   const design = emptyDesign();
   assert.deepEqual(designFonts(design), []);
   design.body.font = "Alegreya";
   design.headings[1].font = "Spectral";
   design.headings[2].font = "alegreya";
   design.headings[4].font = "Charter";
-  assert.deepEqual(designFonts(design), ["Alegreya", "Spectral", "Charter"]);
+  design.chapter.dropCapFont = "Junicode";
+  assert.deepEqual(designFonts(design), ["Alegreya", "Spectral", "Charter", "Junicode"]);
+  // The drop cap registers a face like any other place a font is set.
+  assert.deepEqual(designUses(design).at(-1), { font: "Junicode", variant: undefined });
 });
 
 test("a font's variant is written right after its font, and sets no CSS of its own", () => {

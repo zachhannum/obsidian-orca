@@ -98,7 +98,7 @@ export function generatedRules(
     ...pageRules(design, setting, registered),
     ...bodyRules(design, registered),
     ...headingRules(design, registered),
-    ...sectionRules(design, setting),
+    ...sectionRules(design, setting, registered),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
     ...sceneRules(design, registered),
@@ -541,7 +541,11 @@ function lined(count: number | undefined, design: Design): string | undefined {
   return count === undefined ? undefined : bodyLines(count, design);
 }
 
-function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
+function sectionRules(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[],
+): (Rule | undefined)[] {
   const rules = used(roles(setting)).map((role) => {
     const lines = [declared("page", role)];
     if (role === "chapter" && design.chapter.begins !== undefined) {
@@ -549,7 +553,7 @@ function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
     }
     return block(sectionsOf(setting.sections, role) ?? "", lines, role);
   });
-  return [...rules, ...restart(setting), ...chapterRules(design, setting)];
+  return [...rules, ...restart(setting), ...chapterRules(design, setting, registered)];
 }
 
 /**
@@ -573,23 +577,34 @@ function restart(setting: Setting): (Rule | undefined)[] {
 /**
  * The chapter openings. The drop cap falls on the paragraph the
  * opening headings lead into, so a note with text before its first
- * heading takes no drop cap.
+ * heading takes no drop cap. A chapter with no drop cap sets no font on
+ * its first letter, since the font is the cap's.
  */
-function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
+function chapterRules(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[],
+): (Rule | undefined)[] {
   const chapters = sectionsOf(setting.sections, "chapter");
   if (chapters === undefined) return [];
   const { chapter } = design;
-  const { dropCap } = chapter;
+  const { dropCap, dropCapFont } = chapter;
+  const falls = dropCap !== undefined && dropCap >= 2;
   const starts = (suffix: string): string =>
     TEXT_START.map((start) => `${chapters} > ${start}${suffix}`).join(",\n");
   return [
     block(
       starts(" + p::first-letter"),
       [
+        ...set("initial-letter", falls ? String(dropCap) : undefined, [
+          "chapter-drop-cap",
+        ]),
         ...set(
-          "initial-letter",
-          dropCap === undefined || dropCap < 2 ? undefined : String(dropCap),
-          ["chapter-drop-cap"],
+          "font-family",
+          !falls || dropCapFont === undefined
+            ? undefined
+            : family(dropCapFont, undefined, registered),
+          ["chapter-drop-cap-font"],
         ),
       ],
       "chapter",

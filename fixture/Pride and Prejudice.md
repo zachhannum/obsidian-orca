@@ -29,6 +29,7 @@ heading-2-space-above: 2
 heading-2-space-below: 1
 chapter-begins: right-page
 chapter-drop-cap: 3
+chapter-drop-cap-font: Alegreya
 scene-break-ornament: ⁂
 scene-break-font: Junicode
 header-left-page: author

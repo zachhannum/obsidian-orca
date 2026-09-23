@@ -133,7 +133,7 @@ test("a role reaches the sheet as a page name and as the ids of the sections tha
   );
   assert.match(
     css,
-    /:is\(section#chapter-twelve, section#chapter-fifteen\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n\}/,
+    /:is\(section#chapter-twelve, section#chapter-fifteen\) > :is\(h1(?:, h[2-6])+\):first-child \+ p::first-letter,\n(?:.+,\n)*.+ \{\n {2}initial-letter: 3;\n {2}font-family: "Alegreya", serif;\n\}/,
   );
 });
 
@@ -152,6 +152,27 @@ test("a chapter that stacks headings over its text still takes a drop cap", asyn
       `the drop cap left no initial behind under ${JSON.stringify(opening)}`,
     );
   }
+});
+
+test("the drop cap is set in the font of its own the design gives it", () => {
+  const design = emptyDesign();
+  design.chapter.dropCap = 3;
+  design.chapter.dropCapFont = "junicode";
+  const registered = [
+    { font: "Junicode", variant: undefined, family: "Junicode", faces: [] },
+  ];
+
+  const css = generatedCss(design, { sections: named(["chapter"]) }, registered);
+  assert.match(
+    css,
+    /p::first-letter \{\n {2}initial-letter: 3;\n {2}font-family: "Junicode", serif;\n\}/,
+  );
+
+  // The font sets the letter the drop cap makes, so a chapter with no
+  // drop cap writes neither.
+  design.chapter.dropCap = 0;
+  const none = generatedCss(design, { sections: named(["chapter"]) }, registered);
+  assert.doesNotMatch(none, /p::first-letter/);
 });
 
 test("the title page is set centered and down the page, with the publisher apart from the author", async () => {
