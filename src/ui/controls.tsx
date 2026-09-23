@@ -29,7 +29,10 @@ import type { Override } from "@/style/overrides";
 import {
   stepSaid,
   stepped,
+  styleOn,
+  styleToggled,
   typed,
+  STYLE_AXES,
   type Choice,
   type Measure,
   type Typed,
@@ -394,6 +397,55 @@ export function Segment({
             ) : (
               <Icon name={choice.icon} className="orca-panel-icon" />
             )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Draws the weight and the slope as one control: a button per axis,
+ * each drawn pressed while the style it names is on. A style is one
+ * value, so turning an axis on rewrites the whole name.
+ */
+export function FontStyle({
+  value,
+  faint,
+  testid,
+  settle,
+}: {
+  value: string | undefined;
+  faint: boolean;
+  testid: string;
+  settle: Settle;
+}): JSX.Element {
+  return (
+    <div
+      className="orca-panel-segment"
+      data-testid={testid}
+      data-on={value ?? ""}
+      data-default={String(faint)}
+    >
+      {STYLE_AXES.map(({ axis, icon, label }) => {
+        const on = styleOn(value, axis);
+        return (
+          <button
+            key={axis}
+            type="button"
+            className={classes(
+              "orca-panel-choice",
+              on && "is-on",
+              on && faint && "is-default",
+            )}
+            data-testid={`${testid}-${axis}`}
+            aria-pressed={on}
+            aria-label={label}
+            onClick={() => {
+              settle(styleToggled(value, axis));
+            }}
+          >
+            <Icon name={icon} className="orca-panel-icon" />
           </button>
         );
       })}

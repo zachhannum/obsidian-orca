@@ -40,6 +40,7 @@ import { effective } from "@/style/theme";
 import {
   classes,
   Field,
+  FontStyle,
   Glyphs,
   inactive,
   Reset,
@@ -625,6 +626,8 @@ function Drawn({
           settle={settle}
         />
       );
+    case "style":
+      return <FontStyle value={text} faint={faint} testid={testid} settle={settle} />;
     case "flag":
       return (
         <Switch on={value === true} faint={faint} testid={testid} settle={settle} />
@@ -772,6 +775,7 @@ function drawn(line: Listed, drawing: Drawing): boolean {
     (control) =>
       control.kind === "glyph" ||
       control.key === "scene-break-font" ||
+      control.key === "scene-break-style" ||
       control.key === "scene-break-size",
   );
   if (!ornamental) return true;
