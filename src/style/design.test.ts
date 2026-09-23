@@ -331,7 +331,8 @@ function whole(): Design {
     scene: {
       mark: "ornament",
       ornament: "⁂",
-      word: "Later",
+      font: "Junicode",
+      size: len(9.5, "pt"),
       spaceAbove: 1,
       spaceBelow: 1,
     },
@@ -341,6 +342,8 @@ function whole(): Design {
       position: "center",
       pageNumber: "bottom",
       pageNumberFormat: "arabic",
+      font: "Junicode",
+      folioFont: "Alegreya",
       caps: "small-caps",
       letterSpacing: len(0.06, "em"),
       italic: true,
@@ -446,6 +449,21 @@ test("a design sets each font and variant once, and a level with no font takes t
     { font: "Junicode", variant: "Cond" },
     { font: "Junicode", variant: undefined },
   ]);
+});
+
+test("body text takes all four alignments, and a heading takes every one but justify", () => {
+  for (const align of ["left", "center", "right", "justify"]) {
+    const written = writeDesign(readDesign({ "body-align": align }));
+    assert.equal(written["body-align"], align);
+  }
+  for (const align of ["left", "center", "right"]) {
+    const written = writeDesign(readDesign({ "heading-2-align": align }));
+    assert.equal(written["heading-2-align"], align);
+  }
+  // The schema does not read justify at a heading, so the key is left
+  // to the layer under it.
+  const justified = writeDesign(readDesign({ "heading-2-align": "justify" }));
+  assert.equal(justified["heading-2-align"], undefined);
 });
 
 // What this tier does not cover: the declarations a design turns into,

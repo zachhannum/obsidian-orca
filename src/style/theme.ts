@@ -89,7 +89,9 @@ export const DEFAULTS: Design = frozen({
 /**
  * Fills in every default under a design. A heading level with no font
  * of its own takes the body's font and variant as a pair. A level with
- * its own font and no variant keeps that font's default.
+ * its own font and no variant keeps that font's default. The running
+ * heads and the folios take the body's font, because a margin box is
+ * set from the book's root the way a paragraph is.
  */
 export function effective(design: Design): Design {
   const merged = mergeDesign(structuredClone(DEFAULTS), design);
@@ -102,6 +104,8 @@ export function effective(design: Design): Design {
     if (fontVariant === undefined) delete type.fontVariant;
     else type.fontVariant = fontVariant;
   }
+  merged.headers.font ??= font;
+  merged.headers.folioFont ??= font;
   return merged;
 }
 

@@ -1,4 +1,5 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
+import type { Cover } from "@/assets/cmap";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
   bookUses,
@@ -45,6 +46,8 @@ export interface Designing {
   fonts(uses: readonly FontUse[]): Promise<readonly ResolvedUse[]>;
   /** Registers one face of each variant of a family with the document, so each variant row draws in it. */
   preview(family: Family): Promise<void>;
+  /** The code points a family's default face covers, with that face registered so the browser draws them. */
+  coverage(family: Family): Promise<readonly Cover[]>;
   /** The unit the author measures pages in, from orca's settings. */
   unit(): PageUnit;
   /** Takes the pin off in every preview. */
@@ -126,6 +129,7 @@ export class DesignPanelView extends ItemView {
       preview: (family) => {
         void this.designing.preview(family);
       },
+      coverage: (family) => this.designing.coverage(family),
       view: (viewing) => {
         this.view(viewing);
       },

@@ -95,13 +95,13 @@ export function generatedRules(
   registered: readonly Registered[] = [],
 ): GeneratedRule[] {
   const rules = [
-    ...pageRules(design, setting),
+    ...pageRules(design, setting, registered),
     ...bodyRules(design, registered),
     ...headingRules(design, registered),
     ...sectionRules(design, setting),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
-    ...sceneRules(design),
+    ...sceneRules(design, registered),
   ].filter((rule) => rule !== undefined);
   let line = 1;
   return rules.map(({ css, from, selector, declarations }) => {
@@ -169,7 +169,11 @@ const OPENING = `${HEADINGS}:first-child`;
  */
 const TEXT_START = [OPENING, `${OPENING} + ${HEADINGS}`, `${OPENING} + ${HEADINGS} + ${HEADINGS}`];
 
-function pageRules(design: Design, setting: Setting): (Rule | undefined)[] {
+function pageRules(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[],
+): (Rule | undefined)[] {
   const { page, headers } = design;
   const { margins } = page;
   const root: Declaration[] = [];
@@ -202,11 +206,14 @@ function pageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   );
   for (const [box, content] of placed.both) rootBoxes.set(box, content);
 
+  const type = (pages: ReadonlyMap<Box, Content>): Declaration[] =>
+    boxes(pages, headers, placed.folio, registered);
+
   return [
-    block("@page", [...root, ...boxes(rootBoxes, headers)]),
-    block("@page :left", [...left, ...boxes(placed.left, headers)]),
-    block("@page :right", [...right, ...boxes(placed.right, headers)]),
-    ...frontPages(headers, placed, setting),
+    block("@page", [...root, ...type(rootBoxes)]),
+    block("@page :left", [...left, ...type(placed.left)]),
+    block("@page :right", [...right, ...type(placed.right)]),
+    ...frontPages(headers, placed, setting, registered),
     ...openingPages(headers, placed, setting),
   ];
 }
@@ -280,6 +287,7 @@ function frontPages(
   headers: HeaderDesign,
   placed: Placement,
   setting: Setting,
+  registered: readonly Registered[],
 ): (Rule | undefined)[] {
   if (placed.folio.size === 0) return [];
   const roman = (pages: ReadonlyMap<Box, Content>): Declaration[] =>
@@ -296,6 +304,8 @@ function frontPages(
           ]),
       ),
       headers,
+      placed.folio,
+      registered,
     );
   return front(roles(setting)).flatMap((role) => [
     block(`@page ${role}`, roman(placed.both), role),
@@ -343,23 +353,42 @@ function printed(placed: Placement): Box[] {
 
 /**
  * The margin boxes of one page rule, in the order the rule sets them. A
- * box that prints is set in the type the heads are set in. A box that
- * prints nothing takes none of it.
+ * box that prints is set in the type the heads are set in, in the head's
+ * font or the folio's by what it holds. A box that prints nothing takes
+ * none of it.
  */
-function boxes(content: ReadonlyMap<Box, Content>, headers: HeaderDesign): Declaration[] {
+function boxes(
+  content: ReadonlyMap<Box, Content>,
+  headers: HeaderDesign,
+  folio: ReadonlySet<Box>,
+  registered: readonly Registered[],
+): Declaration[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
     if (found === undefined) return [];
     const prints = boxed(box, "content", found.content, found.keys);
     return found.content === "none"
       ? [prints]
-      : [prints, ...inBox(box, headLines(headers))];
+      : [prints, ...inBox(box, headLines(headers, folio.has(box), registered))];
   });
 }
 
-/** The type the running heads and the folio are set in. */
-function headLines(headers: HeaderDesign): Declaration[] {
+/**
+ * The type one margin box is set in. The heads and the folio are set
+ * in one face each, and take the same case, tracking and slope.
+ */
+function headLines(
+  headers: HeaderDesign,
+  folio: boolean,
+  registered: readonly Registered[],
+): Declaration[] {
+  const font = folio ? headers.folioFont : headers.font;
   return [
+    ...set(
+      "font-family",
+      font === undefined ? undefined : family(font, undefined, registered),
+      [folio ? "folio-font" : "header-font"],
+    ),
     ...typeset(headers.caps, headers.letterSpacing, "header"),
     ...set("font-style", flagged(headers.italic, "italic", "normal"), ["header-italic"]),
   ];
@@ -691,12 +720,17 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   ];
 }
 
-function sceneRules(design: Design): (Rule | undefined)[] {
+/** A scene break with no font or size of its own declares neither, so it inherits the body's. */
+function sceneRules(design: Design, registered: readonly Registered[]): (Rule | undefined)[] {
   const { scene } = design;
-  const lines = [...set("content", sceneContent(scene), sceneKeys(scene))];
-  if (scene.mark === "word" && scene.word !== undefined) {
-    lines.push(declared("text-align", "center", ["scene-break-mark", "scene-break-word"]));
+  const lines: Declaration[] = [];
+  if (scene.font !== undefined) {
+    lines.push(
+      declared("font-family", family(scene.font, undefined, registered), ["scene-break-font"]),
+    );
   }
+  lines.push(...set("font-size", written(scene.size), ["scene-break-size"]));
+  lines.push(...set("content", sceneContent(scene), sceneKeys(scene)));
   lines.push(
     ...set(
       "margin-top",
@@ -723,16 +757,14 @@ function sceneRules(design: Design): (Rule | undefined)[] {
  * ornament.
  */
 function sceneContent(scene: SceneDesign): string | undefined {
-  const { mark, ornament, word } = scene;
+  const { mark, ornament } = scene;
   if (mark === "space") return "none";
-  if (mark === "word") return word === undefined ? undefined : quoted(word);
   return ornament === undefined ? undefined : quoted(ornament);
 }
 
 function sceneKeys(scene: SceneDesign): string[] {
   const mark = scene.mark === undefined ? [] : ["scene-break-mark"];
   if (scene.mark === "space") return mark;
-  if (scene.mark === "word") return [...mark, "scene-break-word"];
   return [...mark, "scene-break-ornament"];
 }
 

@@ -35,12 +35,14 @@ import { membership, type Member } from "@/ui/member";
 import { runExtensions, type Marking } from "@/ui/marks";
 import { readingProcessor } from "@/ui/reading";
 import {
+  documentCoverage,
   documentPreviews,
   fontPlaces,
   previewFaces,
   previewVariants,
   readFontIndex,
   resolveUse,
+  type Coverages,
   type FontPlaces,
   type Previews,
   type ResolvedUse,
@@ -115,6 +117,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private fonts: FontPlaces | undefined;
   /** The preview faces registered with the document, each family once. */
   private previews: Previews | undefined;
+  private coverages: Coverages | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
 
@@ -1237,6 +1240,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
     return previewVariants(this.places(), family, this.documentPreviews());
   }
 
+  private documentCoverage(): Coverages {
+    this.coverages ??= documentCoverage(this.places(), this.documentPreviews());
+    return this.coverages;
+  }
+
   private documentPreviews(): Previews {
     this.previews ??= documentPreviews(document);
     return this.previews;
@@ -1252,6 +1260,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       index: () => this.fontIndex(),
       fonts: (uses) => this.resolved(uses),
       preview: (family) => this.previewVariants(family),
+      coverage: (family) => this.documentCoverage().of(family),
       unit: () => this.limits.unit,
       unpin: () => {
         for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {

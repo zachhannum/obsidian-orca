@@ -54,7 +54,8 @@ export function missingFont(
 
 /**
  * The warnings for every font a design names that the machine does not
- * have, one per family: the body font and each heading level's.
+ * have, one per family: the body font, each heading level's, and the
+ * fonts the running heads and the folios are set in.
  */
 export function missingFonts(index: FontIndex, design: Design): string[] {
   return designFonts(design).flatMap((font) => missingFont(index, font) ?? []);
