@@ -87,6 +87,8 @@ export interface BodyDesign {
   font?: string;
   /** The font's variant, by name. A font's default variant is stored as absent. */
   fontVariant?: string;
+  /** The weight and the slope the text is set in. */
+  style?: FontStyle;
   size?: Length;
   lineSpacing?: Length;
   align?: Alignment;
@@ -107,14 +109,20 @@ export interface BodyDesign {
 /** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
 export type Caps = "normal" | "small-caps" | "all-caps";
 
+/** The weight and the slope a place is set in, as one name per style. */
+export type FontStyle = "normal" | "bold" | "italic" | "bold-italic";
+
 /**
- * The type a heading is set in. Bold and italic inside a heading come
- * from the markdown, so a spec sets neither.
+ * The type a heading is set in. The style the spec sets is the level's
+ * own, and bold or italic written inside a heading still comes from the
+ * markdown.
  */
 export interface TypeSpec {
   font?: string;
   /** The font's variant, by name. A font's default variant is stored as absent. */
   fontVariant?: string;
+  /** The weight and the slope the level is set in. */
+  style?: FontStyle;
   size?: Length;
   /** The case the level is set in. */
   caps?: Caps;
@@ -143,6 +151,8 @@ export interface ChapterDesign {
   dropCap?: number;
   /** The font the drop cap is set in. A chapter with none set takes the body's font. */
   dropCapFont?: string;
+  /** The weight and the slope the drop cap is set in. */
+  dropCapStyle?: FontStyle;
   /** The case a chapter's first line is set in. */
   firstLineCaps?: Caps;
   /** The letter spacing on a chapter's first line. */
@@ -158,6 +168,8 @@ export interface SceneDesign {
   ornament?: string;
   /** The face the mark is set in. A scene break with no font of its own takes the body's. */
   font?: string;
+  /** The weight and the slope the mark is set in. */
+  style?: FontStyle;
   /** The size the mark is set at. A scene break with no size of its own takes the body's. */
   size?: Length;
   /** The blank space above a scene break, in lines of body text. */
@@ -201,8 +213,10 @@ export interface HeaderDesign {
   caps?: Caps;
   /** The letter spacing on the running heads. */
   letterSpacing?: Length;
-  /** When true, the running heads are set in italic. A margin box takes no markdown. */
-  italic?: boolean;
+  /** The weight and the slope the running heads are set in. A margin box takes no markdown. */
+  style?: FontStyle;
+  /** The weight and the slope the folio is set in. */
+  folioStyle?: FontStyle;
   /** When true, the page a section opens on has no running head and no folio. */
   suppressOnOpenings?: boolean;
 }
@@ -348,6 +362,9 @@ interface Field {
 /** Small caps is a font feature and all caps a transform, so one key sets either. */
 const CAPS_PROPERTIES: readonly string[] = ["font-variant-caps", "text-transform"];
 
+/** A style names a weight and a slope together, so one key sets both. */
+const STYLE_PROPERTIES: readonly string[] = ["font-weight", "font-style"];
+
 /** The space above a heading is padding where the heading opens a section, and margin elsewhere. */
 const SPACE_ABOVE_PROPERTIES: readonly string[] = ["margin-top", "padding-top"];
 
@@ -388,6 +405,15 @@ const BODY: readonly Field[] = [
     write: ({ body }, value) => {
       const variant = asText(value);
       if (variant !== undefined) body.fontVariant = variant;
+    },
+  },
+  {
+    key: "body-style",
+    property: STYLE_PROPERTIES,
+    read: ({ body }) => body.style,
+    write: ({ body }, value) => {
+      const style = asWord(value, FONT_STYLES);
+      if (style !== undefined) body.style = style;
     },
   },
   {
@@ -511,6 +537,15 @@ const CHAPTER: readonly Field[] = [
     },
   },
   {
+    key: "chapter-drop-cap-style",
+    property: STYLE_PROPERTIES,
+    read: ({ chapter }) => chapter.dropCapStyle,
+    write: ({ chapter }, value) => {
+      const style = asWord(value, FONT_STYLES);
+      if (style !== undefined) chapter.dropCapStyle = style;
+    },
+  },
+  {
     key: "chapter-first-line-caps",
     property: CAPS_PROPERTIES,
     read: ({ chapter }) => chapter.firstLineCaps,
@@ -556,6 +591,15 @@ const SCENE: readonly Field[] = [
     write: ({ scene }, value) => {
       const font = asText(value);
       if (font !== undefined) scene.font = font;
+    },
+  },
+  {
+    key: "scene-break-style",
+    property: STYLE_PROPERTIES,
+    read: ({ scene }) => scene.style,
+    write: ({ scene }, value) => {
+      const style = asWord(value, FONT_STYLES);
+      if (style !== undefined) scene.style = style;
     },
   },
   {
@@ -645,6 +689,24 @@ const HEADERS: readonly Field[] = [
     },
   },
   {
+    key: "header-style",
+    property: STYLE_PROPERTIES,
+    read: ({ headers }) => headers.style,
+    write: ({ headers }, value) => {
+      const style = asWord(value, FONT_STYLES);
+      if (style !== undefined) headers.style = style;
+    },
+  },
+  {
+    key: "folio-style",
+    property: STYLE_PROPERTIES,
+    read: ({ headers }) => headers.folioStyle,
+    write: ({ headers }, value) => {
+      const style = asWord(value, FONT_STYLES);
+      if (style !== undefined) headers.folioStyle = style;
+    },
+  },
+  {
     key: "header-caps",
     property: CAPS_PROPERTIES,
     read: ({ headers }) => headers.caps,
@@ -660,15 +722,6 @@ const HEADERS: readonly Field[] = [
     write: ({ headers }, value) => {
       const spacing = asLength(value);
       if (spacing !== undefined) headers.letterSpacing = spacing;
-    },
-  },
-  {
-    key: "header-italic",
-    property: "font-style",
-    read: ({ headers }) => headers.italic,
-    write: ({ headers }, value) => {
-      const flag = asFlag(value);
-      if (flag !== undefined) headers.italic = flag;
     },
   },
   {
@@ -849,6 +902,14 @@ const HEADING_ALIGNMENTS: readonly HeadingAlignment[] = ["left", "center", "righ
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
 
+/** The styles a design sets, in the order the panel offers them. */
+export const FONT_STYLES: readonly FontStyle[] = [
+  "normal",
+  "bold",
+  "italic",
+  "bold-italic",
+];
+
 const MARKS: readonly SceneMark[] = ["space", "ornament"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
@@ -894,6 +955,15 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const variant = asText(value);
         if (variant !== undefined) headings[level].fontVariant = variant;
+      },
+    },
+    {
+      key: `heading-${level}-style`,
+      property: STYLE_PROPERTIES,
+      read: ({ headings }) => headings[level].style,
+      write: ({ headings }, value) => {
+        const style = asWord(value, FONT_STYLES);
+        if (style !== undefined) headings[level].style = style;
       },
     },
     {

@@ -1,0 +1,121 @@
+@page {
+  @top-left { content: none; }
+  @top-center { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-center { content: counter(page, decimal); font-weight: normal; font-style: normal; }
+  @bottom-right { content: none; }
+}
+
+@page :left {
+  @top-left { content: "Jane Austen"; font-weight: bold; font-style: italic; }
+}
+
+@page :right {
+  @top-right { content: string(chapter); font-weight: bold; font-style: italic; }
+}
+
+@page title-page {
+  @bottom-center { content: counter(page, lower-roman); font-weight: normal; font-style: normal; }
+}
+
+@page copyright {
+  @bottom-center { content: counter(page, lower-roman); font-weight: normal; font-style: normal; }
+}
+
+@page title-page:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+@page copyright:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+@page chapter:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+book {
+  font-weight: normal;
+  font-style: italic;
+}
+
+h1 {
+  font-weight: bold;
+  font-style: normal;
+}
+
+h2 {
+  font-weight: normal;
+  font-style: normal;
+}
+
+h3 {
+  font-weight: bold;
+  font-style: italic;
+}
+
+h4 {
+  font-weight: normal;
+  font-style: italic;
+}
+
+h5 {
+  font-weight: bold;
+  font-style: normal;
+}
+
+h6 {
+  font-weight: normal;
+  font-style: normal;
+}
+
+section#title-page-1 {
+  page: title-page;
+}
+
+section#copyright-2 {
+  page: copyright;
+}
+
+:is(section#chapter-3, section#chapter-4) {
+  page: chapter;
+}
+
+section#chapter-3 {
+  counter-reset: page 1;
+}
+
+:is(section#chapter-3, section#chapter-4) > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-letter,
+:is(section#chapter-3, section#chapter-4) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + p::first-letter,
+:is(section#chapter-3, section#chapter-4) > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) + p::first-letter {
+  initial-letter: 3;
+  font-weight: bold;
+  font-style: normal;
+}
+
+section#title-page-1 > * {
+  text-align: center;
+  text-indent: 0;
+  margin: 0;
+}
+
+section#title-page-1 > :first-child {
+  padding-top: 6em;
+}
+
+section#title-page-1 > p + h1,
+section#title-page-1 > h1 + p {
+  padding-top: 1em;
+}
+
+hr {
+  font-weight: normal;
+  font-style: italic;
+}
