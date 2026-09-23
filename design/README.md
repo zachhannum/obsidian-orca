@@ -145,10 +145,13 @@ its editor around these files and returns a URL. The artboard list and
 - A heading level, a chapter's first line and the running heads each
   take capitals and tracking. A title's own type sits with the level it
   is written at, not with the chapter's layout, and so does the space
-  above and below it. The running heads also
-  take a slope, because a margin box prints a generated string. A title
-  takes its slope from the note, and a first line takes none, because
-  the engine sets no slope there.
+  above and below it.
+- One font style control sets the weight and the slope, drawn as a bold
+  button and an italic button. Body text, each heading level, the drop
+  cap, the scene break, the running heads and the folio each take one.
+  Bold or italic written inside a heading still comes from the note. A
+  chapter's first line takes no style, because the engine sets none
+  there.
 - A running head set to the chapter title reads the section's first
   heading, whatever level it is written at. The Heads & folios group
   picks the level to read instead, and a chapter with no heading there

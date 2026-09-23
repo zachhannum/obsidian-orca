@@ -1062,6 +1062,48 @@ test("picking capitals writes the key and repaints the pages", async ({
   await written(vault, own);
 });
 
+test("a click on the bold or the italic button writes the style the two name", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  const style = panel.control("heading-1-style");
+  await expect(style).toHaveAttribute("data-default", "true");
+  await panel.choice("heading-1-style", "italic").click();
+
+  await expect(style).toHaveAttribute("data-on", "italic");
+  await expect(panel.choice("heading-1-style", "italic")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("heading-1-style: italic");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // Each button turns its own axis over, so the two together are one
+  // style with one name.
+  await panel.choice("heading-1-style", "bold").click();
+
+  await expect(style).toHaveAttribute("data-on", "bold-italic");
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("heading-1-style: bold-italic");
+
+  await panel.reset("heading-1-style").click();
+
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("heading-1-style:");
+  await expect(style).toHaveAttribute("data-default", "true");
+
+  await written(vault, own);
+});
+
 test("the reset takes a key out of the note, and the field shows the default", async ({
   book,
   panel,
