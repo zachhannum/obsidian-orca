@@ -266,6 +266,20 @@ export class Book {
     await this.folio.press("Enter");
   }
 
+  /**
+   * Turns to `folio` and comes back once the surface opens on it. A
+   * book still settling from the spec before paints again and comes
+   * back to page 1, so the folio is typed again at the new generation.
+   */
+  async turnTo(folio: number): Promise<void> {
+    await expect
+      .poll(async () => {
+        await this.type(String(folio));
+        return this.surface.getAttribute("data-first");
+      })
+      .toBe(String(folio));
+  }
+
   /** Turns to a chapter by name, the way a reader picks one off the bar. */
   async choose(name: string): Promise<void> {
     await this.chapter.selectOption({ label: name });
@@ -454,6 +468,19 @@ export class Book {
   async painted(): Promise<number> {
     await expect(this.surface).toHaveAttribute("data-generation", /\d+/);
     return Number(await this.surface.getAttribute("data-generation"));
+  }
+
+  /** Every face the session the pane reads holds, by the name the engine's font table gives it. */
+  async faces(book: string): Promise<string[]> {
+    const table = await this.obsidian.page.evaluate(
+      async ({ id, at }) => {
+        const orca = window.app.plugins.plugins[id] as Holding | undefined;
+        const typeset = await orca?.composer?.opened(at);
+        return typeset?.session.faces.map((face) => face.name);
+      },
+      { id: PLUGIN, at: book },
+    );
+    return table ?? [];
   }
 
   /**

@@ -1,18 +1,18 @@
 ---
 title: Chapter openings
 eyebrow: Design
-description: Where a chapter begins, the space above its title, its drop cap and its first line.
+description: Where a chapter begins, its drop cap and its first line.
 ---
 
 import Shot from '../../../components/Shot.astro';
 
-By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the space above and below its title, the drop cap and the font it is set in, and the type the first line is set in.
+By default, a chapter starts on a new page. The Chapter openings group in the design panel sets where the chapter begins, the drop cap and the font it is set in, and the type the first line is set in. The space above a chapter title is set in [Headings](/design/headings/).
 
 <Shot
   name="panel-chapter-openings"
-  alt="The Chapter openings group of the design panel, with Begins on, Space above, Space below, Drop cap, Drop cap font and First line."
+  alt="The Chapter openings group of the design panel, with Begins on, Drop cap, Drop cap font and First line."
   caption="The Chapter openings group."
-  marks={['chapter-begins', 'chapter-space-above', 'chapter-space-below', 'chapter-drop-cap', 'chapter-drop-cap-font', 'chapter-first-line-caps', 'chapter-first-line-letter-spacing']}
+  marks={['chapter-begins', 'chapter-drop-cap', 'chapter-drop-cap-font', 'chapter-first-line-caps', 'chapter-first-line-letter-spacing']}
   numbered
 />
 
@@ -21,25 +21,23 @@ By default, a chapter starts on a new page. The Chapter openings group in the de
 | # | Control | Default | Key |
 | --- | --- | --- | --- |
 | 1 | Begins on | `Next page` | `chapter-begins` |
-| 2 | Space above | 0 lines | `chapter-space-above` |
-| 3 | Space below | 0 lines | `chapter-space-below` |
-| 4 | Drop cap | `None` | `chapter-drop-cap` |
-| 5 | Drop cap font | `EB Garamond` | `chapter-drop-cap-font` |
-| 6 | First line, capitals | `Normal` | `chapter-first-line-caps` |
-| 7 | First line, tracking | `None` | `chapter-first-line-letter-spacing` |
+| 2 | Drop cap | `None` | `chapter-drop-cap` |
+| 3 | Drop cap font | `EB Garamond` | `chapter-drop-cap-font` |
+| 4 | First line, capitals | `Normal` | `chapter-first-line-caps` |
+| 5 | First line, tracking | `None` | `chapter-first-line-letter-spacing` |
 
 ## Where a chapter begins
 
 `Begins on` takes one of three values. `Next page` starts the chapter on a new page. `Right-hand page` starts the chapter on a right page. If the next page is a left page, orca leaves that page blank. `Same page` starts the chapter on the same page, below the chapter before it.
 
-## Space and drop cap
+## The drop cap
 
-`Space above` and `Space below` are counts of lines of text. A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
+A drop cap is a large first letter. `Drop cap` makes the first letter of the chapter 2, 3 or 4 lines tall.
 
 `Drop cap font` sets the letter in a font of its own, which is usually a display face. A chapter that sets no font here takes the body font. The row dims while `Drop cap` is `None`, because there is no letter to set.
 
 ## The first line
 
-The `First line` row sets the capitals and the tracking of the chapter's first line. Small caps on the first line is the usual setting for a novel. The line is measured after the text is broken, so a wider page takes more words into capitals.
+The `First line` row sets the capitals and the tracking of the chapter's first line. The line is measured after the text is broken, so a wider page takes more words into capitals.
 
 The engine sets no slope on a first line, so the row offers capitals and tracking alone. The title takes its own capitals and tracking in the Headings group.

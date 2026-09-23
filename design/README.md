@@ -121,6 +121,11 @@ its editor around these files and returns a URL. The artboard list and
   variant shows none. A book with no variant picked sets in the
   family's default variant, and each variant row is set in its own
   face.
+- The Glyph row offers four ornaments and a browser over the face the
+  scene break is set in. The browser lists every code point that face
+  covers, under the name of the Unicode block the code point sits in.
+  An ornamental font holds its ornaments where it likes, so the browser
+  hides no block.
 - The Fonts group follows Headings and adds a font the design names
   nowhere. The picker is the Font control's, and a font added this way
   registers a face, so the author's CSS can set text in it by name. The
@@ -139,10 +144,17 @@ its editor around these files and returns a URL. The artboard list and
   the same page are the other choices.
 - A heading level, a chapter's first line and the running heads each
   take capitals and tracking. A title's own type sits with the level it
-  is written at, not with the chapter's layout. The running heads also
+  is written at, not with the chapter's layout, and so does the space
+  above and below it. The running heads also
   take a slope, because a margin box prints a generated string. A title
   takes its slope from the note, and a first line takes none, because
   the engine sets no slope there.
+- The running heads take a font of their own, and the folios take
+  another, because a head is usually set in another face than the text
+  and a folio in another face again. Neither row has a Variant row, so
+  each sets in its family's default variant. A head or a folio with no
+  font of its own is set in the book's font, and its row shows that
+  font the way a heading's Font row does.
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.

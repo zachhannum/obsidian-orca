@@ -55,8 +55,8 @@ export const WORKS: readonly string[] = [
   'body-hyphens',
   'heading-1-size',
   'heading-1-align',
-  'chapter-space-above',
-  'chapter-space-below',
+  'heading-1-space-above',
+  'heading-1-space-below',
   'chapter-drop-cap',
   'suppress-head-on-openings',
 ];

@@ -24,6 +24,9 @@ import {
   type Control,
 } from "@/ui/groups";
 
+/** The keys a scene break takes from the body when it sets none of its own. */
+const SCENE_INHERITS = ["scene-break-font", "scene-break-size"];
+
 /** The control that writes `key`. */
 function control(key: string): Control {
   const found = GROUPS.flatMap((group) => group.rows)
@@ -51,7 +54,7 @@ test("the panel offers every group a book designer works in", () => {
   }
 });
 
-test("the Headings group sets font, variant, size, capitals, tracking and alignment at every level, and chapter openings set none", () => {
+test("the Headings group sets the type and the space at every level, and chapter openings set none", () => {
   const headings = GROUPS.find((group) => group.name === "Headings");
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
   assert.ok(headings !== undefined && openings !== undefined);
@@ -60,7 +63,16 @@ test("the Headings group sets font, variant, size, capitals, tracking and alignm
     new Set(keysOf(headings)),
     new Set(
       LEVELS.flatMap((level) =>
-        ["font", "font-variant", "size", "caps", "letter-spacing", "align"].map(
+        [
+          "font",
+          "font-variant",
+          "size",
+          "caps",
+          "letter-spacing",
+          "align",
+          "space-above",
+          "space-below",
+        ].map(
           (part) => `heading-${String(level)}-${part}`,
         ),
       ),
@@ -91,14 +103,15 @@ test("every word the panel draws is spelled the American way", () => {
   }
 });
 
-test("every key the panel writes has a default, except the word a scene break is marked with and a font's variant", () => {
+test("every key the panel writes has a default, except what a scene break takes from the body and a font's variant", () => {
   const defaults = writeDesign(effective(emptyDesign()));
   for (const key of PANEL_KEYS) {
-    // A font's default variant is written as absent.
-    if (key === "scene-break-word" || key.endsWith("-font-variant")) continue;
+    // A font's default variant is written as absent, and a scene break
+    // with no face or size of its own takes the body's.
+    if (SCENE_INHERITS.includes(key) || key.endsWith("-font-variant")) continue;
     assert.notEqual(defaults[key], undefined, `\`${key}\` has no default`);
   }
-  assert.equal(defaults["scene-break-word"], undefined);
+  for (const key of SCENE_INHERITS) assert.equal(defaults[key], undefined);
 });
 
 test("a reset names the default in the words the control draws it with", () => {
@@ -135,6 +148,21 @@ test("a chapter begins on the next page unless the book says otherwise, and that
   const begins = control("chapter-begins");
   assert.equal(begins.choices?.[0]?.value, "next-page");
   assert.equal(writeDesign(effective(emptyDesign()))["chapter-begins"], "next-page");
+});
+
+test("a scene break is marked with a space or a glyph, and the glyph is set in a face and a size under it", () => {
+  assert.deepEqual(
+    control("scene-break-mark").choices?.map((choice) => choice.value),
+    ["space", "ornament"],
+  );
+
+  const group = GROUPS.find((each) => each.name === "Scene breaks");
+  assert.deepEqual(
+    group?.rows.map((row) => row.label),
+    ["Mark", "Glyph", "Font", "Size", "Space above", "Space below"],
+  );
+  assert.equal(control("scene-break-font").kind, "font");
+  assert.equal(control("scene-break-size").kind, "length");
 });
 
 test("every word a select or a segment offers is a value the schema reads back", () => {
@@ -295,8 +323,6 @@ test("the capitals and the tracking rows sit with the places they set", () => {
 
   assert.deepEqual(keysOf(openings), [
     "chapter-begins",
-    "chapter-space-above",
-    "chapter-space-below",
     "chapter-drop-cap",
     "chapter-drop-cap-font",
     "chapter-first-line-caps",
@@ -311,9 +337,13 @@ test("the capitals and the tracking rows sit with the places they set", () => {
       "heading-1-caps",
       "heading-1-letter-spacing",
       "heading-1-align",
+      "heading-1-space-above",
+      "heading-1-space-below",
     ],
   );
   assert.deepEqual(keysOf(heads).slice(5), [
+    "header-font",
+    "folio-font",
     "header-caps",
     "header-letter-spacing",
     "header-italic",
@@ -345,6 +375,32 @@ test("the drop cap font row sits under the drop cap row, and dims while the drop
   const cap = openings.rows[at];
   assert.ok(cap !== undefined);
   assert.equal(dimmed(cap, { "chapter-drop-cap": 0 }), false);
+});
+
+test("body text and every heading level share one alignment control, drawn with the alignment icons", () => {
+  const drawn = (each: Control): string[] =>
+    (each.choices ?? []).map((choice) => `${choice.value} ${choice.icon ?? "no icon"}`);
+  const body = control("body-align");
+  const heading = control("heading-N-align");
+
+  // Every text block orca sets is aligned in the same control.
+  assert.deepEqual(
+    PANEL_KEYS.filter((key) => key.endsWith("-align")),
+    ["body-align", ...LEVELS.map((level) => `heading-${String(level)}-align`)],
+  );
+  assert.equal(body.kind, "segment");
+  assert.equal(heading.kind, "segment");
+  assert.deepEqual(drawn(body), [
+    "left align-left",
+    "center align-center",
+    "right align-right",
+    "justify align-justify",
+  ]);
+  // The heading row drops justify and keeps the order of the rest.
+  assert.deepEqual(drawn(heading), drawn(body).slice(0, 3));
+  // The icon stands in for the word, and the word still names the value.
+  assert.equal(defaultSaid(body, "center", "in"), "Center");
+  assert.equal(defaultSaid(heading, "left", "in"), "Left");
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite

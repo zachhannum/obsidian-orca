@@ -40,11 +40,25 @@ const SECOND_CHAPTER = `${SECOND_NAME}.md`;
 /** The font the fixture vault ships, and the one the specs pick. */
 const FIXTURE_FONT = "Alegreya";
 
+/** The fixture's ornamental face, and the code points it covers. */
+const ORNAMENT = "Noto Sans Symbols 2";
+const ORNAMENT_GLYPHS = 194;
+
+/** The fixture body's size, which a scene break prints at until it takes one, and a size of its own. */
+const BODY_SIZE = "10.5pt";
+const ORNAMENT_SIZE = "18pt";
+
 /** A font no machine installs, so the filter matches nothing. */
 const NOWHERE = "Zzyzx Grotesque";
 
 /** The font the engine carries, which a book is set in until one is picked. */
 const CARRIED = "EB Garamond";
+
+/** The author, which the fixture prints as the running head on a verso. */
+const AUTHOR = "Jane Austen";
+
+/** A verso of set text inside a chapter, which carries a head and a folio. */
+const HEAD_PAGE = 12;
 
 /** A right sidebar narrower than the panel's artboard, in pixels. */
 const NARROW = 260;
@@ -331,6 +345,38 @@ test("a heading font picked in the panel is still the headings' font after Obsid
   await panel.open();
   await expect(panel.control("heading-1-font")).toContainText(FIXTURE_FONT);
   await expect(panel.missing).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("the heads and the folios are set in the fonts their own rows pick", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  // The fixture sets both in the font its vault ships.
+  await expect(panel.control("header-font")).toContainText(FIXTURE_FONT);
+  await expect(panel.control("folio-font")).toContainText(FIXTURE_FONT);
+
+  await panel.chooseFont("header-font", VARIED);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`header-font: ${VARIED}`);
+
+  // The head on a verso takes the picked face.
+  await book.type(String(HEAD_PAGE));
+  await expect(book.surface).toHaveAttribute("data-first", String(HEAD_PAGE));
+  await expect
+    .poll(async () => book.facesOf(BOOK, AUTHOR))
+    .toContainEqual(expect.stringMatching(new RegExp(`^${VARIED}`, "i")));
+
+  // The folio is set from a row of its own, which the pick left alone.
+  await expect(panel.control("folio-font")).toContainText(FIXTURE_FONT);
+  await expect.poll(async () => vault.read(BOOK)).toContain(`folio-font: ${FIXTURE_FONT}`);
 
   await written(vault, own);
 });
@@ -886,12 +932,12 @@ test("a key the book does not set is drawn at its default, in faint type", async
   await book.painted();
   await panel.open();
 
-  // The fixture sets no space below a chapter's title.
-  const below = panel.control("chapter-space-below");
+  // The fixture sets no space below a level 1 heading.
+  const below = panel.control("heading-1-space-below");
   await expect(below).toHaveValue("0");
   await expect(below).toHaveAttribute("data-default", "true");
   await expect(below).toHaveClass(/is-default/);
-  await expect(panel.reset("chapter-space-below")).toHaveCount(0);
+  await expect(panel.reset("heading-1-space-below")).toHaveCount(0);
 
   // A key the fixture sets shows its own value and a reset.
   await expect(panel.control("chapter-drop-cap")).toHaveAttribute(
@@ -990,17 +1036,17 @@ test("the stepper moves a count by one line, and the note is written", async ({
   await book.painted();
   await panel.open();
 
-  await expect(panel.control("chapter-space-above")).toHaveValue("7");
-  await expect(panel.up("chapter-space-above")).toHaveAttribute(
+  await expect(panel.control("heading-1-space-above")).toHaveValue("7");
+  await expect(panel.up("heading-1-space-above")).toHaveAttribute(
     "aria-label",
     "Increase by 1 line",
   );
-  await panel.up("chapter-space-above").click();
+  await panel.up("heading-1-space-above").click();
 
   await expect.poll(async () => vault.read(BOOK)).toContain(
-    "chapter-space-above: 8",
+    "heading-1-space-above: 8",
   );
-  await expect(panel.control("chapter-space-above")).toHaveValue("8");
+  await expect(panel.control("heading-1-space-above")).toHaveValue("8");
 
   await written(vault, own);
 });
@@ -1091,12 +1137,27 @@ test("a control writes its key into the note, and the book is set again under it
   const painted = await book.painted();
   await panel.open();
 
-  // The fixture is set justified, so ragged right is a change the
-  // pages show.
+  // The fixture is set justified, so aligning left is a change the
+  // pages show. The control is the alignment icons, and each icon
+  // carries the word it stands for.
   await expect(panel.control("body-align")).toHaveAttribute(
     "data-on",
     "justify",
   );
+  await expect(panel.control("body-align").locator("button")).toHaveCount(4);
+  await expect(panel.choice("body-align", "justify")).toHaveAttribute(
+    "aria-label",
+    "Justified",
+  );
+  // Obsidian draws the word from the label, so the browser has no
+  // tooltip of its own to double it with.
+  await expect(panel.choice("body-align", "justify")).not.toHaveAttribute(
+    "title",
+    /./,
+  );
+  await expect(panel.choice("body-align", "left").locator("svg")).toBeVisible();
+  // A heading takes the same control, without justify.
+  await expect(panel.control("heading-1-align").locator("button")).toHaveCount(3);
   await panel.choice("body-align", "left").click();
 
   await expect(panel.control("body-align")).toHaveAttribute("data-on", "left");
@@ -1336,6 +1397,149 @@ test("setting a key draws its reset without moving the control", async ({
   await expect(position).toHaveAttribute("data-on", "center");
   await expect(panel.reset("header-position")).toBeVisible();
   expect(await panel.placed("header-position")).toEqual(before);
+
+  await written(vault, own);
+});
+
+test("the glyph browser lists the face's own code points, and picking one marks the scene break", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture marks its scene breaks with one of the ornaments the
+  // row offers, and nothing on the row is typed into.
+  const glyphs = panel.control("scene-break-ornament");
+  await expect(glyphs).toHaveAttribute("data-on", "⁂");
+  await expect(panel.control("scene-break-ornament-typed")).toHaveCount(0);
+
+  // The browser reads the face the scene break is set in, so setting it
+  // in the vault's ornamental face is what the browser then lists.
+  await panel.chooseFont("scene-break-font", ORNAMENT);
+  expect(await panel.browseGlyphs()).toEqual(ORNAMENT_GLYPHS);
+  // The face carries a space as well as its ornaments, and the browser
+  // groups that under the block it sits in like any other code point.
+  expect(await panel.glyphGroups()).toEqual([
+    "Basic Latin",
+    "Dingbats",
+    "Ornamental Dingbats",
+  ]);
+
+  // The filter narrows by the name of a block.
+  await panel.glyphFilter.fill("ornamental");
+  expect(await panel.glyphGroups()).toEqual(["Ornamental Dingbats"]);
+
+  // And by a code point written in hex.
+  await panel.glyphFilter.fill("U+2766");
+  await expect(panel.glyphCells).toHaveCount(1);
+  await panel.glyphCell("U+2766").click();
+
+  await expect(panel.glyphBrowser).toHaveCount(0);
+  await expect(glyphs).toHaveAttribute("data-on", "❦");
+  await expect.poll(async () => vault.read(BOOK)).toContain("scene-break-ornament: ❦");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // A scene break marked with a space prints no glyph, so the glyph and
+  // its font are not asked for.
+  await panel.choice("scene-break-mark", "space").click();
+  await expect(panel.row("scene-break-ornament")).toHaveCount(0);
+  await expect(panel.row("scene-break-font")).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("a scene break takes a size of its own, and prints at the body's size until it does", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture sets no size on its scene break, so the row draws the
+  // body's size faint.
+  const size = panel.control("scene-break-size");
+  await expect(size).toHaveValue(BODY_SIZE);
+  await expect(size).toHaveAttribute("data-default", "true");
+
+  await size.fill(ORNAMENT_SIZE);
+  await size.press("Enter");
+
+  await expect(size).toHaveAttribute("data-default", "false");
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `scene-break-size: ${ORNAMENT_SIZE}`,
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  // The size belongs to the glyph, so a scene break marked with a space
+  // does not ask for it.
+  await panel.choice("scene-break-mark", "space").click();
+  await expect(panel.row("scene-break-size")).toHaveCount(0);
+
+  await written(vault, own);
+});
+
+test("every cell of the glyph browser draws in the face the browser read", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  await panel.open();
+
+  await panel.chooseFont("scene-break-font", ORNAMENT);
+  await panel.browseGlyphs();
+
+  // A cell drawn in a face the browser fell back to would show a glyph
+  // the ornamental face does not have.
+  const drawn = await panel.drawnIn(panel.glyphCell("U+2766"));
+  expect(drawn).toEqual({ family: `orca-preview ${ORNAMENT}`, loaded: true });
+
+  await written(vault, own);
+});
+
+test("a scene break is set in a face of its own, picked from the fonts the body row offers", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.painted();
+  await panel.open();
+
+  // The fixture sets its scene break in a face of its own.
+  const font = panel.control("scene-break-font");
+  await expect(font).toContainText(VARIED);
+
+  await panel.pick();
+  const body = await panel.offered();
+  await panel.filter.press("Escape");
+  await font.click();
+  expect(await panel.offered()).toEqual(body);
+  await panel.type(FIXTURE_FONT);
+  await panel.option(FIXTURE_FONT).click();
+
+  await expect(font).toContainText(FIXTURE_FONT);
+  await expect.poll(async () => vault.read(BOOK)).toContain(
+    `scene-break-font: ${FIXTURE_FONT}`,
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  // The face crosses to the engine, which sets the scene break in it.
+  await expect
+    .poll(async () => book.faces(BOOK))
+    .toContainEqual(expect.stringMatching(new RegExp(`^${FIXTURE_FONT}`)));
 
   await written(vault, own);
 });

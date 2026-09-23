@@ -80,7 +80,9 @@ export interface PageDesign {
   mirrored?: boolean;
 }
 
-export type Align = "justify" | "left";
+export type Alignment = "left" | "center" | "right" | "justify";
+
+export type HeadingAlignment = Exclude<Alignment, "justify">;
 
 export interface BodyDesign {
   /** The font the book is set in, by the name its file carries. */
@@ -89,7 +91,7 @@ export interface BodyDesign {
   fontVariant?: string;
   size?: Length;
   lineSpacing?: Length;
-  align?: Align;
+  align?: Alignment;
   /** The indent on a paragraph's first line. */
   indent?: Length;
   /** When true, the first paragraph after a scene break takes the first-line indent. */
@@ -103,8 +105,6 @@ export interface BodyDesign {
   /** A heading keeps the text under it on the same page. */
   keepHeadings?: boolean;
 }
-
-export type Alignment = "left" | "center" | "right";
 
 /** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
 export type Caps = "normal" | "small-caps" | "all-caps";
@@ -122,7 +122,11 @@ export interface TypeSpec {
   caps?: Caps;
   /** The letter spacing on the level. */
   letterSpacing?: Length;
-  align?: Alignment;
+  align?: HeadingAlignment;
+  /** The blank space above the level, in lines of body text. */
+  spaceAbove?: number;
+  /** The blank space below the level, in lines of body text. */
+  spaceBelow?: number;
 }
 
 /** The heading levels markdown writes, which are the ones a design sets. */
@@ -137,10 +141,6 @@ export type Begins = "right-page" | "next-page" | "same-page";
 
 export interface ChapterDesign {
   begins?: Begins;
-  /** The blank space above a chapter's title, in lines of body text. */
-  spaceAbove?: number;
-  /** The blank space below a chapter's title, in lines of body text. */
-  spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
   /** The font the drop cap is set in. A chapter with none set takes the body's font. */
@@ -151,15 +151,17 @@ export interface ChapterDesign {
   firstLineLetterSpacing?: Length;
 }
 
-export type SceneMark = "space" | "ornament" | "word";
+export type SceneMark = "space" | "ornament";
 
 export interface SceneDesign {
   /** The kind of mark between two scenes. A space leaves a blank line. */
   mark?: SceneMark;
   /** The mark between two scenes, as the glyph itself. */
   ornament?: string;
-  /** The word between two scenes, as the author writes it. */
-  word?: string;
+  /** The face the mark is set in. A scene break with no font of its own takes the body's. */
+  font?: string;
+  /** The size the mark is set at. A scene break with no size of its own takes the body's. */
+  size?: Length;
   /** The blank space above a scene break, in lines of body text. */
   spaceAbove?: number;
   /** The blank space below a scene break, in lines of body text. */
@@ -184,6 +186,10 @@ export interface HeaderDesign {
   position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
+  /** The font the running heads are set in, by the name its file carries. */
+  font?: string;
+  /** The font the folio is set in, by the name its file carries. */
+  folioFont?: string;
   /** The case the running heads are set in. */
   caps?: Caps;
   /** The letter spacing on the running heads. */
@@ -218,15 +224,19 @@ export function emptyDesign(): Design {
 
 /**
  * Every font a design names, the body's first, then each heading
- * level's, then the drop cap's. A family two places name is listed
- * once, however it is capitalized, because the index matches a name
- * without case.
+ * level's, then the drop cap's, then the scene break's, then the running
+ * heads' and the folio's. A family two places name is listed once,
+ * however it is capitalized, because the index matches a name without
+ * case.
  */
 export function designFonts(design: Design): string[] {
   const named = [
     design.body.font,
     ...LEVELS.map((level) => design.headings[level].font),
     design.chapter.dropCapFont,
+    design.scene.font,
+    design.headers.font,
+    design.headers.folioFont,
   ];
   const seen = new Set<string>();
   const fonts: string[] = [];
@@ -248,20 +258,26 @@ export interface FontUse {
 
 /**
  * Every font and variant a design sets, the body's first, then each
- * heading level's, then the drop cap's. A level with no font of its own
+ * heading level's, then the drop cap's, then the scene break's, then
+ * the running heads' and the folio's. A level with no font of its own
  * takes the body's font and variant as a pair. A level with its own
- * font and no variant takes that font's default. The drop cap sets no
- * variant, so it takes its font's default. A pair two places set is
- * listed once, however it is capitalized.
+ * font and no variant takes that font's default. A drop cap, a scene
+ * break, a head and a folio each set a font alone, so each takes that
+ * font's default variant. A pair two places set is listed once, however
+ * it is capitalized.
  */
 export function designUses(design: Design): FontUse[] {
   const { font, fontVariant } = design.body;
   const body = font === undefined ? undefined : { font, variant: fontVariant };
-  const { dropCapFont } = design.chapter;
   const named = [
     body,
     ...LEVELS.map((level) => headingUse(design.headings[level], body)),
-    dropCapFont === undefined ? undefined : { font: dropCapFont, variant: undefined },
+    ...[
+      design.chapter.dropCapFont,
+      design.scene.font,
+      design.headers.font,
+      design.headers.folioFont,
+    ].map((each) => (each === undefined ? undefined : { font: each, variant: undefined })),
   ];
   const seen = new Set<string>();
   const uses: FontUse[] = [];
@@ -324,6 +340,9 @@ interface Field {
 
 /** Small caps is a font feature and all caps a transform, so one key sets either. */
 const CAPS_PROPERTIES: readonly string[] = ["font-variant-caps", "text-transform"];
+
+/** The space above a heading is padding where the heading opens a section, and margin elsewhere. */
+const SPACE_ABOVE_PROPERTIES: readonly string[] = ["margin-top", "padding-top"];
 
 const PAGE: readonly Field[] = [
   {
@@ -396,7 +415,7 @@ const BODY: readonly Field[] = [
     property: "text-align",
     read: ({ body }) => body.align,
     write: ({ body }, value) => {
-      const align = asWord(value, ALIGNS);
+      const align = asWord(value, ALIGNMENTS);
       if (align !== undefined) body.align = align;
     },
   },
@@ -476,24 +495,6 @@ const CHAPTER: readonly Field[] = [
     },
   },
   {
-    key: "chapter-space-above",
-    property: "padding-top",
-    read: ({ chapter }) => chapter.spaceAbove,
-    write: ({ chapter }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) chapter.spaceAbove = lines;
-    },
-  },
-  {
-    key: "chapter-space-below",
-    property: "margin-bottom",
-    read: ({ chapter }) => chapter.spaceBelow,
-    write: ({ chapter }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) chapter.spaceBelow = lines;
-    },
-  },
-  {
     key: "chapter-drop-cap",
     property: "initial-letter",
     read: ({ chapter }) => chapter.dropCap,
@@ -551,12 +552,21 @@ const SCENE: readonly Field[] = [
     },
   },
   {
-    key: "scene-break-word",
-    property: "content",
-    read: ({ scene }) => scene.word,
+    key: "scene-break-font",
+    property: "font-family",
+    read: ({ scene }) => scene.font,
     write: ({ scene }, value) => {
-      const word = asText(value);
-      if (word !== undefined) scene.word = word;
+      const font = asText(value);
+      if (font !== undefined) scene.font = font;
+    },
+  },
+  {
+    key: "scene-break-size",
+    property: "font-size",
+    read: ({ scene }) => written(scene.size),
+    write: ({ scene }, value) => {
+      const size = asLength(value);
+      if (size !== undefined) scene.size = size;
     },
   },
   {
@@ -607,6 +617,24 @@ const HEADERS: readonly Field[] = [
     write: ({ headers }, value) => {
       const format = asWord(value, FORMATS);
       if (format !== undefined) headers.pageNumberFormat = format;
+    },
+  },
+  {
+    key: "header-font",
+    property: "font-family",
+    read: ({ headers }) => headers.font,
+    write: ({ headers }, value) => {
+      const font = asText(value);
+      if (font !== undefined) headers.font = font;
+    },
+  },
+  {
+    key: "folio-font",
+    property: "font-family",
+    read: ({ headers }) => headers.folioFont,
+    write: ({ headers }, value) => {
+      const font = asText(value);
+      if (font !== undefined) headers.folioFont = font;
     },
   },
   {
@@ -809,12 +837,12 @@ export function stepCount(count: number, by: 1 | -1, times = 1): number {
   return Math.max(0, count + by * times);
 }
 
-const ALIGNS: readonly Align[] = ["justify", "left"];
-const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
+const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right", "justify"];
+const HEADING_ALIGNMENTS: readonly HeadingAlignment[] = ["left", "center", "right"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
 
-const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
+const MARKS: readonly SceneMark[] = ["space", "ornament"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
   "author",
@@ -884,8 +912,26 @@ function heading(level: Level): Field[] {
       property: "text-align",
       read: ({ headings }) => headings[level].align,
       write: ({ headings }, value) => {
-        const align = asWord(value, ALIGNMENTS);
+        const align = asWord(value, HEADING_ALIGNMENTS);
         if (align !== undefined) headings[level].align = align;
+      },
+    },
+    {
+      key: `heading-${level}-space-above`,
+      property: SPACE_ABOVE_PROPERTIES,
+      read: ({ headings }) => headings[level].spaceAbove,
+      write: ({ headings }, value) => {
+        const lines = asCount(value);
+        if (lines !== undefined) headings[level].spaceAbove = lines;
+      },
+    },
+    {
+      key: `heading-${level}-space-below`,
+      property: "margin-bottom",
+      read: ({ headings }) => headings[level].spaceBelow,
+      write: ({ headings }, value) => {
+        const lines = asCount(value);
+        if (lines !== undefined) headings[level].spaceBelow = lines;
       },
     },
   ];

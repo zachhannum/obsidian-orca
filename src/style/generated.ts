@@ -95,13 +95,13 @@ export function generatedRules(
   registered: readonly Registered[] = [],
 ): GeneratedRule[] {
   const rules = [
-    ...pageRules(design, setting),
+    ...pageRules(design, setting, registered),
     ...bodyRules(design, registered),
     ...headingRules(design, registered),
     ...sectionRules(design, setting, registered),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
-    ...sceneRules(design),
+    ...sceneRules(design, registered),
   ].filter((rule) => rule !== undefined);
   let line = 1;
   return rules.map(({ css, from, selector, declarations }) => {
@@ -169,7 +169,11 @@ const OPENING = `${HEADINGS}:first-child`;
  */
 const TEXT_START = [OPENING, `${OPENING} + ${HEADINGS}`, `${OPENING} + ${HEADINGS} + ${HEADINGS}`];
 
-function pageRules(design: Design, setting: Setting): (Rule | undefined)[] {
+function pageRules(
+  design: Design,
+  setting: Setting,
+  registered: readonly Registered[],
+): (Rule | undefined)[] {
   const { page, headers } = design;
   const { margins } = page;
   const root: Declaration[] = [];
@@ -202,11 +206,14 @@ function pageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   );
   for (const [box, content] of placed.both) rootBoxes.set(box, content);
 
+  const type = (pages: ReadonlyMap<Box, Content>): Declaration[] =>
+    boxes(pages, headers, placed.folio, registered);
+
   return [
-    block("@page", [...root, ...boxes(rootBoxes, headers)]),
-    block("@page :left", [...left, ...boxes(placed.left, headers)]),
-    block("@page :right", [...right, ...boxes(placed.right, headers)]),
-    ...frontPages(headers, placed, setting),
+    block("@page", [...root, ...type(rootBoxes)]),
+    block("@page :left", [...left, ...type(placed.left)]),
+    block("@page :right", [...right, ...type(placed.right)]),
+    ...frontPages(headers, placed, setting, registered),
     ...openingPages(headers, placed, setting),
   ];
 }
@@ -280,6 +287,7 @@ function frontPages(
   headers: HeaderDesign,
   placed: Placement,
   setting: Setting,
+  registered: readonly Registered[],
 ): (Rule | undefined)[] {
   if (placed.folio.size === 0) return [];
   const roman = (pages: ReadonlyMap<Box, Content>): Declaration[] =>
@@ -296,6 +304,8 @@ function frontPages(
           ]),
       ),
       headers,
+      placed.folio,
+      registered,
     );
   return front(roles(setting)).flatMap((role) => [
     block(`@page ${role}`, roman(placed.both), role),
@@ -343,23 +353,42 @@ function printed(placed: Placement): Box[] {
 
 /**
  * The margin boxes of one page rule, in the order the rule sets them. A
- * box that prints is set in the type the heads are set in. A box that
- * prints nothing takes none of it.
+ * box that prints is set in the type the heads are set in, in the head's
+ * font or the folio's by what it holds. A box that prints nothing takes
+ * none of it.
  */
-function boxes(content: ReadonlyMap<Box, Content>, headers: HeaderDesign): Declaration[] {
+function boxes(
+  content: ReadonlyMap<Box, Content>,
+  headers: HeaderDesign,
+  folio: ReadonlySet<Box>,
+  registered: readonly Registered[],
+): Declaration[] {
   return BOXES.flatMap((box) => {
     const found = content.get(box);
     if (found === undefined) return [];
     const prints = boxed(box, "content", found.content, found.keys);
     return found.content === "none"
       ? [prints]
-      : [prints, ...inBox(box, headLines(headers))];
+      : [prints, ...inBox(box, headLines(headers, folio.has(box), registered))];
   });
 }
 
-/** The type the running heads and the folio are set in. */
-function headLines(headers: HeaderDesign): Declaration[] {
+/**
+ * The type one margin box is set in. The heads and the folio are set
+ * in one face each, and take the same case, tracking and slope.
+ */
+function headLines(
+  headers: HeaderDesign,
+  folio: boolean,
+  registered: readonly Registered[],
+): Declaration[] {
+  const font = folio ? headers.folioFont : headers.font;
   return [
+    ...set(
+      "font-family",
+      font === undefined ? undefined : family(font, undefined, registered),
+      [folio ? "folio-font" : "header-font"],
+    ),
     ...typeset(headers.caps, headers.letterSpacing, "header"),
     ...set("font-style", flagged(headers.italic, "italic", "normal"), ["header-italic"]),
   ];
@@ -451,15 +480,17 @@ function headingRules(
   design: Design,
   registered: readonly Registered[],
 ): (Rule | undefined)[] {
-  return LEVELS.map((level) =>
-    block(`h${level}`, typeLines(design.headings[level], level, registered)),
-  );
+  return LEVELS.flatMap((level) => [
+    block(`h${level}`, typeLines(design.headings[level], level, design, registered)),
+    block(`section > h${level}:first-child`, openingSpace(design, level)),
+  ]);
 }
 
 /** A level with no font of its own declares none, so it inherits the body's family whole. */
 function typeLines(
   type: TypeSpec,
   level: Level,
+  design: Design,
   registered: readonly Registered[],
 ): Declaration[] {
   const lines: Declaration[] = [];
@@ -474,7 +505,40 @@ function typeLines(
   lines.push(...set("font-size", written(type.size), [`heading-${level}-size`]));
   lines.push(...typeset(type.caps, type.letterSpacing, `heading-${level}`));
   lines.push(...set("text-align", type.align, [`heading-${level}-align`]));
+  lines.push(
+    ...set("margin-top", lined(type.spaceAbove, design), [
+      `heading-${level}-space-above`,
+      ...spacing(design),
+    ]),
+  );
+  lines.push(
+    ...set("margin-bottom", lined(type.spaceBelow, design), [
+      `heading-${level}-space-below`,
+      ...spacing(design),
+    ]),
+  );
   return lines;
+}
+
+/**
+ * The heading a section opens on, which is the heading that starts a
+ * page. The engine drops the top margin of a box that starts a page,
+ * so the space above is padding there. The margin is cleared with it,
+ * so a section that opens below the one before it takes the space once.
+ */
+function openingSpace(design: Design, level: Level): Declaration[] {
+  const above = design.headings[level].spaceAbove;
+  if (above === undefined) return [];
+  const keys = [`heading-${level}-space-above`, ...spacing(design)];
+  return [
+    declared("padding-top", bodyLines(above, design), keys),
+    declared("margin-top", "0", keys),
+  ];
+}
+
+/** A count of body lines as a length, and nothing for a count the design leaves unset. */
+function lined(count: number | undefined, design: Design): string | undefined {
+  return count === undefined ? undefined : bodyLines(count, design);
 }
 
 function sectionRules(
@@ -515,12 +579,6 @@ function restart(setting: Setting): (Rule | undefined)[] {
  * opening headings lead into, so a note with text before its first
  * heading takes no drop cap. A chapter with no drop cap sets no font on
  * its first letter, since the font is the cap's.
- *
- * A sink is the blank space above a chapter's title, written in lines
- * of body text. Where the design sets a line height, a sink is that
- * many line heights. Where it does not, a sink is that many heading
- * ems. A sink is padding, since the engine drops the top margin of a
- * box that starts a page.
  */
 function chapterRules(
   design: Design,
@@ -535,7 +593,6 @@ function chapterRules(
   const starts = (suffix: string): string =>
     TEXT_START.map((start) => `${chapters} > ${start}${suffix}`).join(",\n");
   return [
-    block(`${chapters} > ${OPENING}`, openingSpace(design), "chapter"),
     block(
       starts(" + p::first-letter"),
       [
@@ -560,23 +617,6 @@ function chapterRules(
   ];
 }
 
-/** The space a chapter's design sets above and below an opening title. */
-function openingSpace(design: Design): Declaration[] {
-  const { spaceAbove, spaceBelow } = design.chapter;
-  return [
-    ...set(
-      "padding-top",
-      spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design),
-      ["chapter-space-above", ...spacing(design)],
-    ),
-    ...set(
-      "margin-bottom",
-      spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design),
-      ["chapter-space-below", ...spacing(design)],
-    ),
-  ];
-}
-
 /** The body lines above a title page's first block. */
 const TITLE_SINK = 6;
 
@@ -588,6 +628,9 @@ const IMPRINT_GAP = 10;
  * author and the publisher, each one optional. The page reaches each
  * block by where it sits. The engine places nothing at the foot of a
  * page, so the publisher sits a set number of lines under the author.
+ *
+ * Every block on the page takes no margin, so the space a design sets
+ * around a heading level leaves the title page as orca lays it out.
  */
 function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const page = sectionsOf(setting.sections, "title-page");
@@ -598,7 +641,11 @@ function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] 
   const rules = [
     block(
       `${page} > *`,
-      [declared("text-align", "center"), declared("text-indent", "0")],
+      [
+        declared("text-align", "center"),
+        declared("text-indent", "0"),
+        declared("margin", "0"),
+      ],
       role,
     ),
     block(
@@ -638,7 +685,6 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const formatKeys = design.headers.pageNumberFormat === undefined ? [] : ["page-number-format"];
   const lines = spacing(design);
   return [
-    block(`${contents} > ${OPENING}`, openingSpace(design), role),
     block(
       `${contents} p`,
       [
@@ -689,12 +735,17 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   ];
 }
 
-function sceneRules(design: Design): (Rule | undefined)[] {
+/** A scene break with no font or size of its own declares neither, so it inherits the body's. */
+function sceneRules(design: Design, registered: readonly Registered[]): (Rule | undefined)[] {
   const { scene } = design;
-  const lines = [...set("content", sceneContent(scene), sceneKeys(scene))];
-  if (scene.mark === "word" && scene.word !== undefined) {
-    lines.push(declared("text-align", "center", ["scene-break-mark", "scene-break-word"]));
+  const lines: Declaration[] = [];
+  if (scene.font !== undefined) {
+    lines.push(
+      declared("font-family", family(scene.font, undefined, registered), ["scene-break-font"]),
+    );
   }
+  lines.push(...set("font-size", written(scene.size), ["scene-break-size"]));
+  lines.push(...set("content", sceneContent(scene), sceneKeys(scene)));
   lines.push(
     ...set(
       "margin-top",
@@ -721,16 +772,14 @@ function sceneRules(design: Design): (Rule | undefined)[] {
  * ornament.
  */
 function sceneContent(scene: SceneDesign): string | undefined {
-  const { mark, ornament, word } = scene;
+  const { mark, ornament } = scene;
   if (mark === "space") return "none";
-  if (mark === "word") return word === undefined ? undefined : quoted(word);
   return ornament === undefined ? undefined : quoted(ornament);
 }
 
 function sceneKeys(scene: SceneDesign): string[] {
   const mark = scene.mark === undefined ? [] : ["scene-break-mark"];
   if (scene.mark === "space") return mark;
-  if (scene.mark === "word") return [...mark, "scene-break-word"];
   return [...mark, "scene-break-ornament"];
 }
 
@@ -817,6 +866,11 @@ function sideMargins(left: Side, right: Side): Declaration[] {
   ];
 }
 
+/**
+ * A count of body lines as a length. Where the design sets a line
+ * spacing, a line is that spacing. Where it does not, a line is one em
+ * of the box's own type.
+ */
 function bodyLines(count: number, design: Design): string {
   const spacing = design.body.lineSpacing;
   if (spacing === undefined) return `${trimmed(count)}em`;

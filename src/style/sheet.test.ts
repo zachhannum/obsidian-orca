@@ -91,7 +91,7 @@ test("a book that sets nothing gets every default in design.css", () => {
     /hr \+ p \{\n {2}text-indent: 0;\n\}/,
     /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/,
     /section#chapter-one \{\n {2}page: chapter;\n {2}break-before: page;\n\}/,
-    /:first-child \{\n {2}padding-top: 0pt;\n {2}margin-bottom: 0pt;\n\}/,
+    /section > h1:first-child \{\n {2}padding-top: 0pt;\n {2}margin-top: 0;\n\}/,
     /hr \{\n {2}content: "❧";\n {2}margin-top: 16\.5pt;\n {2}margin-bottom: 16\.5pt;\n\}/,
   ];
   for (const pattern of expected) assert.match(css, pattern);
@@ -99,7 +99,7 @@ test("a book that sets nothing gets every default in design.css", () => {
     assert.match(
       css,
       new RegExp(
-        `h${level} \\{\\n {2}font-size: 19pt;\\n {2}font-variant-caps: normal;\\n {2}text-transform: none;\\n {2}letter-spacing: 0em;\\n {2}text-align: left;\\n\\}`,
+        `h${level} \\{\\n {2}font-size: 19pt;\\n {2}font-variant-caps: normal;\\n {2}text-transform: none;\\n {2}letter-spacing: 0em;\\n {2}text-align: left;\\n {2}margin-top: 0pt;\\n {2}margin-bottom: 0pt;\\n\\}`,
       ),
     );
   }

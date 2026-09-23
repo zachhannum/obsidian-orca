@@ -68,8 +68,6 @@ export const DEFAULTS: Design = frozen({
   },
   chapter: {
     begins: "next-page",
-    spaceAbove: 0,
-    spaceBelow: 0,
     dropCap: 0,
     firstLineCaps: "normal",
     firstLineLetterSpacing: ems(0),
@@ -93,6 +91,8 @@ export const DEFAULTS: Design = frozen({
  * of its own takes the body's font and variant as a pair. A level with
  * its own font and no variant keeps that font's default. A drop cap
  * with no font of its own takes the body's font, and sets no variant.
+ * The running heads and the folios take the body's font, because a
+ * margin box is set from the book's root the way a paragraph is.
  */
 export function effective(design: Design): Design {
   const merged = mergeDesign(structuredClone(DEFAULTS), design);
@@ -106,11 +106,20 @@ export function effective(design: Design): Design {
     else type.fontVariant = fontVariant;
   }
   merged.chapter.dropCapFont ??= font;
+  merged.headers.font ??= font;
+  merged.headers.folioFont ??= font;
   return merged;
 }
 
 function heading(): TypeSpec {
-  return { size: points(19), caps: "normal", letterSpacing: ems(0), align: "left" };
+  return {
+    size: points(19),
+    caps: "normal",
+    letterSpacing: ems(0),
+    align: "left",
+    spaceAbove: 0,
+    spaceBelow: 0,
+  };
 }
 
 function points(value: number): Length {

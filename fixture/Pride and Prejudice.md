@@ -23,16 +23,21 @@ body-orphans: 2
 body-widows: 2
 heading-1-size: 17pt
 heading-1-align: center
+heading-1-space-above: 7
 heading-2-size: 13pt
+heading-2-space-above: 2
+heading-2-space-below: 1
 chapter-begins: right-page
-chapter-space-above: 7
 chapter-drop-cap: 3
 chapter-drop-cap-font: Alegreya
 scene-break-ornament: ⁂
+scene-break-font: Junicode
 header-left-page: author
 header-right-page: book-title
 page-number-position: bottom
 page-number-format: arabic
+header-font: Alegreya
+folio-font: Alegreya
 tags:
   - novel
 status: drafting

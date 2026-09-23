@@ -24,6 +24,15 @@ test("a face that registered no file refuses, and names where the font is used",
   assert.equal(checked.errors.length, 1);
   assert.equal(checked.errors[0]?.said, "Missing font: Charter Italic");
   assert.equal(checked.errors[0]?.place, "Body text, headings 1–6");
+
+  // A font only the heads or the folios are set in names them.
+  const heads = design();
+  heads.headers = { ...heads.headers, font: "Charter", folioFont: "Charter" };
+  const plain = { font: "Charter", variant: undefined };
+  assert.equal(
+    preflight(book({ design: heads, unloaded: [{ use: plain, unread: false }] })).errors[0]?.place,
+    "Running heads, page numbers",
+  );
   assert.equal(checked.errors[0]?.fix, "Change font…");
   assert.equal(checked.fine, undefined);
   assert.equal(standing(1), "Fix 1 error to export");

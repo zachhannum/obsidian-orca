@@ -87,6 +87,13 @@ function usedIn(design: Design, use: FontUse): string {
   });
   if (levels.length === 1) places.push(`heading ${String(levels[0])}`);
   if (levels.length > 1) places.push(`headings ${runs(levels)}`);
+  const { font: head, folioFont: folio } = design.headers;
+  if (head !== undefined && useKey({ font: head, variant: undefined }) === key) {
+    places.push("running heads");
+  }
+  if (folio !== undefined && useKey({ font: folio, variant: undefined }) === key) {
+    places.push("page numbers");
+  }
   const said = places.length === 0 ? "book" : places.join(", ");
   return said.charAt(0).toUpperCase() + said.slice(1);
 }

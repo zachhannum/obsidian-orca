@@ -1,18 +1,18 @@
 ---
 title: Heads & folios
 eyebrow: Design
-description: Running heads, the type they are set in, and page numbers.
+description: Running heads, page numbers, and the type they are set in.
 ---
 
 import Shot from '../../../components/Shot.astro';
 
-A running head is the line at the top of a page. A folio is the page number. The Heads & folios group in the design panel sets both.
+A running head is the line of text at the top of a page, such as the book title or the chapter title. A folio is the page number. The Heads & folios group in the design panel sets both.
 
 <Shot
   name="panel-heads-and-folios"
-  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format, Capitals, Tracking and two switches."
+  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format, Header font, Folio font, Capitals, Tracking and two switches."
   caption="The Heads & folios group."
-  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
+  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'header-font', 'folio-font', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
   numbered
 />
 
@@ -25,23 +25,21 @@ A running head is the line at the top of a page. A folio is the page number. The
 | 3 | Header position | `Outside` | `header-position` |
 | 4 | Page number | `Bottom` | `page-number-position` |
 | 5 | Number format | `1, 2, 3` | `page-number-format` |
-| 6 | Capitals | `Normal` | `header-caps` |
-| 7 | Tracking | `None` | `header-letter-spacing` |
-| 8 | Set the running heads in italic | off | `header-italic` |
-| 9 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+| 6 | Header font | `EB Garamond` | `header-font` |
+| 7 | Folio font | `EB Garamond` | `folio-font` |
+| 8 | Capitals | `Normal` | `header-caps` |
+| 9 | Tracking | `None` | `header-letter-spacing` |
+| 10 | Set the running heads in italic | off | `header-italic` |
+| 11 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
 
-## Running heads
+## Fonts
 
-`Left-page header` and `Right-page header` each take `Nothing`, `Author`, `Book title` or `Chapter title`. `Header position` puts the running head at the outside edge of the page or in the center.
+Unless you pick a font, the running heads and the folio use the font from the Text group.
 
-## The type the heads are set in
+## Capitals, tracking and italic
 
-`Capitals` sets the heads in small caps or in full capitals, and `Tracking` sets the space between their letters. Small caps with a little tracking is the usual setting for a novel. `Set the running heads in italic` sets them in the italic of the book's font.
+These three controls set the folio as well as the running heads. Capitals do not change digits.
 
-The three controls set the folio as well, so the band of type at the head of the page and the number at the foot agree. Capitals and tracking change no digit.
+## Openings
 
-## Page numbers
-
-`Page number` puts the folio at the top, at the bottom, or at the outside edge. `Number format` chooses arabic numerals or lowercase roman numerals for the folio.
-
-An opening is the first page of a chapter. When `Hide the running head and page number on openings` is on, an opening has no running head and no folio.
+An opening is the first page of a chapter.

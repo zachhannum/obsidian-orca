@@ -28,6 +28,7 @@ import {
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
+import type { Registered } from "@/style/faces";
 import {
   generatedCss,
   generatedRules,
@@ -63,8 +64,9 @@ test("every generated rule sits at its line, reads only real setting keys, and m
   centered.page.mirrored = true;
   centered.headers.position = "center";
   centered.headers.pageNumber = "top";
-  centered.scene.mark = "word";
-  centered.scene.word = "Fin";
+  centered.scene.mark = "ornament";
+  centered.scene.font = "Junicode";
+  centered.scene.size = { value: 12, unit: "pt" };
   designs.push(centered);
 
   for (const design of designs) {
@@ -212,6 +214,9 @@ test("the title page is set centered and down the page, with the publisher apart
   const line = 14;
   const outside = 0.7 * 72;
   assert.ok(series.y > TOP_MARGIN + 6 * line, `the series sits at ${String(series.y)}`);
+  // The page takes no margin, so the space the fixture sets above a
+  // level 1 heading leaves the title where orca puts it.
+  assert.ok(title.y - series.y < 3 * line, `the title sits at ${String(title.y)}`);
   assert.ok(publisher.y - author.y > 10 * line, "the publisher sits under the author");
   for (const each of [series, title, author, publisher]) {
     assert.ok(each.x > outside + 2 * line, `\`${each.text}\` starts at ${String(each.x)}`);
@@ -318,7 +323,7 @@ test("the generated layer sets the pages it describes, and the engine warns abou
 });
 
 
-test("a scene break sets as a blank line, an ornament or a word on its own line", () => {
+test("a scene break sets as a blank line or as a glyph on its own line", () => {
   const scene = (over: Design["scene"]): string => {
     const design = emptyDesign();
     design.scene = over;
@@ -327,27 +332,63 @@ test("a scene break sets as a blank line, an ornament or a word on its own line"
 
   assert.equal(scene({ mark: "space", ornament: "\u2042" }), "hr {\n  content: none;\n}\n");
   assert.equal(
-    scene({ mark: "word", word: "Later" }),
-    'hr {\n  content: "Later";\n  text-align: center;\n}\n',
-  );
-  assert.equal(
     scene({ mark: "ornament", ornament: "\u2042" }),
     'hr {\n  content: "\u2042";\n}\n',
   );
   // A design with no mark set keeps its ornament.
   assert.equal(scene({ ornament: "\u2042" }), 'hr {\n  content: "\u2042";\n}\n');
+  // The glyph the author types is the mark, whatever it is.
+  assert.equal(scene({ mark: "ornament", ornament: "*" }), 'hr {\n  content: "*";\n}\n');
+});
+
+test("a scene break set in a font of its own names that family on `hr`", () => {
+  const design = emptyDesign();
+  design.scene = { mark: "ornament", ornament: "\u2042", font: "Junicode" };
+  const registered: Registered[] = [
+    {
+      font: "Junicode",
+      variant: "Regular",
+      family: "Junicode",
+      faces: [{ url: "orca-font:junicode-regular" }],
+    },
+  ];
+
+  assert.equal(
+    generatedCss(design, { sections: named([]) }, registered),
+    'hr {\n  font-family: "Junicode", serif;\n  content: "\u2042";\n}\n',
+  );
+  // A scene break with no font of its own declares none, so it takes the body's.
+  design.scene.font = undefined;
+  assert.equal(
+    generatedCss(design, { sections: named([]) }, registered),
+    'hr {\n  content: "\u2042";\n}\n',
+  );
+});
+
+test("a scene break set at a size of its own writes that size on `hr`", () => {
+  const design = emptyDesign();
+  design.scene = { mark: "ornament", ornament: "\u2042", size: { value: 14, unit: "pt" } };
+
+  assert.equal(
+    generatedCss(design, { sections: named([]) }),
+    'hr {\n  font-size: 14pt;\n  content: "\u2042";\n}\n',
+  );
+  // A scene break with no size of its own declares none, so it takes the body's.
+  design.scene.size = undefined;
+  assert.equal(
+    generatedCss(design, { sections: named([]) }),
+    'hr {\n  content: "\u2042";\n}\n',
+  );
 });
 
 test("the panel's own controls generate their declarations, and the engine warns about none of them", async () => {
   const design = whole();
   const css = generatedCss(design, { sections: named(ROLES) });
 
-  // A heading's alignment, and the blank space around a chapter's title.
-  assert.match(css, /h1 \{\n {2}text-align: center;\n\}/);
-  assert.match(
-    css,
-    /:is\(section#chapter-3, section#chapter-4\) > :is\(h1(?:, h[2-6])+\):first-child \{\n {2}padding-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/,
-  );
+  // A heading's alignment, and the blank space around each level.
+  assert.match(css, /h1 \{\n {2}text-align: center;\n {2}margin-top: 28pt;\n {2}margin-bottom: 14pt;\n\}/);
+  assert.match(css, /section > h1:first-child \{\n {2}padding-top: 28pt;\n {2}margin-top: 0;\n\}/);
+  assert.match(css, /h2 \{\n {2}margin-top: 14pt;\n {2}margin-bottom: 14pt;\n\}/);
   // A heading keeps the text under it, and the paragraph after a scene
   // break takes no indent.
   assert.match(css, /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/);
@@ -457,11 +498,11 @@ test("centered heads print in the middle of the page, with the folio at the outs
   for (const page of openings) assert.deepEqual(heads(page), []);
 });
 
-test("the space above a chapter's title shows on the page, as padding over the title", async () => {
+test("a heading that opens a section takes its space above as padding, so the engine keeps it", async () => {
   const sunk = (lines: number) => {
     const design = emptyDesign();
     design.body.lineSpacing = { value: 14, unit: "pt" };
-    design.chapter.spaceAbove = lines;
+    design.headings[1].spaceAbove = lines;
     return generatedCss(design, { sections: named(["chapter"]), author: "Jane Austen" });
   };
   const top = async (css: string) => {
@@ -473,8 +514,9 @@ test("the space above a chapter's title shows on the page, as padding over the t
     return found.y;
   };
 
-  assert.match(sunk(4), /:first-child \{\n {2}padding-top: 56pt;\n/);
-  assert.doesNotMatch(sunk(4), /margin-top/);
+  // The margin goes with the padding, so a section that opens below the
+  // one before it takes the space once.
+  assert.match(sunk(4), /section > h1:first-child \{\n {2}padding-top: 56pt;\n {2}margin-top: 0;\n\}/);
   // Four lines of 14pt sink the title 56pt.
   assert.ok(Math.abs((await top(sunk(4))) - (await top(sunk(0))) - 56) < 0.01);
 });
@@ -567,18 +609,27 @@ test("a contents folio rises half a body line, and a part keeps a line above and
   assert.match(bare, /margin-top: 1em;\n {2}margin-bottom: 0\.5em;/);
 });
 
-test("the contents title sinks as far as a chapter's, and takes no sink the design does not set", () => {
+test("the contents opens on the space its own heading level sets", async () => {
   const roles: Role[] = ["contents", "chapter"];
-  const design = emptyDesign();
-  design.body.lineSpacing = { value: 14, unit: "pt" };
-  design.chapter.spaceAbove = 7;
-  design.chapter.spaceBelow = 2;
-  const css = generatedCss(design, { sections: named(roles) });
-  const opening = (id: string) =>
-    new RegExp(`section#${id} > :is\\(h1(?:, h[2-6])+\\):first-child \\{\\n {2}padding-top: 98pt;\\n {2}margin-bottom: 28pt;\\n\\}`);
+  const sunk = (lines: number) => {
+    const design = emptyDesign();
+    design.body.lineSpacing = { value: 14, unit: "pt" };
+    design.headings[1].spaceAbove = lines;
+    design.headings[1].spaceBelow = 2;
+    return generatedCss(design, { sections: named(roles) });
+  };
+  const title = async (css: string) => {
+    const output = await rendered(css, CONTENTS, named(roles));
+    const found = output.pages[0]?.items.find(
+      (item) => item.kind === "text" && item.text === "Contents",
+    );
+    assert.ok(found?.kind === "text", "the contents title did not set");
+    return found.y;
+  };
 
-  assert.match(css, opening("contents-1"));
-  assert.match(css, opening("chapter-2"));
+  assert.match(sunk(7), /h1 \{\n {2}margin-top: 98pt;\n {2}margin-bottom: 28pt;\n\}/);
+  // Seven lines of 14pt sink the title 98pt, the same as a chapter's.
+  assert.ok(Math.abs((await title(sunk(7))) - (await title(sunk(0))) - 98) < 0.01);
   assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(roles) }), /padding-top/);
 });
 
@@ -586,13 +637,7 @@ test("a contents folio sets flush right on its title's line", async () => {
   const design = emptyDesign();
   design.body.lineSpacing = { value: 14, unit: "pt" };
   const css = generatedCss(design, { sections: named(["contents", "chapter"]) });
-  const output = await rendered(css, [
-    {
-      name: "contents.md",
-      text: "# Contents\n\n{.entry}\n\n[Chapter One](one.md#Chapter%20One)\n\n{.folio}\n\n[](one.md#Chapter%20One)\n",
-    },
-    { name: "one.md", text: "# Chapter One\n\nIt is a truth universally acknowledged.\n" },
-  ], named(["contents", "chapter"]));
+  const output = await rendered(css, CONTENTS, named(["contents", "chapter"]));
   const items = (output.pages[0]?.items ?? []).flatMap((item) => (item.kind === "text" ? [item] : []));
   const title = items.find((item) => item.text.startsWith("Chapter"));
   const folio = items.find((item) => /^\d+$/.test(item.text));
@@ -628,6 +673,15 @@ function partition(
   return [head, folio];
 }
 
+/** A contents of one entry, then the chapter it lands on. */
+const CONTENTS: Source[] = [
+  {
+    name: "contents.md",
+    text: "# Contents\n\n{.entry}\n\n[Chapter One](one.md#Chapter%20One)\n\n{.folio}\n\n[](one.md#Chapter%20One)\n",
+  },
+  { name: "one.md", text: "# Chapter One\n\nIt is a truth universally acknowledged.\n" },
+];
+
 /** Three short paragraphs under a heading. */
 const INDENTED: Source = {
   name: "indented.md",
@@ -642,10 +696,14 @@ function whole(): Design {
   design.body.indentAfterBreak = false;
   design.body.keepHeadings = true;
   design.headings[1].align = "center";
-  design.chapter.spaceAbove = 2;
-  design.chapter.spaceBelow = 1;
-  design.scene.mark = "word";
-  design.scene.word = "Later";
+  design.headings[1].spaceAbove = 2;
+  design.headings[1].spaceBelow = 1;
+  design.headings[2].spaceAbove = 1;
+  design.headings[2].spaceBelow = 1;
+  design.scene.mark = "ornament";
+  design.scene.ornament = "\u2042";
+  design.scene.font = "Junicode";
+  design.scene.size = { value: 12, unit: "pt" };
   design.scene.spaceAbove = 1;
   design.scene.spaceBelow = 1;
   design.headers.leftPage = "author";
@@ -881,6 +939,77 @@ test("the running heads and the folio are set in the type the design gives them"
   assert.ok(output.pages.flatMap(texts).includes("Pride and Prejudice"));
 });
 
+test("the running heads are set in the font the design gives them", () => {
+  const design = headed("outside", "bottom");
+  design.headers.font = "Junicode";
+  const at = { sections: named(["chapter"]), author: "Jane Austen" };
+
+  const css = generatedCss(design, at);
+
+  assert.match(
+    css,
+    /@page :left \{\n {2}@top-left \{ content: "Jane Austen"; font-family: "Junicode", serif; \}\n\}/,
+  );
+  assert.match(
+    css,
+    /@page :right \{\n {2}@top-right \{ content: string\(chapter\); font-family: "Junicode", serif; \}\n\}/,
+  );
+  // The folio sets no font of its own, so it takes none.
+  assert.match(css, /@bottom-center \{ content: counter\(page, decimal\); \}/);
+
+  // A head set in a font a face is registered for names that family.
+  const registered = [
+    { font: "Junicode", variant: undefined, family: "Junicode Cond", faces: [] },
+  ];
+  assert.match(
+    generatedCss(design, at, registered),
+    /@top-left \{ content: "Jane Austen"; font-family: "Junicode Cond", serif; \}/,
+  );
+});
+
+test("the folio is set in the font the design gives it", () => {
+  const design = headed("outside", "bottom");
+  design.headers.folioFont = "Alegreya";
+
+  const at = { sections: named(["copyright", "chapter"]), author: "Jane Austen" };
+
+  const css = generatedCss(design, at);
+
+  assert.match(
+    css,
+    /@bottom-center \{ content: counter\(page, decimal\); font-family: "Alegreya", serif; \}/,
+  );
+  // The front matter numbers in roman in the same font.
+  assert.match(
+    css,
+    /@page copyright \{\n {2}@bottom-center \{ content: counter\(page, lower-roman\); font-family: "Alegreya", serif; \}\n\}/,
+  );
+  // The heads set no font of their own, so they take none.
+  assert.match(css, /@top-left \{ content: "Jane Austen"; \}/);
+});
+
+test("a head in the center and a folio at the outside corner each take their own font", () => {
+  const design = headed("center", "top");
+  design.headers.font = "Junicode";
+  design.headers.folioFont = "Alegreya";
+
+  const css = generatedCss(design, { sections: named(["chapter"]), author: "Jane Austen" });
+
+  assert.match(
+    css,
+    /@page :left \{\n {2}@top-left \{ content: counter\(page, decimal\); font-family: "Alegreya", serif; \}\n {2}@top-center \{ content: "Jane Austen"; font-family: "Junicode", serif; \}\n\}/,
+  );
+  assert.match(
+    css,
+    /@page :right \{\n {2}@top-center \{ content: string\(chapter\); font-family: "Junicode", serif; \}\n {2}@top-right \{ content: counter\(page, decimal\); font-family: "Alegreya", serif; \}\n\}/,
+  );
+  // An opening clears all three boxes, and sets the type in none of them.
+  assert.match(
+    css,
+    /@page chapter:first \{\n {2}@top-left \{ content: none; \}\n {2}@top-center \{ content: none; \}\n {2}@top-right \{ content: none; \}\n\}/,
+  );
+});
+
 test("a design that sets every new key renders with no warning from the pinned engine", async () => {
   const design = emptyDesign();
   design.headings[1].caps = "small-caps";
@@ -892,6 +1021,8 @@ test("a design that sets every new key renders with no warning from the pinned e
   design.headers.caps = "all-caps";
   design.headers.letterSpacing = { value: 0.06, unit: "em" };
   design.headers.italic = true;
+  design.headers.font = "EB Garamond";
+  design.headers.folioFont = "EB Garamond";
   const sections = named(ROLES);
   const css = generatedCss(design, { sections, title: "Pride and Prejudice", author: "Jane Austen" });
 

@@ -39,12 +39,12 @@ test("the summary measures the page in the unit the author picked", () => {
 });
 
 test("the summary follows the keys the book sets", () => {
-  let design = withKey(emptyDesign(), "scene-break-mark", "word");
-  design = withKey(design, "scene-break-word", "Later");
+  let design = withKey(emptyDesign(), "scene-break-mark", "ornament");
+  design = withKey(design, "scene-break-ornament", "*");
   design = withKey(design, "header-left-page", "author");
   design = withKey(design, "header-right-page", "chapter-title");
   const lines = summary(design, "in");
-  assert.equal(value(lines, "Scene breaks"), "Later");
+  assert.equal(value(lines, "Scene breaks"), "*");
   assert.equal(
     value(lines, "Running heads"),
     "author on left pages, chapter title on right pages",
