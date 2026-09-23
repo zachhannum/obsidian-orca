@@ -23,6 +23,7 @@ import {
   type FontFiles,
   type FontIndex,
 } from "@/assets/fonts";
+import { coverage, type Cover } from "@/assets/cmap";
 import { faceBytes } from "@/assets/sfnt";
 import { contentKey, fontUrl, type Hashed } from "@/assets/registry";
 import { usedVariant, variantFamily } from "@/assets/variants";
@@ -243,6 +244,44 @@ export async function previewVariants(
       await preview(places, previewFamily(variantFamily(family, variant)), face, previews);
     }),
   );
+}
+
+/** The code points a family covers, read once per face. */
+export interface Coverages {
+  of(family: Family): Promise<readonly Cover[]>;
+}
+
+/**
+ * Reads the code points a family's default face covers and registers
+ * that face with the document. The browser draws every cell in the
+ * face the coverage came from, so a face the browser fell back to
+ * would draw a glyph the family does not have.
+ *
+ * A face that will not read covers nothing, and the browser says so.
+ */
+export function documentCoverage(places: FontPlaces, previews: Previews): Coverages {
+  const read = new Map<string, Promise<readonly Cover[]>>();
+  return {
+    of: (family) => {
+      const variant = family.variants.find((each) => each.isDefault);
+      const face = variant === undefined ? undefined : previewFace(variant);
+      if (face === undefined) return Promise.resolve([]);
+      const at = `${face.path}#${face.face}`;
+      const known = read.get(at);
+      if (known !== undefined) return known;
+      const reading = (async (): Promise<readonly Cover[]> => {
+        try {
+          const { bytes } = await crossing(places, face);
+          await previews.add(previewFamily(family.name), bytes);
+          return coverage(bytes);
+        } catch {
+          return [];
+        }
+      })();
+      read.set(at, reading);
+      return reading;
+    },
+  };
 }
 
 async function preview(

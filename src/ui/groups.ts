@@ -39,6 +39,8 @@ import type { Override } from "@/style/overrides";
 export interface Choice {
   value: string;
   label: string;
+  /** An Obsidian icon a segment draws in place of the label. The label is then the button's name. */
+  icon?: string;
 }
 
 /** The control kinds the panel draws. */
@@ -52,7 +54,6 @@ export type Kind =
   | "select"
   | "segment"
   | "glyph"
-  | "word"
   | "level";
 
 /** One control, and the design key it writes. */
@@ -85,11 +86,6 @@ export interface Group {
   rows: readonly Row[];
 }
 
-const ALIGN: readonly Choice[] = [
-  { value: "justify", label: "Justified" },
-  { value: "left", label: "Ragged right" },
-];
-
 const BEGINS: readonly Choice[] = [
   { value: "next-page", label: "Next page" },
   { value: "right-page", label: "Right-hand page" },
@@ -117,16 +113,21 @@ const TRACKING: readonly Choice[] = [
   { value: "0.12em", label: "Wide" },
 ];
 
+/** Body text and a heading are aligned with one control. */
 const ALIGNMENTS: readonly Choice[] = [
-  { value: "left", label: "Left" },
-  { value: "center", label: "Center" },
-  { value: "right", label: "Right" },
+  { value: "left", label: "Left", icon: "align-left" },
+  { value: "center", label: "Center", icon: "align-center" },
+  { value: "right", label: "Right", icon: "align-right" },
+  { value: "justify", label: "Justified", icon: "align-justify" },
 ];
+
+const HEADING_ALIGNMENTS: readonly Choice[] = ALIGNMENTS.filter(
+  (choice) => choice.value !== "justify",
+);
 
 const MARKS: readonly Choice[] = [
   { value: "space", label: "Space" },
   { value: "ornament", label: "Ornament" },
-  { value: "word", label: "Word" },
 ];
 
 const SLOTS: readonly Choice[] = [
@@ -218,7 +219,10 @@ export const GROUPS: readonly Group[] = [
         label: "Line spacing",
         of: [{ kind: "length", key: "body-line-spacing" }],
       },
-      { label: "Setting", of: [{ kind: "segment", key: "body-align", choices: ALIGN }] },
+      {
+        label: "Alignment",
+        of: [{ kind: "segment", key: "body-align", choices: ALIGNMENTS }],
+      },
       {
         label: "First-line indent",
         of: [{ kind: "length", key: "body-first-line-indent" }],
@@ -266,7 +270,7 @@ export const GROUPS: readonly Group[] = [
       },
       {
         label: "Alignment",
-        of: [{ kind: "segment", key: `${LEVELED}align`, choices: ALIGNMENTS }],
+        of: [{ kind: "segment", key: `${LEVELED}align`, choices: HEADING_ALIGNMENTS }],
       },
     ],
   },
@@ -317,7 +321,8 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "segment", key: "scene-break-mark", choices: MARKS }],
       },
       { label: "Glyph", of: [{ kind: "glyph", key: "scene-break-ornament" }] },
-      { label: "Word", of: [{ kind: "word", key: "scene-break-word" }] },
+      { label: "Font", of: [{ kind: "font", key: "scene-break-font" }] },
+      { label: "Size", of: [{ kind: "length", key: "scene-break-size" }] },
       {
         label: "Space above",
         of: [{ kind: "count", key: "scene-break-space-above", said: "lines" }],

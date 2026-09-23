@@ -68,6 +68,5 @@ function trimSaid(trim: Written | undefined, unit: PageUnit): string {
 function sceneSaid(full: Readonly<Record<string, Written>>): string {
   const mark = full["scene-break-mark"];
   if (mark === "space") return "A blank line";
-  if (mark === "word") return String(full["scene-break-word"] ?? "A word");
   return String(full["scene-break-ornament"] ?? "An ornament");
 }

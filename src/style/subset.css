@@ -87,6 +87,8 @@ section > p:first-of-type::first-letter {
 
 hr {
   content: "\2042";
+  font-family: "EB Garamond", serif;
+  font-size: 11pt;
   text-align: center;
   margin-top: 1em;
   margin-bottom: 1em;

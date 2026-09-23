@@ -28,6 +28,7 @@ chapter-begins: right-page
 chapter-space-above: 7
 chapter-drop-cap: 3
 scene-break-ornament: ⁂
+scene-break-font: Junicode
 header-left-page: author
 header-right-page: book-title
 page-number-position: bottom

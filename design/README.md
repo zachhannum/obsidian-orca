@@ -121,6 +121,11 @@ its editor around these files and returns a URL. The artboard list and
   variant shows none. A book with no variant picked sets in the
   family's default variant, and each variant row is set in its own
   face.
+- The Glyph row offers four ornaments and a browser over the face the
+  scene break is set in. The browser lists every code point that face
+  covers, under the name of the Unicode block the code point sits in.
+  An ornamental font holds its ornaments where it likes, so the browser
+  hides no block.
 - The Fonts group follows Headings and adds a font the design names
   nowhere. The picker is the Font control's, and a font added this way
   registers a face, so the author's CSS can set text in it by name. The

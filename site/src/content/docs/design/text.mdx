@@ -10,7 +10,7 @@ The Text group in the design panel sets the font of the text, its size and line 
 
 <Shot
   name="panel-text"
-  alt="The Text group of the design panel, with Font, Size, Line spacing, Setting, First-line indent and three switches."
+  alt="The Text group of the design panel, with Font, Size, Line spacing, Alignment, First-line indent and three switches."
   caption="The Text group."
   marks={['body-font', 'body-size', 'body-line-spacing', 'body-align', 'body-first-line-indent', 'body-hyphens', 'body-indent-after-break', 'body-hanging-punctuation']}
   numbered
@@ -24,7 +24,7 @@ The Text group in the design panel sets the font of the text, its size and line 
 |  | Variant | The default variant of the font | `body-font-variant` |
 | 2 | Size | `11pt` | `body-size` |
 | 3 | Line spacing | `16.5pt` | `body-line-spacing` |
-| 4 | Setting | `Justified` | `body-align` |
+| 4 | Alignment | `Justified` | `body-align` |
 | 5 | First-line indent | `1.2em` | `body-first-line-indent` |
 | 6 | Hyphenate | on | `body-hyphens` |
 | 7 | Indent again after a scene break | off | `body-indent-after-break` |
@@ -38,6 +38,6 @@ The Text group in the design panel sets the font of the text, its size and line 
 
 The baseline is the line that the letters sit on. `Line spacing` is the distance from the baseline of one line to the baseline of the next. A number with no unit is in points. If `First-line indent` is in `em`, the indent changes with the size of the text.
 
-## Setting
+## Alignment
 
-Justified text aligns on both the left and the right margin. Orca adjusts the space between the words so that each line fills the full width. Ragged right text aligns on the left margin only, so the right edge is uneven.
+Body text can be set left, centered, right or justified. When the text is justified, orca adjusts the space between the words so that each line fills the width to both margins.

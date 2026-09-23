@@ -80,7 +80,9 @@ export interface PageDesign {
   mirrored?: boolean;
 }
 
-export type Align = "justify" | "left";
+export type Alignment = "left" | "center" | "right" | "justify";
+
+export type HeadingAlignment = Exclude<Alignment, "justify">;
 
 export interface BodyDesign {
   /** The font the book is set in, by the name its file carries. */
@@ -89,7 +91,7 @@ export interface BodyDesign {
   fontVariant?: string;
   size?: Length;
   lineSpacing?: Length;
-  align?: Align;
+  align?: Alignment;
   /** The indent on a paragraph's first line. */
   indent?: Length;
   /** When true, the first paragraph after a scene break takes the first-line indent. */
@@ -103,8 +105,6 @@ export interface BodyDesign {
   /** A heading keeps the text under it on the same page. */
   keepHeadings?: boolean;
 }
-
-export type Alignment = "left" | "center" | "right";
 
 /** The case a place is set in. Small caps is the font's feature, all caps the text transformed. */
 export type Caps = "normal" | "small-caps" | "all-caps";
@@ -122,7 +122,7 @@ export interface TypeSpec {
   caps?: Caps;
   /** The letter spacing on the level. */
   letterSpacing?: Length;
-  align?: Alignment;
+  align?: HeadingAlignment;
 }
 
 /** The heading levels markdown writes, which are the ones a design sets. */
@@ -149,15 +149,17 @@ export interface ChapterDesign {
   firstLineLetterSpacing?: Length;
 }
 
-export type SceneMark = "space" | "ornament" | "word";
+export type SceneMark = "space" | "ornament";
 
 export interface SceneDesign {
   /** The kind of mark between two scenes. A space leaves a blank line. */
   mark?: SceneMark;
   /** The mark between two scenes, as the glyph itself. */
   ornament?: string;
-  /** The word between two scenes, as the author writes it. */
-  word?: string;
+  /** The face the mark is set in. A scene break with no font of its own takes the body's. */
+  font?: string;
+  /** The size the mark is set at. A scene break with no size of its own takes the body's. */
+  size?: Length;
   /** The blank space above a scene break, in lines of body text. */
   spaceAbove?: number;
   /** The blank space below a scene break, in lines of body text. */
@@ -220,14 +222,15 @@ export function emptyDesign(): Design {
 
 /**
  * Every font a design names, the body's first, then each heading
- * level's, then the running heads' and the folio's. A family two
- * places name is listed once, however it is capitalized, because the
- * index matches a name without case.
+ * level's, then the scene break's, then the running heads' and the
+ * folio's. A family two places name is listed once, however it is
+ * capitalized, because the index matches a name without case.
  */
 export function designFonts(design: Design): string[] {
   const named = [
     design.body.font,
     ...LEVELS.map((level) => design.headings[level].font),
+    design.scene.font,
     design.headers.font,
     design.headers.folioFont,
   ];
@@ -251,20 +254,21 @@ export interface FontUse {
 
 /**
  * Every font and variant a design sets, the body's first, then each
- * heading level's, then the running heads' and the folio's. A level
- * with no font of its own takes the body's font and variant as a pair.
- * A level with its own font and no variant takes that font's default.
- * A head and a folio each set a font alone, so each takes that font's
- * default variant. A pair two places set is listed once, however it is
- * capitalized.
+ * heading level's, then the scene break's, then the running heads' and
+ * the folio's. A level with no font of its own takes the body's font
+ * and variant as a pair. A level with its own font and no variant
+ * takes that font's default. A scene break, a head and a folio each
+ * set a font alone, so each takes that font's default variant. A pair
+ * two places set is listed once, however it is capitalized.
  */
 export function designUses(design: Design): FontUse[] {
   const { font, fontVariant } = design.body;
   const body = font === undefined ? undefined : { font, variant: fontVariant };
+  const scene = design.scene.font;
   const named = [
     body,
     ...LEVELS.map((level) => headingUse(design.headings[level], body)),
-    ...[design.headers.font, design.headers.folioFont].map((each) =>
+    ...[scene, design.headers.font, design.headers.folioFont].map((each) =>
       each === undefined ? undefined : { font: each, variant: undefined },
     ),
   ];
@@ -401,7 +405,7 @@ const BODY: readonly Field[] = [
     property: "text-align",
     read: ({ body }) => body.align,
     write: ({ body }, value) => {
-      const align = asWord(value, ALIGNS);
+      const align = asWord(value, ALIGNMENTS);
       if (align !== undefined) body.align = align;
     },
   },
@@ -547,12 +551,21 @@ const SCENE: readonly Field[] = [
     },
   },
   {
-    key: "scene-break-word",
-    property: "content",
-    read: ({ scene }) => scene.word,
+    key: "scene-break-font",
+    property: "font-family",
+    read: ({ scene }) => scene.font,
     write: ({ scene }, value) => {
-      const word = asText(value);
-      if (word !== undefined) scene.word = word;
+      const font = asText(value);
+      if (font !== undefined) scene.font = font;
+    },
+  },
+  {
+    key: "scene-break-size",
+    property: "font-size",
+    read: ({ scene }) => written(scene.size),
+    write: ({ scene }, value) => {
+      const size = asLength(value);
+      if (size !== undefined) scene.size = size;
     },
   },
   {
@@ -823,12 +836,12 @@ export function stepCount(count: number, by: 1 | -1, times = 1): number {
   return Math.max(0, count + by * times);
 }
 
-const ALIGNS: readonly Align[] = ["justify", "left"];
-const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right"];
+const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right", "justify"];
+const HEADING_ALIGNMENTS: readonly HeadingAlignment[] = ["left", "center", "right"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
 
-const MARKS: readonly SceneMark[] = ["space", "ornament", "word"];
+const MARKS: readonly SceneMark[] = ["space", "ornament"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
   "author",
@@ -898,7 +911,7 @@ function heading(level: Level): Field[] {
       property: "text-align",
       read: ({ headings }) => headings[level].align,
       write: ({ headings }, value) => {
-        const align = asWord(value, ALIGNMENTS);
+        const align = asWord(value, HEADING_ALIGNMENTS);
         if (align !== undefined) headings[level].align = align;
       },
     },

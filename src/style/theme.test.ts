@@ -48,14 +48,18 @@ test("a book that sets nothing sets one font in two sizes, with nothing the engi
   }
 });
 
-test("every design key has a default but a font that is inherited, each font's variant and the scene-break word", () => {
+test("every design key has a default but a heading's, a head's and a folio's font, a scene break's font and size, and each font's variant", () => {
   const variant = (key: string) => key.endsWith("-font-variant");
   // A heading, a running head and a folio take the body's font, so
   // none of them carries a default of its own.
-  const inherits = (key: string) =>
+  const follows = (key: string) =>
     /^heading-\d-font$/.test(key) || key === "header-font" || key === "folio-font";
+  // A scene break with no font or size of its own takes the body's, so
+  // neither key has a default.
+  const inherited = (key: string) =>
+    key === "scene-break-font" || key === "scene-break-size";
   const optional = (key: string) =>
-    inherits(key) || variant(key) || key === "scene-break-word";
+    follows(key) || variant(key) || inherited(key);
 
   assert.deepEqual(
     Object.keys(writeDesign(DEFAULTS)),
@@ -67,7 +71,7 @@ test("every design key has a default but a font that is inherited, each font's v
   const shown = writeDesign(effective(emptyDesign()));
   assert.deepEqual(
     Object.keys(shown),
-    DESIGN_KEYS.filter((key) => key !== "scene-break-word" && !variant(key)),
+    DESIGN_KEYS.filter((key) => !inherited(key) && !variant(key)),
   );
   for (const level of LEVELS) {
     assert.equal(shown[`heading-${level}-font`], "EB Garamond");

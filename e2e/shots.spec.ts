@@ -1023,6 +1023,86 @@ async function untyped(site: Site, own: string): Promise<void> {
   await settled(site.book);
 }
 
+/** The group the glyph picture crops to, and the key it sets the face in. */
+const SCENE_BREAKS = "Scene breaks";
+const GLYPH_FONT = "scene-break-font";
+
+/**
+ * The face the sample vault carries that is all ornaments. The browser
+ * lists the face the scene break is set in, so the picture sets the
+ * break in that one.
+ */
+const ORNAMENTAL = "Noto Sans Symbols 2";
+
+// The picture sets a key on the book note, so it comes after the
+// flip-through, which reads the book that note sets.
+test("the glyph picture is the browser open over the ornamental face", async ({
+  site,
+}) => {
+  await arrange(site);
+  const own = await noteText(site);
+  await site.panel.chooseFont(GLYPH_FONT, ORNAMENTAL);
+  await expect.poll(async () => noteText(site)).toContain(`${GLYPH_FONT}: ${ORNAMENTAL}`);
+  await settled(site.book);
+
+  const taken: Marks[] = [];
+  for (const scheme of SCHEMES) {
+    await site.paint(scheme);
+    await settled(site.book);
+    await site.obsidian.still();
+    // The browser hangs under its row and the panel clips what hangs
+    // past its foot, so the group goes to the top of the panel first.
+    const group = site.panel.leaf.locator(`[data-group="${SCENE_BREAKS}"]`);
+    await group.evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+    });
+    await site.panel.browseGlyphs();
+
+    // The picture is the group with the browser standing over it, which
+    // is where the browser is drawn.
+    const browser = await measured(site.panel.glyphBrowser);
+    const leaf = await measured(site.panel.leaf);
+    expect(browser.y + browser.height).toBeLessThanOrEqual(leaf.y + leaf.height);
+    const box = await around(site, [await measured(group), browser], PAD / 2);
+    // The group under this one stands at the browser's foot, so the
+    // crop ends where the browser does.
+    const clip = { ...box, height: Math.ceil(browser.y + browser.height) - box.y };
+    taken.push(await site.marks(clip, {}));
+    await expect(site.obsidian.page).toHaveScreenshot(`panel-glyphs-${scheme}.png`, {
+      clip,
+    });
+
+    // The browser closes with the row where it is, so the other scheme
+    // opens it from the same place.
+    await site.panel.glyphFilter.press("Escape");
+    await expect(site.panel.glyphBrowser).toHaveCount(0);
+  }
+  await sidecar("panel-glyphs", taken);
+
+  await site.obsidian.moving();
+  await site.panel.reset(GLYPH_FONT).click();
+  await expect.poll(async () => noteText(site)).not.toContain(GLYPH_FONT);
+  // Orca writes the front matter it owns in its own hand, so the reset
+  // leaves the note set the way orca sets it rather than the way the
+  // vault has it. The note itself goes back for the pictures after this
+  // one.
+  await putBack(site, own);
+  await settled(site.book);
+});
+
+/** Writes the book note back, for a picture that set a design key on it. */
+async function putBack(site: Site, own: string): Promise<void> {
+  await site.obsidian.page.evaluate(
+    async (wrote) => {
+      const note = window.app.vault.getFileByPath(wrote.at);
+      if (note === null) throw new Error(`no note at ${wrote.at}`);
+      await window.app.vault.modify(note, wrote.text);
+    },
+    { at: BOOK, text: own },
+  );
+  await expect.poll(async () => noteText(site)).toEqual(own);
+}
+
 // The inspect picture is taken last. Its rule is a change to the book
 // note, and a change to the note drops the book the flip-through reads.
 test("the inspect picture is a pinned paragraph beside the rules that set it", async ({

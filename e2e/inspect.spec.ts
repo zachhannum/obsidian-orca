@@ -335,7 +335,10 @@ test("a click on the pinned box again, or where no box is, takes the pin off", a
   inspect,
 }) => {
   await book.open();
-  await book.painted();
+  // The spec before this one puts a chapter note back, and the book
+  // repaginates after it. A pin taken during that paint is renumbered
+  // under the spec, so this one starts from a quiet book.
+  await book.settled(BOOK);
   await book.type(String(TEXT_PAGE));
   await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
   await inspect.on();
