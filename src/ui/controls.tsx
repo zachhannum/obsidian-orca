@@ -232,6 +232,9 @@ export function Row({
             grid && "orca-panel-grid",
             !grid && overridden !== undefined && "is-overridden",
           )}
+          // A dim row sets nothing, so its controls take no input. The
+          // reset stays live, so a font set before still clears.
+          inert={dim}
         >
           {children}
         </div>

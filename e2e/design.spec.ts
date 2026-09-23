@@ -947,7 +947,7 @@ test("a key the book does not set is drawn at its default, in faint type", async
   await expect(panel.reset("chapter-drop-cap")).toBeVisible();
 });
 
-test("the drop cap font row dims while the chapter has no drop cap", async ({
+test("the drop cap font row dims and takes no input while the chapter has no drop cap", async ({
   book,
   panel,
   vault,
@@ -970,6 +970,10 @@ test("the drop cap font row dims while the chapter has no drop cap", async ({
   // A chapter with no drop cap has no letter to set, so the row dims.
   await panel.control("chapter-drop-cap").selectOption({ label: "None" });
   await expect(row).toHaveAttribute("data-dim", "");
+  // A dim row takes no input, so its font list cannot open.
+  const field = panel.control("chapter-drop-cap-font");
+  const inert = async () => field.evaluate((each) => each.closest("[inert]") !== null);
+  await expect.poll(inert).toBe(true);
 
   await written(vault, own);
 });
