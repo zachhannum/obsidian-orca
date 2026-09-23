@@ -1,30 +1,42 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CEILING } from "@/engine/pool";
-import { LIMITS, MOST_BOOKS, bookCount, readLimits } from "@/ui/limits";
+import { LIMITS, MOST_SESSIONS, readLimits, sessionCount } from "@/ui/limits";
 
-test("the ceiling is a setting, saved and read back in whole books", () => {
-  assert.equal(LIMITS.books, CEILING);
+test("the ceiling is a setting, saved and read back in whole sessions", () => {
+  assert.equal(LIMITS.sessions, CEILING);
   // Nothing saved yet, and a file something else wrote.
   assert.deepEqual(readLimits(null), LIMITS);
   assert.deepEqual(readLimits({}), LIMITS);
-  assert.deepEqual(readLimits({ books: "four" }), LIMITS);
+  assert.deepEqual(readLimits({ sessions: "four" }), LIMITS);
 
-  assert.deepEqual(readLimits({ books: 4 }), { ...LIMITS, books: 4 });
-  assert.deepEqual(readLimits({ books: 4.5 }), { ...LIMITS, books: 4 });
+  assert.deepEqual(readLimits({ sessions: 4 }), { ...LIMITS, sessions: 4 });
+  assert.deepEqual(readLimits({ sessions: 4.5 }), { ...LIMITS, sessions: 4 });
 
   // A reader with the memory for it raises the ceiling. Nobody sets the
-  // ceiling to no books at all.
-  assert.equal(bookCount(MOST_BOOKS + 1), MOST_BOOKS);
-  assert.equal(bookCount(0), 1);
-  assert.equal(bookCount(Number.NaN), CEILING);
+  // ceiling to no sessions at all.
+  assert.equal(sessionCount(MOST_SESSIONS + 1), MOST_SESSIONS);
+  assert.equal(sessionCount(0), 1);
+  assert.equal(sessionCount(Number.NaN), CEILING);
+});
+
+test("a ceiling saved under the old name reads back as the same number", () => {
+  assert.deepEqual(readLimits({ books: 4 }), { ...LIMITS, sessions: 4 });
+  assert.deepEqual(readLimits({ books: 4, unit: "mm" }), {
+    ...LIMITS,
+    sessions: 4,
+    unit: "mm",
+  });
+  // The name the setting writes now wins over the one it wrote before.
+  assert.equal(readLimits({ books: 4, sessions: 6 }).sessions, 6);
+  assert.equal(readLimits({ books: "four" }).sessions, CEILING);
 });
 
 test("pages are measured in inches until the author picks another unit", () => {
   assert.equal(LIMITS.unit, "in");
-  assert.equal(readLimits({ books: 2 }).unit, "in");
-  assert.equal(readLimits({ books: 2, unit: "mm" }).unit, "mm");
-  assert.equal(readLimits({ books: 2, unit: "px" }).unit, "in");
+  assert.equal(readLimits({ sessions: 2 }).unit, "in");
+  assert.equal(readLimits({ sessions: 2, unit: "mm" }).unit, "mm");
+  assert.equal(readLimits({ sessions: 2, unit: "px" }).unit, "in");
   // A unit saved without a ceiling reads back with the default ceiling.
   assert.deepEqual(readLimits({ unit: "pt" }), { ...LIMITS, unit: "pt" });
 });
@@ -39,6 +51,7 @@ test("the view the last switch chose is the view the next preview opens in", () 
 });
 
 // What this tier does not cover: the tab the ceiling sits in, which is
-// Obsidian's own `Setting` rows around these, the memory of a machine,
-// which is what a reader raises the ceiling against, and the switch
-// that saves a view, which the e2e suite presses in real Obsidian.
+// Obsidian's own `Setting` rows around these and so holds the name and
+// the line the reader reads, the memory of a machine, which is what a
+// reader raises the ceiling against, and the switch that saves a view,
+// which the e2e suite presses in real Obsidian.

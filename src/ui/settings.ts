@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting, type App, type Plugin } from "obsidian";
-import { MOST_BOOKS, isPageUnit, type Limits } from "@/ui/limits";
+import { MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
 
 /** The plugin, narrowed to the settings this tab writes. */
 export interface Limited {
@@ -32,19 +32,18 @@ export class OrcaSettingTab extends PluginSettingTab {
           }),
       );
     new Setting(containerEl)
-      .setName("Books kept on the engine")
+      .setName("Max concurrent preview sessions")
       .setDesc(
-        "A book stays typeset after its last pane closes, so opening it " +
-          "again does not lay it out a second time. Each book kept this " +
-          "way runs a worker that holds the whole book.",
+        "The most books orca keeps typeset at once, so one opens again " +
+          "without a wait.",
       )
       .addSlider((slider) =>
         slider
-          .setLimits(1, MOST_BOOKS, 1)
-          .setValue(this.orca.limits.books)
+          .setLimits(1, MOST_SESSIONS, 1)
+          .setValue(this.orca.limits.sessions)
           .setDynamicTooltip()
-          .onChange((books) => {
-            this.orca.limit({ ...this.orca.limits, books });
+          .onChange((sessions) => {
+            this.orca.limit({ ...this.orca.limits, sessions });
           }),
       );
   }
