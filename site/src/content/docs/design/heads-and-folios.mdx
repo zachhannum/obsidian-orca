@@ -1,12 +1,12 @@
 ---
 title: Heads & folios
 eyebrow: Design
-description: Running heads, the type they are set in, and page numbers.
+description: Running heads, page numbers, and the type they are set in.
 ---
 
 import Shot from '../../../components/Shot.astro';
 
-A running head is the line at the top of a page. A folio is the page number. The Heads & folios group in the design panel sets both.
+A running head is the line of text at the top of a page, such as the book title or the chapter title. A folio is the page number. The Heads & folios group in the design panel sets both.
 
 <Shot
   name="panel-heads-and-folios"
@@ -36,20 +36,20 @@ A running head is the line at the top of a page. A folio is the page number. The
 
 `Left-page header` and `Right-page header` each take `Nothing`, `Author`, `Book title` or `Chapter title`. `Header position` puts the running head at the outside edge of the page or in the center.
 
-## The fonts they are set in
-
-`Header font` sets the running heads in a font of their own, and `Folio font` sets the page numbers in one. A head or a folio with no font of its own is set in the book's font, which is what both rows show until you pick one.
-
-A running head is usually set in another face than the text, and a folio in another face again. Both pickers offer the fonts the text picker offers.
-
-## The type the heads are set in
-
-`Capitals` sets the heads in small caps or in full capitals, and `Tracking` sets the space between their letters. Small caps with a little tracking is the usual setting for a novel. `Set the running heads in italic` sets them in the italic of the book's font.
-
-The three controls set the folio as well, so the band of type at the head of the page and the number at the foot agree. Capitals and tracking change no digit.
-
 ## Page numbers
 
-`Page number` puts the folio at the top, at the bottom, or at the outside edge. `Number format` chooses arabic numerals or lowercase roman numerals for the folio.
+`Page number` puts the folio at the top, at the bottom, or at the outside edge. `Number format` sets the folio in arabic numerals or in lowercase roman numerals.
+
+## Fonts
+
+`Header font` sets the font of the running heads. `Folio font` sets the font of the page numbers. Until you pick a font, each one uses the font from the Text group, and its row shows that font. Both pickers list the same fonts as the Text group.
+
+## Capitals, tracking and italic
+
+`Capitals` sets the running heads in small caps or in full capitals. `Tracking` sets the space between their letters. Small caps with a little tracking is the usual setting for a novel. `Set the running heads in italic` sets them in italic.
+
+These three controls also apply to the folio. Capitals do not change digits.
+
+## Openings
 
 An opening is the first page of a chapter. When `Hide the running head and page number on openings` is on, an opening has no running head and no folio.
