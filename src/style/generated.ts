@@ -188,8 +188,8 @@ function pageRules(
   const outside = { value: written(margins.outside), keys: ["margin-outside"] };
   // The side margins mirror, so the inside one prints at the spine on
   // either page.
-  const left: Declaration[] = sideMargins(outside, inside);
-  const right: Declaration[] = sideMargins(inside, outside);
+  const left = sideMargins(outside, inside);
+  const right = sideMargins(inside, outside);
 
   // Orca owns the running heads and the folio as soon as the design
   // sets anything about them. Orca clears the boxes it does not use
