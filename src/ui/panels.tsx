@@ -38,8 +38,10 @@ import type { Place } from "@/style/origin";
 import type { Override } from "@/style/overrides";
 import { effective } from "@/style/theme";
 import {
+  classes,
   Field,
   Glyphs,
+  inactive,
   Reset,
   Row,
   Segment,
@@ -519,8 +521,9 @@ function Beside({
       </span>
     );
   if (grid) {
+    const cell = inactive(overridden ? "overridden" : undefined);
     return (
-      <div className={overridden ? "orca-panel-cell is-overridden" : "orca-panel-cell"}>
+      <div {...cell} className={classes("orca-panel-cell", cell.className)}>
         {drawn}
         {said}
       </div>

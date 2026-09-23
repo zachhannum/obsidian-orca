@@ -666,7 +666,7 @@ test("the CSS view edits the book's own fence, and the edit reaches the pages an
   await written(vault, own);
 });
 
-test("a control the author's CSS overrides dims and names the line that overrides it", async ({
+test("a control the author's CSS overrides dims, takes no input and names the line that overrides it", async ({
   book,
   panel,
   vault,
@@ -694,6 +694,10 @@ test("a control the author's CSS overrides dims and names the line that override
   await expect(panel.reset(key)).toHaveCount(0);
   await expect(row.locator(".orca-panel-label")).toHaveCSS("opacity", "0.42");
   await expect(panel.control(key)).toBeVisible();
+  // An overridden control takes no input, so what it would write cannot land.
+  const locked = async () =>
+    panel.control(key).evaluate((field) => field.closest("[inert]") !== null);
+  await expect.poll(locked).toBe(true);
 
   // A hover over the lock names the property, the value that beats it and its place.
   await expect(panel.overriddenCard).toBeHidden();
@@ -706,7 +710,8 @@ test("a control the author's CSS overrides dims and names the line that override
   // Obsidian draws an aria-label as its own tooltip over the card, so the lock names itself in text.
   await expect(panel.overridden(key)).not.toHaveAttribute("aria-label");
   await expect(panel.overridden(key)).toHaveAccessibleName(`Overridden by line ${line} of the book's CSS`);
-  await panel.control(key).hover();
+  // The control is inert, so the pointer moves off the lock onto its label.
+  await row.locator(".orca-panel-label").hover();
   await expect(panel.overriddenCard).toBeHidden();
 
   // The lock is the way to the line.
@@ -723,6 +728,7 @@ test("a control the author's CSS overrides dims and names the line that override
   await panel.toControls.click();
   await expect(row).not.toHaveAttribute("data-overridden");
   await expect(panel.overridden(key)).toHaveCount(0);
+  await expect.poll(locked).toBe(false);
 
   await written(vault, own);
 });

@@ -173,6 +173,26 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
   );
 }
 
+/** Why a control takes no input: its key sets nothing yet, or the author's CSS overrides it. */
+export type Inactive = "unset" | "overridden";
+
+/**
+ * The props every inactive control carries. It dims, and it is inert, so
+ * it takes no click, focus or key, and nothing inside it can open. A list
+ * that cannot open is never drawn at the dim's opacity.
+ */
+export function inactive(reason: Inactive | undefined): {
+  className: string | undefined;
+  inert: boolean;
+  "data-inactive": Inactive | undefined;
+} {
+  return {
+    className: reason === undefined ? undefined : "is-inactive",
+    inert: reason !== undefined,
+    "data-inactive": reason,
+  };
+}
+
 /**
  * Draws one row of the panel. The row keeps the slot for the reset even
  * when it has no reset, so the controls do not move when the book starts
@@ -209,6 +229,11 @@ export function Row({
     if (line === undefined) element.removeAttribute("data-overridden");
     else element.setAttribute("data-overridden", String(line));
   }, [line]);
+  // A grid dims each overridden cell where it sits, so only a row's
+  // own controls go inactive as a whole. The lock and the reset stay live.
+  const controls = inactive(
+    dim ? "unset" : !grid && overridden !== undefined ? "overridden" : undefined,
+  );
   return (
     <div
       ref={row}
@@ -222,19 +247,16 @@ export function Row({
     >
       <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
         <span
-          className={classes("orca-panel-label", overridden?.every === true && "is-overridden")}
+          className={classes(
+            "orca-panel-label",
+            (dim || overridden?.every === true) && "is-inactive",
+          )}
         >
           {label}
         </span>
         <div
-          className={classes(
-            "orca-panel-controls",
-            grid && "orca-panel-grid",
-            !grid && overridden !== undefined && "is-overridden",
-          )}
-          // A dim row sets nothing, so its controls take no input. The
-          // reset stays live, so a font set before still clears.
-          inert={dim}
+          {...controls}
+          className={classes("orca-panel-controls", grid && "orca-panel-grid", controls.className)}
         >
           {children}
         </div>
@@ -902,6 +924,6 @@ export function Warning({
   );
 }
 
-function classes(...names: (string | false)[]): string {
-  return names.filter((name) => name !== false).join(" ");
+export function classes(...names: (string | false | undefined)[]): string {
+  return names.filter((name) => typeof name === "string").join(" ");
 }

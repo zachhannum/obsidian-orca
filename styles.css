@@ -1449,15 +1449,11 @@ button.orca-panel-tab.is-on {
   flex-basis: 100%;
 }
 
-/* A control the author's CSS overrides dims where it sits. */
-.orca-panel-label.is-overridden,
-.orca-panel-controls.is-overridden,
-.orca-panel-cell.is-overridden {
-  opacity: 0.42;
-}
-
-/* A row that sets nothing until another row is set dims whole. */
-.orca-panel-line.mod-dim {
+/* A control that takes no input dims where it sits: one whose key sets
+   nothing yet, or one the author's CSS overrides. */
+.orca-panel-label.is-inactive,
+.orca-panel-controls.is-inactive,
+.orca-panel-cell.is-inactive {
   opacity: 0.42;
 }
 
