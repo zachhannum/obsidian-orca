@@ -16,6 +16,7 @@ import {
   type NodeSource,
   type Op,
   type Page,
+  type Source,
 } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
@@ -130,7 +131,10 @@ class FakeClient implements EngineClient {
     return Promise.resolve(null);
   }
 
-  inspectMarginBox(page: number, box: MarginBoxName): Promise<Inspection | null> {
+  inspectMarginBox(
+    page: number,
+    box: MarginBoxName,
+  ): Promise<Inspection | null> {
     const key = `${String(page)}:${box}`;
     this.inspected.push(key);
     return Promise.resolve(this.margins.get(key) ?? null);
@@ -212,7 +216,7 @@ function leaves(count: number): Page[] {
         source: "",
         sourceMap: [],
         origin: null,
-        features: { smallCaps: false },
+        features: { smallCaps: false, settings: [] },
         color: "#000000",
         glyphs: [],
         layer: 0,
@@ -364,7 +368,10 @@ test("an edit drops the pages from before it rather than painting one of them", 
   client.rewrite(337);
   const reading = await session.read(0);
 
-  assert.ok(client.ranges.length > asked, "page 1 was painted from the book before the edit");
+  assert.ok(
+    client.ranges.length > asked,
+    "page 1 was painted from the book before the edit",
+  );
   assert.equal(reading?.pages[0]?.number, 1);
 });
 
@@ -382,7 +389,10 @@ test("a render overtaken by a later one paints no page of the book it asked for"
   // The reply came back behind the current generation, so it was
   // dropped: nothing of it was kept, and the page painted is asked for
   // again off the book the engine now has.
-  assert.ok(client.ranges.length > asked, "a page from before the render was painted");
+  assert.ok(
+    client.ranges.length > asked,
+    "a page from before the render was painted",
+  );
   assert.equal(reading?.length, 12);
   assert.equal(session.pages, 12);
 });
@@ -401,7 +411,11 @@ test("the whole book is read without an op, and the window a view paints stays c
   assert.equal(session.generation, generation);
   const asked = client.ranges.length;
   await session.read(0);
-  assert.equal(client.ranges.length, asked, "the painted window was asked for again");
+  assert.equal(
+    client.ranges.length,
+    asked,
+    "the painted window was asked for again",
+  );
 
   // A book that grew since the last reply is read at its new length.
   client.rewrite(400);
@@ -715,6 +729,88 @@ test("the sample note sets to a page the painter can draw", async () => {
   }
 });
 
+/** A book of three chapters, each on a page of its own. */
+const CHAPTERS: Source = {
+  name: "Chapters.md",
+  text: ["One", "Two", "Three"]
+    .map((name) => `## ${name}\n\n> A plate under the heading.\n`)
+    .join("\n"),
+};
+
+/** Pages that differ by side, and blocks that tile and that do not. */
+const BACKGROUNDS = [
+  "h2 { break-before: page; }",
+  "@page :left { background-image: url(left.png); background-size: cover; }",
+  "@page :right { background-image: url(right.png); background-size: cover; }",
+  "h2 { background-image: url(tile.png); background-repeat: repeat; background-size: 4pt 4pt; }",
+  "blockquote { background-image: url(plate.png); background-repeat: no-repeat; }",
+].join("\n");
+
+test("each page of a spread paints its backgrounds from definitions on that page", async () => {
+  const engine = await startEngine(await moduleBytes(), nodeHost());
+  try {
+    const session = new Session(engine.client, faces());
+    const png = new Uint8Array(
+      await readFile(path.join(root, "fixture/images/device.png")),
+    );
+    const images: Op[] = ["left.png", "right.png", "tile.png", "plate.png"].map(
+      // Each op's bytes are transferred, so each needs a buffer of its own.
+      (url) => ({ op: "image", url, bytes: png.slice() }),
+    );
+    await session.open([
+      ...openBook(CHAPTERS),
+      ...images,
+      styleOp([{ name: THEME_SHEET, css: BACKGROUNDS }]),
+    ]);
+
+    // The first page is a recto alone, so the spread is the two after it.
+    const reading = await session.read(1, 2);
+    assert.ok(reading, "the book set to no pages");
+    const spread = reading.pages;
+    assert.deepEqual(
+      spread.map((page) => page.side),
+      ["verso", "recto"],
+    );
+    const markup = spread.map((page) =>
+      paintPage(page, {
+        fonts: reading.fonts,
+        assets: reading.assets,
+        asset: (image) => image.url,
+      }),
+    );
+
+    // One surface holds both pages, and a url() resolves to the first
+    // element in it with that id.
+    const joined = markup.join("");
+    const ids = [...joined.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
+    assert.equal(new Set(ids).size, ids.length, "two pages share an id");
+    markup.forEach((page, index) => {
+      const refs = [...page.matchAll(/url\(#([^)]+)\)/g)].map((m) => m[1]);
+      for (const kind of ["clipPath", "pattern"]) {
+        assert.ok(
+          page.includes(`<${kind} `),
+          `page ${String(index)} has no ${kind}`,
+        );
+      }
+      for (const ref of refs) {
+        assert.ok(
+          page.includes(` id="${ref ?? ""}"`),
+          `${ref ?? ""} is not on page ${String(index)}`,
+        );
+      }
+    });
+    const [left, right] = markup;
+    assert.ok(
+      left?.includes('href="left.png"') && !left.includes('href="right.png"'),
+    );
+    assert.ok(
+      right?.includes('href="right.png"') && !right.includes('href="left.png"'),
+    );
+  } finally {
+    engine.stop();
+  }
+});
+
 /** A sheet setting the book in the family the installed file carries. */
 const TIMES = 'book { font-family: "Times New Roman", serif; }';
 
@@ -734,9 +830,10 @@ test(
       // The whole registered table comes back, including the cuts the
       // page never drew with.
       assert.ok(bundled.length > 1, "the bundled family answered one cut");
-      assert.deepEqual([...new Set(bundled.map((face) => face.family))], [
-        "eb garamond",
-      ]);
+      assert.deepEqual(
+        [...new Set(bundled.map((face) => face.family))],
+        ["eb garamond"],
+      );
       const variable = bundled.filter((face) => face.variations.length > 0);
       assert.ok(variable.length > 0, "no cut of the variable file was pinned");
       assert.deepEqual(
@@ -842,7 +939,11 @@ function engineDirectory(): string {
 test("a byte answers with its node, a node with its place, and neither with nothing", async () => {
   const client = new FakeClient(typeset(2));
   client.nodes.set("Chapter Twelve.md:812", 412);
-  client.sources.set(412, { source: "Chapter Twelve.md", start: 812, end: 1043 });
+  client.sources.set(412, {
+    source: "Chapter Twelve.md",
+    start: 812,
+    end: 1043,
+  });
   const session = new Session(client, faces());
 
   assert.equal(await session.nodeAt("Chapter Twelve.md", 812), 412);
@@ -927,7 +1028,8 @@ test("a page's margin boxes are asked about once per page per generation", async
 });
 
 /** A sheet that sets a running head on every page. */
-const RUNNING_HEAD = '@page { @top-center { content: "Pride and Prejudice"; } }';
+const RUNNING_HEAD =
+  '@page { @top-center { content: "Pride and Prejudice"; } }';
 
 test("a point in a paragraph hits it, and a point in the running head names its page selector", async () => {
   const vault = directoryVault(path.join(root, "fixture"));
@@ -977,7 +1079,8 @@ test("a point in a paragraph hits it, and a point in the running head names its 
 });
 
 /** A sheet that sets the opening paragraph's first letter three lines deep. */
-const DROP_CAP = "section > p:first-of-type::first-letter { initial-letter: 3; }";
+const DROP_CAP =
+  "section > p:first-of-type::first-letter { initial-letter: 3; }";
 
 test("a point on a drop cap hits the pseudo-element, which answers for itself", async () => {
   const vault = directoryVault(path.join(root, "fixture"));
@@ -1004,16 +1107,25 @@ test("a point on a drop cap hits the pseudo-element, which answers for itself", 
     // The letter sits at the top-left corner of the paragraph's box.
     const hit = await session.hit(box.page, box.x + 1, box.y + 1);
     assert.ok(hit !== undefined, "the point hit nothing");
-    assert.notEqual(hit, paragraph?.node, "the drop cap has the paragraph's id");
+    assert.notEqual(
+      hit,
+      paragraph?.node,
+      "the drop cap has the paragraph's id",
+    );
     const cap = await session.inspect(hit);
     assert.equal(cap?.element, "p");
     assert.equal(cap?.pseudoElement, "::first-letter");
-    assert.ok(cap?.rules.some((rule) => rule.selector.endsWith("::first-letter")));
+    assert.ok(
+      cap?.rules.some((rule) => rule.selector.endsWith("::first-letter")),
+    );
 
     // Its box is the letter, which is smaller than the paragraph.
     const letter = cap?.boxes[0];
     assert.ok(letter, "the drop cap reached no page");
-    assert.ok(letter.width < box.width, "the drop cap is as wide as the paragraph");
+    assert.ok(
+      letter.width < box.width,
+      "the drop cap is as wide as the paragraph",
+    );
   } finally {
     engine.stop();
   }
