@@ -8,7 +8,15 @@
  * Every control carries the design key it writes, so the script that
  * works them keeps no table of its own.
  */
-import { GLYPHS, atLevel, trims, type Control, type Group } from '@/ui/groups';
+import {
+  GLYPHS,
+  STYLE_AXES,
+  atLevel,
+  styleOn,
+  trims,
+  type Control,
+  type Group,
+} from '@/ui/groups';
 import Icon from './Icon.astro';
 
 interface Props {
@@ -39,6 +47,7 @@ const DRAWN = new Set([
   'count',
   'flag',
   'segment',
+  'style',
   'glyph',
   'select',
   'trim',
@@ -167,6 +176,22 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                     data-value={choice.value}
                   >
                     {choice.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {control.kind === 'style' && (
+              <div class="o-seg">
+                {STYLE_AXES.map(({ axis, icon, label }) => (
+                  <button
+                    type="button"
+                    class={styleOn(set(control), axis) ? 'on' : undefined}
+                    data-key={keyOf(control)} data-level={leveled(control)}
+                    data-kind={control.kind}
+                    data-axis={axis}
+                    aria-label={label}
+                  >
+                    <Icon name={icon} size={13} />
                   </button>
                 ))}
               </div>

@@ -25,6 +25,7 @@ In a key, `N` is the heading level, from 1 to 6.
 | 1 | Level | `H1` | none |
 | 2 | Font | `EB Garamond` | `heading-N-font` |
 |  | Variant | The default variant of the font | `heading-N-font-variant` |
+|  | Style | `Normal` | `heading-N-style` |
 | 3 | Size | `19pt` | `heading-N-size` |
 | 4 | Capitals | `Normal` | `heading-N-caps` |
 | 5 | Tracking | `None` | `heading-N-letter-spacing` |
@@ -43,7 +44,11 @@ If a level has no font of its own, it uses the font from the Text group.
 
 `Capitals` sets the level in small caps or in full capitals. Small caps are the small capital letters the font carries. Tracking is the space between letters.
 
-The two controls set every heading at that level, a chapter title and a part title alike. Italic comes from the manuscript: write `# *Chapter One*` in the note.
+The two controls set every heading at that level, a chapter title and a part title alike.
+
+## Style
+
+`Style` sets the weight and the slope of every heading at that level. The control has a button for bold and a button for italic, and pressing both sets bold italic. To slope one title alone, write it in the note as `# *Chapter One*`.
 
 ## Alignment
 
