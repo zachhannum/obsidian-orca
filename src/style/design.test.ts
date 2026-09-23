@@ -324,8 +324,6 @@ function whole(): Design {
     headings: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} },
     chapter: {
       begins: "right-page",
-      spaceAbove: 7,
-      spaceBelow: 2,
       dropCap: 3,
       firstLineCaps: "all-caps",
       firstLineLetterSpacing: len(0.04, "em"),
@@ -360,6 +358,8 @@ function whole(): Design {
       caps: "small-caps",
       letterSpacing: len(0.08, "em"),
       align: "center",
+      spaceAbove: 7,
+      spaceBelow: 2,
     };
   }
   return design;

@@ -81,8 +81,7 @@ test("with inspect mode on, the box under the pointer is outlined", async ({
 }) => {
   await book.open();
   await book.painted();
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
 
   const body = inspect.sheet(TEXT_PAGE).locator("text[data-selection-line]").nth(10);
@@ -138,8 +137,7 @@ test("a tag beside the outline shows the element, the section's role and the siz
 }) => {
   await book.open();
   await book.painted();
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
 
   await inspect.hoverLine(inspect.sheet(TEXT_PAGE).locator("text[data-selection-line]").nth(10));
@@ -158,8 +156,7 @@ test("a click pins the box, and the design panel opens its CSS view", async ({
 }) => {
   await book.open();
   await book.painted();
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
 
   const key = await inspect.pinLine(
@@ -226,8 +223,7 @@ test("a title page element and a running head can each be picked", async ({
   await inspect.off();
   await inspect.unpinned();
 
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
   const head = await inspect.pin(TEXT_PAGE, IN_THE_HEAD);
   expect(head).toBe(`@${HEAD_BOX}:${String(TEXT_PAGE)}`);
@@ -315,8 +311,7 @@ test("the first Escape removes the pin, and the second turns inspect mode off", 
 }) => {
   await book.open();
   await book.painted();
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
   await inspect.pinLine(inspect.sheet(TEXT_PAGE).locator("text[data-selection-line]").nth(10));
 
@@ -339,8 +334,7 @@ test("a click on the pinned box again, or where no box is, takes the pin off", a
   // repaginates after it. A pin taken during that paint is renumbered
   // under the spec, so this one starts from a quiet book.
   await book.settled(BOOK);
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
   const line = inspect.sheet(TEXT_PAGE).locator("text[data-selection-line]").nth(10);
   await inspect.pinLine(line);
@@ -948,8 +942,7 @@ test("the pane: a running head and a title page element show their selectors and
   await inspect.unpinned();
   await expect(panel.pane).toHaveCount(0);
 
-  await book.type(String(TEXT_PAGE));
-  await expect(book.surface).toHaveAttribute("data-first", String(TEXT_PAGE));
+  await book.turnTo(TEXT_PAGE);
   await inspect.on();
   await inspect.pin(TEXT_PAGE, IN_THE_HEAD);
   pin = await inspect.pinned();
@@ -1001,12 +994,14 @@ test("the pane: a section is named by its id in the pane and in an inserted rule
   await inspect.on();
 
   // The chapter's title is matched by the design panel's rule for the
-  // section's opening, which reaches the section by its id.
+  // heading that opens a section. The section's own id reaches the pane
+  // through the crumbs, and the rule the author adds.
   await inspect.pinLine(inspect.line(OPENING, CHAPTER_TITLE));
   const pin = await inspect.pinned();
   await panel.inspecting(pin.key, pin.generation);
   await expect(panel.crumbs.filter({ hasText: SECTION })).toHaveCount(1);
-  await expect(panel.rulesIn("design").filter({ hasText: SECTION }).first()).toBeVisible();
+  const opening = panel.rulesIn("design").filter({ hasText: "section > h1:first-child" });
+  await expect(opening.first()).toBeVisible();
   await expect(panel.pane).not.toContainText(":nth-child");
 
   await panel.code.click();

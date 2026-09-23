@@ -321,10 +321,11 @@ test("the book note carries the design the landing page shows", async () => {
       "body-first-line-indent": "1.2em",
       "body-hyphens": "true",
       "chapter-begins": "next-page",
-      "chapter-space-above": "7",
       "chapter-drop-cap": "3",
     },
   );
+  // The chapter opens on its label, which is a level 2 heading.
+  assert.equal(design["heading-2-space-above"], "7");
   assert.equal(design.trim, "5.5in 8.5in");
   assert.deepEqual(entries(await read(SAMPLE_BOOK), "Front matter"), [
     { link: undefined, role: "title-page" },

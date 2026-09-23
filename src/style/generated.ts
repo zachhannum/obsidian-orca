@@ -480,15 +480,17 @@ function headingRules(
   design: Design,
   registered: readonly Registered[],
 ): (Rule | undefined)[] {
-  return LEVELS.map((level) =>
-    block(`h${level}`, typeLines(design.headings[level], level, registered)),
-  );
+  return LEVELS.flatMap((level) => [
+    block(`h${level}`, typeLines(design.headings[level], level, design, registered)),
+    block(`section > h${level}:first-child`, openingSpace(design, level)),
+  ]);
 }
 
 /** A level with no font of its own declares none, so it inherits the body's family whole. */
 function typeLines(
   type: TypeSpec,
   level: Level,
+  design: Design,
   registered: readonly Registered[],
 ): Declaration[] {
   const lines: Declaration[] = [];
@@ -503,7 +505,40 @@ function typeLines(
   lines.push(...set("font-size", written(type.size), [`heading-${level}-size`]));
   lines.push(...typeset(type.caps, type.letterSpacing, `heading-${level}`));
   lines.push(...set("text-align", type.align, [`heading-${level}-align`]));
+  lines.push(
+    ...set("margin-top", lined(type.spaceAbove, design), [
+      `heading-${level}-space-above`,
+      ...spacing(design),
+    ]),
+  );
+  lines.push(
+    ...set("margin-bottom", lined(type.spaceBelow, design), [
+      `heading-${level}-space-below`,
+      ...spacing(design),
+    ]),
+  );
   return lines;
+}
+
+/**
+ * The heading a section opens on, which is the heading that starts a
+ * page. The engine drops the top margin of a box that starts a page,
+ * so the space above is padding there. The margin is cleared with it,
+ * so a section that opens below the one before it takes the space once.
+ */
+function openingSpace(design: Design, level: Level): Declaration[] {
+  const above = design.headings[level].spaceAbove;
+  if (above === undefined) return [];
+  const keys = [`heading-${level}-space-above`, ...spacing(design)];
+  return [
+    declared("padding-top", bodyLines(above, design), keys),
+    declared("margin-top", "0", keys),
+  ];
+}
+
+/** A count of body lines as a length, and nothing for a count the design leaves unset. */
+function lined(count: number | undefined, design: Design): string | undefined {
+  return count === undefined ? undefined : bodyLines(count, design);
 }
 
 function sectionRules(design: Design, setting: Setting): (Rule | undefined)[] {
@@ -539,12 +574,6 @@ function restart(setting: Setting): (Rule | undefined)[] {
  * The chapter openings. The drop cap falls on the paragraph the
  * opening headings lead into, so a note with text before its first
  * heading takes no drop cap.
- *
- * A sink is the blank space above a chapter's title, written in lines
- * of body text. Where the design sets a line height, a sink is that
- * many line heights. Where it does not, a sink is that many heading
- * ems. A sink is padding, since the engine drops the top margin of a
- * box that starts a page.
  */
 function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const chapters = sectionsOf(setting.sections, "chapter");
@@ -554,7 +583,6 @@ function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const starts = (suffix: string): string =>
     TEXT_START.map((start) => `${chapters} > ${start}${suffix}`).join(",\n");
   return [
-    block(`${chapters} > ${OPENING}`, openingSpace(design), "chapter"),
     block(
       starts(" + p::first-letter"),
       [
@@ -574,23 +602,6 @@ function chapterRules(design: Design, setting: Setting): (Rule | undefined)[] {
   ];
 }
 
-/** The space a chapter's design sets above and below an opening title. */
-function openingSpace(design: Design): Declaration[] {
-  const { spaceAbove, spaceBelow } = design.chapter;
-  return [
-    ...set(
-      "padding-top",
-      spaceAbove === undefined ? undefined : bodyLines(spaceAbove, design),
-      ["chapter-space-above", ...spacing(design)],
-    ),
-    ...set(
-      "margin-bottom",
-      spaceBelow === undefined ? undefined : bodyLines(spaceBelow, design),
-      ["chapter-space-below", ...spacing(design)],
-    ),
-  ];
-}
-
 /** The body lines above a title page's first block. */
 const TITLE_SINK = 6;
 
@@ -602,6 +613,9 @@ const IMPRINT_GAP = 10;
  * author and the publisher, each one optional. The page reaches each
  * block by where it sits. The engine places nothing at the foot of a
  * page, so the publisher sits a set number of lines under the author.
+ *
+ * Every block on the page takes no margin, so the space a design sets
+ * around a heading level leaves the title page as orca lays it out.
  */
 function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const page = sectionsOf(setting.sections, "title-page");
@@ -612,7 +626,11 @@ function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] 
   const rules = [
     block(
       `${page} > *`,
-      [declared("text-align", "center"), declared("text-indent", "0")],
+      [
+        declared("text-align", "center"),
+        declared("text-indent", "0"),
+        declared("margin", "0"),
+      ],
       role,
     ),
     block(
@@ -652,7 +670,6 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
   const formatKeys = design.headers.pageNumberFormat === undefined ? [] : ["page-number-format"];
   const lines = spacing(design);
   return [
-    block(`${contents} > ${OPENING}`, openingSpace(design), role),
     block(
       `${contents} p`,
       [
@@ -834,6 +851,11 @@ function sideMargins(left: Side, right: Side): Declaration[] {
   ];
 }
 
+/**
+ * A count of body lines as a length. Where the design sets a line
+ * spacing, a line is that spacing. Where it does not, a line is one em
+ * of the box's own type.
+ */
 function bodyLines(count: number, design: Design): string {
   const spacing = design.body.lineSpacing;
   if (spacing === undefined) return `${trimmed(count)}em`;

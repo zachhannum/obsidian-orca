@@ -123,6 +123,10 @@ export interface TypeSpec {
   /** The letter spacing on the level. */
   letterSpacing?: Length;
   align?: HeadingAlignment;
+  /** The blank space above the level, in lines of body text. */
+  spaceAbove?: number;
+  /** The blank space below the level, in lines of body text. */
+  spaceBelow?: number;
 }
 
 /** The heading levels markdown writes, which are the ones a design sets. */
@@ -137,10 +141,6 @@ export type Begins = "right-page" | "next-page" | "same-page";
 
 export interface ChapterDesign {
   begins?: Begins;
-  /** The blank space above a chapter's title, in lines of body text. */
-  spaceAbove?: number;
-  /** The blank space below a chapter's title, in lines of body text. */
-  spaceBelow?: number;
   /** The lines a drop cap falls over. */
   dropCap?: number;
   /** The case a chapter's first line is set in. */
@@ -334,6 +334,9 @@ interface Field {
 /** Small caps is a font feature and all caps a transform, so one key sets either. */
 const CAPS_PROPERTIES: readonly string[] = ["font-variant-caps", "text-transform"];
 
+/** The space above a heading is padding where the heading opens a section, and margin elsewhere. */
+const SPACE_ABOVE_PROPERTIES: readonly string[] = ["margin-top", "padding-top"];
+
 const PAGE: readonly Field[] = [
   {
     key: "trim",
@@ -482,24 +485,6 @@ const CHAPTER: readonly Field[] = [
     write: ({ chapter }, value) => {
       const begins = asWord(value, BEGINS);
       if (begins !== undefined) chapter.begins = begins;
-    },
-  },
-  {
-    key: "chapter-space-above",
-    property: "padding-top",
-    read: ({ chapter }) => chapter.spaceAbove,
-    write: ({ chapter }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) chapter.spaceAbove = lines;
-    },
-  },
-  {
-    key: "chapter-space-below",
-    property: "margin-bottom",
-    read: ({ chapter }) => chapter.spaceBelow,
-    write: ({ chapter }, value) => {
-      const lines = asCount(value);
-      if (lines !== undefined) chapter.spaceBelow = lines;
     },
   },
   {
@@ -913,6 +898,24 @@ function heading(level: Level): Field[] {
       write: ({ headings }, value) => {
         const align = asWord(value, HEADING_ALIGNMENTS);
         if (align !== undefined) headings[level].align = align;
+      },
+    },
+    {
+      key: `heading-${level}-space-above`,
+      property: SPACE_ABOVE_PROPERTIES,
+      read: ({ headings }) => headings[level].spaceAbove,
+      write: ({ headings }, value) => {
+        const lines = asCount(value);
+        if (lines !== undefined) headings[level].spaceAbove = lines;
+      },
+    },
+    {
+      key: `heading-${level}-space-below`,
+      property: "margin-bottom",
+      read: ({ headings }) => headings[level].spaceBelow,
+      write: ({ headings }, value) => {
+        const lines = asCount(value);
+        if (lines !== undefined) headings[level].spaceBelow = lines;
       },
     },
   ];

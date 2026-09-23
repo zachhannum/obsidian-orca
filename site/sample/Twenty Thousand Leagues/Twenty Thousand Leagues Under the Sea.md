@@ -20,8 +20,8 @@ heading-1-size: 16pt
 heading-1-align: center
 heading-2-size: 9pt
 heading-2-align: center
+heading-2-space-above: 7
 chapter-begins: next-page
-chapter-space-above: 7
 chapter-drop-cap: 3
 header-left-page: author
 header-right-page: chapter-title

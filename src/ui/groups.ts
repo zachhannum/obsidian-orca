@@ -272,6 +272,14 @@ export const GROUPS: readonly Group[] = [
         label: "Alignment",
         of: [{ kind: "segment", key: `${LEVELED}align`, choices: HEADING_ALIGNMENTS }],
       },
+      {
+        label: "Space above",
+        of: [{ kind: "count", key: `${LEVELED}space-above`, said: "lines" }],
+      },
+      {
+        label: "Space below",
+        of: [{ kind: "count", key: `${LEVELED}space-below`, said: "lines" }],
+      },
     ],
   },
   {
@@ -280,14 +288,6 @@ export const GROUPS: readonly Group[] = [
       {
         label: "Begins on",
         of: [{ kind: "select", key: "chapter-begins", choices: BEGINS }],
-      },
-      {
-        label: "Space above",
-        of: [{ kind: "count", key: "chapter-space-above", said: "lines" }],
-      },
-      {
-        label: "Space below",
-        of: [{ kind: "count", key: "chapter-space-below", said: "lines" }],
       },
       {
         label: "Drop cap",
