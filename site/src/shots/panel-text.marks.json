@@ -22,21 +22,21 @@
     },
     "body-hanging-punctuation": {
       "x": 0,
-      "y": 476,
-      "width": 34,
-      "height": 19
+      "y": 478,
+      "width": 36,
+      "height": 16
     },
     "body-hyphens": {
       "x": 0,
-      "y": 384,
-      "width": 34,
-      "height": 19
+      "y": 385,
+      "width": 36,
+      "height": 16
     },
     "body-indent-after-break": {
       "x": 0,
-      "y": 438,
-      "width": 34,
-      "height": 19
+      "y": 440,
+      "width": 36,
+      "height": 16
     },
     "body-line-spacing": {
       "x": 0,

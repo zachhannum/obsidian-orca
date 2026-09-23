@@ -1,96 +1,102 @@
 {
   "width": 252,
-  "height": 699,
+  "height": 761,
   "marks": {
+    "chapter-title-from": {
+      "x": 0,
+      "y": 193,
+      "width": 220,
+      "height": 30
+    },
     "folio-font": {
       "x": 0,
-      "y": 445,
+      "y": 507,
       "width": 220,
       "height": 30
     },
     "header-caps": {
       "x": 0,
-      "y": 508,
+      "y": 570,
       "width": 220,
       "height": 30
     },
     "header-font": {
       "x": 0,
-      "y": 382,
+      "y": 444,
       "width": 220,
       "height": 30
     },
     "header-italic": {
       "x": 0,
-      "y": 616,
-      "width": 34,
-      "height": 19
+      "y": 680,
+      "width": 36,
+      "height": 16
     },
     "header-left-page": {
       "x": 0,
-      "y": 68,
+      "y": 67,
       "width": 220,
       "height": 30
     },
     "header-letter-spacing": {
       "x": 0,
-      "y": 571,
+      "y": 633,
       "width": 220,
       "height": 30
     },
     "header-position": {
       "x": 0,
-      "y": 194,
+      "y": 256,
       "width": 220,
       "height": 30
     },
     "header-right-page": {
       "x": 0,
-      "y": 131,
+      "y": 130,
       "width": 220,
       "height": 30
     },
     "page-number-format": {
       "x": 0,
-      "y": 319,
+      "y": 381,
       "width": 220,
       "height": 30
     },
     "page-number-position": {
       "x": 0,
-      "y": 256,
+      "y": 318,
       "width": 220,
       "height": 30
     },
     "reset-header-left-page": {
       "x": 228,
-      "y": 71,
+      "y": 70,
       "width": 24,
       "height": 24
     },
     "reset-header-right-page": {
       "x": 228,
-      "y": 134,
+      "y": 133,
       "width": 24,
       "height": 24
     },
     "reset-page-number-position": {
       "x": 228,
-      "y": 259,
+      "y": 321,
       "width": 24,
       "height": 24
     },
     "reset-suppress-head-on-openings": {
       "x": 228,
-      "y": 654,
+      "y": 716,
       "width": 24,
       "height": 24
     },
     "suppress-head-on-openings": {
       "x": 0,
-      "y": 657,
-      "width": 34,
-      "height": 19
+      "y": 720,
+      "width": 36,
+      "height": 16
     }
   }
 }
