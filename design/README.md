@@ -149,6 +149,10 @@ its editor around these files and returns a URL. The artboard list and
   take a slope, because a margin box prints a generated string. A title
   takes its slope from the note, and a first line takes none, because
   the engine sets no slope there.
+- A running head set to the chapter title reads the section's first
+  heading, whatever level it is written at. The Heads & folios group
+  picks the level to read instead, and a chapter with no heading there
+  reads its first.
 - The running heads take a font of their own, and the folios take
   another, because a head is usually set in another face than the text
   and a folio in another face again. Neither row has a Variant row, so

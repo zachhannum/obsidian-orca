@@ -10,9 +10,9 @@ A running head is the line of text at the top of a page, such as the book title 
 
 <Shot
   name="panel-heads-and-folios"
-  alt="The Heads & folios group of the design panel, with the two headers, Header position, Page number, Number format, Header font, Folio font, Capitals, Tracking and two switches."
+  alt="The Heads & folios group of the design panel, with the two headers, Chapter title from, Header position, Page number, Number format, Header font, Folio font, Capitals, Tracking and two switches."
   caption="The Heads & folios group."
-  marks={['header-left-page', 'header-right-page', 'header-position', 'page-number-position', 'page-number-format', 'header-font', 'folio-font', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
+  marks={['header-left-page', 'header-right-page', 'chapter-title-from', 'header-position', 'page-number-position', 'page-number-format', 'header-font', 'folio-font', 'header-caps', 'header-letter-spacing', 'header-italic', 'suppress-head-on-openings']}
   numbered
 />
 
@@ -22,15 +22,22 @@ A running head is the line of text at the top of a page, such as the book title 
 | --- | --- | --- | --- |
 | 1 | Left-page header | `Nothing` | `header-left-page` |
 | 2 | Right-page header | `Nothing` | `header-right-page` |
-| 3 | Header position | `Outside` | `header-position` |
-| 4 | Page number | `Bottom` | `page-number-position` |
-| 5 | Number format | `1, 2, 3` | `page-number-format` |
-| 6 | Header font | `EB Garamond` | `header-font` |
-| 7 | Folio font | `EB Garamond` | `folio-font` |
-| 8 | Capitals | `Normal` | `header-caps` |
-| 9 | Tracking | `None` | `header-letter-spacing` |
-| 10 | Set the running heads in italic | off | `header-italic` |
-| 11 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+| 3 | Chapter title from | `First heading` | `chapter-title-from` |
+| 4 | Header position | `Outside` | `header-position` |
+| 5 | Page number | `Bottom` | `page-number-position` |
+| 6 | Number format | `1, 2, 3` | `page-number-format` |
+| 7 | Header font | `EB Garamond` | `header-font` |
+| 8 | Folio font | `EB Garamond` | `folio-font` |
+| 9 | Capitals | `Normal` | `header-caps` |
+| 10 | Tracking | `None` | `header-letter-spacing` |
+| 11 | Set the running heads in italic | off | `header-italic` |
+| 12 | Hide the running head and page number on openings | on | `suppress-head-on-openings` |
+
+## The chapter title
+
+A running head set to `Chapter title` reads the section's first heading, whatever level it is written at. A chapter that opens on a title and a subhead has two headings, and the first one wins.
+
+The `Chapter title from` row picks the level to read instead. A chapter with no heading at that level reads its first heading.
 
 ## Fonts
 

@@ -25,6 +25,7 @@ import {
   emptyDesign,
   mergeDesign,
   readDesign,
+  type ChapterTitle,
   type Design,
   type HeaderPosition,
   type PageNumberPosition,
@@ -1075,6 +1076,83 @@ test("a design that sets every new key renders with no warning from the pinned e
 
   assert.deepEqual(output.warnings, []);
 });
+
+test("orca writes its own `string-set` rule for the chapter title", async () => {
+  const model = await fixture();
+  const at = await setting(model);
+  const design = structuredClone(model.book.design);
+  design.headers.chapterTitle = "h2";
+  const rule = ruleFor(generatedRules(mergeDesign(DEFAULTS, design), at), "chapter-title-from");
+
+  // The headings a section opens on are its first and up to two
+  // stacked under it, so a level deeper in the chapter is left alone.
+  assert.equal(
+    rule.css,
+    [
+      "section > h2:first-child,",
+      "section > :is(h1, h2, h3, h4, h5, h6):first-child + h2,",
+      "section > :is(h1, h2, h3, h4, h5, h6):first-child + :is(h1, h2, h3, h4, h5, h6) + h2 {",
+      "  string-set: chapter content();",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  assert.deepEqual(rule.declarations, [
+    { property: "string-set", keys: ["chapter-title-from"] },
+  ]);
+  // A design that picks nothing leaves the string to the engine.
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter"]) }), /string-set/);
+});
+
+test("a chapter with a title and a subhead prints the level that was picked in its running head", async () => {
+  assert.deepEqual(await running("h1"), ["Chapter One"]);
+  assert.deepEqual(await running("h2"), ["The Meeting"]);
+  // A chapter with no heading at the level picked keeps the engine's
+  // own reading, which is its first heading.
+  assert.deepEqual(await running("h3"), ["Chapter One"]);
+});
+
+test("the default reads the section's first heading, so a book set today prints the same head", async () => {
+  const model = await fixture();
+  const at = await setting(model);
+  const rule = ruleFor(generatedRules(mergeDesign(DEFAULTS, model.book.design), at), "chapter-title-from");
+
+  assert.equal(DEFAULTS.headers.chapterTitle, "first");
+  // The rule orca writes at the default is the engine's own, so the
+  // string is set on the same heading and nothing on the page moves.
+  assert.equal(
+    rule.css,
+    "section > :is(h1, h2, h3, h4, h5, h6):first-child {\n  string-set: chapter content();\n}\n",
+  );
+  assert.deepEqual(await running("first"), ["Chapter One"]);
+  assert.deepEqual(await running(undefined), ["Chapter One"]);
+});
+
+/**
+ * The running head of a chapter that opens on a title and a subhead,
+ * once per text it prints. The opening page carries no head, so the
+ * chapter runs past it.
+ */
+async function running(from: ChapterTitle | undefined): Promise<string[]> {
+  const sections = named(["chapter"]);
+  const design = emptyDesign();
+  design.headers = { leftPage: "chapter-title", rightPage: "chapter-title" };
+  if (from !== undefined) design.headers.chapterTitle = from;
+  const output = await rendered(
+    generatedCss(design, { sections }),
+    [
+      {
+        name: "one.md",
+        text: `# Chapter One\n\n## The Meeting\n\n${sentence("It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.")}`,
+      },
+    ],
+    sections,
+  );
+
+  assert.deepEqual(output.warnings, []);
+  assert.ok(output.pages.length > 1, "the chapter did not turn a page");
+  return [...new Set(output.pages.flatMap((page) => heads(page)))];
+}
 
 /** The one generated rule a setting key writes. */
 function ruleFor(rules: readonly GeneratedRule[], key: string): GeneratedRule {

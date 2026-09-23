@@ -359,7 +359,7 @@ test("the capitals and the tracking rows sit with the places they set", () => {
       "heading-1-space-below",
     ],
   );
-  assert.deepEqual(keysOf(heads).slice(5), [
+  assert.deepEqual(keysOf(heads).slice(6), [
     "header-font",
     "folio-font",
     "header-caps",
@@ -419,6 +419,29 @@ test("body text and every heading level share one alignment control, drawn with 
   // The icon stands in for the word, and the word still names the value.
   assert.equal(defaultSaid(body, "center", "in"), "Center");
   assert.equal(defaultSaid(heading, "left", "in"), "Left");
+});
+
+test("the Heads & folios group picks the heading the chapter title is read from", () => {
+  const heads = GROUPS.find((group) => group.name === "Heads & folios");
+  assert.ok(heads !== undefined);
+
+  // The row sits with the two slots it qualifies.
+  assert.deepEqual(
+    heads.rows.slice(0, 3).map((row) => row.label),
+    ["Left-page header", "Right-page header", "Chapter title from"],
+  );
+  const picked = control("chapter-title-from");
+  assert.equal(picked.kind, "select");
+  assert.deepEqual(picked.choices?.map((choice) => choice.value), [
+    "first",
+    ...LEVELS.map((level) => `h${String(level)}`),
+  ]);
+  // The panel draws the default until the book picks a level, and a
+  // pick writes the key and nothing else.
+  assert.equal(defaultSaid(picked, writeDesign(effective(emptyDesign()))["chapter-title-from"], "in"), "First heading");
+  assert.deepEqual(writeDesign(withKey(emptyDesign(), "chapter-title-from", "h2")), {
+    "chapter-title-from": "h2",
+  });
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite

@@ -241,6 +241,10 @@ section#volume-the-first {
   letter-spacing: 0em;
 }
 
+section > :is(h1, h2, h3, h4, h5, h6):first-child {
+  string-set: chapter content();
+}
+
 section#title-page > * {
   text-align: center;
   text-indent: 0;

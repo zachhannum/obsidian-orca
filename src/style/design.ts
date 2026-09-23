@@ -168,6 +168,13 @@ export interface SceneDesign {
 
 export type HeaderSlot = "none" | "author" | "book-title" | "chapter-title";
 
+/**
+ * The heading a running head reads the chapter title from: the
+ * section's first heading, whatever level it is written at, or the
+ * heading at one level.
+ */
+export type ChapterTitle = "first" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
 export type PageNumberPosition = "top" | "bottom" | "outside";
 
 export type NumberFormat = "arabic" | "roman";
@@ -181,6 +188,8 @@ export type HeaderPosition = "outside" | "center";
 export interface HeaderDesign {
   leftPage?: HeaderSlot;
   rightPage?: HeaderSlot;
+  /** The heading the chapter title is read from. A section with no heading at that level reads its first. */
+  chapterTitle?: ChapterTitle;
   position?: HeaderPosition;
   pageNumber?: PageNumberPosition;
   pageNumberFormat?: NumberFormat;
@@ -582,6 +591,15 @@ const HEADERS: readonly Field[] = [
   slot("header-left-page", "leftPage"),
   slot("header-right-page", "rightPage"),
   {
+    key: "chapter-title-from",
+    property: "string-set",
+    read: ({ headers }) => headers.chapterTitle,
+    write: ({ headers }, value) => {
+      const from = asWord(value, CHAPTER_TITLES);
+      if (from !== undefined) headers.chapterTitle = from;
+    },
+  },
+  {
     key: "header-position",
     property: "content",
     read: ({ headers }) => headers.position,
@@ -838,6 +856,15 @@ const SLOTS: readonly HeaderSlot[] = [
   "book-title",
   "chapter-title",
 ];
+const CHAPTER_TITLES: readonly ChapterTitle[] = [
+  "first",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+];
 const HEAD_POSITIONS: readonly HeaderPosition[] = ["outside", "center"];
 const POSITIONS: readonly PageNumberPosition[] = ["top", "bottom", "outside"];
 const FORMATS: readonly NumberFormat[] = ["arabic", "roman"];
@@ -941,7 +968,7 @@ function margin(key: string, side: keyof Margins, property: string): Field {
 function slot(key: string, side: "leftPage" | "rightPage"): Field {
   return {
     key,
-    property: "string-set",
+    property: "content",
     read: ({ headers }) => headers[side],
     write: ({ headers }, value) => {
       const found = asWord(value, SLOTS);

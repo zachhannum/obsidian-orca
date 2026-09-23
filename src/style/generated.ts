@@ -17,6 +17,7 @@ import {
   written,
   type Begins,
   type Caps,
+  type ChapterTitle,
   type Design,
   type HeaderDesign,
   type HeaderSlot,
@@ -99,6 +100,7 @@ export function generatedRules(
     ...bodyRules(design, registered),
     ...headingRules(design, registered),
     ...sectionRules(design, setting, registered),
+    ...titleRules(design),
     ...titlePageRules(design, setting),
     ...contentsRules(design, setting),
     ...sceneRules(design, registered),
@@ -567,6 +569,34 @@ function restart(setting: Setting): (Rule | undefined)[] {
       opening.role,
     ),
   ];
+}
+
+/**
+ * The heading the chapter title is read from. The engine reads the
+ * section's first heading, whatever level it is written at, so a
+ * chapter that opens on a title and a subhead takes whichever comes
+ * first. A design that picks a level reads the heading at that level
+ * instead, and a section with no heading there keeps the engine's own
+ * reading.
+ */
+function titleRules(design: Design): (Rule | undefined)[] {
+  const from = design.headers.chapterTitle;
+  if (from === undefined) return [];
+  return [
+    block(titleSource(from), [
+      declared("string-set", "chapter content()", ["chapter-title-from"]),
+    ]),
+  ];
+}
+
+/** The headings one pick reads, which are the ones a section opens on. */
+function titleSource(from: ChapterTitle): string {
+  if (from === "first") return `section > ${OPENING}`;
+  return [
+    `section > ${from}:first-child`,
+    `section > ${OPENING} + ${from}`,
+    `section > ${OPENING} + ${HEADINGS} + ${from}`,
+  ].join(",\n");
 }
 
 /**
