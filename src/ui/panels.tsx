@@ -233,7 +233,9 @@ export function Panel({
   const header = (
     <div className="orca-panel-header">
       <span className="orca-panel-title">{css ? "CSS" : "Design"}</span>
-      <span className="orca-panel-book">— {shown.name}</span>
+      <span className="orca-panel-book" data-testid="orca-panel-book">
+        · {shown.name}
+      </span>
       {css && shown.warned > 0 ? (
         <span className="orca-panel-warned" data-testid="orca-panel-warned">
           {shown.warned === 1 ? "1 warning" : `${String(shown.warned)} warnings`}

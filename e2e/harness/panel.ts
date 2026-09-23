@@ -95,6 +95,8 @@ export class Controls {
   readonly caretLine: Locator;
   /** The count of warnings in the CSS view's header. */
   readonly warned: Locator;
+  /** The book's name in the header, after the name of the view. */
+  readonly bookName: Locator;
   /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
   readonly card: Locator;
   /** The card a hover over a row's lock opens. The panel draws it on the body, outside the panel. */
@@ -140,6 +142,7 @@ export class Controls {
     this.flaggedLines = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}.orca-editor-flagged`);
     this.caretLine = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}${CODEMIRROR_CARET_LINE}`);
     this.warned = root.getByTestId("orca-panel-warned");
+    this.bookName = root.getByTestId("orca-panel-book");
     this.card = root.page().getByTestId("orca-editor-card");
     this.overriddenCard = root.page().getByTestId("orca-panel-card");
     this.pane = root.getByTestId("orca-inspect-pane");
@@ -333,6 +336,17 @@ export class Controls {
     return this.groups.evaluateAll((groups) =>
       groups.map((group) => group.getAttribute("data-group") ?? ""),
     );
+  }
+
+  /**
+   * Whether the book's name in the header is wider than the room it has,
+   * and what the header does with the part that does not fit.
+   */
+  async shortened(): Promise<{ clipped: boolean; overflow: string }> {
+    return this.bookName.evaluate((name) => ({
+      clipped: name.scrollWidth > name.clientWidth,
+      overflow: getComputedStyle(name).textOverflow,
+    }));
   }
 
   /** The width of the panel's content, which the pane around it sets. */

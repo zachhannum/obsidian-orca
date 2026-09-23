@@ -21,8 +21,12 @@ const CONDENSED_FACE = /^Junicode[ -]?Cond/;
 const HEADING_WORD = "Twelve";
 const BODY_WORDS = /\b(the|and|of)\b/;
 
-/** The book note in the fixture vault. */
+/** The book note in the fixture vault, and the title it carries. */
 const BOOK = "Pride and Prejudice.md";
+const BOOK_NAME = "Pride and Prejudice";
+
+/** A title no narrow panel has the room for. */
+const LONG_NAME = "Pride and Prejudice, and a Title No Narrow Panel Fits";
 
 /** The fixture chapter as the toolbar names it. Its heading is a level 1 heading. */
 const CHAPTER_NAME = "Chapter Twelve";
@@ -924,6 +928,56 @@ test("at the width of a narrow sidebar every control fits the panel", async ({
   }
 });
 
+test("the panel header separates the view from the book with a middle dot", async ({
+  book,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await panel.open();
+
+  await expect(panel.bookName).toHaveText(`· ${BOOK_NAME}`);
+
+  // The CSS view prints the same header.
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await expect(panel.bookName).toHaveText(`· ${BOOK_NAME}`);
+  await panel.toControls.click();
+});
+
+test("a book name too long for a narrow panel shortens with an ellipsis", async ({
+  book,
+  obsidian,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+
+  // A title the header has no room for. The panel takes the name from
+  // the book it opened, so the note carries the title before the open.
+  await vault.modify(BOOK, own.replace(`title: ${BOOK_NAME}`, `title: ${LONG_NAME}`));
+  await titled(obsidian, BOOK, LONG_NAME);
+
+  await book.open();
+  await book.painted();
+  await panel.open();
+  await expect(panel.bookName).toHaveText(`· ${LONG_NAME}`);
+
+  const had = await panel.resize(NARROW);
+  try {
+    await expect.poll(async () => panel.width()).toBeLessThanOrEqual(NARROW);
+    await expect
+      .poll(async () => panel.shortened())
+      .toEqual({ clipped: true, overflow: "ellipsis" });
+    expect(await panel.beyond()).toEqual([]);
+  } finally {
+    await panel.resize(had);
+  }
+
+  await written(vault, own);
+});
+
 test("a key the book does not set is drawn at its default, in faint type", async ({
   book,
   panel,
@@ -1554,6 +1608,21 @@ test("the panel is not a mode, so it stays when the book it designed closes", as
   // the pane that had the book.
   await expect(panel.empty).toBeVisible();
 });
+
+/**
+ * Waits for the metadata cache to carry a title. The open command reads
+ * the cache, and it finds no book while the cache is still reading a
+ * note that was written a moment before.
+ */
+async function titled(obsidian: Obsidian, at: string, title: string): Promise<void> {
+  await obsidian.page.waitForFunction((want) => {
+    const note = window.app.vault.getFileByPath(want.at);
+    if (note === null) return false;
+    return (
+      window.app.metadataCache.getFileCache(note)?.frontmatter?.["title"] === want.title
+    );
+  }, { at, title });
+}
 
 /**
  * Puts the book note back through the vault, so a pick written into it
