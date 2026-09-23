@@ -32,7 +32,7 @@ function run(node: number | undefined): TextItem {
     sourceMap: [],
     origin: node === undefined ? null : { node, range: [0, 5] },
     pseudoElement: null,
-    features: { smallCaps: false },
+    features: { smallCaps: false, settings: [] },
     color: "#000000",
     glyphs: [],
     layer: 0,
