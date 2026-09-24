@@ -7,16 +7,7 @@
  * generates. So a control here does to the page what the same control
  * does in Obsidian.
  */
-import {
-  STYLE_AXES,
-  atLevel,
-  stepped,
-  styleOn,
-  styleToggled,
-  typed,
-  withKey,
-  type StyleAxis,
-} from '@/ui/groups';
+import { atLevel, stepped, typed, withKey } from '@/ui/groups';
 import { effective } from '@/style/theme';
 import {
   readDesign,
@@ -57,7 +48,6 @@ export const WORKS: readonly string[] = [
   'margin-outside',
   'margin-top',
   'margin-bottom',
-  'body-style',
   'body-size',
   'body-line-spacing',
   'body-align',
@@ -79,31 +69,16 @@ export function opens(demo: Demo): Design {
   return readDesign(demo.design);
 }
 
-/** The axis a style button turns over, and nothing for any other control. */
-export function axisOf(control: HTMLElement): StyleAxis | undefined {
-  const said = control.dataset['axis'];
-  return STYLE_AXES.map((each) => each.axis).find((axis) => axis === said);
-}
-
-/** The style a key holds, as the name the style control reads. */
-function styleOf(design: Design, key: string): string | undefined {
-  const held = writeDesign(design)[key];
-  return held === undefined ? undefined : String(held);
-}
-
 /**
  * The value a control writes when it is clicked. A choice writes the
- * value it stands for, a switch writes the opposite of the one the
- * design holds, and an axis of a style control turns that axis over and
- * writes the whole name.
+ * value it stands for, and a switch writes the opposite of the one the
+ * design holds.
  */
 export function clicked(
   design: Design,
   key: string,
-  value: string | undefined,
-  axis?: StyleAxis
+  value: string | undefined
 ): Written | undefined {
-  if (axis !== undefined) return styleToggled(styleOf(design, key), axis);
   if (value !== undefined) return value;
   return writeDesign(design)[key] === true ? false : true;
 }
@@ -157,15 +132,7 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
       const value = control.dataset['value'];
       // A select shows its value through the option that is chosen.
       const held = properties[key];
-      const axis = axisOf(control);
-      // A style button stands for one axis of the name the key holds,
-      // not for the whole name.
-      const on =
-        axis !== undefined
-          ? styleOn(held === undefined ? undefined : String(held), axis)
-          : value === undefined
-            ? held === true
-            : String(held) === value;
+      const on = value === undefined ? held === true : String(held) === value;
       control.classList.toggle('on', on);
       // A switch shows its state the other way round: it is not a
       // choice among several.
@@ -180,6 +147,8 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
       ) {
         control.value = said;
       }
+      // A style select is set in the style it holds.
+      if (control.dataset['kind'] === 'style') control.dataset['style'] = said;
     }
   };
 
@@ -247,7 +216,7 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
     if (control.dataset['step'] !== undefined) continue;
     control.addEventListener('click', () => {
       const at = control.dataset['key'] ?? key;
-      write(at, clicked(effective(design), at, control.dataset['value'], axisOf(control)));
+      write(at, clicked(effective(design), at, control.dataset['value']));
     });
   }
 

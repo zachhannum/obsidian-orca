@@ -8,15 +8,7 @@
  * Every control carries the design key it writes, so the script that
  * works them keeps no table of its own.
  */
-import {
-  GLYPHS,
-  STYLE_AXES,
-  atLevel,
-  styleOn,
-  trims,
-  type Control,
-  type Group,
-} from '@/ui/groups';
+import { GLYPHS, atLevel, trims, type Control, type Group } from '@/ui/groups';
 import Icon from './Icon.astro';
 
 interface Props {
@@ -107,6 +99,7 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
         {row.of.map((control) => (
           <div class="o-cell">
             {(control.kind === 'select' ||
+              control.kind === 'style' ||
               control.kind === 'trim' ||
               control.kind === 'font') && (
               <select
@@ -114,9 +107,14 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                 aria-label={row.label}
                 data-key={keyOf(control)} data-level={leveled(control)}
                 data-kind={control.kind}
+                data-style={control.kind === 'style' ? set(control) : undefined}
               >
                 {choicesOf(control).map((choice) => (
-                  <option value={choice.value} selected={choice.value === set(control)}>
+                  <option
+                    value={choice.value}
+                    selected={choice.value === set(control)}
+                    data-style={control.kind === 'style' ? choice.value : undefined}
+                  >
                     {choice.label}
                   </option>
                 ))}
@@ -176,22 +174,6 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
                     data-value={choice.value}
                   >
                     {choice.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {control.kind === 'style' && (
-              <div class="o-seg">
-                {STYLE_AXES.map(({ axis, icon, label }) => (
-                  <button
-                    type="button"
-                    class={styleOn(set(control), axis) ? 'on' : undefined}
-                    data-key={keyOf(control)} data-level={leveled(control)}
-                    data-kind={control.kind}
-                    data-axis={axis}
-                    aria-label={label}
-                  >
-                    <Icon name={icon} size={13} />
                   </button>
                 ))}
               </div>
@@ -297,6 +279,23 @@ const choicesOf = (control: Control): readonly { value: string; label: string }[
   .o-pick {
     cursor: pointer;
     appearance: none;
+  }
+  /* A style select sets each name in the style it names. */
+  .o-pick[data-style='bold'],
+  .o-pick [data-style='bold'],
+  .o-pick[data-style='bold-italic'],
+  .o-pick [data-style='bold-italic'] {
+    font-weight: 600;
+  }
+  .o-pick[data-style='italic'],
+  .o-pick [data-style='italic'],
+  .o-pick[data-style='bold-italic'],
+  .o-pick [data-style='bold-italic'] {
+    font-style: italic;
+  }
+  .o-pick [data-style='normal'] {
+    font-weight: normal;
+    font-style: normal;
   }
   /* A number field as the plugin draws it: sixty pixels of text with an
      eighteen-pixel stepper joined to its right end, a rule between the
