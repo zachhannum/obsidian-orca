@@ -625,17 +625,6 @@ function Drawn({
           settle={settle}
         />
       );
-    case "style":
-      return (
-        <Select
-          value={text}
-          faint={faint}
-          choices={control.choices ?? []}
-          testid={testid}
-          settle={settle}
-          styled
-        />
-      );
     case "flag":
       return (
         <Switch on={value === true} faint={faint} testid={testid} settle={settle} />

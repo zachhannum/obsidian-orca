@@ -39,8 +39,11 @@ import type { Override } from "@/style/overrides";
 export interface Choice {
   value: string;
   label: string;
-  /** An Obsidian icon a segment draws in place of the label. The label is then the button's name. */
-  icon?: string;
+  /**
+   * An Obsidian icon a segment draws in place of the label, or several
+   * drawn side by side. The label is then the button's name.
+   */
+  icon?: string | readonly string[];
 }
 
 /** The control kinds the panel draws. */
@@ -53,7 +56,6 @@ export type Kind =
   | "flag"
   | "select"
   | "segment"
-  | "style"
   | "glyph"
   | "level";
 
@@ -100,12 +102,12 @@ const DROP_CAPS: readonly Choice[] = [
   { value: "4", label: "4 lines" },
 ];
 
-/** The styles the font style control offers, each set in the style it names. */
+/** The styles the font style control offers. Bold italic draws both icons. */
 const STYLES: readonly Choice[] = [
-  { value: "normal", label: "Normal" },
-  { value: "bold", label: "Bold" },
-  { value: "italic", label: "Italic" },
-  { value: "bold-italic", label: "Bold italic" },
+  { value: "normal", label: "Normal", icon: "type" },
+  { value: "bold", label: "Bold", icon: "bold" },
+  { value: "italic", label: "Italic", icon: "italic" },
+  { value: "bold-italic", label: "Bold italic", icon: ["bold", "italic"] },
 ];
 
 const CAPITALS: readonly Choice[] = [
@@ -266,7 +268,7 @@ export const GROUPS: readonly Group[] = [
       { label: "Variant", of: [{ kind: "variant", key: `${LEVELED}font-variant` }] },
       {
         label: "Style",
-        of: [{ kind: "style", key: `${LEVELED}style`, choices: STYLES }],
+        of: [{ kind: "segment", key: `${LEVELED}style`, choices: STYLES }],
       },
       { label: "Size", of: [{ kind: "length", key: `${LEVELED}size` }] },
       {
@@ -308,7 +310,7 @@ export const GROUPS: readonly Group[] = [
       },
       {
         label: "Drop cap style",
-        of: [{ kind: "style", key: "chapter-drop-cap-style", choices: STYLES }],
+        of: [{ kind: "segment", key: "chapter-drop-cap-style", choices: STYLES }],
       },
       {
         label: "First line",
@@ -341,7 +343,7 @@ export const GROUPS: readonly Group[] = [
       { label: "Font", of: [{ kind: "font", key: "scene-break-font" }] },
       {
         label: "Style",
-        of: [{ kind: "style", key: "scene-break-style", choices: STYLES }],
+        of: [{ kind: "segment", key: "scene-break-style", choices: STYLES }],
       },
       { label: "Size", of: [{ kind: "length", key: "scene-break-size" }] },
       {
@@ -387,11 +389,11 @@ export const GROUPS: readonly Group[] = [
       { label: "Folio font", of: [{ kind: "font", key: "folio-font" }] },
       {
         label: "Header style",
-        of: [{ kind: "style", key: "header-style", choices: STYLES }],
+        of: [{ kind: "segment", key: "header-style", choices: STYLES }],
       },
       {
         label: "Folio style",
-        of: [{ kind: "style", key: "folio-style", choices: STYLES }],
+        of: [{ kind: "segment", key: "folio-style", choices: STYLES }],
       },
       {
         label: "Capitals",

@@ -465,7 +465,7 @@ test("one font style control sets the weight and the slope wherever orca sets a 
   assert.deepEqual(
     GROUPS.flatMap((group) => group.rows)
       .flatMap((row) => row.of)
-      .filter((each) => each.kind === "style")
+      .filter((each) => each.key?.endsWith("-style") === true)
       .map((each) => each.key),
     [
       "heading-N-style",
@@ -479,13 +479,19 @@ test("one font style control sets the weight and the slope wherever orca sets a 
   assert.ok(!PANEL_KEYS.includes("chapter-first-line-style"));
   assert.ok(!PANEL_KEYS.includes("header-italic"));
 
-  // The control is a select that names the four styles.
-  assert.deepEqual(control("header-style").choices?.map((choice) => choice.label), [
-    "Normal",
-    "Bold",
-    "Italic",
-    "Bold italic",
-  ]);
+  // The control is a segment of the four styles, drawn with icons, and
+  // bold italic draws the bold and the italic icon together.
+  const style = control("header-style");
+  assert.equal(style.kind, "segment");
+  assert.deepEqual(
+    style.choices?.map((choice) => [choice.value, choice.icon]),
+    [
+      ["normal", "type"],
+      ["bold", "bold"],
+      ["italic", "italic"],
+      ["bold-italic", ["bold", "italic"]],
+    ],
+  );
   // The name the reset says is the word the control is drawn with.
   assert.equal(defaultSaid(control("folio-style"), "bold-italic", "in"), "Bold italic");
   assert.equal(defaultSaid(control("header-style"), "normal", "in"), "Normal");
