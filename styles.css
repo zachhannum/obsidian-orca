@@ -1582,6 +1582,27 @@ select.orca-panel-select option {
   color: var(--text-normal);
 }
 
+/* A style select sets its value, and each choice in its menu, in the
+   style it names. */
+.orca-panel-select[data-style="bold"],
+.orca-panel-select [data-style="bold"],
+.orca-panel-select[data-style="bold-italic"],
+.orca-panel-select [data-style="bold-italic"] {
+  font-weight: var(--bold-weight);
+}
+
+.orca-panel-select[data-style="italic"],
+.orca-panel-select [data-style="italic"],
+.orca-panel-select[data-style="bold-italic"],
+.orca-panel-select [data-style="bold-italic"] {
+  font-style: italic;
+}
+
+.orca-panel-select[data-style] [data-style="normal"] {
+  font-weight: normal;
+  font-style: normal;
+}
+
 /* A segment is one control with a word for each choice, and the choice
    in force is lit. The words share the width and do not wrap. In a
    narrow sidebar, a word ends in an ellipsis and the control stays on
@@ -1628,12 +1649,6 @@ button.orca-panel-choice.is-on.is-default {
 button.orca-panel-choice > .orca-panel-icon {
   display: flex;
   margin: 0 auto;
-}
-
-/* Two icons in one button sit side by side, touching. */
-.orca-panel-icons {
-  display: flex;
-  justify-content: center;
 }
 
 .orca-panel-switch {

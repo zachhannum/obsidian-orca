@@ -1062,7 +1062,7 @@ test("picking capitals writes the key and repaints the pages", async ({
   await written(vault, own);
 });
 
-test("a click on a style in the segment writes the style it names", async ({
+test("a pick in the style select writes the style it names, set in that style", async ({
   book,
   panel,
   vault,
@@ -1075,17 +1075,10 @@ test("a click on a style in the segment writes the style it names", async ({
 
   const style = panel.control("heading-1-style");
   await expect(style).toHaveAttribute("data-default", "true");
-  await expect(panel.choice("heading-1-style", "normal")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await panel.choice("heading-1-style", "bold-italic").click();
+  await style.selectOption({ label: "Bold italic" });
 
-  await expect(style).toHaveAttribute("data-on", "bold-italic");
-  await expect(panel.choice("heading-1-style", "normal")).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await expect(style).toHaveValue("bold-italic");
+  await expect(style).toHaveCSS("font-style", "italic");
   await expect
     .poll(async () => vault.read(BOOK))
     .toContain("heading-1-style: bold-italic");
