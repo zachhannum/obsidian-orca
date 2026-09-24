@@ -319,15 +319,12 @@ export function Select({
   choices,
   testid,
   settle,
-  styled = false,
 }: {
   value: string | undefined;
   faint: boolean;
   choices: readonly Choice[];
   testid: string;
   settle: Settle;
-  /** Whether each choice names a font style and is set in it. */
-  styled?: boolean;
 }): JSX.Element {
   const offered =
     value === undefined || choices.some((choice) => choice.value === value)
@@ -338,7 +335,6 @@ export function Select({
       className={classes("dropdown orca-panel-select", faint && "is-default")}
       data-testid={testid}
       data-default={String(faint)}
-      data-style={styled ? value : undefined}
       value={value ?? ""}
       onChange={(event) => {
         settle(event.target.value === "" ? undefined : event.target.value);
@@ -346,11 +342,7 @@ export function Select({
     >
       {value === undefined ? <option value="">—</option> : null}
       {offered.map((choice) => (
-        <option
-          key={choice.value}
-          value={choice.value}
-          data-style={styled ? choice.value : undefined}
-        >
+        <option key={choice.value} value={choice.value}>
           {choice.label}
         </option>
       ))}

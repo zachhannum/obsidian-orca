@@ -20,6 +20,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type JSX,
   type KeyboardEvent,
 } from "react";
@@ -63,6 +64,7 @@ import {
   overriddenAt,
   trims,
   withKey,
+  type Choice,
   type Control,
   type Owner,
   type Row as Listed,
@@ -627,13 +629,12 @@ function Drawn({
       );
     case "style":
       return (
-        <Select
+        <StylePicker
           value={text}
           faint={faint}
           choices={control.choices ?? []}
           testid={testid}
           settle={settle}
-          styled
         />
       );
     case "flag":
@@ -1130,6 +1131,114 @@ function VariantPicker({
       )}
     </div>
   );
+}
+
+/**
+ * The font styles, each drawn in the style it names. A native select
+ * cannot draw them, because the menu macOS opens for one ignores the
+ * styles of its options.
+ */
+function StylePicker({
+  value,
+  faint,
+  choices,
+  testid,
+  settle,
+}: {
+  value: string | undefined;
+  faint: boolean;
+  choices: readonly Choice[];
+  testid: string;
+  settle: Settle;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState(0);
+  const menu = useRef<HTMLDivElement>(null);
+  const current = choices.find((choice) => choice.value === value);
+
+  useEffect(() => {
+    if (open) menu.current?.focus();
+  }, [open]);
+
+  const commit = (chosen: Choice | undefined): void => {
+    if (chosen === undefined) return;
+    settle(chosen.value);
+    setOpen(false);
+  };
+
+  const keyed = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setAt(Math.min(at + 1, choices.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setAt(Math.max(at - 1, 0));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      commit(choices[at]);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="orca-panel-picker">
+      <button
+        type="button"
+        className={faint ? "orca-panel-field is-default" : "orca-panel-field"}
+        data-testid={testid}
+        data-default={String(faint)}
+        data-on={value ?? ""}
+        style={styleFace(value)}
+        onClick={() => {
+          if (!open) setAt(Math.max(choices.findIndex((choice) => choice === current), 0));
+          setOpen(!open);
+        }}
+      >
+        <span className="orca-panel-family">{current?.label ?? value ?? ""}</span>
+        <Icon name="chevron-down" className="orca-panel-icon" />
+      </button>
+      {!open ? null : (
+        <div
+          ref={menu}
+          tabIndex={-1}
+          className="orca-panel-menu"
+          onKeyDown={keyed}
+          onBlur={() => {
+            setOpen(false);
+          }}
+        >
+          {choices.map((choice, row) => (
+            <div
+              key={choice.value}
+              className={row === at ? "orca-panel-option is-on" : "orca-panel-option"}
+              data-testid={`${testid}-${choice.value}`}
+              style={styleFace(choice.value)}
+              // The menu keeps focus, so the blur that would close it
+              // never fires before the click lands.
+              onMouseDown={(event) => {
+                event.preventDefault();
+                commit(choice);
+              }}
+            >
+              {choice.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The weight and the slope a font style names, for drawing its name in it. */
+function styleFace(style: string | undefined): CSSProperties {
+  const bold = style === "bold" || style === "bold-italic";
+  const italic = style === "italic" || style === "bold-italic";
+  return {
+    fontWeight: bold ? "var(--bold-weight)" : "normal",
+    fontStyle: italic ? "italic" : "normal",
+  };
 }
 
 /**
