@@ -62,20 +62,21 @@ export function outline(cached: readonly Cached[] | undefined, name: string): He
  * The line of the heading a span of pages falls under: the last one
  * that opens on or before the span's first page. A heading `asked` for
  * wins while it opens inside the span, so a click on the second of two
- * headings on a page marks the one clicked. No heading answers
- * nothing, and the entry is the row marked.
+ * headings on a page marks the one clicked. Otherwise a span the entry
+ * `opens` in is the entry's. Nothing answered means the entry is the
+ * row marked.
  */
 export function headingOn(
   pages: readonly (number | undefined)[],
   lines: readonly number[],
   span: { first: number; last: number },
   asked?: number,
+  opens?: number,
 ): number | undefined {
-  const at = asked === undefined ? -1 : lines.indexOf(asked);
-  const opens = pages[at];
-  if (opens !== undefined && opens >= span.first && opens <= span.last) {
-    return asked;
-  }
+  const inside = (page: number | undefined): boolean =>
+    page !== undefined && page >= span.first && page <= span.last;
+  if (asked !== undefined && inside(pages[lines.indexOf(asked)])) return asked;
+  if (inside(opens)) return undefined;
   let under: number | undefined;
   lines.forEach((line, index) => {
     const page = pages[index];

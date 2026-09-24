@@ -50,6 +50,10 @@ test("the row for the page the preview shows is marked, heading rows included", 
   // A spread holds a heading asked for on either of its pages.
   assert.equal(headingOn(pages, lines, { first: 40, last: 41 }, 22), 22);
   assert.equal(headingOn(pages, lines, { first: 42, last: 43 }, 22), 31);
+  // A span the entry opens in is the entry's, unless a heading in it was asked for.
+  assert.equal(headingOn(pages, lines, { first: 40, last: 40 }, undefined, 40), undefined);
+  assert.equal(headingOn(pages, lines, { first: 41, last: 41 }, undefined, 40), 31);
+  assert.equal(headingOn(pages, lines, { first: 40, last: 40 }, 13, 40), 13);
   // A heading the engine gave no page is never the one marked.
   assert.equal(headingOn([undefined, 41, 41], lines, { first: 40, last: 40 }), undefined);
 

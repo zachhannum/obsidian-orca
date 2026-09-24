@@ -389,7 +389,7 @@ export class Book {
     await this.obsidian.page.evaluate((id) => {
       const orca = window.app.plugins.plugins[id] as Holding | undefined;
       if (orca?.limits === undefined) return;
-      orca.limit?.({ ...orca.limits, view: "single" });
+      orca.limit?.({ ...orca.limits, view: "single", headings: true });
     }, PLUGIN);
   }
 

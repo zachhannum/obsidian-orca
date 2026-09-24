@@ -1580,13 +1580,16 @@ export class PreviewView extends ItemView {
         ? outline(headingsOf(this.app, section.path), entryName(section.entry))
         : [];
     const lines = cached.map((heading) => heading.line);
-    const pages =
+    const [pages, opens] =
       lines.length === 0
-        ? []
-        : await typeset.linesOpen(at, lines).catch(() => lines.map(() => undefined));
+        ? [[], undefined]
+        : await Promise.all([
+            typeset.linesOpen(at, lines).catch(() => lines.map(() => undefined)),
+            this.opensSection(at),
+          ]);
     if (naming !== this.naming) return;
     const span = { first: reading.at, last: reading.at + reading.pages.length - 1 };
-    const line = headingOn(pages, lines, span, this.askedLine);
+    const line = headingOn(pages, lines, span, this.askedLine, opens);
     this.handoff.showing(this, { book, at, line });
   }
 

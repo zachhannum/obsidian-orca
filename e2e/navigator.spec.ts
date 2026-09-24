@@ -597,6 +597,172 @@ test("a chapter whose properties hold an indented fence turns", async ({
   await expect(book.chapterName).toHaveText(CHAPTER);
 });
 
+/** The fixture chapter with headings under its title. */
+const FIFTEEN = "Chapter Fifteen";
+
+test("an entry lists the headings inside its note as a tree, and folds them away on its own", async ({
+  navigator,
+  vault,
+}) => {
+  vault.touch(`${CHAPTER}.md`);
+  await navigator.reveal();
+  // The note's own title is the entry's row, so the tree starts under it.
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage", "The Entail"]);
+  await expect(navigator.heading(BOOK, "The Parsonage")).toHaveAttribute("data-depth", "0");
+  await expect(navigator.heading(BOOK, "The Entail")).toHaveAttribute("data-depth", "1");
+
+  // A second entry with a heading of its own, which a fold elsewhere leaves be.
+  const text = await vault.read(`${CHAPTER}.md`);
+  await vault.modify(`${CHAPTER}.md`, `${text}\n## An Evening\n\nThe end.\n`);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
+
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(0);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // The setting takes every heading row away, and gives them back.
+  await navigator.outlines(false);
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await navigator.outlines(true);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+});
+
+test("the heading rows are the lines of Obsidian's own cache", async ({
+  navigator,
+  obsidian,
+}) => {
+  await navigator.reveal();
+  const cached = await obsidian.page.evaluate(
+    (path) =>
+      (window.app.metadataCache.getCache(path)?.headings ?? []).map((heading) =>
+        String(heading.position.start.line),
+      ),
+    `${FIFTEEN}.md`,
+  );
+  // The first is the note's title, which the entry's own row says.
+  const rows = navigator.outline(BOOK, FIFTEEN);
+  await expect(rows).toHaveCount(cached.length - 1);
+  for (const [at, line] of cached.slice(1).entries()) {
+    await expect(rows.nth(at)).toHaveAttribute("data-line", line);
+  }
+});
+
+test("a heading row never drags, and an entry drags with its headings", async ({
+  navigator,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.reveal();
+  const before = await vault.read(BOOK);
+  const painted = await navigator.painted();
+
+  await navigator.drag(
+    navigator.heading(BOOK, "The Entail"),
+    navigator.entry(BOOK, "Volume the First"),
+    "above",
+  );
+  await expect(navigator.heading(BOOK, "The Entail")).not.toHaveAttribute("aria-pressed", "true");
+  expect(await navigator.painted()).toBe(painted);
+  expect(await vault.read(BOOK)).toBe(before);
+
+  await navigator.drag(
+    navigator.entry(BOOK, FIFTEEN),
+    navigator.entry(BOOK, CHAPTER),
+    "above",
+  );
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain(`- [[${FIFTEEN}]]\n- [[${CHAPTER}]]\n`);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+});
+
+test("a heading click turns the preview to its page and marks its row, and a Mod click opens it at its line", async ({
+  book,
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  // The chapter breaks the page before this heading.
+  const text = await vault.read(`${FIFTEEN}.md`);
+  await vault.modify(`${FIFTEEN}.md`, text.replace("## The Entail", "\\pagebreak\n\n## The Entail"));
+  await book.open();
+  await book.painted();
+  await navigator.reveal();
+
+  await navigator.entry(BOOK, FIFTEEN).click();
+  await expect(book.chapterName).toHaveText(FIFTEEN);
+  await expect(navigator.entry(BOOK, FIFTEEN)).toHaveAttribute("aria-current", "page");
+  const opens = Number(await book.surface.getAttribute("data-first"));
+
+  const entail = navigator.heading(BOOK, "The Entail");
+  await entail.click();
+  await expect
+    .poll(async () => Number(await book.surface.getAttribute("data-first")))
+    .toBeGreaterThan(opens);
+  await expect(book.chapterName).toHaveText(FIFTEEN);
+  await expect(entail).toHaveAttribute("aria-current", "page");
+  await expect(navigator.entry(BOOK, FIFTEEN)).not.toHaveAttribute("aria-current", "page");
+
+  // A chapter click moves the mark back to an entry.
+  await navigator.entry(BOOK, CHAPTER).click();
+  await expect(navigator.entry(BOOK, CHAPTER)).toHaveAttribute("aria-current", "page");
+  await expect(entail).not.toHaveAttribute("aria-current", "page");
+
+  const parsonage = navigator.heading(BOOK, "The Parsonage");
+  const line = Number(await parsonage.getAttribute("data-line"));
+  await parsonage.click({ modifiers: ["ControlOrMeta"] });
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate(() => {
+        const view = window.app.workspace.getMostRecentLeaf()?.view as
+          | { file?: { path: string } | null; editor?: { getCursor(): { line: number } } }
+          | undefined;
+        return `${view?.file?.path}:${view?.editor?.getCursor().line}`;
+      }),
+    )
+    .toBe(`${FIFTEEN}.md:${line}`);
+  await obsidian.detach("markdown");
+});
+
+test("a heading renamed in its note reads its new words in the navigator", async ({
+  navigator,
+  vault,
+}) => {
+  vault.touch(`${FIFTEEN}.md`);
+  await navigator.reveal();
+  await expect(navigator.heading(BOOK, "The Entail")).toBeVisible();
+
+  const text = await vault.read(`${FIFTEEN}.md`);
+  await vault.modify(`${FIFTEEN}.md`, text.replace("## The Entail", "## The Settlement"));
+
+  await expect(navigator.heading(BOOK, "The Settlement")).toBeVisible();
+  await expect(navigator.outline(BOOK, FIFTEEN)).not.toContainText(["The Entail"]);
+});
+
+test("the arrow keys walk sections, entries and headings as one list", async ({
+  navigator,
+  obsidian,
+}) => {
+  await navigator.reveal();
+  await navigator.entry(BOOK, "Chapter Four").focus();
+  await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Chapter Four/);
+
+  const { keyboard } = obsidian.page;
+  await keyboard.press("ArrowDown");
+  await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Chapter Fifteen/);
+  await keyboard.press("ArrowDown");
+  await expect.poll(async () => navigator.focused()).toBe("orca-outline:The Parsonage");
+  await keyboard.press("End");
+  await expect.poll(async () => navigator.focused()).toBe("orca-group:The book's css");
+  // A section's row is a stop on the walk too.
+  await keyboard.press("Home");
+  await expect.poll(async () => navigator.focused()).toBe("orca-group:Front matter");
+  await keyboard.press("ArrowDown");
+  await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Title page/);
+});
+
 test("opening a book note reveals the navigator", async ({
   navigator,
   note,

@@ -6,11 +6,18 @@
  */
 
 import { expect, type Locator } from "@playwright/test";
+import { PLUGIN } from "./launch";
 import { OPEN_PREVIEW } from "./note";
 import type { Obsidian } from "./obsidian";
 
 /** The type the navigator is registered under. */
 export const NAVIGATOR = "orca-navigator";
+
+/**
+ * The distance into a row a drag takes hold of it at: past the slot at its
+ * start, where an entry's fold sits and a press starts no drag.
+ */
+const GRIP = 40;
 
 /** The side of the target row a dragged entry is dropped on. */
 export type Onto = "above" | "below";
@@ -52,6 +59,47 @@ export class Navigator {
       .getByTestId("orca-entry")
       .filter({ hasText: name })
       .first();
+  }
+
+  /** The headings listed under one entry, in the order its note has them. */
+  outline(book: string, name: string): Locator {
+    return this.entry(book, name).locator("xpath=..").getByTestId("orca-outline");
+  }
+
+  /** One heading row, by its words. */
+  heading(book: string, words: string): Locator {
+    return this.book(book)
+      .getByTestId("orca-outline")
+      .filter({ hasText: words })
+      .first();
+  }
+
+  /** The chevron that folds an entry's headings. */
+  fold(book: string, name: string): Locator {
+    return this.entry(book, name).getByTestId("orca-entry-fold");
+  }
+
+  /** The test id and the words of the row that has focus. */
+  async focused(): Promise<string> {
+    return this.obsidian.page.evaluate(() => {
+      const on = document.activeElement;
+      if (!(on instanceof HTMLElement)) return "";
+      return `${on.dataset["testid"] ?? ""}:${on.textContent ?? ""}`;
+    });
+  }
+
+  /** Turns the setting that lists headings on or off. */
+  async outlines(on: boolean): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ([id, headings]) => {
+        const orca = window.app.plugins.plugins[id] as
+          | { limits?: object; limit?(limits: object): void }
+          | undefined;
+        if (orca?.limits === undefined) throw new Error("orca is not loaded");
+        orca.limit?.({ ...orca.limits, headings });
+      },
+      [PLUGIN, on] as const,
+    );
   }
 
   /** One of a book's sections, by the heading it is written with. */
@@ -146,9 +194,9 @@ export class Navigator {
     const start = await box(from);
     const end = await box(to);
     const land = onto === "above" ? end.y + 2 : end.y + end.height - 2;
-    await mouse.move(start.x + 20, start.y + start.height / 2);
+    await mouse.move(start.x + GRIP, start.y + start.height / 2);
     await mouse.down();
-    await mouse.move(start.x + 20, start.y + start.height / 2 + 10, {
+    await mouse.move(start.x + GRIP, start.y + start.height / 2 + 10, {
       steps: 5,
     });
     await mouse.move(end.x + 20, land, { steps: 15 });
@@ -168,21 +216,23 @@ export class Navigator {
     const floor = await this.obsidian.page.evaluate(
       () => window.innerHeight - 2,
     );
-    await mouse.move(start.x + 20, start.y + start.height / 2);
+    await mouse.move(start.x + GRIP, start.y + start.height / 2);
     await mouse.down();
     // One app runs the whole suite, so the button is released and the
     // drag cancelled on every way out of this block. A button left
     // down, or a drop whose write outruns the fixture going back, fails
     // every spec after this one.
     try {
-      await mouse.move(start.x + 20, start.y + start.height / 2 + 10, {
+      await mouse.move(start.x + GRIP, start.y + start.height / 2 + 10, {
         steps: 5,
       });
-      await mouse.move(start.x + 20, floor, { steps: 15 });
-      await mouse.move(start.x + 20, floor);
+      await mouse.move(start.x + GRIP, floor, { steps: 15 });
+      await mouse.move(start.x + GRIP, floor);
       // dnd-kit presses the row it is carrying, so the wait is on that.
       await expect(from).toHaveAttribute("aria-pressed", "true");
-      await expect(from).toHaveCSS("transform", /matrix\(/);
+      // The entry moves with its headings, so the transform is on the
+      // row and the headings together.
+      await expect(from.locator("xpath=..")).toHaveCSS("transform", /matrix\(/);
       await during();
     } catch (cause) {
       await this.obsidian.page.keyboard.press("Escape");

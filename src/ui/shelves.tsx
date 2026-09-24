@@ -831,7 +831,11 @@ function Entry({
               tabIndex={0}
               role="button"
               aria-current={mark === heading.line ? "page" : undefined}
-              style={{ paddingLeft: `calc(var(--size-4-2) + 14px + ${String(heading.depth)} * var(--size-4-3))` }}
+              // The entry's label starts past the padding, the mark and the
+              // gap, and each level steps one indent in from there.
+              style={{
+                paddingLeft: `calc(var(--size-4-2) + 14px + var(--size-4-1) + ${String(heading.depth + 1)} * var(--size-4-3))`,
+              }}
               onClick={(event) => {
                 acting.openHeading(book, row, heading, event);
               }}
