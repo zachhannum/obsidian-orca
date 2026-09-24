@@ -9,6 +9,10 @@ const OPENING = "Pride and Prejudice";
 /** The blocks the fixture's title page prints, from the book's properties. */
 const TITLE_PAGE = ["The Bennet Novels", OPENING, "Jane Austen", "Whitehall Press"];
 
+/** A book that lists no notes, and the chapter its button makes. */
+const EMPTY = "Empty book.md";
+const NEW_CHAPTER = "New chapter.md";
+
 /** The page the first of the fixture's chapters opens on. */
 const CHAPTER = 11;
 
@@ -91,6 +95,27 @@ test("`Open as markdown` on generated matter, with no note read, opens the neare
     )
     .toEqual(`markdown:${FIRST_NOTE}`);
   await obsidian.detach("markdown");
+});
+
+test("a book with no chapters says so, and `New chapter` gives it its first page", async ({
+  book,
+  obsidian,
+  vault,
+}) => {
+  await vault.write(EMPTY, "---\norca-book: 1\n---\n\n# Body\n");
+  vault.touch(NEW_CHAPTER);
+  await obsidian.open(EMPTY);
+  await book.open();
+
+  await expect(book.empty).toContainText("Empty book has no pages yet");
+  await expect(book.empty).toContainText("add a chapter");
+
+  await book.newChapter.click();
+  await expect
+    .poll(async () => vault.read(EMPTY))
+    .toContain("# Body\n\n- [[New chapter]]\n");
+  expect(await book.painted()).toBeGreaterThan(0);
+  await expect(book.empty).toBeHidden();
 });
 
 test("the title page prints the book's properties", async ({ book }) => {
