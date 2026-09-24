@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 428,
+  "height": 491,
   "marks": {
     "scene-break-font": {
       "x": 0,
@@ -10,7 +10,7 @@
     },
     "scene-break-mark": {
       "x": 0,
-      "y": 67,
+      "y": 68,
       "width": 220,
       "height": 30
     },
@@ -22,20 +22,26 @@
     },
     "scene-break-size": {
       "x": 0,
-      "y": 256,
+      "y": 319,
       "width": 60,
       "height": 30
     },
     "scene-break-space-above": {
       "x": 0,
-      "y": 319,
+      "y": 382,
       "width": 60,
       "height": 30
     },
     "scene-break-space-below": {
       "x": 0,
-      "y": 382,
+      "y": 445,
       "width": 60,
+      "height": 30
+    },
+    "scene-break-style": {
+      "x": 0,
+      "y": 256,
+      "width": 220,
       "height": 30
     }
   }

@@ -924,7 +924,13 @@ test("the number on each mark of a design group's picture is the number of its r
     const slug = group.name.toLowerCase().replace(" & ", " and ").replaceAll(" ", "-");
     const page = await read(`${DOCS}/design/${slug}.mdx`);
     const marks = [.../marks=\{\[([^\]]*)\]\}/.exec(page)[1].matchAll(/'([^']+)'/g)].map((found) => found[1]);
-    const numbered = table(page, ["#", "Control", "Default", "Key"])
+    const rows = table(page, ["#", "Control", "Default", "Key"]);
+    // The sample's fonts have one variant each, so the picture draws no
+    // Variant row. Every other row is in the picture and takes a mark.
+    for (const [, , , key] of rows.filter(([n]) => n === "")) {
+      assert.match(unquoted(key), /-font-variant$/, `the ${group.name} page marks no ${key}`);
+    }
+    const numbered = rows
       .filter(([n]) => n !== "")
       .map(([n, , , key]) => [Number(n), key === "none" ? "heading-level" : unquoted(key).replace("-N-", "-1-")]);
     assert.deepEqual(

@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 219,
+  "height": 220,
   "marks": {
     "body-orphans": {
       "x": 0,
@@ -16,9 +16,9 @@
     },
     "keep-heading-with-text": {
       "x": 0,
-      "y": 179,
-      "width": 36,
-      "height": 16
+      "y": 178,
+      "width": 34,
+      "height": 19
     }
   }
 }
