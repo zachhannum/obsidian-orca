@@ -7,9 +7,9 @@
 
 import { TFile, type App, type TFolder } from "obsidian";
 import { byName, newBook } from "@/book/create";
-import { under } from "@/book/folder";
 import { writeModel } from "@/book/model";
 import type { BookMetadata } from "@/book/note";
+import { free } from "@/ui/naming";
 
 /** The default chapter name. */
 export const CHAPTER = "New chapter";
@@ -55,7 +55,7 @@ async function createBook(
   links: (path: string) => Iterable<string>,
   metadata: BookMetadata,
 ): Promise<TFile> {
-  const path = free(app, folder, name);
+  const path = freePath(app, folder, name);
   return app.vault.create(path, writeModel(newBook(metadata, links(path))));
 }
 
@@ -65,7 +65,7 @@ export async function createChapter(
   folder: string,
   name = CHAPTER,
 ): Promise<TFile> {
-  const path = free(app, folder, name);
+  const path = freePath(app, folder, name);
   const heading = path.slice(path.lastIndexOf("/") + 1, -".md".length);
   return app.vault.create(path, `# ${heading}\n`);
 }
@@ -87,10 +87,7 @@ function pathOf(folder: TFolder): string {
   return folder.isRoot() ? "" : folder.path;
 }
 
-/** A path in this folder that no file has, numbered the way Obsidian numbers one. */
-function free(app: App, folder: string, name: string): string {
-  for (let next = 0; ; next += 1) {
-    const path = under(folder, `${name}${next === 0 ? "" : ` ${next}`}.md`);
-    if (app.vault.getAbstractFileByPath(path) === null) return path;
-  }
+/** A path in this folder that no file has. */
+function freePath(app: App, folder: string, name: string): string {
+  return free(folder, name, (path) => app.vault.getAbstractFileByPath(path) !== null);
 }
