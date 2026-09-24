@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 429,
+  "height": 428,
   "marks": {
     "scene-break-font": {
       "x": 0,
@@ -10,7 +10,7 @@
     },
     "scene-break-mark": {
       "x": 0,
-      "y": 68,
+      "y": 67,
       "width": 220,
       "height": 30
     },
