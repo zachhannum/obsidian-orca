@@ -52,6 +52,7 @@ import {
 import type { Pin } from "@/ui/inspect";
 import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
+import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
@@ -140,6 +141,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
   /** The place each leaf left the manuscript it toggled away from. */
   private readonly manuscript = new WeakMap<WorkspaceLeaf, Place>();
+  /** The entry and heading each open preview last painted. */
+  private readonly shown = new Map<PreviewView, Showing>();
+  /** The preview the navigator marks the rows of: the one read last. */
+  private marked: PreviewView | undefined;
   /** The icon on each note that belongs to a book, and where it leads. */
   private readonly back = new WeakMap<
     MarkdownView,
@@ -200,6 +205,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
             adds: (book) => {
               void this.addChapter(book);
             },
+            outlined: () =>
+              this.limits.headings &&
+              this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW).length > 0,
+            showing: (view, showing) => {
+              this.showing(view, showing);
+            },
           },
           (text) => {
             this.reading(leaf, text);
@@ -235,7 +246,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
           preview: (book) => {
             void this.previewBook(book);
           },
-          turn: (book, at) => this.turnPreview(book, at),
+          turn: (book, at, line) => this.turnPreview(book, at, line),
+          headings: () => this.limits.headings,
         }),
     );
     this.registerView(
@@ -355,6 +367,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const view = leaf?.view;
         if (view instanceof MarkdownView && view.file !== null) {
           this.turned(view.file);
+        }
+        if (view instanceof PreviewView && view !== this.marked) {
+          this.marked = view;
+          this.marks();
         }
       }),
     );
@@ -1196,7 +1212,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   limit(limits: Limits): void {
     const remeasured = limits.unit !== this.limits.unit;
+    const outlined = limits.headings !== this.limits.headings;
     this.limits = limits;
+    if (outlined) {
+      for (const leaf of this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW)) {
+        if (leaf.view instanceof NavigatorView) leaf.view.redraw();
+      }
+    }
     if (this.engines !== undefined) this.engines.ceiling = limits.sessions;
     void this.saveData(limits);
     if (!remeasured) return;
@@ -1547,11 +1569,36 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.openPanel();
   }
 
-  private async turnPreview(book: string, at: number): Promise<boolean> {
+  private async turnPreview(book: string, at: number, line?: number): Promise<boolean> {
     const { workspace } = this.app;
     const view = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
     if (!(view instanceof PreviewView) || view.book !== book) return false;
-    return await view.turnToSection(at);
+    return await view.turnToSection(at, line);
+  }
+
+  /**
+   * Keeps what a preview painted, and marks it in the navigator when it
+   * is the preview read last. A closed preview takes its mark with it.
+   */
+  private showing(view: PreviewView, showing: Showing | undefined): void {
+    if (showing === undefined) {
+      this.shown.delete(view);
+      if (this.marked === view) this.marked = undefined;
+    } else {
+      this.shown.set(view, showing);
+      const { workspace } = this.app;
+      const recent = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
+      if (this.marked === undefined || recent === view) this.marked = view;
+    }
+    this.marks();
+  }
+
+  /** Marks the rows of the preview read last in every navigator. */
+  private marks(): void {
+    const showing = this.marked === undefined ? undefined : this.shown.get(this.marked);
+    for (const leaf of this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW)) {
+      if (leaf.view instanceof NavigatorView) leaf.view.show(showing);
+    }
   }
 
   private async openPreview(state: PreviewState): Promise<void> {

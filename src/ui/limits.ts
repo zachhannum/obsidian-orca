@@ -19,9 +19,16 @@ export interface Limits {
    * opens in. A pane restored with the workspace keeps its own.
    */
   view: ViewMode;
+  /** Whether the navigator lists the headings inside each entry's note. */
+  headings: boolean;
 }
 
-export const LIMITS: Limits = { sessions: CEILING, unit: "in", view: "single" };
+export const LIMITS: Limits = {
+  sessions: CEILING,
+  unit: "in",
+  view: "single",
+  headings: true,
+};
 
 /** The most sessions the setting offers to keep. */
 export const MOST_SESSIONS = 8;
@@ -37,11 +44,13 @@ export function readLimits(saved: unknown): Limits {
   const sessions = kept ?? older;
   const unit = "unit" in saved ? saved.unit : undefined;
   const view = "view" in saved ? saved.view : undefined;
+  const headings = "headings" in saved ? saved.headings : undefined;
   return {
     sessions:
       typeof sessions === "number" ? sessionCount(sessions) : LIMITS.sessions,
     unit: isPageUnit(unit) ? unit : LIMITS.unit,
     view: isViewMode(view) ? view : LIMITS.view,
+    headings: typeof headings === "boolean" ? headings : LIMITS.headings,
   };
 }
 

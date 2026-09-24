@@ -32,6 +32,14 @@ export class OrcaSettingTab extends PluginSettingTab {
           }),
       );
     new Setting(containerEl)
+      .setName("Headings in the navigator")
+      .setDesc("List the headings inside each note under its entry.")
+      .addToggle((toggle) =>
+        toggle.setValue(this.orca.limits.headings).onChange((headings) => {
+          this.orca.limit({ ...this.orca.limits, headings });
+        }),
+      );
+    new Setting(containerEl)
       .setName("Max concurrent preview sessions")
       .setDesc(
         "The max number of live preview sessions Orca keeps running at one time.",

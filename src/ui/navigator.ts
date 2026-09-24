@@ -1,4 +1,12 @@
-import { ItemView, Keymap, Menu, Notice, TFile, type WorkspaceLeaf } from "obsidian";
+import {
+  ItemView,
+  Keymap,
+  MarkdownView,
+  Menu,
+  Notice,
+  TFile,
+  type WorkspaceLeaf,
+} from "obsidian";
 import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
 import { bookFormat } from "@/book/note";
@@ -25,7 +33,8 @@ import type { Edits } from "@/ui/edits";
 import { createChapter, emptyBook } from "@/ui/make";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
-import { shelve, type Row, type Shelved } from "@/ui/shelf";
+import { headingsOf, type Headed, type Showing } from "@/ui/outline";
+import { members, shelve, type Row, type Shelved } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
 /** The type the navigator is registered under. */
@@ -37,11 +46,14 @@ export interface Handoff {
   preview(book: string): void;
   /**
    * Turns the preview in the main area's most recent tab to a section,
-   * by its place in the reading order. It answers false, and turns
-   * nothing, where that tab is not a preview of the book, or where the
-   * book set that section to no page.
+   * by its place in the reading order, or to the heading on `line` of
+   * its note. It answers false, and turns nothing, where that tab is
+   * not a preview of the book, or where the book set that section to
+   * no page. A heading set on no page turns to the section.
    */
-  turn(book: string, at: number): Promise<boolean>;
+  turn(book: string, at: number, line?: number): Promise<boolean>;
+  /** Whether the author lists the headings inside each entry. */
+  headings(): boolean;
 }
 
 /**
@@ -55,6 +67,8 @@ export interface Handoff {
 export class NavigatorView extends ItemView {
   /** The books the last read found, which a write does not take off the shelf. */
   private shelved = new Set<string>();
+  /** The notes the last read listed, whose headings the shelf draws. */
+  private members = new Set<string>();
   /** The book the list has focus in, which a paste adds to. */
   private focused: string | undefined;
   private mounted: Mounted | undefined;
@@ -107,7 +121,8 @@ export class NavigatorView extends ItemView {
         const properties = cache.frontmatter;
         const isBookNote =
           properties !== undefined && bookFormat(properties) !== undefined;
-        if (isBookNote || this.shelved.has(file.path)) again();
+        const outlined = this.handoff.headings() && this.members.has(file.path);
+        if (isBookNote || outlined || this.shelved.has(file.path)) again();
       }),
     );
     // The highlight follows the active note. Nothing else here does:
@@ -129,6 +144,9 @@ export class NavigatorView extends ItemView {
       },
       openEntry: (book, row, event) => {
         void this.openEntry(book, row, event.nativeEvent);
+      },
+      openHeading: (book, row, heading, event) => {
+        void this.openHeading(book, row, heading, event.nativeEvent);
       },
       bookMenu: (event, book) => {
         this.bookMenu(event.nativeEvent, book);
@@ -197,6 +215,17 @@ export class NavigatorView extends ItemView {
     this.mounted?.focus(book, at);
   }
 
+  /** Marks the row for the page a preview shows. */
+  show(showing: Showing | undefined): void {
+    this.mounted?.show(showing);
+  }
+
+  /** Reads the shelf again and paints it even when it reads the same, after a setting changed. */
+  redraw(): void {
+    this.shown = "";
+    this.refresh();
+  }
+
   /** Repaints the shelf once, however many events arrived. */
   private refresh(): void {
     if (this.queued !== undefined) return;
@@ -229,6 +258,9 @@ export class NavigatorView extends ItemView {
     const vault = {
       links: cacheLinks(this.app),
       active: this.app.workspace.getActiveFile()?.path,
+      headings: this.handoff.headings()
+        ? (path: string) => headingsOf(this.app, path)
+        : undefined,
     };
 
     const shelf: Shelved[] = [];
@@ -254,6 +286,7 @@ export class NavigatorView extends ItemView {
       );
     }
     this.shelved = new Set(shelf.map((book) => book.path));
+    this.members = members(shelf);
     return shelf;
   }
 
@@ -603,6 +636,31 @@ export class NavigatorView extends ItemView {
     }
     if ((await this.handoff.turn(book.path, row.at)) || note === null) return;
     await this.app.workspace.getLeaf(false).openFile(note);
+  }
+
+  /**
+   * Opens a heading the way an entry opens: a preview of the book turns
+   * to the page it opens on, and a click with the Mod key opens the
+   * note as markdown at its line, in a new tab.
+   */
+  private async openHeading(
+    book: Shelved,
+    row: Row,
+    heading: Headed,
+    event: MouseEvent | KeyboardEvent,
+  ): Promise<void> {
+    const note =
+      row.path === undefined ? null : this.app.vault.getFileByPath(row.path);
+    const mod = Keymap.isModEvent(event) !== false;
+    if (!mod && (await this.handoff.turn(book.path, row.at, heading.line))) return;
+    if (note === null) return;
+    const leaf = this.app.workspace.getLeaf(mod ? "tab" : false);
+    await leaf.openFile(note, { active: true, eState: { line: heading.line } });
+    const view = leaf.view;
+    if (!(view instanceof MarkdownView)) return;
+    const pos = { line: heading.line, ch: 0 };
+    view.editor.setCursor(pos);
+    view.editor.scrollIntoView({ from: pos, to: pos }, true);
   }
 }
 

@@ -10,6 +10,7 @@ import { faceBytes } from "@/assets/sfnt";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
+import { lineByte } from "@/book/place";
 import type { Face } from "@/book/plan";
 import type { Design, FontUse } from "@/style/design";
 import { FACES_SHEET, OWN_SHEET } from "@/style/sheet";
@@ -54,7 +55,7 @@ class FakeClient implements EngineClient {
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   /** The text of each source the book op sent, by the name it sent it under. */
-  private sent: { name: string; text: string }[] = [];
+  protected sent: { name: string; text: string }[] = [];
 
   private get sources(): number {
     return this.sent.length;
@@ -303,6 +304,37 @@ test("a chapter opening on a block that set nothing opens under it", async () =>
   // A section the book did not set is still on no page at all.
   assert.equal(await book.opens(6), undefined);
 });
+
+test("a heading asks the engine where the line it opens on was set", async () => {
+  const client = new Asked();
+  const composer = new Composer(await setting(client));
+  const book = await composer.open(BOOK);
+  const text = client.written("Chapter Twelve.md");
+  client.asked.length = 0;
+
+  // Line 0 is the frontmatter, which is on no page.
+  assert.deepEqual(await book.linesOpen(5, [0, 5]), [undefined, 10]);
+  assert.deepEqual(client.asked, [
+    { source: "Chapter Twelve.md", byte: lineByte(text, 0) },
+    { source: "Chapter Twelve.md", byte: lineByte(text, 5) },
+  ]);
+  // A section with no note crossed has no line on any page.
+  assert.deepEqual(await book.linesOpen(6, [3]), [undefined]);
+});
+
+/** A client that keeps every byte it was asked to place. */
+class Asked extends FakeClient {
+  readonly asked: { source: string; byte: number }[] = [];
+
+  written(name: string): string {
+    return this.sent.find((sent) => sent.name === name)?.text ?? "";
+  }
+
+  override nodeAt(source: string, byte: number): Promise<number | null> {
+    this.asked.push({ source, byte });
+    return super.nodeAt(source, byte);
+  }
+}
 
 /**
  * A book whose every chapter opens on a block the engine set nothing

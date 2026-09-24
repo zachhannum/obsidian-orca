@@ -36,6 +36,7 @@ import {
   useRef,
   useState,
   type JSX,
+  type KeyboardEvent as Keyed,
   type MouseEvent as Pointed,
   type RefObject,
 } from "react";
@@ -55,6 +56,7 @@ import {
   type Item,
 } from "@/ui/list";
 import { Icon, PREVIEW_ICON } from "@/ui/icon";
+import { markOf, walk, type Headed, type Showing } from "@/ui/outline";
 import type { Row, Shelved } from "@/ui/shelf";
 
 /** The actions a shelf row can ask the view to perform. */
@@ -63,6 +65,8 @@ export interface Acting {
   preview(book: Shelved): void;
   /** A click on an entry that has a note or generates its own. The view reads the Mod key off the event. */
   openEntry(book: Shelved, row: Row, event: Pointed): void;
+  /** A click on a heading inside an entry, or Enter on one. */
+  openHeading(book: Shelved, row: Row, heading: Headed, event: Pointed | Keyed): void;
   bookMenu(event: Pointed, book: Shelved): void;
   /** The entry's own menu. `after` is where `New chapter here` goes. */
   entryMenu(event: Pointed, book: Shelved, row: Row, after: Place): void;
@@ -96,6 +100,8 @@ export interface Shelves {
   wanted: Wanted | undefined;
   /** Called once the entry has focus, or once it is known not to exist. */
   located: () => void;
+  /** The page a preview shows, whose row is marked. */
+  showing: Showing | undefined;
 }
 
 /** An entry asked for by its book and its place in the reading order. */
@@ -115,6 +121,8 @@ export interface Mounted {
    * that is still being read.
    */
   focus(book: string, at: number): void;
+  /** Marks the row for the page a preview shows. */
+  show(showing: Showing | undefined): void;
   unmount(): void;
 }
 
@@ -130,6 +138,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
   let generation = 0;
   let renaming: Renaming | undefined;
   let wanted: Wanted | undefined;
+  let showing: Showing | undefined;
 
   const draw = (): void => {
     root.render(
@@ -147,6 +156,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
           wanted = undefined;
           draw();
         }}
+        showing={showing}
       />,
     );
   };
@@ -164,6 +174,11 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
     },
     focus(book, at) {
       wanted = { book, at };
+      draw();
+    },
+    show(next) {
+      if (JSON.stringify(next) === JSON.stringify(showing)) return;
+      showing = next;
       draw();
     },
     unmount() {
@@ -281,6 +296,7 @@ export function Shelf({
   renamed,
   wanted,
   located,
+  showing,
 }: Shelves): JSX.Element {
   const pane = useRef<HTMLDivElement>(null);
   // The suite waits on the generation the pane has painted, so it is
@@ -326,6 +342,7 @@ export function Shelf({
               renamed={renamed}
               wanted={wanted?.book === book.path ? wanted.at : undefined}
               located={located}
+              showing={showing}
             />
           ))
         )}
@@ -341,6 +358,7 @@ function Book({
   renamed,
   wanted,
   located,
+  showing,
 }: {
   book: Shelved;
   acting: Acting;
@@ -349,8 +367,11 @@ function Book({
   /** The place of the entry this book has been asked to focus. */
   wanted: number | undefined;
   located: () => void;
+  showing: Showing | undefined;
 }): JSX.Element {
   const [folded, setFolded] = useState(false);
+  /** The entries whose headings are folded, by note path, which a reorder keeps. */
+  const [shut, setShut] = useState<ReadonlySet<string>>(new Set());
   const shelf = useRef<HTMLDivElement>(null);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
   /** The section a drag is carrying, whose entries move with it. */
@@ -504,7 +525,22 @@ function Book({
           }}
         >
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-            <div className="orca-nav-children" ref={list}>
+            <div
+              className="orca-nav-children"
+              ref={list}
+              onKeyDown={(event) => {
+                // A keyboard drag moves the row with the same keys.
+                if (dragged !== undefined) return;
+                const rows = [
+                  ...(list.current?.querySelectorAll<HTMLElement>("[data-walk]") ?? []),
+                ];
+                const from = rows.findIndex((row) => row.contains(document.activeElement));
+                const to = walk(rows.length, from, event.key);
+                if (from < 0 || to === undefined) return;
+                event.preventDefault();
+                rows[to]?.focus();
+              }}
+            >
               {items.map((item, at) =>
                 item.kind === "group" ? (
                   <Heading
@@ -532,6 +568,16 @@ function Book({
                     row={item.row}
                     after={next(where[at], item.heading)}
                     acting={acting}
+                    folded={shut.has(item.row.path ?? "")}
+                    fold={(fold) => {
+                      const path = item.row.path;
+                      if (path === undefined) return;
+                      const next = new Set(shut);
+                      if (fold) next.add(path);
+                      else next.delete(path);
+                      setShut(next);
+                    }}
+                    showing={showing}
                   />
                 ),
               )}
@@ -585,6 +631,7 @@ function Heading({
       className={`orca-nav-heading${sortable.isDragging ? " is-dragged" : ""}`}
       data-testid="orca-group"
       data-heading={heading}
+      data-walk=""
       {...sortable.attributes}
       {...(renaming ? undefined : sortable.listeners)}
       onContextMenu={(event) => {
@@ -658,16 +705,28 @@ function Rename({
   );
 }
 
+/**
+ * One entry and the headings inside its note. The entry row is the one
+ * handle a drag takes, and the headings travel with it, so the whole
+ * note moves and a heading row never drags on its own.
+ */
 function Entry({
   book,
   row,
   after,
   acting,
+  folded,
+  fold,
+  showing,
 }: {
   book: Shelved;
   row: Row;
   after: Place;
   acting: Acting;
+  /** Whether the author folded this entry's headings away. */
+  folded: boolean;
+  fold: (fold: boolean) => void;
+  showing: Showing | undefined;
 }): JSX.Element {
   const sortable = useSortable({
     id: rowId(row.at),
@@ -677,53 +736,114 @@ function Entry({
     transform: CSS.Translate.toString(sortable.transform),
     transition: sortable.transition,
   };
+  const headings = row.headings ?? [];
+  const mark = markOf(showing, book.path, row, folded);
 
   return (
     <div
       ref={sortable.setNodeRef}
       style={style}
-      className={`orca-nav-item orca-entry${sortable.isDragging ? " is-dragged" : ""}`}
-      data-testid="orca-entry"
-      data-at={row.at}
-      data-role={row.role}
-      data-kind={row.kind}
-      {...sortable.attributes}
-      {...sortable.listeners}
-      onClick={(event) => {
-        if (row.kind !== "missing") acting.openEntry(book, row, event);
-      }}
-      onContextMenu={(event) => {
-        acting.entryMenu(event, book, row, after);
+      className={`orca-entry-tree${sortable.isDragging ? " is-dragged" : ""}`}
+      onKeyDown={(event) => {
+        if (headings.length === 0 || sortable.isDragging) return;
+        const onEntry = event.target === event.currentTarget.firstElementChild;
+        if (event.key === "ArrowRight" && onEntry && folded) fold(false);
+        else if (event.key === "ArrowLeft" && onEntry && !folded) fold(true);
+        else if (event.key === "ArrowLeft" && !onEntry) {
+          event.currentTarget.querySelector<HTMLElement>("[data-testid=orca-entry]")?.focus();
+        } else return;
+        event.preventDefault();
       }}
     >
-      <span className="orca-entry-mark">
-        {row.kind === "missing" ? <Icon name="triangle-alert" /> : null}
-        {row.kind === "generated" ? <Icon name="wand-sparkles" /> : null}
-      </span>
-      <span className="orca-label">{row.name}</span>
-      {row.kind === "generated" ? (
-        <span className="orca-chip">generated</span>
-      ) : row.named ? (
-        <span className="orca-chip">{ROLES[row.role].name.toLowerCase()}</span>
-      ) : null}
-      {row.kind === "missing" ? (
-        <span className="orca-nav-actions">
-          <Action
-            icon="search"
-            label="Locate"
-            onClick={() => {
-              acting.locate(book, row);
-            }}
-          />
-          <Action
-            icon="x"
-            label="Remove"
-            onClick={() => {
-              acting.removeEntry(book, row);
-            }}
-          />
+      <div
+        ref={sortable.setActivatorNodeRef}
+        className={`orca-nav-item orca-entry${sortable.isDragging ? " is-dragged" : ""}${mark === "entry" ? " is-selected" : ""}`}
+        data-testid="orca-entry"
+        data-at={row.at}
+        data-role={row.role}
+        data-kind={row.kind}
+        data-walk=""
+        aria-current={mark === "entry" ? "page" : undefined}
+        {...sortable.attributes}
+        {...sortable.listeners}
+        onClick={(event) => {
+          if (row.kind !== "missing") acting.openEntry(book, row, event);
+        }}
+        onContextMenu={(event) => {
+          acting.entryMenu(event, book, row, after);
+        }}
+      >
+        <span className="orca-entry-mark">
+          {row.kind === "missing" ? <Icon name="triangle-alert" /> : null}
+          {row.kind === "generated" ? <Icon name="wand-sparkles" /> : null}
+          {headings.length > 0 ? (
+            <span
+              className="orca-fold"
+              data-testid="orca-entry-fold"
+              aria-expanded={!folded}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                fold(!folded);
+              }}
+            >
+              <Icon name={folded ? "chevron-right" : "chevron-down"} />
+            </span>
+          ) : null}
         </span>
-      ) : null}
+        <span className="orca-label">{row.name}</span>
+        {row.kind === "generated" ? (
+          <span className="orca-chip">generated</span>
+        ) : row.named ? (
+          <span className="orca-chip">{ROLES[row.role].name.toLowerCase()}</span>
+        ) : null}
+        {row.kind === "missing" ? (
+          <span className="orca-nav-actions">
+            <Action
+              icon="search"
+              label="Locate"
+              onClick={() => {
+                acting.locate(book, row);
+              }}
+            />
+            <Action
+              icon="x"
+              label="Remove"
+              onClick={() => {
+                acting.removeEntry(book, row);
+              }}
+            />
+          </span>
+        ) : null}
+      </div>
+      {folded
+        ? null
+        : headings.map((heading) => (
+            <div
+              key={heading.line}
+              className={`orca-nav-item orca-outline${mark === heading.line ? " is-selected" : ""}`}
+              data-testid="orca-outline"
+              data-line={heading.line}
+              data-depth={heading.depth}
+              data-walk=""
+              tabIndex={0}
+              role="button"
+              aria-current={mark === heading.line ? "page" : undefined}
+              style={{ paddingLeft: `calc(var(--size-4-2) + 14px + ${String(heading.depth)} * var(--size-4-3))` }}
+              onClick={(event) => {
+                acting.openHeading(book, row, heading, event);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                acting.openHeading(book, row, heading, event);
+              }}
+            >
+              <span className="orca-label">{heading.words}</span>
+            </div>
+          ))}
     </div>
   );
 }

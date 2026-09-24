@@ -21,7 +21,7 @@ import { sectionIds } from "@/book/names";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { sectionRanges, sourceNamed, type Range as Folio } from "@/book/pages";
-import { writtenBytes } from "@/book/place";
+import { lineByte, writtenBytes } from "@/book/place";
 import {
   bookImages,
   cssImages,
@@ -205,6 +205,32 @@ export class Typeset {
     const bytes = text === undefined ? [0] : writtenBytes(text);
     const opens = await this.setOn(source, bytes.slice(0, 1));
     return opens ?? (await this.setOn(source, bytes.slice(1)));
+  }
+
+  /**
+   * The page each of these lines of a section's note opens on, counting
+   * from 0, or nothing for a line set on no page. The lines count into
+   * the text the engine holds.
+   */
+  async linesOpen(
+    at: number,
+    lines: readonly number[],
+  ): Promise<(number | undefined)[]> {
+    const source = sourceNamed(this.sections, at);
+    const text = source === undefined ? undefined : this.sent.get(source);
+    if (source === undefined || text === undefined) return lines.map(() => undefined);
+    const nodes = await Promise.all(
+      lines.map((line) => this.session.nodeAt(source, lineByte(text, line))),
+    );
+    const read = nodes.flatMap((node) => (node === undefined ? [] : [node]));
+    const folios = read.length === 0 ? [] : await this.session.foliosOf(read);
+    let next = 0;
+    return nodes.map((node) => {
+      if (node === undefined) return undefined;
+      const set = folios[next];
+      next += 1;
+      return set?.at;
+    });
   }
 
   /** The page the first of these bytes of a source that reached one is set on. */

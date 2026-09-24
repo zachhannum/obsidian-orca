@@ -20,6 +20,12 @@ test("the ceiling is a setting, saved and read back in whole sessions", () => {
   assert.equal(sessionCount(Number.NaN), CEILING);
 });
 
+test("the navigator lists headings until the setting is turned off", () => {
+  assert.equal(LIMITS.headings, true);
+  assert.deepEqual(readLimits({ headings: false }), { ...LIMITS, headings: false });
+  assert.deepEqual(readLimits({ headings: "no" }), LIMITS);
+});
+
 test("a ceiling saved under the old name reads back as the same number", () => {
   assert.deepEqual(readLimits({ books: 4 }), { ...LIMITS, sessions: 4 });
   assert.deepEqual(readLimits({ books: 4, unit: "mm" }), {
