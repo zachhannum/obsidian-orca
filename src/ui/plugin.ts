@@ -158,7 +158,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
         if (why === "died") this.composer?.died(book);
         else this.composer?.discard(book);
       },
-      ceiling: this.limits.books,
+      ceiling: this.limits.sessions,
     });
     this.engines = engines;
     const composer = new Composer(this.composing(engines));
@@ -1149,7 +1149,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** Reads the settings, and applies the ceiling in them. */
   private async saved(): Promise<void> {
     this.limits = readLimits(await this.loadData());
-    if (this.engines !== undefined) this.engines.ceiling = this.limits.books;
+    if (this.engines !== undefined) this.engines.ceiling = this.limits.sessions;
   }
 
   /** Reads the engine module at load, and reports an install without one. */
@@ -1192,7 +1192,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   limit(limits: Limits): void {
     const remeasured = limits.unit !== this.limits.unit;
     this.limits = limits;
-    if (this.engines !== undefined) this.engines.ceiling = limits.books;
+    if (this.engines !== undefined) this.engines.ceiling = limits.sessions;
     void this.saveData(limits);
     if (!remeasured) return;
     for (const leaf of this.app.workspace.getLeavesOfType(PANEL_VIEW)) {
