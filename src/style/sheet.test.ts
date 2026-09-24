@@ -84,7 +84,7 @@ test("a book that sets nothing gets every default in design.css", () => {
     /@page \{\n {2}size: 6in 9in;\n {2}margin-top: 0\.75in;\n {2}margin-bottom: 0\.75in;\n/,
     /@page :left \{\n {2}margin-left: 0\.6in;\n {2}margin-right: 0\.75in;\n\}/,
     /@page :right \{\n {2}margin-left: 0\.75in;\n {2}margin-right: 0\.6in;\n\}/,
-    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-style: normal; \}/,
+    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; \}/,
     /@page chapter:first \{\n {2}@bottom-center \{ content: none; \}\n\}/,
     /book \{\n {2}font-family: "EB Garamond", serif;\n {2}font-size: 11pt;\n {2}line-height: 16\.5pt;\n {2}text-align: justify;\n {2}hyphens: auto;\n {2}hanging-punctuation: none;\n {2}orphans: 2;\n {2}widows: 2;\n\}/,
     /p \+ p \{\n {2}text-indent: 1\.2em;\n\}/,
@@ -92,14 +92,14 @@ test("a book that sets nothing gets every default in design.css", () => {
     /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/,
     /section#chapter-one \{\n {2}page: chapter;\n {2}break-before: page;\n\}/,
     /section > h1:first-child \{\n {2}padding-top: 0pt;\n {2}margin-top: 0;\n\}/,
-    /hr \{\n {2}content: "❧";\n {2}margin-top: 16\.5pt;\n {2}margin-bottom: 16\.5pt;\n\}/,
+    /hr \{\n {2}font-weight: normal;\n {2}font-style: normal;\n {2}content: "❧";\n {2}margin-top: 16\.5pt;\n {2}margin-bottom: 16\.5pt;\n\}/,
   ];
   for (const pattern of expected) assert.match(css, pattern);
   for (const level of [1, 2, 3, 4, 5, 6]) {
     assert.match(
       css,
       new RegExp(
-        `h${level} \\{\\n {2}font-size: 19pt;\\n {2}font-variant-caps: normal;\\n {2}text-transform: none;\\n {2}letter-spacing: 0em;\\n {2}text-align: left;\\n {2}margin-top: 0pt;\\n {2}margin-bottom: 0pt;\\n\\}`,
+        `h${level} \\{\\n {2}font-weight: normal;\\n {2}font-style: normal;\\n {2}font-size: 19pt;\\n {2}font-variant-caps: normal;\\n {2}text-transform: none;\\n {2}letter-spacing: 0em;\\n {2}text-align: left;\\n {2}margin-top: 0pt;\\n {2}margin-bottom: 0pt;\\n\\}`,
       ),
     );
   }

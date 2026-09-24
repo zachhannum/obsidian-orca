@@ -49,6 +49,13 @@ const BOOK = "Pride and Prejudice.md";
 /** The snapshot beside this spec, which is reviewed like code. */
 const SNAPSHOT = "src/style/generated.snapshot.css";
 
+/**
+ * The snapshot of a design that sets a style everywhere it can. The
+ * fixture sets none, so the styles get a sheet of their own rather than
+ * a slope on every page the e2e run photographs.
+ */
+const STYLES = "src/style/styles.snapshot.css";
+
 test("the fixture's design generates the sheet checked in beside this spec", async () => {
   const model = await fixture();
   // The sheet as it is sent, with the defaults under the design.
@@ -853,8 +860,8 @@ async function paths(folder = "/"): Promise<string[]> {
  * The snapshot as it is on disk, written first when `ORCA_SNAPSHOTS` is
  * set. A snapshot is read like code, so it is updated on purpose.
  */
-async function snapshot(css: string): Promise<string> {
-  const file = path.join(root, SNAPSHOT);
+async function snapshot(css: string, at: string = SNAPSHOT): Promise<string> {
+  const file = path.join(root, at);
   if (process.env["ORCA_SNAPSHOTS"] !== undefined) await writeFile(file, css);
   return readFile(file, "utf8");
 }
@@ -963,19 +970,21 @@ test("the running heads and the folio are set in the type the design gives them"
   design.headers.pageNumber = "bottom";
   design.headers.caps = "small-caps";
   design.headers.letterSpacing = { value: 0.06, unit: "em" };
-  design.headers.italic = true;
+  design.headers.style = "italic";
+  design.headers.folioStyle = "bold";
   const sections = named(ROLES);
   const at = { sections, title: "Pride and Prejudice", author: "Jane Austen" };
   const css = generatedCss(design, at);
 
   assert.match(
     css,
-    /@top-left \{ content: "Jane Austen"; font-variant-caps: small-caps; text-transform: none; letter-spacing: 0.06em; font-style: italic; \}/,
+    /@top-left \{ content: "Jane Austen"; font-variant-caps: small-caps; text-transform: none; letter-spacing: 0.06em; font-weight: normal; font-style: italic; \}/,
   );
-  // The folio carries the same band of type as the heads.
+  // The folio carries the same case and tracking as the heads, and the
+  // style it is given of its own.
   assert.match(
     css,
-    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: small-caps; text-transform: none; letter-spacing: 0.06em; font-style: italic; \}/,
+    /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: small-caps; text-transform: none; letter-spacing: 0.06em; font-weight: bold; font-style: normal; \}/,
   );
   // A page that opens a section prints none of it.
   assert.match(css, /@page chapter:first \{\n(?: {2}@[a-z-]+ \{ content: none; \}\n)+\}/);
@@ -1066,9 +1075,14 @@ test("a design that sets every new key renders with no warning from the pinned e
   design.headers.rightPage = "book-title";
   design.headers.caps = "all-caps";
   design.headers.letterSpacing = { value: 0.06, unit: "em" };
-  design.headers.italic = true;
+  design.headers.style = "italic";
+  design.headers.folioStyle = "bold-italic";
   design.headers.font = "EB Garamond";
   design.headers.folioFont = "EB Garamond";
+  design.headings[1].style = "bold";
+  design.chapter.dropCap = 3;
+  design.chapter.dropCapStyle = "bold";
+  design.scene.style = "italic";
   const sections = named(ROLES);
   const css = generatedCss(design, { sections, title: "Pride and Prejudice", author: "Jane Austen" });
 
@@ -1152,6 +1166,68 @@ async function running(from: ChapterTitle | undefined): Promise<string[]> {
   assert.deepEqual(output.warnings, []);
   assert.ok(output.pages.length > 1, "the chapter did not turn a page");
   return [...new Set(output.pages.flatMap((page) => heads(page)))];
+}
+
+test("a heading level, the folio, the drop cap and the scene break each take a style", async () => {
+  const design = styles();
+  const sections = named(ROLES);
+  const at = { sections, title: "Pride and Prejudice", author: "Jane Austen" };
+
+  const css = generatedCss(design, at);
+
+  // The body takes its bold and italic from the note alone.
+  assert.doesNotMatch(css, /book \{[^}]*font-style/);
+  assert.match(css, /h1 \{\n {2}font-weight: bold;\n {2}font-style: normal;\n\}/);
+  assert.match(css, /h3 \{\n {2}font-weight: bold;\n {2}font-style: italic;\n\}/);
+  assert.match(css, /::first-letter \{\n {2}initial-letter: 3;\n {2}font-weight: bold;\n {2}font-style: normal;\n\}/);
+  assert.match(css, /hr \{\n {2}font-weight: normal;\n {2}font-style: italic;\n/);
+  // The heads and the folio each take the style set for them.
+  assert.match(css, /@top-left \{ content: "Jane Austen"; font-weight: bold; font-style: italic; \}/);
+  assert.match(css, /@bottom-center \{ content: counter\(page, decimal\); font-weight: normal; font-style: normal; \}/);
+
+  const output = await rendered(css, BROKEN, sections);
+
+  assert.deepEqual(output.warnings, []);
+  assert.ok(output.pages.length > 0);
+});
+
+test("a design that sets a style everywhere generates the sheet checked in beside this spec", async () => {
+  const sections = named(ROLES);
+  const css = generatedCss(styles(), {
+    sections,
+    title: "Pride and Prejudice",
+    author: "Jane Austen",
+  });
+
+  assert.equal(css, await snapshot(css, STYLES));
+  // Every style key the schema has is read by a rule in the sheet.
+  const rules = generatedRules(styles(), { sections });
+  for (const key of DESIGN_KEYS.filter((each) => each.endsWith("-style"))) {
+    assert.ok(
+      rules.some((rule) => rule.from.keys.includes(key)),
+      `no rule reads \`${key}\``,
+    );
+  }
+});
+
+/** A design that sets a style in every place the panel offers one. */
+function styles(): Design {
+  const design = emptyDesign();
+  design.headings[1].style = "bold";
+  design.headings[2].style = "normal";
+  design.headings[3].style = "bold-italic";
+  design.headings[4].style = "italic";
+  design.headings[5].style = "bold";
+  design.headings[6].style = "normal";
+  design.chapter.dropCap = 3;
+  design.chapter.dropCapStyle = "bold";
+  design.scene.style = "italic";
+  design.headers.leftPage = "author";
+  design.headers.rightPage = "chapter-title";
+  design.headers.pageNumber = "bottom";
+  design.headers.style = "bold-italic";
+  design.headers.folioStyle = "normal";
+  return design;
 }
 
 /** The one generated rule a setting key writes. */

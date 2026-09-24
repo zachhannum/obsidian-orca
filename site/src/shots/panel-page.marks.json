@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 291,
+  "height": 247,
   "marks": {
     "margin-bottom": {
       "x": 114,
@@ -26,21 +26,9 @@
       "width": 88,
       "height": 30
     },
-    "mirrored": {
-      "x": 0,
-      "y": 250,
-      "width": 36,
-      "height": 16
-    },
     "reset-margin-inside": {
       "x": 228,
       "y": 133,
-      "width": 24,
-      "height": 24
-    },
-    "reset-mirrored": {
-      "x": 228,
-      "y": 246,
       "width": 24,
       "height": 24
     },

@@ -23,6 +23,7 @@
     font-variant-caps: small-caps;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    font-weight: bold;
     font-style: italic;
   }
   @bottom-left { content: counter(page, decimal); }
@@ -43,6 +44,8 @@
 
 book {
   font-family: "EB Garamond", serif;
+  font-weight: normal;
+  font-style: normal;
   font-size: 10.5pt;
   line-height: 14pt;
   text-align: justify;
@@ -66,6 +69,8 @@ section > :is(h1, h2, h3, h4, h5, h6):first-child {
   padding-top: 7em;
   margin-bottom: 2em;
   font-family: "EB Garamond", serif;
+  font-weight: bold;
+  font-style: italic;
   font-size: 17pt;
   text-align: center;
   break-after: avoid;
@@ -83,11 +88,15 @@ section > :is(h1, h2, h3, h4, h5, h6):first-child + p::first-line {
 
 section > p:first-of-type::first-letter {
   initial-letter: 3;
+  font-weight: bold;
+  font-style: normal;
 }
 
 hr {
   content: "\2042";
   font-family: "EB Garamond", serif;
+  font-weight: normal;
+  font-style: italic;
   font-size: 11pt;
   text-align: center;
   margin-top: 1em;

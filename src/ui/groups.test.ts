@@ -84,6 +84,7 @@ test("the Headings group sets the type and the space at every level, and chapter
         [
           "font",
           "font-variant",
+          "style",
           "size",
           "caps",
           "letter-spacing",
@@ -177,7 +178,7 @@ test("a scene break is marked with a space or a glyph, and the glyph is set in a
   const group = GROUPS.find((each) => each.name === "Scene breaks");
   assert.deepEqual(
     group?.rows.map((row) => row.label),
-    ["Mark", "Glyph", "Font", "Size", "Space above", "Space below"],
+    ["Mark", "Glyph", "Font", "Style", "Size", "Space above", "Space below"],
   );
   assert.equal(control("scene-break-font").kind, "font");
   assert.equal(control("scene-break-size").kind, "length");
@@ -343,6 +344,7 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     "chapter-begins",
     "chapter-drop-cap",
     "chapter-drop-cap-font",
+    "chapter-drop-cap-style",
     "chapter-first-line-caps",
     "chapter-first-line-letter-spacing",
   ]);
@@ -351,6 +353,7 @@ test("the capitals and the tracking rows sit with the places they set", () => {
     [
       "heading-1-font",
       "heading-1-font-variant",
+      "heading-1-style",
       "heading-1-size",
       "heading-1-caps",
       "heading-1-letter-spacing",
@@ -362,9 +365,10 @@ test("the capitals and the tracking rows sit with the places they set", () => {
   assert.deepEqual(keysOf(heads).slice(6), [
     "header-font",
     "folio-font",
+    "header-style",
+    "folio-style",
     "header-caps",
     "header-letter-spacing",
-    "header-italic",
     "suppress-head-on-openings",
   ]);
 
@@ -442,6 +446,49 @@ test("the Heads & folios group picks the heading the chapter title is read from"
   assert.deepEqual(writeDesign(withKey(emptyDesign(), "chapter-title-from", "h2")), {
     "chapter-title-from": "h2",
   });
+});
+
+test("one font style control sets the weight and the slope wherever orca sets a place apart", () => {
+  const styled = PANEL_KEYS.filter((key) => key.endsWith("-style"));
+
+  // Every place orca sets apart from the body offers the control, and
+  // each writes one key. The body takes its bold and italic from the
+  // note. A chapter's first line offers none, because the engine drops
+  // a style there.
+  assert.deepEqual(styled, [
+    ...LEVELS.map((level) => `heading-${String(level)}-style`),
+    "chapter-drop-cap-style",
+    "scene-break-style",
+    "header-style",
+    "folio-style",
+  ]);
+  assert.deepEqual(
+    GROUPS.flatMap((group) => group.rows)
+      .flatMap((row) => row.of)
+      .filter((each) => each.kind === "style")
+      .map((each) => each.key),
+    [
+      "heading-N-style",
+      "chapter-drop-cap-style",
+      "scene-break-style",
+      "header-style",
+      "folio-style",
+    ],
+  );
+  assert.ok(!PANEL_KEYS.includes("body-style"));
+  assert.ok(!PANEL_KEYS.includes("chapter-first-line-style"));
+  assert.ok(!PANEL_KEYS.includes("header-italic"));
+
+  // The control is a select that names the four styles.
+  assert.deepEqual(control("header-style").choices?.map((choice) => choice.label), [
+    "Normal",
+    "Bold",
+    "Italic",
+    "Bold italic",
+  ]);
+  // The name the reset says is the word the control is drawn with.
+  assert.equal(defaultSaid(control("folio-style"), "bold-italic", "in"), "Bold italic");
+  assert.equal(defaultSaid(control("header-style"), "normal", "in"), "Normal");
 });
 
 // What this tier does not cover: the drawing itself. The e2e suite

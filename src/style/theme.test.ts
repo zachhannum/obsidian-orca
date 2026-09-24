@@ -135,8 +135,8 @@ test("a book that sets nothing opens a chapter on the next page, inside margins 
   assert.equal(properties["header-position"], "outside");
 });
 
-test("a book on the defaults declares its capitals, its tracking and its slope", () => {
-  const { chapter, headers, headings } = DEFAULTS;
+test("a book on the defaults declares its capitals, its tracking and its style", () => {
+  const { chapter, headers, headings, scene } = DEFAULTS;
 
   assert.deepEqual(
     [headings[1].caps, chapter.firstLineCaps, headers.caps],
@@ -150,7 +150,17 @@ test("a book on the defaults declares its capitals, its tracking and its slope",
     ],
     [0, 0, 0],
   );
-  assert.equal(headers.italic, false);
+  // Every place the panel offers a style control has a default style.
+  assert.deepEqual(
+    [
+      headings[1].style,
+      chapter.dropCapStyle,
+      scene.style,
+      headers.style,
+      headers.folioStyle,
+    ],
+    ["normal", "normal", "normal", "normal", "normal"],
+  );
 
   // A control that declared nothing at its default would leave the
   // place to whatever else sets it, and the panel would go on saying

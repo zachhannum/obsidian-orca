@@ -1,46 +1,46 @@
 {
   "width": 252,
-  "height": 761,
+  "height": 849,
   "marks": {
     "chapter-title-from": {
       "x": 0,
-      "y": 193,
+      "y": 194,
       "width": 220,
       "height": 30
     },
     "folio-font": {
       "x": 0,
-      "y": 507,
+      "y": 508,
+      "width": 220,
+      "height": 30
+    },
+    "folio-style": {
+      "x": 0,
+      "y": 634,
       "width": 220,
       "height": 30
     },
     "header-caps": {
       "x": 0,
-      "y": 570,
+      "y": 697,
       "width": 220,
       "height": 30
     },
     "header-font": {
       "x": 0,
-      "y": 444,
+      "y": 445,
       "width": 220,
       "height": 30
     },
-    "header-italic": {
-      "x": 0,
-      "y": 680,
-      "width": 36,
-      "height": 16
-    },
     "header-left-page": {
       "x": 0,
-      "y": 67,
+      "y": 68,
       "width": 220,
       "height": 30
     },
     "header-letter-spacing": {
       "x": 0,
-      "y": 633,
+      "y": 760,
       "width": 220,
       "height": 30
     },
@@ -52,51 +52,57 @@
     },
     "header-right-page": {
       "x": 0,
-      "y": 130,
+      "y": 131,
+      "width": 220,
+      "height": 30
+    },
+    "header-style": {
+      "x": 0,
+      "y": 571,
       "width": 220,
       "height": 30
     },
     "page-number-format": {
       "x": 0,
-      "y": 381,
+      "y": 382,
       "width": 220,
       "height": 30
     },
     "page-number-position": {
       "x": 0,
-      "y": 318,
+      "y": 319,
       "width": 220,
       "height": 30
     },
     "reset-header-left-page": {
       "x": 228,
-      "y": 70,
+      "y": 71,
       "width": 24,
       "height": 24
     },
     "reset-header-right-page": {
       "x": 228,
-      "y": 133,
+      "y": 134,
       "width": 24,
       "height": 24
     },
     "reset-page-number-position": {
       "x": 228,
-      "y": 321,
+      "y": 322,
       "width": 24,
       "height": 24
     },
     "reset-suppress-head-on-openings": {
       "x": 228,
-      "y": 716,
+      "y": 805,
       "width": 24,
       "height": 24
     },
     "suppress-head-on-openings": {
       "x": 0,
-      "y": 720,
-      "width": 36,
-      "height": 16
+      "y": 808,
+      "width": 34,
+      "height": 19
     }
   }
 }

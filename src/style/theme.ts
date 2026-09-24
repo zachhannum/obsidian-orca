@@ -68,10 +68,17 @@ export const DEFAULTS: Design = frozen({
   chapter: {
     begins: "next-page",
     dropCap: 0,
+    dropCapStyle: "normal",
     firstLineCaps: "normal",
     firstLineLetterSpacing: ems(0),
   },
-  scene: { mark: "ornament", ornament: "❧", spaceAbove: 1, spaceBelow: 1 },
+  scene: {
+    mark: "ornament",
+    ornament: "❧",
+    style: "normal",
+    spaceAbove: 1,
+    spaceBelow: 1,
+  },
   headers: {
     leftPage: "none",
     rightPage: "none",
@@ -79,9 +86,10 @@ export const DEFAULTS: Design = frozen({
     position: "outside",
     pageNumber: "bottom",
     pageNumberFormat: "arabic",
+    style: "normal",
+    folioStyle: "normal",
     caps: "normal",
     letterSpacing: ems(0),
-    italic: false,
     suppressOnOpenings: true,
   },
 });
@@ -113,6 +121,7 @@ export function effective(design: Design): Design {
 
 function heading(): TypeSpec {
   return {
+    style: "normal",
     size: points(19),
     caps: "normal",
     letterSpacing: ems(0),

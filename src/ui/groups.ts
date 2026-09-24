@@ -53,6 +53,7 @@ export type Kind =
   | "flag"
   | "select"
   | "segment"
+  | "style"
   | "glyph"
   | "level";
 
@@ -97,6 +98,14 @@ const DROP_CAPS: readonly Choice[] = [
   { value: "2", label: "2 lines" },
   { value: "3", label: "3 lines" },
   { value: "4", label: "4 lines" },
+];
+
+/** The styles the font style control offers, each set in the style it names. */
+const STYLES: readonly Choice[] = [
+  { value: "normal", label: "Normal" },
+  { value: "bold", label: "Bold" },
+  { value: "italic", label: "Italic" },
+  { value: "bold-italic", label: "Bold italic" },
 ];
 
 const CAPITALS: readonly Choice[] = [
@@ -255,6 +264,10 @@ export const GROUPS: readonly Group[] = [
       { label: "", of: [{ kind: "level", choices: LEVEL_CHOICES }] },
       { label: "Font", of: [{ kind: "font", key: `${LEVELED}font` }] },
       { label: "Variant", of: [{ kind: "variant", key: `${LEVELED}font-variant` }] },
+      {
+        label: "Style",
+        of: [{ kind: "style", key: `${LEVELED}style`, choices: STYLES }],
+      },
       { label: "Size", of: [{ kind: "length", key: `${LEVELED}size` }] },
       {
         label: "Capitals",
@@ -294,6 +307,10 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "font", key: "chapter-drop-cap-font" }],
       },
       {
+        label: "Drop cap style",
+        of: [{ kind: "style", key: "chapter-drop-cap-style", choices: STYLES }],
+      },
+      {
         label: "First line",
         grid: true,
         of: [
@@ -322,6 +339,10 @@ export const GROUPS: readonly Group[] = [
       },
       { label: "Glyph", of: [{ kind: "glyph", key: "scene-break-ornament" }] },
       { label: "Font", of: [{ kind: "font", key: "scene-break-font" }] },
+      {
+        label: "Style",
+        of: [{ kind: "style", key: "scene-break-style", choices: STYLES }],
+      },
       { label: "Size", of: [{ kind: "length", key: "scene-break-size" }] },
       {
         label: "Space above",
@@ -365,22 +386,20 @@ export const GROUPS: readonly Group[] = [
       { label: "Header font", of: [{ kind: "font", key: "header-font" }] },
       { label: "Folio font", of: [{ kind: "font", key: "folio-font" }] },
       {
+        label: "Header style",
+        of: [{ kind: "style", key: "header-style", choices: STYLES }],
+      },
+      {
+        label: "Folio style",
+        of: [{ kind: "style", key: "folio-style", choices: STYLES }],
+      },
+      {
         label: "Capitals",
         of: [{ kind: "select", key: "header-caps", choices: CAPITALS }],
       },
       {
         label: "Tracking",
         of: [{ kind: "select", key: "header-letter-spacing", choices: TRACKING }],
-      },
-      {
-        label: "",
-        of: [
-          {
-            kind: "flag",
-            key: "header-italic",
-            said: "Set the running heads in italic",
-          },
-        ],
       },
       {
         label: "",

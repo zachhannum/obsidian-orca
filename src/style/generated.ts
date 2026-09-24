@@ -19,6 +19,7 @@ import {
   type Caps,
   type ChapterTitle,
   type Design,
+  type FontStyle,
   type HeaderDesign,
   type HeaderSlot,
   type Length,
@@ -372,7 +373,7 @@ function boxes(
 
 /**
  * The type one margin box is set in. The heads and the folio are set
- * in one face each, and take the same case, tracking and slope.
+ * in one face and one style each, and take the same case and tracking.
  */
 function headLines(
   headers: HeaderDesign,
@@ -387,7 +388,7 @@ function headLines(
       [folio ? "folio-font" : "header-font"],
     ),
     ...typeset(headers.caps, headers.letterSpacing, "header"),
-    ...set("font-style", flagged(headers.italic, "italic", "normal"), ["header-italic"]),
+    ...styled(folio ? headers.folioStyle : headers.style, folio ? "folio-style" : "header-style"),
   ];
 }
 
@@ -414,6 +415,21 @@ function typeset(
   }
   lines.push(...set("letter-spacing", written(spacing), [`${key}-letter-spacing`]));
   return lines;
+}
+
+/**
+ * The weight and the slope one place is set in. One key names both, so
+ * a place set in the normal style declares that rather than leaving
+ * the style to whatever else sets it.
+ */
+function styled(style: FontStyle | undefined, key: string): Declaration[] {
+  if (style === undefined) return [];
+  const bold = style === "bold" || style === "bold-italic";
+  const italic = style === "italic" || style === "bold-italic";
+  return [
+    declared("font-weight", bold ? "bold" : "normal", [key]),
+    declared("font-style", italic ? "italic" : "normal", [key]),
+  ];
 }
 
 /**
@@ -499,6 +515,7 @@ function typeLines(
       ]),
     );
   }
+  lines.push(...styled(type.style, `heading-${level}-style`));
   lines.push(...set("font-size", written(type.size), [`heading-${level}-size`]));
   lines.push(...typeset(type.caps, type.letterSpacing, `heading-${level}`));
   lines.push(...set("text-align", type.align, [`heading-${level}-align`]));
@@ -631,6 +648,7 @@ function chapterRules(
             : family(dropCapFont, undefined, registered),
           ["chapter-drop-cap-font"],
         ),
+        ...styled(chapter.dropCapStyle, "chapter-drop-cap-style"),
       ],
       "chapter",
     ),
@@ -769,6 +787,7 @@ function sceneRules(design: Design, registered: readonly Registered[]): (Rule | 
       declared("font-family", family(scene.font, undefined, registered), ["scene-break-font"]),
     );
   }
+  lines.push(...styled(scene.style, "scene-break-style"));
   lines.push(...set("font-size", written(scene.size), ["scene-break-size"]));
   lines.push(...set("content", sceneContent(scene), sceneKeys(scene)));
   lines.push(

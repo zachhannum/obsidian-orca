@@ -293,7 +293,7 @@ export class Controls {
     return this.root.getByTestId(`orca-panel-${key}`);
   }
 
-  /** One word of a segment, or one tab of a strip, by the value it writes. */
+  /** One word of a segment or a menu, or one tab of a strip, by the value it writes. */
   choice(key: string, value: string): Locator {
     return this.root.getByTestId(`orca-panel-${key}-${value}`);
   }

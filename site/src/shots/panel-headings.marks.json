@@ -1,16 +1,16 @@
 {
   "width": 252,
-  "height": 532,
+  "height": 594,
   "marks": {
     "heading-1-align": {
       "x": 0,
-      "y": 359,
+      "y": 422,
       "width": 220,
       "height": 30
     },
     "heading-1-caps": {
       "x": 0,
-      "y": 234,
+      "y": 296,
       "width": 220,
       "height": 30
     },
@@ -22,26 +22,32 @@
     },
     "heading-1-letter-spacing": {
       "x": 0,
-      "y": 296,
+      "y": 359,
       "width": 220,
       "height": 30
     },
     "heading-1-size": {
       "x": 0,
-      "y": 171,
+      "y": 233,
       "width": 60,
       "height": 30
     },
     "heading-1-space-above": {
       "x": 0,
-      "y": 422,
+      "y": 485,
       "width": 60,
       "height": 30
     },
     "heading-1-space-below": {
       "x": 0,
-      "y": 485,
+      "y": 548,
       "width": 60,
+      "height": 30
+    },
+    "heading-1-style": {
+      "x": 0,
+      "y": 170,
+      "width": 220,
       "height": 30
     },
     "heading-level": {
@@ -52,13 +58,13 @@
     },
     "reset-heading-1-align": {
       "x": 228,
-      "y": 362,
+      "y": 425,
       "width": 24,
       "height": 24
     },
     "reset-heading-1-size": {
       "x": 228,
-      "y": 174,
+      "y": 236,
       "width": 24,
       "height": 24
     }

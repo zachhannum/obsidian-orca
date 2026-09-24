@@ -85,29 +85,53 @@ test("every field is one key and one scalar, so the properties panel shows a lin
   assert.equal(properties["heading-1-size"], "17pt");
 });
 
-test("the schema has no preset and no heading weight or slope", () => {
-  for (const key of DESIGN_KEYS) {
-    assert.ok(!/-(weight|slope)$/.test(key), `\`${key}\` is still in the schema`);
+test("one style key sets the weight and the slope of every place orca sets text", () => {
+  const styled = DESIGN_KEYS.filter((key) => key.endsWith("-style"));
+
+  assert.deepEqual(styled, [
+    ...LEVELS.map((level) => `heading-${level}-style`),
+    "chapter-drop-cap-style",
+    "scene-break-style",
+    "header-style",
+    "folio-style",
+  ]);
+  for (const key of styled) {
+    assert.deepEqual(propertiesOf(key), ["font-weight", "font-style"]);
   }
-  assert.ok(!DESIGN_KEYS.includes("preset"));
-  assert.ok(!DESIGN_PROPERTIES.includes("font-weight"));
-  // The running heads take a slope, because a margin box prints a
-  // generated string and no markdown reaches it. Text a note holds
-  // takes its slope from the note.
+  // No other key sets either property, so one control settles both.
   for (const key of DESIGN_KEYS) {
-    if (key === "header-italic") continue;
-    assert.ok(!propertiesOf(key).includes("font-style"), `\`${key}\` sets a slope`);
+    if (styled.includes(key)) continue;
+    const properties = propertiesOf(key);
+    assert.ok(!properties.includes("font-style"), `\`${key}\` sets a slope`);
+    assert.ok(!properties.includes("font-weight"), `\`${key}\` sets a weight`);
   }
+  // A style is one name, which is how the note writes it.
+  assert.equal(readDesign({ "header-style": "bold-italic" }).headers.style, "bold-italic");
+  assert.equal(writeDesign(readDesign({ "header-style": "Italic" }))["header-style"], "italic");
+  assert.equal(readDesign({ "header-style": "oblique" }).headers.style, undefined);
   // A note that still carries these keys reads as a design that sets
   // nothing.
+  assert.ok(!DESIGN_KEYS.includes("preset"));
   assert.deepEqual(
     readDesign({
       preset: "Quarto",
+      "header-italic": true,
       "heading-1-weight": "bold",
       "heading-2-slope": "italic",
     }),
     emptyDesign(),
   );
+});
+
+test("a chapter's first line takes no style, because the pinned engine drops one there", () => {
+  // The engine answers `Unsupported property font-style on
+  // ::first-line`, so the first line waits on an engine that sets one.
+  assert.ok(!DESIGN_KEYS.includes("chapter-first-line-style"));
+  assert.deepEqual(readDesign({ "chapter-first-line-style": "italic" }), emptyDesign());
+  assert.deepEqual(propertiesOf("chapter-first-line-caps"), [
+    "font-variant-caps",
+    "text-transform",
+  ]);
 });
 
 test("a design read back from its own properties is the design that was written", () => {
@@ -331,6 +355,7 @@ function whole(): Design {
       begins: "right-page",
       dropCap: 3,
       dropCapFont: "Junicode",
+      dropCapStyle: "bold",
       firstLineCaps: "all-caps",
       firstLineLetterSpacing: len(0.04, "em"),
     },
@@ -338,6 +363,7 @@ function whole(): Design {
       mark: "ornament",
       ornament: "⁂",
       font: "Junicode",
+      style: "bold-italic",
       size: len(9.5, "pt"),
       spaceAbove: 1,
       spaceBelow: 1,
@@ -351,9 +377,10 @@ function whole(): Design {
       pageNumberFormat: "arabic",
       font: "Junicode",
       folioFont: "Alegreya",
+      style: "italic",
+      folioStyle: "normal",
       caps: "small-caps",
       letterSpacing: len(0.06, "em"),
-      italic: true,
       suppressOnOpenings: true,
     },
   };
@@ -361,6 +388,7 @@ function whole(): Design {
     design.headings[level] = {
       font: "EB Garamond",
       fontVariant: "Semibold",
+      style: "italic",
       size: len(18 - level, "pt"),
       caps: "small-caps",
       letterSpacing: len(0.08, "em"),
