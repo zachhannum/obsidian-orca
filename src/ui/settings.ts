@@ -34,8 +34,7 @@ export class OrcaSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Max concurrent preview sessions")
       .setDesc(
-        "The most books orca keeps typeset at once, so one opens again " +
-          "without a wait.",
+        "The max number of live preview sessions Orca keeps running at one time.",
       )
       .addSlider((slider) =>
         slider
