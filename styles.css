@@ -279,6 +279,18 @@
     0 0 0 1px var(--background-modifier-border);
 }
 
+/* Obsidian turns selection off on the body, so a drag over the pages
+   selects nothing until the sheets turn it back on. Only the painter's
+   selection layer takes it: the glyphs under it are the same words, and
+   a highlight on both would draw every line twice. */
+.orca-preview-sheets {
+  user-select: text;
+}
+
+.orca-page text:not([data-selection-line]) {
+  user-select: none;
+}
+
 /* A spread that opens on a recto leaves the slot beside it empty, and
    the empty slot still holds the recto on its own side of the spine. */
 .orca-page[data-empty] {
