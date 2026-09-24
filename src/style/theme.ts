@@ -75,6 +75,7 @@ export const DEFAULTS: Design = frozen({
   headers: {
     leftPage: "none",
     rightPage: "none",
+    chapterTitle: "first",
     position: "outside",
     pageNumber: "bottom",
     pageNumberFormat: "arabic",

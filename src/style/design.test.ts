@@ -229,9 +229,15 @@ test("a running head's position reads as outside or center, and nothing else", (
   assert.equal(readDesign({ "header-position": "Center" }).headers.position, "center");
   assert.equal(readDesign({ "header-position": "outside" }).headers.position, "outside");
   assert.equal(readDesign({ "header-position": "left" }).headers.position, undefined);
-  // The key sits beside the two slots it places.
-  const at = DESIGN_KEYS.indexOf("header-position");
-  assert.equal(DESIGN_KEYS[at - 1], "header-right-page");
+  // The key sits with the two slots it places, and with the heading
+  // the chapter-title slot is read from.
+  const at = DESIGN_KEYS.indexOf("header-left-page");
+  assert.deepEqual(DESIGN_KEYS.slice(at, at + 4), [
+    "header-left-page",
+    "header-right-page",
+    "chapter-title-from",
+    "header-position",
+  ]);
 });
 
 test("a step moves a length by its unit's step and a count by one, and stops at zero", () => {
@@ -339,6 +345,7 @@ function whole(): Design {
     headers: {
       leftPage: "author",
       rightPage: "book-title",
+      chapterTitle: "h2",
       position: "center",
       pageNumber: "bottom",
       pageNumberFormat: "arabic",

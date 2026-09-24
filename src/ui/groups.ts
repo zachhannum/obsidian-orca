@@ -137,6 +137,12 @@ const SLOTS: readonly Choice[] = [
   { value: "chapter-title", label: "Chapter title" },
 ];
 
+/** The heading a running head reads the chapter title from. */
+const TITLE_SOURCES: readonly Choice[] = [
+  { value: "first", label: "First heading" },
+  ...LEVELS.map((level) => ({ value: `h${String(level)}`, label: `H${String(level)}` })),
+];
+
 const HEADS: readonly Choice[] = [
   { value: "outside", label: "Outside" },
   { value: "center", label: "Center" },
@@ -337,6 +343,10 @@ export const GROUPS: readonly Group[] = [
       {
         label: "Right-page header",
         of: [{ kind: "select", key: "header-right-page", choices: SLOTS }],
+      },
+      {
+        label: "Chapter title from",
+        of: [{ kind: "select", key: "chapter-title-from", choices: TITLE_SOURCES }],
       },
       {
         label: "Header position",
