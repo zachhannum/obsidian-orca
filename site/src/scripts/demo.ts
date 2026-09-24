@@ -147,8 +147,6 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
       ) {
         control.value = said;
       }
-      // A style select is set in the style it holds.
-      if (control.dataset['kind'] === 'style') control.dataset['style'] = said;
     }
   };
 
