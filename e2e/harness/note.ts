@@ -69,9 +69,13 @@ export class Note {
     return Number(await this.page.getAttribute("data-generation"));
   }
 
-  /** One edit, through the view the book is open in. */
-  async edit(title: string): Promise<void> {
-    await this.drag(title, 1);
+  /**
+   * One edit to the book's series, through the view the book is open
+   * in. The series names no file, so the edit leaves the note where it
+   * is.
+   */
+  async edit(series: string): Promise<void> {
+    await this.drag(series, 1);
   }
 
   /**
@@ -79,8 +83,8 @@ export class Note {
    * renderer, so the frames land inside the settle rather than around
    * it.
    */
-  async drag(title: string, frames: number): Promise<void> {
-    await this.edited(title, frames, false);
+  async drag(series: string, frames: number): Promise<void> {
+    await this.edited(series, frames, false);
   }
 
   /**
@@ -88,13 +92,13 @@ export class Note {
    * renderer, so the settle the edit armed is still waiting when the
    * note goes.
    */
-  async editAndDelete(title: string): Promise<void> {
-    await this.edited(title, 1, true);
+  async editAndDelete(series: string): Promise<void> {
+    await this.edited(series, 1, true);
   }
 
   /** Makes edits through the view, one per frame, then optionally trashes the note. */
   private async edited(
-    title: string,
+    series: string,
     frames: number,
     trash: boolean,
   ): Promise<void> {
@@ -105,12 +109,12 @@ export class Note {
           (Editing & { file: TFile | null }) | undefined;
         if (view === undefined) throw new Error("no book view is open");
         for (let frame = 0; frame < count; frame += 1) {
-          const title = count === 1 ? name : `${name} ${frame}`;
+          const series = count === 1 ? name : `${name} ${frame}`;
           view.edit((model) => ({
             ...model,
             book: {
               ...model.book,
-              metadata: { ...model.book.metadata, title },
+              metadata: { ...model.book.metadata, series },
             },
           }));
         }
@@ -119,7 +123,7 @@ export class Note {
         if (note === null) throw new Error("the view has no note");
         await window.app.fileManager.trashFile(note);
       },
-      { name: title, count: frames, gone: trash, type: BOOK },
+      { name: series, count: frames, gone: trash, type: BOOK },
     );
   }
 

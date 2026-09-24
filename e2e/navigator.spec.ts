@@ -311,7 +311,7 @@ test("a book deleted under an unwritten edit has nothing written back to it", as
     // since it is armed after the delete and lands after its own.
     await note.open(BOOK);
     await note.edit("Settled");
-    await expect.poll(async () => vault.read(BOOK)).toContain("title: Settled");
+    await expect.poll(async () => vault.read(BOOK)).toContain("series: Settled");
   });
 
   expect(said).toEqual([]);
