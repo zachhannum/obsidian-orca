@@ -29,10 +29,7 @@ import type { Override } from "@/style/overrides";
 import {
   stepSaid,
   stepped,
-  styleOn,
-  styleToggled,
   typed,
-  STYLE_AXES,
   type Choice,
   type Measure,
   type Typed,
@@ -322,12 +319,15 @@ export function Select({
   choices,
   testid,
   settle,
+  styled = false,
 }: {
   value: string | undefined;
   faint: boolean;
   choices: readonly Choice[];
   testid: string;
   settle: Settle;
+  /** Whether each choice names a font style and is set in it. */
+  styled?: boolean;
 }): JSX.Element {
   const offered =
     value === undefined || choices.some((choice) => choice.value === value)
@@ -338,6 +338,7 @@ export function Select({
       className={classes("dropdown orca-panel-select", faint && "is-default")}
       data-testid={testid}
       data-default={String(faint)}
+      data-style={styled ? value : undefined}
       value={value ?? ""}
       onChange={(event) => {
         settle(event.target.value === "" ? undefined : event.target.value);
@@ -345,7 +346,11 @@ export function Select({
     >
       {value === undefined ? <option value="">—</option> : null}
       {offered.map((choice) => (
-        <option key={choice.value} value={choice.value}>
+        <option
+          key={choice.value}
+          value={choice.value}
+          data-style={styled ? choice.value : undefined}
+        >
           {choice.label}
         </option>
       ))}
@@ -397,55 +402,6 @@ export function Segment({
             ) : (
               <Icon name={choice.icon} className="orca-panel-icon" />
             )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Draws the weight and the slope as one control: a button per axis,
- * each drawn pressed while the style it names is on. A style is one
- * value, so turning an axis on rewrites the whole name.
- */
-export function FontStyle({
-  value,
-  faint,
-  testid,
-  settle,
-}: {
-  value: string | undefined;
-  faint: boolean;
-  testid: string;
-  settle: Settle;
-}): JSX.Element {
-  return (
-    <div
-      className="orca-panel-segment"
-      data-testid={testid}
-      data-on={value ?? ""}
-      data-default={String(faint)}
-    >
-      {STYLE_AXES.map(({ axis, icon, label }) => {
-        const on = styleOn(value, axis);
-        return (
-          <button
-            key={axis}
-            type="button"
-            className={classes(
-              "orca-panel-choice",
-              on && "is-on",
-              on && faint && "is-default",
-            )}
-            data-testid={`${testid}-${axis}`}
-            aria-pressed={on}
-            aria-label={label}
-            onClick={() => {
-              settle(styleToggled(value, axis));
-            }}
-          >
-            <Icon name={icon} className="orca-panel-icon" />
           </button>
         );
       })}

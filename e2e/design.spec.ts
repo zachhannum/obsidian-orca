@@ -1062,7 +1062,7 @@ test("picking capitals writes the key and repaints the pages", async ({
   await written(vault, own);
 });
 
-test("a click on the bold or the italic button writes the style the two name", async ({
+test("a pick in the style select writes the style it names, set in that style", async ({
   book,
   panel,
   vault,
@@ -1075,31 +1075,20 @@ test("a click on the bold or the italic button writes the style the two name", a
 
   const style = panel.control("heading-1-style");
   await expect(style).toHaveAttribute("data-default", "true");
-  await panel.choice("heading-1-style", "italic").click();
+  await style.selectOption({ label: "Bold italic" });
 
-  await expect(style).toHaveAttribute("data-on", "italic");
-  await expect(panel.choice("heading-1-style", "italic")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect
-    .poll(async () => vault.read(BOOK))
-    .toContain("heading-1-style: italic");
-  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
-
-  // Each button turns its own axis over, so the two together are one
-  // style with one name.
-  await panel.choice("heading-1-style", "bold").click();
-
-  await expect(style).toHaveAttribute("data-on", "bold-italic");
+  await expect(style).toHaveValue("bold-italic");
+  await expect(style).toHaveCSS("font-style", "italic");
   await expect
     .poll(async () => vault.read(BOOK))
     .toContain("heading-1-style: bold-italic");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
   await panel.reset("heading-1-style").click();
 
   await expect.poll(async () => vault.read(BOOK)).not.toContain("heading-1-style:");
   await expect(style).toHaveAttribute("data-default", "true");
+  await expect(panel.control("body-style")).toHaveCount(0);
 
   await written(vault, own);
 });

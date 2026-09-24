@@ -15,9 +15,6 @@ import {
   keysOf,
   stepSaid,
   stepped,
-  styleOn,
-  styleToggled,
-  STYLE_AXES,
   overriddenAt,
   trims,
   typed,
@@ -451,14 +448,14 @@ test("the Heads & folios group picks the heading the chapter title is read from"
   });
 });
 
-test("one font style control sets the weight and the slope wherever orca sets text", () => {
+test("one font style control sets the weight and the slope wherever orca sets a place apart", () => {
   const styled = PANEL_KEYS.filter((key) => key.endsWith("-style"));
 
-  // Every place orca sets text offers the control, and each writes one
-  // key. A chapter's first line offers none, because the engine drops
+  // Every place orca sets apart from the body offers the control, and
+  // each writes one key. The body takes its bold and italic from the
+  // note. A chapter's first line offers none, because the engine drops
   // a style there.
   assert.deepEqual(styled, [
-    "body-style",
     ...LEVELS.map((level) => `heading-${String(level)}-style`),
     "chapter-drop-cap-style",
     "scene-break-style",
@@ -471,7 +468,6 @@ test("one font style control sets the weight and the slope wherever orca sets te
       .filter((each) => each.kind === "style")
       .map((each) => each.key),
     [
-      "body-style",
       "heading-N-style",
       "chapter-drop-cap-style",
       "scene-break-style",
@@ -479,29 +475,19 @@ test("one font style control sets the weight and the slope wherever orca sets te
       "folio-style",
     ],
   );
+  assert.ok(!PANEL_KEYS.includes("body-style"));
   assert.ok(!PANEL_KEYS.includes("chapter-first-line-style"));
   assert.ok(!PANEL_KEYS.includes("header-italic"));
 
-  // The control is drawn as the bold and the italic icon, one button
-  // each, and a click on a button turns its own axis over.
-  assert.deepEqual(
-    STYLE_AXES.map(({ axis, icon }) => `${axis} ${icon}`),
-    ["bold bold", "italic italic"],
-  );
-  assert.deepEqual(
-    STYLE_AXES.map(({ axis }) => styleOn("bold-italic", axis)),
-    [true, true],
-  );
-  assert.deepEqual(
-    STYLE_AXES.map(({ axis }) => styleOn("italic", axis)),
-    [false, true],
-  );
-  assert.equal(styleToggled(undefined, "bold"), "bold");
-  assert.equal(styleToggled("italic", "bold"), "bold-italic");
-  assert.equal(styleToggled("bold-italic", "italic"), "bold");
-  assert.equal(styleToggled("bold", "bold"), "normal");
-  // Both names the reset says are the words the control is drawn with.
-  assert.equal(defaultSaid(control("body-style"), "bold-italic", "in"), "Bold italic");
+  // The control is a select that names the four styles.
+  assert.deepEqual(control("header-style").choices?.map((choice) => choice.label), [
+    "Normal",
+    "Bold",
+    "Italic",
+    "Bold italic",
+  ]);
+  // The name the reset says is the word the control is drawn with.
+  assert.equal(defaultSaid(control("folio-style"), "bold-italic", "in"), "Bold italic");
   assert.equal(defaultSaid(control("header-style"), "normal", "in"), "Normal");
 });
 

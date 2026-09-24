@@ -40,7 +40,6 @@ import { effective } from "@/style/theme";
 import {
   classes,
   Field,
-  FontStyle,
   Glyphs,
   inactive,
   Reset,
@@ -627,7 +626,16 @@ function Drawn({
         />
       );
     case "style":
-      return <FontStyle value={text} faint={faint} testid={testid} settle={settle} />;
+      return (
+        <Select
+          value={text}
+          faint={faint}
+          choices={control.choices ?? []}
+          testid={testid}
+          settle={settle}
+          styled
+        />
+      );
     case "flag":
       return (
         <Switch on={value === true} faint={faint} testid={testid} settle={settle} />

@@ -24,9 +24,7 @@ import {
   writeDesign,
   written,
   BOOK_SIZES,
-  FONT_STYLES,
   type Design,
-  type FontStyle,
   type Length,
   type Level,
   type PageUnit,
@@ -102,47 +100,13 @@ const DROP_CAPS: readonly Choice[] = [
   { value: "4", label: "4 lines" },
 ];
 
-/**
- * The styles the font style control writes. The control draws the two
- * axes rather than the four names, so the labels name a value the panel
- * says back in a reset.
- */
+/** The styles the font style control offers, each set in the style it names. */
 const STYLES: readonly Choice[] = [
   { value: "normal", label: "Normal" },
   { value: "bold", label: "Bold" },
   { value: "italic", label: "Italic" },
   { value: "bold-italic", label: "Bold italic" },
 ];
-
-/** The two buttons a font style control is drawn with, in the order it draws them. */
-export const STYLE_AXES = [
-  { axis: "bold", icon: "bold", label: "Bold" },
-  { axis: "italic", icon: "italic", label: "Italic" },
-] as const;
-
-export type StyleAxis = (typeof STYLE_AXES)[number]["axis"];
-
-/** Whether a style holds one axis, so its button is drawn pressed. */
-export function styleOn(style: string | undefined, axis: StyleAxis): boolean {
-  return axesOf(style)[axis];
-}
-
-/** The style one axis of the control writes when it is clicked. */
-export function styleToggled(style: string | undefined, axis: StyleAxis): FontStyle {
-  const axes = axesOf(style);
-  axes[axis] = !axes[axis];
-  if (axes.bold && axes.italic) return "bold-italic";
-  if (axes.bold) return "bold";
-  return axes.italic ? "italic" : "normal";
-}
-
-function axesOf(style: string | undefined): Record<StyleAxis, boolean> {
-  const named = FONT_STYLES.find((each) => each === style);
-  return {
-    bold: named === "bold" || named === "bold-italic",
-    italic: named === "italic" || named === "bold-italic",
-  };
-}
 
 const CAPITALS: readonly Choice[] = [
   { value: "normal", label: "Normal" },
@@ -255,7 +219,6 @@ export const GROUPS: readonly Group[] = [
     rows: [
       { label: "Font", of: [{ kind: "font", key: "body-font" }] },
       { label: "Variant", of: [{ kind: "variant", key: "body-font-variant" }] },
-      { label: "Style", of: [{ kind: "style", key: "body-style", choices: STYLES }] },
       { label: "Size", of: [{ kind: "length", key: "body-size" }] },
       {
         label: "Line spacing",
