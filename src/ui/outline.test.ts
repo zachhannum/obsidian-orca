@@ -83,4 +83,7 @@ test("sections, entries and headings are one walk that stops at either end", () 
 
 // What this tier does not cover: the cache Obsidian builds, which the
 // e2e job reads beside the rows, and the rows the navigator draws and
-// the keys it listens for, which the e2e job presses.
+// the keys it listens for, which the e2e job presses. Nor a heading
+// asked about while the note has typed words not yet saved: the cache
+// counts lines on disk and the engine counts the text it holds, so
+// the page can be the one the line opened on before the edit.
