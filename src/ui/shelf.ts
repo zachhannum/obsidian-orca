@@ -11,6 +11,7 @@ import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { entryName, groups, resolve, type Section } from "@/book/order";
 import { DEFAULT_ROLE, type Role } from "@/book/roles";
+import { outline, type Cached, type Headed } from "@/ui/outline";
 
 /** One entry, as a row under its heading. */
 export interface Row {
@@ -24,6 +25,8 @@ export interface Row {
   role: Role;
   /** Whether the role is drawn as a chip, which the default role is not. */
   named: boolean;
+  /** The headings inside its note, when the navigator lists them. */
+  headings?: Headed[];
 }
 
 /** One heading and the rows under it. */
@@ -58,6 +61,8 @@ export interface Shelving {
   links: Links;
   /** The note the workspace is on, if it is on one. */
   active?: string | undefined;
+  /** The headings a note holds. With none, the rows list no headings. */
+  headings?: ((path: string) => readonly Cached[] | undefined) | undefined;
 }
 
 /** The book's title, or the note's name when it has none. */
@@ -75,7 +80,7 @@ export function shelve(book: Opened, vault: Shelving): Shelved {
       heading: group.heading,
       rows: group.entries.flatMap((at) => {
         const section = sections[at];
-        return section === undefined ? [] : [row(section, at)];
+        return section === undefined ? [] : [row(section, at, vault.headings)];
       }),
     })),
     folder: chapterFolder(sections, book.path),
@@ -84,7 +89,11 @@ export function shelve(book: Opened, vault: Shelving): Shelved {
 }
 
 /** One entry as a row, by its place in the reading order. */
-export function row(section: Section, at: number): Row {
+export function row(
+  section: Section,
+  at: number,
+  headings?: Shelving["headings"],
+): Row {
   const { entry } = section;
   const made: Row = {
     at,
@@ -93,8 +102,22 @@ export function row(section: Section, at: number): Row {
     role: entry.role,
     named: entry.role !== DEFAULT_ROLE,
   };
-  if (section.kind === "note") made.path = section.path;
+  if (section.kind === "note") {
+    made.path = section.path;
+    if (headings !== undefined) {
+      made.headings = outline(headings(section.path), made.name);
+    }
+  }
   return made;
+}
+
+/** The note paths a shelf's rows read. */
+export function members(shelved: readonly Shelved[]): Set<string> {
+  return new Set(
+    shelved.flatMap((book) =>
+      book.groups.flatMap((group) => group.rows.flatMap((row) => row.path ?? [])),
+    ),
+  );
 }
 
 /**
