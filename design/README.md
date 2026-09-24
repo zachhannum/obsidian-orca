@@ -146,9 +146,9 @@ its editor around these files and returns a URL. The artboard list and
   take capitals and tracking. A title's own type sits with the level it
   is written at, not with the chapter's layout, and so does the space
   above and below it.
-- One font style control sets the weight and the slope. It is a segment
-  of Normal, Bold, Italic and Bold italic, drawn with the type, bold and
-  italic icons, and bold italic draws both. Each heading level, the drop cap, the scene break, the running
+- One font style control sets the weight and the slope. It is a select
+  of Normal, Bold, Italic and Bold italic, each set in the style it
+  names. Each heading level, the drop cap, the scene break, the running
   heads and the folio each take one. Body text takes none, because the
   note marks its bold and italic. Bold or italic written inside a
   heading still comes from the note. A chapter's first line takes no
