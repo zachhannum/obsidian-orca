@@ -87,8 +87,6 @@ export interface BodyDesign {
   font?: string;
   /** The font's variant, by name. A font's default variant is stored as absent. */
   fontVariant?: string;
-  /** The weight and the slope the text is set in. */
-  style?: FontStyle;
   size?: Length;
   lineSpacing?: Length;
   align?: Alignment;
@@ -405,15 +403,6 @@ const BODY: readonly Field[] = [
     write: ({ body }, value) => {
       const variant = asText(value);
       if (variant !== undefined) body.fontVariant = variant;
-    },
-  },
-  {
-    key: "body-style",
-    property: STYLE_PROPERTIES,
-    read: ({ body }) => body.style,
-    write: ({ body }, value) => {
-      const style = asWord(value, FONT_STYLES);
-      if (style !== undefined) body.style = style;
     },
   },
   {

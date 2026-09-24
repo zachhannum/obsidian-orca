@@ -89,7 +89,6 @@ test("one style key sets the weight and the slope of every place orca sets text"
   const styled = DESIGN_KEYS.filter((key) => key.endsWith("-style"));
 
   assert.deepEqual(styled, [
-    "body-style",
     ...LEVELS.map((level) => `heading-${level}-style`),
     "chapter-drop-cap-style",
     "scene-break-style",
@@ -108,8 +107,8 @@ test("one style key sets the weight and the slope of every place orca sets text"
   }
   // A style is one name, which is how the note writes it.
   assert.equal(readDesign({ "header-style": "bold-italic" }).headers.style, "bold-italic");
-  assert.equal(writeDesign(readDesign({ "body-style": "Italic" }))["body-style"], "italic");
-  assert.equal(readDesign({ "body-style": "oblique" }).body.style, undefined);
+  assert.equal(writeDesign(readDesign({ "header-style": "Italic" }))["header-style"], "italic");
+  assert.equal(readDesign({ "header-style": "oblique" }).headers.style, undefined);
   // A note that still carries these keys reads as a design that sets
   // nothing.
   assert.ok(!DESIGN_KEYS.includes("preset"));
@@ -340,7 +339,6 @@ function whole(): Design {
     body: {
       font: "Alegreya",
       fontVariant: "SC",
-      style: "normal",
       size: len(10.5, "pt"),
       lineSpacing: len(14, "pt"),
       align: "justify",

@@ -448,7 +448,6 @@ function bodyRules(design: Design, registered: readonly Registered[]): (Rule | u
       ]),
     );
   }
-  lines.push(...styled(body.style, "body-style"));
   lines.push(...set("font-size", written(body.size), ["body-size"]));
   lines.push(...set("line-height", written(body.lineSpacing), ["body-line-spacing"]));
   lines.push(...set("text-align", body.align, ["body-align"]));

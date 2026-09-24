@@ -41,11 +41,6 @@
   @bottom-center { content: none; }
 }
 
-book {
-  font-weight: normal;
-  font-style: italic;
-}
-
 h1 {
   font-weight: bold;
   font-style: normal;

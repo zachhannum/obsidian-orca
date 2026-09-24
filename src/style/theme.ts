@@ -46,7 +46,6 @@ export const DEFAULTS: Design = frozen({
   },
   body: {
     font: "EB Garamond",
-    style: "normal",
     size: points(11),
     lineSpacing: points(16.5),
     align: "justify",

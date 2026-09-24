@@ -136,7 +136,7 @@ test("a book that sets nothing opens a chapter on the next page, inside margins 
 });
 
 test("a book on the defaults declares its capitals, its tracking and its style", () => {
-  const { body, chapter, headers, headings, scene } = DEFAULTS;
+  const { chapter, headers, headings, scene } = DEFAULTS;
 
   assert.deepEqual(
     [headings[1].caps, chapter.firstLineCaps, headers.caps],
@@ -153,14 +153,13 @@ test("a book on the defaults declares its capitals, its tracking and its style",
   // Every place the panel offers a style control has a default style.
   assert.deepEqual(
     [
-      body.style,
       headings[1].style,
       chapter.dropCapStyle,
       scene.style,
       headers.style,
       headers.folioStyle,
     ],
-    ["normal", "normal", "normal", "normal", "normal", "normal"],
+    ["normal", "normal", "normal", "normal", "normal"],
   );
 
   // A control that declared nothing at its default would leave the

@@ -147,7 +147,6 @@ test("every generated rule sits at its line, reads only real setting keys, and m
   assert.deepEqual(designRuleAt(model.book.design, at, book.line + 3), {
     keys: [
       "body-font",
-      "body-style",
       "body-size",
       "body-line-spacing",
       "body-align",
@@ -1080,7 +1079,6 @@ test("a design that sets every new key renders with no warning from the pinned e
   design.headers.folioStyle = "bold-italic";
   design.headers.font = "EB Garamond";
   design.headers.folioFont = "EB Garamond";
-  design.body.style = "normal";
   design.headings[1].style = "bold";
   design.chapter.dropCap = 3;
   design.chapter.dropCapStyle = "bold";
@@ -1170,14 +1168,15 @@ async function running(from: ChapterTitle | undefined): Promise<string[]> {
   return [...new Set(output.pages.flatMap((page) => heads(page)))];
 }
 
-test("body text, a heading level, the folio, the drop cap and the scene break each take a style", async () => {
+test("a heading level, the folio, the drop cap and the scene break each take a style", async () => {
   const design = styles();
   const sections = named(ROLES);
   const at = { sections, title: "Pride and Prejudice", author: "Jane Austen" };
 
   const css = generatedCss(design, at);
 
-  assert.match(css, /book \{\n {2}font-weight: normal;\n {2}font-style: italic;\n/);
+  // The body takes its bold and italic from the note alone.
+  assert.doesNotMatch(css, /book \{[^}]*font-style/);
   assert.match(css, /h1 \{\n {2}font-weight: bold;\n {2}font-style: normal;\n\}/);
   assert.match(css, /h3 \{\n {2}font-weight: bold;\n {2}font-style: italic;\n\}/);
   assert.match(css, /::first-letter \{\n {2}initial-letter: 3;\n {2}font-weight: bold;\n {2}font-style: normal;\n\}/);
@@ -1214,7 +1213,6 @@ test("a design that sets a style everywhere generates the sheet checked in besid
 /** A design that sets a style in every place the panel offers one. */
 function styles(): Design {
   const design = emptyDesign();
-  design.body.style = "italic";
   design.headings[1].style = "bold";
   design.headings[2].style = "normal";
   design.headings[3].style = "bold-italic";

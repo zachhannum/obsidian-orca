@@ -86,7 +86,7 @@ test("a book that sets nothing gets every default in design.css", () => {
     /@page :right \{\n {2}margin-left: 0\.75in;\n {2}margin-right: 0\.6in;\n\}/,
     /@bottom-center \{ content: counter\(page, decimal\); font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; \}/,
     /@page chapter:first \{\n {2}@bottom-center \{ content: none; \}\n\}/,
-    /book \{\n {2}font-family: "EB Garamond", serif;\n {2}font-weight: normal;\n {2}font-style: normal;\n {2}font-size: 11pt;\n {2}line-height: 16\.5pt;\n {2}text-align: justify;\n {2}hyphens: auto;\n {2}hanging-punctuation: none;\n {2}orphans: 2;\n {2}widows: 2;\n\}/,
+    /book \{\n {2}font-family: "EB Garamond", serif;\n {2}font-size: 11pt;\n {2}line-height: 16\.5pt;\n {2}text-align: justify;\n {2}hyphens: auto;\n {2}hanging-punctuation: none;\n {2}orphans: 2;\n {2}widows: 2;\n\}/,
     /p \+ p \{\n {2}text-indent: 1\.2em;\n\}/,
     /hr \+ p \{\n {2}text-indent: 0;\n\}/,
     /:is\(h1(?:, h[2-6])+\) \{\n {2}break-after: avoid;\n\}/,
