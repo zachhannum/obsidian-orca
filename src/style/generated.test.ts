@@ -24,6 +24,7 @@ import {
   DESIGN_KEYS,
   emptyDesign,
   mergeDesign,
+  readDesign,
   type Design,
   type HeaderPosition,
   type PageNumberPosition,
@@ -54,6 +55,51 @@ test("the fixture's design generates the sheet checked in beside this spec", asy
 
   assert.equal(css, await snapshot(css));
   assert.equal(generatedCss(emptyDesign(), { sections: named([]) }), "");
+  // The side margins take one shape, so the root `@page` carries
+  // neither of them.
+  const [root] = css.split("\n\n");
+  assert.ok(root !== undefined && root.startsWith("@page {"));
+  assert.doesNotMatch(root, /margin-(?:left|right)/);
+});
+
+test("the side margins always write `@page :left` and `@page :right`, swapped", () => {
+  const design = readDesign({ "margin-inside": "1in", "margin-outside": "0.5in" });
+
+  const css = generatedCss(design, { sections: named([]) });
+
+  // The inside margin is at the spine, which is the right of a left
+  // page and the left of a right page.
+  assert.equal(
+    css,
+    [
+      "@page :left {",
+      "  margin-left: 0.5in;",
+      "  margin-right: 1in;",
+      "}",
+      "",
+      "@page :right {",
+      "  margin-left: 1in;",
+      "  margin-right: 0.5in;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("`mirrored` is no longer a design key, and a note that carries it opens with mirrored margins", () => {
+  const sides = { "margin-inside": "1in", "margin-outside": "0.5in" };
+
+  assert.ok(!DESIGN_KEYS.includes("mirrored"));
+  // The key reads as nothing, so the book is the book without it and
+  // the margins mirror either way.
+  for (const flag of [true, false]) {
+    const design = readDesign({ ...sides, mirrored: flag });
+    assert.deepEqual(design, readDesign(sides));
+    assert.equal(
+      generatedCss(design, { sections: named([]) }),
+      generatedCss(readDesign(sides), { sections: named([]) }),
+    );
+  }
 });
 
 test("every generated rule sits at its line, reads only real setting keys, and maps back from any line it spans", async () => {
@@ -61,7 +107,6 @@ test("every generated rule sits at its line, reads only real setting keys, and m
   const at = await setting(model);
   const designs: Design[] = [model.book.design, emptyDesign()];
   const centered = structuredClone(model.book.design);
-  centered.page.mirrored = true;
   centered.headers.position = "center";
   centered.headers.pageNumber = "top";
   centered.scene.mark = "ornament";

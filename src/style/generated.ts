@@ -184,17 +184,12 @@ function pageRules(
   }
   root.push(...set("margin-top", written(margins.top), ["margin-top"]));
   root.push(...set("margin-bottom", written(margins.bottom), ["margin-bottom"]));
-  const mirrored = page.mirrored === undefined ? [] : ["mirrored"];
-  const inside = { value: written(margins.inside), keys: ["margin-inside", ...mirrored] };
-  const outside = { value: written(margins.outside), keys: ["margin-outside", ...mirrored] };
-  const left: Declaration[] = [];
-  const right: Declaration[] = [];
-  if (page.mirrored === true) {
-    left.push(...sideMargins(outside, inside));
-    right.push(...sideMargins(inside, outside));
-  } else {
-    root.push(...sideMargins(inside, outside));
-  }
+  const inside = { value: written(margins.inside), keys: ["margin-inside"] };
+  const outside = { value: written(margins.outside), keys: ["margin-outside"] };
+  // The side margins mirror, so the inside one prints at the spine on
+  // either page.
+  const left = sideMargins(outside, inside);
+  const right = sideMargins(inside, outside);
 
   // Orca owns the running heads and the folio as soon as the design
   // sets anything about them. Orca clears the boxes it does not use

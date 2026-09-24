@@ -197,16 +197,6 @@ export const GROUPS: readonly Group[] = [
           { kind: "length", key: "margin-bottom", said: "bottom", page: true },
         ],
       },
-      {
-        label: "",
-        of: [
-          {
-            kind: "flag",
-            key: "mirrored",
-            said: "Mirror the margins on facing pages",
-          },
-        ],
-      },
     ],
   },
   {

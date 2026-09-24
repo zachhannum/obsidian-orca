@@ -12,7 +12,6 @@ margin-inside: 0.95in
 margin-outside: 0.7in
 margin-top: 0.8in
 margin-bottom: 1in
-mirrored: true
 body-size: 10.5pt
 body-line-spacing: 14pt
 body-align: justify
