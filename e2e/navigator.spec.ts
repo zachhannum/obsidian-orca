@@ -600,7 +600,7 @@ test("a chapter whose properties hold an indented fence turns", async ({
 /** The fixture chapter with headings under its title. */
 const FIFTEEN = "Chapter Fifteen";
 
-test("an entry lists the headings inside its note as a tree, and folds them away on its own", async ({
+test("an entry lists the headings inside its note as a tree, down to a level, and folds them away on its own", async ({
   navigator,
   vault,
 }) => {
@@ -626,6 +626,13 @@ test("an entry lists the headings inside its note as a tree, and folds them away
   await navigator.outlines(false);
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
   await navigator.outlines(true);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // A shallower level takes the deeper rows away, and gives them back.
+  await navigator.levels(1);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveCount(0);
+  await navigator.levels(6);
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 });
 

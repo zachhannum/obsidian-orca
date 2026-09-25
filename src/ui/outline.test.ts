@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { headingOn, markOf, outline, walk, type Cached } from "@/ui/outline";
+import { headingOn, levelsTo, markOf, outline, walk, type Cached } from "@/ui/outline";
 import type { Row } from "@/ui/shelf";
 
 /** The cache Obsidian holds for the fixture's `Chapter Fifteen.md`. */
@@ -66,6 +66,14 @@ test("the row for the page the preview shows is marked, heading rows included", 
   // A heading the row does not draw, such as the entry's own title.
   assert.equal(markOf({ book: "B.md", at: 3, line: 6 }, "B.md", row, false), "entry");
   assert.equal(markOf({ book: "B.md", at: 3, line: 13 }, "B.md", entry(3), false), "entry");
+});
+
+test("an entry lists its headings down to the level the author picked", () => {
+  assert.deepEqual(outline(levelsTo(FIFTEEN, 1), "Chapter Fifteen"), [
+    { line: 13, words: "The Parsonage", depth: 0 },
+  ]);
+  assert.equal(outline(levelsTo(FIFTEEN, 2), "Chapter Fifteen").length, 3);
+  assert.equal(levelsTo(undefined, 1), undefined);
 });
 
 test("sections, entries and headings are one walk that stops at either end", () => {

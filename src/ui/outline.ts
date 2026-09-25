@@ -37,9 +37,24 @@ export interface Showing {
   line?: number | undefined;
 }
 
-/** The headings Obsidian's cache holds for the note at `path`. */
-export function headingsOf(app: App, path: string): readonly Cached[] | undefined {
-  return app.metadataCache.getCache(path)?.headings;
+/**
+ * The headings Obsidian's cache holds for the note at `path`, down to
+ * the level `deepest`.
+ */
+export function headingsOf(
+  app: App,
+  path: string,
+  deepest: number,
+): readonly Cached[] | undefined {
+  return levelsTo(app.metadataCache.getCache(path)?.headings, deepest);
+}
+
+/** The headings of `cached` at the level `deepest` or above. */
+export function levelsTo(
+  cached: readonly Cached[] | undefined,
+  deepest: number,
+): readonly Cached[] | undefined {
+  return cached?.filter((heading) => heading.level <= deepest);
 }
 
 /**

@@ -102,6 +102,20 @@ export class Navigator {
     );
   }
 
+  /** Sets the deepest heading level the navigator lists. */
+  async levels(deepest: number): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ([id, deepest]) => {
+        const orca = window.app.plugins.plugins[id] as
+          | { limits?: object; limit?(limits: object): void }
+          | undefined;
+        if (orca?.limits === undefined) throw new Error("orca is not loaded");
+        orca.limit?.({ ...orca.limits, deepest });
+      },
+      [PLUGIN, deepest] as const,
+    );
+  }
+
   /** One of a book's sections, by the heading it is written with. */
   group(book: string, heading: string): Locator {
     return this.book(book).locator(`[data-heading="${heading}"]`);

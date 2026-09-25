@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting, type App, type Plugin } from "obsidian";
-import { MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
+import { DEEPEST_LEVEL, MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
 
 /** The plugin, narrowed to the settings this tab writes. */
 export interface Limited {
@@ -31,14 +31,29 @@ export class OrcaSettingTab extends PluginSettingTab {
             if (isPageUnit(unit)) this.orca.limit({ ...this.orca.limits, unit });
           }),
       );
+    let levels: Setting | undefined;
     new Setting(containerEl)
       .setName("Headings in the navigator")
       .setDesc("List the headings inside each note under its entry.")
       .addToggle((toggle) =>
         toggle.setValue(this.orca.limits.headings).onChange((headings) => {
           this.orca.limit({ ...this.orca.limits, headings });
+          levels?.setDisabled(!headings);
         }),
       );
+    levels = new Setting(containerEl)
+      .setName("Heading levels in the navigator")
+      .setDesc("List the headings down to this level. At 2, the navigator lists H1 and H2.")
+      .addSlider((slider) =>
+        slider
+          .setLimits(1, DEEPEST_LEVEL, 1)
+          .setValue(this.orca.limits.deepest)
+          .setDynamicTooltip()
+          .onChange((deepest) => {
+            this.orca.limit({ ...this.orca.limits, deepest });
+          }),
+      )
+      .setDisabled(!this.orca.limits.headings);
     new Setting(containerEl)
       .setName("Max concurrent preview sessions")
       .setDesc(

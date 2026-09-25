@@ -52,8 +52,8 @@ export interface Handoff {
    * no page. A heading set on no page turns to the section.
    */
   turn(book: string, at: number, line?: number): Promise<boolean>;
-  /** Whether the author lists the headings inside each entry. */
-  headings(): boolean;
+  /** The deepest heading level the author lists inside each entry, or nothing when they list none. */
+  headings(): number | undefined;
 }
 
 /**
@@ -121,7 +121,8 @@ export class NavigatorView extends ItemView {
         const properties = cache.frontmatter;
         const isBookNote =
           properties !== undefined && bookFormat(properties) !== undefined;
-        const outlined = this.handoff.headings() && this.members.has(file.path);
+        const outlined =
+          this.handoff.headings() !== undefined && this.members.has(file.path);
         if (isBookNote || outlined || this.shelved.has(file.path)) again();
       }),
     );
@@ -255,12 +256,14 @@ export class NavigatorView extends ItemView {
   private async read(): Promise<Shelved[]> {
     const notes = this.app.vault.getMarkdownFiles();
     const index = noteIndex(this.app);
+    const deepest = this.handoff.headings();
     const vault = {
       links: cacheLinks(this.app),
       active: this.app.workspace.getActiveFile()?.path,
-      headings: this.handoff.headings()
-        ? (path: string) => headingsOf(this.app, path)
-        : undefined,
+      headings:
+        deepest === undefined
+          ? undefined
+          : (path: string) => headingsOf(this.app, path, deepest),
     };
 
     const shelf: Shelved[] = [];

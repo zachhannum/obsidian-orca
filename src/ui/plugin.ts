@@ -206,8 +206,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
               void this.addChapter(book);
             },
             outlined: () =>
-              this.limits.headings &&
-              this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW).length > 0,
+              this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW).length > 0
+                ? this.listed()
+                : undefined,
             showing: (view, showing) => {
               this.showing(view, showing);
             },
@@ -247,7 +248,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
             void this.previewBook(book);
           },
           turn: (book, at, line) => this.turnPreview(book, at, line),
-          headings: () => this.limits.headings,
+          headings: () => this.listed(),
         }),
     );
     this.registerView(
@@ -1212,7 +1213,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   limit(limits: Limits): void {
     const remeasured = limits.unit !== this.limits.unit;
-    const outlined = limits.headings !== this.limits.headings;
+    const outlined =
+      limits.headings !== this.limits.headings || limits.deepest !== this.limits.deepest;
     this.limits = limits;
     if (outlined) {
       for (const leaf of this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW)) {
@@ -1567,6 +1569,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await workspace.revealLeaf(open);
     workspace.setActiveLeaf(open, { focus: true });
     await this.openPanel();
+  }
+
+  /** The deepest heading level the navigator lists, or nothing when it lists none. */
+  private listed(): number | undefined {
+    return this.limits.headings ? this.limits.deepest : undefined;
   }
 
   private async turnPreview(book: string, at: number, line?: number): Promise<boolean> {
