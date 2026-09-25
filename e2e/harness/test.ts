@@ -84,7 +84,9 @@ export const test = base.extend<Fixtures, Shared>({
     await note.close();
   },
 
-  manuscript: async ({ obsidian }, use) => {
+  // A fixture tears down after every fixture that asked for it, so the
+  // vault is put back only once the editor has written what it held.
+  manuscript: async ({ obsidian, vault: _ }, use) => {
     const manuscript = new Manuscript(obsidian);
     await use(manuscript);
     await manuscript.close();

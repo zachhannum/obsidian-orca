@@ -1,5 +1,8 @@
 import { expect, test } from "./harness/test";
 
+/** The book the chapter is in. */
+const BOOK = "Pride and Prejudice.md";
+
 /** The chapter the fixture has a note for. */
 const CHAPTER = "Chapter Twelve.md";
 
@@ -65,7 +68,9 @@ test("typing in one chapter costs that chapter, and leaves the rest of the book 
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await book.split();
-  const painted = await book.painted();
+  // A render the open or an earlier spec queued would count against
+  // the keystroke, so the counts are read once the book is quiet.
+  const painted = await book.settled(BOOK);
   const before = await book.stages();
   await manuscript.place({ line: 2, ch: 0 });
 
