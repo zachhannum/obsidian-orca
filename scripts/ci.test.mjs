@@ -6,10 +6,11 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [workflow, shots, release, spec, claude] = await Promise.all([
+const [workflow, shots, release, cut, spec, claude] = await Promise.all([
   read(".github/workflows/ci.yml"),
   read(".github/workflows/shots.yml"),
   read(".github/workflows/release.yml"),
+  read(".github/workflows/cut-release.yml"),
   read("e2e/shots.spec.ts"),
   read("CLAUDE.md"),
 ]);
@@ -71,11 +72,13 @@ test("a version tag attaches the plugin to the release", () => {
   }
 });
 
-test("a dispatched release pushes its version commit as the release app", () => {
-  const tag = release.slice(release.indexOf("\n  tag:\n"), release.indexOf("\n  release:\n"));
-  assert.match(tag, /uses: actions\/create-github-app-token@v2/);
-  assert.match(tag, /token: \$\{\{ steps\.app\.outputs\.token \}\}/);
-  assert.match(tag, /git push --follow-tags/);
+test("a cut release pushes its version commit and tag as the release app", () => {
+  assert.match(cut, /^on:\n {2}workflow_dispatch:\n/m);
+  assert.match(cut, /uses: actions\/create-github-app-token@v3/);
+  assert.match(cut, /token: \$\{\{ steps\.app\.outputs\.token \}\}/);
+  // The branch goes up before the tag, so no tag points at a commit
+  // that main never took.
+  assert.ok(cut.indexOf('git push origin "HEAD:') < cut.indexOf('git push origin "$version"'));
 });
 
 test("`npm version` bumps the manifest and writes a tag with no `v`", async () => {

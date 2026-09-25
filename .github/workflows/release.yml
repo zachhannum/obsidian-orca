@@ -2,17 +2,11 @@ name: release
 
 # The Obsidian directory installs a plugin from a release's assets, and
 # `main.js` is gitignored, so the three files it wants exist only as build
-# output. This is the one job that builds them for anyone but the author.
+# output. This is the one job that builds them for anyone but the author,
+# and a tag from `cut-release.yml` is what runs it.
 on:
   push:
     tags: ["[0-9]+.[0-9]+.[0-9]+"]
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: "Which part of the version to raise"
-        type: choice
-        options: [patch, minor, major]
-        default: patch
 
 permissions:
   contents: write
@@ -22,38 +16,7 @@ permissions:
   id-token: write
 
 jobs:
-  # Main takes changes only through a PR, and the release app is the one
-  # actor its ruleset lets past that. A tag the app pushes starts a run of
-  # this workflow, and `release` builds it there.
-  tag:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - id: app
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ steps.app.outputs.token }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "22"
-      # `npm version` rewrites the manifest and `versions.json` through
-      # version-bump.mjs, which wants nothing installed.
-      - env:
-          BUMP: ${{ inputs.bump }}
-          BOT: ${{ steps.app.outputs.app-slug }}[bot]
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-        run: |
-          git config user.name "$BOT"
-          git config user.email "$(gh api "/users/$BOT" --jq .id)+$BOT@users.noreply.github.com"
-          npm version "$BUMP" -m "Release %s"
-          git push --follow-tags
-
   release:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       TAG: ${{ github.ref_name }}

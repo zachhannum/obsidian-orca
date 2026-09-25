@@ -246,14 +246,14 @@ attaches `main.js`, `manifest.json` and `styles.css` to the release,
 and it refuses a tag that does not match `manifest.json` or
 `package.json`. The tag carries no `v`, which is what `.npmrc` is for.
 
-`npm version` is the only place a version number is typed. It runs
-`version-bump.mjs`, which rewrites `manifest.json` and `versions.json`
-and stages them. A release starts from the Actions tab. The workflow
-runs `npm version` there and pushes the version commit and its tag to
-main, which is the one change that reaches main without a PR. It
-pushes as the release app, because main's ruleset lets only that app
-past. The app's ID is the `RELEASE_APP_ID` variable and its key is the
-`RELEASE_APP_PRIVATE_KEY` secret.
+`cut-release.yml` is where a release starts, from the Actions tab. It
+runs `npm version`, which runs `version-bump.mjs` to rewrite
+`manifest.json` and `versions.json`, so no version number is typed by
+hand. It then pushes the version commit to main and the tag after it.
+Main's ruleset lets no push past but the release app's, which is the
+app fleuron releases with. The workflow mints a token from the
+`RELEASE_APP_ID` variable and the `RELEASE_APP_PRIVATE_KEY` secret, and
+the tag it pushes under that token starts `release.yml`.
 
 ## Documentation rules
 
