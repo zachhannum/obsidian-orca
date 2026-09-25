@@ -1,0 +1,119 @@
+---
+title: Markdown
+eyebrow: Reference
+description: The marks a chapter can hold beyond Obsidian's own Markdown.
+---
+
+import Shot from '../../../components/Shot.astro';
+import Written from '../../../components/Written.astro';
+
+A chapter is an Obsidian note, and the engine reads its Markdown. The engine also reads seven marks that Obsidian does not give a meaning to. Four of them give a block or a few words a name that CSS can find. The other three are setext headings, the page break and the column break.
+
+Each mark below is shown as it is written, then as it prints.
+
+## Names
+
+A run is a pair of braces that holds names, separated by spaces. `.name` gives a class, and `#name` gives an id. A name holds letters, digits, `-` and `_`, and does not start with a digit. If a run holds more than one id, the first id counts.
+
+If a run holds anything else, the engine warns about it. A run in a paragraph then prints as text. A heading stays a heading.
+
+A name changes nothing on the page by itself. A rule in the book's [custom CSS](/design/custom-css/) gives the named block its look.
+
+## Attribute line
+
+A run on a line of its own names the block under it, such as a paragraph, a heading or a quote. A blank line between the run and the block is allowed. If no block is under the run, the run prints as text and the engine warns.
+
+A run over a row of dashes names the scene break under it.
+
+<Written name="attribute-line" />
+
+<Shot
+  name="mark-attribute-line"
+  alt="A page with a plain paragraph, then the letter set in italics and indented from both margins."
+  caption="The letter takes the class, and the paragraph above it does not."
+/>
+
+## Heading attributes
+
+A run at the end of a heading names the heading.
+
+<Written name="heading-attributes" />
+
+<Shot
+  name="mark-heading-attributes"
+  alt="A chapter opening whose heading is set in italics."
+  caption="The heading takes the class."
+/>
+
+## Image attributes
+
+A run directly after an image, on the same line, names the image. A run on the next line is an attribute line, and it names the block under it.
+
+<Written name="image-attributes" />
+
+<Shot
+  name="mark-image-attributes"
+  alt="A drawing of the Nautilus set at half the width of the text, with a line of text under it."
+  caption="The image takes the class."
+/>
+
+## Span
+
+Square brackets around words, directly followed by a run, name those words. The words cannot hold a bracket or a line break. A span in inline code prints as it is written.
+
+<Written name="span" />
+
+<Shot
+  name="mark-span"
+  alt="A line of text in which the name of the ship is set in italics."
+  caption="The ship's name takes the class."
+/>
+
+## Setext headings
+
+A line of text over a row of `=` is a level 1 heading. A line of text over a row of `-` is a level 2 heading. The text can be more than one line.
+
+A row of dashes with a blank line above it is a scene break, not a heading.
+
+<Written name="setext-heading" />
+
+<Shot
+  name="mark-setext-heading"
+  alt="A chapter opening with a level 1 heading, a paragraph, a level 2 heading and a second paragraph."
+  caption="The two underlines print as a level 1 and a level 2 heading."
+/>
+
+## Page break
+
+`\pagebreak` ends the page, and the text after it starts on the next page. The command is a paragraph of its own and starts at the head of its line. Written anywhere else, it prints as text.
+
+<Written name="page-break" />
+
+<Shot
+  name="mark-page-break"
+  alt="Two facing pages. The first ends after one paragraph, and the second starts with the next one."
+  caption="The text after the break starts on the next page."
+/>
+
+## Column break
+
+`\columnbreak` ends the column, and the text after it starts in the next column. It follows the same rules as `\pagebreak`.
+
+Columns come from the book's custom CSS, as a `column-count` in an `@page` rule. On a page with one column, a column break starts a new page.
+
+<Written name="column-break" />
+
+<Shot
+  name="mark-column-break"
+  alt="A page in two columns. The first column holds one paragraph, and the second column starts with the next one."
+  caption="The text after the break starts in the second column."
+/>
+
+## What the engine leaves out
+
+Some Obsidian Markdown does not print as it shows in Obsidian. The engine warns about each of these:
+
+- HTML blocks and inline HTML are left out.
+- A task list prints without its checkboxes.
+- Math prints as plain text.
+- An image inside a paragraph prints as a block after that paragraph.
