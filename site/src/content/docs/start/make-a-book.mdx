@@ -6,6 +6,7 @@ description: Turn a folder of notes into a book.
 
 import Shot from '../../../components/Shot.astro';
 import Action from '../../../components/Action.astro';
+import Key from '../../../components/Key.astro';
 
 A book is a folder of notes and one book note that lists them in reading order.
 
@@ -61,9 +62,9 @@ The navigator can list the headings inside each note, under the entry for that n
 2. Turn on `Headings in the navigator`.
 3. To list fewer levels, set `Heading levels in the navigator`. At 2, the navigator lists H1 and H2.
 
-If a note starts with a heading that has the name of its entry, the navigator does not list that heading. The entry already shows the name.
+If a note starts with a heading that has the name of its entry, the navigator does not list that heading.
 
-To go to a heading, select it. If a preview of the book is open, the preview turns to the page where the heading starts. If no preview is open, the note opens at the heading. To open the note at the heading in a new tab, hold Ctrl (Cmd on macOS) and select the heading. The navigator marks the row for the page that the preview shows, heading rows included.
+To go to a heading, select it. If a preview of the book is open, the preview turns to the page where the heading starts. If no preview is open, the note opens at the heading. To open the note at the heading in a new tab, hold <Key name="mod" /> and select the heading. The navigator marks the row for the page that the preview shows, heading rows included.
 
 To hide the headings of one entry, select the arrow beside the entry. A heading with deeper headings under it has an arrow of its own. To hide every heading, select <Action name="collapseAll" /> in the header of the navigator. To show them again, select <Action name="expandAll" />. Obsidian keeps the folds when it reloads.
 

@@ -242,6 +242,15 @@ site-search button[data-open-modal] > kbd kbd {
   border-radius: 3px;
   white-space: nowrap;
 }
+.sl-markdown-content .key {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code);
+  color: var(--codetext);
+  padding: 1px 5px;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 var(--codetext);
+}
 .sl-markdown-content .action svg {
   width: 1.15em;
   height: 1.15em;
