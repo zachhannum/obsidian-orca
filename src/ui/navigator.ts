@@ -5,6 +5,7 @@ import {
   Menu,
   Notice,
   TFile,
+  type ViewStateResult,
   type WorkspaceLeaf,
 } from "obsidian";
 import { linksIn } from "@/book/links";
@@ -33,7 +34,7 @@ import type { Edits } from "@/ui/edits";
 import { createChapter, emptyBook } from "@/ui/make";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
-import { headingsOf, type Headed, type Showing } from "@/ui/outline";
+import { headingsOf, readFolds, type Headed, type Showing } from "@/ui/outline";
 import { members, shelve, type Row, type Shelved } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
@@ -72,6 +73,8 @@ export class NavigatorView extends ItemView {
   /** The book the list has focus in, which a paste adds to. */
   private focused: string | undefined;
   private mounted: Mounted | undefined;
+  /** The folds on the shelf, which Obsidian keeps with the workspace and gives back on a reload. */
+  private folds: readonly string[] = [];
   private queued: number | undefined;
   private generation = 0;
   private painting = 0;
@@ -96,6 +99,16 @@ export class NavigatorView extends ItemView {
 
   override getIcon(): string {
     return "library";
+  }
+
+  override getState(): Record<string, unknown> {
+    return { ...super.getState(), folds: [...this.folds] };
+  }
+
+  override async setState(state: unknown, result: ViewStateResult): Promise<void> {
+    await super.setState(state, result);
+    this.folds = readFolds(state);
+    this.mounted?.fold(this.folds);
   }
 
   override onOpen(): Promise<void> {
@@ -139,6 +152,10 @@ export class NavigatorView extends ItemView {
     this.mounted = mountShelf(this.contentEl, {
       open: (path) => {
         void this.openNote(path);
+      },
+      folded: (shut) => {
+        this.folds = shut;
+        this.app.workspace.requestSaveLayout();
       },
       preview: (book) => {
         this.handoff.preview(book.path);
@@ -195,6 +212,7 @@ export class NavigatorView extends ItemView {
         this.focused = path;
       },
     });
+    this.mounted.fold(this.folds);
 
     this.refresh();
     return Promise.resolve();
@@ -679,3 +697,4 @@ function free(model: Model, name: string): string {
     if (!taken.has(heading)) return heading;
   }
 }
+

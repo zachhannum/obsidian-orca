@@ -671,6 +671,28 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 });
 
+test("the folds on the shelf are still folded after Obsidian reloads", async ({
+  navigator,
+  obsidian,
+}) => {
+  await navigator.outlines(true);
+  await navigator.reveal();
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await navigator.saveLayout();
+
+  await obsidian.reload();
+  await navigator.reveal();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+
+  await navigator.button("Collapse all").click();
+  await navigator.saveLayout();
+  await obsidian.reload();
+  await navigator.reveal();
+  await expect(navigator.button("Expand all")).toBeVisible();
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+});
+
 test("the heading rows are the lines of Obsidian's own cache", async ({
   navigator,
   obsidian,

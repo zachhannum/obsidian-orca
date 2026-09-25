@@ -200,6 +200,14 @@ export function foldable(shelf: readonly Shelved[]): string[] {
   );
 }
 
+/** The folds a saved navigator state holds. A state without them folds nothing. */
+export function readFolds(state: unknown): string[] {
+  if (typeof state !== "object" || state === null || !("folds" in state)) return [];
+  const { folds } = state;
+  if (!Array.isArray(folds)) return [];
+  return folds.filter((fold): fold is string => typeof fold === "string");
+}
+
 /**
  * The row a key moves the focus to, of `count` rows in order, from the
  * row at `from`. A key that walks nowhere answers nothing, and the

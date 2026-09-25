@@ -74,6 +74,8 @@ import type { Row, Shelved } from "@/ui/shelf";
 /** The actions a shelf row can ask the view to perform. */
 export interface Acting {
   open(path: string): void;
+  /** Told every fold on the shelf after the author folds or opens one, so the view can keep them. */
+  folded(shut: readonly string[]): void;
   preview(book: Shelved): void;
   /** A click on an entry that has a note or generates its own. The view reads the Mod key off the event. */
   openEntry(book: Shelved, row: Row, event: Pointed): void;
@@ -114,6 +116,13 @@ export interface Shelves {
   located: () => void;
   /** The page a preview shows, whose row is marked. */
   showing: Showing | undefined;
+  /**
+   * The books, entries and headings folded on the shelf: a book by its
+   * path, an entry by its book and note path, and a heading by its
+   * line as well. A reorder keeps all three.
+   */
+  shut: ReadonlySet<string>;
+  setShut: (shut: ReadonlySet<string>) => void;
 }
 
 /** An entry asked for by its book and its place in the reading order. */
@@ -135,6 +144,8 @@ export interface Mounted {
   focus(book: string, at: number): void;
   /** Marks the row for the page a preview shows. */
   show(showing: Showing | undefined): void;
+  /** Puts back the folds the view kept, without telling the view again. */
+  fold(shut: readonly string[]): void;
   unmount(): void;
 }
 
@@ -151,6 +162,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
   let renaming: Renaming | undefined;
   let wanted: Wanted | undefined;
   let showing: Showing | undefined;
+  let shut: ReadonlySet<string> = new Set();
 
   const draw = (): void => {
     root.render(
@@ -169,6 +181,12 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
           draw();
         }}
         showing={showing}
+        shut={shut}
+        setShut={(next) => {
+          shut = next;
+          draw();
+          acting.folded([...next]);
+        }}
       />,
     );
   };
@@ -191,6 +209,10 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
     show(next) {
       if (JSON.stringify(next) === JSON.stringify(showing)) return;
       showing = next;
+      draw();
+    },
+    fold(kept) {
+      shut = new Set(kept);
       draw();
     },
     unmount() {
@@ -329,13 +351,10 @@ export function Shelf({
   wanted,
   located,
   showing,
+  shut,
+  setShut,
 }: Shelves): JSX.Element {
   const pane = useRef<HTMLDivElement>(null);
-  /**
-   * The entries whose headings are folded, and the headings folded
-   * inside them, by book, note path and line. A reorder keeps both.
-   */
-  const [shut, setShut] = useState<ReadonlySet<string>>(new Set());
   const entries = foldable(shelf);
   const open = entries.some((key) => !shut.has(key));
   // The suite waits on the generation the pane has painted, so it is
@@ -365,7 +384,9 @@ export function Shelf({
             icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
             label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
             onClick={() => {
-              setShut(open ? new Set(entries) : new Set());
+              // A book's own fold is not an entry's, so both keep it.
+              const books = [...shut].filter((key) => !key.includes("\n"));
+              setShut(new Set(open ? [...books, ...entries] : books));
             }}
           />
         )}
@@ -424,7 +445,13 @@ function Book({
   shut: ReadonlySet<string>;
   setShut: (shut: ReadonlySet<string>) => void;
 }): JSX.Element {
-  const [folded, setFolded] = useState(false);
+  const folded = shut.has(book.path);
+  const setFolded = (fold: boolean): void => {
+    const next = new Set(shut);
+    if (fold) next.add(book.path);
+    else next.delete(book.path);
+    setShut(next);
+  };
   const shelf = useRef<HTMLDivElement>(null);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
   /** The section a drag is carrying, whose entries move with it. */

@@ -9,6 +9,7 @@ import {
   markOf,
   outline,
   parentOf,
+  readFolds,
   shutIn,
   unfolded,
   walk,
@@ -121,6 +122,13 @@ test("collapse all folds every entry that lists headings, in every book", () => 
   // A fold in one book leaves the same note in another open.
   assert.deepEqual([...shutIn(new Set([entryKey("A.md", "Chapter Fifteen.md") + "\n13"]), "B.md", listed)], []);
   assert.deepEqual([...shutIn(new Set([entryKey("A.md", "Chapter Fifteen.md") + "\n13"]), "A.md", listed)], [13]);
+});
+
+test("the folds a navigator saved read back, and a state without them folds nothing", () => {
+  assert.deepEqual(readFolds({ folds: ["A.md", "A.md\nB.md"] }), ["A.md", "A.md\nB.md"]);
+  assert.deepEqual(readFolds({ folds: ["A.md", 3] }), ["A.md"]);
+  assert.deepEqual(readFolds({}), []);
+  assert.deepEqual(readFolds(undefined), []);
 });
 
 test("sections, entries and headings are one walk that stops at either end", () => {

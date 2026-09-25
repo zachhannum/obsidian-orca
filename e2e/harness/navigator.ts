@@ -107,10 +107,25 @@ export class Navigator {
     );
   }
 
-  /** Puts the heading settings back to their defaults, which list no headings. */
+  /** Puts the heading settings back to their defaults, which list no headings, and opens every fold. */
   async reset(): Promise<void> {
     await this.outlines(false);
     await this.levels(6);
+    await this.obsidian.page.evaluate(async (type) => {
+      for (const leaf of window.app.workspace.getLeavesOfType(type)) {
+        await leaf.view.setState({ folds: [] }, { history: false });
+      }
+    }, NAVIGATOR);
+  }
+
+  /**
+   * Writes the workspace now. Obsidian saves it a moment after a view's
+   * state changes, and a reload before then would lose the change.
+   */
+  async saveLayout(): Promise<void> {
+    await this.obsidian.page.evaluate(async () => {
+      await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
+    });
   }
 
   /** Sets the deepest heading level the navigator lists. */
