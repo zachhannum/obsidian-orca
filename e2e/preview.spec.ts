@@ -108,7 +108,7 @@ test("a book with no chapters says so, and `New chapter` gives it its first page
   await book.open();
 
   await expect(book.empty).toContainText("Empty book has no pages yet");
-  await expect(book.empty).toContainText("add a chapter");
+  await expect(book.empty).not.toContainText("add a chapter");
 
   await book.newChapter.click();
   await expect

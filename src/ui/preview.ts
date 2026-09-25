@@ -1731,10 +1731,6 @@ export class PreviewView extends ItemView {
     setIcon(state.createDiv({ cls: "orca-preview-setting-icon" }), "book");
     const name = state.createDiv({ cls: "orca-preview-setting-name" });
     name.append(name.createEl("i", { text: this.getDisplayText() }), " has no pages yet");
-    const note = state.createDiv({ cls: "orca-preview-setting-note" });
-    note.append("add a chapter");
-    note.createEl("br");
-    note.append("and its pages show here");
     const adding = state.createEl("button", { cls: "mod-cta", text: "New chapter" });
     adding.dataset["testid"] = "orca-new-chapter";
     this.registerDomEvent(adding, "click", () => {
