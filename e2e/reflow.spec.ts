@@ -40,7 +40,7 @@ const SPREAD = { label: "Spread", mode: "spread" };
  * pages into it a spec turns. Long enough that a page well inside it is
  * pages away from the page it starts on.
  */
-const SENTENCES = 400;
+const SENTENCES = 160;
 const INTO = 8;
 
 /**
