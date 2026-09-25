@@ -2396,3 +2396,7 @@ input.orca-panel-filter {
 .orca-break[data-form="columnbreak"]::after {
   border-top-style: dashed;
 }
+
+.orca-preview-setting.mod-empty button {
+  margin-top: 2px;
+}

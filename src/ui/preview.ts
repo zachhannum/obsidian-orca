@@ -136,6 +136,8 @@ export interface PreviewHandoff {
   viewed(mode: ViewMode): void;
   /** Opens the export dialog on the book this view reads. */
   exports(book: string): void;
+  /** Adds a new chapter at the end of the book's body. */
+  adds(book: string): void;
 }
 
 /** A box the pointer found, and the generation the answer is from. */
@@ -1248,7 +1250,7 @@ export class PreviewView extends ItemView {
     }
     if (turn !== this.turning || this.surface === undefined) return;
     if (reading === undefined) {
-      this.report("The book set to no pages");
+      this.empty();
       return;
     }
     this.message?.remove();
@@ -1713,6 +1715,29 @@ export class PreviewView extends ItemView {
     });
     well.prepend(banner);
     this.message = banner;
+  }
+
+  /**
+   * Draws a book that set to no pages, which is a book with nothing in
+   * it yet, and offers the chapter it is missing.
+   */
+  private empty(): void {
+    const well = this.well;
+    const book = this.book;
+    if (well === undefined || book === undefined) return;
+    this.message?.remove();
+    const state = well.createDiv({ cls: "orca-preview-setting mod-empty" });
+    state.dataset["testid"] = "orca-empty";
+    setIcon(state.createDiv({ cls: "orca-preview-setting-icon" }), "book");
+    const name = state.createDiv({ cls: "orca-preview-setting-name" });
+    name.append(name.createEl("i", { text: this.getDisplayText() }), " has no pages yet");
+    const adding = state.createEl("button", { cls: "mod-cta", text: "New chapter" });
+    adding.dataset["testid"] = "orca-new-chapter";
+    this.registerDomEvent(adding, "click", () => {
+      this.handoff.adds(book);
+    });
+    well.prepend(state);
+    this.message = state;
   }
 
   /** Puts a message in the well in place of the pages. */

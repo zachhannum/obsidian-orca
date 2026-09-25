@@ -25,9 +25,11 @@ import { books, isBook, type NoteIndex } from "@/ui/books";
 import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
-import { bookFromFolder, emptyBook } from "@/ui/make";
+import { bookFromFolder, createChapter, emptyBook } from "@/ui/make";
 import { notedBook } from "@/ui/manuscript";
 import { bookCss, withCss } from "@/book/css";
+import { folderOf } from "@/book/folder";
+import { add } from "@/book/order";
 import { writeDesign, type Design, type FontUse } from "@/style/design";
 import { offsetOf, shownOver, type Seen, type Shown } from "@/book/place";
 import type { Place as Warned } from "@/style/origin";
@@ -194,6 +196,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
             },
             exports: (book) => {
               this.exportBook(book);
+            },
+            adds: (book) => {
+              void this.addChapter(book);
             },
           },
           (text) => {
@@ -1501,6 +1506,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.edits.edit(book, (current) => ({
       ...current,
       order: withCss(current.order, css),
+    }));
+  }
+
+  /** Creates a chapter note beside the book and adds it at the end of the body. */
+  private async addChapter(book: string): Promise<void> {
+    const note = await createChapter(this.app, folderOf(book));
+    const link = this.app.metadataCache.fileToLinktext(note, book, true);
+    await this.edits.edit(book, (model) => ({
+      ...model,
+      order: add(model.order, link),
     }));
   }
 

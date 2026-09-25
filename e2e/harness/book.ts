@@ -112,6 +112,10 @@ export class Book {
   readonly held: Locator;
   /** The offer of what each stop said. */
   readonly report: Locator;
+  /** The state the pane holds for a book that sets to no pages. */
+  readonly empty: Locator;
+  /** The button on that state that adds a chapter. */
+  readonly newChapter: Locator;
   /** The action that hands the pane back to the manuscript. */
   readonly asMarkdown: Locator;
   /** Every pane reading a book. */
@@ -141,6 +145,8 @@ export class Book {
     this.setting = pane.getByTestId("orca-setting");
     this.held = pane.getByTestId("orca-held");
     this.report = pane.getByTestId("orca-report");
+    this.empty = pane.getByTestId("orca-empty");
+    this.newChapter = pane.getByTestId("orca-new-chapter");
     this.asMarkdown = obsidian.action(AS_MARKDOWN);
     this.panes = pane;
   }
