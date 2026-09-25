@@ -151,7 +151,9 @@ its editor around these files and returns a URL. The artboard list and
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
   A selector completes from the classes and ids the book's sections
-  carry, after a `.` or a `#`.
+  carry, after a `.` or a `#`. Property names, their keywords, the
+  elements, pseudo-classes and at-rules complete from the subset the
+  engine exports, and from no list orca keeps.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view

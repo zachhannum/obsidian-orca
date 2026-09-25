@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { language } from "@codemirror/language";
 import { CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
 import { EditorState } from "@codemirror/state";
+import { SUBSET } from "fleuron";
 import { OWN_SHEET } from "@/style/sheet";
 import {
   cssExtensions,
@@ -14,8 +15,10 @@ import {
   inserted,
   revealed,
   ruleExtent,
+  propertyCompletion,
   sectioned,
   selectorCompletion,
+  valueCompletion,
   skippedIn,
   type Flag,
 } from "@/ui/editor";
@@ -68,8 +71,7 @@ test("a font-family value completes from the fonts the book carries", () => {
   ]);
   // A name of more than one word goes in quoted, so it reads as one family.
   assert.equal(offered?.options[1]?.apply, '"Junicode Cond"');
-  // Only font-family completes. The engine is the only linter, so a
-  // property it refuses is a warning rather than a missing option.
+  // Only a font-family value completes a family.
   assert.equal(complete(doc.indexOf("font-size: ") + "font-size: ".length), null);
   assert.equal(complete(0), null);
 
@@ -84,29 +86,84 @@ test("a font-family value completes from the fonts the book carries", () => {
   assert.equal(typing.sliceDoc(narrowed?.from, narrowed?.to), '"Junicode C');
 });
 
-test("a selector completes from the ids and the classes the book's sections carry", () => {
+type Source = (context: CompletionContext) => CompletionResult | null;
+
+/** The labels a source offers at the end of the text, as typing asks rather than a key. */
+function offered(source: Source, doc: string, at = doc.length): string[] | undefined {
   const named = [
     { role: "title-page", id: "title-page" },
     { role: "chapter", id: "the-harbor" },
     { role: "chapter", id: "the-lighthouse" },
   ] as const;
-  const labels = (doc: string, at = doc.length): string[] | undefined => {
-    const state = editing(doc).update(sectioned(named)).state;
-    return selectorCompletion(new CompletionContext(state, at, false))?.options.map(
-      (option) => option.label,
-    );
-  };
+  const state = editing(doc).update(sectioned(named)).state;
+  return source(new CompletionContext(state, at, false))?.options.map((option) => option.label);
+}
 
+test("a property name completes, and the names offered are the ones the pinned engine sets", () => {
+  const names = (list: readonly { name: string }[]): string[] => list.map((each) => each.name);
+  assert.deepEqual(offered(propertyCompletion, "p {\n  font-s"), names(SUBSET.properties));
+  // An `@page` body declares the page's own properties and opens the
+  // margin boxes the engine draws, and no box it drops.
+  const page = offered(propertyCompletion, "@page :left {\n  mar");
+  assert.deepEqual(page?.slice(0, SUBSET.page.properties.length), names(SUBSET.page.properties));
+  assert.ok(page?.includes("@top-center"));
+  assert.ok(!page?.includes("@left-middle"));
+  assert.ok(offered(propertyCompletion, "@page {\n  @bottom-center {\n    cont")?.includes("content"));
+  assert.deepEqual(
+    offered(propertyCompletion, "@font-face {\n  sr"),
+    names(SUBSET.font_face.descriptors),
+  );
+  // A value, a selector and a block the engine does not read offer no name.
+  assert.equal(offered(propertyCompletion, "p {\n  color: re"), undefined);
+  assert.equal(offered(propertyCompletion, "p"), undefined);
+  assert.equal(offered(propertyCompletion, "@media print {\n  co"), undefined);
+});
+
+test("the values of the property at the caret complete", () => {
+  assert.deepEqual(offered(valueCompletion, "p {\n  font-style: "), ["normal", "italic", "oblique"]);
+  assert.ok(offered(valueCompletion, "p {\n  color: re")?.includes("rebeccapurple"));
+  assert.ok(offered(valueCompletion, "p {\n  font-family: Junicode, s")?.includes("serif"));
+  const size = offered(valueCompletion, "@page {\n  size: ");
+  assert.ok(size?.includes("a5") && size.includes("landscape"));
+  const content = offered(valueCompletion, "@page {\n  @top-center {\n    content: ");
+  assert.ok(content?.includes("counter()") && content.includes("upper-roman"));
+  // A hex colour and a number's unit are not keywords.
+  assert.equal(offered(valueCompletion, "p {\n  color: #ff"), undefined);
+  assert.equal(offered(valueCompletion, "p {\n  font-size: 1.5e"), undefined);
+  // A property the engine does not set has no values to offer.
+  assert.equal(offered(valueCompletion, "p {\n  text-wrap: "), undefined);
+});
+
+test("a selector completes from the ids and the classes the book's sections carry", () => {
+  const selector = (doc: string, at?: number): string[] | undefined =>
+    offered(selectorCompletion, doc, at);
   // A class is a role some section has, each once, and an id is each section's.
-  assert.deepEqual(labels("section."), [".title-page", ".chapter"]);
-  assert.deepEqual(labels("p { a: b }\n#the"), ["#title-page", "#the-harbor", "#the-lighthouse"]);
-  assert.deepEqual(labels("@media print {\n  h1, .ch"), [".title-page", ".chapter"]);
+  assert.deepEqual(selector("section."), [".title-page", ".chapter"]);
+  assert.deepEqual(selector("p { a: b }\n#the"), ["#title-page", "#the-harbor", "#the-lighthouse"]);
+  assert.deepEqual(selector("h1, .ch"), [".title-page", ".chapter"]);
   // Inside a rule's braces a `#` starts a colour, not a selector, closed or not.
-  assert.equal(labels("p {\n  color: #ff\n}", "p {\n  color: #ff".length), undefined);
-  assert.equal(labels("p {\n  color: #ff"), undefined);
-  assert.equal(labels("@page {\n  @top-left { content: #x"), undefined);
-  assert.equal(labels("/* .ch"), undefined);
-  assert.equal(labels("h1"), undefined);
+  assert.equal(selector("p {\n  color: #ff\n}", "p {\n  color: #ff".length), undefined);
+  assert.equal(selector("p {\n  color: #ff"), undefined);
+  assert.equal(selector("@page {\n  @top-left { content: #x"), undefined);
+  assert.equal(selector("/* .ch"), undefined);
+});
+
+test("a selector completes the elements, pseudo-classes and at-rules the engine reads", () => {
+  const selector = (doc: string): string[] | undefined => offered(selectorCompletion, doc);
+  assert.deepEqual(selector("h"), SUBSET.selectors.elements);
+  assert.ok(selector("p:first")?.includes(":first-child"));
+  assert.deepEqual(
+    selector("p::"),
+    SUBSET.selectors.pseudo_elements.map(({ name }) => name),
+  );
+  assert.deepEqual(selector("@"), ["@page", "@font-face"]);
+  assert.deepEqual(
+    selector("@page :"),
+    SUBSET.page.selectors.map((name) => `:${name}`),
+  );
+  // An at-rule opens a statement, and a page name is not an element.
+  assert.equal(selector("p @"), undefined);
+  assert.equal(selector("@page ch"), undefined);
 });
 
 test("every flag in the editor comes from a warning the engine sent", () => {
@@ -195,9 +252,9 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
 // card. Nor the font the engine carries, which no face registers and
 // the completion does not offer.
 //
-// The completion does not name a property or the values one accepts.
-// The engine's module does not export its CSS subset yet, and a list
-// copied here would be a second statement of it. It does not offer a
-// selector the book's sections do not carry, such as an element name,
-// a pseudo-class, or a class the author's own markdown writes. No e2e
+// The completion reads the engine's subset for names and keywords,
+// not its grammar. It offers no value inside a function, except the
+// counter styles that a `content` value takes anywhere, and no unit
+// after a number. It does not offer `var()`, `!important`, a page name
+// after `@page`, or a class the author's own markdown writes. No e2e
 // spec opens the completion list in Obsidian.
