@@ -35,5 +35,11 @@ test("an embed is not a word, and a code block is set on the page and counted", 
   assert.equal(countWords("```css\nh1 { color: red }\n```"), 4);
 });
 
+test("a link counts the words it prints, and not where it goes", () => {
+  assert.equal(countWords("the [first edition](https://www.gutenberg.org/ebooks/1342)"), 3);
+  assert.equal(countWords("[The Entail](Chapter%20Fifteen.md#The%20Entail)"), 2);
+  assert.equal(countWords('[a page](https://example.com "A title")'), 2);
+});
+
 // What this tier does not cover: a note read through Obsidian's vault,
 // which the e2e suite counts on the book page.
