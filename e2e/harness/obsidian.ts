@@ -181,7 +181,14 @@ export class Obsidian {
     const page = await renderer(browser, vault);
     const session = await page.context().newCDPSession(page);
     await session.send("Emulation.setDeviceMetricsOverride", WINDOW);
-    if (fresh) await page.reload();
+    // Obsidian saves the layout some time after a leaf closes, and a
+    // reload before then opens the leaves the last spec closed.
+    if (fresh) {
+      await page.evaluate(async () => {
+        await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
+      });
+      await page.reload();
+    }
     await page.waitForFunction(
       () => window.app?.workspace.layoutReady === true,
       undefined,
