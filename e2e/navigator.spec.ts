@@ -639,6 +639,14 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
   await navigator.headingFold(BOOK, "The Parsonage").click();
 
+  // Words the row cuts short name themselves under the pointer.
+  const long = "An Evening at Netherfield, where the whole of the party danced until the candles were low";
+  await vault.modify(`${CHAPTER}.md`, `${text}\n## ${long}\n\nThe end.\n`);
+  await navigator.heading(BOOK, long).locator(".orca-label").hover();
+  await expect(obsidian.tooltip()).toHaveText(long);
+  await navigator.heading(BOOK, "The Parsonage").locator(".orca-label").hover();
+  await expect(obsidian.tooltip()).toHaveCount(0);
+
   // The setting takes every heading row away, and gives them back.
   await navigator.outlines(false);
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);

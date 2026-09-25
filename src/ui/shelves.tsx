@@ -263,6 +263,26 @@ const inside =
 const clamp = (value: number, low: number, high: number): number =>
   Math.min(Math.max(value, low), high);
 
+/**
+ * A row's words. Words the row cuts short with an ellipsis name
+ * themselves in a tooltip, and words that fit raise none.
+ */
+function Label({ words }: { words: string }): JSX.Element {
+  return (
+    <span
+      className="orca-label"
+      // Obsidian raises its tooltip on the mouseover that follows, so
+      // the words are set before it reads them.
+      onPointerEnter={(event) => {
+        const label = event.currentTarget;
+        setTooltip(label, label.scrollWidth > label.clientWidth ? words : "");
+      }}
+    >
+      {words}
+    </span>
+  );
+}
+
 /** An icon button. Pressing it never starts a drag. */
 function Action({
   icon,
@@ -846,7 +866,7 @@ function Entry({
             </span>
           ) : null}
         </span>
-        <span className="orca-label">{row.name}</span>
+        <Label words={row.name} />
         {row.kind === "generated" ? (
           <span className="orca-chip">generated</span>
         ) : row.named ? (
@@ -915,7 +935,7 @@ function Entry({
                   </span>
                 ) : null}
               </span>
-              <span className="orca-label">{heading.words}</span>
+              <Label words={heading.words} />
             </div>
           ))}
     </div>

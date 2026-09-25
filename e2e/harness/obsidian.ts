@@ -678,6 +678,11 @@ export class Obsidian {
     return this.page.locator(CHROME.suggestion);
   }
 
+  /** The tooltip the pointer raised. */
+  tooltip(): Locator {
+    return this.page.locator(CHROME.tooltip);
+  }
+
   /** The notice orca is showing. */
   notice(): Locator {
     return this.page.locator(CHROME.notice);
