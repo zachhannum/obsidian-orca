@@ -27,7 +27,7 @@ import {
   type WorkerPort,
 } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
-import { readModule } from "@/engine/module";
+import { engineModule } from "@/engine/module";
 import { THEME_SHEET } from "@/style/theme";
 import {
   MARGIN_BOXES,
@@ -867,7 +867,7 @@ test(
 test("a note in the fixture vault sets to PDF bytes, with no application around it", async () => {
   const vault = directoryVault(path.join(root, "fixture"));
   const engine = await startEngine(
-    await readModule(directoryVault(engineDirectory()), "."),
+    engineModule().slice(0),
     nodeHost(),
   );
   try {
@@ -1035,7 +1035,7 @@ const RUNNING_HEAD =
 test("a point in a paragraph hits it, and a point in the running head names its page selector", async () => {
   const vault = directoryVault(path.join(root, "fixture"));
   const engine = await startEngine(
-    await readModule(directoryVault(engineDirectory()), "."),
+    engineModule().slice(0),
     nodeHost(),
   );
   try {
@@ -1086,7 +1086,7 @@ const DROP_CAP =
 test("a point on a drop cap hits the pseudo-element, which answers for itself", async () => {
   const vault = directoryVault(path.join(root, "fixture"));
   const engine = await startEngine(
-    await readModule(directoryVault(engineDirectory()), "."),
+    engineModule().slice(0),
     nodeHost(),
   );
   try {

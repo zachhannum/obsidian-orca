@@ -59,12 +59,12 @@ test("a push to main that changes a picture opens a PR with the new pictures", (
   assert.doesNotMatch(step, /git push origin (main|HEAD)/);
 });
 
-test("a version tag attaches the plugin and the engine module to the release", () => {
+test("a version tag attaches the plugin to the release", () => {
   assert.match(release, /^on:\n {2}push:\n {4}tags: \["\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+"\]\n/m);
   assert.match(release, /- run: npm run build\n/);
   assert.match(
     release,
-    /gh release upload "\$TAG" main\.js manifest\.json styles\.css fleuron_bg\.wasm --clobber/,
+    /gh release upload "\$TAG" main\.js manifest\.json styles\.css --clobber/,
   );
   for (const file of ["manifest.json", "package.json"]) {
     assert.ok(release.includes(file), `the tag is not checked against ${file}`);

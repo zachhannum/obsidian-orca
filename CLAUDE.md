@@ -242,9 +242,9 @@ rasterized by the machine that took it, so this job is the one that
 takes them. On main it opens a PR with the pictures that changed.
 
 `.github/workflows/release.yml` runs on a version tag. It builds and
-attaches `main.js`, `manifest.json`, `styles.css` and `fleuron_bg.wasm`
-to the release, and it refuses a tag that does not match
-`manifest.json` or `package.json`. The tag carries no `v`, which is
+attaches `main.js`, `manifest.json` and `styles.css` to the release,
+and it refuses a tag that does not match `manifest.json` or
+`package.json`. The tag carries no `v`, which is
 what `.npmrc` is for.
 
 `npm version` is the only place a version number is typed. It runs

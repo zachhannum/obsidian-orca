@@ -5,7 +5,7 @@
  */
 
 import { execFileSync, type ChildProcess } from "node:child_process";
-import { copyFile, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -18,7 +18,6 @@ const INSTALLER = "1.13.7";
 
 /** The id in orca's manifest, which the app keys its plugins by. */
 export const PLUGIN = "orca";
-const MODULE = "fleuron_bg.wasm";
 
 const root = path.resolve(fileURLToPath(import.meta.url), "../../..");
 
@@ -96,9 +95,7 @@ export default async function launch(): Promise<() => Promise<void>> {
 }
 
 /**
- * Copies a vault and installs orca in the copy. The launcher installs a
- * plugin's manifest, bundle and stylesheet; the engine module is the
- * fourth file of orca's release, and is copied beside them here.
+ * Copies a vault and installs orca in the copy.
  *
  * The copy is moved under a directory of its own so it keeps the name
  * the checked-in vault has. Obsidian shows a vault's name in the status
@@ -120,10 +117,6 @@ async function orcaIn(
     path.basename(from),
   );
   await rename(copied, vault);
-  await copyFile(
-    path.join(staged, MODULE),
-    path.join(vault, ".obsidian/plugins", PLUGIN, MODULE),
-  );
   // CDP can neither see nor click a native menu, so the copy uses Obsidian's own.
   const config = path.join(vault, ".obsidian/app.json");
   const had = await readFile(config, "utf8").then(

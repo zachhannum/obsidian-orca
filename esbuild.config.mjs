@@ -1,8 +1,9 @@
 import esbuild from "esbuild";
 import process from "node:process";
 import {
-  copyModule,
+  checkEngine,
   copyPlugin,
+  engineModule,
   manifestFile,
   options,
   root,
@@ -18,7 +19,7 @@ const flag = (name, fallback) => {
 const outdir = flag("out", root);
 
 const manifest = flag("manifest", manifestFile);
-await copyModule(outdir, manifest);
+await checkEngine(engineModule, manifest);
 await copyPlugin(outdir, manifest);
 
 const context = await esbuild.context(options({ production, outdir }));
