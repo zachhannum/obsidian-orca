@@ -57,6 +57,23 @@ declare global {
   }
 }
 
+/**
+ * One line of one link on a painted page, where a click lands on it.
+ * The painter marks each line of each link with its index in the
+ * page's links.
+ */
+export interface LinkMark {
+  /** The index of the link on its page. */
+  link: number;
+  /** The page it is on, counting from 1. */
+  page: number;
+  /** The middle of the line of the link, in the window's pixels. */
+  x: number;
+  y: number;
+  /** The words of the line it is set on. */
+  line: string;
+}
+
 /** One notice the pane put up while a book was being set. */
 export interface Notice {
   /** The words it put on screen. */
@@ -395,6 +412,38 @@ export class Book {
       selection?.removeAllRanges();
       return result;
     });
+  }
+
+  /**
+   * Every line of every link on the pages on screen, in the order the
+   * painter marked them.
+   */
+  async links(): Promise<LinkMark[]> {
+    return this.surface.evaluate((surface) =>
+      [...surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")].flatMap((sheet) => {
+        const lines = [...sheet.querySelectorAll("text[data-selection-line]")].map((line) => ({
+          box: line.getBoundingClientRect(),
+          text: line.textContent ?? "",
+        }));
+        return [...sheet.querySelectorAll("rect[data-link]")].map((mark) => {
+          const box = mark.getBoundingClientRect();
+          const y = box.top + box.height / 2;
+          const line = lines.find((one) => one.box.top <= y && y <= one.box.bottom);
+          return {
+            link: Number(mark.getAttribute("data-link")),
+            page: Number(sheet.dataset["page"]),
+            x: box.left + box.width / 2,
+            y,
+            line: line?.text ?? "",
+          };
+        });
+      }),
+    );
+  }
+
+  /** Clicks a point in the window, the way a mouse does. */
+  async click(at: { x: number; y: number }): Promise<void> {
+    await this.obsidian.page.mouse.click(at.x, at.y);
   }
 
   /** The pages the view says it is showing. */
