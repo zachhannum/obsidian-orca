@@ -241,6 +241,20 @@ vault and writes the pictures to `site/src/shots`. A picture is
 rasterized by the machine that took it, so this job is the one that
 takes them. On main it opens a PR with the pictures that changed.
 
+`.github/workflows/release.yml` runs on a version tag. It builds and
+attaches `main.js`, `manifest.json`, `styles.css` and `fleuron_bg.wasm`
+to the release, and it refuses a tag that does not match
+`manifest.json` or `package.json`. The tag carries no `v`, which is
+what `.npmrc` is for.
+
+`npm version` is the only place a version number is typed. It runs
+`version-bump.mjs`, which rewrites `manifest.json` and `versions.json`
+and stages them. A release is `npm version <patch|minor|major>` and
+`git push --follow-tags`, or the same from the Actions tab, where the
+workflow raises the version and pushes the version commit to main
+itself. That push is the one thing any workflow here writes to main,
+and protecting the branch would block it.
+
 ## Documentation rules
 
 Applies to code comments and all documentation — internal (CLAUDE.md,
