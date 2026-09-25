@@ -1203,6 +1203,188 @@ test("the book note picture is the sample book's note open as its page", async (
   await sized(site, WINDOW.width, WINDOW.height);
 });
 
+/** The folder the Markdown page's examples are written in, as a note and its CSS. */
+const EXAMPLES = path.resolve(fileURLToPath(import.meta.url), "../../site/src/marks");
+
+/**
+ * Each example the Markdown page shows, by the words each page of its
+ * picture opens on. The page break is the one example set on two pages.
+ */
+const SET_ON: Record<string, string[]> = {
+  "attribute-line": ["This morning"],
+  "heading-attributes": ["The Hunting Party"],
+  "image-attributes": ["The Nautilus, as"],
+  span: ["We were on board"],
+  "setext-heading": ["The Coral Kingdom"],
+  "page-break": ["The night fell", "At dawn"],
+  "column-break": ["Above the waterline"],
+};
+
+/** The folder the examples and the books that set them go into. */
+const MARKED = "Marks";
+
+/** The book note that sets one example, which is named for it. */
+function markedAt(name: string): string {
+  return `${MARKED}/${name} book.md`;
+}
+
+/**
+ * The example books' design, which is the sample book's text with no
+ * heads. A title page comes first, so the chapter opens on a left-hand
+ * page and a page break lands on the page facing it.
+ */
+const MARKED_DESIGN = [
+  "orca-book: 1",
+  "trim: 5.5in 8.5in",
+  "margin-inside: 0.95in",
+  "margin-outside: 0.7in",
+  "margin-top: 0.8in",
+  "margin-bottom: 1in",
+  `body-font: ${BODY}`,
+  "body-size: 10.5pt",
+  "body-line-spacing: 14pt",
+  "body-align: justify",
+  "body-first-line-indent: 1.2em",
+  "body-hyphens: true",
+  "heading-1-size: 16pt",
+  "heading-1-align: center",
+  "heading-2-size: 12pt",
+  "heading-2-align: center",
+  "chapter-begins: next-page",
+  "header-left-page: none",
+  "header-right-page: none",
+];
+
+/** The book note that sets one example, with the CSS the example needs. */
+function markedBook(name: string, css: string | undefined): string {
+  const lines = [
+    "---",
+    ...MARKED_DESIGN,
+    `title: ${name} book`,
+    "---",
+    "",
+    "# Front matter",
+    "",
+    "- `title-page`",
+    "",
+    "# Body",
+    "",
+    `- [[${name}]]`,
+  ];
+  if (css !== undefined) lines.push("", "```css", css.trimEnd(), "```");
+  return `${lines.join("\n")}\n`;
+}
+
+/**
+ * The foot of the last thing an example set on a sheet: a line of its
+ * text or an image. The folio is a line too, and the note does not
+ * hold it. A line is the note's by its first word, since a span's
+ * braces are in the note and not in the line.
+ */
+async function footOf(sheet: Locator, note: string): Promise<number> {
+  const feet = await sheet
+    .locator("text[data-selection-line], image")
+    .evaluateAll(
+      (set, wrote) =>
+        set
+          .filter(
+            (each) =>
+              each.tagName === "image" ||
+              wrote.includes(each.textContent.trim().split(" ")[0] ?? ""),
+          )
+          .map((each) => each.getBoundingClientRect().bottom),
+      note,
+    );
+  return Math.max(...feet);
+}
+
+test("the Markdown pictures are each example set on its own page", async ({ site }) => {
+  const layout = await site.obsidian.layout();
+  const written = await readdir(EXAMPLES);
+  const examples = await Promise.all(
+    Object.keys(SET_ON).map(async (name) => ({
+      name,
+      note: await readFile(path.join(EXAMPLES, `${name}.md`), "utf8"),
+      css: written.includes(`${name}.css`)
+        ? await readFile(path.join(EXAMPLES, `${name}.css`), "utf8")
+        : undefined,
+    })),
+  );
+  // Every example the page can show has a picture.
+  expect(written.filter((file) => file.endsWith(".md")).sort()).toEqual(
+    Object.keys(SET_ON).map((name) => `${name}.md`).sort(),
+  );
+
+  // A preview does not follow a book note written from outside the
+  // view, so each example is a book of its own rather than one book
+  // written over.
+  await site.obsidian.page.evaluate(
+    async (made) => {
+      await window.app.vault.createFolder(made.folder);
+      for (const [at, text] of made.notes) await window.app.vault.create(at, text);
+    },
+    {
+      folder: MARKED,
+      notes: examples.flatMap((each) => [
+        [`${MARKED}/${each.name}.md`, each.note] as const,
+        [markedAt(each.name), markedBook(each.name, each.css)] as const,
+      ]),
+    },
+  );
+  await sized(site, WINDOW.width, WINDOW.height);
+  const note = new Note(site.obsidian);
+
+  for (const example of examples) {
+    // The example's book is the only one open, so the preview in the
+    // picture is the one it opens.
+    await site.obsidian.detach(PREVIEW);
+    await site.obsidian.detach(BOOK_PAGE);
+    await note.open(markedAt(example.name));
+    await note.painted();
+    await note.preview.click();
+    await site.obsidian.collapse("left");
+    await site.obsidian.collapse("right");
+    await site.book.show("Spread", "spread");
+    await site.book.choose(example.name);
+    const pages = (SET_ON[example.name] ?? []).map((words) =>
+      site.book.sheets.filter({
+        has: site.obsidian.page.locator("text[data-selection-line]", { hasText: words }),
+      }),
+    );
+    for (const page of pages) await expect(page).toBeVisible();
+    // A spread opens with the first page alone on the right, so the
+    // pane is settled once it has turned to the chapter.
+    await settled(site.book);
+
+    for (const scheme of SCHEMES) {
+      await site.paint(scheme);
+      await settled(site.book);
+      await site.obsidian.still();
+      // The picture is the top of each page, down to the last thing the
+      // example set there.
+      const boxes = await Promise.all(
+        pages.map(async (page) => {
+          const sheet = await measured(page);
+          return { ...sheet, height: (await footOf(page, example.note)) + PAD - sheet.y };
+        }),
+      );
+      const clip = await around(site, boxes, PAD);
+      await expect(site.obsidian.page).toHaveScreenshot(
+        `mark-${example.name}-${scheme}.png`,
+        { clip },
+      );
+    }
+    await site.obsidian.moving();
+  }
+
+  // One app takes every picture, so the books and their folder go again.
+  await site.obsidian.reopen(layout);
+  await site.obsidian.page.evaluate(async (at) => {
+    const found = window.app.vault.getAbstractFileByPath(at);
+    if (found !== null) await window.app.vault.delete(found, true);
+  }, MARKED);
+});
+
 // What this spec does not cover: the pictures on any platform but the
 // one CI takes them on, since a run elsewhere sets the same pages and
 // rasterizes them differently; whether the site uses the pictures and
@@ -1212,4 +1394,5 @@ test("the book note picture is the sample book's note open as its page", async (
 // export written to a path outside the vault, which stops at a native
 // dialog; and what the design panel holds while a chapter rather than a
 // book is being read, which is why the swap pictures are of the pane
-// alone.
+// alone; and a mark written wrongly, which the Markdown page describes
+// and no picture shows.

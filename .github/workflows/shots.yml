@@ -1,8 +1,8 @@
 name: shots
 
 # The pictures on the docs site are photographs of real Obsidian, so a
-# change to a surface, to the site's colors or to the sample book takes
-# new ones.
+# change to a surface, to the site's colors, to the sample book or to an
+# example of a mark takes new ones.
 on:
   pull_request:
     paths:
@@ -10,6 +10,7 @@ on:
       - "styles.css"
       - "e2e/**"
       - "site/sample/**"
+      - "site/src/marks/**"
       - "site/src/styles/tokens.css"
       - ".github/workflows/shots.yml"
   push:
@@ -19,6 +20,7 @@ on:
       - "styles.css"
       - "e2e/**"
       - "site/sample/**"
+      - "site/src/marks/**"
       - "site/src/styles/tokens.css"
       - ".github/workflows/shots.yml"
 
