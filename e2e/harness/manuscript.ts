@@ -292,7 +292,17 @@ export class Manuscript {
     );
   }
 
+  /**
+   * Writes what the editor still holds before the pane goes. A pane
+   * closed on unsaved typing writes it some time later, which can land
+   * after the vault is put back.
+   */
   async close(): Promise<void> {
+    await this.obsidian.page.evaluate(async (type) => {
+      for (const leaf of window.app.workspace.getLeavesOfType(type)) {
+        await (leaf.view as MarkdownView).save();
+      }
+    }, MARKDOWN);
     await this.obsidian.detach(MARKDOWN);
   }
 }
