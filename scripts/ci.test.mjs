@@ -71,6 +71,13 @@ test("a version tag attaches the plugin to the release", () => {
   }
 });
 
+test("a dispatched release pushes its version commit as the release app", () => {
+  const tag = release.slice(release.indexOf("\n  tag:\n"), release.indexOf("\n  release:\n"));
+  assert.match(tag, /uses: actions\/create-github-app-token@v2/);
+  assert.match(tag, /token: \$\{\{ steps\.app\.outputs\.token \}\}/);
+  assert.match(tag, /git push --follow-tags/);
+});
+
 test("`npm version` bumps the manifest and writes a tag with no `v`", async () => {
   const [pkg, npmrc] = await Promise.all([read("package.json"), read(".npmrc")]);
   assert.equal(JSON.parse(pkg).scripts.version, "node version-bump.mjs");

@@ -244,16 +244,16 @@ takes them. On main it opens a PR with the pictures that changed.
 `.github/workflows/release.yml` runs on a version tag. It builds and
 attaches `main.js`, `manifest.json` and `styles.css` to the release,
 and it refuses a tag that does not match `manifest.json` or
-`package.json`. The tag carries no `v`, which is
-what `.npmrc` is for.
+`package.json`. The tag carries no `v`, which is what `.npmrc` is for.
 
 `npm version` is the only place a version number is typed. It runs
 `version-bump.mjs`, which rewrites `manifest.json` and `versions.json`
-and stages them. A release is `npm version <patch|minor|major>` and
-`git push --follow-tags`, or the same from the Actions tab, where the
-workflow raises the version and pushes the version commit to main
-itself. That push is the one thing any workflow here writes to main,
-and protecting the branch would block it.
+and stages them. A release starts from the Actions tab. The workflow
+runs `npm version` there and pushes the version commit and its tag to
+main, which is the one change that reaches main without a PR. It
+pushes as the release app, because main's ruleset lets only that app
+past. The app's ID is the `RELEASE_APP_ID` variable and its key is the
+`RELEASE_APP_PRIVATE_KEY` secret.
 
 ## Documentation rules
 

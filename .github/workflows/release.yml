@@ -22,45 +22,43 @@ permissions:
   id-token: write
 
 jobs:
-  # A tag pushed with `GITHUB_TOKEN` starts no workflow run of its own, so a
-  # dispatched release cannot hand off to the push trigger. It cuts the tag
-  # here and `release` carries on with it.
-  #
-  # Separate from `release` so that re-running the failed half of a dispatched
-  # release does not raise the version a second time.
+  # Main takes changes only through a PR, and the release app is the one
+  # actor its ruleset lets past that. A tag the app pushes starts a run of
+  # this workflow, and `release` builds it there.
   tag:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.bump.outputs.tag }}
     steps:
+      - id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v5
+        with:
+          token: ${{ steps.app.outputs.token }}
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
       # `npm version` rewrites the manifest and `versions.json` through
       # version-bump.mjs, which wants nothing installed.
-      - id: bump
-        env:
+      - env:
           BUMP: ${{ inputs.bump }}
+          BOT: ${{ steps.app.outputs.app-slug }}[bot]
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "$BOT"
+          git config user.email "$(gh api "/users/$BOT" --jq .id)+$BOT@users.noreply.github.com"
           npm version "$BUMP" -m "Release %s"
           git push --follow-tags
-          node -p "'tag=' + require('./package.json').version" >> "$GITHUB_OUTPUT"
 
   release:
-    needs: tag
-    # `tag` is skipped for a tag push, which is not a failure.
-    if: ${{ !cancelled() && !failure() }}
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
-      TAG: ${{ needs.tag.outputs.tag || github.ref_name }}
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.tag.outputs.tag || github.ref_name }}
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
