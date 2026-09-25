@@ -150,8 +150,8 @@ its editor around these files and returns a URL. The artboard list and
   warns.
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
-  Nothing else in the CSS completes, because the engine is the only
-  linter.
+  A selector completes from the classes and ids the book's sections
+  carry, after a `.` or a `#`.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view

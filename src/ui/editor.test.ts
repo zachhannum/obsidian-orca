@@ -14,6 +14,8 @@ import {
   inserted,
   revealed,
   ruleExtent,
+  sectioned,
+  selectorCompletion,
   skippedIn,
   type Flag,
 } from "@/ui/editor";
@@ -80,6 +82,31 @@ test("a font-family value completes from the fonts the book carries", () => {
   );
   assert.deepEqual(narrowed?.options.map((option) => option.label), ["Junicode Cond"]);
   assert.equal(typing.sliceDoc(narrowed?.from, narrowed?.to), '"Junicode C');
+});
+
+test("a selector completes from the ids and the classes the book's sections carry", () => {
+  const named = [
+    { role: "title-page", id: "title-page" },
+    { role: "chapter", id: "the-harbor" },
+    { role: "chapter", id: "the-lighthouse" },
+  ] as const;
+  const labels = (doc: string, at = doc.length): string[] | undefined => {
+    const state = editing(doc).update(sectioned(named)).state;
+    return selectorCompletion(new CompletionContext(state, at, false))?.options.map(
+      (option) => option.label,
+    );
+  };
+
+  // A class is a role some section has, each once, and an id is each section's.
+  assert.deepEqual(labels("section."), [".title-page", ".chapter"]);
+  assert.deepEqual(labels("p { a: b }\n#the"), ["#title-page", "#the-harbor", "#the-lighthouse"]);
+  assert.deepEqual(labels("@media print {\n  h1, .ch"), [".title-page", ".chapter"]);
+  // Inside a rule's braces a `#` starts a colour, not a selector, closed or not.
+  assert.equal(labels("p {\n  color: #ff\n}", "p {\n  color: #ff".length), undefined);
+  assert.equal(labels("p {\n  color: #ff"), undefined);
+  assert.equal(labels("@page {\n  @top-left { content: #x"), undefined);
+  assert.equal(labels("/* .ch"), undefined);
+  assert.equal(labels("h1"), undefined);
 });
 
 test("every flag in the editor comes from a warning the engine sent", () => {
@@ -167,3 +194,10 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
 // Obsidian and waits on the write, the render, the squiggle and its
 // card. Nor the font the engine carries, which no face registers and
 // the completion does not offer.
+//
+// The completion does not name a property or the values one accepts.
+// The engine's module does not export its CSS subset yet, and a list
+// copied here would be a second statement of it. It does not offer a
+// selector the book's sections do not carry, such as an element name,
+// a pseudo-class, or a class the author's own markdown writes. No e2e
+// spec opens the completion list in Obsidian.

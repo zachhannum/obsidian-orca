@@ -43,6 +43,7 @@ import {
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { classHighlighter } from "@lezer/highlight";
+import type { Named } from "@/book/names";
 import type { Place } from "@/style/origin";
 import { quoted } from "@/style/quoted";
 
@@ -60,6 +61,8 @@ export interface CssEditor {
   insert(text: string): void;
   /** Sets the families a `font-family` value completes from. See {@link fontCompletion}. */
   fonts(families: readonly string[]): void;
+  /** Sets the sections a selector completes from. See {@link selectorCompletion}. */
+  sections(named: readonly Named[]): void;
   /** The line and column of the caret, both counted from 1. */
   caret(): { line: number; column: number };
   /** The warnings inside the rule that starts at a line and column. */
@@ -113,6 +116,22 @@ export function fonted(names: readonly string[]): TransactionSpec {
   return { effects: refamilies.of(names) };
 }
 
+/** Replaces the sections a selector completes from. */
+const renamed = StateEffect.define<readonly Named[]>();
+
+const sectionNamed = StateField.define<readonly Named[]>({
+  create: () => [],
+  update(named, tr) {
+    for (const effect of tr.effects) if (effect.is(renamed)) return effect.value;
+    return named;
+  },
+});
+
+/** The transaction that sets the sections a selector completes from. */
+export function sectioned(named: readonly Named[]): TransactionSpec {
+  return { effects: renamed.of(named) };
+}
+
 /** The `font-family` value being written, and the text typed into it so far. */
 interface Naming {
   from: number;
@@ -123,9 +142,9 @@ interface Naming {
 /**
  * The families the book registers, offered inside a `font-family`
  * value and nowhere else. A name goes in quoted, so one of several
- * words reads as one family. Nothing else completes, because the engine
- * is the only linter and a property it refuses is a warning rather than
- * a missing option.
+ * words reads as one family. No other value completes, because the
+ * engine is the only linter and a property it refuses is a warning
+ * rather than a missing option.
  */
 export function fontCompletion(context: CompletionContext): CompletionResult | null {
   const at = naming(context.state, context.pos);
@@ -181,6 +200,43 @@ function naming(state: EditorState, pos: number): Naming | undefined {
   return { from, to, typed: state.sliceDoc(from, pos) };
 }
 
+/**
+ * The classes and ids the book's sections cross with, offered where a
+ * selector is written and a `.` or `#` starts it. A class is a role that
+ * some section has, and an id is one that the engine gets.
+ */
+export function selectorCompletion(context: CompletionContext): CompletionResult | null {
+  const word = context.matchBefore(/[.#][-\w]*$/);
+  if (word === null || !selecting(context.state, word.from)) return null;
+  const named = context.state.field(sectionNamed);
+  const roles = [...new Set(named.map((each) => each.role))];
+  const options = [
+    ...roles.map((role) => ({ label: `.${role}`, type: "class" })),
+    ...named.map((each) => ({ label: `#${each.id}`, type: "class", detail: each.role })),
+  ].filter((option) => option.label.startsWith(word.text[0] ?? ""));
+  if (options.length === 0) return null;
+  return { from: word.from, options, validFor: /^[.#][-\w]*$/ };
+}
+
+/**
+ * Whether a place in the text is in a selector. That is outside every
+ * rule's braces, or inside those of an `@media` or `@supports` block. The
+ * grammar reads a half-typed value such as `color: #ff` as a selector
+ * when its rule is not closed yet, so the braces before the place decide.
+ */
+function selecting(state: EditorState, pos: number): boolean {
+  const node = syntaxTree(state).resolveInner(pos, 1);
+  if (node.name === "Comment" || node.name === "StringLiteral") return false;
+  const before = state
+    .sliceDoc(0, pos)
+    .replace(/\/\*[\s\S]*?(\*\/|$)/g, "")
+    .replace(/"[^"\n]*"|'[^'\n]*'/g, '""');
+  const brace = Math.max(before.lastIndexOf("{"), before.lastIndexOf("}"));
+  if (brace < 0 || before[brace] === "}") return true;
+  const prelude = before.slice(0, brace).split(/[{};]/).pop() ?? "";
+  return /^\s*@(media|supports)\b/i.test(prelude);
+}
+
 const flags = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(set, tr) {
@@ -219,7 +275,8 @@ const flagHover = hoverTooltip((view, pos) => {
 
 /**
  * The editor's extensions: the CSS grammar, the engine's warnings on
- * the text, and the book's families under `font-family`. Nothing here
+ * the text, the book's families under `font-family`, and its sections'
+ * classes and ids in a selector. Nothing here
  * lints. Every flag comes from a render, because the engine is the only
  * linter.
  */
@@ -227,7 +284,8 @@ export function cssExtensions(changed: (css: string) => void): Extension[] {
   return [
     cssLanguage,
     families,
-    autocompletion({ override: [fontCompletion] }),
+    sectionNamed,
+    autocompletion({ override: [fontCompletion, selectorCompletion] }),
     syntaxHighlighting(classHighlighter),
     lineNumbers(),
     highlightActiveLine(),
@@ -500,6 +558,9 @@ export function mountEditor(
     },
     fonts(names) {
       view.dispatch(fonted(names));
+    },
+    sections(named) {
+      view.dispatch(sectioned(named));
     },
     caret() {
       const head = view.state.selection.main.head;

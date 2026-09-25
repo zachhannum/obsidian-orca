@@ -17,7 +17,7 @@ import { bookCss } from "@/book/css";
 import { imagesInCss } from "@/book/images";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
-import { sectionIds } from "@/book/names";
+import { sectionIds, type Named } from "@/book/names";
 import { BookError } from "@/book/note";
 import { entryName, resolve, type Section } from "@/book/order";
 import { sectionRanges, sourceNamed, type Range as Folio } from "@/book/pages";
@@ -331,6 +331,11 @@ export class Typeset {
   /** The families the faces sheet registers, which the author's CSS can name. */
   get families(): string[] {
     return [...new Set(this.registered.map((each) => each.family))];
+  }
+
+  /** The role and id of each section the engine gets, which the author's CSS can select. */
+  get named(): readonly Named[] {
+    return this.setting.sections;
   }
 
   /** The design the book is set under, which the book note holds. */
