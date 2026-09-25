@@ -653,13 +653,20 @@
 /* The ring shows for a focus given by script as well as by the keyboard:
    the book page focuses an entry here, and the author has to see where
    it went. */
-.orca-entry:focus {
+.orca-entry:focus,
+.orca-outline:focus {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 .orca-nav-item.is-active {
   background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* The row for the page the preview shows. */
+.orca-nav-item.is-selected {
+  background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
   color: var(--text-normal);
 }
 
@@ -680,6 +687,30 @@
 
 .orca-nav-heading.is-dragged::after {
   display: none;
+}
+
+/* An entry drags with the headings inside its note. */
+.orca-entry-tree.is-dragged {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+/* A heading is text in the note, so its row reads quieter than an
+   entry and carries no handle. */
+.orca-outline {
+  height: 24px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-outline:hover {
+  color: var(--text-muted);
+}
+
+.orca-entry-mark .orca-fold {
+  cursor: pointer;
 }
 
 .orca-shelf-name {

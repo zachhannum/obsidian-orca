@@ -597,6 +597,257 @@ test("a chapter whose properties hold an indented fence turns", async ({
   await expect(book.chapterName).toHaveText(CHAPTER);
 });
 
+/** The fixture chapter with headings under its title. */
+const FIFTEEN = "Chapter Fifteen";
+
+test("an entry lists the headings inside its note as a tree, down to a level, and folds each level on its own", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  vault.touch(`${CHAPTER}.md`);
+  await navigator.reveal();
+  // The note's own title is the entry's row, so the tree starts under it.
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage", "The Entail"]);
+  await expect(navigator.heading(BOOK, "The Parsonage")).toHaveAttribute("data-depth", "0");
+  await expect(navigator.heading(BOOK, "The Entail")).toHaveAttribute("data-depth", "1");
+
+  // A second entry with a heading of its own, which a fold elsewhere leaves be.
+  const text = await vault.read(`${CHAPTER}.md`);
+  await vault.modify(`${CHAPTER}.md`, `${text}\n## An Evening\n\nThe end.\n`);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
+
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(0);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // A heading folds the headings under it, and the keys fold it the same way.
+  await expect(navigator.headingFold(BOOK, "The Entail")).toHaveCount(0);
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await expect(navigator.headingFold(BOOK, "The Parsonage")).toHaveAttribute("aria-expanded", "false");
+  await navigator.heading(BOOK, "The Parsonage").focus();
+  await obsidian.page.keyboard.press("ArrowRight");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+  await navigator.heading(BOOK, "The Entail").focus();
+  await obsidian.page.keyboard.press("ArrowLeft");
+  expect(await navigator.focused()).toBe("orca-outline:The Parsonage");
+  await obsidian.page.keyboard.press("ArrowLeft");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+
+  // Collapse all folds every entry, and Expand all opens every entry and heading.
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+  await navigator.button("Collapse all").click();
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  // Every level folded, so an entry opened on its own shows only its top headings.
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await navigator.button("Expand all").click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
+  await expect(navigator.button("Collapse all")).toBeVisible();
+
+  // Words the row cuts short name themselves under the pointer.
+  const long = "An Evening at Netherfield, where the whole of the party danced until the candles were low";
+  await vault.modify(`${CHAPTER}.md`, `${text}\n## ${long}\n\nThe end.\n`);
+  await navigator.heading(BOOK, long).locator(".orca-label").hover();
+  await expect(obsidian.tooltip()).toHaveText(long);
+  await navigator.heading(BOOK, "The Parsonage").locator(".orca-label").hover();
+  await expect(obsidian.tooltip()).toHaveCount(0);
+
+  // The setting takes every heading row away, and gives them back.
+  await navigator.outlines(false);
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await expect(navigator.button("Collapse all")).toHaveCount(0);
+  await navigator.outlines(true);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // A shallower level takes the deeper rows away, and gives them back.
+  await navigator.levels(1);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveCount(0);
+  await navigator.levels(6);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+});
+
+test("the folds on the shelf are still folded after Obsidian reloads, and after text moves them", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  await navigator.reveal();
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await navigator.saveLayout();
+
+  await obsidian.reload();
+  await navigator.reveal();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+
+  // Text written above the heading moves its line, and the fold stays on it.
+  const text = await vault.read(`${FIFTEEN}.md`);
+  await vault.modify(`${FIFTEEN}.md`, text.replace("# Chapter Fifteen\n", "# Chapter Fifteen\n\nA line.\n\nAnother.\n"));
+  await expect(navigator.heading(BOOK, "The Parsonage")).not.toHaveAttribute("data-line", "13");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+
+  await navigator.button("Collapse all").click();
+  await navigator.saveLayout();
+  await obsidian.reload();
+  await navigator.reveal();
+  await expect(navigator.button("Expand all")).toBeVisible();
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+});
+
+test("the heading rows are the lines of Obsidian's own cache", async ({
+  navigator,
+  obsidian,
+}) => {
+  await navigator.outlines(true);
+  await navigator.reveal();
+  const cached = await obsidian.page.evaluate(
+    (path) =>
+      (window.app.metadataCache.getCache(path)?.headings ?? []).map((heading) =>
+        String(heading.position.start.line),
+      ),
+    `${FIFTEEN}.md`,
+  );
+  // The first is the note's title, which the entry's own row says.
+  const rows = navigator.outline(BOOK, FIFTEEN);
+  await expect(rows).toHaveCount(cached.length - 1);
+  for (const [at, line] of cached.slice(1).entries()) {
+    await expect(rows.nth(at)).toHaveAttribute("data-line", line);
+  }
+});
+
+test("a heading row never drags, and an entry folds its headings while it is dragged", async ({
+  navigator,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  vault.touch(BOOK);
+  await navigator.reveal();
+  const before = await vault.read(BOOK);
+  const painted = await navigator.painted();
+
+  await navigator.drag(
+    navigator.heading(BOOK, "The Entail"),
+    navigator.entry(BOOK, "Volume the First"),
+    "above",
+  );
+  await expect(navigator.heading(BOOK, "The Entail")).not.toHaveAttribute("aria-pressed", "true");
+  expect(await navigator.painted()).toBe(painted);
+  expect(await vault.read(BOOK)).toBe(before);
+
+  await navigator.drag(
+    navigator.entry(BOOK, FIFTEEN),
+    navigator.entry(BOOK, CHAPTER),
+    "above",
+    async () => {
+      await expect(navigator.entry(BOOK, FIFTEEN)).toHaveAttribute("aria-pressed", "true");
+      await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(0);
+    },
+  );
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain(`- [[${FIFTEEN}]]\n- [[${CHAPTER}]]\n`);
+  // The drop gives the headings back.
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+});
+
+test("a heading click turns the preview to its page and marks its row, and a Mod click opens it at its line", async ({
+  book,
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  // The chapter breaks the page before this heading.
+  const text = await vault.read(`${FIFTEEN}.md`);
+  await vault.modify(`${FIFTEEN}.md`, text.replace("## The Entail", "\\pagebreak\n\n## The Entail"));
+  await book.open();
+  await book.painted();
+  await navigator.reveal();
+
+  await navigator.entry(BOOK, FIFTEEN).click();
+  await expect(book.chapterName).toHaveText(FIFTEEN);
+  await expect(navigator.entry(BOOK, FIFTEEN)).toHaveAttribute("aria-current", "page");
+  const opens = Number(await book.surface.getAttribute("data-first"));
+
+  const entail = navigator.heading(BOOK, "The Entail");
+  await entail.click();
+  await expect
+    .poll(async () => Number(await book.surface.getAttribute("data-first")))
+    .toBeGreaterThan(opens);
+  await expect(book.chapterName).toHaveText(FIFTEEN);
+  await expect(entail).toHaveAttribute("aria-current", "page");
+  await expect(navigator.entry(BOOK, FIFTEEN)).not.toHaveAttribute("aria-current", "page");
+
+  // A chapter click moves the mark back to an entry.
+  await navigator.entry(BOOK, CHAPTER).click();
+  await expect(navigator.entry(BOOK, CHAPTER)).toHaveAttribute("aria-current", "page");
+  await expect(entail).not.toHaveAttribute("aria-current", "page");
+
+  const parsonage = navigator.heading(BOOK, "The Parsonage");
+  const line = Number(await parsonage.getAttribute("data-line"));
+  await parsonage.click({ modifiers: ["ControlOrMeta"] });
+  await expect
+    .poll(async () =>
+      obsidian.page.evaluate(() => {
+        const view = window.app.workspace.getMostRecentLeaf()?.view as
+          | { file?: { path: string } | null; editor?: { getCursor(): { line: number } } }
+          | undefined;
+        return `${view?.file?.path}:${view?.editor?.getCursor().line}`;
+      }),
+    )
+    .toBe(`${FIFTEEN}.md:${line}`);
+  await obsidian.detach("markdown");
+});
+
+test("a heading renamed in its note reads its new words in the navigator", async ({
+  navigator,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  vault.touch(`${FIFTEEN}.md`);
+  await navigator.reveal();
+  await expect(navigator.heading(BOOK, "The Entail")).toBeVisible();
+
+  const text = await vault.read(`${FIFTEEN}.md`);
+  await vault.modify(`${FIFTEEN}.md`, text.replace("## The Entail", "## The Settlement"));
+
+  await expect(navigator.heading(BOOK, "The Settlement")).toBeVisible();
+  await expect(navigator.outline(BOOK, FIFTEEN)).not.toContainText(["The Entail"]);
+});
+
+test("the arrow keys walk sections, entries and headings as one list", async ({
+  navigator,
+  obsidian,
+}) => {
+  await navigator.outlines(true);
+  await navigator.reveal();
+  await navigator.entry(BOOK, "Chapter Four").focus();
+  await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Chapter Four/);
+
+  const { keyboard } = obsidian.page;
+  await keyboard.press("ArrowDown");
+  await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Chapter Fifteen/);
+  await keyboard.press("ArrowDown");
+  await expect.poll(async () => navigator.focused()).toBe("orca-outline:The Parsonage");
+  await keyboard.press("End");
+  await expect.poll(async () => navigator.focused()).toBe("orca-group:The book's css");
+  // A section's row is a stop on the walk too.
+  await keyboard.press("Home");
+  await expect.poll(async () => navigator.focused()).toBe("orca-group:Front matter");
+  await keyboard.press("ArrowDown");
+  await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Title page/);
+});
+
 test("opening a book note reveals the navigator", async ({
   navigator,
   note,

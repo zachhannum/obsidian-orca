@@ -90,6 +90,22 @@ its editor around these files and returns a URL. The artboard list and
   a chapter or a generated section of that book in the navigator turns
   the preview to it. A click with the Mod key opens a chapter as
   markdown in a new tab. Any other chapter click opens the note.
+- The navigator lists the headings inside each entry's note under the
+  entry, read from Obsidian's cache. A note that opens on a heading
+  with the entry's name leaves it out, because the entry's row says
+  it. The author folds the headings of one entry at a time, and a
+  heading folds the deeper headings under it. `Collapse all` in the
+  navigator header folds every entry and every heading level in it, and `Expand all` opens every
+  entry and heading again. Obsidian keeps every fold with the
+  workspace, so a reload opens the shelf as the author left it. A
+  heading's fold follows its words under the headings above it, so
+  text written elsewhere in the note keeps it. A setting
+  lists them, and it is off until the author turns it on. A second setting sets the deepest heading
+  level the navigator lists, and a heading below it has no row. A heading row turns a preview of the book to
+  the page the heading opens on, and a Mod click opens the note at its
+  line. A heading row never drags, and a dragged entry folds its
+  headings until it is dropped. The row for the page the preview
+  shows is marked, heading rows included.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
 - The design panel is in the right sidebar, and it does not open or

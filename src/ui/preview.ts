@@ -12,7 +12,7 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import { BookError } from "@/book/note";
-import type { Section } from "@/book/order";
+import { entryName, type Section } from "@/book/order";
 import {
   chapters,
   placeOf,
@@ -51,6 +51,7 @@ import {
   type Viewing,
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
+import { headingOn, headingsOf, outline, type Showing } from "@/ui/outline";
 import {
   INSPECT_OFF,
   clicked,
@@ -138,6 +139,16 @@ export interface PreviewHandoff {
   exports(book: string): void;
   /** Adds a new chapter at the end of the book's body. */
   adds(book: string): void;
+  /**
+   * The deepest heading level a navigator lists, or nothing when none
+   * lists headings, which is the only reason to ask where they are.
+   */
+  outlined(): number | undefined;
+  /**
+   * Told the entry and the heading the painted span falls under, and
+   * nothing when the view closes.
+   */
+  showing(view: PreviewView, showing: Showing | undefined): void;
 }
 
 /** A box the pointer found, and the generation the answer is from. */
@@ -212,6 +223,8 @@ export class PreviewView extends ItemView {
   private named: number | undefined;
   /** The chapter the reader last turned to, which the span it opens on is named for. */
   private turnedTo: number | undefined;
+  /** The line of the heading the reader last turned to, which wins a page it shares. */
+  private askedLine: number | undefined;
   /** The first page being read, counting from 0. */
   private at = 0;
   /** The pages the painted span put on screen. */
@@ -432,7 +445,9 @@ export class PreviewView extends ItemView {
     this.chapter = undefined;
     this.turns = [];
     this.named = undefined;
+    this.askedLine = undefined;
     this.reading(undefined);
+    this.handoff.showing(this, undefined);
     this.back = undefined;
     this.on = undefined;
     this.edit?.remove();
@@ -575,9 +590,25 @@ export class PreviewView extends ItemView {
    * and answers whether it turned. A section the book did not set
    * turns nothing.
    */
-  async turnToSection(at: number): Promise<boolean> {
+  async turnToSection(at: number, line?: number): Promise<boolean> {
     const chapter = this.turns.find((turn) => turn.at === at);
-    return chapter === undefined ? false : await this.turnToPlace(chapter);
+    if (chapter === undefined) return false;
+    const page = line === undefined ? undefined : await this.opensLine(at, line);
+    if (line === undefined || page === undefined) return await this.turnToPlace(chapter);
+    this.turnedTo = at;
+    this.askedLine = line;
+    this.namesAt(at);
+    await this.turn(page);
+    return true;
+  }
+
+  /** The page a line of a section's note opens on, or nothing where the engine set it on none. */
+  private async opensLine(at: number, line: number): Promise<number | undefined> {
+    try {
+      return (await this.composed?.linesOpen(at, [line]))?.[0];
+    } catch {
+      return undefined;
+    }
   }
 
   private async turnToPlace(chapter: Chapter): Promise<boolean> {
@@ -587,6 +618,7 @@ export class PreviewView extends ItemView {
     // that also carries the one before it is still named for the one
     // the reader asked for, and the next turn command steps from it.
     this.turnedTo = chapter.at;
+    this.askedLine = undefined;
     this.namesAt(chapter.at);
     await this.turn(at);
     return true;
@@ -1533,6 +1565,36 @@ export class PreviewView extends ItemView {
     // verso.
     const opens = sectionOn(reading.pages.slice(0, 1), places);
     if (opens !== undefined) this.reads(typeset.sections[opens]);
+    await this.marksShown(typeset, reading, naming);
+  }
+
+  /**
+   * Tells the navigator the entry the span is named for, and the
+   * heading in it the span falls under. The engine answers where each
+   * heading was set.
+   */
+  private async marksShown(typeset: Typeset, reading: Reading, naming: number): Promise<void> {
+    const book = this.book;
+    const at = this.named;
+    if (book === undefined || at === undefined) return;
+    const section = typeset.sections[at];
+    const deepest = this.handoff.outlined();
+    const cached =
+      deepest !== undefined && section?.kind === "note"
+        ? outline(headingsOf(this.app, section.path, deepest), entryName(section.entry))
+        : [];
+    const lines = cached.map((heading) => heading.line);
+    const [pages, opens] =
+      lines.length === 0
+        ? [[], undefined]
+        : await Promise.all([
+            typeset.linesOpen(at, lines).catch(() => lines.map(() => undefined)),
+            this.opensSection(at),
+          ]);
+    if (naming !== this.naming) return;
+    const span = { first: reading.at, last: reading.at + reading.pages.length - 1 };
+    const line = headingOn(pages, lines, span, this.askedLine, opens);
+    this.handoff.showing(this, { book, at, line });
   }
 
   /** Puts the chapter control on one section of the reading order. */

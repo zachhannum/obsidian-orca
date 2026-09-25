@@ -19,9 +19,22 @@ export interface Limits {
    * opens in. A pane restored with the workspace keeps its own.
    */
   view: ViewMode;
+  /** Whether the navigator lists the headings inside each entry's note. */
+  headings: boolean;
+  /** The deepest heading level the navigator lists, from 1 to 6. */
+  deepest: number;
 }
 
-export const LIMITS: Limits = { sessions: CEILING, unit: "in", view: "single" };
+/** The deepest heading level Markdown writes. */
+export const DEEPEST_LEVEL = 6;
+
+export const LIMITS: Limits = {
+  sessions: CEILING,
+  unit: "in",
+  view: "single",
+  headings: false,
+  deepest: DEEPEST_LEVEL,
+};
 
 /** The most sessions the setting offers to keep. */
 export const MOST_SESSIONS = 8;
@@ -37,11 +50,15 @@ export function readLimits(saved: unknown): Limits {
   const sessions = kept ?? older;
   const unit = "unit" in saved ? saved.unit : undefined;
   const view = "view" in saved ? saved.view : undefined;
+  const headings = "headings" in saved ? saved.headings : undefined;
+  const deepest = "deepest" in saved ? saved.deepest : undefined;
   return {
     sessions:
       typeof sessions === "number" ? sessionCount(sessions) : LIMITS.sessions,
     unit: isPageUnit(unit) ? unit : LIMITS.unit,
     view: isViewMode(view) ? view : LIMITS.view,
+    headings: typeof headings === "boolean" ? headings : LIMITS.headings,
+    deepest: typeof deepest === "number" ? headingLevel(deepest) : LIMITS.deepest,
   };
 }
 
@@ -49,6 +66,12 @@ export function readLimits(saved: unknown): Limits {
 export function sessionCount(sessions: number): number {
   if (!Number.isFinite(sessions)) return LIMITS.sessions;
   return Math.min(Math.max(Math.floor(sessions), 1), MOST_SESSIONS);
+}
+
+/** Rounds `level` to a whole heading level from 1 to 6. */
+export function headingLevel(level: number): number {
+  if (!Number.isFinite(level)) return LIMITS.deepest;
+  return Math.min(Math.max(Math.floor(level), 1), DEEPEST_LEVEL);
 }
 
 export function isPageUnit(value: unknown): value is PageUnit {

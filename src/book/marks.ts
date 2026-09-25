@@ -282,6 +282,17 @@ function onlyRun(said: string): { from: number; to: number; inside: string } | u
   return { from, to, inside: only.slice(1, -1) };
 }
 
+/**
+ * The words of a heading as a reader sees them. A run fleuron reads
+ * is dropped; a run it rejects is part of the words, as it is on the
+ * page.
+ */
+export function headingWords(said: string): string {
+  const run = trailing(said);
+  if (run === undefined || reads(run.inside) === undefined) return said.trim();
+  return said.slice(0, run.from).trim();
+}
+
 /** The `{...}` a block ends on, with the blanks before it. */
 function trailing(said: string): { from: number; to: number; inside: string } | undefined {
   const to = said.trimEnd().length;

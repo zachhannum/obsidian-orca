@@ -93,7 +93,9 @@ export const test = base.extend<Fixtures, Shared>({
   },
 
   navigator: async ({ obsidian }, use) => {
-    await use(new Navigator(obsidian));
+    const navigator = new Navigator(obsidian);
+    await use(navigator);
+    await navigator.reset();
   },
 
   panel: async ({ obsidian }, use) => {

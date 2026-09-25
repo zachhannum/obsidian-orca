@@ -2,7 +2,7 @@
 
   <div class="title-block">
     <h2>The navigator owns the structure</h2>
-    <div class="sub">Membership, reading order and roles are edited here and nowhere else. A section groups the reading order and nothing more: it is made, renamed, dragged and taken out the way a folder is, and an entry carries its own role wherever it lands.</div>
+    <div class="sub">Membership, reading order and roles are edited here and nowhere else. A section groups the reading order and nothing more: it is made, renamed, dragged and taken out the way a folder is, and an entry carries its own role wherever it lands. The headings inside each entry's note are listed under it, as a way through the book.</div>
   </div>
 
   <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
@@ -12,6 +12,10 @@
       <div class="step-n"><b>A</b> At rest</div>
       <div style="flex: 1; min-height: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); padding: 8px 4px; overflow: hidden">
         <div class="nav-header" style="padding-left: 8px"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">BOOKS</span><span class="grow"></span>
+          <!-- Collapse all folds every entry and every heading level, and turns to
+               Expand all once they are folded. It shows only while the
+               navigator lists headings. -->
+          <svg class="icon-s icon" viewBox="0 0 24 24" aria-label="Collapse all"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></svg>
           <svg class="icon-s icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         </div>
 
@@ -34,8 +38,17 @@
 
           <div class="nav-heading">Body</div>
           <div class="nav-item"><span style="width: 14px"></span><span class="label">Volume the First</span><span class="chip" style="margin-left: auto">part</span></div>
-          <div class="nav-item"><span style="width: 14px"></span><span class="label">Chapter One</span></div>
-          <div class="nav-item"><span style="width: 14px"></span><span class="label">Chapter Two</span></div>
+          <!-- An entry folds the headings inside its note. The note's own
+               title is the entry's row, so the tree starts under it. -->
+          <div class="nav-item"><span style="width: 14px; display: flex; color: var(--text-faint)"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span><span class="label">Chapter One</span></div>
+          <div class="nav-item"><span style="width: 14px; display: flex; color: var(--text-faint)"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span><span class="label">Chapter Two</span></div>
+          <!-- A heading row is read-only: it turns the preview and opens
+               the note at its line, and never drags. A heading with deeper
+               headings under it folds them, the way an entry folds its own.
+               The row for the page the preview shows is marked. -->
+          <div class="nav-item" style="height: 24px; padding-left: 20px; color: var(--text-faint); font-size: var(--font-ui-smaller)"><span style="width: 14px; display: flex"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span><span class="label">The Parsonage</span></div>
+          <div class="nav-item is-selected" style="height: 24px; padding-left: 32px; font-size: var(--font-ui-smaller)"><span style="width: 14px"></span><span class="label">The Entail</span></div>
+          <div class="nav-item" style="height: 24px; padding-left: 20px; color: var(--text-faint); font-size: var(--font-ui-smaller)"><span style="width: 14px; display: flex"><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span><span class="label">A Morning Call</span></div>
           <!-- A missing note keeps its row, at the height of the rest. -->
           <div class="nav-item">
             <span style="width: 14px; display: flex"><svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--color-orange)"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
@@ -97,9 +110,10 @@
     </div>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
     <div class="callout"><div><span class="k">A section is organizational.</span> It is made, renamed, dragged and taken out the way a folder is, and an entry carries its own role wherever it lands.</div></div>
     <div class="callout"><div><span class="k">One delete, on the book note.</span> <em>Remove from book</em> takes an entry out and <em>Remove section</em> takes a heading out. <em>Delete book…</em> asks first, and trashes the book note alone: every note it lists is borrowed.</div></div>
+    <div class="callout"><div><span class="k">A heading is text in its note.</span> Its row turns the preview to the page it opens on, and a Mod click opens the note at its line. It never drags, and an entry folds its headings while it is dragged. A setting lists the heading rows, and it is off until the author turns it on.</div></div>
     <div class="callout"><div><span class="k">A missing note</span> keeps its entry and its row height, offers <em>Locate</em> and <em>Remove</em> as icons, and the book still typesets with a warning.</div></div>
   </div>
 </div>

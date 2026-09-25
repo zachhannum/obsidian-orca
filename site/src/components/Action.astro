@@ -3,6 +3,8 @@
     gives it. The pair comes from the plugin, so a button renamed there
     is renamed here. A pair with no glyph below stops the build. */
 import { ACTIONS } from '@/ui/actions';
+import chevronsDownUp from 'lucide-static/icons/chevrons-down-up.svg?raw';
+import chevronsUpDown from 'lucide-static/icons/chevrons-up-down.svg?raw';
 import code from 'lucide-static/icons/code.svg?raw';
 import crosshair from 'lucide-static/icons/crosshair.svg?raw';
 import download from 'lucide-static/icons/download.svg?raw';
@@ -18,6 +20,8 @@ interface Props {
 }
 
 const GLYPHS: Record<string, string> = {
+  'chevrons-down-up': chevronsDownUp,
+  'chevrons-up-down': chevronsUpDown,
   code,
   crosshair,
   download,

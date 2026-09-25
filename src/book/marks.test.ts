@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { marksIn, namesOf, type Drawn, type Form, type Names } from "@/book/marks";
+import { headingWords, marksIn, namesOf, type Drawn, type Form, type Names } from "@/book/marks";
 
 /** Each mark as its form and the text it covers, which is what a chip replaces. */
 function covers(text: string): string[] {
@@ -582,6 +582,12 @@ test("a brace run over a row of equals opens a heading rather than naming a brea
 
 test("a run on the line below an image is a block of its own", () => {
   assert.deepEqual(covers("![A plate](plate.png)\n{.full}\n"), []);
+});
+
+test("a heading's words leave out the run fleuron reads and keep one it rejects", () => {
+  assert.equal(headingWords("The Entail {.plain #entail}"), "The Entail");
+  assert.equal(headingWords("Plain words"), "Plain words");
+  assert.equal(headingWords("Odd {.1bad}"), "Odd {.1bad}");
 });
 
 // What this file does not cover: a break command indented under four
