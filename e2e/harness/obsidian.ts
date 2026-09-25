@@ -384,6 +384,11 @@ export class Obsidian {
     }).toPass({ timeout: 30_000 });
   }
 
+  /** A button on the dialog Obsidian has open, by its label. */
+  button(label: string): Locator {
+    return this.page.locator(CHROME.modal).getByRole("button", { name: label, exact: true });
+  }
+
   /** A folder's own row in the file tree, by its path. */
   treeItem(path: string): Locator {
     return this.page.locator(CHROME.folder(path));

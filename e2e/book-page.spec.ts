@@ -75,6 +75,48 @@ test("a metadata edit on the page is written to the note once, on settle", async
   );
 });
 
+test("a new title renames the book note, and a link to the book follows it", async ({
+  note,
+  obsidian,
+  vault,
+}) => {
+  const RENAMED = "First Impressions.md";
+  // The rename is put back by the title below, and these are put back
+  // from the fixture if the spec stops before it.
+  vault.touch(BOOK);
+  vault.touch(RENAMED);
+  await vault.write("Shelf.md", "[[Pride and Prejudice]]\n");
+  await obsidian.page.waitForFunction(
+    () => window.app.metadataCache.getCache("Shelf.md")?.links?.length === 1,
+  );
+
+  /** The note the one link in the shelf note leads to. */
+  const linked = async (): Promise<string | undefined> =>
+    obsidian.page.evaluate(() => {
+      const { metadataCache } = window.app;
+      const link = metadataCache.getCache("Shelf.md")?.links?.[0]?.link;
+      if (link === undefined) return undefined;
+      return metadataCache.getFirstLinkpathDest(link, "Shelf.md")?.path;
+    });
+  expect(await linked()).toEqual(BOOK);
+
+  await note.open(BOOK);
+  await note.metadata("title").fill("First Impressions");
+
+  // The file manager asks whether to update links, the way the author's
+  // own configuration says it must.
+  await obsidian.button("Just once").click();
+  await expect.poll(async () => vault.notes()).toContain(RENAMED);
+  expect(await vault.notes()).not.toContain(BOOK);
+  expect(await vault.read(RENAMED)).toContain("title: First Impressions");
+  await expect.poll(linked).toEqual(RENAMED);
+
+  await note.metadata("title").fill("Pride and Prejudice");
+  await obsidian.button("Just once").click();
+  await expect.poll(async () => vault.notes()).toContain(BOOK);
+  expect(await vault.notes()).not.toContain(RENAMED);
+});
+
 test("the reading order is read-only on the page, and clicking an entry focuses it in the navigator", async ({
   navigator,
   note,

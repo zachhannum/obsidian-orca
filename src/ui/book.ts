@@ -1,4 +1,5 @@
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
+import { folderOf } from "@/book/folder";
 import { readModel, type Model } from "@/book/model";
 import { BookError } from "@/book/note";
 import { resolve, type Section } from "@/book/order";
@@ -9,6 +10,7 @@ import { ACTIONS } from "@/ui/actions";
 import { Changed } from "@/ui/changed";
 import type { Composer, Typeset } from "@/ui/composer";
 import { save, type Edits } from "@/ui/edits";
+import { fileName, free } from "@/ui/naming";
 import { cacheLinks } from "@/ui/notes";
 import { report, setField } from "@/ui/report";
 import { mountPage, type Mounted } from "@/ui/reports";
@@ -52,6 +54,8 @@ export class BookView extends FileView {
   private disk = "";
   /** Number of orca's own saves in flight. */
   private saving = 0;
+  /** The title in the note on disk, which the note's name follows when it changes. */
+  private titled: string | undefined;
   /** The model the page shows, and the generation it is at. */
   private shown: { model: Model; generation: number } | undefined;
   /** The word count of each note the book reads, once counted. */
@@ -216,6 +220,7 @@ export class BookView extends FileView {
     this.folios = new Map();
     const model = this.opened(text);
     if (model === undefined) return;
+    this.titled = model.book.metadata.title;
     this.writer = new Writer(model, {
       paint: (model, generation) => {
         this.show(model, generation);
@@ -276,7 +281,9 @@ export class BookView extends FileView {
 
   private reload(text: string): void {
     const model = this.opened(text);
-    if (model !== undefined) this.writer?.take(model);
+    if (model === undefined) return;
+    this.titled = model.book.metadata.title;
+    this.writer?.take(model);
   }
 
   /** Writes the model, and reports a write that failed. */
@@ -302,6 +309,28 @@ export class BookView extends FileView {
     } finally {
       this.saving -= 1;
     }
+    const { title } = model.book.metadata;
+    if (title === this.titled) return;
+    this.titled = title;
+    await this.retitle(file, title);
+  }
+
+  /**
+   * Renames the note after its title, through the file manager so that
+   * links to the book follow it. A title with nothing fit for a file
+   * name leaves the name as it is.
+   */
+  private async retitle(file: TFile, title: string | undefined): Promise<void> {
+    const name = fileName(title ?? "");
+    if (name === "") return;
+    const { vault } = this.app;
+    const path = free(
+      folderOf(file.path),
+      name,
+      (at) => vault.getAbstractFileByPath(at) !== null,
+      file.path,
+    );
+    if (path !== file.path) await this.app.fileManager.renameFile(file, path);
   }
 
   /** Paints the page again with the settings as they are now. */

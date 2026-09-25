@@ -3,7 +3,7 @@ import { expect, test } from "./harness/test";
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
-const RENAMED = "title: First Impressions";
+const EDITED = "series: First Impressions";
 
 test("an edit is written through the frontmatter API, and the author's own properties survive it", async ({
   note,
@@ -15,7 +15,7 @@ test("an edit is written through the frontmatter API, and the author's own prope
 
   await note.edit("First Impressions");
 
-  await expect.poll(async () => vault.read(BOOK)).toContain(RENAMED);
+  await expect.poll(async () => vault.read(BOOK)).toContain(EDITED);
   const after = await vault.read(BOOK);
   expect(after).toContain("orca-book: 1");
   // The properties orca does not own are the author's, and Obsidian's
@@ -73,8 +73,8 @@ test("a dragged control repaints per frame and writes the note once, on settle",
       "data-generation",
       String(painted + 40),
     );
-    await expect(note.page).toContainText("Frame 39");
-    await expect.poll(async () => vault.read(BOOK)).toContain("title: Frame 39");
+    await expect(note.metadata("series")).toHaveValue("Frame 39");
+    await expect.poll(async () => vault.read(BOOK)).toContain("series: Frame 39");
   });
 
   expect(writes).toEqual(1);
