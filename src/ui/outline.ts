@@ -10,7 +10,7 @@
 
 import type { App } from "obsidian";
 import { headingWords } from "@/book/marks";
-import type { Row, Shelved } from "@/ui/shelf";
+import type { Row } from "@/ui/shelf";
 
 /** A heading as Obsidian's metadata cache holds it. */
 export interface Cached {
@@ -26,6 +26,12 @@ export interface Headed {
   words: string;
   /** Its depth under the entry. The shallowest heading in the note is 0. */
   depth: number;
+  /**
+   * The heading's place in the note: the words of each heading above
+   * it and its own, top first. `nth` counts the earlier siblings with
+   * the same words, so two of one name are told apart.
+   */
+  trail: readonly { words: string; nth: number }[];
 }
 
 /** The page a preview shows, as the navigator marks it. */
@@ -70,7 +76,19 @@ export function outline(cached: readonly Cached[] | undefined, name: string): He
   }));
   const kept = read[0]?.words === name ? read.slice(1) : read;
   const top = Math.min(...kept.map((heading) => heading.level));
-  return kept.map(({ line, level, words }) => ({ line, words, depth: level - top }));
+  // The headings above the one being read, each with the words its
+  // children have used so far.
+  const above: { depth: number; step: { words: string; nth: number }; seen: Map<string, number> }[] = [];
+  const roots = new Map<string, number>();
+  return kept.map(({ line, level, words }) => {
+    const depth = level - top;
+    while ((above.at(-1)?.depth ?? -1) >= depth) above.pop();
+    const siblings = above.at(-1)?.seen ?? roots;
+    const nth = siblings.get(words) ?? 0;
+    siblings.set(words, nth + 1);
+    above.push({ depth, step: { words, nth }, seen: new Map() });
+    return { line, words, depth, trail: above.map((heading) => heading.step) };
+  });
 }
 
 /**
@@ -161,51 +179,6 @@ export function markOf(
     index = headings.findIndex((heading) => heading.line === at);
   }
   return "entry";
-}
-
-/**
- * The fold key of an entry's note in a book. A path holds no newline,
- * so no two keys meet.
- */
-export function entryKey(book: string, path: string): string {
-  return `${book}\n${path}`;
-}
-
-/** The fold key of the heading on `line` of a note in a book. */
-export function headingKey(book: string, path: string, line: number): string {
-  return `${entryKey(book, path)}\n${String(line)}`;
-}
-
-/** The lines of the headings folded inside the entry `row` of `book`. */
-export function shutIn(shut: ReadonlySet<string>, book: string, row: Row): ReadonlySet<number> {
-  const { path } = row;
-  if (path === undefined) return new Set();
-  return new Set(
-    (row.headings ?? [])
-      .map((heading) => heading.line)
-      .filter((line) => shut.has(headingKey(book, path, line))),
-  );
-}
-
-/** The keys of every entry on the shelf that lists headings, which `Collapse all` folds. */
-export function foldable(shelf: readonly Shelved[]): string[] {
-  return shelf.flatMap((book) =>
-    book.groups.flatMap((group) =>
-      group.rows.flatMap((row) =>
-        row.path !== undefined && (row.headings ?? []).length > 0
-          ? [entryKey(book.path, row.path)]
-          : [],
-      ),
-    ),
-  );
-}
-
-/** The folds a saved navigator state holds. A state without them folds nothing. */
-export function readFolds(state: unknown): string[] {
-  if (typeof state !== "object" || state === null || !("folds" in state)) return [];
-  const { folds } = state;
-  if (!Array.isArray(folds)) return [];
-  return folds.filter((fold): fold is string => typeof fold === "string");
 }
 
 /**

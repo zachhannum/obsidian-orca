@@ -1,21 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  entryKey,
-  foldable,
   folds,
   headingOn,
   levelsTo,
   markOf,
   outline,
   parentOf,
-  readFolds,
-  shutIn,
   unfolded,
   walk,
   type Cached,
 } from "@/ui/outline";
-import type { Row, Shelved } from "@/ui/shelf";
+import type { Row } from "@/ui/shelf";
 
 /** The cache Obsidian holds for the fixture's `Chapter Fifteen.md`. */
 const FIFTEEN: Cached[] = [
@@ -38,9 +34,25 @@ function entry(at: number, cached?: Cached[]): Row {
 test("an entry's headings are listed under it as a tree, and a folded entry marks only itself", () => {
   // The heading that repeats the entry's name is the entry's own row.
   assert.deepEqual(outline(FIFTEEN, "Chapter Fifteen"), [
-    { line: 13, words: "The Parsonage", depth: 0 },
-    { line: 22, words: "The Entail", depth: 1 },
-    { line: 31, words: "A Morning Call Longbourn, in the Spring", depth: 1 },
+    { line: 13, words: "The Parsonage", depth: 0, trail: [{ words: "The Parsonage", nth: 0 }] },
+    {
+      line: 22,
+      words: "The Entail",
+      depth: 1,
+      trail: [
+        { words: "The Parsonage", nth: 0 },
+        { words: "The Entail", nth: 0 },
+      ],
+    },
+    {
+      line: 31,
+      words: "A Morning Call Longbourn, in the Spring",
+      depth: 1,
+      trail: [
+        { words: "The Parsonage", nth: 0 },
+        { words: "A Morning Call Longbourn, in the Spring", nth: 0 },
+      ],
+    },
   ]);
   // A note that opens on other words keeps its first heading.
   assert.equal(outline(FIFTEEN, "Fifteen")[0]?.words, "Chapter Fifteen");
@@ -84,7 +96,7 @@ test("the row for the page the preview shows is marked, heading rows included", 
 
 test("an entry lists its headings down to the level the author picked", () => {
   assert.deepEqual(outline(levelsTo(FIFTEEN, 1), "Chapter Fifteen"), [
-    { line: 13, words: "The Parsonage", depth: 0 },
+    { line: 13, words: "The Parsonage", depth: 0, trail: [{ words: "The Parsonage", nth: 0 }] },
   ]);
   assert.equal(outline(levelsTo(FIFTEEN, 2), "Chapter Fifteen").length, 3);
   assert.equal(levelsTo(undefined, 1), undefined);
@@ -105,30 +117,18 @@ test("a heading with deeper headings under it folds them away, and marks the pag
   assert.equal(markOf(showing, "B.md", entry(3, FIFTEEN), false, new Set()), 22);
 });
 
-test("collapse all folds every entry that lists headings, in every book", () => {
-  const listed = { ...entry(3, FIFTEEN), path: "Chapter Fifteen.md" };
-  const bare = { ...entry(4), path: "Chapter Sixteen.md" };
-  const shelf = (path: string): Shelved => ({
-    path,
-    name: path,
-    groups: [{ heading: "Body", rows: [listed, bare] }],
-    folder: "",
-    holds: false,
-  });
-  assert.deepEqual(foldable([shelf("A.md"), shelf("B.md")]), [
-    entryKey("A.md", "Chapter Fifteen.md"),
-    entryKey("B.md", "Chapter Fifteen.md"),
-  ]);
-  // A fold in one book leaves the same note in another open.
-  assert.deepEqual([...shutIn(new Set([entryKey("A.md", "Chapter Fifteen.md") + "\n13"]), "B.md", listed)], []);
-  assert.deepEqual([...shutIn(new Set([entryKey("A.md", "Chapter Fifteen.md") + "\n13"]), "A.md", listed)], [13]);
-});
-
-test("the folds a navigator saved read back, and a state without them folds nothing", () => {
-  assert.deepEqual(readFolds({ folds: ["A.md", "A.md\nB.md"] }), ["A.md", "A.md\nB.md"]);
-  assert.deepEqual(readFolds({ folds: ["A.md", 3] }), ["A.md"]);
-  assert.deepEqual(readFolds({}), []);
-  assert.deepEqual(readFolds(undefined), []);
+test("a heading's trail is its words under the headings above it, and counts siblings of one name", () => {
+  const twice: Cached[] = [
+    { heading: "Part", level: 1, position: { start: { line: 0 } } },
+    { heading: "Notes", level: 2, position: { start: { line: 2 } } },
+    { heading: "Notes", level: 2, position: { start: { line: 4 } } },
+    { heading: "Other", level: 1, position: { start: { line: 6 } } },
+    { heading: "Notes", level: 2, position: { start: { line: 8 } } },
+  ];
+  assert.deepEqual(
+    outline(twice, "Chapter").map((heading) => heading.trail.map((step) => `${step.words}#${String(step.nth)}`).join(" > ")),
+    ["Part#0", "Part#0 > Notes#0", "Part#0 > Notes#1", "Other#0", "Other#0 > Notes#0"],
+  );
 });
 
 test("sections, entries and headings are one walk that stops at either end", () => {

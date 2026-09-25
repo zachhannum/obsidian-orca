@@ -671,9 +671,10 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 });
 
-test("the folds on the shelf are still folded after Obsidian reloads", async ({
+test("the folds on the shelf are still folded after Obsidian reloads, and after text moves them", async ({
   navigator,
   obsidian,
+  vault,
 }) => {
   await navigator.outlines(true);
   await navigator.reveal();
@@ -683,6 +684,12 @@ test("the folds on the shelf are still folded after Obsidian reloads", async ({
 
   await obsidian.reload();
   await navigator.reveal();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+
+  // Text written above the heading moves its line, and the fold stays on it.
+  const text = await vault.read(`${FIFTEEN}.md`);
+  await vault.modify(`${FIFTEEN}.md`, text.replace("# Chapter Fifteen\n", "# Chapter Fifteen\n\nA line.\n\nAnother.\n"));
+  await expect(navigator.heading(BOOK, "The Parsonage")).not.toHaveAttribute("data-line", "13");
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
 
   await navigator.button("Collapse all").click();

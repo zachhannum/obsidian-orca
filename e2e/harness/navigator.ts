@@ -113,7 +113,7 @@ export class Navigator {
     await this.levels(6);
     await this.obsidian.page.evaluate(async (type) => {
       for (const leaf of window.app.workspace.getLeavesOfType(type)) {
-        await leaf.view.setState({ folds: [] }, { history: false });
+        await leaf.view.setState({ folds: {} }, { history: false });
       }
     }, NAVIGATOR);
   }

@@ -112,7 +112,7 @@ test("the headings come from the cache the navigator is handed, and nothing is r
   // Every note the book reads is asked about by its path.
   assert.deepEqual(asked, rows.flatMap((row) => row.path ?? []));
   const fifteen = rows.find((row) => row.name === "Chapter Fifteen");
-  assert.deepEqual(fifteen?.headings, [{ line: 13, words: "The Parsonage", depth: 0 }]);
+  assert.deepEqual(fifteen?.headings, [{ line: 13, words: "The Parsonage", depth: 0, trail: [{ words: "The Parsonage", nth: 0 }] }]);
 
   // With no cache handed over, the rows list no headings at all.
   const bare = shelve(book, await shelving(undefined)).groups.flatMap((group) => group.rows);

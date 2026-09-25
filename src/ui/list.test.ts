@@ -189,7 +189,9 @@ test("a heading is never an item to drag, and an entry dropped keeps its heading
   const groups = shelf();
   const body = groups[1]?.rows[0];
   assert.ok(body !== undefined);
-  body.headings = [{ line: 13, words: "The Parsonage", depth: 0 }];
+  body.headings = [
+    { line: 13, words: "The Parsonage", depth: 0, trail: [{ words: "The Parsonage", nth: 0 }] },
+  ];
   const items = flatten(groups);
 
   // The list dnd-kit sorts holds sections and entries, nothing else.

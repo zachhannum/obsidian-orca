@@ -97,7 +97,9 @@ its editor around these files and returns a URL. The artboard list and
   heading folds the deeper headings under it. `Collapse all` in the
   navigator header folds every entry, and `Expand all` opens every
   entry and heading again. Obsidian keeps every fold with the
-  workspace, so a reload opens the shelf as the author left it. A setting
+  workspace, so a reload opens the shelf as the author left it. A
+  heading's fold follows its words under the headings above it, so
+  text written elsewhere in the note keeps it. A setting
   lists them, and it is off until the author turns it on. A second setting sets the deepest heading
   level the navigator lists, and a heading below it has no row. A heading row turns a preview of the book to
   the page the heading opens on, and a Mod click opens the note at its

@@ -34,7 +34,8 @@ import type { Edits } from "@/ui/edits";
 import { createChapter, emptyBook } from "@/ui/make";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
-import { headingsOf, readFolds, type Headed, type Showing } from "@/ui/outline";
+import { readFolds, type Folds } from "@/ui/folds";
+import { headingsOf, type Headed, type Showing } from "@/ui/outline";
 import { members, shelve, type Row, type Shelved } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
@@ -74,7 +75,7 @@ export class NavigatorView extends ItemView {
   private focused: string | undefined;
   private mounted: Mounted | undefined;
   /** The folds on the shelf, which Obsidian keeps with the workspace and gives back on a reload. */
-  private folds: readonly string[] = [];
+  private folds: Folds = {};
   private queued: number | undefined;
   private generation = 0;
   private painting = 0;
@@ -102,7 +103,7 @@ export class NavigatorView extends ItemView {
   }
 
   override getState(): Record<string, unknown> {
-    return { ...super.getState(), folds: [...this.folds] };
+    return { ...super.getState(), folds: this.folds };
   }
 
   override async setState(state: unknown, result: ViewStateResult): Promise<void> {
@@ -153,8 +154,8 @@ export class NavigatorView extends ItemView {
       open: (path) => {
         void this.openNote(path);
       },
-      folded: (shut) => {
-        this.folds = shut;
+      folded: (folds) => {
+        this.folds = folds;
         this.app.workspace.requestSaveLayout();
       },
       preview: (book) => {

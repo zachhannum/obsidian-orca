@@ -55,15 +55,23 @@ import {
   rowId,
   type Item,
 } from "@/ui/list";
+import {
+  allCollapsed,
+  bookCollapsed,
+  collapseAll,
+  collapsedLines,
+  entryCollapsed,
+  expandAll,
+  foldable,
+  withBook,
+  withNote,
+  type Folds,
+} from "@/ui/folds";
 import { Icon, PREVIEW_ICON } from "@/ui/icon";
 import {
-  entryKey,
-  foldable,
-  folds,
-  headingKey,
+  folds as holds,
   markOf,
   parentOf,
-  shutIn,
   unfolded,
   walk,
   type Headed,
@@ -75,7 +83,7 @@ import type { Row, Shelved } from "@/ui/shelf";
 export interface Acting {
   open(path: string): void;
   /** Told every fold on the shelf after the author folds or opens one, so the view can keep them. */
-  folded(shut: readonly string[]): void;
+  folded(folds: Folds): void;
   preview(book: Shelved): void;
   /** A click on an entry that has a note or generates its own. The view reads the Mod key off the event. */
   openEntry(book: Shelved, row: Row, event: Pointed): void;
@@ -116,13 +124,9 @@ export interface Shelves {
   located: () => void;
   /** The page a preview shows, whose row is marked. */
   showing: Showing | undefined;
-  /**
-   * The books, entries and headings folded on the shelf: a book by its
-   * path, an entry by its book and note path, and a heading by its
-   * line as well. A reorder keeps all three.
-   */
-  shut: ReadonlySet<string>;
-  setShut: (shut: ReadonlySet<string>) => void;
+  /** The books, entries and headings folded on the shelf, which a reorder keeps. */
+  folds: Folds;
+  setFolds: (folds: Folds) => void;
 }
 
 /** An entry asked for by its book and its place in the reading order. */
@@ -145,7 +149,7 @@ export interface Mounted {
   /** Marks the row for the page a preview shows. */
   show(showing: Showing | undefined): void;
   /** Puts back the folds the view kept, without telling the view again. */
-  fold(shut: readonly string[]): void;
+  fold(folds: Folds): void;
   unmount(): void;
 }
 
@@ -162,7 +166,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
   let renaming: Renaming | undefined;
   let wanted: Wanted | undefined;
   let showing: Showing | undefined;
-  let shut: ReadonlySet<string> = new Set();
+  let folds: Folds = {};
 
   const draw = (): void => {
     root.render(
@@ -181,11 +185,11 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
           draw();
         }}
         showing={showing}
-        shut={shut}
-        setShut={(next) => {
-          shut = next;
+        folds={folds}
+        setFolds={(next) => {
+          folds = next;
           draw();
-          acting.folded([...next]);
+          acting.folded(next);
         }}
       />,
     );
@@ -212,7 +216,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
       draw();
     },
     fold(kept) {
-      shut = new Set(kept);
+      folds = kept;
       draw();
     },
     unmount() {
@@ -351,12 +355,11 @@ export function Shelf({
   wanted,
   located,
   showing,
-  shut,
-  setShut,
+  folds,
+  setFolds,
 }: Shelves): JSX.Element {
   const pane = useRef<HTMLDivElement>(null);
-  const entries = foldable(shelf);
-  const open = entries.some((key) => !shut.has(key));
+  const open = !allCollapsed(folds, shelf);
   // The suite waits on the generation the pane has painted, so it is
   // written after the commit and never during one.
   useEffect(() => {
@@ -379,14 +382,12 @@ export function Shelf({
     <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
       <div className="orca-nav-header">
         <span className="orca-nav-title">Books</span>
-        {entries.length === 0 ? null : (
+        {!foldable(shelf) ? null : (
           <Action
             icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
             label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
             onClick={() => {
-              // A book's own fold is not an entry's, so both keep it.
-              const books = [...shut].filter((key) => !key.includes("\n"));
-              setShut(new Set(open ? [...books, ...entries] : books));
+              setFolds(open ? collapseAll(folds, shelf) : expandAll(folds));
             }}
           />
         )}
@@ -412,8 +413,8 @@ export function Shelf({
               wanted={wanted?.book === book.path ? wanted.at : undefined}
               located={located}
               showing={showing}
-              shut={shut}
-              setShut={setShut}
+              folds={folds}
+              setFolds={setFolds}
             />
           ))
         )}
@@ -430,8 +431,8 @@ function Book({
   wanted,
   located,
   showing,
-  shut,
-  setShut,
+  folds,
+  setFolds,
 }: {
   book: Shelved;
   acting: Acting;
@@ -441,16 +442,13 @@ function Book({
   wanted: number | undefined;
   located: () => void;
   showing: Showing | undefined;
-  /** The entries and headings folded on the whole shelf. */
-  shut: ReadonlySet<string>;
-  setShut: (shut: ReadonlySet<string>) => void;
+  /** The books, entries and headings folded on the whole shelf. */
+  folds: Folds;
+  setFolds: (folds: Folds) => void;
 }): JSX.Element {
-  const folded = shut.has(book.path);
+  const folded = bookCollapsed(folds, book.path);
   const setFolded = (fold: boolean): void => {
-    const next = new Set(shut);
-    if (fold) next.add(book.path);
-    else next.delete(book.path);
-    setShut(next);
+    setFolds(withBook(folds, book.path, fold));
   };
   const shelf = useRef<HTMLDivElement>(null);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
@@ -648,19 +646,15 @@ function Book({
                     row={item.row}
                     after={next(where[at], item.heading)}
                     acting={acting}
-                    folded={shut.has(entryKey(book.path, item.row.path ?? ""))}
-                    shutLines={shutIn(shut, book.path, item.row)}
-                    fold={(fold, line) => {
+                    folded={
+                      item.row.path !== undefined &&
+                      entryCollapsed(folds, book.path, item.row.path)
+                    }
+                    shutLines={collapsedLines(folds, book.path, item.row)}
+                    fold={(fold, heading) => {
                       const path = item.row.path;
                       if (path === undefined) return;
-                      const key =
-                        line === undefined
-                          ? entryKey(book.path, path)
-                          : headingKey(book.path, path, line);
-                      const next = new Set(shut);
-                      if (fold) next.add(key);
-                      else next.delete(key);
-                      setShut(next);
+                      setFolds(withNote(folds, book.path, path, fold, heading));
                     }}
                     showing={showing}
                   />
@@ -813,8 +807,8 @@ function Entry({
   folded: boolean;
   /** The lines of the headings the author folded inside this entry. */
   shutLines: ReadonlySet<number>;
-  /** Folds or opens the entry, or the heading on `line` when one is named. */
-  fold: (fold: boolean, line?: number) => void;
+  /** Folds or opens the entry, or the heading inside it when one is named. */
+  fold: (fold: boolean, heading?: Headed) => void;
   showing: Showing | undefined;
 }): JSX.Element {
   const sortable = useSortable({
@@ -849,10 +843,11 @@ function Entry({
         const line = Number(event.target.dataset["line"]);
         const index = headings.findIndex((heading) => heading.line === line);
         if (index === -1) return;
-        const opens = folds(headings, index);
+        const heading = headings[index];
+        const opens = holds(headings, index);
         const shut = shutLines.has(line);
-        if (event.key === "ArrowRight" && opens && shut) fold(false, line);
-        else if (event.key === "ArrowLeft" && opens && !shut) fold(true, line);
+        if (event.key === "ArrowRight" && opens && shut) fold(false, heading);
+        else if (event.key === "ArrowLeft" && opens && !shut) fold(true, heading);
         else if (event.key === "ArrowLeft") {
           const parent = parentOf(headings, index);
           const selector =
@@ -955,14 +950,14 @@ function Entry({
               }}
             >
               <span className="orca-entry-mark">
-                {folds(headings, headings.indexOf(heading)) ? (
+                {holds(headings, headings.indexOf(heading)) ? (
                   <span
                     className="orca-fold"
                     data-testid="orca-outline-fold"
                     aria-expanded={!shutLines.has(heading.line)}
                     onClick={(event) => {
                       event.stopPropagation();
-                      fold(!shutLines.has(heading.line), heading.line);
+                      fold(!shutLines.has(heading.line), heading);
                     }}
                   >
                     <Icon
