@@ -317,7 +317,7 @@ test("a generated rule names the control that wrote it", () => {
 
 test("a row the author's CSS overrides is named by the line that overrides it", () => {
   const margins = ["margin-inside", "margin-outside", "margin-top", "margin-bottom"];
-  const at = { sheet: "book.css", column: 3, declared: "margin", value: "1in" };
+  const at = { sheet: "book.css", column: 3, declared: "margin", value: "1in", important: false };
   const top = { ...at, line: 7, property: "margin-top" };
   const bottom = { ...at, line: 4, property: "margin-bottom" };
   // The first key in row order names the row, whatever line it is on.
