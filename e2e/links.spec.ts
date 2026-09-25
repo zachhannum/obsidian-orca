@@ -196,44 +196,25 @@ test("with inspect mode on, a click on a link pins its box and turns no page", a
   await inspect.off();
 });
 
-test("copy over a link returns the words of the lines the drag covered", async ({
-  book,
-  obsidian,
-}) => {
+test("copy over a link returns the words of the lines the drag covered", async ({ book }) => {
   await book.open();
   await book.painted();
   await book.choose(THANKS);
   await expect(book.chapterName).toHaveText(THANKS);
 
-  const copied = await obsidian.page.evaluate(() => {
-    const surface = document.querySelector("[data-testid='orca-sheets']");
-    const lines = [...(surface?.querySelectorAll("text[data-selection-line]") ?? [])];
-    const first = lines[0]?.firstChild;
-    const last = lines.at(-1);
-    if (!first || !last?.firstChild) return null;
-    const range = document.createRange();
-    range.setStart(first, 0);
-    range.setEnd(last.firstChild, (last.textContent ?? "").length);
-    const selection = document.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-    const event = new ClipboardEvent("copy", {
-      bubbles: true,
-      clipboardData: new DataTransfer(),
-    });
-    surface?.dispatchEvent(event);
-    const text = event.clipboardData?.getData("text/plain") ?? null;
-    selection?.removeAllRanges();
-    return { text, set: lines.map((line) => line.textContent).join("\n") };
-  });
+  const lines = book.seat(0).locator("text[data-selection-line]");
+  const set = await lines.allTextContents();
+  await book.drag(lines.first(), lines.last());
 
   // The link marks sit over the selection layer and take no pointer,
   // so what a drag over a link copies is the layer's own words.
-  expect(copied?.text).toBe(copied?.set);
-  expect(copied?.text).toContain("first edition");
+  const selected = await book.selected();
+  expect(selected.onLines).toBe(true);
+  expect(selected.copied).toBe(set.join("\n"));
+  expect(selected.copied).toContain("first edition");
 });
 
 // What this suite does not cover: the url reaching the system's
 // browser, since the spec catches the call that hands it over. A drag
-// that ends on a link, which follows nothing because the selection it
-// made is not empty, is not driven with a real mouse.
+// that ends on a link follows nothing, because the selection it made
+// is not empty, and no spec waits to see that no turn came.
