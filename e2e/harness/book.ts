@@ -343,6 +343,60 @@ export class Book {
     return lines.join(" ");
   }
 
+  /** The painter's selection layer on every sheet, in reading order. */
+  lines(): Locator {
+    return this.surface.locator("text[data-selection-line]");
+  }
+
+  /**
+   * Drags the mouse from the start of one set line to the end of
+   * another, with real pointer events, the way a reader selects.
+   */
+  async drag(from: Locator, to: Locator): Promise<void> {
+    const start = await from.boundingBox();
+    const end = await to.boundingBox();
+    if (start === null || end === null) throw new Error("a line is not on screen");
+    // The layer is set in the book's own faces, and a face that loads
+    // after the paint moves the characters under the pointer.
+    await this.obsidian.page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+    const mouse = this.obsidian.page.mouse;
+    await mouse.move(start.x + 1, start.y + start.height / 2);
+    await mouse.down();
+    await mouse.move(end.x + end.width - 0.25, end.y + end.height / 2, { steps: 12 });
+    await mouse.up();
+  }
+
+  /**
+   * The window's selection after a drag: its text, whether
+   * both ends landed on the selection layer, and what a copy off the
+   * pages puts on the clipboard. The copy is dispatched rather than
+   * typed, since the clipboard itself is the operating system's.
+   */
+  async selected(): Promise<{ text: string; onLines: boolean; copied: string }> {
+    return this.obsidian.page.evaluate(() => {
+      const selection = document.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : undefined;
+      const onLine = (node: Node | undefined): boolean =>
+        (node instanceof Element ? node : node?.parentElement)?.closest(
+          "text[data-selection-line]",
+        ) != null;
+      const event = new ClipboardEvent("copy", {
+        bubbles: true,
+        clipboardData: new DataTransfer(),
+      });
+      document.querySelector("[data-testid='orca-sheets']")?.dispatchEvent(event);
+      const result = {
+        text: selection?.toString() ?? "",
+        onLines: onLine(range?.startContainer) && onLine(range?.endContainer),
+        copied: event.clipboardData?.getData("text/plain") ?? "",
+      };
+      selection?.removeAllRanges();
+      return result;
+    });
+  }
+
   /** The pages the view says it is showing. */
   async showing(): Promise<number> {
     return Number(await this.surface.getAttribute("data-count"));

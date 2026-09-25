@@ -294,42 +294,52 @@ test("the grid shows a screenful, and asks for exactly the pages it paints", asy
   );
 });
 
-test("copy off a page returns the text in reading order", async ({
+test("a drag across a page selects the set lines, and copy returns them in reading order", async ({
   book,
-  obsidian,
 }) => {
   await book.open();
   await book.painted();
 
-  const copied = await obsidian.page.evaluate(() => {
-    const surface = document.querySelector("[data-testid='orca-sheets']");
-    const lines = [
-      ...(surface?.querySelectorAll("text[data-selection-line]") ?? []),
-    ].slice(0, 3);
-    const first = lines[0]?.firstChild;
-    const last = lines.at(-1);
-    if (!first || !last?.firstChild) return null;
-    const range = document.createRange();
-    range.setStart(first, 0);
-    range.setEnd(last.firstChild, (last.textContent ?? "").length);
-    const selection = document.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-    const event = new ClipboardEvent("copy", {
-      bubbles: true,
-      clipboardData: new DataTransfer(),
-    });
-    surface?.dispatchEvent(event);
-    const text = event.clipboardData?.getData("text/plain") ?? null;
-    selection?.removeAllRanges();
-    return { text, set: lines.map((line) => line.textContent).join("\n") };
-  });
+  const lines = book.seat(0).locator("text[data-selection-line]");
+  const set = (await lines.allTextContents()).slice(0, 3);
+  await book.drag(lines.nth(0), lines.nth(2));
 
   // A page is paths, so what comes back is the painter's own layer:
   // the lines the drag covered, in the order they are set.
-  expect(copied?.text).toBe(copied?.set);
-  expect(copied?.text).toContain(OPENING);
+  const selected = await book.selected();
+  expect(selected.onLines).toBe(true);
+  expect(selected.text).toContain(OPENING);
+  expect(selected.copied).toBe(set.join("\n"));
 });
+
+for (const [label, mode] of [
+  ["Spread", "spread"],
+  ["Grid", "grid"],
+] as const) {
+  test(`a drag across the ${mode} selects over every sheet it covers, in reading order`, async ({
+    book,
+    obsidian,
+  }) => {
+    await book.open();
+    await book.painted();
+    await book.show(label, mode);
+    // A spread inside a chapter, so both of its pages set words.
+    if (mode === "spread") await book.turnTo(CHAPTER + 1);
+    await book.painted();
+    const worded = book.sheets.filter({
+      has: obsidian.page.locator("text[data-selection-line]"),
+    });
+    expect(await worded.count()).toBeGreaterThan(1);
+
+    const lines = book.lines();
+    const set = await lines.allTextContents();
+    await book.drag(lines.first(), lines.last());
+
+    const selected = await book.selected();
+    expect(selected.onLines).toBe(true);
+    expect(selected.copied).toBe(set.join("\n"));
+  });
+}
 
 test("a screen reader reads a page: it is named, and the glyphs stay out of the tree", async ({
   book,
