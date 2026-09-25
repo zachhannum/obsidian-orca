@@ -20,9 +20,9 @@ test("the ceiling is a setting, saved and read back in whole sessions", () => {
   assert.equal(sessionCount(Number.NaN), CEILING);
 });
 
-test("the navigator lists headings until the setting is turned off", () => {
-  assert.equal(LIMITS.headings, true);
-  assert.deepEqual(readLimits({ headings: false }), { ...LIMITS, headings: false });
+test("the navigator lists no headings until the setting is turned on", () => {
+  assert.equal(LIMITS.headings, false);
+  assert.deepEqual(readLimits({ headings: true }), { ...LIMITS, headings: true });
   assert.deepEqual(readLimits({ headings: "no" }), LIMITS);
 });
 

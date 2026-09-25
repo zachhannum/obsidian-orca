@@ -102,6 +102,12 @@ export class Navigator {
     );
   }
 
+  /** Puts the heading settings back to their defaults, which list no headings. */
+  async reset(): Promise<void> {
+    await this.outlines(false);
+    await this.levels(6);
+  }
+
   /** Sets the deepest heading level the navigator lists. */
   async levels(deepest: number): Promise<void> {
     await this.obsidian.page.evaluate(

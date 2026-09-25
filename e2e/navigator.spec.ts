@@ -604,6 +604,7 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   navigator,
   vault,
 }) => {
+  await navigator.outlines(true);
   vault.touch(`${CHAPTER}.md`);
   await navigator.reveal();
   // The note's own title is the entry's row, so the tree starts under it.
@@ -640,6 +641,7 @@ test("the heading rows are the lines of Obsidian's own cache", async ({
   navigator,
   obsidian,
 }) => {
+  await navigator.outlines(true);
   await navigator.reveal();
   const cached = await obsidian.page.evaluate(
     (path) =>
@@ -660,6 +662,7 @@ test("a heading row never drags, and an entry drags with its headings", async ({
   navigator,
   vault,
 }) => {
+  await navigator.outlines(true);
   vault.touch(BOOK);
   await navigator.reveal();
   const before = await vault.read(BOOK);
@@ -691,6 +694,7 @@ test("a heading click turns the preview to its page and marks its row, and a Mod
   obsidian,
   vault,
 }) => {
+  await navigator.outlines(true);
   // The chapter breaks the page before this heading.
   const text = await vault.read(`${FIFTEEN}.md`);
   await vault.modify(`${FIFTEEN}.md`, text.replace("## The Entail", "\\pagebreak\n\n## The Entail"));
@@ -737,6 +741,7 @@ test("a heading renamed in its note reads its new words in the navigator", async
   navigator,
   vault,
 }) => {
+  await navigator.outlines(true);
   vault.touch(`${FIFTEEN}.md`);
   await navigator.reveal();
   await expect(navigator.heading(BOOK, "The Entail")).toBeVisible();
@@ -752,6 +757,7 @@ test("the arrow keys walk sections, entries and headings as one list", async ({
   navigator,
   obsidian,
 }) => {
+  await navigator.outlines(true);
   await navigator.reveal();
   await navigator.entry(BOOK, "Chapter Four").focus();
   await expect.poll(async () => navigator.focused()).toMatch(/^orca-entry:Chapter Four/);

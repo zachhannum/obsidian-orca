@@ -32,7 +32,7 @@ export const LIMITS: Limits = {
   sessions: CEILING,
   unit: "in",
   view: "single",
-  headings: true,
+  headings: false,
   deepest: DEEPEST_LEVEL,
 };
 

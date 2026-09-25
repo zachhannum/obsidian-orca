@@ -93,8 +93,8 @@ its editor around these files and returns a URL. The artboard list and
 - The navigator lists the headings inside each entry's note under the
   entry, read from Obsidian's cache. A note that opens on a heading
   with the entry's name leaves it out, because the entry's row says
-  it. The author folds the headings of one entry at a time, and a
-  setting hides them all. A second setting sets the deepest heading
+  it. The author folds the headings of one entry at a time. A setting
+  lists them, and it is off until the author turns it on. A second setting sets the deepest heading
   level the navigator lists, and a heading below it has no row. A heading row turns a preview of the book to
   the page the heading opens on, and a Mod click opens the note at its
   line. A heading row never drags. The row for the page the preview
