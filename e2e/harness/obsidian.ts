@@ -187,6 +187,18 @@ export class Obsidian {
       undefined,
       { timeout: APPEARING },
     );
+    // A reload restores the panes the workspace last saved, which are
+    // the panes of the spec that failed. The spec that runs next opens
+    // its own.
+    if (fresh) {
+      await page.evaluate(() => {
+        const leaves: WorkspaceLeaf[] = [];
+        window.app.workspace.iterateRootLeaves((leaf) => {
+          leaves.push(leaf);
+        });
+        for (const leaf of leaves) leaf.detach();
+      });
+    }
     // A native menu is the platform's own window: CDP can neither read
     // it nor click it, and it holds the renderer until someone answers
     // it. The run asks Obsidian for its own menus instead.
