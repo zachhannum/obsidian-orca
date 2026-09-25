@@ -17,7 +17,9 @@ test("a burst of keystrokes is one render, and the pages last painted stay until
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await book.split();
-  const painted = await book.painted();
+  // A render the open or an earlier spec queued would count against
+  // the keystroke, so the count is read once the book is quiet.
+  const painted = await book.settled(BOOK);
   const opens = await book.reading();
   await manuscript.place({ line: 2, ch: 0 });
 
@@ -48,7 +50,9 @@ test("the note written after the keystrokes that made it renders nothing a secon
   vault.touch(CHAPTER);
   await manuscript.open(CHAPTER);
   await book.split();
-  const painted = await book.painted();
+  // A render the open or an earlier spec queued would count against
+  // the keystroke, so the count is read once the book is quiet.
+  const painted = await book.settled(BOOK);
   await manuscript.place({ line: 2, ch: 0 });
 
   await manuscript.type(TYPED);
