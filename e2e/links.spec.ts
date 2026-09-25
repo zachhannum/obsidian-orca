@@ -177,6 +177,7 @@ test("a click on a link to a website opens its url outside Obsidian and turns no
 test("with inspect mode on, a click on a link pins its box and turns no page", async ({
   book,
   inspect,
+  panel,
 }) => {
   await book.open();
   await book.painted();
@@ -189,6 +190,9 @@ test("with inspect mode on, a click on a link pins its box and turns no page", a
   await inspect.pinAt(label);
 
   await expect(book.surface).toHaveAttribute("data-first", String(contents));
+  // The pin opens the design panel on the rule for the box, and the
+  // panel's own fixture closes it after the spec.
+  await expect(panel.editor).toBeVisible();
   await inspect.off();
 });
 
