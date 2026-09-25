@@ -639,6 +639,15 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
   await navigator.headingFold(BOOK, "The Parsonage").click();
 
+  // Collapse all folds every entry, and Expand all opens every entry and heading.
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+  await navigator.button("Collapse all").click();
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await navigator.button("Expand all").click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+  await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
+  await expect(navigator.button("Collapse all")).toBeVisible();
+
   // Words the row cuts short name themselves under the pointer.
   const long = "An Evening at Netherfield, where the whole of the party danced until the candles were low";
   await vault.modify(`${CHAPTER}.md`, `${text}\n## ${long}\n\nThe end.\n`);
@@ -650,6 +659,7 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   // The setting takes every heading row away, and gives them back.
   await navigator.outlines(false);
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await expect(navigator.button("Collapse all")).toHaveCount(0);
   await navigator.outlines(true);
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 

@@ -57,9 +57,13 @@ import {
 } from "@/ui/list";
 import { Icon, PREVIEW_ICON } from "@/ui/icon";
 import {
+  entryKey,
+  foldable,
   folds,
+  headingKey,
   markOf,
   parentOf,
+  shutIn,
   unfolded,
   walk,
   type Headed,
@@ -327,6 +331,13 @@ export function Shelf({
   showing,
 }: Shelves): JSX.Element {
   const pane = useRef<HTMLDivElement>(null);
+  /**
+   * The entries whose headings are folded, and the headings folded
+   * inside them, by book, note path and line. A reorder keeps both.
+   */
+  const [shut, setShut] = useState<ReadonlySet<string>>(new Set());
+  const entries = foldable(shelf);
+  const open = entries.some((key) => !shut.has(key));
   // The suite waits on the generation the pane has painted, so it is
   // written after the commit and never during one.
   useEffect(() => {
@@ -349,6 +360,15 @@ export function Shelf({
     <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
       <div className="orca-nav-header">
         <span className="orca-nav-title">Books</span>
+        {entries.length === 0 ? null : (
+          <Action
+            icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
+            label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
+            onClick={() => {
+              setShut(open ? new Set(entries) : new Set());
+            }}
+          />
+        )}
         <Action
           icon={ACTIONS.newBook.icon}
           label={ACTIONS.newBook.label}
@@ -371,6 +391,8 @@ export function Shelf({
               wanted={wanted?.book === book.path ? wanted.at : undefined}
               located={located}
               showing={showing}
+              shut={shut}
+              setShut={setShut}
             />
           ))
         )}
@@ -387,6 +409,8 @@ function Book({
   wanted,
   located,
   showing,
+  shut,
+  setShut,
 }: {
   book: Shelved;
   acting: Acting;
@@ -396,14 +420,11 @@ function Book({
   wanted: number | undefined;
   located: () => void;
   showing: Showing | undefined;
+  /** The entries and headings folded on the whole shelf. */
+  shut: ReadonlySet<string>;
+  setShut: (shut: ReadonlySet<string>) => void;
 }): JSX.Element {
   const [folded, setFolded] = useState(false);
-  /**
-   * The entries whose headings are folded, by note path, and the
-   * headings folded inside them, by note path and line. A reorder
-   * keeps both.
-   */
-  const [shut, setShut] = useState<ReadonlySet<string>>(new Set());
   const shelf = useRef<HTMLDivElement>(null);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
   /** The section a drag is carrying, whose entries move with it. */
@@ -600,12 +621,15 @@ function Book({
                     row={item.row}
                     after={next(where[at], item.heading)}
                     acting={acting}
-                    folded={shut.has(item.row.path ?? "")}
-                    shutLines={shutIn(shut, item.row)}
+                    folded={shut.has(entryKey(book.path, item.row.path ?? ""))}
+                    shutLines={shutIn(shut, book.path, item.row)}
                     fold={(fold, line) => {
                       const path = item.row.path;
                       if (path === undefined) return;
-                      const key = line === undefined ? path : headingKey(path, line);
+                      const key =
+                        line === undefined
+                          ? entryKey(book.path, path)
+                          : headingKey(book.path, path, line);
                       const next = new Set(shut);
                       if (fold) next.add(key);
                       else next.delete(key);
@@ -736,22 +760,6 @@ function Rename({
         if (event.key === "Escape") once("");
       }}
     />
-  );
-}
-
-/** The fold key of the heading on `line` of the note at `path`. A path holds no newline. */
-function headingKey(path: string, line: number): string {
-  return `${path}\n${String(line)}`;
-}
-
-/** The lines of the headings folded inside the entry `row`. */
-function shutIn(shut: ReadonlySet<string>, row: Row): ReadonlySet<number> {
-  const { path } = row;
-  if (path === undefined) return new Set();
-  return new Set(
-    (row.headings ?? [])
-      .map((heading) => heading.line)
-      .filter((line) => shut.has(headingKey(path, line))),
   );
 }
 

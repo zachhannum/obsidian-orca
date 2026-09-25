@@ -1,17 +1,20 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  entryKey,
+  foldable,
   folds,
   headingOn,
   levelsTo,
   markOf,
   outline,
   parentOf,
+  shutIn,
   unfolded,
   walk,
   type Cached,
 } from "@/ui/outline";
-import type { Row } from "@/ui/shelf";
+import type { Row, Shelved } from "@/ui/shelf";
 
 /** The cache Obsidian holds for the fixture's `Chapter Fifteen.md`. */
 const FIFTEEN: Cached[] = [
@@ -99,6 +102,25 @@ test("a heading with deeper headings under it folds them away, and marks the pag
   const showing = { book: "B.md", at: 3, line: 22 };
   assert.equal(markOf(showing, "B.md", entry(3, FIFTEEN), false, new Set([13])), 13);
   assert.equal(markOf(showing, "B.md", entry(3, FIFTEEN), false, new Set()), 22);
+});
+
+test("collapse all folds every entry that lists headings, in every book", () => {
+  const listed = { ...entry(3, FIFTEEN), path: "Chapter Fifteen.md" };
+  const bare = { ...entry(4), path: "Chapter Sixteen.md" };
+  const shelf = (path: string): Shelved => ({
+    path,
+    name: path,
+    groups: [{ heading: "Body", rows: [listed, bare] }],
+    folder: "",
+    holds: false,
+  });
+  assert.deepEqual(foldable([shelf("A.md"), shelf("B.md")]), [
+    entryKey("A.md", "Chapter Fifteen.md"),
+    entryKey("B.md", "Chapter Fifteen.md"),
+  ]);
+  // A fold in one book leaves the same note in another open.
+  assert.deepEqual([...shutIn(new Set([entryKey("A.md", "Chapter Fifteen.md") + "\n13"]), "B.md", listed)], []);
+  assert.deepEqual([...shutIn(new Set([entryKey("A.md", "Chapter Fifteen.md") + "\n13"]), "A.md", listed)], [13]);
 });
 
 test("sections, entries and headings are one walk that stops at either end", () => {

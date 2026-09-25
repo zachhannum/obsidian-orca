@@ -10,7 +10,7 @@
 
 import type { App } from "obsidian";
 import { headingWords } from "@/book/marks";
-import type { Row } from "@/ui/shelf";
+import type { Row, Shelved } from "@/ui/shelf";
 
 /** A heading as Obsidian's metadata cache holds it. */
 export interface Cached {
@@ -161,6 +161,43 @@ export function markOf(
     index = headings.findIndex((heading) => heading.line === at);
   }
   return "entry";
+}
+
+/**
+ * The fold key of an entry's note in a book. A path holds no newline,
+ * so no two keys meet.
+ */
+export function entryKey(book: string, path: string): string {
+  return `${book}\n${path}`;
+}
+
+/** The fold key of the heading on `line` of a note in a book. */
+export function headingKey(book: string, path: string, line: number): string {
+  return `${entryKey(book, path)}\n${String(line)}`;
+}
+
+/** The lines of the headings folded inside the entry `row` of `book`. */
+export function shutIn(shut: ReadonlySet<string>, book: string, row: Row): ReadonlySet<number> {
+  const { path } = row;
+  if (path === undefined) return new Set();
+  return new Set(
+    (row.headings ?? [])
+      .map((heading) => heading.line)
+      .filter((line) => shut.has(headingKey(book, path, line))),
+  );
+}
+
+/** The keys of every entry on the shelf that lists headings, which `Collapse all` folds. */
+export function foldable(shelf: readonly Shelved[]): string[] {
+  return shelf.flatMap((book) =>
+    book.groups.flatMap((group) =>
+      group.rows.flatMap((row) =>
+        row.path !== undefined && (row.headings ?? []).length > 0
+          ? [entryKey(book.path, row.path)]
+          : [],
+      ),
+    ),
+  );
 }
 
 /**
