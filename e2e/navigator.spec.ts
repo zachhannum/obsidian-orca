@@ -600,8 +600,9 @@ test("a chapter whose properties hold an indented fence turns", async ({
 /** The fixture chapter with headings under its title. */
 const FIFTEEN = "Chapter Fifteen";
 
-test("an entry lists the headings inside its note as a tree, down to a level, and folds them away on its own", async ({
+test("an entry lists the headings inside its note as a tree, down to a level, and folds each level on its own", async ({
   navigator,
+  obsidian,
   vault,
 }) => {
   await navigator.outlines(true);
@@ -622,6 +623,21 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
   await navigator.fold(BOOK, FIFTEEN).click();
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // A heading folds the headings under it, and the keys fold it the same way.
+  await expect(navigator.headingFold(BOOK, "The Entail")).toHaveCount(0);
+  await navigator.headingFold(BOOK, "The Parsonage").click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await expect(navigator.headingFold(BOOK, "The Parsonage")).toHaveAttribute("aria-expanded", "false");
+  await navigator.heading(BOOK, "The Parsonage").focus();
+  await obsidian.page.keyboard.press("ArrowRight");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+  await navigator.heading(BOOK, "The Entail").focus();
+  await obsidian.page.keyboard.press("ArrowLeft");
+  expect(await navigator.focused()).toBe("orca-outline:The Parsonage");
+  await obsidian.page.keyboard.press("ArrowLeft");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await navigator.headingFold(BOOK, "The Parsonage").click();
 
   // The setting takes every heading row away, and gives them back.
   await navigator.outlines(false);

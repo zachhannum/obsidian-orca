@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { headingOn, levelsTo, markOf, outline, walk, type Cached } from "@/ui/outline";
+import {
+  folds,
+  headingOn,
+  levelsTo,
+  markOf,
+  outline,
+  parentOf,
+  unfolded,
+  walk,
+  type Cached,
+} from "@/ui/outline";
 import type { Row } from "@/ui/shelf";
 
 /** The cache Obsidian holds for the fixture's `Chapter Fifteen.md`. */
@@ -74,6 +84,21 @@ test("an entry lists its headings down to the level the author picked", () => {
   ]);
   assert.equal(outline(levelsTo(FIFTEEN, 2), "Chapter Fifteen").length, 3);
   assert.equal(levelsTo(undefined, 1), undefined);
+});
+
+test("a heading with deeper headings under it folds them away, and marks the page they hold", () => {
+  const headings = outline(FIFTEEN, "Chapter Fifteen");
+  // The Parsonage holds the two below it, and they hold nothing.
+  assert.deepEqual(headings.map((_, index) => folds(headings, index)), [true, false, false]);
+  assert.deepEqual(headings.map((_, index) => parentOf(headings, index)), [undefined, 13, 13]);
+
+  assert.deepEqual(unfolded(headings, new Set([13])).map((heading) => heading.line), [13]);
+  // A fold on a heading with nothing under it leaves every row drawn.
+  assert.equal(unfolded(headings, new Set([22])).length, 3);
+
+  const showing = { book: "B.md", at: 3, line: 22 };
+  assert.equal(markOf(showing, "B.md", entry(3, FIFTEEN), false, new Set([13])), 13);
+  assert.equal(markOf(showing, "B.md", entry(3, FIFTEEN), false, new Set()), 22);
 });
 
 test("sections, entries and headings are one walk that stops at either end", () => {

@@ -100,24 +100,67 @@ export function headingOn(
   return under;
 }
 
+/** Whether the heading at `index` has deeper headings under it, which it folds. */
+export function folds(headings: readonly Headed[], index: number): boolean {
+  const heading = headings[index];
+  const after = headings[index + 1];
+  return heading !== undefined && after !== undefined && after.depth > heading.depth;
+}
+
+/** The line of the heading that the heading at `index` sits under, if one does. */
+export function parentOf(headings: readonly Headed[], index: number): number | undefined {
+  const depth = headings[index]?.depth;
+  if (depth === undefined) return undefined;
+  for (let at = index - 1; at >= 0; at--) {
+    const heading = headings[at];
+    if (heading !== undefined && heading.depth < depth) return heading.line;
+  }
+  return undefined;
+}
+
+/**
+ * The headings drawn while the ones on the lines in `shut` are folded.
+ * A folded heading keeps its row, and every heading under it has none.
+ */
+export function unfolded(headings: readonly Headed[], shut: ReadonlySet<number>): Headed[] {
+  const drawn: Headed[] = [];
+  let under: number | undefined;
+  for (const heading of headings) {
+    if (under !== undefined && heading.depth > under) continue;
+    under = shut.has(heading.line) ? heading.depth : undefined;
+    drawn.push(heading);
+  }
+  return drawn;
+}
+
 /**
  * The row a preview's page marks, for the entry `row` of `book`: the
  * entry itself, the line of one of its headings, or nothing. A folded
- * entry, or a heading the row does not draw, marks the entry.
+ * entry marks the entry. A heading folded away marks the folded
+ * heading it sits under.
  */
 export function markOf(
   showing: Showing | undefined,
   book: string,
   row: Row,
   folded: boolean,
+  shut: ReadonlySet<number> = new Set(),
 ): "entry" | number | undefined {
   if (showing === undefined || showing.book !== book || showing.at !== row.at) {
     return undefined;
   }
   const { line } = showing;
   if (line === undefined || folded) return "entry";
-  const drawn = (row.headings ?? []).some((heading) => heading.line === line);
-  return drawn ? line : "entry";
+  const headings = row.headings ?? [];
+  const drawn = new Set(unfolded(headings, shut).map((heading) => heading.line));
+  let index = headings.findIndex((heading) => heading.line === line);
+  if (index === -1) return "entry";
+  for (let at: number | undefined = line; at !== undefined; ) {
+    if (drawn.has(at)) return at;
+    at = parentOf(headings, index);
+    index = headings.findIndex((heading) => heading.line === at);
+  }
+  return "entry";
 }
 
 /**

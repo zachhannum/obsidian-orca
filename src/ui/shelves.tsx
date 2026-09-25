@@ -56,7 +56,15 @@ import {
   type Item,
 } from "@/ui/list";
 import { Icon, PREVIEW_ICON } from "@/ui/icon";
-import { markOf, walk, type Headed, type Showing } from "@/ui/outline";
+import {
+  folds,
+  markOf,
+  parentOf,
+  unfolded,
+  walk,
+  type Headed,
+  type Showing,
+} from "@/ui/outline";
 import type { Row, Shelved } from "@/ui/shelf";
 
 /** The actions a shelf row can ask the view to perform. */
@@ -370,7 +378,11 @@ function Book({
   showing: Showing | undefined;
 }): JSX.Element {
   const [folded, setFolded] = useState(false);
-  /** The entries whose headings are folded, by note path, which a reorder keeps. */
+  /**
+   * The entries whose headings are folded, by note path, and the
+   * headings folded inside them, by note path and line. A reorder
+   * keeps both.
+   */
   const [shut, setShut] = useState<ReadonlySet<string>>(new Set());
   const shelf = useRef<HTMLDivElement>(null);
   const [dragged, setDragged] = useState<string | undefined>(undefined);
@@ -569,12 +581,14 @@ function Book({
                     after={next(where[at], item.heading)}
                     acting={acting}
                     folded={shut.has(item.row.path ?? "")}
-                    fold={(fold) => {
+                    shutLines={shutIn(shut, item.row)}
+                    fold={(fold, line) => {
                       const path = item.row.path;
                       if (path === undefined) return;
+                      const key = line === undefined ? path : headingKey(path, line);
                       const next = new Set(shut);
-                      if (fold) next.add(path);
-                      else next.delete(path);
+                      if (fold) next.add(key);
+                      else next.delete(key);
                       setShut(next);
                     }}
                     showing={showing}
@@ -705,6 +719,22 @@ function Rename({
   );
 }
 
+/** The fold key of the heading on `line` of the note at `path`. A path holds no newline. */
+function headingKey(path: string, line: number): string {
+  return `${path}\n${String(line)}`;
+}
+
+/** The lines of the headings folded inside the entry `row`. */
+function shutIn(shut: ReadonlySet<string>, row: Row): ReadonlySet<number> {
+  const { path } = row;
+  if (path === undefined) return new Set();
+  return new Set(
+    (row.headings ?? [])
+      .map((heading) => heading.line)
+      .filter((line) => shut.has(headingKey(path, line))),
+  );
+}
+
 /**
  * One entry and the headings inside its note. The entry row is the one
  * handle a drag takes, and the headings travel with it, so the whole
@@ -716,6 +746,7 @@ function Entry({
   after,
   acting,
   folded,
+  shutLines,
   fold,
   showing,
 }: {
@@ -725,7 +756,10 @@ function Entry({
   acting: Acting;
   /** Whether the author folded this entry's headings away. */
   folded: boolean;
-  fold: (fold: boolean) => void;
+  /** The lines of the headings the author folded inside this entry. */
+  shutLines: ReadonlySet<number>;
+  /** Folds or opens the entry, or the heading on `line` when one is named. */
+  fold: (fold: boolean, line?: number) => void;
   showing: Showing | undefined;
 }): JSX.Element {
   const sortable = useSortable({
@@ -737,7 +771,7 @@ function Entry({
     transition: sortable.transition,
   };
   const headings = row.headings ?? [];
-  const mark = markOf(showing, book.path, row, folded);
+  const mark = markOf(showing, book.path, row, folded, shutLines);
 
   return (
     <div
@@ -746,11 +780,30 @@ function Entry({
       className={`orca-entry-tree${sortable.isDragging ? " is-dragged" : ""}`}
       onKeyDown={(event) => {
         if (headings.length === 0 || sortable.isDragging) return;
-        const onEntry = event.target === event.currentTarget.firstElementChild;
-        if (event.key === "ArrowRight" && onEntry && folded) fold(false);
-        else if (event.key === "ArrowLeft" && onEntry && !folded) fold(true);
-        else if (event.key === "ArrowLeft" && !onEntry) {
-          event.currentTarget.querySelector<HTMLElement>("[data-testid=orca-entry]")?.focus();
+        const tree = event.currentTarget;
+        const onEntry = event.target === tree.firstElementChild;
+        if (onEntry) {
+          if (event.key === "ArrowRight" && folded) fold(false);
+          else if (event.key === "ArrowLeft" && !folded) fold(true);
+          else return;
+          event.preventDefault();
+          return;
+        }
+        if (!(event.target instanceof HTMLElement)) return;
+        const line = Number(event.target.dataset["line"]);
+        const index = headings.findIndex((heading) => heading.line === line);
+        if (index === -1) return;
+        const opens = folds(headings, index);
+        const shut = shutLines.has(line);
+        if (event.key === "ArrowRight" && opens && shut) fold(false, line);
+        else if (event.key === "ArrowLeft" && opens && !shut) fold(true, line);
+        else if (event.key === "ArrowLeft") {
+          const parent = parentOf(headings, index);
+          const selector =
+            parent === undefined
+              ? "[data-testid=orca-entry]"
+              : `[data-testid=orca-outline][data-line="${String(parent)}"]`;
+          tree.querySelector<HTMLElement>(selector)?.focus();
         } else return;
         event.preventDefault();
       }}
@@ -820,7 +873,7 @@ function Entry({
       </div>
       {folded
         ? null
-        : headings.map((heading) => (
+        : unfolded(headings, shutLines).map((heading) => (
             <div
               key={heading.line}
               className={`orca-nav-item orca-outline${mark === heading.line ? " is-selected" : ""}`}
@@ -831,10 +884,10 @@ function Entry({
               tabIndex={0}
               role="button"
               aria-current={mark === heading.line ? "page" : undefined}
-              // The entry's label starts past the padding, the mark and the
-              // gap, and each level steps one indent in from there.
+              // The mark sits one indent in per level, so each label starts
+              // that far past the entry's own label.
               style={{
-                paddingLeft: `calc(var(--size-4-2) + 14px + var(--size-4-1) + ${String(heading.depth + 1)} * var(--size-4-3))`,
+                paddingLeft: `calc(var(--size-4-2) + ${String(heading.depth + 1)} * var(--size-4-3))`,
               }}
               onClick={(event) => {
                 acting.openHeading(book, row, heading, event);
@@ -845,6 +898,23 @@ function Entry({
                 acting.openHeading(book, row, heading, event);
               }}
             >
+              <span className="orca-entry-mark">
+                {folds(headings, headings.indexOf(heading)) ? (
+                  <span
+                    className="orca-fold"
+                    data-testid="orca-outline-fold"
+                    aria-expanded={!shutLines.has(heading.line)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      fold(!shutLines.has(heading.line), heading.line);
+                    }}
+                  >
+                    <Icon
+                      name={shutLines.has(heading.line) ? "chevron-right" : "chevron-down"}
+                    />
+                  </span>
+                ) : null}
+              </span>
               <span className="orca-label">{heading.words}</span>
             </div>
           ))}

@@ -79,6 +79,11 @@ export class Navigator {
     return this.entry(book, name).getByTestId("orca-entry-fold");
   }
 
+  /** The chevron that folds the headings under one heading, by its words. */
+  headingFold(book: string, words: string): Locator {
+    return this.heading(book, words).getByTestId("orca-outline-fold");
+  }
+
   /** The test id and the words of the row that has focus. */
   async focused(): Promise<string> {
     return this.obsidian.page.evaluate(() => {
