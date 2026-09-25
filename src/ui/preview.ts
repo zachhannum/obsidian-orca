@@ -66,6 +66,7 @@ import {
   type Pin,
   type Target,
 } from "@/ui/inspect";
+import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
@@ -295,8 +296,8 @@ export class PreviewView extends ItemView {
   /** The last pointer position, which the next animation frame asks about. */
   private pointer: { x: number; y: number } | undefined;
   private framing = false;
-  /** The trim of each painted page, counting from 0, in points. */
-  private trims = new Map<number, Box>();
+  /** Each painted page, by its place in the book counting from 0. */
+  private painted = new Map<number, Page>();
   /** Raised on each paint and resize, so the overlay measures the pages again. */
   private measured = 0;
 
@@ -683,6 +684,7 @@ export class PreviewView extends ItemView {
     this.surface = surface;
     this.overlay = mountOverlay(surface);
     this.inspects(surface);
+    this.followsLinks(surface);
 
     this.registerDomEvent(folio, "change", () => {
       this.typed(folio.value);
@@ -819,6 +821,7 @@ export class PreviewView extends ItemView {
       this.pinning += 1;
       this.pinText = undefined;
     }
+    if (next.on) this.surface?.removeClass("is-on-link");
     this.inspectAction?.toggleClass("is-active", next.on);
     this.inspectAction?.setAttribute("aria-pressed", String(next.on));
     this.drawsOverlay();
@@ -843,7 +846,7 @@ export class PreviewView extends ItemView {
               generation: pin.generation,
             },
       unit: this.handoff.unit(),
-      trims: this.trims,
+      trims: this.painted,
       measured: this.measured,
     });
   }
@@ -887,6 +890,45 @@ export class PreviewView extends ItemView {
       event.preventDefault();
       this.setInspecting(next);
     });
+  }
+
+  /**
+   * Follows the link under a click, and shows the link cursor over one.
+   * Inspect mode takes every click for itself, and a click that ends a
+   * drag keeps the selection it made.
+   */
+  private followsLinks(surface: HTMLElement): void {
+    this.registerDomEvent(surface, "pointermove", (event) => {
+      const over =
+        !this.inspecting.on && this.linkAt(event.clientX, event.clientY) !== undefined;
+      surface.toggleClass("is-on-link", over);
+    });
+    this.registerDomEvent(surface, "pointerleave", () => {
+      surface.removeClass("is-on-link");
+    });
+    this.registerDomEvent(surface, "click", (event) => {
+      if (this.inspecting.on || event.defaultPrevented) return;
+      if (surface.ownerDocument.getSelection()?.isCollapsed === false) return;
+      const follow = this.linkAt(event.clientX, event.clientY);
+      if (follow === undefined) return;
+      event.preventDefault();
+      // Obsidian hands a url the window opens to the system's browser.
+      if (follow.kind === "open") surface.win.open(follow.url);
+      else void this.turn(follow.page);
+    });
+  }
+
+  /** The link under a point on the screen, on whichever painted page is there. */
+  private linkAt(x: number, y: number): Follow | undefined {
+    const surface = this.surface;
+    if (surface === undefined) return undefined;
+    for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
+      const page = this.painted.get(Number(sheet.dataset["page"]) - 1);
+      if (page === undefined) continue;
+      const point = pointOn(sheet.getBoundingClientRect(), page, x, y);
+      if (point !== undefined) return followAt(page, point.x, point.y);
+    }
+    return undefined;
   }
 
   private async hovers(at: { x: number; y: number }): Promise<void> {
@@ -950,7 +992,7 @@ export class PreviewView extends ItemView {
     if (session === undefined || surface === undefined) return undefined;
     for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
       const page = Number(sheet.dataset["page"]) - 1;
-      const trim = this.trims.get(page);
+      const trim = this.painted.get(page);
       if (trim === undefined) continue;
       const point = pointOn(sheet.getBoundingClientRect(), trim, at.x, at.y);
       if (point === undefined) continue;
@@ -1335,11 +1377,8 @@ export class PreviewView extends ItemView {
       columns: SEATS[this.mode] ?? this.columns,
       rows: this.mode === "grid" ? this.rows : 1,
     });
-    this.trims = new Map(
-      reading.pages.map((page, index) => [
-        reading.at + index,
-        { width: page.width, height: page.height },
-      ]),
+    this.painted = new Map(
+      reading.pages.map((page, index) => [reading.at + index, page]),
     );
     this.measured += 1;
     if (this.hovered?.generation !== session.generation) this.hovered = undefined;
