@@ -350,10 +350,15 @@ export class Book {
     const start = await from.boundingBox();
     const end = await to.boundingBox();
     if (start === null || end === null) throw new Error("a line is not on screen");
+    // The layer is set in the book's own faces, and a face that loads
+    // after the paint moves the characters under the pointer.
+    await this.obsidian.page.evaluate(async () => {
+      await document.fonts.ready;
+    });
     const mouse = this.obsidian.page.mouse;
     await mouse.move(start.x + 1, start.y + start.height / 2);
     await mouse.down();
-    await mouse.move(end.x + end.width - 1, end.y + end.height / 2, { steps: 12 });
+    await mouse.move(end.x + end.width - 0.25, end.y + end.height / 2, { steps: 12 });
     await mouse.up();
   }
 

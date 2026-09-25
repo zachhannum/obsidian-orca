@@ -209,6 +209,7 @@ function leaves(count: number): Page[] {
         kind: "text" as const,
         x: 54,
         y: 73,
+        width: 40,
         fontId: 0,
         size: 18,
         text: `Page ${String(at + 1)}`,

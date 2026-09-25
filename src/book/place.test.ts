@@ -25,6 +25,7 @@ function run(node: number | undefined): TextItem {
     kind: "text",
     x: 54,
     y: 73,
+    width: 30,
     fontId: 0,
     size: 12,
     text: "words",
