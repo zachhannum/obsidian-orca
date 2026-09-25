@@ -82,6 +82,27 @@ export function inlineWorker({ production = false } = {}) {
   };
 }
 
+/**
+ * `virtual:module` is the engine module as base64, so the release is the
+ * three files Obsidian installs and nothing beside them.
+ */
+export function inlineModule() {
+  return {
+    name: "orca-inline-module",
+    setup(build) {
+      build.onResolve({ filter: /^virtual:module$/ }, () => ({
+        path: engineModule,
+        namespace: "orca-module",
+      }));
+      build.onLoad({ filter: /.*/, namespace: "orca-module" }, async () => ({
+        contents: `export default ${JSON.stringify((await readFile(engineModule)).toString("base64"))}`,
+        loader: "js",
+        watchFiles: [engineModule],
+      }));
+    },
+  };
+}
+
 export function options({ production, outdir }) {
   return {
     entryPoints: [path.join(root, "src/main.ts")],
@@ -95,7 +116,7 @@ export function options({ production, outdir }) {
     sourcemap: production ? false : "inline",
     treeShaking: true,
     minify: production,
-    plugins: [inlineWorker({ production })],
+    plugins: [inlineWorker({ production }), inlineModule()],
     tsconfig,
     external,
   };
@@ -112,16 +133,9 @@ export async function copyPlugin(outdir, manifest = manifestFile) {
   await copyFile(path.join(root, "styles.css"), path.join(outdir, "styles.css"));
 }
 
-export async function copyModule(outdir, manifest = manifestFile) {
-  await checkEngine(engineModule, manifest);
-  await mkdir(outdir, { recursive: true });
-  await copyFile(engineModule, path.join(outdir, path.basename(engineModule)));
-}
-
 /**
- * `main.js` and the module beside it are one release: the manifest
- * records the fleuron the bundle was built against, and the module
- * writes the wire version the bundle reads.
+ * The manifest records the fleuron the bundle was built against, and
+ * the module writes the wire version the bundle reads.
  */
 export async function checkEngine(module, manifest = manifestFile) {
   const { engineVersion } = JSON.parse(await readFile(manifest, "utf8"));

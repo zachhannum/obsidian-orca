@@ -1,35 +1,19 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { test } from "node:test";
-import { readModule } from "@/engine/module";
-import { EngineError } from "@/engine/errors";
+import { engineModule } from "@/engine/module";
 
-const INSTALL = ".obsidian/plugins/orca";
-const MODULE = `${INSTALL}/fleuron_bg.wasm`;
+const require = createRequire(import.meta.url);
 
-test("the module is read from the plugin's own install path", async () => {
-  const asked: string[] = [];
-  const bytes = new ArrayBuffer(4);
-  const read = await readModule(
-    {
-      readBinary: async (path) => {
-        asked.push(path);
-        return bytes;
-      },
-    },
-    INSTALL,
-  );
-
-  assert.deepEqual(asked, [MODULE]);
-  assert.equal(read, bytes);
+test("the bundle carries the engine module byte for byte", async () => {
+  const shipped = await readFile(require.resolve("fleuron/fleuron_bg.wasm"));
+  assert.ok(Buffer.from(engineModule()).equals(shipped));
 });
 
-test("a missing module is an engine error naming the path it read", async () => {
-  await assert.rejects(
-    readModule({ readBinary: () => Promise.reject(new Error("ENOENT")) }, INSTALL),
-    (error: unknown) =>
-      error instanceof EngineError && error.message.includes(MODULE),
-  );
+test("the module is decoded once", () => {
+  assert.equal(engineModule(), engineModule());
 });
 
-// What this tier does not cover: the install directory Obsidian hands
-// the plugin, which the e2e job reaches.
+// What this tier does not cover: how long the decode takes inside
+// Obsidian, which the e2e job reaches only as a book that opens.

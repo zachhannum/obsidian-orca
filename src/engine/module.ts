@@ -1,20 +1,18 @@
-import { EngineError } from "@/engine/errors";
+import encoded from "virtual:module";
 
-const MODULE_FILE = "fleuron_bg.wasm";
+let decoded: ArrayBuffer | undefined;
 
-/** The vault, narrowed to what the engine reads from it. */
-export interface VaultFiles {
-  readBinary(path: string): Promise<ArrayBuffer>;
-}
-
-export async function readModule(
-  files: VaultFiles,
-  directory: string,
-): Promise<ArrayBuffer> {
-  const path = `${directory}/${MODULE_FILE}`;
-  try {
-    return await files.readBinary(path);
-  } catch (cause) {
-    throw new EngineError(`the engine module is not at ${path}`, { cause });
+/**
+ * The engine module, decoded from the bundle on the first call and kept
+ * after that. A start transfers the bytes it is given, so a caller
+ * passes the worker a copy.
+ */
+export function engineModule(): ArrayBuffer {
+  if (decoded === undefined) {
+    const text = atob(encoded);
+    const bytes = new Uint8Array(text.length);
+    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
+    decoded = bytes.buffer;
   }
+  return decoded;
 }

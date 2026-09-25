@@ -6,9 +6,11 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [workflow, shots, spec, claude] = await Promise.all([
+const [workflow, shots, release, cut, spec, claude] = await Promise.all([
   read(".github/workflows/ci.yml"),
   read(".github/workflows/shots.yml"),
+  read(".github/workflows/release.yml"),
+  read(".github/workflows/cut-release.yml"),
   read("e2e/shots.spec.ts"),
   read("CLAUDE.md"),
 ]);
@@ -58,6 +60,33 @@ test("a push to main that changes a picture opens a PR with the new pictures", (
   assert.doesNotMatch(step, /git push origin (main|HEAD)/);
 });
 
+test("a version tag attaches the plugin to the release", () => {
+  assert.match(release, /^on:\n {2}push:\n {4}tags: \["\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+"\]\n/m);
+  assert.match(release, /- run: npm run build\n/);
+  assert.match(
+    release,
+    /gh release upload "\$TAG" main\.js manifest\.json styles\.css --clobber/,
+  );
+  for (const file of ["manifest.json", "package.json"]) {
+    assert.ok(release.includes(file), `the tag is not checked against ${file}`);
+  }
+});
+
+test("a cut release pushes its version commit and tag as the release app", () => {
+  assert.match(cut, /^on:\n {2}workflow_dispatch:\n/m);
+  assert.match(cut, /uses: actions\/create-github-app-token@v3/);
+  assert.match(cut, /token: \$\{\{ steps\.app\.outputs\.token \}\}/);
+  // The branch goes up before the tag, so no tag points at a commit
+  // that main never took.
+  assert.ok(cut.indexOf('git push origin "HEAD:') < cut.indexOf('git push origin "$version"'));
+});
+
+test("`npm version` bumps the manifest and writes a tag with no `v`", async () => {
+  const [pkg, npmrc] = await Promise.all([read("package.json"), read(".npmrc")]);
+  assert.equal(JSON.parse(pkg).scripts.version, "node version-bump.mjs");
+  assert.match(npmrc, /^tag-version-prefix=""$/m);
+});
+
 test("the screenshot spec ends on what it does not cover", () => {
   const note = spec
     .trimEnd()
@@ -67,12 +96,13 @@ test("the screenshot spec ends on what it does not cover", () => {
   assert.match(note.join("\n"), /does not cover/i);
 });
 
-test("CLAUDE.md's CI section lists the shots workflow", () => {
+test("CLAUDE.md's CI section lists the shots and release workflows", () => {
   const section = claude.slice(
     claude.indexOf("## CI scaffolding"),
     claude.indexOf("## Documentation rules"),
   );
   assert.match(section, /shots\.yml/);
+  assert.match(section, /release\.yml/);
 });
 
 // What this tier does not cover: whether the runner has what a job

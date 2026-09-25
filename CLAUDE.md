@@ -241,6 +241,20 @@ vault and writes the pictures to `site/src/shots`. A picture is
 rasterized by the machine that took it, so this job is the one that
 takes them. On main it opens a PR with the pictures that changed.
 
+`.github/workflows/release.yml` runs on a version tag. It builds and
+attaches `main.js`, `manifest.json` and `styles.css` to the release,
+and it refuses a tag that does not match `manifest.json` or
+`package.json`. The tag carries no `v`, which is what `.npmrc` is for.
+
+`cut-release.yml` is where a release starts, from the Actions tab. It
+runs `npm version`, which runs `version-bump.mjs` to rewrite
+`manifest.json` and `versions.json`, so no version number is typed by
+hand. It then pushes the version commit to main and the tag after it.
+Main's ruleset lets no push past but the release app's, which is the
+app fleuron releases with. The workflow mints a token from the
+`RELEASE_APP_ID` variable and the `RELEASE_APP_PRIVATE_KEY` secret, and
+the tag it pushes under that token starts `release.yml`.
+
 ## Documentation rules
 
 Applies to code comments and all documentation — internal (CLAUDE.md,

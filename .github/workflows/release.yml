@@ -1,0 +1,56 @@
+name: release
+
+# The Obsidian directory installs a plugin from a release's assets, and
+# `main.js` is gitignored, so the three files it wants exist only as build
+# output. This is the one job that builds them for anyone but the author,
+# and a tag from `cut-release.yml` is what runs it.
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+  # A signed asset can be traced back to the commit and the run that
+  # built it.
+  attestations: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm ci
+
+      # `npm version` writes every version number from one place, so a tag
+      # that disagrees with one of these files was typed by hand. The
+      # Obsidian directory rejects a mismatch.
+      - name: Check the tag against the versions
+        run: |
+          for file in manifest.json package.json; do
+            version=$(node -p "require('./$file').version")
+            if [ "$version" != "$TAG" ]; then
+              echo "$file says $version, the tag says $TAG" >&2
+              exit 1
+            fi
+          done
+
+      # The build checks the module against the manifest's engine version.
+      - run: npm run build
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: "main.js, manifest.json, styles.css"
+
+      - name: Attach the plugin to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 ||
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          gh release upload "$TAG" main.js manifest.json styles.css --clobber

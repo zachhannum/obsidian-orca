@@ -17,7 +17,7 @@ import type { Family, FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
 import { browserHost, startEngine } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
-import { readModule } from "@/engine/module";
+import { engineModule } from "@/engine/module";
 import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
@@ -108,8 +108,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
   limits: Limits = { ...LIMITS };
   /** The engines orca runs, one per book. */
   private engines: Pool | undefined;
-  /** The engine module, read once and kept for every worker. */
-  private bytes: Promise<ArrayBuffer> | undefined;
   /** Every edit to a book, routed to the note's one writer. */
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
   /** Sets a book on the engine. Every preview reads the pages it typesets. */
@@ -152,10 +150,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
   >();
 
   override async onload(): Promise<void> {
-    // Orca reads the settings and the module while the views register,
-    // because Obsidian restores a leaf as soon as `onload` returns.
+    // Orca reads the settings while the views register, because
+    // Obsidian restores a leaf as soon as `onload` returns.
     const settings = this.saved();
-    const warmed = this.warmed();
     const engines = new Pool({
       start: (book) => this.startWorker(book),
       // Orca drops the book on a stopped engine, so the pane sets the
@@ -417,7 +414,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       }),
     );
 
-    await Promise.all([settings, warmed]);
+    await settings;
   }
 
   /**
@@ -1148,9 +1145,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   private async startWorker(book: string): Promise<Engine> {
     try {
-      const module = await this.module();
       const handle = await startEngine(
-        module.slice(0),
+        engineModule().slice(0),
         browserHost,
         engineName(book),
       );
@@ -1172,29 +1168,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private async saved(): Promise<void> {
     this.limits = readLimits(await this.loadData());
     if (this.engines !== undefined) this.engines.ceiling = this.limits.sessions;
-  }
-
-  /** Reads the engine module at load, and reports an install without one. */
-  private async warmed(): Promise<void> {
-    try {
-      await this.module();
-    } catch (cause) {
-      this.notice(cause);
-    }
-  }
-
-  /**
-   * Reads the engine module once, and gives the same bytes back after
-   * that. Orca does not keep a read that fails.
-   */
-  private module(): Promise<ArrayBuffer> {
-    this.bytes ??= readModule(this.files(), this.directory()).catch(
-      (cause: unknown) => {
-        this.bytes = undefined;
-        throw cause;
-      },
-    );
-    return this.bytes;
   }
 
   /** Shows the engine's own message to the author. */
@@ -1631,14 +1604,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
       },
       list: (folder) => adapter.list(at(folder)),
     };
-  }
-
-  private directory(): string {
-    const dir = this.manifest.dir;
-    if (dir === undefined) {
-      throw new EngineError("the plugin has no install directory");
-    }
-    return dir;
   }
 }
 

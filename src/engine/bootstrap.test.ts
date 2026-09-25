@@ -5,7 +5,6 @@ import {
   readFile,
   readdir,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -118,17 +117,15 @@ test("the release is the plugin folder, with one JavaScript file in it", async (
     assert.equal(code, 0);
 
     const written = (await readdir(outdir)).sort();
-    assert.deepEqual(written, [
-      "fleuron_bg.wasm",
-      "main.js",
-      "manifest.json",
-      "styles.css",
-    ]);
-    assert.ok((await stat(path.join(outdir, "fleuron_bg.wasm"))).size > 0);
+    assert.deepEqual(written, ["main.js", "manifest.json", "styles.css"]);
 
-    // The worker travels inside the bundle rather than beside it.
+    // The worker and the engine module travel inside the bundle rather
+    // than beside it.
     const bundle = await readFile(path.join(outdir, "main.js"), "utf8");
     assert.ok(bundle.includes("createObjectURL"));
+    const require = createRequire(import.meta.url);
+    const module = await readFile(require.resolve("fleuron/fleuron_bg.wasm"));
+    assert.ok(bundle.includes(module.subarray(0, 3072).toString("base64")));
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }
