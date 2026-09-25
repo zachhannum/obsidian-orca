@@ -8,7 +8,7 @@
  * cache, and a copy of it here would go stale.
  */
 
-import type { Headed } from "@/ui/outline";
+import { hasChildren, type Headed } from "@/ui/outline";
 import type { Row, Shelved } from "@/ui/shelf";
 
 /** The folds on the shelf, by book note path. */
@@ -73,21 +73,39 @@ export function withNote(
 
 /** Whether any entry on the shelf lists headings, which is when `Collapse all` shows. */
 export function foldable(shelf: readonly Shelved[]): boolean {
-  return shelf.some((book) => notesWithHeadings(book).length > 0);
+  return shelf.some((book) => rowsWithHeadings(book).length > 0);
 }
 
-/** Whether every entry that lists headings is folded, which turns the button to `Expand all`. */
+/**
+ * Whether every entry that lists headings is folded, and every heading
+ * inside it with headings under it, which turns the button to
+ * `Expand all`.
+ */
 export function allCollapsed(folds: Folds, shelf: readonly Shelved[]): boolean {
   return shelf.every((book) =>
-    notesWithHeadings(book).every((note) => entryCollapsed(folds, book.path, note)),
+    rowsWithHeadings(book).every((row) => {
+      const note = row.path;
+      if (note === undefined || !entryCollapsed(folds, book.path, note)) return false;
+      const lines = collapsedLines(folds, book.path, row);
+      return parents(row).every((heading) => lines.has(heading.line));
+    }),
   );
 }
 
-/** Folds every entry that lists headings, and keeps every other fold. */
+/**
+ * Folds every entry that lists headings and every heading inside it
+ * with headings under it, and keeps every other fold. An entry opened
+ * afterwards shows its headings folded one level at a time.
+ */
 export function collapseAll(folds: Folds, shelf: readonly Shelved[]): Folds {
   let next = folds;
   for (const book of shelf) {
-    for (const note of notesWithHeadings(book)) next = withNote(next, book.path, note, true);
+    for (const row of rowsWithHeadings(book)) {
+      const note = row.path;
+      if (note === undefined) continue;
+      next = withNote(next, book.path, note, true);
+      for (const heading of parents(row)) next = withNote(next, book.path, note, true, heading);
+    }
   }
   return next;
 }
@@ -146,12 +164,16 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function notesWithHeadings(book: Shelved): string[] {
+function rowsWithHeadings(book: Shelved): Row[] {
   return book.groups.flatMap((group) =>
-    group.rows.flatMap((row) =>
-      row.path !== undefined && (row.headings ?? []).length > 0 ? [row.path] : [],
-    ),
+    group.rows.filter((row) => row.path !== undefined && (row.headings ?? []).length > 0),
   );
+}
+
+/** The headings of `row` with headings under them, which are the ones that fold. */
+function parents(row: Row): Headed[] {
+  const headings = row.headings ?? [];
+  return headings.filter((_, index) => hasChildren(headings, index));
 }
 
 function withBookFolds(folds: Folds, book: string, kept: BookFolds): Folds {

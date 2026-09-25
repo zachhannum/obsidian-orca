@@ -119,7 +119,7 @@ export function headingOn(
 }
 
 /** Whether the heading at `index` has deeper headings under it, which it folds. */
-export function folds(headings: readonly Headed[], index: number): boolean {
+export function hasChildren(headings: readonly Headed[], index: number): boolean {
   const heading = headings[index];
   const after = headings[index + 1];
   return heading !== undefined && after !== undefined && after.depth > heading.depth;

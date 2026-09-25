@@ -65,7 +65,7 @@ test("a fold opened again leaves nothing behind", () => {
   assert.deepEqual(withBook(withBook({}, "B.md", true), "B.md", false), {});
 });
 
-test("collapse all folds every entry that lists headings, and expand all keeps only the books", () => {
+test("collapse all folds every entry and every heading level, and expand all keeps only the books", () => {
   const bare: Row = { at: 1, name: "Sixteen", kind: "note", role: "chapter", named: false, path: "Sixteen.md" };
   const books = [shelf("A.md", [row([3, 5, 7]), bare]), shelf("B.md", [row([3, 5, 7])])];
   assert.equal(foldable(books), true);
@@ -77,6 +77,12 @@ test("collapse all folds every entry that lists headings, and expand all keeps o
   assert.equal(allCollapsed(collapsed, books), true);
   assert.equal(entryCollapsed(collapsed, "B.md", "Fifteen.md"), true);
   assert.equal(entryCollapsed(collapsed, "A.md", "Sixteen.md"), false);
+  // Every level folds: The Parsonage holds the two below it, and they hold nothing.
+  assert.deepEqual([...collapsedLines(collapsed, "B.md", row([3, 5, 7]))], [3]);
+  // A heading opened again leaves the button at `Collapse all`.
+  const parsonage = row([3, 5, 7]).headings?.[0];
+  assert.ok(parsonage !== undefined);
+  assert.equal(allCollapsed(withNote(collapsed, "B.md", "Fifteen.md", false, parsonage), books), false);
 
   const expanded = expandAll(collapsed);
   assert.deepEqual(expanded, { "A.md": { collapsed: true } });

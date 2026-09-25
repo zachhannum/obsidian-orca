@@ -69,7 +69,7 @@ import {
 } from "@/ui/folds";
 import { Icon, PREVIEW_ICON } from "@/ui/icon";
 import {
-  folds as holds,
+  hasChildren,
   markOf,
   parentOf,
   unfolded,
@@ -844,7 +844,7 @@ function Entry({
         const index = headings.findIndex((heading) => heading.line === line);
         if (index === -1) return;
         const heading = headings[index];
-        const opens = holds(headings, index);
+        const opens = hasChildren(headings, index);
         const shut = shutLines.has(line);
         if (event.key === "ArrowRight" && opens && shut) fold(false, heading);
         else if (event.key === "ArrowLeft" && opens && !shut) fold(true, heading);
@@ -950,7 +950,7 @@ function Entry({
               }}
             >
               <span className="orca-entry-mark">
-                {holds(headings, headings.indexOf(heading)) ? (
+                {hasChildren(headings, headings.indexOf(heading)) ? (
                   <span
                     className="orca-fold"
                     data-testid="orca-outline-fold"

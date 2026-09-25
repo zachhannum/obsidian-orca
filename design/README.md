@@ -95,7 +95,7 @@ its editor around these files and returns a URL. The artboard list and
   with the entry's name leaves it out, because the entry's row says
   it. The author folds the headings of one entry at a time, and a
   heading folds the deeper headings under it. `Collapse all` in the
-  navigator header folds every entry, and `Expand all` opens every
+  navigator header folds every entry and every heading level in it, and `Expand all` opens every
   entry and heading again. Obsidian keeps every fold with the
   workspace, so a reload opens the shelf as the author left it. A
   heading's fold follows its words under the headings above it, so

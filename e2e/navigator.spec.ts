@@ -643,6 +643,10 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await navigator.headingFold(BOOK, "The Parsonage").click();
   await navigator.button("Collapse all").click();
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  // Every level folded, so an entry opened on its own shows only its top headings.
+  await navigator.fold(BOOK, FIFTEEN).click();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await navigator.fold(BOOK, FIFTEEN).click();
   await navigator.button("Expand all").click();
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
   await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);

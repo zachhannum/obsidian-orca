@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  folds,
+  hasChildren,
   headingOn,
   levelsTo,
   markOf,
@@ -105,7 +105,7 @@ test("an entry lists its headings down to the level the author picked", () => {
 test("a heading with deeper headings under it folds them away, and marks the page they hold", () => {
   const headings = outline(FIFTEEN, "Chapter Fifteen");
   // The Parsonage holds the two below it, and they hold nothing.
-  assert.deepEqual(headings.map((_, index) => folds(headings, index)), [true, false, false]);
+  assert.deepEqual(headings.map((_, index) => hasChildren(headings, index)), [true, false, false]);
   assert.deepEqual(headings.map((_, index) => parentOf(headings, index)), [undefined, 13, 13]);
 
   assert.deepEqual(unfolded(headings, new Set([13])).map((heading) => heading.line), [13]);
