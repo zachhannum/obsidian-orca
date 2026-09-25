@@ -757,8 +757,8 @@ function shutIn(shut: ReadonlySet<string>, row: Row): ReadonlySet<number> {
 
 /**
  * One entry and the headings inside its note. The entry row is the one
- * handle a drag takes, and the headings travel with it, so the whole
- * note moves and a heading row never drags on its own.
+ * handle a drag takes, and its headings fold while it is carried, so a
+ * dragged note is one row tall and a heading row never drags on its own.
  */
 function Entry({
   book,
@@ -791,7 +791,8 @@ function Entry({
     transition: sortable.transition,
   };
   const headings = row.headings ?? [];
-  const mark = markOf(showing, book.path, row, folded, shutLines);
+  const shown = !folded && !sortable.isDragging;
+  const mark = markOf(showing, book.path, row, !shown, shutLines);
 
   return (
     <div
@@ -862,7 +863,7 @@ function Entry({
                 fold(!folded);
               }}
             >
-              <Icon name={folded ? "chevron-right" : "chevron-down"} />
+              <Icon name={shown ? "chevron-down" : "chevron-right"} />
             </span>
           ) : null}
         </span>
@@ -891,7 +892,7 @@ function Entry({
           </span>
         ) : null}
       </div>
-      {folded
+      {!shown
         ? null
         : unfolded(headings, shutLines).map((heading) => (
             <div

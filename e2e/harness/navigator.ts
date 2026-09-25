@@ -212,9 +212,15 @@ export class Navigator {
   /**
    * Drags one row onto another. dnd-kit starts a drag once the
    * pointer has travelled its activation distance, so the pointer moves
-   * away before it travels to where it lands.
+   * away before it travels to where it lands. `during` runs while the
+   * row is held over where it lands.
    */
-  async drag(from: Locator, to: Locator, onto: Onto): Promise<void> {
+  async drag(
+    from: Locator,
+    to: Locator,
+    onto: Onto,
+    during?: () => Promise<void>,
+  ): Promise<void> {
     const { mouse } = this.obsidian.page;
     const start = await box(from);
     const end = await box(to);
@@ -227,7 +233,11 @@ export class Navigator {
     await mouse.move(end.x + 20, land, { steps: 15 });
     // dnd-kit settles the drop on the frame after the last move.
     await mouse.move(end.x + 20, land);
-    await mouse.up();
+    try {
+      await during?.();
+    } finally {
+      await mouse.up();
+    }
   }
 
   /**

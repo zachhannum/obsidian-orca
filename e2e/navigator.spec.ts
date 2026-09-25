@@ -682,7 +682,7 @@ test("the heading rows are the lines of Obsidian's own cache", async ({
   }
 });
 
-test("a heading row never drags, and an entry drags with its headings", async ({
+test("a heading row never drags, and an entry folds its headings while it is dragged", async ({
   navigator,
   vault,
 }) => {
@@ -705,10 +705,15 @@ test("a heading row never drags, and an entry drags with its headings", async ({
     navigator.entry(BOOK, FIFTEEN),
     navigator.entry(BOOK, CHAPTER),
     "above",
+    async () => {
+      await expect(navigator.entry(BOOK, FIFTEEN)).toHaveAttribute("aria-pressed", "true");
+      await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(0);
+    },
   );
   await expect
     .poll(async () => vault.read(BOOK))
     .toContain(`- [[${FIFTEEN}]]\n- [[${CHAPTER}]]\n`);
+  // The drop gives the headings back.
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 });
 

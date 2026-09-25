@@ -98,7 +98,8 @@ its editor around these files and returns a URL. The artboard list and
   lists them, and it is off until the author turns it on. A second setting sets the deepest heading
   level the navigator lists, and a heading below it has no row. A heading row turns a preview of the book to
   the page the heading opens on, and a Mod click opens the note at its
-  line. A heading row never drags. The row for the page the preview
+  line. A heading row never drags, and a dragged entry folds its
+  headings until it is dropped. The row for the page the preview
   shows is marked, heading rows included.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
