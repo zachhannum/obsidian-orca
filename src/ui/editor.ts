@@ -6,7 +6,9 @@
  */
 
 import {
+  acceptCompletion,
   autocompletion,
+  type Completion,
   type CompletionContext,
   type CompletionResult,
 } from "@codemirror/autocomplete";
@@ -21,6 +23,7 @@ import {
   Annotation,
   Compartment,
   EditorState,
+  Prec,
   RangeSet,
   StateEffect,
   StateField,
@@ -42,7 +45,9 @@ import {
   type DecorationSet,
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
+import { SUBSET } from "fleuron";
 import { classHighlighter } from "@lezer/highlight";
+import type { Named } from "@/book/names";
 import type { Place } from "@/style/origin";
 import { quoted } from "@/style/quoted";
 
@@ -60,6 +65,8 @@ export interface CssEditor {
   insert(text: string): void;
   /** Sets the families a `font-family` value completes from. See {@link fontCompletion}. */
   fonts(families: readonly string[]): void;
+  /** Sets the sections a selector completes from. See {@link selectorCompletion}. */
+  sections(named: readonly Named[]): void;
   /** The line and column of the caret, both counted from 1. */
   caret(): { line: number; column: number };
   /** The warnings inside the rule that starts at a line and column. */
@@ -113,6 +120,22 @@ export function fonted(names: readonly string[]): TransactionSpec {
   return { effects: refamilies.of(names) };
 }
 
+/** Replaces the sections a selector completes from. */
+const renamed = StateEffect.define<readonly Named[]>();
+
+const sectionNamed = StateField.define<readonly Named[]>({
+  create: () => [],
+  update(named, tr) {
+    for (const effect of tr.effects) if (effect.is(renamed)) return effect.value;
+    return named;
+  },
+});
+
+/** The transaction that sets the sections a selector completes from. */
+export function sectioned(named: readonly Named[]): TransactionSpec {
+  return { effects: renamed.of(named) };
+}
+
 /** The `font-family` value being written, and the text typed into it so far. */
 interface Naming {
   from: number;
@@ -123,9 +146,7 @@ interface Naming {
 /**
  * The families the book registers, offered inside a `font-family`
  * value and nowhere else. A name goes in quoted, so one of several
- * words reads as one family. Nothing else completes, because the engine
- * is the only linter and a property it refuses is a warning rather than
- * a missing option.
+ * words reads as one family.
  */
 export function fontCompletion(context: CompletionContext): CompletionResult | null {
   const at = naming(context.state, context.pos);
@@ -181,6 +202,239 @@ function naming(state: EditorState, pos: number): Naming | undefined {
   return { from, to, typed: state.sliceDoc(from, pos) };
 }
 
+/** The part of a rule a place in the text is in. */
+type Spot =
+  | { in: "selector"; statement: string }
+  | { in: "name"; block: Block }
+  | { in: "value"; block: Block; property: string };
+
+/** The block a declaration sits in, which sets the names it can declare. */
+type Block = "style" | "page" | "margin" | "face";
+
+/** One name a block declares, with the values it takes. */
+interface Declared {
+  name: string;
+  syntax: string;
+  keywords: readonly string[];
+}
+
+/**
+ * The part of a rule a place in the text is in, or nothing inside a
+ * comment, a string or a block the engine does not read. The braces
+ * before the place decide, because the grammar reads a half-typed value
+ * such as `color: #ff` as a selector while its rule is not closed.
+ */
+function spot(state: EditorState, pos: number): Spot | undefined {
+  const node = syntaxTree(state).resolveInner(pos, -1);
+  if (node.name === "Comment" || node.name === "StringLiteral") return undefined;
+  const before = state
+    .sliceDoc(0, pos)
+    .replace(/\/\*[\s\S]*?(\*\/|$)/g, "")
+    .replace(/"[^"\n]*"|'[^'\n]*'/g, '""');
+  const open: string[] = [];
+  let start = 0;
+  for (let at = 0; at < before.length; at += 1) {
+    const char = before[at];
+    if (char === "{") open.push(before.slice(start, at).trim());
+    else if (char === "}") open.pop();
+    else if (char !== ";") continue;
+    start = at + 1;
+  }
+  const statement = before.slice(start);
+  const prelude = open.at(-1);
+  if (prelude === undefined) return { in: "selector", statement };
+  const block = blockOf(prelude);
+  if (block === undefined) return undefined;
+  const colon = statement.indexOf(":");
+  if (colon < 0) return { in: "name", block };
+  return { in: "value", block, property: statement.slice(0, colon).trim().toLowerCase() };
+}
+
+/** The block a prelude opens, or nothing for an at-rule the engine does not read. */
+function blockOf(prelude: string): Block | undefined {
+  const at = /^@([-\w]+)/.exec(prelude)?.[1]?.toLowerCase();
+  if (at === undefined) return "style";
+  if (at === "page") return "page";
+  if (at === "font-face") return "face";
+  return SUBSET.page.margin_boxes.some((box) => box.name === at) ? "margin" : undefined;
+}
+
+/** The names a block declares, from the engine's own subset. */
+function declared(block: Block): readonly Declared[] {
+  switch (block) {
+    case "style":
+      return SUBSET.properties;
+    case "page":
+      return SUBSET.page.properties;
+    case "margin":
+      return [
+        ...SUBSET.properties.filter(
+          (each) => !SUBSET.page.margin_box_properties.some((own) => own.name === each.name),
+        ),
+        ...SUBSET.page.margin_box_properties,
+      ];
+    case "face":
+      return SUBSET.font_face.descriptors;
+  }
+}
+
+/**
+ * The names the block at the caret declares, from the subset of the
+ * pinned engine. An `@page` body also opens the margin boxes the engine
+ * draws. A box it reads and drops is not offered.
+ */
+export function propertyCompletion(context: CompletionContext): CompletionResult | null {
+  const at = spot(context.state, context.pos);
+  if (at?.in !== "name") return null;
+  const word = context.matchBefore(/@?[-\w]*$/);
+  if (word === null || (word.from === word.to && !context.explicit)) return null;
+  const options: Completion[] = declared(at.block).map((each) => ({
+    label: each.name,
+    type: "property",
+    detail: each.syntax,
+  }));
+  if (at.block === "page") {
+    for (const box of SUBSET.page.margin_boxes) {
+      if (box.paints) options.push({ label: `@${box.name}`, type: "keyword" });
+    }
+  }
+  return { from: word.from, options, validFor: /^@?[-\w]*$/ };
+}
+
+/**
+ * The values the property at the caret accepts, from the subset of the
+ * pinned engine: its keywords, the colour names where it takes a
+ * colour, the page sizes and counter styles where it takes them, the
+ * functions its syntax names, and `var()`, which any value takes. A
+ * function goes in open, with the caret inside it.
+ */
+export function valueCompletion(context: CompletionContext): CompletionResult | null {
+  const at = spot(context.state, context.pos);
+  if (at?.in !== "value") return null;
+  const property = declared(at.block).find((each) => each.name === at.property);
+  if (property === undefined) return null;
+  const word = context.matchBefore(/[-\w]*$/);
+  if (word === null) return null;
+  if (namedIn(context.state, word.from) !== undefined) return null;
+  // A word after `#` is a hex colour and one after a digit is a unit.
+  if (/[#\d.]$/.test(context.state.sliceDoc(word.from - 1, word.from))) return null;
+  const { syntax } = property;
+  const options: Completion[] = property.keywords.map((keyword) => ({
+    label: keyword,
+    type: "keyword",
+  }));
+  if (syntax.includes("<color>")) {
+    for (const name of SUBSET.color_names) options.push({ label: name, type: "constant" });
+  }
+  if (syntax.includes("<page-size>")) {
+    for (const size of SUBSET.page.sizes) options.push({ label: size.name, type: "constant" });
+  }
+  if (syntax.includes("<counter-style>")) {
+    for (const name of SUBSET.page.counter_styles) options.push({ label: name, type: "constant" });
+  }
+  for (const name of new Set(syntax.match(/[a-z][-a-z]*(?=\()/g))) {
+    options.push({ label: `${name}()`, type: "function", apply: `${name}(`, detail: syntax });
+  }
+  options.push({ label: "var()", type: "function", apply: "var(", detail: SUBSET.var });
+  return { from: word.from, options, validFor: /^[-\w]*$/ };
+}
+
+/** The function the text before a place opens, when a name the sheet defines goes there. */
+function namedIn(state: EditorState, pos: number): "var" | "string" | undefined {
+  const opened = /\b(var|string)\(\s*$/i.exec(state.sliceDoc(Math.max(0, pos - 64), pos));
+  return opened?.[1]?.toLowerCase() as "var" | "string" | undefined;
+}
+
+/**
+ * The names the sheet defines, offered inside the function that reads
+ * them: a custom property inside `var(`, and a name a `string-set`
+ * sets inside `string(`. A name counts wherever the sheet defines it,
+ * because the engine reads the whole sheet before it resolves either.
+ */
+export function namedCompletion(context: CompletionContext): CompletionResult | null {
+  const at = spot(context.state, context.pos);
+  if (at?.in !== "value") return null;
+  const word = context.matchBefore(/[-\w]*$/);
+  if (word === null) return null;
+  const inside = namedIn(context.state, word.from);
+  if (inside === undefined) return null;
+  const sheet = context.state.doc
+    .toString()
+    .replace(/\/\*[\s\S]*?(\*\/|$)/g, "")
+    .replace(/"[^"\n]*"|'[^'\n]*'/g, '""');
+  const names = new Set<string>();
+  if (inside === "var") {
+    for (const [, name] of sheet.matchAll(/(?:^|[{;\s])(--[-\w]+)\s*:/g)) {
+      if (name !== undefined) names.add(name);
+    }
+  } else {
+    for (const [, list] of sheet.matchAll(/(?:^|[{;\s])string-set\s*:([^;}]*)/gi)) {
+      for (const part of list?.split(",") ?? []) {
+        const name = /^\s*([-\w]+)/.exec(part)?.[1];
+        if (name !== undefined && name.toLowerCase() !== "none") names.add(name);
+      }
+    }
+  }
+  if (names.size === 0) return null;
+  const type = inside === "var" ? "variable" : "constant";
+  const options = [...names].map((label) => ({ label, type }));
+  return { from: word.from, options, validFor: /^[-\w]*$/ };
+}
+
+/**
+ * The selectors the engine reads, offered where a selector is written:
+ * the elements the content tree makes, the pseudo-classes and
+ * pseudo-elements, the at-rules and an `@page` rule's page selectors. A
+ * class is a role that some section has, and an id is one that the
+ * engine gets.
+ */
+export function selectorCompletion(context: CompletionContext): CompletionResult | null {
+  const at = spot(context.state, context.pos);
+  if (at?.in !== "selector") return null;
+  const word = context.matchBefore(/(::?|[.#@])?[-\w]*$/);
+  if (word === null || (word.from === word.to && !context.explicit)) return null;
+  const page = /^\s*@page\b/i.test(at.statement);
+  const lead = /^(::?|[.#@])?/.exec(word.text)?.[0] ?? "";
+  // An at-rule opens a statement, and nothing else follows `@`.
+  if (lead === "@" && at.statement.trim() !== word.text) return null;
+  if (page && lead !== ":") return null;
+  if (at.statement.trimStart().startsWith("@") && !page && lead !== "@") return null;
+  const named = context.state.field(sectionNamed);
+  const options: Completion[] = page
+    ? SUBSET.page.selectors.map((name) => ({ label: `:${name}`, type: "keyword" }))
+    : optionsAfter(lead, named);
+  if (options.length === 0) return null;
+  return { from: word.from, options, validFor: /^(::?|[.#@])?[-\w]*$/ };
+}
+
+/** The selector options a lead character opens. */
+function optionsAfter(lead: string, named: readonly Named[]): Completion[] {
+  switch (lead) {
+    case "@":
+      return ["@page", "@font-face"].map((label) => ({ label, type: "keyword" }));
+    case "::":
+      return SUBSET.selectors.pseudo_elements.map(({ name }) => ({ label: name, type: "keyword" }));
+    case ":":
+      return [
+        ...SUBSET.selectors.pseudo_classes.map(({ name }) => ({
+          label: name,
+          type: "keyword",
+          apply: name.replace(/\)$/, ""),
+        })),
+        ...SUBSET.selectors.pseudo_elements.map(({ name }) => ({ label: name, type: "keyword" })),
+      ];
+    case ".":
+      return [...new Set(named.map((each) => each.role))].map((role) => ({
+        label: `.${role}`,
+        type: "class",
+      }));
+    case "#":
+      return named.map((each) => ({ label: `#${each.id}`, type: "class", detail: each.role }));
+    default:
+      return SUBSET.selectors.elements.map((name) => ({ label: name, type: "type" }));
+  }
+}
+
 const flags = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(set, tr) {
@@ -217,17 +471,64 @@ const flagHover = hoverTooltip((view, pos) => {
   };
 });
 
+/** Draws an Obsidian icon into an element. */
+export type DrawIcon = (el: HTMLElement, name: string) => void;
+
+/** The Obsidian icon each kind of completion shows. */
+const COMPLETION_ICONS: Readonly<Record<string, string>> = {
+  property: "sliders-horizontal",
+  keyword: "tag",
+  constant: "diamond",
+  function: "parentheses",
+  type: "code",
+  class: "hash",
+  variable: "variable",
+};
+
+/** An option's icon, drawn by Obsidian in place of CodeMirror's own glyph. */
+function completionIcons(draw: DrawIcon): Parameters<typeof autocompletion>[0] {
+  return {
+    icons: false,
+    addToOptions: [
+      {
+        // CodeMirror puts its own icon at 20, before the label.
+        position: 20,
+        render(completion, _state, view) {
+          const el = view.dom.ownerDocument.createElement("div");
+          el.className = "orca-completion-icon";
+          const name = COMPLETION_ICONS[completion.type ?? ""];
+          if (name !== undefined) draw(el, name);
+          return el;
+        },
+      },
+    ],
+  };
+}
+
 /**
  * The editor's extensions: the CSS grammar, the engine's warnings on
- * the text, and the book's families under `font-family`. Nothing here
+ * the text, and completion from the engine's subset, the book's
+ * families and its sections' classes and ids. Nothing here
  * lints. Every flag comes from a render, because the engine is the only
  * linter.
  */
-export function cssExtensions(changed: (css: string) => void): Extension[] {
+export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): Extension[] {
   return [
     cssLanguage,
     families,
-    autocompletion({ override: [fontCompletion] }),
+    sectionNamed,
+    autocompletion({
+      override: [
+        fontCompletion,
+        propertyCompletion,
+        valueCompletion,
+        namedCompletion,
+        selectorCompletion,
+      ],
+      tooltipClass: () => "orca-completion",
+      ...(icon === undefined ? {} : completionIcons(icon)),
+    }),
+    Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     syntaxHighlighting(classHighlighter),
     lineNumbers(),
     highlightActiveLine(),
@@ -452,6 +753,7 @@ function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
 export function mountEditor(
   parent: HTMLElement,
   css: string,
+  icon: DrawIcon,
   changed: (css: string) => void,
   moved: () => void = () => undefined,
 ): CssEditor {
@@ -460,7 +762,7 @@ export function mountEditor(
     state: EditorState.create({
       doc: css,
       extensions: [
-        ...cssExtensions(changed),
+        ...cssExtensions(changed, icon),
         EditorView.updateListener.of((update) => {
           if (update.selectionSet) moved();
         }),
@@ -500,6 +802,9 @@ export function mountEditor(
     },
     fonts(names) {
       view.dispatch(fonted(names));
+    },
+    sections(named) {
+      view.dispatch(sectioned(named));
     },
     caret() {
       const head = view.state.selection.main.head;
