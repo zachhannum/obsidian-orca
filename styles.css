@@ -1035,18 +1035,16 @@ button.orca-nav-action:hover {
   color: var(--color-orange);
 }
 
-/* A completion's detail goes on a line of its own under the label. */
-.cm-tooltip-autocomplete > ul {
-  max-height: 16em;
-}
-
-.cm-tooltip-autocomplete > ul > li {
+/* The CSS editor's completion list. Obsidian hides an option's detail,
+   and here the detail is the syntax, on a line under the label. */
+.cm-tooltip.cm-tooltip-autocomplete.orca-completion > ul > li[role="option"] {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  max-width: 480px;
+  white-space: nowrap;
 }
 
-.cm-tooltip-autocomplete .cm-completionDetail {
+.cm-tooltip.cm-tooltip-autocomplete.orca-completion .cm-completionDetail {
+  display: block;
   grid-column: 2;
   margin-left: 0;
   overflow: hidden;
@@ -1056,8 +1054,13 @@ button.orca-nav-action:hover {
   color: var(--text-muted);
 }
 
-.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail {
-  color: inherit;
+.orca-completion-icon {
+  display: flex;
+  align-items: center;
+  margin-inline-end: var(--size-4-2);
+  color: var(--text-faint);
+  --icon-size: var(--icon-xs);
+  --icon-stroke: var(--icon-xs-stroke-width);
 }
 
 /* CodeMirror wraps the editor's card in its own tooltip box. The card

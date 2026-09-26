@@ -1,4 +1,4 @@
-import { ItemView, type WorkspaceLeaf } from "obsidian";
+import { ItemView, setIcon, type WorkspaceLeaf } from "obsidian";
 import type { Cover } from "@/assets/cmap";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
@@ -214,6 +214,7 @@ export class DesignPanelView extends ItemView {
       editor = mountEditor(
         host,
         typeset.css,
+        setIcon,
         (css) => {
           this.recss(css);
         },

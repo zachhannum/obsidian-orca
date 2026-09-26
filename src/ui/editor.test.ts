@@ -289,4 +289,5 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
 // after a number. It does not offer `!important`, a page name
 // after `@page`, or a class the author's own markdown writes. No e2e
 // spec opens the completion list in Obsidian, so the Tab key that
-// takes an option and the detail line under a label go untested.
+// takes an option, the detail line under a label and the Obsidian icon
+// beside it go untested.

@@ -156,7 +156,8 @@ its editor around these files and returns a URL. The artboard list and
   engine exports, and from no list orca keeps. A name inside `var(`
   completes from the custom properties the sheet declares, and one
   inside `string(` from the names its `string-set` declarations set. An option
-  shows its syntax on a line under its name, and Tab takes it.
+  shows an Obsidian icon for its kind and its syntax on a line under
+  its name, and Tab takes it.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view

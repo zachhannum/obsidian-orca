@@ -471,6 +471,40 @@ const flagHover = hoverTooltip((view, pos) => {
   };
 });
 
+/** Draws an Obsidian icon into an element. */
+export type DrawIcon = (el: HTMLElement, name: string) => void;
+
+/** The Obsidian icon each kind of completion shows. */
+const COMPLETION_ICONS: Readonly<Record<string, string>> = {
+  property: "sliders-horizontal",
+  keyword: "tag",
+  constant: "diamond",
+  function: "parentheses",
+  type: "code",
+  class: "hash",
+  variable: "variable",
+};
+
+/** An option's icon, drawn by Obsidian in place of CodeMirror's own glyph. */
+function completionIcons(draw: DrawIcon): Parameters<typeof autocompletion>[0] {
+  return {
+    icons: false,
+    addToOptions: [
+      {
+        // CodeMirror puts its own icon at 20, before the label.
+        position: 20,
+        render(completion, _state, view) {
+          const el = view.dom.ownerDocument.createElement("div");
+          el.className = "orca-completion-icon";
+          const name = COMPLETION_ICONS[completion.type ?? ""];
+          if (name !== undefined) draw(el, name);
+          return el;
+        },
+      },
+    ],
+  };
+}
+
 /**
  * The editor's extensions: the CSS grammar, the engine's warnings on
  * the text, and completion from the engine's subset, the book's
@@ -478,7 +512,7 @@ const flagHover = hoverTooltip((view, pos) => {
  * lints. Every flag comes from a render, because the engine is the only
  * linter.
  */
-export function cssExtensions(changed: (css: string) => void): Extension[] {
+export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): Extension[] {
   return [
     cssLanguage,
     families,
@@ -491,6 +525,8 @@ export function cssExtensions(changed: (css: string) => void): Extension[] {
         namedCompletion,
         selectorCompletion,
       ],
+      tooltipClass: () => "orca-completion",
+      ...(icon === undefined ? {} : completionIcons(icon)),
     }),
     Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     syntaxHighlighting(classHighlighter),
@@ -717,6 +753,7 @@ function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
 export function mountEditor(
   parent: HTMLElement,
   css: string,
+  icon: DrawIcon,
   changed: (css: string) => void,
   moved: () => void = () => undefined,
 ): CssEditor {
@@ -725,7 +762,7 @@ export function mountEditor(
     state: EditorState.create({
       doc: css,
       extensions: [
-        ...cssExtensions(changed),
+        ...cssExtensions(changed, icon),
         EditorView.updateListener.of((update) => {
           if (update.selectionSet) moved();
         }),
