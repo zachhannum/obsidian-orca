@@ -154,7 +154,8 @@ its editor around these files and returns a URL. The artboard list and
   carry, after a `.` or a `#`. Property names, their keywords, the
   elements, pseudo-classes and at-rules complete from the subset the
   engine exports, and from no list orca keeps. A name inside `var(`
-  completes from the custom properties the sheet declares. An option
+  completes from the custom properties the sheet declares, and one
+  inside `string(` from the names its `string-set` declarations set. An option
   shows its syntax on a line under its name, and Tab takes it.
 - Export sits in the book preview's toolbar and on the book note's
   page.

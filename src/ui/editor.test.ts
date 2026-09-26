@@ -19,7 +19,7 @@ import {
   sectioned,
   selectorCompletion,
   valueCompletion,
-  varCompletion,
+  namedCompletion,
   skippedIn,
   type Flag,
 } from "@/ui/editor";
@@ -150,10 +150,18 @@ test("a completion carries its syntax as detail, under the label rather than bes
 
 test("a name inside var() completes from the custom properties the sheet declares", () => {
   const sheet = ":root {\n  --accent: teal;\n  /* --hidden: red; */\n}\np {\n  color: var(--a";
-  assert.deepEqual(offered(varCompletion, sheet), ["--accent"]);
+  assert.deepEqual(offered(namedCompletion, sheet), ["--accent"]);
   // Inside var() the property's own keywords give way to the names.
   assert.equal(offered(valueCompletion, sheet), undefined);
-  assert.equal(offered(varCompletion, "p {\n  color: re"), undefined);
+  assert.equal(offered(namedCompletion, "p {\n  color: re"), undefined);
+});
+
+test("a name inside string() completes from the names the sheet's string-set declarations set", () => {
+  const sheet =
+    'h1 {\n  string-set: chapter content(), part "a, b";\n}\nh2 { string-set: none; }\n' +
+    "@page {\n  @top-center {\n    content: string(";
+  assert.deepEqual(offered(namedCompletion, sheet), ["chapter", "part"]);
+  assert.equal(offered(valueCompletion, sheet), undefined);
 });
 
 test("a selector completes from the ids and the classes the book's sections carry", () => {
@@ -276,7 +284,8 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
 //
 // The completion reads the engine's subset for names and keywords,
 // not its grammar. It offers no value inside a function, except the
-// counter styles that a `content` value takes anywhere, and no unit
+// names inside `var()` and `string()` and the counter styles that a
+// `content` value takes anywhere, and no unit
 // after a number. It does not offer `!important`, a page name
 // after `@page`, or a class the author's own markdown writes. No e2e
 // spec opens the completion list in Obsidian, so the Tab key that

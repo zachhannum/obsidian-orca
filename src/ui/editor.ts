@@ -315,7 +315,7 @@ export function valueCompletion(context: CompletionContext): CompletionResult | 
   if (property === undefined) return null;
   const word = context.matchBefore(/[-\w]*$/);
   if (word === null) return null;
-  if (inVar(context.state, word.from)) return null;
+  if (namedIn(context.state, word.from) !== undefined) return null;
   // A word after `#` is a hex colour and one after a digit is a unit.
   if (/[#\d.]$/.test(context.state.sliceDoc(word.from - 1, word.from))) return null;
   const { syntax } = property;
@@ -339,28 +339,45 @@ export function valueCompletion(context: CompletionContext): CompletionResult | 
   return { from: word.from, options, validFor: /^[-\w]*$/ };
 }
 
-/** Whether the text before a place opens a `var(`, so a custom property's name goes there. */
-function inVar(state: EditorState, pos: number): boolean {
-  return /var\(\s*$/i.test(state.sliceDoc(Math.max(0, pos - 64), pos));
+/** The function the text before a place opens, when a name the sheet defines goes there. */
+function namedIn(state: EditorState, pos: number): "var" | "string" | undefined {
+  const opened = /\b(var|string)\(\s*$/i.exec(state.sliceDoc(Math.max(0, pos - 64), pos));
+  return opened?.[1]?.toLowerCase() as "var" | "string" | undefined;
 }
 
 /**
- * The custom properties the sheet declares, offered inside `var(`. A
- * name counts wherever it is declared, because the engine reads the
- * whole sheet before it resolves a `var()`.
+ * The names the sheet defines, offered inside the function that reads
+ * them: a custom property inside `var(`, and a name a `string-set`
+ * sets inside `string(`. A name counts wherever the sheet defines it,
+ * because the engine reads the whole sheet before it resolves either.
  */
-export function varCompletion(context: CompletionContext): CompletionResult | null {
+export function namedCompletion(context: CompletionContext): CompletionResult | null {
   const at = spot(context.state, context.pos);
   if (at?.in !== "value") return null;
   const word = context.matchBefore(/[-\w]*$/);
-  if (word === null || !inVar(context.state, word.from)) return null;
-  const sheet = context.state.doc.toString().replace(/\/\*[\s\S]*?(\*\/|$)/g, "");
+  if (word === null) return null;
+  const inside = namedIn(context.state, word.from);
+  if (inside === undefined) return null;
+  const sheet = context.state.doc
+    .toString()
+    .replace(/\/\*[\s\S]*?(\*\/|$)/g, "")
+    .replace(/"[^"\n]*"|'[^'\n]*'/g, '""');
   const names = new Set<string>();
-  for (const [, name] of sheet.matchAll(/(?:^|[{;\s])(--[-\w]+)\s*:/g)) {
-    if (name !== undefined && name !== word.text) names.add(name);
+  if (inside === "var") {
+    for (const [, name] of sheet.matchAll(/(?:^|[{;\s])(--[-\w]+)\s*:/g)) {
+      if (name !== undefined) names.add(name);
+    }
+  } else {
+    for (const [, list] of sheet.matchAll(/(?:^|[{;\s])string-set\s*:([^;}]*)/gi)) {
+      for (const part of list?.split(",") ?? []) {
+        const name = /^\s*([-\w]+)/.exec(part)?.[1];
+        if (name !== undefined && name.toLowerCase() !== "none") names.add(name);
+      }
+    }
   }
   if (names.size === 0) return null;
-  const options = [...names].map((label) => ({ label, type: "variable" }));
+  const type = inside === "var" ? "variable" : "constant";
+  const options = [...names].map((label) => ({ label, type }));
   return { from: word.from, options, validFor: /^[-\w]*$/ };
 }
 
@@ -471,7 +488,7 @@ export function cssExtensions(changed: (css: string) => void): Extension[] {
         fontCompletion,
         propertyCompletion,
         valueCompletion,
-        varCompletion,
+        namedCompletion,
         selectorCompletion,
       ],
     }),
