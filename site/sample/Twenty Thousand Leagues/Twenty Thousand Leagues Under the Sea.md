@@ -158,6 +158,17 @@ section.part h1 {
   font-size: 14pt;
 }
 
+/* The plate stands in the middle of the paper rather than of the
+   text block, which sits toward the spine. */
+section#a-squid-of-colossal-dimensions {
+  padding-top: 0.67in;
+}
+
+section#a-squid-of-colossal-dimensions img {
+  position: relative;
+  left: 0.125in;
+}
+
 /* The copyright sits small at the foot of its page. */
 section.copyright > p {
   font-size: 8.5pt;
