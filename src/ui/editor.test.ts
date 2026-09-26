@@ -381,14 +381,18 @@ test("Mod-/ wraps the selected lines in a comment, and takes it out of lines alr
 // DOM here, and the card a hover draws. The e2e suite types into it in
 // Obsidian and waits on the write, the render, the squiggle and its
 // card. Nor the font the engine carries, which no face registers and
-// the completion does not offer.
+// the completion does not offer. The editing keys run here as commands
+// on a state, not as keys pressed. The bracket highlight, the fold
+// gutter, the search panel, the selection matches and the Alt mouse
+// need a view, and the e2e suite presses them in Obsidian. Neither
+// tier presses them on a keyboard layout other than the runner's.
 //
 // The completion reads the engine's subset for names and keywords,
 // not its grammar. It offers no value inside a function, except the
 // names inside `var()` and `string()` and the counter styles that a
 // `content` value takes anywhere, and no unit
 // after a number. It does not offer `!important`, a page name
-// after `@page`, or a class the author's own markdown writes. No e2e
-// spec opens the completion list in Obsidian, so the Tab key that
-// takes an option, the detail line under a label and the Obsidian icon
-// beside it go untested.
+// after `@page`, or a class the author's own markdown writes. The e2e
+// suite opens the list in Obsidian only to take a family with Tab, so
+// the detail line under a label and the Obsidian icon beside it go
+// untested.

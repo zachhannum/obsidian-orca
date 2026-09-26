@@ -49,6 +49,7 @@ import {
   highlightActiveLineGutter,
   hoverTooltip,
   keymap,
+  runScopeHandlers,
   lineNumbers,
   rectangularSelection,
   tooltips,
@@ -83,6 +84,12 @@ export interface CssEditor {
   caret(): { line: number; column: number };
   /** The warnings inside the rule that starts at a line and column. */
   skipped(line: number, column: number): Skipped[];
+  /**
+   * Runs the editor's own binding for a key with a modifier pressed
+   * inside it, and answers whether one took the key. Obsidian's hotkeys
+   * see a key before the editor does, so the view asks here first.
+   */
+  keydown(event: KeyboardEvent): boolean;
   destroy(): void;
 }
 
@@ -884,6 +891,15 @@ export function mountEditor(
     },
     skipped(line, column) {
       return skippedIn(view.state, line, column);
+    },
+    keydown(event) {
+      // A bare key goes to the editor already, and Tab after Escape
+      // must reach its own handling to leave the editor.
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) return false;
+      const target = event.target as Node | null;
+      if (view.contentDOM.contains(target)) return runScopeHandlers(view, event, "editor");
+      if (view.dom.contains(target)) return runScopeHandlers(view, event, "search-panel");
+      return false;
     },
     destroy() {
       view.destroy();

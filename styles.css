@@ -1107,6 +1107,11 @@ button.orca-nav-action:hover {
 .orca-search .orca-search-button svg {
   width: 14px;
   height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .orca-search .orca-search-button.is-active {
