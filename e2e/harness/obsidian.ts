@@ -106,6 +106,9 @@ const CHROME = {
   content: (type: string) =>
     `.workspace-leaf-content[data-type="${type}"] > .view-content`,
   action: (label: string) => `.view-action[aria-label="${label}"]`,
+  /** The arrows a view header draws for its leaf's history. */
+  back: '.view-header-nav-buttons [aria-label="Navigate back"]',
+  forward: '.view-header-nav-buttons [aria-label="Navigate forward"]',
   tab: (label: string) => `.workspace-tab-header[aria-label="${label}"]`,
   menu: ".menu",
   item: ".menu-item",
@@ -342,6 +345,11 @@ export class Obsidian {
    */
   actionIn(type: string, label: string): Locator {
     return this.view(type).locator(CHROME.action(label));
+  }
+
+  /** The arrow in a view's header that walks its leaf's history one way. */
+  navigateIn(type: string, way: "back" | "forward"): Locator {
+    return this.view(type).locator(CHROME[way]);
   }
 
   /** A leaf's own tab, by the name the view is displayed under. */

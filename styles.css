@@ -2450,3 +2450,10 @@ input.orca-panel-filter {
 .orca-preview-setting.mod-empty button {
   margin-top: 2px;
 }
+
+/* The painter's selection layer sits over every link, so the cursor is
+   set on the whole surface while the pointer is over one. */
+.orca-preview-sheets.is-on-link,
+.orca-preview-sheets.is-on-link * {
+  cursor: var(--cursor-link);
+}
