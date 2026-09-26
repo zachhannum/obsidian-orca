@@ -6,6 +6,7 @@
  */
 
 import {
+  acceptCompletion,
   autocompletion,
   type Completion,
   type CompletionContext,
@@ -22,6 +23,7 @@ import {
   Annotation,
   Compartment,
   EditorState,
+  Prec,
   RangeSet,
   StateEffect,
   StateField,
@@ -289,7 +291,7 @@ export function propertyCompletion(context: CompletionContext): CompletionResult
   const options: Completion[] = declared(at.block).map((each) => ({
     label: each.name,
     type: "property",
-    info: each.syntax,
+    detail: each.syntax,
   }));
   if (at.block === "page") {
     for (const box of SUBSET.page.margin_boxes) {
@@ -302,8 +304,9 @@ export function propertyCompletion(context: CompletionContext): CompletionResult
 /**
  * The values the property at the caret accepts, from the subset of the
  * pinned engine: its keywords, the colour names where it takes a
- * colour, the page sizes and counter styles where it takes them, and
- * the functions its syntax names. A function goes in open, with the caret inside it.
+ * colour, the page sizes and counter styles where it takes them, the
+ * functions its syntax names, and `var()`, which any value takes. A
+ * function goes in open, with the caret inside it.
  */
 export function valueCompletion(context: CompletionContext): CompletionResult | null {
   const at = spot(context.state, context.pos);
@@ -312,6 +315,7 @@ export function valueCompletion(context: CompletionContext): CompletionResult | 
   if (property === undefined) return null;
   const word = context.matchBefore(/[-\w]*$/);
   if (word === null) return null;
+  if (inVar(context.state, word.from)) return null;
   // A word after `#` is a hex colour and one after a digit is a unit.
   if (/[#\d.]$/.test(context.state.sliceDoc(word.from - 1, word.from))) return null;
   const { syntax } = property;
@@ -329,9 +333,34 @@ export function valueCompletion(context: CompletionContext): CompletionResult | 
     for (const name of SUBSET.page.counter_styles) options.push({ label: name, type: "constant" });
   }
   for (const name of new Set(syntax.match(/[a-z][-a-z]*(?=\()/g))) {
-    options.push({ label: `${name}()`, type: "function", apply: `${name}(`, info: syntax });
+    options.push({ label: `${name}()`, type: "function", apply: `${name}(`, detail: syntax });
   }
-  if (options.length === 0) return null;
+  options.push({ label: "var()", type: "function", apply: "var(", detail: SUBSET.var });
+  return { from: word.from, options, validFor: /^[-\w]*$/ };
+}
+
+/** Whether the text before a place opens a `var(`, so a custom property's name goes there. */
+function inVar(state: EditorState, pos: number): boolean {
+  return /var\(\s*$/i.test(state.sliceDoc(Math.max(0, pos - 64), pos));
+}
+
+/**
+ * The custom properties the sheet declares, offered inside `var(`. A
+ * name counts wherever it is declared, because the engine reads the
+ * whole sheet before it resolves a `var()`.
+ */
+export function varCompletion(context: CompletionContext): CompletionResult | null {
+  const at = spot(context.state, context.pos);
+  if (at?.in !== "value") return null;
+  const word = context.matchBefore(/[-\w]*$/);
+  if (word === null || !inVar(context.state, word.from)) return null;
+  const sheet = context.state.doc.toString().replace(/\/\*[\s\S]*?(\*\/|$)/g, "");
+  const names = new Set<string>();
+  for (const [, name] of sheet.matchAll(/(?:^|[{;\s])(--[-\w]+)\s*:/g)) {
+    if (name !== undefined && name !== word.text) names.add(name);
+  }
+  if (names.size === 0) return null;
+  const options = [...names].map((label) => ({ label, type: "variable" }));
   return { from: word.from, options, validFor: /^[-\w]*$/ };
 }
 
@@ -438,8 +467,15 @@ export function cssExtensions(changed: (css: string) => void): Extension[] {
     families,
     sectionNamed,
     autocompletion({
-      override: [fontCompletion, propertyCompletion, valueCompletion, selectorCompletion],
+      override: [
+        fontCompletion,
+        propertyCompletion,
+        valueCompletion,
+        varCompletion,
+        selectorCompletion,
+      ],
     }),
+    Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     syntaxHighlighting(classHighlighter),
     lineNumbers(),
     highlightActiveLine(),

@@ -1035,6 +1035,31 @@ button.orca-nav-action:hover {
   color: var(--color-orange);
 }
 
+/* A completion's detail goes on a line of its own under the label. */
+.cm-tooltip-autocomplete > ul {
+  max-height: 16em;
+}
+
+.cm-tooltip-autocomplete > ul > li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  max-width: 480px;
+}
+
+.cm-tooltip-autocomplete .cm-completionDetail {
+  grid-column: 2;
+  margin-left: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: normal;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail {
+  color: inherit;
+}
+
 /* CodeMirror wraps the editor's card in its own tooltip box. The card
    draws the box itself. */
 .cm-tooltip.cm-tooltip-hover:has(> .orca-card) {

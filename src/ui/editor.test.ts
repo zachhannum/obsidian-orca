@@ -19,6 +19,7 @@ import {
   sectioned,
   selectorCompletion,
   valueCompletion,
+  varCompletion,
   skippedIn,
   type Flag,
 } from "@/ui/editor";
@@ -120,7 +121,12 @@ test("a property name completes, and the names offered are the ones the pinned e
 });
 
 test("the values of the property at the caret complete", () => {
-  assert.deepEqual(offered(valueCompletion, "p {\n  font-style: "), ["normal", "italic", "oblique"]);
+  assert.deepEqual(offered(valueCompletion, "p {\n  font-style: "), [
+    "normal",
+    "italic",
+    "oblique",
+    "var()",
+  ]);
   assert.ok(offered(valueCompletion, "p {\n  color: re")?.includes("rebeccapurple"));
   assert.ok(offered(valueCompletion, "p {\n  font-family: Junicode, s")?.includes("serif"));
   const size = offered(valueCompletion, "@page {\n  size: ");
@@ -132,6 +138,22 @@ test("the values of the property at the caret complete", () => {
   assert.equal(offered(valueCompletion, "p {\n  font-size: 1.5e"), undefined);
   // A property the engine does not set has no values to offer.
   assert.equal(offered(valueCompletion, "p {\n  text-wrap: "), undefined);
+});
+
+test("a completion carries its syntax as detail, under the label rather than beside the list", () => {
+  const state = editing("p {\n  font-s");
+  const options = propertyCompletion(new CompletionContext(state, state.doc.length, false))?.options;
+  const size = options?.find((option) => option.label === "font-size");
+  assert.equal(size?.detail, SUBSET.properties.find((each) => each.name === "font-size")?.syntax);
+  assert.equal(size?.info, undefined);
+});
+
+test("a name inside var() completes from the custom properties the sheet declares", () => {
+  const sheet = ":root {\n  --accent: teal;\n  /* --hidden: red; */\n}\np {\n  color: var(--a";
+  assert.deepEqual(offered(varCompletion, sheet), ["--accent"]);
+  // Inside var() the property's own keywords give way to the names.
+  assert.equal(offered(valueCompletion, sheet), undefined);
+  assert.equal(offered(varCompletion, "p {\n  color: re"), undefined);
 });
 
 test("a selector completes from the ids and the classes the book's sections carry", () => {
@@ -255,6 +277,7 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
 // The completion reads the engine's subset for names and keywords,
 // not its grammar. It offers no value inside a function, except the
 // counter styles that a `content` value takes anywhere, and no unit
-// after a number. It does not offer `var()`, `!important`, a page name
+// after a number. It does not offer `!important`, a page name
 // after `@page`, or a class the author's own markdown writes. No e2e
-// spec opens the completion list in Obsidian.
+// spec opens the completion list in Obsidian, so the Tab key that
+// takes an option and the detail line under a label go untested.
