@@ -29,7 +29,7 @@ test("the bracket beside the caret and the bracket that matches it are highlight
   await panel.code.press("ArrowLeft");
   await expect(panel.matchedBrackets).toHaveCount(0);
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("a bracket typed closes after the caret, and Enter and } indent a rule", async ({
@@ -56,7 +56,7 @@ test("a bracket typed closes after the caret, and Enter and } indent a rule", as
   await panel.code.pressSequentially("\na: b;\n}");
   expect(await panel.cssText()).toBe("h2 {\n  a: b;\n}");
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("Tab indents lines and takes an open option, and Escape then Tab leaves the editor", async ({
@@ -84,7 +84,7 @@ test("Tab indents lines and takes an open option, and Escape then Tab leaves the
   await expect(panel.code).not.toBeFocused();
   expect(await panel.cssText()).toBe(`h1 { font-family: "${FAMILY}"}`);
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("a marker in the gutter folds and unfolds a rule, and so do the fold keys", async ({
@@ -113,7 +113,7 @@ test("a marker in the gutter folds and unfolds a rule, and so do the fold keys",
   await panel.code.press(UNFOLD);
   await expect(panel.folded).toHaveCount(0);
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("Mod-F opens a search panel that matches case, reads a regular expression and replaces", async ({
@@ -153,7 +153,7 @@ test("Mod-F opens a search panel that matches case, reads a regular expression a
   await expect(panel.search).toHaveCount(0);
   await expect(panel.code).toBeFocused();
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("Mod-D selects the next copy of the selection, and every other copy of a selected word is highlighted", async ({
@@ -175,7 +175,7 @@ test("Mod-D selects the next copy of the selection, and every other copy of a se
     "p { padding: 0; }\nh1 { padding: 1em; }\nh2 { margin: 2em; }",
   );
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("Mod-/ wraps the selected lines in a comment and takes it out again", async ({
@@ -192,7 +192,7 @@ test("Mod-/ wraps the selected lines in a comment and takes it out again", async
   await panel.code.press("ControlOrMeta+Slash");
   expect(await panel.cssText()).toBe("a: b;\nc: d;");
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 test("Alt-click adds a cursor, and Alt-drag makes a rectangular selection", async ({
@@ -227,7 +227,7 @@ test("Alt-click adds a cursor, and Alt-drag makes a rectangular selection", asyn
   await keyboard.type("X");
   expect(await panel.cssText()).toBe("aXc\naXc\naXc");
 
-  await closed(panel, vault, own);
+  await closed(book, panel, vault, own);
 });
 
 /** Opens the fixture book and the CSS view, and answers the book note as it was. */
@@ -242,11 +242,15 @@ async function opened(book: Book, panel: Panel, vault: Vault): Promise<string> {
   return own;
 }
 
-/** Leaves the CSS view and puts the book note back, so the edits do not reach the next spec. */
-async function closed(panel: Panel, vault: Vault, own: string): Promise<void> {
+/**
+ * Leaves the CSS view and puts the book note back, so the edits do not
+ * reach the next spec, and waits for the book to be set from it.
+ */
+async function closed(book: Book, panel: Panel, vault: Vault, own: string): Promise<void> {
   await panel.toControls.click();
   vault.touch(BOOK);
   await vault.modify(BOOK, own);
+  await book.settled(BOOK);
 }
 
 /** A point before a column of a line, from the corner of the editor's text. */
