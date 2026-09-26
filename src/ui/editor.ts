@@ -545,6 +545,9 @@ export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): 
         selectorCompletion,
       ],
       tooltipClass: () => "orca-completion",
+      // Tab and Enter take the option the moment the list shows it, as
+      // they do in VS Code, rather than falling through to indent.
+      interactionDelay: 0,
       ...(icon === undefined ? {} : completionIcons(icon)),
     }),
     Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),

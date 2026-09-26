@@ -242,9 +242,13 @@ async function opened(book: Book, panel: Panel, vault: Vault): Promise<string> {
   return own;
 }
 
-/** Leaves the CSS view and puts the book note back, so the edits do not reach the next spec. */
+/**
+ * Leaves the CSS view, closes the panel and puts the book note back, so
+ * neither the edits nor the panel's focus reach the next spec.
+ */
 async function closed(panel: Panel, vault: Vault, own: string): Promise<void> {
   await panel.toControls.click();
+  await panel.close();
   vault.touch(BOOK);
   await vault.modify(BOOK, own);
 }
