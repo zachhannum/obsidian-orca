@@ -172,7 +172,11 @@ const EXPORT = "Export to PDF";
 /** The file the export writes beside the book note, named from its title. */
 const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
 
-/** The pages the flip-through turns, counted from the spread it opens on. */
+/**
+ * The pages the flip-through turns past the page the preview opens on.
+ * The flip-through starts at the title page, so it holds the front
+ * matter too.
+ */
 const FLIP = 12;
 
 /**
@@ -699,6 +703,9 @@ test("the flip-through's pages come from the book's own PDF", async ({
   const pdf = await readFile(exported);
   await rm(exported);
   expect(pdf.subarray(0, 5).toString("latin1")).toEqual("%PDF-");
+  // The site offers the same file for download. The engine dates it from
+  // the book, so the bytes change only when the book does.
+  expect(pdf).toMatchSnapshot("twenty-thousand-leagues.pdf");
 
   const where = await mkdtemp(path.join(tmpdir(), "orca-shots-"));
   const written = path.join(where, "sample.pdf");
@@ -708,7 +715,7 @@ test("the flip-through's pages come from the book's own PDF", async ({
     "-r",
     String(DPI),
     "-f",
-    String(first),
+    "1",
     "-l",
     String(first + FLIP - 1),
     written,
@@ -721,10 +728,10 @@ test("the flip-through's pages come from the book's own PDF", async ({
   const rendered = (await readdir(where))
     .filter((file) => file.endsWith(".png"))
     .sort();
-  expect(rendered).toHaveLength(FLIP);
+  expect(rendered).toHaveLength(first + FLIP - 1);
   for (const [at, file] of rendered.entries()) {
     const page = await readFile(path.join(where, file));
-    const folio = String(first + at).padStart(2, "0");
+    const folio = String(at + 1).padStart(2, "0");
     expect(page).toMatchSnapshot(["pages", `page-${folio}.png`]);
   }
 });

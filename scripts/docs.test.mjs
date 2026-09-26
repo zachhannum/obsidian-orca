@@ -640,9 +640,11 @@ test("the pages turn on a click, on the arrow buttons and from the keyboard", as
   // Five leaves stand between the first page and the last, so the book
   // reads as six spreads.
   const leaves = 5;
-  assert.deepEqual([...flip.spread(0)], [flip.FIRST, flip.FIRST + 1]);
-  assert.equal(flip.folio(0), `Pages ${flip.FIRST}–${flip.FIRST + 1}`);
-  assert.equal(flip.folio(leaves), `Pages ${flip.FIRST + 10}–${flip.FIRST + 11}`);
+  // The book opens closed, on the title page alone.
+  assert.deepEqual([...flip.spread(0)], [0, 1]);
+  assert.equal(flip.folio(0), "Page 1");
+  assert.equal(flip.folio(1), "Pages 2–3");
+  assert.equal(flip.folio(leaves), "Pages 10–11");
 
   const turned = (at) => flip.layout(leaves, at).filter((leaf) => leaf.turned).length;
   assert.equal(turned(0), 0);
