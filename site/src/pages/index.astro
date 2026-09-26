@@ -165,6 +165,18 @@ const images = imagesInCss(css).map(({ url, link }) => {
   return { url, src };
 });
 
+/**
+ * The book's title face, served beside the page. The engine carries EB
+ * Garamond, and the demo sends it the rest.
+ */
+const faces = Object.values(
+  import.meta.glob<string>('../../sample/fonts/IMFe*.ttf', {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  })
+);
+
 /** What the panel shows for every key, with the defaults filled in. */
 const shown: Record<string, string> = Object.fromEntries(
   Object.entries(writeDesign(effective(design))).map(([key, value]) => [key, String(value)])
@@ -174,7 +186,7 @@ const shown: Record<string, string> = Object.fromEntries(
 const own = Object.keys(writeDesign(design));
 
 /** The faces the engine carries, which are the ones the demo can set in. */
-const FACES = ['EB Garamond'];
+const FACES = ['EB Garamond', 'IM FELL English'];
 
 /**
  * The groups the demo draws, from the plugin's own table, holding the
@@ -216,6 +228,7 @@ const demo = {
   source: { name: `${CHAPTER}.md`, text: chapterNote },
   css,
   images,
+  faces,
 };
 
 /** The page title. The sky's copy and the sea's are both set from it. */

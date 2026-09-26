@@ -31,6 +31,8 @@ export interface Demo {
   css: string;
   /** The images that CSS names. */
   images: Served[];
+  /** The faces the book names beyond the one the engine carries, where the site serves them. */
+  faces: string[];
 }
 
 /**
@@ -259,7 +261,8 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
         demo.setting,
         design,
         demo.css,
-        demo.images
+        demo.images,
+        demo.faces
       );
     });
   });

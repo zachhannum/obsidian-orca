@@ -6,5 +6,5 @@ The plate facing Chapter I is by Alphonse de Neuville, cut by Henri
 Théophile Hildibrand for the illustrated edition of 1871. It is in the
 public domain.
 
-The book is set in EB Garamond, which carries the SIL Open Font
-License.
+The book is set in EB Garamond, and its titles in IM Fell English. Both
+carry the SIL Open Font License.

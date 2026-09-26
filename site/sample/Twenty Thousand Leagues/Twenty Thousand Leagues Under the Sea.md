@@ -17,6 +17,7 @@ body-align: justify
 body-first-line-indent: 1.2em
 body-hyphens: true
 body-hanging-punctuation: true
+heading-1-font: IM FELL English
 heading-1-size: 16pt
 heading-1-align: center
 heading-2-size: 9pt
@@ -25,6 +26,7 @@ heading-2-letter-spacing: 0.2em
 heading-2-space-above: 7
 chapter-begins: next-page
 chapter-drop-cap: 3
+chapter-drop-cap-font: IM FELL English
 chapter-first-line-caps: small-caps
 chapter-first-line-letter-spacing: 0.04em
 header-left-page: author
@@ -146,10 +148,16 @@ section.part p {
 }
 
 section.title-page p,
-section.part h1,
 section.contents p.part {
   text-transform: lowercase;
   font-variant-caps: small-caps;
+  letter-spacing: 0.15em;
+}
+
+/* IM Fell has no small capitals, so its headings are spaced capitals. */
+section.part h1,
+section#colophon h1 {
+  text-transform: uppercase;
   letter-spacing: 0.15em;
 }
 
@@ -181,9 +189,6 @@ section.copyright > p {
 section#colophon h1 {
   padding-top: 3.4in;
   font-size: 10.5pt;
-  text-transform: lowercase;
-  font-variant-caps: small-caps;
-  letter-spacing: 0.15em;
   color: #1d4e5b;
 }
 

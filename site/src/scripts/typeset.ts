@@ -35,7 +35,8 @@ export interface Typeset {
  * Starts a session over one chapter and paints its first page into
  * `into`. The module is fetched on the first call, so a caller that
  * wants the page later starts this later. The book's own CSS rides last,
- * as it does in the plugin, and every image it names crosses first.
+ * as it does in the plugin, and every image and face it names crosses
+ * first.
  */
 export async function startTypeset(
   into: HTMLElement,
@@ -43,7 +44,8 @@ export async function startTypeset(
   setting: Setting,
   design: Design,
   css: string,
-  images: readonly Served[]
+  images: readonly Served[],
+  faces: readonly string[]
 ): Promise<Typeset> {
   const worker = new Worker(new URL('./typeset.worker.ts', import.meta.url), {
     type: 'module',
@@ -74,6 +76,13 @@ export async function startTypeset(
       return { op: 'image', url, bytes: new Uint8Array(await response.arrayBuffer()) };
     })
   );
+  const fonts = await Promise.all(
+    faces.map(async (src): Promise<Op> => {
+      const response = await fetch(src);
+      return { op: 'font', bytes: new Uint8Array(await response.arrayBuffer()) };
+    })
+  );
+  bytes.push(...fonts);
   const served = new Map(images.map(({ url, src }) => [url, src]));
   const styled = (sets: Design): Op => styleOp(designSheets(sets, setting, css));
   const opened = (sets: Design): Op[] => [
