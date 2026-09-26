@@ -17,8 +17,9 @@ function at(
   property: string,
   value: string,
   declared = property,
+  important = false,
 ): Override {
-  return { sheet: OWN_SHEET, line, column, property, declared, value };
+  return { sheet: OWN_SHEET, line, column, property, declared, value, important };
 }
 
 test("the overrides layer beats a generated declaration of the same property under the same selector, and names the line that beat it", () => {
@@ -101,9 +102,62 @@ test("an author rule beats the capitals and the tracking a control sets, and nam
   assert.deepEqual([...beatenDefault.keys()], ["chapter-first-line-caps"]);
 });
 
+test("an !important author declaration beats a generated one on every element it matches, from any selector", () => {
+  assert.deepEqual(beaten("p {\n  text-indent: 0 !important;\n}\n"), {
+    "body-first-line-indent": at(2, 3, "text-indent", "0", "text-indent", true),
+    "body-indent-after-break": at(2, 3, "text-indent", "0", "text-indent", true),
+  });
+
+  // p ~ p matches every p + p, but not the paragraph after a break.
+  assert.deepEqual(beaten("p ~ p { text-indent: 0 !important; }"), {
+    "body-first-line-indent": at(1, 9, "text-indent", "0", "text-indent", true),
+  });
+  assert.deepEqual(beaten("h1, h2 { font-size: 20pt !important; }\n*::before { content: none; }"), {
+    "heading-1-size": at(1, 10, "font-size", "20pt", "font-size", true),
+    "heading-2-size": at(1, 10, "font-size", "20pt", "font-size", true),
+  });
+
+  // An important declaration beats a later normal one under the generated selector.
+  assert.deepEqual(beaten("p ~ p { text-indent: 1em !important; }\np + p { text-indent: 0; }"), {
+    "body-first-line-indent": at(1, 9, "text-indent", "1em", "text-indent", true),
+  });
+
+  // An important @page rule reaches the margin boxes of the left and right pages.
+  const design = emptyDesign();
+  design.headers.leftPage = "author";
+  design.headers.letterSpacing = { value: 0.06, unit: "em" };
+  const setting: Setting = { sections: [], author: "Jane Austen" };
+  const headers = Object.fromEntries(
+    designOverridden(design, setting, "@page {\n  @top-left { letter-spacing: 0 !important; }\n}\n"),
+  );
+  assert.deepEqual(headers["header-letter-spacing"], at(2, 15, "letter-spacing", "0", "letter-spacing", true));
+});
+
+test("a control whose generated declaration still wins stays live", () => {
+  const live = [
+    // Not important, and a selector the generated rule does not carry.
+    "p { text-indent: 0; }",
+    // Important, but it matches only some of the elements the generated rule sets.
+    ".chapter p + p { text-indent: 0 !important; }",
+    "p > p { text-indent: 0 !important; }",
+    "h1 { font-size: 20pt !important; }",
+    "p { font-variant-caps: normal !important; }",
+    "@page :left { @bottom-center { content: none !important; } }",
+    // Important, but under a conditional at-rule.
+    "@media print { p { text-indent: 0 !important; } }",
+  ];
+  for (const css of live) {
+    const keys = Object.keys(beaten(css));
+    assert.ok(!keys.includes("body-first-line-indent"), css);
+    assert.ok(!keys.includes("heading-2-size"), css);
+    assert.ok(!keys.includes("page-number-position"), css);
+  }
+});
+
 // What this tier does not cover: an author rule on a different selector
-// that wins by specificity or !important; selectors that match the same
-// elements written differently, such as p ~ p, .chapter p or :where();
-// a property inherited from a parent; var(); declarations inside
+// that wins by specificity; selectors that match the same elements
+// written differently without !important, such as p ~ p or :where();
+// which of two !important author declarations wins by specificity; a
+// property inherited from a parent; var(); declarations inside
 // conditional at-rules; columns on lines with characters outside the
 // basic multilingual plane; a comment marker inside a quoted value.

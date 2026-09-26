@@ -737,6 +737,35 @@ test("a control the author's CSS overrides dims, takes no input and names the li
   await written(vault, own);
 });
 
+test("an !important author rule from a selector the generated rule does not carry locks the control and says it is important", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const before = await book.painted();
+  await panel.open();
+  const key = "body-first-line-indent";
+  await expect(panel.row(key)).not.toHaveAttribute("data-overridden");
+
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  const typed = "\np { text-indent: 0 !important; }";
+  await panel.typeCss(typed);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+
+  await panel.toControls.click();
+  await expect(panel.row(key)).toHaveAttribute("data-overridden", line);
+  await panel.overridden(key).hover();
+  await expect(panel.overriddenCard).toContainText("0 !important");
+
+  await written(vault, own);
+});
+
 test("a long line in the CSS view scrolls sideways until the author wraps it", async ({
   book,
   panel,

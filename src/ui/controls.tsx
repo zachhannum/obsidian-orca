@@ -152,7 +152,10 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
                   <div className="orca-card-body">
                     <div className="orca-card-said">
                       <code>{override.property}</code> is overridden with value{" "}
-                      <code>{override.value}</code>
+                      <code>
+                        {override.value}
+                        {override.important ? " !important" : ""}
+                      </code>
                       {override.declared === override.property ? null : (
                         <>
                           {" "}
