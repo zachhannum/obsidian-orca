@@ -81,6 +81,28 @@ test("a click on the page number an entry prints turns the book the same way", a
   await expect(book.surface).toHaveAttribute("data-first", String(OPENS));
 });
 
+test("back and forward in the pane's header walk the turns a link made", async ({
+  book,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CONTENTS);
+  await expect(book.chapterName).toHaveText(CONTENTS);
+  const contents = await book.surface.getAttribute("data-first");
+
+  const [label] = await entryOf(book, CHAPTER);
+  await book.click(label);
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENS));
+
+  await book.back.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(contents));
+  await expect(book.chapterName).toHaveText(CONTENTS);
+
+  await book.forward.click();
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENS));
+  await expect(book.chapterName).toHaveText(CHAPTER);
+});
+
 test("the pointer over a link shows the link cursor, and nowhere else", async ({
   book,
   obsidian,

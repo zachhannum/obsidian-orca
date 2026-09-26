@@ -108,6 +108,12 @@ export interface PreviewState {
    * restored at startup opens at the folio instead.
    */
   over?: Shown[];
+  /**
+   * Set when a click on a link asks for the folio. The turn goes into
+   * the leaf's history, so Obsidian's back and forward return across it.
+   * The workspace never keeps it.
+   */
+  followed?: boolean;
 }
 
 /** The plugin, as much of it as the preview reaches: it owns the other leaves. */
@@ -335,6 +341,8 @@ export class PreviewView extends ItemView {
     await super.setState(state, result);
     const wanted = readState(state);
     const changed = wanted.book !== this.state.book;
+    result.history =
+      wanted.followed === true && !changed && wanted.folio !== this.state.folio;
     const reviewed = wanted.view !== undefined && wanted.view !== this.mode;
     if (wanted.view !== undefined) this.mode = wanted.view;
     this.over = wanted.over;
@@ -914,8 +922,26 @@ export class PreviewView extends ItemView {
       event.preventDefault();
       // Obsidian hands a url the window opens to the system's browser.
       if (follow.kind === "open") surface.win.open(follow.url);
-      else void this.turn(follow.page);
+      else void this.follows(follow.page);
     });
+  }
+
+  /**
+   * Turns to the page a link names through the leaf, which records the
+   * turn. A leaf records history only for a navigation view, and one of
+   * those is where Obsidian opens the next note, so the preview is one
+   * only for this call.
+   */
+  private async follows(page: number): Promise<void> {
+    this.navigation = true;
+    try {
+      await this.leaf.setViewState({
+        type: PREVIEW_VIEW,
+        state: { ...this.getState(), folio: page + 1, followed: true },
+      });
+    } finally {
+      this.navigation = false;
+    }
   }
 
   /** The link under a point on the screen, on whichever painted page is there. */
@@ -1865,10 +1891,11 @@ function readState(state: unknown): PreviewState {
   if (isViewMode(raw["view"])) made.view = raw["view"];
   const over = raw["over"];
   if (Array.isArray(over)) made.over = over as Shown[];
+  if (raw["followed"] === true) made.followed = true;
   return made;
 }
 
 /** The state the workspace keeps: where a book opens is not part of it. */
-function kept({ over, ...state }: PreviewState): PreviewState {
+function kept({ over, followed, ...state }: PreviewState): PreviewState {
   return state;
 }

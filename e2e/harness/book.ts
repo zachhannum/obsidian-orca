@@ -122,6 +122,9 @@ export class Book {
   /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
+  /** Obsidian's arrows over the pane, which walk the turns a link made. */
+  readonly back: Locator;
+  readonly forward: Locator;
   readonly next: Locator;
   /** The state the pane holds while a cold session typesets the whole book. */
   readonly setting: Locator;
@@ -159,6 +162,8 @@ export class Book {
     this.status = obsidian.page.getByTestId("orca-status");
     this.previous = pane.getByLabel("Previous page");
     this.next = pane.getByLabel("Next page");
+    this.back = obsidian.navigateIn(PREVIEW, "back");
+    this.forward = obsidian.navigateIn(PREVIEW, "forward");
     this.setting = pane.getByTestId("orca-setting");
     this.held = pane.getByTestId("orca-held");
     this.report = pane.getByTestId("orca-report");
