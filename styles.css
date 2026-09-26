@@ -974,7 +974,7 @@ button.orca-nav-action:hover {
 
 .orca-editor-host .cm-lineNumbers .cm-gutterElement {
   min-width: 25px;
-  padding: 0 11px 0 0;
+  padding: 0 3px 0 0;
 }
 
 .orca-editor-host .cm-activeLine {
@@ -988,6 +988,135 @@ button.orca-nav-action:hover {
 
 .orca-editor-host .cm-content {
   caret-color: var(--text-normal);
+}
+
+/* CodeMirror's base theme carries its own colors, so each rule here
+   names .cm-editor to outrank it. */
+.orca-editor-host .cm-editor .cm-cursor {
+  border-left-color: var(--text-normal);
+}
+
+.orca-editor-host .cm-editor .cm-selectionBackground,
+.orca-editor-host .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+  background: hsla(var(--interactive-accent-hsl), 0.25);
+}
+
+.orca-editor-host .cm-editor .cm-selectionMatch {
+  background: hsla(var(--interactive-accent-hsl), 0.14);
+}
+
+.orca-editor-host .cm-editor .cm-matchingBracket,
+.orca-editor-host .cm-editor.cm-focused .cm-matchingBracket {
+  background: hsla(var(--interactive-accent-hsl), 0.2);
+  color: var(--text-normal);
+  outline: 1px solid hsla(var(--interactive-accent-hsl), 0.5);
+}
+
+.orca-editor-host .cm-editor .cm-nonmatchingBracket,
+.orca-editor-host .cm-editor.cm-focused .cm-nonmatchingBracket {
+  background: transparent;
+  color: var(--color-red);
+}
+
+.orca-editor-host .cm-editor .cm-searchMatch {
+  background: rgba(var(--color-yellow-rgb), 0.3);
+  outline: none;
+}
+
+.orca-editor-host .cm-editor .cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(var(--color-orange-rgb), 0.45);
+}
+
+.orca-editor-host .cm-foldGutter .cm-gutterElement {
+  display: flex;
+  align-items: center;
+  width: 14px;
+  color: var(--text-faint);
+  cursor: var(--cursor);
+}
+
+.orca-editor-fold {
+  display: flex;
+}
+
+.orca-editor-fold svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A rule that can fold shows its chevron while the pointer is over the
+   gutter, as Obsidian's own editor does. A folded one always shows. */
+.orca-editor-host .cm-gutters:not(:hover) [data-testid="orca-editor-fold"] {
+  visibility: hidden;
+}
+
+.orca-editor-host .cm-foldGutter .cm-gutterElement:hover {
+  color: var(--text-muted);
+}
+
+.orca-editor-host .cm-editor .cm-foldPlaceholder {
+  margin: 0 2px;
+  padding: 0 4px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+}
+
+.orca-editor-host .cm-editor .cm-panels {
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.orca-editor-host .cm-editor .cm-panels-top {
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.orca-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  padding: var(--size-4-2);
+  font-family: var(--font-interface);
+}
+
+.orca-search-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.orca-search .orca-search-field {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  margin-right: var(--size-4-1);
+  padding: 0 var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-search .orca-search-button {
+  padding: 4px;
+}
+
+.orca-search .orca-search-button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orca-search .orca-search-button.is-active {
+  background: var(--background-modifier-hover);
+  color: var(--text-accent);
 }
 
 .orca-editor-host .tok-keyword {

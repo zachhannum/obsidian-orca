@@ -856,8 +856,12 @@ test("the make pictures are a folder of notes made into a book", async ({
   await site.obsidian.asRendered();
 });
 
-/** The rule a CSS picture types: it overrides the indent control and holds a declaration fleuron skips. */
-const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;\n}";
+/**
+ * The rule a CSS picture types: it overrides the indent control and
+ * holds a declaration fleuron skips. The editor closes the brace and
+ * indents the lines, as it does for the author.
+ */
+const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;";
 
 /** The control that rule overrides. */
 const OVERRIDDEN = "body-first-line-indent";
@@ -1129,9 +1133,10 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
   const selector = (await site.panel.selector.textContent()) ?? "";
   const section = selector.replace(/ > p$/, "");
   expect(section).toMatch(/^section#/);
-  // The rule is typed over three lines, since one line is wider than the
-  // editor and scrolls it sideways under its gutter.
-  await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
+  // The rule is typed over lines, since one line is wider than the
+  // editor and scrolls it sideways under its gutter. The editor closes
+  // the brace.
+  await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};`);
   await expect(site.panel.rulesIn("own").first()).toContainText(OWN_INDENT);
   pin = await inspect.pinned();
   await site.panel.inspecting(pin.key, pin.generation);

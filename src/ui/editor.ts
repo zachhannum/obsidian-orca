@@ -8,20 +8,28 @@
 import {
   acceptCompletion,
   autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
   type Completion,
   type CompletionContext,
   type CompletionResult,
 } from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { cssLanguage } from "@codemirror/lang-css";
 import {
+  bracketMatching,
   ensureSyntaxTree,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
   syntaxHighlighting,
   syntaxTree,
 } from "@codemirror/language";
+import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import {
   Annotation,
   Compartment,
+  EditorSelection,
   EditorState,
   Prec,
   RangeSet,
@@ -33,6 +41,7 @@ import {
 } from "@codemirror/state";
 import {
   Decoration,
+  drawSelection,
   EditorView,
   GutterMarker,
   gutterLineClass,
@@ -40,9 +49,12 @@ import {
   highlightActiveLineGutter,
   hoverTooltip,
   keymap,
+  runScopeHandlers,
   lineNumbers,
+  rectangularSelection,
   tooltips,
   type DecorationSet,
+  type MouseSelectionStyle,
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { SUBSET } from "fleuron";
@@ -50,6 +62,7 @@ import { classHighlighter } from "@lezer/highlight";
 import type { Named } from "@/book/names";
 import type { Place } from "@/style/origin";
 import { quoted } from "@/style/quoted";
+import { searchPanel } from "@/ui/search";
 
 /** The editor over the fence, held by the panel view. */
 export interface CssEditor {
@@ -71,6 +84,12 @@ export interface CssEditor {
   caret(): { line: number; column: number };
   /** The warnings inside the rule that starts at a line and column. */
   skipped(line: number, column: number): Skipped[];
+  /**
+   * Runs the editor's own binding for a key with a modifier pressed
+   * inside it, and answers whether one took the key. Obsidian's hotkeys
+   * see a key before the editor does, so the view asks here first.
+   */
+  keydown(event: KeyboardEvent): boolean;
   destroy(): void;
 }
 
@@ -526,15 +545,34 @@ export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): 
         selectorCompletion,
       ],
       tooltipClass: () => "orca-completion",
+      // Tab and Enter take the option the moment the list shows it, as
+      // they do in VS Code, rather than falling through to indent.
+      interactionDelay: 0,
       ...(icon === undefined ? {} : completionIcons(icon)),
     }),
     Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     syntaxHighlighting(classHighlighter),
     lineNumbers(),
+    foldGutter({ markerDOM: foldMarker }),
     highlightActiveLine(),
     highlightActiveLineGutter(),
     history(),
-    keymap.of([...defaultKeymap, ...historyKeymap]),
+    drawSelection(),
+    EditorState.allowMultipleSelections.of(true),
+    altSelection,
+    bracketMatching(),
+    closeBrackets(),
+    indentOnInput(),
+    highlightSelectionMatches(),
+    search({ top: true, createPanel: searchPanel }),
+    keymap.of([
+      ...closeBracketsKeymap,
+      ...defaultKeymap,
+      ...searchKeymap,
+      ...historyKeymap,
+      ...foldKeymap,
+      indentWithTab,
+    ]),
     wrapping.of([]),
     flags,
     flaggedLines,
@@ -708,6 +746,49 @@ export function inserted(state: EditorState, text: string): TransactionSpec {
   };
 }
 
+/** Lucide's chevrons, which Obsidian draws its own fold markers with. */
+const FOLD_PATHS = { open: "m6 9 6 6 6-6", folded: "m9 18 6-6-6-6" };
+
+function foldMarker(open: boolean): HTMLElement {
+  const marker = document.createElement("div");
+  marker.className = "orca-editor-fold";
+  marker.dataset["testid"] = open ? "orca-editor-fold" : "orca-editor-folded";
+  const svg = marker.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg
+    .appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"))
+    .setAttribute("d", open ? FOLD_PATHS.open : FOLD_PATHS.folded);
+  return marker;
+}
+
+/** The mouse style CodeMirror's rectangular selection uses for an `Alt` drag. */
+const rectangle = EditorState.create({ extensions: rectangularSelection() }).facet(
+  EditorView.mouseSelectionStyle,
+)[0];
+
+/**
+ * `Alt`-click adds a cursor to the ones already there, and `Alt`-drag
+ * makes a rectangular selection in place of them.
+ */
+const altSelection = EditorView.mouseSelectionStyle.of((view, event) => {
+  const style = rectangle?.(view, event);
+  if (style === undefined || style === null) return null;
+  const before = view.state.selection;
+  const added: MouseSelectionStyle = {
+    update: (update) => {
+      style.update(update);
+    },
+    get(moved, extend) {
+      const drawn = style.get(moved, extend, false);
+      const clicked = drawn.ranges.length === 1 && drawn.main.empty;
+      return clicked
+        ? EditorSelection.create([...before.ranges, drawn.main], before.ranges.length)
+        : drawn;
+    },
+  };
+  return added;
+});
+
 /** The icon Obsidian draws a warning with, drawn here because CodeMirror owns this DOM. */
 const WARNING_PATHS = [
   "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
@@ -813,6 +894,15 @@ export function mountEditor(
     },
     skipped(line, column) {
       return skippedIn(view.state, line, column);
+    },
+    keydown(event) {
+      // A bare key goes to the editor already, and Tab after Escape
+      // must reach its own handling to leave the editor.
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) return false;
+      const target = event.target as Node | null;
+      if (view.contentDOM.contains(target)) return runScopeHandlers(view, event, "editor");
+      if (view.dom.contains(target)) return runScopeHandlers(view, event, "search-panel");
+      return false;
     },
     destroy() {
       view.destroy();
