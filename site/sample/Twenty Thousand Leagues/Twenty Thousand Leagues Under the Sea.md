@@ -4,6 +4,7 @@ title: Twenty Thousand Leagues Under the Sea
 author: Jules Verne
 language: "en-GB"
 date: 1871-11-16
+publisher: The Orca Library
 trim: 5.5in 8.5in
 margin-inside: 0.95in
 margin-outside: 0.7in
@@ -15,15 +16,22 @@ body-line-spacing: 14pt
 body-align: justify
 body-first-line-indent: 1.2em
 body-hyphens: true
+body-hanging-punctuation: true
 heading-1-size: 16pt
 heading-1-align: center
 heading-2-size: 9pt
 heading-2-align: center
+heading-2-letter-spacing: 0.2em
 heading-2-space-above: 7
 chapter-begins: next-page
 chapter-drop-cap: 3
+chapter-first-line-caps: small-caps
+chapter-first-line-letter-spacing: 0.04em
 header-left-page: author
 header-right-page: chapter-title
+chapter-title-from: h1
+header-caps: small-caps
+header-letter-spacing: 0.1em
 page-number-position: bottom
 suppress-head-on-openings: true
 ---
@@ -89,8 +97,102 @@ suppress-head-on-openings: true
 # Back matter
 
 - [[A note on the text]] `back-matter`
+- [[Colophon]] `back-matter`
 
 ```css
+/* The book prints in one colour beside black. */
+section.chapter h2,
+section.chapter p:first-of-type::first-letter,
+section.part h1,
+section.title-page h1,
+section.contents p.part {
+  color: #1d4e5b;
+}
+
+section.chapter h2 {
+  text-transform: lowercase;
+  font-variant-caps: small-caps;
+}
+
+section.title-page h1 {
+  font-size: 24pt;
+  line-height: 30pt;
+}
+
+/* The shell stands under the title, as it stands behind each chapter's. */
+section.title-page h1 {
+  margin-bottom: 1.3in;
+}
+
+section.title-page h1::after {
+  content: "";
+  position: absolute;
+  top: 2.6in;
+  left: 0;
+  right: 0;
+  height: 0.9in;
+  background-image: url("nautilus.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.8;
+}
+
+section.part p {
+  text-align: center;
+  text-indent: 0;
+  font-size: 18pt;
+  color: #1d4e5b;
+}
+
+section.title-page p,
+section.part h1,
+section.contents p.part {
+  text-transform: lowercase;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.15em;
+}
+
+section.part h1 {
+  padding-top: 2.4in;
+  font-size: 14pt;
+}
+
+/* The copyright sits small at the foot of its page. */
+section.copyright > p {
+  font-size: 8.5pt;
+  line-height: 11pt;
+  text-indent: 0;
+  margin-bottom: 6pt;
+}
+
+/* The colophon is set as a centred block low on the last page. */
+section#colophon h1 {
+  padding-top: 3.4in;
+  font-size: 10.5pt;
+  text-transform: lowercase;
+  font-variant-caps: small-caps;
+  letter-spacing: 0.15em;
+  color: #1d4e5b;
+}
+
+section#colophon p {
+  text-align: center;
+  text-indent: 0;
+  font-style: italic;
+  margin-bottom: 6pt;
+}
+
+section#colophon p:last-child {
+  font-style: normal;
+  font-size: 14pt;
+  color: #1d4e5b;
+}
+
+section.copyright > p:first-child {
+  padding-top: 4.6in;
+}
+
 /* Four body lines under the title keep the text clear of the shell. */
 section.chapter h1 {
   margin-bottom: 56pt;

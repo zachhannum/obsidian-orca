@@ -320,8 +320,12 @@ test("the book note carries the design the landing page shows", async () => {
       "body-align": "justify",
       "body-first-line-indent": "1.2em",
       "body-hyphens": "true",
+      "body-hanging-punctuation": "true",
       "chapter-begins": "next-page",
       "chapter-drop-cap": "3",
+      "chapter-first-line-caps": "small-caps",
+      "chapter-first-line-letter-spacing": "0.04em",
+      "chapter-title-from": "h1",
     },
   );
   // The chapter opens on its label, which is a level 2 heading.
