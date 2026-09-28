@@ -6,6 +6,7 @@
  */
 
 import { expect, type Locator } from "@playwright/test";
+import { PREVIEW } from "./book";
 import type { Obsidian } from "./obsidian";
 
 /** The command that opens the dialog on the active book. */
@@ -40,8 +41,16 @@ export class Export {
     this.openPdf = this.dialog.getByTestId("orca-export-open");
   }
 
-  /** Opens the dialog the way the palette runs it. */
+  /**
+   * Opens the dialog the way the palette runs it, from the book. A leaf
+   * an earlier spec focused, like the design panel, stays active when
+   * the book opens, so the preview is put in front first.
+   */
   async open(): Promise<void> {
+    await this.obsidian.page.evaluate((type) => {
+      const preview = window.app.workspace.getLeavesOfType(type)[0];
+      if (preview !== undefined) window.app.workspace.setActiveLeaf(preview, { focus: true });
+    }, PREVIEW);
     await this.obsidian.command(EXPORT_PDF);
     await expect(this.dialog).toBeVisible();
   }

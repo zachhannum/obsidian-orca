@@ -1,4 +1,4 @@
-import { ItemView, setIcon, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Scope, setIcon, type WorkspaceLeaf } from "obsidian";
 import type { Cover } from "@/assets/cmap";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
@@ -92,6 +92,10 @@ export class DesignPanelView extends ItemView {
     private readonly designing: Designing,
   ) {
     super(leaf);
+    // Obsidian's hotkeys see a key before CodeMirror does, and swallow
+    // the ones they bind, so a key the CSS editor binds goes to it first.
+    this.scope = new Scope(this.app.scope);
+    this.scope.register(null, null, (event) => (this.editor?.keydown(event) === true ? false : undefined));
   }
 
   override getViewType(): string {

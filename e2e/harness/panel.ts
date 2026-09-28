@@ -31,6 +31,27 @@ const CODEMIRROR_GUTTERS = ".cm-gutters";
 /** CodeMirror's own class for the gutter of the line the caret is on. */
 const CODEMIRROR_CARET_LINE = ".cm-activeLineGutter";
 
+/** CodeMirror's own class for the bracket beside the caret and the one it matches. */
+const CODEMIRROR_MATCHED = ".cm-matchingBracket";
+
+/** CodeMirror's own class for another copy of the selected word. */
+const CODEMIRROR_SELECTION_MATCH = ".cm-selectionMatch";
+
+/** CodeMirror's own class for a match the search panel found. */
+const CODEMIRROR_SEARCH_MATCH = ".cm-searchMatch";
+
+/** CodeMirror's own class for a cursor it draws, one for each selection range. */
+const CODEMIRROR_CURSOR = ".cm-cursorLayer .cm-cursor";
+
+/** CodeMirror's own class for the text that stands in for a folded rule. */
+const CODEMIRROR_FOLDED = ".cm-foldPlaceholder";
+
+/** CodeMirror's own class for one line of its text. */
+const CODEMIRROR_LINE = ".cm-line";
+
+/** CodeMirror's own class for an option in the completion list. */
+const CODEMIRROR_OPTION = ".cm-tooltip-autocomplete li";
+
 /** The id in the plugin's manifest, which the app keys its plugins by. */
 const ORCA = "orca";
 
@@ -93,6 +114,24 @@ export class Controls {
   readonly flaggedLines: Locator;
   /** The number of the line the caret is on. */
   readonly caretLine: Locator;
+  /** The bracket beside the caret and the one it matches. */
+  readonly matchedBrackets: Locator;
+  /** The other copies of the selected word. */
+  readonly selectionMatches: Locator;
+  /** The matches the search panel found. */
+  readonly searchMatches: Locator;
+  /** The cursors the editor draws, one for each selection range. */
+  readonly cursors: Locator;
+  /** The editor's search panel, and its fields and buttons by their labels. */
+  readonly search: Locator;
+  /** A chevron that folds the rule its line opens, shown while the pointer is over the gutter. */
+  readonly foldMarkers: Locator;
+  /** A chevron that unfolds a folded rule. */
+  readonly unfoldMarkers: Locator;
+  /** The text that stands in for a folded rule. */
+  readonly folded: Locator;
+  /** The options of the completion list. CodeMirror draws it on the body, outside the panel. */
+  readonly completions: Locator;
   /** The count of warnings in the CSS view's header. */
   readonly warned: Locator;
   /** The book's name in the header, after the name of the view. */
@@ -141,6 +180,15 @@ export class Controls {
     this.gutters = this.editor.locator(CODEMIRROR_GUTTERS);
     this.flaggedLines = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}.orca-editor-flagged`);
     this.caretLine = this.editor.locator(`${CODEMIRROR_LINE_NUMBER}${CODEMIRROR_CARET_LINE}`);
+    this.matchedBrackets = this.editor.locator(CODEMIRROR_MATCHED);
+    this.selectionMatches = this.editor.locator(CODEMIRROR_SELECTION_MATCH);
+    this.searchMatches = this.editor.locator(CODEMIRROR_SEARCH_MATCH);
+    this.cursors = this.editor.locator(CODEMIRROR_CURSOR);
+    this.search = this.editor.getByTestId("orca-editor-search");
+    this.foldMarkers = this.editor.getByTestId("orca-editor-fold");
+    this.unfoldMarkers = this.editor.getByTestId("orca-editor-folded");
+    this.folded = this.editor.locator(CODEMIRROR_FOLDED);
+    this.completions = root.page().locator(CODEMIRROR_OPTION);
     this.warned = root.getByTestId("orca-panel-warned");
     this.bookName = root.getByTestId("orca-panel-book");
     this.card = root.page().getByTestId("orca-editor-card");
@@ -218,6 +266,44 @@ export class Controls {
     await this.code.click();
     await this.code.press("ControlOrMeta+End");
     await this.code.pressSequentially(typed);
+  }
+
+  /** Puts this text in place of the author's CSS, typed as the author would. */
+  async replaceCss(typed: string): Promise<void> {
+    await this.code.click();
+    await this.code.press("ControlOrMeta+A");
+    await this.code.press("Backspace");
+    await this.code.pressSequentially(typed);
+  }
+
+  /** The editor's text, one line of it to a line. A folded rule shows what stands in for it. */
+  async cssText(): Promise<string> {
+    const lines = await this.editor.locator(CODEMIRROR_LINE).allInnerTexts();
+    return lines.join("\n");
+  }
+
+  /** The point on the page before a column of a line, both counted from 1, where a click puts the caret. */
+  async point(line: number, column: number): Promise<{ x: number; y: number }> {
+    return this.editor
+      .locator(CODEMIRROR_LINE)
+      .nth(line - 1)
+      .evaluate((element, at) => {
+        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let left = at;
+        for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+          const length = node.textContent?.length ?? 0;
+          if (left <= length) {
+            const range = element.ownerDocument.createRange();
+            range.setStart(node, left);
+            range.setEnd(node, left);
+            const rect = range.getBoundingClientRect();
+            return { x: rect.left + 1, y: rect.top + rect.height / 2 };
+          }
+          left -= length;
+        }
+        const box = element.getBoundingClientRect();
+        return { x: box.right, y: box.top + box.height / 2 };
+      }, column - 1);
   }
 
   /** The distance from a header icon to the center of its button, in pixels, on the axis where it is larger. */

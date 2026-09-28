@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { language } from "@codemirror/language";
-import { CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
-import { EditorState } from "@codemirror/state";
+import { foldable, language } from "@codemirror/language";
+import {
+  acceptCompletion,
+  CompletionContext,
+  insertBracket,
+  type CompletionResult,
+} from "@codemirror/autocomplete";
+import {
+  indentLess,
+  indentMore,
+  insertNewlineAndIndent,
+  toggleComment,
+} from "@codemirror/commands";
+import { selectNextOccurrence } from "@codemirror/search";
+import { EditorState, type Transaction } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
 import { SUBSET } from "fleuron";
 import { OWN_SHEET } from "@/style/sheet";
 import {
@@ -276,18 +289,110 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
   assert.equal(set.selection.main.head, "@page :left {\n  @top-left {\n    ".length);
 });
 
+/**
+ * Runs a command on a state and hands back the state it leaves. The
+ * target is typed `never` because `@codemirror/commands` types it
+ * against its own copy of `@codemirror/state`.
+ */
+function run(state: EditorState, command: (target: never) => boolean): EditorState {
+  let after = state;
+  const dispatch = (tr: Transaction): void => {
+    after = tr.state;
+  };
+  const ran = command({ state, dispatch } as never);
+  assert.ok(ran);
+  return after;
+}
+
+/** A state with the caret at a place, or a selection between two. */
+function at(doc: string, anchor: number, head = anchor): EditorState {
+  return editing(doc).update({ selection: { anchor, head } }).state;
+}
+
+/** Types one character as the author does, so the filters that watch input run. */
+function typed(state: EditorState, text: string): EditorState {
+  const bracket = insertBracket(state, text);
+  if (bracket !== null) return state.update(bracket).state;
+  return state.update(state.replaceSelection(text), { userEvent: "input.type" }).state;
+}
+
+test("a bracket or quote typed closes after the caret, and its closing character steps over it", () => {
+  for (const [open, close] of [["{", "}"], ["(", ")"], ["[", "]"], ['"', '"'], ["'", "'"]] as const) {
+    const opened = typed(at("", 0), open);
+    assert.equal(opened.doc.toString(), `${open}${close}`, open);
+    assert.equal(opened.selection.main.head, 1, open);
+    const closed = typed(opened, close);
+    assert.equal(closed.doc.toString(), `${open}${close}`, close);
+    assert.equal(closed.selection.main.head, 2, close);
+  }
+});
+
+test("Enter inside a rule indents the new line, and a } typed on an indented line outdents it", () => {
+  const inside = run(at("p {", 3), insertNewlineAndIndent);
+  assert.equal(inside.doc.toString(), "p {\n  ");
+  const declared = typed(typed(inside, "a"), ";");
+  const next = run(declared, insertNewlineAndIndent);
+  assert.equal(next.doc.toString(), "p {\n  a;\n  ");
+  assert.equal(typed(next, "}").doc.toString(), "p {\n  a;\n}");
+});
+
+test("Tab indents the selected lines and Shift-Tab outdents them, after the open option", () => {
+  const doc = "a: b;\nc: d;";
+  const indented = run(at(doc, 0, doc.length), indentMore);
+  assert.equal(indented.doc.toString(), "  a: b;\n  c: d;");
+  assert.equal(run(indented, indentLess).doc.toString(), doc);
+  // The first binding Tab reaches takes an option when the list is open.
+  const tab = editing()
+    .facet(keymap)
+    .flat()
+    .find((binding) => binding.key === "Tab");
+  assert.equal(tab?.run, acceptCompletion);
+});
+
+test("a rule folds from the line that opens it", () => {
+  const state = editing();
+  const first = state.doc.line(1);
+  assert.deepEqual(foldable(state, first.from, first.to), { from: 3, to: CSS.length - 1 });
+  const inner = state.doc.line(2);
+  assert.equal(foldable(state, inner.from, inner.to), null);
+});
+
+test("Mod-D selects the next copy of the selection", () => {
+  const doc = "p { a: b; }\nh1 { a: c; }";
+  const state = run(at(doc, 4, 5), selectNextOccurrence);
+  assert.deepEqual(
+    state.selection.ranges.map(({ from, to }) => [from, to]),
+    [
+      [4, 5],
+      [17, 18],
+    ],
+  );
+});
+
+test("Mod-/ wraps the selected lines in a comment, and takes it out of lines already inside one", () => {
+  const doc = "p {\n  a: b;\n  c: d;\n}";
+  const lines = at(doc, doc.indexOf("a"), doc.indexOf("d;") + 2);
+  const commented = run(lines, toggleComment);
+  assert.equal(commented.doc.toString(), "p {\n  /* a: b;\n  c: d; */\n}");
+  assert.equal(run(commented, toggleComment).doc.toString(), doc);
+});
+
 // What this tier does not cover: the editor on a page, which has no
 // DOM here, and the card a hover draws. The e2e suite types into it in
 // Obsidian and waits on the write, the render, the squiggle and its
 // card. Nor the font the engine carries, which no face registers and
-// the completion does not offer.
+// the completion does not offer. The editing keys run here as commands
+// on a state, not as keys pressed. The bracket highlight, the fold
+// gutter, the search panel, the selection matches and the Alt mouse
+// need a view, and the e2e suite presses them in Obsidian. Neither
+// tier presses them on a keyboard layout other than the runner's.
 //
 // The completion reads the engine's subset for names and keywords,
 // not its grammar. It offers no value inside a function, except the
 // names inside `var()` and `string()` and the counter styles that a
 // `content` value takes anywhere, and no unit
 // after a number. It does not offer `!important`, a page name
-// after `@page`, or a class the author's own markdown writes. No e2e
-// spec opens the completion list in Obsidian, so the Tab key that
-// takes an option, the detail line under a label and the Obsidian icon
-// beside it go untested.
+// after `@page`, or a class the author's own markdown writes. The e2e
+// suite opens the list in Obsidian only to take a family with Tab, so
+// the detail line under a label and the Obsidian icon beside it go
+// untested.
