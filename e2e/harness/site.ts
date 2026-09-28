@@ -119,14 +119,16 @@ function block(css: string, selector: string): Map<string, string> {
 /**
  * The site's faces, with every file inlined. A snippet is a stylesheet
  * with no directory of its own, so a relative url in one resolves
- * against Obsidian rather than against the site.
+ * against Obsidian rather than against the site. A url that starts
+ * with a dot is a face the site keeps itself; any other names a package.
  */
 async function faces(): Promise<string> {
   const css = await readFile(FACES, "utf8");
   const files = [...new Set([...css.matchAll(/url\('([^']+)'\)/g)].map((m) => m[1] ?? ""))];
   const inlined = new Map<string, string>();
   for (const file of files) {
-    const bytes = await readFile(path.join(MODULES, file)).catch(() => undefined);
+    const from = file.startsWith(".") ? path.dirname(FACES) : MODULES;
+    const bytes = await readFile(path.join(from, file)).catch(() => undefined);
     if (bytes === undefined) {
       throw new Error(`no ${file}; run \`npm ci\` in site to install the faces`);
     }
