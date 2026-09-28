@@ -171,7 +171,7 @@ test("a click on a link to a website opens its url outside Obsidian and turns no
   // A url the window opens goes to the system's browser, which this
   // suite cannot see, so the call that hands it over is caught instead.
   await obsidian.page.evaluate(() => {
-    const caught = { urls: [] as string[], open: window.open };
+    const caught = { urls: [] as string[], open: window.open.bind(window) };
     window.orcaOpened = caught;
     window.open = (url) => {
       caught.urls.push(String(url));

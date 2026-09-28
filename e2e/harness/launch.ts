@@ -5,10 +5,11 @@
  */
 
 import { execFileSync, type ChildProcess } from "node:child_process";
-import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath } from "node:url";
 import ObsidianLauncher from "obsidian-launcher";
 
@@ -118,13 +119,31 @@ async function orcaIn(
   );
   await rename(copied, vault);
   // CDP can neither see nor click a native menu, so the copy uses Obsidian's own.
-  const config = path.join(vault, ".obsidian/app.json");
+  const config = path.join(await configIn(vault), "app.json");
   const had = await readFile(config, "utf8").then(
     (text) => JSON.parse(text) as Record<string, unknown>,
     () => ({}),
   );
   await writeFile(config, JSON.stringify({ ...had, nativeMenus: false }, null, 2));
   return vault;
+}
+
+/**
+ * A vault copy's configuration folder, found where the launcher
+ * installed orca. The app names it `Vault#configDir`, and that is not
+ * there to read until the app has opened the vault.
+ */
+export async function configIn(vault: string): Promise<string> {
+  for (const entry of await readdir(vault, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const config = path.join(vault, entry.name);
+    const installed = await stat(path.join(config, "plugins", PLUGIN)).then(
+      (found) => found.isDirectory(),
+      () => false,
+    );
+    if (installed) return config;
+  }
+  throw new Error(`no configuration folder with ${PLUGIN} installed in ${vault}`);
 }
 
 /**

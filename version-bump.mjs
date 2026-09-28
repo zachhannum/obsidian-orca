@@ -22,4 +22,4 @@ versions[targetVersion] = minAppVersion;
 writeJson("versions.json", versions);
 
 execFileSync("git", ["add", ...staged], { stdio: "inherit" });
-console.log(`${targetVersion}: ${staged.join(", ")}`);
+process.stdout.write(`${targetVersion}: ${staged.join(", ")}\n`);
