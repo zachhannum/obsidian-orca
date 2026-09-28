@@ -26,7 +26,7 @@ export class Changed extends Modal {
     const pane = this.contentEl;
     pane.dataset["testid"] = "orca-book-changed";
     pane.createEl("p", {
-      text: "This note was written outside orca. Your edit is not in it.",
+      text: "This note was written outside Orca. Your edit is not in it.",
     });
 
     const buttons = pane.createDiv({ cls: "modal-button-container" });

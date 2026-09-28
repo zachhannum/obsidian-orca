@@ -463,7 +463,7 @@ export class BookView extends FileView {
         return 0;
       },
     );
-    reading.then((count) => {
+    void reading.then((count) => {
       // A change while the read was out has already dropped this one.
       if (this.counting.get(path) !== reading) return;
       this.counting.delete(path);

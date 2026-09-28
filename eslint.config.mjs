@@ -35,6 +35,9 @@ export default defineConfig([
         },
       },
     },
+    rules: {
+      "obsidianmd/ui/sentence-case": ["warn", { brands: ["Orca"] }],
+    },
   },
   {
     // node:test hands back a promise the runner already waits on.

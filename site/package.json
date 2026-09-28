@@ -8,7 +8,7 @@
     "dev": "astro dev",
     "build": "node scripts/check-tokens.mjs && astro check && astro build",
     "preview": "astro preview",
-    "lint": "astro sync && eslint ."
+    "lint": "astro sync && eslint --max-warnings 0 ."
   },
   "license": "MIT",
   "dependencies": {
