@@ -42,6 +42,7 @@ import {
   isViewMode,
   nextPage,
   previousPage,
+  pressSheet,
   showPages,
   spanAt,
   turnedTo,
@@ -1393,16 +1394,20 @@ export class PreviewView extends ItemView {
     this.asked = reading.at + on;
     const read = reading.pages[on];
     this.blocks = read === undefined ? [] : heldOn(read);
-    showPages(surface, {
-      mode: this.mode,
-      leaves,
-      generation: session.generation,
-      stages: session.stages,
-      pages: reading.length,
-      note: this.showing ?? "",
-      columns: SEATS[this.mode] ?? this.columns,
-      rows: this.mode === "grid" ? this.rows : 1,
-    });
+    showPages(
+      surface,
+      {
+        mode: this.mode,
+        leaves,
+        generation: session.generation,
+        stages: session.stages,
+        pages: reading.length,
+        note: this.showing ?? "",
+        columns: SEATS[this.mode] ?? this.columns,
+        rows: this.mode === "grid" ? this.rows : 1,
+      },
+      pressSheet,
+    );
     this.painted = new Map(
       reading.pages.map((page, index) => [reading.at + index, page]),
     );
