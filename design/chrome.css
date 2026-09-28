@@ -132,8 +132,8 @@
 /* ---- the set page ---- */
 .paper { background: #fdfcf9; color: #1a1712; box-shadow: var(--paper-shadow); font-family: "EB Garamond", Georgia, "Times New Roman", serif; position: relative; }
 .paper .body { font-size: 10.5px; line-height: 1.62; text-align: justify; hyphens: auto; }
-.paper .body p { margin: 0; text-indent: 1.2em; }
-.paper .body p.first { text-indent: 0; }
+.paper .body p { margin: 0; }
+.paper .body p:not(.first)::before { content: ""; display: inline-block; width: 1.2em; }
 .paper .folio { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; font-size: 9px; color: #4a453c; }
 .paper .runhead { position: absolute; top: 22px; left: 0; right: 0; text-align: center; font-size: 8.5px; letter-spacing: 0.09em; text-transform: uppercase; color: #6a6355; }
 .paper .chaphead { text-align: center; }
@@ -252,7 +252,7 @@
 .decl { padding-left: 12px; }
 .decl .p { color: var(--color-cyan); }
 .decl .v { color: var(--color-purple); }
-.decl.is-lost { text-decoration: line-through; text-decoration-color: var(--text-faint); opacity: 0.55; }
+.decl.is-lost { text-decoration: line-through; opacity: 0.55; }
 .decl.is-skipped .p, .decl.is-skipped .v { text-decoration: underline wavy var(--color-orange); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .computed { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 11.5px; }
 .computed > span:nth-child(odd) { color: var(--text-faint); }
