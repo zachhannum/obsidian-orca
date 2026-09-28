@@ -10,9 +10,10 @@
     open: [0, 7.5],
     notes: [7.5, 15],
     write: [15, 22.5],
-    design: [22.5, 37.5],
+    design: [22.5, 30],
+    css: [30, 37.5],
     export: [37.5, 45],
-    engine: [45, 50.625],
+    pdf: [45, 50.625],
     end: [50.625, 58.125],
   };
   O.scenes = [];
@@ -204,7 +205,8 @@
       return;
     }
     O.setVis(cursor, true);
-    const [x, y] = O.keys(t, tr.frames, E.inOutCubic);
+    let [x, y] = O.keys(t, tr.frames, E.inOutCubic);
+    if (tr.map) [x, y] = tr.map(t, [x, y]);
     const vis = O.env(t, tr.a, tr.b, 0.3, 0.3);
     let press = 1;
     let rk = -1;
@@ -291,17 +293,5 @@
     el.style.filter = bl > 0.05 ? `blur(${bl.toFixed(2)}px)` : 'none';
   };
 
-  O.icon = {
-    file: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>',
-    book: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>',
-    pen: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
-    cross: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>',
-    down: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>',
-    sliders: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
-    chev: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10l4-4 4 4M8 14l4 4 4-4"/></svg>',
-    reset: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
-    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-    link: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
-  };
   O.tail = '<svg viewBox="60 244 905 520" fill="currentColor"><path d="M797.14 322.264C701.904 337.045 656.024 322.264 585.814 381.386C515.604 440.507 530.898 491.5 530.898 727.247C531.632 759.024 538.347 759.169 542.02 759.024C560.789 758.285 565.172 711.922 688.909 618.805C812.645 525.688 830.955 523.281 884.3 473.658C958.279 404.84 961.195 286.052 954.243 267.577C947.292 249.101 892.375 307.484 797.14 322.264Z"/><path d="M227.611 322.264C322.847 337.045 368.727 322.264 438.937 381.386C509.147 440.507 493.853 491.5 493.853 727.247C493.119 759.024 486.404 759.169 482.731 759.024C463.962 758.285 459.579 711.922 335.842 618.805C212.106 525.688 193.796 523.281 140.452 473.658C66.4723 404.84 63.5559 286.052 70.5077 267.577C77.4594 249.101 132.376 307.484 227.611 322.264Z"/></svg>';
 })();

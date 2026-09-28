@@ -3,7 +3,7 @@
 (function () {
   const O = window.O, E = O.E;
   const [A, B] = O.T.open;
-  let tail, mark, skyCopy, seaCopy, charsSky, charsSea, lede, words, cta, ctaBits;
+  let tail, mark, skyCopy, seaCopy, charsSky, charsSea, lede, words;
 
   const HL = `<div class="hl"><span class="lm">A B<span class="wide">O</span><span class="wide">O</span>K DESIGNER</span><span class="lm"><i>INSIDE OBSIDIAN.</i></span></div>`;
 
@@ -19,18 +19,13 @@
           #sc-open .tail{position:absolute;left:0;top:0;width:560px;height:322px;will-change:transform}
           #sc-open .tail svg{width:100%;height:100%;display:block}
           #sc-open .mark{position:absolute;left:226px;top:78px;font-family:'Dirtyline';font-size:70px;line-height:1;color:var(--ink);white-space:nowrap}
-          #sc-open .lede{position:absolute;left:120px;top:676px;width:1000px;font-size:30px;line-height:1.5;color:var(--muted)}
-          #sc-open .cta{position:absolute;left:120px;top:870px;display:flex;align-items:center;gap:34px;font-family:var(--ui)}
-          #sc-open .btn{font-size:21px;font-weight:600;padding:18px 30px;border-radius:8px;background:var(--accent);color:#fff;box-shadow:0 10px 40px -8px rgba(99,102,241,.6)}
-          #sc-open .lnk{font-size:21px;font-weight:600;color:var(--text);border-bottom:2px solid var(--text);padding-bottom:3px}
-          #sc-open .dsk{font-family:var(--display);font-size:17px;color:var(--faint)}
+          #sc-open .lede{position:absolute;left:120px;top:690px;width:1000px;font-size:30px;line-height:1.5;color:var(--muted)}
         </style>
         <div class="hlayer sea" style="color:var(--text)">${HL}</div>
         <div class="hlayer sky" style="color:var(--ink)">${HL}</div>
         <div class="tail">${O.tail}</div>
         <div class="mark">oRcA</div>
-        <p class="lede">Each chapter is a Markdown note. One book note stores the details and the design. Preview the typeset book and export it to PDF, without leaving Obsidian.</p>
-        <div class="cta"><span class="btn">Install in Obsidian</span><span class="lnk">Read the docs</span><span class="dsk">Desktop only</span></div>`;
+        <p class="lede">Each chapter is a Markdown note. One book note stores the details and the design. Preview the typeset book and export it to PDF, without leaving Obsidian.</p>`;
       tail = el.querySelector('.tail');
       mark = el.querySelector('.mark');
       seaCopy = el.querySelector('.hlayer.sea');
@@ -47,8 +42,6 @@
       charsSky = prep(skyCopy);
       lede = el.querySelector('.lede');
       words = O.splitWords(lede);
-      cta = el.querySelector('.cta');
-      ctaBits = Array.from(cta.children);
 
       O.cues.whooshes.push(1.15, 7.45);
       O.cues.impacts.push({ t: 3.75, big: true });
@@ -96,11 +89,6 @@
       setChars(charsSky);
 
       O.reveal(words, t, 4.75, 0.022, 0.8, { dist: 100 });
-      ctaBits.forEach((b, i) => {
-        const k = E.outQuart(O.prog(t, 5.35 + i * 0.12, 6.0 + i * 0.12));
-        b.style.opacity = k;
-        b.style.transform = `translate3d(0,${(1 - k) * 24}px,0)`;
-      });
 
       // Exit: the camera sinks, so everything rides up with the surface.
       this.el.style.transform = `translate3d(0,${-out * 620}px,0)`;
