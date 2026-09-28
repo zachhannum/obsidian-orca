@@ -6,6 +6,7 @@ import {
   engineModule,
   manifestFile,
   options,
+  packageFile,
   root,
 } from "./scripts/bundle.mjs";
 
@@ -19,7 +20,7 @@ const flag = (name, fallback) => {
 const outdir = flag("out", root);
 
 const manifest = flag("manifest", manifestFile);
-await checkEngine(engineModule, manifest);
+await checkEngine(engineModule, flag("package", packageFile));
 await copyPlugin(outdir, manifest);
 
 const context = await esbuild.context(options({ production, outdir }));

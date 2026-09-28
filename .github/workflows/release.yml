@@ -40,7 +40,7 @@ jobs:
             fi
           done
 
-      # The build checks the module against the manifest's engine version.
+      # The build checks the module against the engine the package pins.
       - run: npm run build
 
       - uses: actions/attest-build-provenance@v4
