@@ -212,8 +212,22 @@ const demo = {
   images,
 };
 
+/**
+ * One line of the title, written with a capital for each letter drawn
+ * at full width. The title is set in capitals, so the case the line is
+ * written in marks the wide letters and nothing else.
+ */
+const widen = (line: string): string =>
+  [...line]
+    .map((letter) =>
+      letter !== letter.toLowerCase()
+        ? `<span class="wide">${letter.toLowerCase()}</span>`
+        : letter
+    )
+    .join('');
+
 /** The page title. The sky's copy and the sea's are both set from it. */
-const title = 'A book designer<br /><i>inside Obsidian.</i>';
+const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}</i>`;
 
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
@@ -279,7 +293,7 @@ const swap = {
       <header>
         <a class="word" href="/">
           <Mark width={40} height={25} />
-          <span>orca</span>
+          <span aria-label="orca">oRcA</span>
         </a>
         <nav>
           <a href={docs}>Docs</a>
@@ -548,7 +562,7 @@ const swap = {
       <footer>
         <a class="word small" href="/">
           <Mark width={26} height={16} />
-          <span>orca</span>
+          <span aria-label="orca">oRcA</span>
         </a>
         <nav>
           <a href={docs}>Docs</a>
@@ -682,8 +696,10 @@ const swap = {
     text-decoration: none;
   }
   .word span {
-    font-family: var(--display);
-    font-weight: 600;
+    font-family: var(--wordmark);
+    font-weight: 400;
+    /* The ink sits high in the face's box, as it does in the docs' title. */
+    translate: 0 0.125em;
     font-size: 30px;
   }
   /* The footer's mark is the reading colour, so it is one flat white on
@@ -733,16 +749,20 @@ const swap = {
   h1 {
     position: relative;
     margin: 0;
-    font-family: var(--display);
+    font-family: var(--title);
     font-size: var(--title-size);
     line-height: var(--title-leading);
-    letter-spacing: -0.02em;
-    font-weight: 700;
+    font-weight: 500;
+    text-transform: uppercase;
     color: var(--sky-text);
   }
+  /* The sea's copy is clipped to its own box, and a slanted letter at
+     the start of a line leans out past the box's left edge. The box
+     reaches left by that much, and the padding puts the letters back. */
   h1 .sunk {
     position: absolute;
-    inset: 0;
+    inset: 0 0 0 -0.2em;
+    padding-inline-start: 0.2em;
     color: var(--text);
     /* The surface before the module runs, and the surface with the page
        read without scripts: the rest line, level. */
@@ -754,9 +774,20 @@ const swap = {
   /* Both copies of the title are written in, so their letters carry no
      scope class and the selector reaches them globally. The h1 ahead of
      it is scoped, so the rule stays on this page. */
+  /* The face slants and widens on axes of its own. The settings are
+     not inherited as parts, so every letter restates both. */
+  h1,
+  h1 :global(*) {
+    font-variation-settings:
+      'wdth' var(--wdth, 60),
+      'slnt' var(--slnt, 0);
+  }
   h1 :global(i) {
-    font-style: italic;
-    font-weight: 500;
+    font-style: normal;
+    --slnt: -10;
+  }
+  h1 :global(.wide) {
+    --wdth: 150;
   }
   .lede {
     margin: 34px 0 0;

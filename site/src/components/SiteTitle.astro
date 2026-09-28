@@ -5,7 +5,7 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 
 <a href={siteTitleHref} class="site-title">
   <Mark />
-  <span translate="no">{siteTitle}</span>
+  <span translate="no" aria-label={siteTitle}>oRcA</span>
 </a>
 
 <style>
@@ -19,8 +19,11 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
     min-width: 0;
   }
   span {
-    font-family: var(--display);
-    font-weight: 600;
+    font-family: var(--wordmark);
+    font-weight: 400;
+    /* The face keeps room for descenders these letters do not use, so
+       the box is centred on the mark and the ink sits high in it. */
+    translate: 0 0.125em;
     font-size: 25px;
     overflow: hidden;
   }
