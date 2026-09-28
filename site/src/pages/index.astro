@@ -212,8 +212,23 @@ const demo = {
   images,
 };
 
+/**
+ * One line of the title, a span per letter. The weight steps from `from`
+ * to `to` across the line in the heading face's hundreds.
+ */
+const ramp = (line: string, from: number, to: number): string => {
+  const letters = [...line];
+  const last = Math.max(letters.length - 1, 1);
+  return letters
+    .map((letter, at) => {
+      const weight = Math.round((from + ((to - from) * at) / last) / 100) * 100;
+      return `<span style="font-weight:${weight}">${letter}</span>`;
+    })
+    .join('');
+};
+
 /** The page title. The sky's copy and the sea's are both set from it. */
-const title = 'A book designer<br /><i>inside Obsidian.</i>';
+const title = `${ramp('A book designer', 100, 800)}<br /><i>${ramp('inside Obsidian.', 800, 100)}</i>`;
 
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
@@ -279,7 +294,7 @@ const swap = {
       <header>
         <a class="word" href="/">
           <Mark width={40} height={25} />
-          <span>orca</span>
+          <span aria-label="orca">oRcA</span>
         </a>
         <nav>
           <a href={docs}>Docs</a>
@@ -548,7 +563,7 @@ const swap = {
       <footer>
         <a class="word small" href="/">
           <Mark width={26} height={16} />
-          <span>orca</span>
+          <span aria-label="orca">oRcA</span>
         </a>
         <nav>
           <a href={docs}>Docs</a>
@@ -682,8 +697,8 @@ const swap = {
     text-decoration: none;
   }
   .word span {
-    font-family: var(--display);
-    font-weight: 600;
+    font-family: var(--wordmark);
+    font-weight: 400;
     font-size: 30px;
   }
   /* The footer's mark is the reading colour, so it is one flat white on
@@ -756,7 +771,6 @@ const swap = {
      it is scoped, so the rule stays on this page. */
   h1 :global(i) {
     font-style: italic;
-    font-weight: 500;
   }
   .lede {
     margin: 34px 0 0;
