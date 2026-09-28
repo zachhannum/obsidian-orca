@@ -126,7 +126,12 @@ async function faces(): Promise<string> {
   const files = [...new Set([...css.matchAll(/url\('([^']+)'\)/g)].map((m) => m[1] ?? ""))];
   const inlined = new Map<string, string>();
   for (const file of files) {
-    const bytes = await readFile(path.join(MODULES, file)).catch(() => undefined);
+    // A face the site keeps itself is a path beside the stylesheet; the
+    // rest are packages.
+    const from = file.startsWith(".")
+      ? path.resolve(path.dirname(FACES), file)
+      : path.join(MODULES, file);
+    const bytes = await readFile(from).catch(() => undefined);
     if (bytes === undefined) {
       throw new Error(`no ${file}; run \`npm ci\` in site to install the faces`);
     }
