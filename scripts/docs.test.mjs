@@ -86,7 +86,7 @@ test("one tokens file holds both schemes, and Starlight's variables read from it
   const dark = block(tokens, ":root");
   const light = block(tokens, ":root[data-theme='light']");
   assert.deepEqual(Object.keys(dark), Object.keys(light));
-  assert.equal(dark["--bg"], "#0a0c0f");
+  assert.equal(dark["--bg"], "#000000");
   assert.equal(light["--bg"], "#eef0ec");
 
   const mapped = block(theme, ":root");
@@ -456,7 +456,7 @@ test("the surface moves, runs through the second line of the title, and the titl
   assert.equal(metric("sea-rest"), REST);
 });
 
-test("the sea darkens from the surface to the end of the page", () => {
+test("the sea never lightens from the surface to the end of the page", () => {
   const body = /\.sea \.body \{([\s\S]*?)\}/.exec(landingStyle)[1];
   assert.match(body, /bottom: 0/);
   // The body reaches up under the lip, so no sky shows where they meet.
@@ -471,7 +471,8 @@ test("the sea darkens from the surface to the end of the page", () => {
     const deep = [0, 1, 2, 3].map((at) => luminance(ramp[`--sea-${at}`]));
     for (const [at, light] of deep.entries()) {
       if (at === 0) continue;
-      assert.ok(light < deep[at - 1], `${scheme} --sea-${at} is no darker than the one above it`);
+      // The dark sea is black from top to bottom, so a stop may match the one above it.
+      assert.ok(light <= deep[at - 1], `${scheme} --sea-${at} is lighter than the one above it`);
     }
   }
 });
