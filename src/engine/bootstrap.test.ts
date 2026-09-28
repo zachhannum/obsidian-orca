@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
+import { Script } from "node:vm";
 import { Worker } from "node:worker_threads";
 import { VERSION, WIRE_VERSION } from "fleuron";
 import workerSource from "virtual:worker";
@@ -91,8 +92,8 @@ function fakeHost(reply: unknown): WorkerHost & {
 
 test("the worker starts from a Blob URL built out of the bundle", async () => {
   // Anything esbuild left behind for a second file would be an import,
-  // and `new Function` would throw.
-  assert.doesNotThrow(() => new Function(workerSource));
+  // and a classic script does not compile one.
+  assert.doesNotThrow(() => new Script(workerSource));
   assert.ok(workerSource.length > 0);
 
   const host = fakeHost(ready);
@@ -366,7 +367,7 @@ async function moduleBytes(): Promise<ArrayBuffer> {
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
+  );
 }
 
 // What this tier does not cover: the plugin's own load and unload, which

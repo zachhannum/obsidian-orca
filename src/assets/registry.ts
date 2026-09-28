@@ -62,10 +62,9 @@ export const revokeUrl: Revoke = (url) => {
 export const blobUrl: Mint = (bytes) =>
   URL.createObjectURL(new Blob([new Uint8Array(bytes)]));
 
-/** The browser's idle time, or the next turn of the loop without it. */
+/** The window's idle time. */
 export const whenIdle: Later = (run) => {
-  if (typeof requestIdleCallback === "function") requestIdleCallback(() => run());
-  else setTimeout(run, 0);
+  window.requestIdleCallback(() => run());
 };
 
 /** Hashes bytes to the key they go under, as hex SHA-256. */

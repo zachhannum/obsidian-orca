@@ -48,6 +48,8 @@ export default defineConfig([
           ],
         },
       ],
+      // A test's strings are the book's text, not orca's.
+      "obsidianmd/ui/sentence-case": "off",
     },
   },
 ]);

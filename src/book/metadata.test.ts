@@ -37,7 +37,7 @@ test("title, author, language and date reach the PDF's document information", as
     series: "The Bennet Novels",
     isbn: "978-0-000-00000-0",
   });
-  for (const value of Object.values(imprint(book))) {
+  for (const value of Object.values<string>(imprint(book))) {
     assert.equal(written.includes(value), false, value);
   }
 });

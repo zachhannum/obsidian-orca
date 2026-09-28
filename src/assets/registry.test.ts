@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { paintPage, type Intrinsic, type Page } from "fleuron";
+import { resolveObjectURL } from "node:buffer";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
@@ -135,7 +136,7 @@ test("a page draws an image from the bytes that crossed, as a url of its own", a
   assert.equal(registry.imageUrl("images/device.png"), drawn);
   assert.equal(registry.imageUrl("nothing here.png"), undefined);
   assert.deepEqual(
-    new Uint8Array(await (await fetch(drawn)).arrayBuffer()),
+    new Uint8Array((await resolveObjectURL(drawn)?.arrayBuffer()) ?? []),
     device.bytes,
     "the pixels a page decodes are the ones layout was set from",
   );
@@ -147,7 +148,7 @@ test("a page draws an image from the bytes that crossed, as a url of its own", a
   assert.ok(markup.includes(drawn), "the painter draws from the url it was given");
 
   registry.close();
-  await assert.rejects(fetch(drawn), "no url outlives its registry");
+  assert.equal(resolveObjectURL(drawn), undefined, "no url outlives its registry");
 });
 
 test("a read that fails is not kept, so the next ask reads the file again", async () => {

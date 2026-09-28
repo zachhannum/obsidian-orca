@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { exportName, exportPath } from "@/book/export";
 
-const FORBIDDEN = /[/\\:*?"<>|\u0000-\u001f\u007f]/;
+const FORBIDDEN = /[/\\:*?"<>|\p{Cc}]/u;
 
 test("the title names the file", () => {
   assert.equal(exportName({ title: "The Long Road" }, "pdf"), "The Long Road.pdf");

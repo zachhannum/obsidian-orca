@@ -207,7 +207,7 @@ test("the note holds the fonts the book adds", () => {
   assert.deepEqual(book.own, {});
 
   const text = writeNote({ ...book, fonts: ["Junicode"] }, "\n");
-  assert.match(text, /^---\norca-book: 1\nfonts:\n  - Junicode\n---\n$/);
+  assert.match(text, /^---\norca-book: 1\nfonts:\n {2}- Junicode\n---\n$/);
   assert.deepEqual(readBook(readFrontmatter(text).properties).fonts, ["Junicode"]);
 
   applyBook(properties, { ...book, fonts: [] });
