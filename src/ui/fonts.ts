@@ -7,10 +7,6 @@
  * available.
  */
 
-import { open, readFile, readdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import path from "node:path";
-import process from "node:process";
 import { AssetError } from "@/assets/errors";
 import {
   VAULT_FONTS,
@@ -24,6 +20,7 @@ import {
   type FontIndex,
 } from "@/assets/fonts";
 import { coverage, type Cover } from "@/assets/cmap";
+import { files, machine, paths } from "@/assets/node";
 import { faceBytes } from "@/assets/sfnt";
 import { contentKey, fontUrl, type Hashed } from "@/assets/registry";
 import { usedVariant, variantFamily } from "@/assets/variants";
@@ -46,14 +43,14 @@ export function platformFonts(): FontSource {
   return {
     list: async (directory) => {
       const listing: Listing = { files: [], folders: [] };
-      for (const entry of await readdir(directory, { withFileTypes: true })) {
+      for (const entry of await files.readdir(directory, { withFileTypes: true })) {
         const into = entry.isDirectory() ? listing.folders : listing.files;
-        into.push(path.join(directory, entry.name));
+        into.push(paths.join(directory, entry.name));
       }
       return listing;
     },
     read: async (file, at, length) => {
-      const handle = await open(file, "r");
+      const handle = await files.open(file, "r");
       try {
         const into = new Uint8Array(length);
         const { bytesRead } = await handle.read(into, 0, length, at);
@@ -62,7 +59,7 @@ export function platformFonts(): FontSource {
         await handle.close();
       }
     },
-    whole: async (file) => new Uint8Array(await readFile(file)),
+    whole: async (file) => new Uint8Array(await files.readFile(file)),
   };
 }
 
@@ -105,7 +102,7 @@ export function fontPlaces(vault: VaultAdapter): FontPlaces {
   return {
     platform: platformFonts(),
     vault: vaultFonts(vault),
-    directories: fontDirectories(process.platform, homedir()),
+    directories: fontDirectories(machine.platform(), machine.homedir()),
     folder: VAULT_FONTS,
   };
 }

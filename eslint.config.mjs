@@ -40,6 +40,13 @@ export default defineConfig([
     },
   },
   {
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    ignores: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    languageOptions: {
+      parserOptions: { projectService: false, project: "./tsconfig.review.json" },
+    },
+  },
+  {
     // node:test hands back a promise the runner already waits on.
     files: ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs"],
     rules: {

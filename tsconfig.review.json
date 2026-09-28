@@ -1,0 +1,8 @@
+{
+  // The source as the plugin review types it: without `@types/node`,
+  // so a Node module is `any`. The lint reads the shipped source through
+  // this program.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": [] },
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

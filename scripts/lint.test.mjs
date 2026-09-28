@@ -3,7 +3,9 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { check, checkClock, lint } from "./lint.mjs";
+import { ESLint } from "eslint";
+import { root } from "./bundle.mjs";
+import { check, checkClock, lint, lintBundle } from "./lint.mjs";
 
 const said = (file, text) => check(file, text).map((found) => found.said);
 const waited = (text) =>
@@ -165,7 +167,24 @@ test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
 
 test("the repository answers the lint pass", async () => {
   assert.deepEqual(await lint(), []);
+  assert.deepEqual(await lintBundle(), []);
+});
+
+test("the source that reads Node modules is typed without @types/node, as the plugin review types it", async () => {
+  const eslint = new ESLint({ cwd: root });
+  const results = await eslint.lintFiles([
+    "src/assets/directory.ts",
+    "src/assets/node.ts",
+    "src/ui/desktop.ts",
+    "src/ui/fonts.ts",
+  ]);
+  const unsafe = results.flatMap(({ filePath, messages }) =>
+    messages
+      .filter(({ ruleId }) => ruleId?.startsWith("@typescript-eslint/no-unsafe-"))
+      .map(({ line, ruleId }) => `${path.relative(root, filePath)}:${line} ${ruleId}`),
+  );
+  assert.deepEqual(unsafe, []);
 });
 
 // What this tier does not cover: the type check and the production
-// bundle, which the same CI job runs.
+// bundle written to disk, which the same CI job runs.

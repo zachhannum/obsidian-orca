@@ -4,10 +4,9 @@
  * application around it.
  */
 
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { vaultWritePath, type Sink } from "@/assets/destination";
 import { AssetError } from "@/assets/errors";
+import { files, paths } from "@/assets/node";
 import type { Listing, VaultAdapter } from "@/assets/vault";
 
 /**
@@ -22,7 +21,7 @@ export function directorySink(root: string): Sink {
         await vault.writeBinary(vaultWritePath(destination.path), bytes);
         return;
       }
-      if (!path.isAbsolute(destination.path)) {
+      if (!paths.isAbsolute(destination.path)) {
         throw new AssetError(`${destination.path} is not an absolute path`);
       }
       await writeAt(destination.path, bytes);
@@ -31,8 +30,8 @@ export function directorySink(root: string): Sink {
 }
 
 async function writeAt(full: string, bytes: Uint8Array): Promise<void> {
-  await mkdir(path.dirname(full), { recursive: true });
-  await writeFile(full, bytes);
+  await files.mkdir(paths.dirname(full), { recursive: true });
+  await files.writeFile(full, bytes);
 }
 
 export function directoryVault(root: string): VaultAdapter {
@@ -41,15 +40,15 @@ export function directoryVault(root: string): VaultAdapter {
     exists: async (file) => {
       const full = at(file);
       try {
-        await stat(full);
+        await files.stat(full);
         return true;
       } catch {
         return false;
       }
     },
-    read: (file) => readFile(at(file), "utf8"),
+    read: (file) => files.readFile(at(file), "utf8"),
     readBinary: async (file) => {
-      const bytes = await readFile(at(file));
+      const bytes = await files.readFile(at(file));
       return bytes.buffer.slice(
         bytes.byteOffset,
         bytes.byteOffset + bytes.byteLength,
@@ -58,9 +57,9 @@ export function directoryVault(root: string): VaultAdapter {
     list: async (folder) => {
       const under = at(folder);
       const listing: Listing = { files: [], folders: [] };
-      for (const entry of await readdir(under, { withFileTypes: true })) {
+      for (const entry of await files.readdir(under, { withFileTypes: true })) {
         const into = entry.isDirectory() ? listing.folders : listing.files;
-        into.push(vaultPath(root, path.join(under, entry.name)));
+        into.push(vaultPath(root, paths.join(under, entry.name)));
       }
       listing.files.sort();
       listing.folders.sort();
@@ -76,14 +75,14 @@ export function directoryVault(root: string): VaultAdapter {
  * is refused.
  */
 function resolve(root: string, at: string): string {
-  const full = path.resolve(root, at.replace(/^\/+/, ""));
-  const inside = path.relative(root, full);
-  if (inside.startsWith("..") || path.isAbsolute(inside)) {
+  const full = paths.resolve(root, at.replace(/^\/+/, ""));
+  const inside = paths.relative(root, full);
+  if (inside.startsWith("..") || paths.isAbsolute(inside)) {
     throw new AssetError(`${at} is outside the vault`);
   }
   return full;
 }
 
 function vaultPath(root: string, full: string): string {
-  return path.relative(root, full).split(path.sep).join("/");
+  return paths.relative(root, full).split(paths.sep).join("/");
 }

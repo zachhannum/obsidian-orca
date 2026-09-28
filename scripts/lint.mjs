@@ -1,14 +1,16 @@
 /**
  * The dependency rule and the conventions around it, checked over
  * `src`. The doc comment rule also runs over `e2e` and `scripts`, and
- * the clock rule over the specs. A violation names the file, the line
- * and the rule.
+ * the clock rule over the specs. The production bundle is built in
+ * memory and held to the build's own checks. A violation names the
+ * file, the line and the rule.
  */
 
 import { glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { root } from "./bundle.mjs";
+import esbuild from "esbuild";
+import { options, root } from "./bundle.mjs";
 
 /** The five modules, in the order the module map lists them. */
 export const MODULES = ["engine", "book", "style", "assets", "ui"];
@@ -140,6 +142,23 @@ export async function lint(from = root) {
   return found;
 }
 
+/**
+ * The production bundle, built in memory. A dependency that brings in
+ * code the plugin review rejects fails here as it fails the build.
+ */
+export async function lintBundle() {
+  try {
+    await esbuild.build({
+      ...options({ production: true, outdir: root }),
+      write: false,
+      logLevel: "silent",
+    });
+    return [];
+  } catch (failure) {
+    return failure.errors.map(({ text }) => ({ file: "main.js", line: 0, said: text }));
+  }
+}
+
 /** Whether a specifier is one of the packages only `ui` may reach. */
 function application(specifier) {
   return (
@@ -222,7 +241,7 @@ function backlog(text) {
 }
 
 if (import.meta.filename === process.argv[1]) {
-  const found = await lint();
+  const found = [...(await lint()), ...(await lintBundle())];
   for (const { file, line, said } of found) {
     process.stderr.write(`${file}:${line}  ${said}\n`);
   }
