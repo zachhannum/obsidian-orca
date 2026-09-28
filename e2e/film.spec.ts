@@ -48,6 +48,9 @@ const EXPORT = "Export to PDF";
 const RULE =
   "\n\nsection.chapter h1,\nsection.chapter h2,\nsection.chapter p:first-of-type::first-letter {\ncolor: #9e2a2b;";
 
+/** The lines the rule fills once the editor has closed its brace. */
+const RULE_LINES = 5;
+
 /** The pages of the exported book the film's closing wall is made of, and their resolution. */
 const WALL = 24;
 const WALL_DPI = 60;
@@ -124,10 +127,10 @@ async function sized(site: Site): Promise<void> {
  * The rows of text an editor draws, one box per visual row, in reading
  * order. The film uncovers them one after another as the typing.
  */
-async function rowsIn(editor: Locator): Promise<Box[]> {
-  return editor.evaluate((root) => {
+async function rowsIn(editor: Locator, last = 0): Promise<Box[]> {
+  return editor.evaluate((root, count) => {
     const rects: DOMRect[] = [];
-    for (const line of root.querySelectorAll(".cm-line")) {
+    for (const line of [...root.querySelectorAll(".cm-line")].slice(-count)) {
       const range = document.createRange();
       range.selectNodeContents(line);
       rects.push(...[...range.getClientRects()].filter((rect) => rect.width > 0));
@@ -155,7 +158,7 @@ async function rowsIn(editor: Locator): Promise<Box[]> {
         width: Math.round(row.width),
         height: Math.round(row.height),
       }));
-  });
+  }, last);
 }
 
 /** The note's text as it is on disk. */
@@ -287,12 +290,19 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
   await expect.poll(async () => noteText(site, BOOK)).toContain("#9e2a2b");
   await expect.poll(async () => site.book.painted()).toBeGreaterThan(typedFrom);
   await settled(site.book);
-  await (await site.panel.code.elementHandle())?.evaluate((code) => (code as HTMLElement).blur());
+  // The editor closed the brace on the line under the caret, so it is
+  // scrolled to its end to show it.
+  await site.panel.editor.evaluate((editor) => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    const scroller = editor.querySelector(".cm-scroller");
+    if (scroller !== null) scroller.scrollTop = scroller.scrollHeight;
+  });
+  await expect(site.panel.editor.locator(".cm-line").last()).toBeInViewport();
   await frame(
     site,
     "css-2",
     { code: site.panel.editor, export: obsidian.actionIn(PREVIEW, EXPORT) },
-    await rowsIn(site.panel.editor),
+    await rowsIn(site.panel.editor, RULE_LINES),
   );
 
   // Export to PDF, from the preview's own action.
