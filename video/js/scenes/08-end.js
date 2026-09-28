@@ -36,7 +36,7 @@
       const dEl = el.querySelector('.drops');
       for (let i = 0; i < 34; i++) {
         const side = r() < 0.5 ? -1 : 1;
-        const d = { x: 960 + side * (40 + r() * 170), vx: side * (40 + r() * 220), vy: -(260 + r() * 420), r: 2 + r() * 5, t0: 51.55 + r() * 0.35 };
+        const d = { x: 960 + side * (40 + r() * 170), vx: side * (40 + r() * 220), vy: -(260 + r() * 420), r: 2 + r() * 5, t0: 47.8 + r() * 0.35 };
         const e = document.createElement('div');
         e.className = 'dp';
         e.style.width = e.style.height = d.r * 2 + 'px';
@@ -44,18 +44,18 @@
         d.el = e;
         drops.push(d);
       }
-      O.cues.impacts.push({ t: 50.625, big: true, final: true });
-      O.cues.pops.push(51.6);
+      O.cues.impacts.push({ t: 46.875, big: true, final: true });
+      O.cues.pops.push(47.85);
     },
     update(t) {
       const lvl = O.level(t);
       skyL.style.clipPath = `path('${O.skyPath(t, lvl)}')`;
       seaL.style.clipPath = `path('${O.seaPath(t, lvl)}')`;
-      this.el.style.opacity = O.tw(t, 50.3, 50.8);
+      this.el.style.opacity = O.tw(t, 46.55, 47.05);
 
-      const rise = E.outBackSoft(O.prog(t, 50.95, 52.35));
+      const rise = E.outBackSoft(O.prog(t, 47.2, 48.6));
       const bottom = O.lerp(1000, 628, rise);
-      const sway = 2.2 * Math.sin((t - 51) * 1.2) * O.tw(t, 52, 53);
+      const sway = 2.2 * Math.sin((t - 47.25) * 1.2) * O.tw(t, 48.25, 49.25);
       const tr = `translate3d(0,${bottom - 265}px,0) rotate(${sway}deg)`;
       tailSky.style.transform = tr;
       tailSea.style.transform = tr;
@@ -69,15 +69,15 @@
       });
 
       markCh.forEach((c, i) => {
-        const k = E.outQuart(O.prog(t, 52.25 + i * 0.09, 53.2 + i * 0.09));
+        const k = E.outQuart(O.prog(t, 48.5 + i * 0.09, 49.45 + i * 0.09));
         c.style.transform = `translate3d(0,${(1 - k) * 60}px,0) scale(${O.lerp(0.8, 1, k)})`;
         c.style.opacity = k;
         c.style.filter = k < 0.99 ? `blur(${(1 - k) * 10}px)` : 'none';
       });
-      const tk = E.outQuart(O.prog(t, 53.0, 53.9));
+      const tk = E.outQuart(O.prog(t, 49.25, 50.15));
       tag.style.opacity = tk;
       tag.style.transform = `translate3d(0,${(1 - tk) * 18}px,0)`;
-      const uk = E.outQuart(O.prog(t, 53.5, 54.4));
+      const uk = E.outQuart(O.prog(t, 49.75, 50.65));
       url.style.opacity = uk;
       url.style.letterSpacing = `${O.lerp(0.3, 0.04, uk)}em`;
     },

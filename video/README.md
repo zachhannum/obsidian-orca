@@ -1,12 +1,13 @@
 # Orca film
 
-A 58-second film about orca, drawn in HTML and JavaScript. Every frame is a function of time, so the page plays live and renders to video the same way. The score is synthesized with Web Audio from the same timeline, so each click, key and page flick lands on its frame.
+A 54-second film about orca, drawn in HTML and JavaScript. Every frame is a function of time, so the page plays live and renders to video the same way. The score is synthesized with Web Audio from the same timeline, so each click, key and page flick lands on its frame.
 
 ## Files
 
 - `index.html` plays the film in a browser, with sound. Space pauses, the arrow keys skip two seconds.
 - `js/world.js` holds the shared layers: the sea, the surface, the cursor, grain and the scene timing.
 - `js/window.js` shows the Obsidian window. It stacks frames of real Obsidian and moves a camera over them.
+- `js/desk.js` keeps one window on screen from writing to export, so the camera moves between those scenes without a cut.
 - `js/scenes/` holds one file per scene.
 - `js/audio.js` holds the score and the sound effects.
 - `render.mjs` writes `orca.mp4`, at 1920 × 1080 and 60 fps with two sub-frames of motion blur per frame.
@@ -17,7 +18,7 @@ A 58-second film about orca, drawn in HTML and JavaScript. Every frame is a func
 
 ## Frames
 
-The film draws no part of Obsidian or orca. If the UI changes, take the frames again:
+The first scene draws the book note and its chapters as cards. Every other view of Obsidian in the film is one of these frames. If the UI changes, take the frames again:
 
 ```sh
 npm run film

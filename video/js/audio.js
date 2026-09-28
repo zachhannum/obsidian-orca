@@ -19,10 +19,9 @@
     [30, 43, [59, 62, 66, 69]],
     [33.75, 45, [61, 64, 69, 71]],
     [37.5, 47, [62, 66, 69, 73]],
-    [41.25, 43, [59, 62, 66, 69]],
-    [45, 40, [55, 59, 62, 66]],
-    [47.8125, 45, [61, 64, 69, 71]],
-    [50.625, 38, [54, 57, 61, 64, 66]],
+    [41.25, 40, [55, 59, 62, 66]],
+    [44.0625, 45, [61, 64, 69, 71]],
+    [46.875, 38, [54, 57, 61, 64, 66]],
   ];
 
   function build(ctx, total) {
@@ -417,25 +416,25 @@
     CHORDS.forEach(([t0, root, notes], i) => {
       const t1 = i + 1 < CHORDS.length ? CHORDS[i + 1][0] : total;
       const intro = t0 < 7.5;
-      const fin = t0 >= 50;
+      const fin = t0 >= 46.8;
       pad(notes, t0, t1, fin ? 0.03 : 0.022, intro && i === 0 ? 2.6 : 0.5);
-      sub(root, t0, t1, intro ? 0.09 : t0 >= 45 ? 0.12 : 0.06);
+      sub(root, t0, t1, intro ? 0.09 : t0 >= 41.25 ? 0.12 : 0.06);
     });
 
     // Arpeggio: from the second scene to the break.
     const PAT = [0, 2, 1, 3, 2, 0, 3, 1];
     const chordAt = (t) => { let c = CHORDS[0]; for (const x of CHORDS) if (t >= x[0] - 0.001) c = x; return c; };
-    for (let t = 7.5, k = 0; t < 47.8; t += BEAT / 2, k++) {
+    for (let t = 7.5, k = 0; t < 44.05; t += BEAT / 2, k++) {
       const [, , notes] = chordAt(t);
       const m = notes[PAT[k % 8] % notes.length] + 12;
-      const fade = t < 15 ? O.lerp(0.35, 0.8, (t - 7.5) / 7.5) : t > 45 ? 0.8 * (1 - (t - 45) / 2.8) : 0.8;
-      const bright = t < 15 ? 900 + (t - 7.5) * 200 : t > 45 ? 2400 - (t - 45) * 600 : 2400 + (t > 37.5 ? 1200 : 0);
+      const fade = t < 15 ? O.lerp(0.35, 0.8, (t - 7.5) / 7.5) : t > 41.25 ? 0.8 * (1 - (t - 41.25) / 2.8) : 0.8;
+      const bright = t < 15 ? 900 + (t - 7.5) * 200 : t > 41.25 ? 2400 - (t - 41.25) * 600 : 2400 + (t > 37.5 ? 1200 : 0);
       pluck(m, t, 0.13 * fade * (k % 2 ? 0.75 : 1), (k % 4) / 3 - 0.5, bright);
-      if (t >= 37.5 && t < 45 && k % 2 === 0) pluck(m + 12, t + BEAT / 4, 0.045, 0.5 - (k % 4) / 3, 3000);
+      if (t >= 37.5 && t < 41.25 && k % 2 === 0) pluck(m + 12, t + BEAT / 4, 0.045, 0.5 - (k % 4) / 3, 3000);
     }
 
     // Rhythm section.
-    for (let b = 0, t = 15; t < 45 - 0.01; b++, t = 15 + b * BEAT) {
+    for (let b = 0, t = 15; t < 41.25 - 0.01; b++, t = 15 + b * BEAT) {
       const full = t >= 22.5;
       if (full || b % 2 === 0) kick(t, full ? 0.85 : 0.7);
       if (full && b % 2 === 1) clap(t);
@@ -448,17 +447,17 @@
     }
 
     // The break builds into the last chord.
-    riser(47.8, 50.625, 0.28);
-    for (let t = 48.75, i = 0; t < 50.62; i++) {
-      const step = t < 49.69 ? BEAT / 2 : t < 50.16 ? BEAT / 4 : BEAT / 8;
-      clap(t, 0.05 + 0.2 * ((t - 48.75) / 1.9));
+    riser(44.05, 46.875, 0.28);
+    for (let t = 45, i = 0; t < 46.87; i++) {
+      const step = t < 45.94 ? BEAT / 2 : t < 46.41 ? BEAT / 4 : BEAT / 8;
+      clap(t, 0.05 + 0.2 * ((t - 45) / 1.9));
       t += step;
     }
-    kick(50.625, 1);
+    kick(46.875, 1);
     // Opening shimmer and the resolution.
     [[1.0, 81], [1.9, 78], [2.7, 85], [3.75, 74], [3.9, 81], [4.05, 86], [4.2, 90]].forEach(([t, m], i) => bell(m, t, 0.06 + (i > 2 ? 0.03 : 0), (i % 2 ? 0.4 : -0.4), 3.2, 1));
-    [74, 78, 81, 85, 88].forEach((m, i) => bell(m, 50.7 + i * 0.16, 0.08, (i / 4 - 0.5) * 0.8, 4.5, 1.1));
-    [[52.3, 86], [53.0, 85], [53.5, 81], [54.2, 78], [55, 74]].forEach(([t, m], i) => bell(m, t, 0.04, i % 2 ? 0.5 : -0.5, 3.5, 1.2));
+    [74, 78, 81, 85, 88].forEach((m, i) => bell(m, 46.95 + i * 0.16, 0.08, (i / 4 - 0.5) * 0.8, 4.5, 1.1));
+    [[48.55, 86], [49.25, 85], [49.75, 81], [50.45, 78], [51.25, 74]].forEach(([t, m], i) => bell(m, t, 0.04, i % 2 ? 0.5 : -0.5, 3.5, 1.2));
     riser(2.55, 3.75, 0.12);
 
     // Sound effects from the scenes.

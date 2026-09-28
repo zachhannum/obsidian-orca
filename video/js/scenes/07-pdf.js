@@ -6,8 +6,8 @@
   const ROWS = 5, COLS = 9, TW = 170, TH = 263, GX = 198, GY = 292;
   const PAGES = 24;
   const CX = 960, CY = 520;
-  const COLLAPSE = 48.1;
-  const tIn = (r, c) => 45.1 + (c + r * 0.6) * 0.075;
+  const COLLAPSE = 44.35;
+  const tIn = (r, c) => 41.1 + (c + r * 0.6) * 0.075;
 
   let plane, tiles, pdf, pdfName, ring;
 
@@ -45,8 +45,8 @@
       ring = el.querySelector('.ring');
 
       tiles.forEach((tl) => O.cues.flicks.push(tIn(tl.r, tl.c) + 0.05));
-      O.cues.impacts.push({ t: 49.05 });
-      O.cues.ticks.push({ t: 49.6, n: 4, bright: true });
+      O.cues.impacts.push({ t: 41.25 }, { t: 45.3 });
+      O.cues.ticks.push({ t: 45.85, n: 4, bright: true });
     },
     update(t) {
       O.sceneEnv(this.el, t, A, B, { pre: 0.3, din: 0.5, dout: 0.5, post: 0.3 });
@@ -63,18 +63,18 @@
         const x = O.lerp(gx - scroll, i * 0.15, ck), y = O.lerp(gy + scroll * 0.3, -i * 0.15, ck);
         const z = O.lerp((1 - k) * -520 + 8 * Math.sin(t * 1.3 + i), i * 0.4, ck);
         tl.im.style.transform = `translate3d(${x}px,${y}px,${z}px) rotateZ(${(1 - k) * 8}deg)`;
-        tl.im.style.opacity = k * (1 - O.prog(t, 49.0, 49.3));
+        tl.im.style.opacity = k * (1 - O.prog(t, 45.25, 45.55));
       });
 
       // The stack becomes the file.
-      const pk = E.outBackSoft(O.prog(t, 49.0, 49.8));
-      pdf.style.display = t > 48.95 ? '' : 'none';
-      pdf.style.opacity = O.tw(t, 48.95, 49.2);
-      const fl = 6 * Math.sin((t - 49.5) * 1.4);
-      pdf.style.transform = `translate3d(0,${t > 49.8 ? fl * O.tw(t, 49.8, 50.4) : 0}px,0) scale(${O.lerp(TW / 320, 1, pk)})`;
-      ring.style.transform = `scale(${E.outBack(O.prog(t, 49.5, 49.8))})`;
-      ring.querySelector('path').setAttribute('stroke-dashoffset', String(1 - E.outCubic(O.prog(t, 49.65, 50.0))));
-      const nk = E.outQuart(O.prog(t, 49.4, 50.0));
+      const pk = E.outBackSoft(O.prog(t, 45.25, 46.05));
+      pdf.style.display = t > 45.2 ? '' : 'none';
+      pdf.style.opacity = O.tw(t, 45.2, 45.45);
+      const fl = 6 * Math.sin((t - 45.75) * 1.4);
+      pdf.style.transform = `translate3d(0,${t > 46.05 ? fl * O.tw(t, 46.05, 46.65) : 0}px,0) scale(${O.lerp(TW / 320, 1, pk)})`;
+      ring.style.transform = `scale(${E.outBack(O.prog(t, 45.75, 46.05))})`;
+      ring.querySelector('path').setAttribute('stroke-dashoffset', String(1 - E.outCubic(O.prog(t, 45.9, 46.25))));
+      const nk = E.outQuart(O.prog(t, 45.65, 46.25));
       pdfName.style.opacity = nk;
       pdfName.style.transform = `translate3d(0,${(1 - nk) * 20}px,0)`;
     },

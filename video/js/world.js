@@ -5,16 +5,16 @@
   const E = O.E;
 
   O.T = {
-    total: 58.125,
+    total: 54.375,
     bpm: 128,
     open: [0, 7.5],
     notes: [7.5, 15],
     write: [15, 22.5],
     design: [22.5, 30],
     css: [30, 37.5],
-    export: [37.5, 45],
-    pdf: [45, 50.625],
-    end: [50.625, 58.125],
+    export: [37.5, 41.25],
+    pdf: [41.25, 46.875],
+    end: [46.875, 54.375],
   };
   O.scenes = [];
   O.cursorTracks = [];
@@ -26,7 +26,7 @@
       const up = O.tw(t, 6.6, 7.6, E.inCubic);
       return O.lerp(O.lerp(-160, 455, down), -160, up);
     }
-    return O.lerp(-160, 590, O.tw(t, 50.35, 51.9, E.outQuart));
+    return O.lerp(-160, 590, O.tw(t, 46.6, 48.15, E.outQuart));
   };
   O.surfaceY = (x, t, lvl) =>
     lvl + 11 * Math.sin(x * 0.0037 + t * 1.05) + 6 * Math.sin(x * 0.0102 - t * 1.6 + 1.3) + 2.5 * Math.sin(x * 0.024 + t * 2.4);
@@ -56,8 +56,8 @@
     320 * O.tw(t, 14.5, 15.7, E.inOutCubic) +
     320 * O.tw(t, 22.0, 23.2, E.inOutCubic) +
     320 * O.tw(t, 37.0, 38.2, E.inOutCubic) +
-    320 * O.tw(t, 44.5, 45.7, E.inOutCubic) -
-    1400 * O.tw(t, 49.9, 51.9, E.inOutCubic);
+    320 * O.tw(t, 40.75, 41.95, E.inOutCubic) -
+    1400 * O.tw(t, 46.15, 48.15, E.inOutCubic);
 
   let bg, bgx, sky, grain, gx, noise = [], cursor, ring, fade, specks = [];
 
@@ -125,8 +125,8 @@
     c.fillRect(0, 0, 1920, 1080);
 
     // A slow indigo glow behind the work, wandering between scenes.
-    const gxp = O.keys(t, [[0, 960], [7.5, 1200], [15, 1250], [22.5, 1220], [37.5, 1250], [45, 960], [58, 960]]);
-    const gyp = O.keys(t, [[0, 700], [7.5, 520], [15, 540], [22.5, 540], [37.5, 520], [45, 560], [58, 820]]);
+    const gxp = O.keys(t, [[0, 960], [7.5, 1200], [15, 1250], [22.5, 1220], [37.5, 1250], [41.25, 960], [54, 960]]);
+    const gyp = O.keys(t, [[0, 700], [7.5, 520], [15, 540], [22.5, 540], [37.5, 520], [41.25, 560], [54, 820]]);
     const g = c.createRadialGradient(gxp, gyp, 0, gxp, gyp, 900);
     g.addColorStop(0, 'rgba(70,72,190,0.16)');
     g.addColorStop(0.45, 'rgba(40,42,120,0.06)');
