@@ -498,8 +498,10 @@ test("the vault picture is the file tree and the book note's own Markdown", asyn
     await site.paint(scheme);
     // The folder holds the book note beside the chapters it lists, and
     // the note itself is the Markdown, not a form drawn over it.
+    // The editor keeps only the lines near the view, and the top of the
+    // frontmatter is scrolled past, so the check reads a line below it.
     await expect(tree).toContainText(FOLDER);
-    await expect(note).toContainText("orca-book: 1");
+    await expect(note).toContainText("- `title-page`");
 
     await expect(tree).toHaveScreenshot(`vault-tree-${scheme}.png`);
     await expect(note).toHaveScreenshot(`vault-note-${scheme}.png`);
