@@ -1,4 +1,4 @@
-@font-face { font-family: 'Dirtyline'; src: url(fonts/Dirtyline-36daysoftype-2022.woff2) format('woff2'); }
+@font-face { font-family: 'Faune Display'; font-style: italic; font-weight: 700; src: url(fonts/Faune-Display_Bold_Italic.ttf) format('truetype'); }
 @font-face { font-family: 'Archivo'; font-weight: 100 900; src: url(fonts/archivo-latin-wght-normal.woff2) format('woff2-variations'); }
 @font-face { font-family: 'Archivo'; font-style: italic; font-weight: 100 900; src: url(fonts/archivo-latin-wght-italic.woff2) format('woff2-variations'); }
 @font-face { font-family: 'DM Mono'; font-weight: 400; src: url(fonts/dm-mono-latin-400-normal.woff2) format('woff2'); }
@@ -54,6 +54,7 @@ canvas.layer { width: 1920px; height: 1080px; }
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 60px 120px -30px rgba(0, 0, 0, 0.9), 0 0 140px -20px rgba(99, 102, 241, 0.14); }
 .ol { position: absolute; left: 0; top: 0; width: 1200px; height: 750px; display: block; }
 .shade { position: absolute; left: 0; top: 0; width: 1100px; height: 1080px; pointer-events: none; background: linear-gradient(90deg, #000 0, rgba(0, 0, 0, 0.93) 600px, rgba(0, 0, 0, 0.5) 660px, rgba(0, 0, 0, 0) 730px); }
+.strip { position: absolute; overflow: hidden; }
 .cover { position: absolute; background: rgb(16, 19, 24); }
 .caret { position: absolute; width: 1.5px; background: #e9ece8; }
 

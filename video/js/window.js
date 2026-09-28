@@ -56,6 +56,29 @@
     };
   };
 
+  // A scroll of the design panel, drawn from frames of the panel at
+  // several scroll positions. Each frame's panel is placed where its
+  // content sits, so the frames tile one tall strip under the panel.
+  O.strip = function (win, names) {
+    const box = O.shot(names[0]).marks.scroller;
+    const el = O.h(`<div class="strip" style="left:${box.x}px;top:${box.y}px;width:${box.width}px;height:${box.height}px"></div>`);
+    const imgs = names.map((n) => {
+      const img = O.h(`<img class="ol" src="assets/ui/${n}.jpg" alt="">`);
+      img.style.left = -box.x + 'px';
+      img.style.top = -box.y + 'px';
+      img.style.clipPath = `inset(${box.y}px ${W - box.x - box.width}px ${H - box.y - box.height}px ${box.x}px)`;
+      el.appendChild(img);
+      return [img, O.shot(n).scroll];
+    });
+    win.el.appendChild(el);
+    return {
+      el,
+      at(scroll) {
+        for (const [img, top] of imgs) img.style.transform = `translate3d(0,${(top - scroll).toFixed(2)}px,0)`;
+      },
+    };
+  };
+
   // Maps window points to the screen through the camera at time t, for
   // a cursor track.
   O.camMap = (keys) => (t, p) => {

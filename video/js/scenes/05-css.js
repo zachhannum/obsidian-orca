@@ -9,7 +9,7 @@
   const ROWS = O.shot('css-2').rows;
   const GUTTER = CODE.x + 2;
   const DROP = [495, 410];
-  const SWITCH = O.mid('design-0', 'css');
+  const SWITCH = O.mid('design-12', 'css');
   const END = [1000, 690];
   let covers, caret;
 
@@ -28,7 +28,7 @@
     a: A, b: B,
     // The last frame twice: its editor while the rule is typed, and all
     // of it once the pages are set again.
-    frames: ['design-8', 'css-0', 'css-1', 'css-2', 'css-2-page@css-2'],
+    frames: ['design-12', 'css-0', 'css-1', 'css-2', 'css-2-page@css-2'],
     cap: {
       num: '04', top: 330,
       title: 'Go further<br>in <i>CSS.</i>',
@@ -56,7 +56,7 @@
     show(t) {
       const toCss = E.outQuad(O.prog(t, TO_CSS + 0.06, TO_CSS + 0.2));
       return {
-        'design-8': toCss < 1 ? 1 : 0,
+        'design-12': toCss < 1 ? 1 : 0,
         'css-0': t < INTO + 0.06 ? toCss : 0,
         'css-1': t >= INTO + 0.06 ? 1 : 0,
         'css-2': t >= TYPE[0] - 0.05 ? 1 : 0,

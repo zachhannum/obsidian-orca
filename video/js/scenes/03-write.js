@@ -10,7 +10,8 @@
   const ROWS = O.shot('write').rows.slice(0, 13);
   const SPANS = [[15.9, 16.3, 0, 1], [16.4, 16.85, 1, 2], [17.0, 18.35, 2, 10], [18.45, 18.9, 10, 13]];
   const PREVIEW = O.mid('write', 'preview');
-  const DROP = [676, 400];
+  // The opening of the chapter, where the camera reads the page.
+  const OPENING = [765, 450];
   let caret;
 
   function typing(t) {
@@ -51,8 +52,8 @@
       [FLIP + 0.2, O.aim(1000, 160, 1.15, 1450, 330)],
       [FLIP + 0.9, O.HOME],
       [20.3, O.HOME],
-      [21.4, O.aim(DROP[0], DROP[1], 1.9, 1300, 560)],
-      [21.9, O.aim(DROP[0], DROP[1], 1.95, 1300, 560)],
+      [21.4, O.aim(OPENING[0], OPENING[1], 2.9, 1330, 540)],
+      [21.9, O.aim(OPENING[0], OPENING[1], 3.0, 1330, 540)],
       [22.7, O.HOME],
     ],
     init(win) {

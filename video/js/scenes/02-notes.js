@@ -73,7 +73,7 @@
       doc.innerHTML = `
         <h1>Twenty Thousand Leagues Under the Sea</h1>
         <div class="props">
-          ${[['author', 'Jules Verne'], ['language', 'en-GB'], ['trim', '5.5in 8.5in'], ['body-font', 'EB Garamond'], ['body-size', '10.5pt'], ['chapter-drop-cap', '3']]
+          ${[['author', 'Jules Verne'], ['language', 'en-GB'], ['trim', '5.5in 8.5in'], ['body-font', 'EB Garamond'], ['body-size', '9pt'], ['body-align', 'left']]
             .map(([k, v]) => `<div class="pr"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')}
         </div>
         <div class="bh">Body</div>
