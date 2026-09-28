@@ -27,7 +27,7 @@ const PAGES = path.join(OUT, "pages");
  * CSS size, and the density leaves room for the camera to push in.
  */
 const WINDOW = { width: 1200, height: 750 };
-const DENSITY = 2;
+const DENSITY = 3;
 
 /** The width the design panel is given, and the navigator's. */
 const PANEL = 400;
@@ -41,15 +41,48 @@ const EDITOR = "markdown";
 const OPEN_PREVIEW = "Open preview";
 const EXPORT = "Export to PDF";
 
+/** The book's colour beside black, and the rule of the book's CSS that sets it. */
+const TEAL = "#1d4e5b";
+const COLOURED = `/* The book prints in one colour beside black. */
+section.chapter h2,
+section.chapter p:first-of-type::first-letter,
+section.part h1,
+section.title-page h1,
+section.contents p.part {
+  color: ${TEAL};
+}
+
+`;
+
+/**
+ * The book the film starts from: smaller type set tighter and flush
+ * left, no drop cap, and all in black. The panel and the CSS scene
+ * then build the sample book back up.
+ */
+const BARE: [string, string][] = [
+  ["body-size: 10.5pt", "body-size: 9pt"],
+  ["body-line-spacing: 14pt", "body-line-spacing: 12.5pt"],
+  ["body-align: justify", "body-align: left"],
+  ["chapter-drop-cap: 3\n", ""],
+  ["chapter-drop-cap-font: IM FELL English\n", ""],
+  [COLOURED, ""],
+];
+
+/** The steps up the panel takes for the type size and for the line spacing. */
+const SIZE_STEPS = 3;
+
+/** The face the drop cap is set in, and what the film types to find it. */
+const CAP_FONT = "IM FELL English";
+const CAP_FILTER = "Fell";
+
 /**
  * The rule the CSS scene types at the end of the book's CSS. It is
  * typed without its closing brace, which the editor writes.
  */
-const RULE =
-  "\n\nsection.chapter h1,\nsection.chapter h2,\nsection.chapter p:first-of-type::first-letter {\ncolor: #9e2a2b;";
+const RULE = `\n\n${COLOURED.split("\n").slice(1, 6).join("\n")}\ncolor: ${TEAL};`;
 
 /** The lines the rule fills once the editor has closed its brace. */
-const RULE_LINES = 5;
+const RULE_LINES = 7;
 
 /** The pages of the exported book the film's closing wall is made of, and their resolution. */
 const WALL = 24;
@@ -60,6 +93,8 @@ interface Frame {
   name: string;
   marks: Record<string, Box>;
   rows?: Box[];
+  /** How far the design panel is scrolled, which the film animates between frames. */
+  scroll?: number;
 }
 
 const taken: Frame[] = [];
@@ -74,16 +109,20 @@ async function frame(
   name: string,
   targets: Record<string, Locator> = {},
   rows?: Box[],
+  // A frame of an open menu keeps the focus, since the menu closes without it.
+  focused = false,
 ): Promise<void> {
   await site.obsidian.unhovered();
   // A sidebar whose leaf is active draws its tab in the accent, so the
   // pane in the middle is made the active one, without the focus.
-  await site.obsidian.page.evaluate(() => {
-    const { workspace } = window.app;
-    const middle = workspace.getMostRecentLeaf(workspace.rootSplit);
-    if (middle !== null) workspace.setActiveLeaf(middle, { focus: false });
-    (document.activeElement as HTMLElement | null)?.blur();
-  });
+  if (!focused) {
+    await site.obsidian.page.evaluate(() => {
+      const { workspace } = window.app;
+      const middle = workspace.getMostRecentLeaf(workspace.rootSplit);
+      if (middle !== null) workspace.setActiveLeaf(middle, { focus: false });
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+  }
   // Obsidian flashes the tab of a sidebar it has just revealed.
   await expect(site.obsidian.page.locator(".workspace-tab-header.is-flashing")).toHaveCount(0);
   const marks = await site.marks(
@@ -96,7 +135,13 @@ async function frame(
     quality: 88,
     scale: "device",
   });
-  taken.push({ name, marks: marks.marks, ...(rows === undefined ? {} : { rows }) });
+  const scroll = (await site.panel.scroller.isVisible()) ? await site.panel.scrolled() : undefined;
+  taken.push({
+    name,
+    marks: marks.marks,
+    ...(rows === undefined ? {} : { rows }),
+    ...(scroll === undefined ? {} : { scroll }),
+  });
 }
 
 /**
@@ -109,6 +154,17 @@ async function settled(book: Book): Promise<void> {
     await expect(book.surface).toHaveAttribute(`data-stage-${stage}`, /[1-9]\d*/);
   }
   await book.settled(BOOK);
+}
+
+/**
+ * Scrolls the design panel, and takes a frame there when named. The
+ * film draws a scroll from the frames either side and one between.
+ */
+async function scrolledTo(site: Site, name: string | null, top: number): Promise<void> {
+  await site.panel.scroller.evaluate((scroller, to) => {
+    scroller.scrollTop = to;
+  }, Math.round(top));
+  if (name !== null) await frame(site, name, { scroller: site.panel.scroller });
 }
 
 /** Sizes the window and waits for the renderer to be that size. */
@@ -179,6 +235,16 @@ async function putBack(site: Site, at: string, text: string): Promise<void> {
   await expect.poll(async () => noteText(site, at)).toEqual(text);
 }
 
+/** The book note as the film starts it. */
+function bare(book: string): string {
+  let text = book;
+  for (const [from, to] of BARE) {
+    if (!text.includes(from)) throw new Error(`the book note has no ${JSON.stringify(from)}`);
+    text = text.replace(from, to);
+  }
+  return text;
+}
+
 /** Puts this text in the editor in front, and takes the focus off it so no caret or markup shows. */
 async function editorHolds(site: Site, text: string): Promise<void> {
   await site.obsidian.page.evaluate((value) => {
@@ -195,6 +261,7 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
   const book = await noteText(site, BOOK);
   const chapter = await noteText(site, WRITING);
   const obsidian = site.obsidian;
+  await putBack(site, BOOK, bare(book));
 
   await sized(site);
   await obsidian.paint("dark");
@@ -245,34 +312,58 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
   const controls = {
     "size-up": site.panel.up("body-size"),
     "spacing-up": site.panel.up("body-line-spacing"),
-    "outside-up": site.panel.up("margin-outside"),
-    left: site.panel.choice("body-align", "left"),
     justify: site.panel.choice("body-align", "justify"),
     css: site.panel.toCss,
+    scroller: site.panel.scroller,
   };
   await frame(site, "design-0", controls);
-  const steps: [string, Locator][] = [
-    ["design-1", site.panel.up("body-size")],
-    ["design-2", site.panel.up("body-size")],
-    ["design-3", site.panel.up("body-line-spacing")],
-    ["design-4", site.panel.up("body-line-spacing")],
-    ["design-5", site.panel.up("margin-outside")],
-    ["design-6", site.panel.up("margin-outside")],
-  ];
-  for (const [name, button] of steps) {
+  let taking = 0;
+  /** Does one thing in the panel, waits for the pages it sets, and takes the frame after it. */
+  const step = async (act: () => Promise<void>, marks: Record<string, Locator>): Promise<void> => {
     const before = await site.book.painted();
-    await button.click();
+    await act();
     await expect.poll(async () => site.book.painted()).toBeGreaterThan(before);
     await settled(site.book);
-    await frame(site, name, controls);
+    taking += 1;
+    await frame(site, `design-${taking}`, marks);
+  };
+  for (const key of ["body-size", "body-line-spacing"]) {
+    for (let at = 0; at < SIZE_STEPS; at += 1) {
+      await step(async () => site.panel.up(key).click(), controls);
+    }
   }
-  for (const [name, align] of [["design-7", "left"], ["design-8", "justify"]] as const) {
-    const was = await site.book.painted();
-    await site.panel.choice("body-align", align).click();
-    await expect.poll(async () => site.book.painted()).toBeGreaterThan(was);
-    await settled(site.book);
-    await frame(site, name, controls);
-  }
+  await step(async () => site.panel.choice("body-align", "justify").click(), controls);
+
+  // The drop cap rows are further down the panel.
+  const cap = {
+    "drop-cap": site.panel.control("chapter-drop-cap"),
+    "cap-font": site.panel.control("chapter-drop-cap-font"),
+    scroller: site.panel.scroller,
+  };
+  const bottom = await site.panel.scrollTo(site.panel.control("chapter-drop-cap-font"));
+  await scrolledTo(site, "scroll-down", bottom / 2);
+  await site.panel.scrollTo(site.panel.control("chapter-drop-cap-font"));
+  taking += 1;
+  await frame(site, `design-${taking}`, cap);
+  await step(async () => {
+    await site.panel.control("chapter-drop-cap").selectOption({ label: "3 lines" });
+  }, cap);
+  // The picker, open on the faces the filter leaves.
+  await site.panel.control("chapter-drop-cap-font").click();
+  await expect(site.panel.filter).toBeVisible();
+  await site.panel.type(CAP_FILTER);
+  await expect(site.panel.option(CAP_FONT)).toBeVisible();
+  taking += 1;
+  await frame(site, `design-${taking}`, { ...cap, option: site.panel.option(CAP_FONT) }, undefined, true);
+  await step(async () => {
+    await site.panel.option(CAP_FONT).click();
+    await expect(site.panel.control("chapter-drop-cap-font")).toContainText(CAP_FONT);
+  }, cap);
+  // Back up to the switch to the book's CSS.
+  await scrolledTo(site, "scroll-up", bottom / 2);
+  await scrolledTo(site, null, 0);
+  taking += 1;
+  await frame(site, `design-${taking}`, { css: site.panel.toCss, scroller: site.panel.scroller });
 
   // Go further in CSS: the book's own CSS, and a rule typed at its end.
   await site.panel.toCss.click();
@@ -287,7 +378,7 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
   await frame(site, "css-1", { code: site.panel.editor });
   const typedFrom = await site.book.painted();
   await site.panel.code.pressSequentially(RULE.slice(1));
-  await expect.poll(async () => noteText(site, BOOK)).toContain("#9e2a2b");
+  await expect.poll(async () => noteText(site, BOOK)).toMatch(/p\.part \{\s*color: #1d4e5b;/);
   await expect.poll(async () => site.book.painted()).toBeGreaterThan(typedFrom);
   await settled(site.book);
   // The editor closed the brace on the line under the caret, so it is
