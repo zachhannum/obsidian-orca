@@ -218,7 +218,9 @@ export async function bookSources(
   const present = resolve(order, links, from).sections.filter(sendable);
   const texts = await Promise.all(
     present.map((section) =>
-      section.kind === "note" ? read(section.path) : undefined,
+      section.kind === "note"
+        ? read(section.path)
+        : Promise.resolve(undefined),
     ),
   );
   const listed: Listed[] = present.flatMap((section, at) => {

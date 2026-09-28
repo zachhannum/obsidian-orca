@@ -214,7 +214,8 @@ production bundle, and the `e2e` job runs the suite on both platforms.
    outside `ui` imports `ui`, only `ui` imports Obsidian, an import
    inside `src` uses the `@/` alias, a doc comment opens with a name
    rather than a question word, a test file ends on what it does not
-   cover, and no spec waits on a clock
+   cover, and no spec waits on a clock. After it, ESLint and Stylelint
+   apply the rules the Obsidian plugin review applies
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned

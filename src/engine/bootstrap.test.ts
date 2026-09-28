@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
+import { Script } from "node:vm";
 import { Worker } from "node:worker_threads";
 import { VERSION, WIRE_VERSION } from "fleuron";
 import workerSource from "virtual:worker";
@@ -91,8 +92,8 @@ function fakeHost(reply: unknown): WorkerHost & {
 
 test("the worker starts from a Blob URL built out of the bundle", async () => {
   // Anything esbuild left behind for a second file would be an import,
-  // and `new Function` would throw.
-  assert.doesNotThrow(() => new Function(workerSource));
+  // and a classic script does not compile one.
+  assert.doesNotThrow(() => new Script(workerSource));
   assert.ok(workerSource.length > 0);
 
   const host = fakeHost(ready);
@@ -260,36 +261,41 @@ test("the manifest keeps the plugin off mobile", async () => {
   assert.equal((await manifest()).isDesktopOnly, true);
 });
 
-test("the manifest names the plugin's version and the engine's", async () => {
-  const { version, engineVersion } = await manifest();
+test("the manifest names the plugin's version, and the package pins the engine", async () => {
+  const manifested = await manifest();
   const npm = await packaged();
 
-  assert.equal(version, npm.version);
-  assert.equal(engineVersion, VERSION);
-  // The dependency is pinned, so the manifest and the bundle name one
+  assert.equal(manifested.version, npm.version);
+  // The review holds a manifest to the fields Obsidian reads.
+  assert.equal("engineVersion" in manifested, false);
+  // The dependency is pinned, so the package and the bundle name one
   // engine.
   assert.equal(npm.dependencies.fleuron, VERSION);
 });
 
-test("a manifest naming another engine version fails the build", async () => {
+test("a package pinning another engine version fails the build", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-apart-"));
   try {
-    const apart = path.join(outdir, "manifest.json");
+    const npm = await packaged();
+    const apart = path.join(outdir, "package.json");
     await writeFile(
       apart,
-      JSON.stringify({ ...(await manifest()), engineVersion: "0.0.0" }),
+      JSON.stringify({
+        ...npm,
+        dependencies: { ...npm.dependencies, fleuron: "0.0.0" },
+      }),
     );
 
     const { code, stderr } = await build([
       `--out=${outdir}`,
-      `--manifest=${apart}`,
+      `--package=${apart}`,
     ]);
 
     assert.notEqual(code, 0);
     assert.match(stderr, /0\.0\.0/);
     assert.match(stderr, new RegExp(VERSION.replaceAll(".", "\\.")));
     // The build wrote no part of the release.
-    assert.deepEqual(await readdir(outdir), ["manifest.json"]);
+    assert.deepEqual(await readdir(outdir), ["package.json"]);
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }
@@ -333,7 +339,6 @@ function build(args: string[]): Promise<{ code: number; stderr: string }> {
 
 interface Manifest {
   version: string;
-  engineVersion: string;
   minAppVersion: string;
   isDesktopOnly: boolean;
 }
@@ -362,7 +367,7 @@ async function moduleBytes(): Promise<ArrayBuffer> {
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
+  );
 }
 
 // What this tier does not cover: the plugin's own load and unload, which

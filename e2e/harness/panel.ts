@@ -358,7 +358,7 @@ export class Controls {
   /** Resolves a theme variable to the color the browser computes for it. */
   async resolves(variable: string): Promise<string> {
     return this.editor.evaluate((editor, name) => {
-      const probe = document.createElement("span");
+      const probe = createSpan();
       probe.style.color = `var(${name})`;
       editor.append(probe);
       const color = getComputedStyle(probe).color;

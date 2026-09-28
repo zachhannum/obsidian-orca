@@ -1,11 +1,10 @@
 /** The build, as a module, so its test runs the same build. */
 
 import { copyFile, mkdir, readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
-import builtins from "builtin-modules";
 import { VERSION, WIRE_VERSION, initSync, wireVersion } from "fleuron";
 
 const require = createRequire(import.meta.url);
@@ -16,6 +15,8 @@ export const root = path.resolve(fileURLToPath(import.meta.url), "../..");
 export const engineModule = require.resolve("fleuron/fleuron_bg.wasm");
 
 export const manifestFile = path.join(root, "manifest.json");
+
+export const packageFile = path.join(root, "package.json");
 
 export const external = [
   "obsidian",
@@ -31,11 +32,11 @@ export const external = [
   "@lezer/common",
   "@lezer/highlight",
   "@lezer/lr",
-  ...builtins,
+  ...builtinModules,
   // esbuild matches the specifier as written, and orca imports the
   // `node:` form. The plugin is desktop only, so Obsidian provides
   // these.
-  ...builtins.map((name) => `node:${name}`),
+  ...builtinModules.map((name) => `node:${name}`),
 ];
 
 /** esbuild reads `@/` out of its `paths`. */
@@ -134,14 +135,15 @@ export async function copyPlugin(outdir, manifest = manifestFile) {
 }
 
 /**
- * The manifest records the fleuron the bundle was built against, and
- * the module writes the wire version the bundle reads.
+ * The package pins the fleuron the bundle is built against, and the
+ * module writes the wire version the bundle reads.
  */
-export async function checkEngine(module, manifest = manifestFile) {
-  const { engineVersion } = JSON.parse(await readFile(manifest, "utf8"));
-  if (engineVersion !== VERSION) {
+export async function checkEngine(module, pkg = packageFile) {
+  const { dependencies } = JSON.parse(await readFile(pkg, "utf8"));
+  const pinned = dependencies?.fleuron;
+  if (pinned !== VERSION) {
     throw new Error(
-      `${path.basename(manifest)} is engine ${engineVersion}; ` +
+      `${path.basename(pkg)} pins fleuron ${String(pinned)}; ` +
         `the bundle is built against fleuron ${VERSION}`,
     );
   }

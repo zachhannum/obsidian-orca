@@ -55,20 +55,15 @@ export function searchPanel(view: EditorView): Panel {
   const document = view.dom.ownerDocument;
   let query = getSearchQuery(view.state);
 
-  const dom = document.createElement("div");
-  dom.className = "orca-search";
+  const dom = document.win.createDiv({ cls: "orca-search" });
   dom.dataset["testid"] = "orca-editor-search";
 
   const row = (): HTMLElement => {
-    const div = dom.appendChild(document.createElement("div"));
-    div.className = "orca-search-row";
-    return div;
+    return dom.createDiv({ cls: "orca-search-row" });
   };
 
   const field = (into: HTMLElement, label: string, value: string): HTMLInputElement => {
-    const input = into.appendChild(document.createElement("input"));
-    input.type = "text";
-    input.className = "orca-search-field";
+    const input = into.createEl("input", { type: "text", cls: "orca-search-field" });
     input.placeholder = label;
     input.setAttribute("aria-label", label);
     input.spellcheck = false;
@@ -83,16 +78,11 @@ export function searchPanel(view: EditorView): Panel {
     icon: readonly string[],
     run: () => void,
   ): HTMLElement => {
-    const div = into.appendChild(document.createElement("div"));
-    div.className = "clickable-icon orca-search-button";
+    const div = into.createDiv({ cls: "clickable-icon orca-search-button" });
     div.setAttribute("role", "button");
     div.setAttribute("aria-label", label);
-    const svg = div.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
-    svg.setAttribute("class", "svg-icon");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    for (const d of icon) {
-      svg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path")).setAttribute("d", d);
-    }
+    const svg = div.createSvg("svg", { cls: "svg-icon", attr: { viewBox: "0 0 24 24" } });
+    for (const d of icon) svg.createSvg("path", { attr: { d } });
     // A press on the button keeps the focus in the field it belongs to.
     div.addEventListener("mousedown", (event) => {
       event.preventDefault();

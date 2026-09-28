@@ -91,6 +91,14 @@ export function cleared(design: Design, keys: readonly string[]): Design {
 }
 
 /** Runs the controls over a page the engine sets. */
+/**
+ * A control's kind, read from its tag. An HTML document names its
+ * elements in capitals.
+ */
+const isButton = (node: HTMLElement): node is HTMLButtonElement => node.tagName === 'BUTTON';
+const isInput = (node: HTMLElement): node is HTMLInputElement => node.tagName === 'INPUT';
+const isSelect = (node: HTMLElement): node is HTMLSelectElement => node.tagName === 'SELECT';
+
 export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
   let design = opens(demo);
   let typeset: Typeset | undefined;
@@ -139,12 +147,12 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
       // A switch shows its state the other way round: it is not a
       // choice among several.
       if (control.dataset['kind'] === 'flag') control.classList.toggle('off', !on);
-      if (control instanceof HTMLButtonElement) {
+      if (isButton(control)) {
         control.setAttribute('aria-pressed', String(on));
       }
       const said = held === undefined ? '' : String(held);
       if (
-        (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) &&
+        (isInput(control) || isSelect(control)) &&
         control.value !== said
       ) {
         control.value = said;
@@ -180,7 +188,7 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
 
   for (const control of controls) {
     const key = control.dataset['key'] ?? '';
-    if (control instanceof HTMLSelectElement) {
+    if (isSelect(control)) {
       control.addEventListener('change', () => {
         // The key a heading control writes follows the level on screen,
         // so it is read now rather than when the control was found.
@@ -188,7 +196,7 @@ export function startDemo(root: HTMLElement, demo: Demo, mount: Mount): void {
       });
       continue;
     }
-    if (control instanceof HTMLInputElement) {
+    if (isInput(control)) {
       // A field settles when it is left or the reader presses enter,
       // which is where the panel settles one too. Half-typed text is
       // not a value.

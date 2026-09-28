@@ -4,7 +4,7 @@ const UNTITLED = "Untitled";
 
 // Characters macOS, Windows or Linux refuse in a file name, and the
 // control characters.
-const FORBIDDEN = /[/\\:*?"<>|\u0000-\u001f\u007f]/g;
+const FORBIDDEN = /[/\\:*?"<>|\p{Cc}]/gu;
 
 /**
  * The file name for an exported book. The name before the extension is

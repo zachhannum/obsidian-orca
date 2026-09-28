@@ -192,10 +192,10 @@ export class Book {
     await this.obsidian.page.evaluate(() => {
       const said: Notice[] = [];
       const collect = (node: Node): void => {
-        if (!(node instanceof HTMLElement)) return;
-        const found = node.matches("[data-testid=\'orca-setting\']")
+        if (!node.instanceOf(HTMLElement)) return;
+        const found = node.matches("[data-testid='orca-setting']")
           ? node
-          : node.querySelector("[data-testid=\'orca-setting\']");
+          : node.querySelector("[data-testid='orca-setting']");
         if (found === null) return;
         said.push({
           said: found.textContent ?? "",
@@ -530,15 +530,18 @@ export class Book {
           ".orca-page { position: fixed;" +
           ` width: ${String(trim.width)}px; height: ${String(trim.height)}px;` +
           ` top: ${String(top)}px; left: ${String(left)}px }`;
-        const pose = document.createElement("style");
-        pose.id = id;
-        pose.textContent = stand(0, 0);
-        document.head.append(pose);
+        const sheets = (window.orcaSheets ??= {});
+        const pose = sheets[id] ?? new CSSStyleSheet();
+        pose.replaceSync(stand(0, 0));
+        if (!document.adoptedStyleSheets.includes(pose)) {
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, pose];
+        }
+        sheets[id] = pose;
         // A pane is the containing block for anything fixed inside it,
         // and which pane that is answers in pixels rather than in the
         // rules, so the offset is read off where the corner landed.
         const at = page.getBoundingClientRect();
-        pose.textContent = stand(want.top - at.top, want.left - at.left);
+        pose.replaceSync(stand(want.top - at.top, want.left - at.left));
       },
       [FLOATING, POSED, POSE] as const,
     );
@@ -547,7 +550,12 @@ export class Book {
   /** Puts the pane back the way the pose found it. */
   async stand(): Promise<void> {
     await this.obsidian.page.evaluate((id) => {
-      document.getElementById(id)?.remove();
+      const sheet = window.orcaSheets?.[id];
+      if (sheet === undefined) return;
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (adopted) => adopted !== sheet,
+      );
+      delete window.orcaSheets?.[id];
     }, POSED);
   }
 

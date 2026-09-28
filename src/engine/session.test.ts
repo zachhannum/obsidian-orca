@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { Worker, type TransferListItem } from "node:worker_threads";
+import { Worker, type Transferable } from "node:worker_threads";
 import {
   paintPage,
   styleOp,
@@ -909,7 +909,7 @@ function nodeHost(): WorkerHost {
         onmessage: null,
         onerror: null,
         postMessage: (message, transfer) => {
-          worker.postMessage(message, transfer as TransferListItem[]);
+          worker.postMessage(message, transfer as Transferable[]);
         },
         terminate: () => {
           void worker.terminate();
@@ -928,7 +928,7 @@ async function moduleBytes(): Promise<ArrayBuffer> {
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
+  );
 }
 
 /** The directory the pinned engine module is installed in. */

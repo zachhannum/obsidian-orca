@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import type { Locator } from "@playwright/test";
 import { Book } from "./book";
 import { Navigator } from "./navigator";
-import { PLUGIN } from "./launch";
+import { configIn, PLUGIN } from "./launch";
 import { Obsidian, type Scheme } from "./obsidian";
 import { Panel } from "./panel";
 
@@ -229,7 +229,7 @@ export class Site {
 
   static async open(from: Obsidian): Promise<Site> {
     const vault = Obsidian.sample();
-    const config = path.join(vault, ".obsidian");
+    const config = await configIn(vault);
     await mkdir(path.join(config, "snippets"), { recursive: true });
     await writeFile(
       path.join(config, "snippets", `${SNIPPET}.css`),

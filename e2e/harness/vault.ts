@@ -167,7 +167,7 @@ export class Vault {
     for (const folder of this.folders) {
       await this.page.evaluate(async (at) => {
         const found = window.app.vault.getFolderByPath(at);
-        if (found !== null) await window.app.vault.delete(found, true);
+        if (found !== null) await window.app.fileManager.trashFile(found);
       }, folder);
     }
     this.touched.clear();

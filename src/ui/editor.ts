@@ -486,7 +486,22 @@ const flagHover = hoverTooltip((view, pos) => {
     pos: Math.min(...here.map((found) => found.from)),
     end: Math.max(...here.map((found) => found.to)),
     above: true,
-    create: () => ({ dom: flagCard(view, here) }),
+    create: () => {
+      const dom = flagCard(view, here);
+      // The card draws its own box, so CodeMirror's box around it
+      // draws none while it holds the card.
+      let host: HTMLElement | null = null;
+      return {
+        dom,
+        mount: () => {
+          host = dom.parentElement;
+          host?.addClass("orca-card-host");
+        },
+        destroy: () => {
+          host?.removeClass("orca-card-host");
+        },
+      };
+    },
   };
 });
 
@@ -513,8 +528,7 @@ function completionIcons(draw: DrawIcon): Parameters<typeof autocompletion>[0] {
         // CodeMirror puts its own icon at 20, before the label.
         position: 20,
         render(completion, _state, view) {
-          const el = view.dom.ownerDocument.createElement("div");
-          el.className = "orca-completion-icon";
+          const el = view.dom.ownerDocument.win.createDiv({ cls: "orca-completion-icon" });
           const name = COMPLETION_ICONS[completion.type ?? ""];
           if (name !== undefined) draw(el, name);
           return el;
@@ -750,14 +764,10 @@ export function inserted(state: EditorState, text: string): TransactionSpec {
 const FOLD_PATHS = { open: "m6 9 6 6 6-6", folded: "m9 18 6-6-6-6" };
 
 function foldMarker(open: boolean): HTMLElement {
-  const marker = document.createElement("div");
-  marker.className = "orca-editor-fold";
+  const marker = createDiv({ cls: "orca-editor-fold" });
   marker.dataset["testid"] = open ? "orca-editor-fold" : "orca-editor-folded";
-  const svg = marker.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg
-    .appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"))
-    .setAttribute("d", open ? FOLD_PATHS.open : FOLD_PATHS.folded);
+  const svg = marker.createSvg("svg", { attr: { viewBox: "0 0 24 24" } });
+  svg.createSvg("path", { attr: { d: open ? FOLD_PATHS.open : FOLD_PATHS.folded } });
   return marker;
 }
 
@@ -802,30 +812,21 @@ const WARNING_PATHS = [
  * the typing.
  */
 function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
-  const document = view.dom.ownerDocument;
-  const card = document.createElement("div");
-  card.className = "orca-card";
+  const card = view.dom.ownerDocument.win.createDiv({ cls: "orca-card" });
   card.dataset["testid"] = "orca-editor-card";
   for (const found of here) {
-    const row = card.appendChild(document.createElement("div"));
-    row.className = "orca-card-row mod-warning";
+    const row = card.createDiv({ cls: "orca-card-row mod-warning" });
 
-    const svg = row.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "svg"));
-    svg.setAttribute("class", "orca-card-icon");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    for (const d of WARNING_PATHS) {
-      svg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path")).setAttribute("d", d);
-    }
+    const svg = row.createSvg("svg", { cls: "orca-card-icon", attr: { viewBox: "0 0 24 24" } });
+    for (const d of WARNING_PATHS) svg.createSvg("path", { attr: { d } });
 
-    const body = row.appendChild(document.createElement("div"));
-    body.className = "orca-card-body";
-    const said = body.appendChild(document.createElement("div"));
-    said.className = "orca-card-said";
-    said.textContent = found.message;
+    const body = row.createDiv({ cls: "orca-card-body" });
+    body.createDiv({ cls: "orca-card-said", text: found.message });
     const line = view.state.doc.lineAt(found.from);
-    const at = body.appendChild(document.createElement("div"));
-    at.className = "orca-card-at";
-    at.textContent = `${found.sheet}:${String(line.number)}:${String(found.from - line.from + 1)}`;
+    body.createDiv({
+      cls: "orca-card-at",
+      text: `${found.sheet}:${String(line.number)}:${String(found.from - line.from + 1)}`,
+    });
   }
   return card;
 }

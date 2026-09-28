@@ -6,11 +6,11 @@
  * milliseconds of work, and that much on the main thread is a page
  * that stops answering the controls beside it.
  */
-import { createEngine } from 'fleuron';
+import { createEngine, type Request } from 'fleuron';
 
 /** The worker's own global, which the DOM's `self` does not describe. */
 interface WorkerScope {
-  onmessage: ((event: MessageEvent) => void) | null;
+  onmessage: ((event: MessageEvent<Request>) => void) | null;
   postMessage(message: unknown, transfer: Transferable[]): void;
 }
 
@@ -18,7 +18,7 @@ const scope = self as unknown as WorkerScope;
 
 const engine = createEngine();
 
-scope.onmessage = ({ data }: MessageEvent) => {
+scope.onmessage = ({ data }: MessageEvent<Request>) => {
   void engine.then((ready) =>
     ready.submit(data, (response, transfer) => {
       scope.postMessage(response, transfer);

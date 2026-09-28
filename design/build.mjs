@@ -65,5 +65,5 @@ ${logic}
 </html>
 `;
   writeFileSync(`${name}.dc.html`, out);
-  console.log(`${name}.dc.html  ${s.w}x${s.h}`);
+  process.stdout.write(`${name}.dc.html  ${s.w}x${s.h}\n`);
 }

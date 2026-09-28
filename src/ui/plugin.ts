@@ -61,7 +61,8 @@ import {
   PreviewView,
   type PreviewState,
 } from "@/ui/preview";
-import { OrcaSettingTab, type Limited } from "@/ui/settings";
+import type { Limited } from "@/ui/definitions";
+import { OrcaSettingTab } from "@/ui/settings";
 import { Composer, type Composing, type Typeset } from "@/ui/composer";
 import type { Opened } from "@/ui/shelf";
 
@@ -425,10 +426,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * sees.
    */
   private catchOpening(): void {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- the wrapper calls it on its own leaf
     const original = WorkspaceLeaf.prototype.setViewState as SetViewState;
-    const plugin = this;
+    const asBook = (leaf: WorkspaceLeaf, state: ViewState): ViewState => this.asBook(leaf, state);
     const caught: SetViewState = function (state, ...rest) {
-      return original.call(this, plugin.asBook(this, state), ...rest);
+      return original.call(this, asBook(this, state), ...rest);
     };
     WorkspaceLeaf.prototype.setViewState = caught;
     this.register(() => {
@@ -498,7 +500,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (view === null) return false;
     const to = view.chapterBy(step);
     if (to === undefined) return false;
-    if (!checking) view.turnToChapter(to);
+    if (!checking) void view.turnToChapter(to);
     return true;
   }
 
@@ -1155,8 +1157,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
       // document, and two renders at once race it.
       return {
         client: serialized(handle.client),
-        dies: handle.dies,
-        stop: handle.stop,
+        dies: (told) => {
+          handle.dies(told);
+        },
+        stop: () => {
+          handle.stop();
+        },
       };
     } catch (cause) {
       this.notice(cause);

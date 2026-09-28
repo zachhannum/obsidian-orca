@@ -312,9 +312,7 @@
 /* The book being set, or the reason it was not, stands in the well in
    place of the pages. A book being set again has pages already, and
    they stay under the notice. */
-.orca-preview-well:has(> .orca-preview-setting:not(.mod-again):not(.mod-held))
-  > .orca-preview-sheets,
-.orca-preview-well:has(> .orca-preview-message) > .orca-preview-sheets {
+.orca-preview-well.is-covered > .orca-preview-sheets {
   display: none;
 }
 
@@ -1155,8 +1153,12 @@ button.orca-nav-action:hover {
 }
 
 .orca-editor-host .orca-editor-flag {
+  /* Chrome 124 draws these in full. caniuse's partial mark is for
+     text-decoration-skip, which orca does not use. */
+  /* stylelint-disable plugin/no-unsupported-browser-features */
   text-decoration: underline wavy var(--color-orange);
   text-decoration-thickness: 1px;
+  /* stylelint-enable plugin/no-unsupported-browser-features */
   text-underline-offset: 3px;
 }
 
@@ -1194,7 +1196,7 @@ button.orca-nav-action:hover {
 
 /* CodeMirror wraps the editor's card in its own tooltip box. The card
    draws the box itself. */
-.cm-tooltip.cm-tooltip-hover:has(> .orca-card) {
+.cm-tooltip.cm-tooltip-hover.orca-card-host {
   padding: 0;
   border: none;
   background: transparent;
@@ -1460,13 +1462,21 @@ button.orca-inspect-src:hover {
 .orca-inspect-decl.is-lost {
   opacity: 0.55;
   text-decoration: line-through;
+  /* Chrome 124 draws these in full. caniuse's partial mark is for
+     text-decoration-skip, which orca does not use. */
+  /* stylelint-disable plugin/no-unsupported-browser-features */
   text-decoration-color: var(--text-faint);
+  /* stylelint-enable plugin/no-unsupported-browser-features */
 }
 
 .orca-inspect-decl.is-skipped .orca-inspect-p,
 .orca-inspect-decl.is-skipped .orca-inspect-v {
+  /* Chrome 124 draws these in full. caniuse's partial mark is for
+     text-decoration-skip, which orca does not use. */
+  /* stylelint-disable plugin/no-unsupported-browser-features */
   text-decoration: underline wavy var(--color-orange);
   text-decoration-thickness: 1px;
+  /* stylelint-enable plugin/no-unsupported-browser-features */
   text-underline-offset: 3px;
 }
 
@@ -1670,7 +1680,7 @@ button.orca-panel-tab.is-on {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  clip-path: inset(50%);
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
 

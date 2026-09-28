@@ -5,8 +5,8 @@
  * generate are the plugin's own, so the page here is set the way the
  * plugin sets one. Nothing about the page is drawn by the browser.
  */
-import { Client, paintPage, styleOp, type Op } from 'fleuron';
-import { Session, documentFaces, serialized, type EngineClient } from '@/engine/session';
+import { Client, paintPage, styleOp, type Op, type Response } from 'fleuron';
+import { Session, documentFaces, serialized } from '@/engine/session';
 import type { Design } from '@/style/design';
 import type { Setting } from '@/style/generated';
 import { designSheets } from '@/style/sheet';
@@ -55,14 +55,14 @@ export async function startTypeset(
       worker.postMessage(request, transfer);
     },
   });
-  worker.addEventListener('message', ({ data }: MessageEvent) => {
+  worker.addEventListener('message', ({ data }: MessageEvent<Response>) => {
     client.receive(data);
   });
 
   // The faces the engine shaped with are registered on the document, so
   // the glyphs the painter places are drawn in the face they were
   // measured in.
-  const session = new Session(serialized(client as EngineClient), documentFaces(document));
+  const session = new Session(serialized(client), documentFaces(document));
 
   /**
    * The book, as the ops one chapter takes. The chapter is one section,
@@ -72,13 +72,15 @@ export async function startTypeset(
   const section = setting.sections[0];
   const bytes = await Promise.all(
     images.map(async ({ url, src }): Promise<Op> => {
-      const response = await fetch(src);
+      // The site is a web page, not a plugin, so there is no requestUrl.
+      const response = await window.fetch(src);
       return { op: 'image', url, bytes: new Uint8Array(await response.arrayBuffer()) };
     })
   );
   const fonts = await Promise.all(
     faces.map(async (src): Promise<Op> => {
-      const response = await fetch(src);
+      // The site is a web page, not a plugin, so there is no requestUrl.
+      const response = await window.fetch(src);
       return { op: 'font', bytes: new Uint8Array(await response.arrayBuffer()) };
     })
   );
@@ -105,11 +107,15 @@ export async function startTypeset(
     if (reading === undefined) return;
     const page = reading.pages[0];
     if (page === undefined) return;
-    into.innerHTML = paintPage(page, {
+    // The painter's markup is parsed as SVG, so the chapter's text
+    // inside it stays text.
+    const markup = paintPage(page, {
       fonts: reading.fonts,
       assets: reading.assets,
       asset: (asset) => served.get(asset.url),
     });
+    const parsed = new DOMParser().parseFromString(markup, 'image/svg+xml');
+    into.replaceChildren(document.importNode(parsed.documentElement, true));
     into.dataset['set'] = 'yes';
   };
 

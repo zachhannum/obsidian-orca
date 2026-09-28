@@ -13,15 +13,26 @@ import {
   type Surface,
 } from "@/ui/page";
 
-interface Fake extends Surface {
-  readonly writes: string[];
+/** A sheet as the fake press builds it. */
+interface Sheet {
+  attributes: Record<string, string>;
+  markup: string | undefined;
+}
+
+const press = (
+  attributes: Record<string, string>,
+  markup: string | undefined,
+): Sheet => ({ attributes, markup });
+
+interface Fake extends Surface<Sheet> {
+  readonly writes: Sheet[][];
   readonly trim: Record<string, string>;
   readonly asked: string[];
   readonly marked: { selector: string; name: string; value: string }[];
 }
 
 function surface(glyphs = 2): Fake {
-  const writes: string[] = [];
+  const writes: Sheet[][] = [];
   const trim: Record<string, string> = {};
   const asked: string[] = [];
   const marked: { selector: string; name: string; value: string }[] = [];
@@ -47,11 +58,8 @@ function surface(glyphs = 2): Fake {
         }),
       );
     },
-    get innerHTML(): string {
-      return writes.at(-1) ?? "";
-    },
-    set innerHTML(markup: string) {
-      writes.push(markup);
+    replaceChildren(...sheets: Sheet[]): void {
+      writes.push(sheets);
     },
   };
 }
@@ -140,34 +148,68 @@ test("a grid fits as many sheets as the well has room for", () => {
 test("a view's pages are the painter's markup in one write, not a node at a time", () => {
   const node = surface();
 
-  showPages(node, {
-    mode: "spread",
-    leaves: [leaf(2, "verso"), leaf(3, "recto")],
-    generation: 1,
-    stages,
-    pages: 337,
-    note: "",
-    columns: 2,
-    rows: 1,
-  });
+  showPages(
+    node,
+    {
+      mode: "spread",
+      leaves: [leaf(2, "verso"), leaf(3, "recto")],
+      generation: 1,
+      stages,
+      pages: 337,
+      note: "",
+      columns: 2,
+      rows: 1,
+    },
+    press,
+  );
 
   assert.equal(node.writes.length, 1);
-  assert.match(node.writes[0] ?? "", /data-page="2"[\s\S]*data-page="3"/);
+  const pages = (node.writes[0] ?? []).map((s) => s.attributes["data-page"]);
+  assert.deepEqual(pages, ["2", "3"]);
+  assert.equal(node.writes[0]?.[0]?.markup, leaf(2, "verso").markup);
+});
+
+test("a spread's empty seat is a sheet with no markup, hidden from what reads aloud", () => {
+  const node = surface();
+
+  showPages(
+    node,
+    {
+      mode: "spread",
+      leaves: [leaf(1, "recto")],
+      generation: 1,
+      stages,
+      pages: 337,
+      note: "",
+      columns: 2,
+      rows: 1,
+    },
+    press,
+  );
+
+  assert.deepEqual(node.writes[0]?.[0], {
+    attributes: { "data-empty": "true", "aria-hidden": "true" },
+    markup: undefined,
+  });
 });
 
 test("the surface has the generation painted into it, what that cost, and the span it is showing", () => {
   const node = surface();
 
-  showPages(node, {
-    mode: "grid",
-    leaves: [leaf(12, "verso"), leaf(13, "recto"), leaf(14, "verso")],
-    generation: 7,
-    stages: { style: 1, lines: 4, flow: 3, paint: 2 },
-    pages: 337,
-    note: "Chapter Twelve.md",
-    columns: 3,
-    rows: 1,
-  });
+  showPages(
+    node,
+    {
+      mode: "grid",
+      leaves: [leaf(12, "verso"), leaf(13, "recto"), leaf(14, "verso")],
+      generation: 7,
+      stages: { style: 1, lines: 4, flow: 3, paint: 2 },
+      pages: 337,
+      note: "Chapter Twelve.md",
+      columns: 3,
+      rows: 1,
+    },
+    press,
+  );
 
   assert.equal(node.dataset["generation"], "7");
   assert.equal(node.dataset["stageStyle"], "1");
@@ -184,16 +226,20 @@ test("the surface has the generation painted into it, what that cost, and the sp
 test("the sheet box is the trim the painter drew, placed on the view's own grid", () => {
   const node = surface();
 
-  showPages(node, {
-    mode: "grid",
-    leaves: [leaf(1, "recto")],
-    generation: 1,
-    stages,
-    pages: 337,
-    note: "",
-    columns: 4,
-    rows: 3,
-  });
+  showPages(
+    node,
+    {
+      mode: "grid",
+      leaves: [leaf(1, "recto")],
+      generation: 1,
+      stages,
+      pages: 337,
+      note: "",
+      columns: 4,
+      rows: 3,
+    },
+    press,
+  );
 
   assert.equal(node.trim["--orca-trim-w"], "432");
   assert.equal(node.trim["--orca-trim-h"], "648");
@@ -205,18 +251,24 @@ test("the sheet box is the trim the painter drew, placed on the view's own grid"
 test("a page is named for what reads it aloud, and the drawn glyphs are left out of it", () => {
   const node = surface();
 
-  showPages(node, {
-    mode: "single",
-    leaves: [leaf(146, "verso")],
-    generation: 1,
-    stages,
-    pages: 337,
-    note: "",
-    columns: 1,
-    rows: 1,
-  });
+  showPages(
+    node,
+    {
+      mode: "single",
+      leaves: [leaf(146, "verso")],
+      generation: 1,
+      stages,
+      pages: 337,
+      note: "",
+      columns: 1,
+      rows: 1,
+    },
+    press,
+  );
 
-  assert.match(node.writes[0] ?? "", /role="group" aria-label="Page 146"/);
+  const named = node.writes[0]?.[0]?.attributes;
+  assert.equal(named?.["role"], "group");
+  assert.equal(named?.["aria-label"], "Page 146");
   // The glyph layer is the shaped text; the painter's selection layer
   // is the manuscript's own, and that is the one left to be read.
   assert.deepEqual(node.asked, ["text:not([data-selection-line])"]);

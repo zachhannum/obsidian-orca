@@ -856,7 +856,7 @@ test("the make pictures are a folder of notes made into a book", async ({
     async (paths) => {
       for (const at of paths) {
         const found = window.app.vault.getAbstractFileByPath(at);
-        if (found !== null) await window.app.vault.delete(found, true);
+        if (found !== null) await window.app.fileManager.trashFile(found);
       }
     },
     [MADE, DRAFT],

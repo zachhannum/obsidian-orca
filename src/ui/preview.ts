@@ -42,6 +42,7 @@ import {
   isViewMode,
   nextPage,
   previousPage,
+  pressSheet,
   showPages,
   spanAt,
   turnedTo,
@@ -1353,8 +1354,7 @@ export class PreviewView extends ItemView {
       this.empty();
       return;
     }
-    this.message?.remove();
-    this.message = undefined;
+    this.post(undefined, false);
     this.paint(session, reading, wanted, led);
   }
 
@@ -1393,16 +1393,20 @@ export class PreviewView extends ItemView {
     this.asked = reading.at + on;
     const read = reading.pages[on];
     this.blocks = read === undefined ? [] : heldOn(read);
-    showPages(surface, {
-      mode: this.mode,
-      leaves,
-      generation: session.generation,
-      stages: session.stages,
-      pages: reading.length,
-      note: this.showing ?? "",
-      columns: SEATS[this.mode] ?? this.columns,
-      rows: this.mode === "grid" ? this.rows : 1,
-    });
+    showPages(
+      surface,
+      {
+        mode: this.mode,
+        leaves,
+        generation: session.generation,
+        stages: session.stages,
+        pages: reading.length,
+        note: this.showing ?? "",
+        columns: SEATS[this.mode] ?? this.columns,
+        rows: this.mode === "grid" ? this.rows : 1,
+      },
+      pressSheet,
+    );
     this.painted = new Map(
       reading.pages.map((page, index) => [reading.at + index, page]),
     );
@@ -1777,7 +1781,6 @@ export class PreviewView extends ItemView {
   private setting(progress: Progress): void {
     const well = this.well;
     if (well === undefined) return;
-    this.message?.remove();
     const banner = well.createDiv({ cls: "orca-preview-setting" });
     banner.dataset["testid"] = "orca-setting";
     // A book being set for the first time has no pages yet. One being
@@ -1806,8 +1809,7 @@ export class PreviewView extends ItemView {
         note.append(`it will open at ${progress.opening}`);
       }
     }
-    well.prepend(banner);
-    this.message = banner;
+    this.post(banner, !progress.again);
   }
 
   /**
@@ -1819,7 +1821,6 @@ export class PreviewView extends ItemView {
   private held(dead: EngineDead): void {
     const well = this.well;
     if (well === undefined) return;
-    this.message?.remove();
     const banner = well.createDiv({ cls: "orca-preview-setting mod-held" });
     banner.dataset["testid"] = "orca-held";
     setIcon(
@@ -1840,8 +1841,7 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(report, "click", () => {
       void navigator.clipboard.writeText(dead.log.join("\n"));
     });
-    well.prepend(banner);
-    this.message = banner;
+    this.post(banner, false);
   }
 
   /**
@@ -1852,7 +1852,6 @@ export class PreviewView extends ItemView {
     const well = this.well;
     const book = this.book;
     if (well === undefined || book === undefined) return;
-    this.message?.remove();
     const state = well.createDiv({ cls: "orca-preview-setting mod-empty" });
     state.dataset["testid"] = "orca-empty";
     setIcon(state.createDiv({ cls: "orca-preview-setting-icon" }), "book");
@@ -1863,19 +1862,23 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(adding, "click", () => {
       this.handoff.adds(book);
     });
-    well.prepend(state);
-    this.message = state;
+    this.post(state, true);
   }
 
   /** Puts a message in the well in place of the pages. */
   private report(text: string): void {
+    this.post(this.well?.createDiv({ cls: "orca-preview-message", text }), true);
+  }
+
+  /**
+   * Puts a message at the top of the well in place of the one before,
+   * and hides the pages under one that `covers` them.
+   */
+  private post(message: HTMLElement | undefined, covers: boolean): void {
     this.message?.remove();
-    const message = this.well?.createDiv({
-      cls: "orca-preview-message",
-      text,
-    });
-    if (message !== undefined) this.well?.prepend(message);
     this.message = message;
+    if (message !== undefined) this.well?.prepend(message);
+    this.well?.toggleClass("is-covered", message !== undefined && covers);
   }
 }
 

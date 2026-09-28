@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "node scripts/check-tokens.mjs && astro check && astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "lint": "astro sync && eslint --max-warnings 0 ."
   },
   "license": "MIT",
   "dependencies": {
@@ -29,5 +30,12 @@
     "esbuild@0.28.2": true,
     "sharp@0.35.4": true,
     "sharp@0.34.5": true
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@eslint/json": "^0.14.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "typescript-eslint": "^8.70.1"
   }
 }

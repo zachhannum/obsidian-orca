@@ -422,6 +422,27 @@ function luminance(hex) {
 }
 
 /** One length the page declares on `.page`, in pixels. */
+/** The value of a sum of products of numbers, which is all a calc() here holds. */
+function arithmetic(expression) {
+  assert.doesNotMatch(expression, /[()]/, `a calc() with brackets: ${expression}`);
+  const tokens = expression.match(/[\d.]+|[-+*/]/g);
+  assert.ok(tokens, `no arithmetic in ${expression}`);
+  let sum = 0;
+  let sign = 1;
+  let product = Number(tokens[0]);
+  for (let i = 1; i < tokens.length; i += 2) {
+    const [op, next] = [tokens[i], Number(tokens[i + 1])];
+    if (op === "*") product *= next;
+    else if (op === "/") product /= next;
+    else {
+      sum += sign * product;
+      sign = op === "-" ? -1 : 1;
+      product = next;
+    }
+  }
+  return sum + sign * product;
+}
+
 function metric(name) {
   const found = new RegExp(`--${name}:\\s*([^;]+);`).exec(landingStyle);
   assert.ok(found, `the page declares no --${name}`);
@@ -437,10 +458,8 @@ test("the surface moves, runs through the second line of the title, and the titl
   // The band the surface moves inside, measured down the page: the rest
   // line, less the deepest the middle dips, plus the tallest swell.
   const calc = /--sea-top:\s*calc\(([\s\S]*?)\);/.exec(landingStyle)[1];
-  const seaTop = Number(
-    new Function(
-      `return (${calc.replace(/var\(--([\w-]+)\)/g, (whole, name) => String(metric(name))).replace(/px/g, "")})`,
-    )(),
+  const seaTop = arithmetic(
+    calc.replace(/var\(--([\w-]+)\)/g, (whole, name) => String(metric(name))).replace(/px/g, ""),
   );
   const leading = metric("title-size") * metric("title-leading");
   const title = metric("header-h") + metric("hero-pad");
@@ -457,8 +476,8 @@ test("the surface moves, runs through the second line of the title, and the titl
   const h1 = /<h1>([\s\S]*?)<\/h1>/.exec(landing)[1];
   assert.equal(h1.match(/set:html=\{title\}/g).length, 2);
   assert.match(h1, /class="sunk"[^>]*data-sea-cut/);
-  assert.match(/\n  h1 \{([\s\S]*?)\n  \}/.exec(landingStyle)[1], /color: var\(--sky-text\)/);
-  const sunk = /\n  h1 \.sunk \{([\s\S]*?)\n  \}/.exec(landingStyle)[1];
+  assert.match(/\n {2}h1 \{([\s\S]*?)\n {2}\}/.exec(landingStyle)[1], /color: var\(--sky-text\)/);
+  const sunk = /\n {2}h1 \.sunk \{([\s\S]*?)\n {2}\}/.exec(landingStyle)[1];
   assert.match(sunk, /color: var\(--text\)/);
   assert.match(sunk, /clip-path:/);
 
@@ -496,14 +515,18 @@ test("with reduced motion on, the sea, the specks and the pane swap hold still",
 
   const drawn = [];
   let frames = 0;
+  const requestAnimationFrame = () => (frames += 1);
+  const cancelAnimationFrame = () => {};
   const { startSea } = await moduleOf("site/src/scripts/sea.ts", {
     window: {
       matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
       addEventListener() {},
       removeEventListener() {},
+      requestAnimationFrame,
+      cancelAnimationFrame,
     },
-    requestAnimationFrame: () => (frames += 1),
-    cancelAnimationFrame() {},
+    requestAnimationFrame,
+    cancelAnimationFrame,
     performance: { now: () => 0 },
   });
   const path = {

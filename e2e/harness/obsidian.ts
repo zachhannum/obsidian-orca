@@ -6,6 +6,7 @@
 
 import path from "node:path";
 import process from "node:process";
+import { setTimeout as delay } from "node:timers/promises";
 import {
   expect,
   type Browser,
@@ -87,6 +88,8 @@ declare global {
     require(id: string): unknown;
     /** The recorder a spec installs while `notices` runs. */
     orcaNotices?: { said: string[]; watch: MutationObserver } | undefined;
+    /** The sheets the harness has adopted, by the name it gave each. */
+    orcaSheets?: Record<string, CSSStyleSheet> | undefined;
   }
 }
 
@@ -607,11 +610,13 @@ export class Obsidian {
       (what) => {
         // A second hold replaces the first, so one call to moving puts
         // all of it back.
-        document.getElementById(what.id)?.remove();
-        const style = document.createElement("style");
-        style.id = what.id;
-        style.textContent = what.css;
-        document.head.append(style);
+        const sheets = (window.orcaSheets ??= {});
+        const sheet = sheets[what.id] ?? new CSSStyleSheet();
+        sheet.replaceSync(what.css);
+        if (!document.adoptedStyleSheets.includes(sheet)) {
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+        }
+        sheets[what.id] = sheet;
       },
       { id: STILL, css },
     );
@@ -620,7 +625,12 @@ export class Obsidian {
   /** Puts that chrome back. */
   async moving(): Promise<void> {
     await this.page.evaluate((id) => {
-      document.getElementById(id)?.remove();
+      const sheet = window.orcaSheets?.[id];
+      if (sheet === undefined) return;
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (adopted) => adopted !== sheet,
+      );
+      delete window.orcaSheets?.[id];
     }, STILL);
   }
 
@@ -716,7 +726,7 @@ export class Obsidian {
       const watch = new MutationObserver((records) => {
         for (const record of records) {
           for (const node of record.addedNodes) {
-            if (node instanceof HTMLElement && node.matches(selector)) {
+            if (node.instanceOf(HTMLElement) && node.matches(selector)) {
               said.push(node.textContent ?? "");
             }
           }
@@ -729,28 +739,29 @@ export class Obsidian {
     // One app runs the whole suite, so the watch comes off even when
     // `during` throws: a spec that fails inside one would otherwise
     // leave an observer on the body for every spec after it.
-    let said: string[] = [];
-    let ran = false;
+    let failed: Error | undefined;
     try {
       await during();
-      ran = true;
-    } finally {
-      try {
-        said = await this.page.evaluate(() => {
-          const notices = window.orcaNotices;
-          if (notices === undefined) return [];
-          notices.watch.disconnect();
-          window.orcaNotices = undefined;
-          return notices.said;
-        });
-      } catch (cause) {
-        // A page that is gone cannot be read, and the reason it is
-        // gone is what the spec should report. On the way out of a
-        // block that finished, nothing was recorded and no list of
-        // what was said can be answered for.
-        if (ran) throw cause;
-      }
+    } catch (cause) {
+      failed = cause instanceof Error ? cause : new Error(String(cause));
     }
+    let said: string[] = [];
+    try {
+      said = await this.page.evaluate(() => {
+        const notices = window.orcaNotices;
+        if (notices === undefined) return [];
+        notices.watch.disconnect();
+        window.orcaNotices = undefined;
+        return notices.said;
+      });
+    } catch (cause) {
+      // A page that is gone cannot be read, and the reason it is gone
+      // is what the spec should report. On the way out of a block that
+      // finished, nothing was recorded and no list of what was said
+      // can be answered for.
+      if (failed === undefined) throw cause;
+    }
+    if (failed !== undefined) throw failed;
     return said;
   }
 
@@ -861,6 +872,6 @@ async function renderer(browser: Browser, vault?: string): Promise<Page> {
     if (Date.now() > deadline) {
       throw new Error(`no Obsidian window on ${vault ?? "a vault"} in ${APPEARING}ms`);
     }
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await delay(250);
   }
 }

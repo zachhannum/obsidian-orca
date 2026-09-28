@@ -61,7 +61,7 @@ class ExportModal extends Modal {
   }
 
   private exporter(): Exporter {
-    const { book, files, openPanel } = this.exports;
+    const { book, files } = this.exports;
     const { workspace } = this.app;
     return {
       prepare: async () => {
@@ -107,7 +107,7 @@ class ExportModal extends Modal {
       fix: (blocker) => {
         this.close();
         if (blocker.at === undefined) {
-          openPanel();
+          this.exports.openPanel();
           return;
         }
         void workspace.openLinkText(blocker.at.note, "", false, {

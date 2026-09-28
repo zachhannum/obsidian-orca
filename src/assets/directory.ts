@@ -53,7 +53,7 @@ export function directoryVault(root: string): VaultAdapter {
       return bytes.buffer.slice(
         bytes.byteOffset,
         bytes.byteOffset + bytes.byteLength,
-      ) as ArrayBuffer;
+      );
     },
     list: async (folder) => {
       const under = at(folder);
