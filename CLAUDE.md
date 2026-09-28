@@ -27,7 +27,7 @@ wins and the quick fix waits for its own PR.
 - fleuron is the engine and is pinned. The wire format is checked
   against the module before a book opens, so a mismatched build fails
   at the door rather than halfway through a render.
-- The three invariants (see README): the panel never writes the
+- The three invariants (see CONTRIBUTING.md): the panel never writes the
   author's CSS; the engine is the only linter; preview and export come
   from one session.
 - `book/` parses a note to draw the editor's marks, and that parse
