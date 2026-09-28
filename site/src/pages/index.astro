@@ -754,9 +754,13 @@ const swap = {
     text-transform: uppercase;
     color: var(--sky-text);
   }
+  /* The sea's copy is clipped to its own box, and a slanted letter at
+     the start of a line leans out past the box's left edge. The box
+     reaches left by that much, and the padding puts the letters back. */
   h1 .sunk {
     position: absolute;
-    inset: 0;
+    inset: 0 0 0 -0.2em;
+    padding-inline-start: 0.2em;
     color: var(--text);
     /* The surface before the module runs, and the surface with the page
        read without scripts: the rest line, level. */
