@@ -21,6 +21,9 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
   span {
     font-family: var(--wordmark);
     font-weight: 400;
+    /* The face keeps room for descenders these letters do not use, so
+       the box is centred on the mark and the ink sits high in it. */
+    translate: 0 0.125em;
     font-size: 25px;
     overflow: hidden;
   }

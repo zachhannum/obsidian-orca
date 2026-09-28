@@ -698,6 +698,8 @@ const swap = {
   .word span {
     font-family: var(--wordmark);
     font-weight: 400;
+    /* The ink sits high in the face's box, as it does in the docs' title. */
+    translate: 0 0.125em;
     font-size: 30px;
   }
   /* The footer's mark is the reading colour, so it is one flat white on
