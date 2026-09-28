@@ -29,12 +29,6 @@ See [make a book](https://orca.typeworks.dev/start/make-a-book/) in the docs for
 
 Orca sets the pages with [fleuron](https://github.com/zachhannum/fleuron), a typesetting engine that runs as WebAssembly inside the plugin.
 
-## Files and the clipboard
-
-In your vault, orca writes only the book note. Export writes one more file: the PDF, at the path you select, which can be outside the vault. Orca reads the font folders of your computer to list the installed fonts. Orca writes no other file.
-
-Orca puts text on the clipboard in two cases. If you copy a selection from the preview, the clipboard gets the words as you wrote them. If the engine stops and you select `Copy the report`, the clipboard gets the report. If you paste links into the navigator, orca reads the pasted text.
-
 ## Contributing
 
 Submit a bug or issue request [in the repo](https://github.com/zachhannum/obsidian-orca/issues). To build orca from source, read [CONTRIBUTING.md](CONTRIBUTING.md).
