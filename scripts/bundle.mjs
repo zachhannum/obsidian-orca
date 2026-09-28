@@ -104,6 +104,34 @@ export function inlineModule() {
   };
 }
 
+/** A call that makes a script element, as the plugin review finds one. */
+export const scriptElement = /createElement\(\s*["'`]script["'`]\s*\)/i;
+
+/**
+ * Fails the build when the bundle makes a script element. The plugin
+ * review rejects one, and a dependency can bring it in: React 19 hoists
+ * a rendered `<script>` into the document head.
+ */
+export function noScriptElements() {
+  return {
+    name: "orca-no-script-elements",
+    setup(build) {
+      build.onEnd(async (result) => {
+        if (result.errors.length > 0) return;
+        const texts =
+          result.outputFiles?.map((file) => [file.path, file.text]) ??
+          [[build.initialOptions.outfile, await readFile(build.initialOptions.outfile, "utf8")]];
+        const errors = texts
+          .filter(([, text]) => scriptElement.test(text))
+          .map(([file]) => ({
+            text: `${path.basename(file)} creates a script element at runtime`,
+          }));
+        return { errors };
+      });
+    },
+  };
+}
+
 export function options({ production, outdir }) {
   return {
     entryPoints: [path.join(root, "src/main.ts")],
@@ -117,7 +145,7 @@ export function options({ production, outdir }) {
     sourcemap: production ? false : "inline",
     treeShaking: true,
     minify: production,
-    plugins: [inlineWorker({ production }), inlineModule()],
+    plugins: [inlineWorker({ production }), inlineModule(), noScriptElements()],
     tsconfig,
     external,
   };
