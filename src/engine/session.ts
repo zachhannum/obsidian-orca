@@ -8,6 +8,7 @@ import {
   type Inspection,
   type LayoutOutput,
   type MarginBoxName,
+  type Names,
   type NodeSource,
   type Op,
   type Page,
@@ -40,6 +41,7 @@ export interface EngineClient {
   inspect(node: number): Promise<Inspection | null>;
   inspectMarginBox(page: number, box: MarginBoxName): Promise<Inspection | null>;
   hit(page: number, x: number, y: number): Promise<number | null>;
+  names(): Promise<Names>;
   readonly current: number;
   readonly stages: Stages;
 }
@@ -73,6 +75,7 @@ export function serialized(client: EngineClient): EngineClient {
     inspect: (node) => client.inspect(node),
     inspectMarginBox: (page, box) => client.inspectMarginBox(page, box),
     hit: (page, x, y) => client.hit(page, x, y),
+    names: () => client.names(),
     get current(): number {
       return client.current;
     },
@@ -300,6 +303,18 @@ export class Session {
   async hit(page: number, x: number, y: number): Promise<number | undefined> {
     const node = await routed(() => this.client.hit(page, x, y));
     return node ?? undefined;
+  }
+
+  /**
+   * The classes and ids the blocks and inlines of the book's notes
+   * write, as the engine read them. A section's own role and id are
+   * not in the answer.
+   */
+  async names(): Promise<Names> {
+    // A question overtakes a render in flight, so it waits for the
+    // first layout rather than ask about a book the engine lacks.
+    await this.opening;
+    return routed(() => this.client.names());
   }
 
   /**

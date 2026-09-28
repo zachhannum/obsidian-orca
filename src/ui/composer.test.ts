@@ -143,6 +143,10 @@ class FakeClient implements EngineClient {
     return Promise.resolve(null);
   }
 
+  names(): Promise<{ classes: string[]; ids: string[] }> {
+    return Promise.resolve({ classes: [], ids: [] });
+  }
+
   private pages(): Page[] {
     return Array.from({ length: this.sources * SPREAD }, (_, at) => ({
       number: at + 1,

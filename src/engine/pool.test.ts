@@ -74,6 +74,10 @@ class FakeClient implements EngineClient {
   hit(): Promise<null> {
     return Promise.resolve(null);
   }
+
+  names(): Promise<{ classes: string[]; ids: string[] }> {
+    return Promise.resolve({ classes: [], ids: [] });
+  }
 }
 
 /** The workers a pool started, and which of them still run. */
