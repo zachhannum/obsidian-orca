@@ -9,6 +9,12 @@ const BOOK = "Pride and Prejudice.md";
 /** A family the fixture book sets text in, so a `font-family` value completes to it. */
 const FAMILY = "Alegreya";
 
+/** A chapter of the fixture book. */
+const CHAPTER = "Chapter Twelve.md";
+
+/** A class no note in the fixture vault writes. */
+const WRITTEN = "postscript";
+
 /** The keys that fold and unfold the rule at the caret, which differ by platform. */
 const FOLD = process.platform === "darwin" ? "Meta+Alt+BracketLeft" : "Control+Shift+BracketLeft";
 const UNFOLD = process.platform === "darwin" ? "Meta+Alt+BracketRight" : "Control+Shift+BracketRight";
@@ -83,6 +89,31 @@ test("Tab indents lines and takes an open option, and Escape then Tab leaves the
   await panel.code.press("Tab");
   await expect(panel.code).not.toBeFocused();
   expect(await panel.cssText()).toBe(`h1 { font-family: "${FAMILY}"}`);
+
+  await closed(book, panel, vault, own);
+});
+
+test("a class a chapter edit writes is offered after a `.`, and goes when the edit is taken back", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await opened(book, panel, vault);
+  const chapter = await vault.read(CHAPTER);
+
+  await vault.modify(CHAPTER, `${chapter}\n{.${WRITTEN}}\n> And so the evening passed.\n`);
+  await book.settled(BOOK);
+  await expect.poll(async () => classesOffered(panel)).toContain(`.${WRITTEN}`);
+
+  await vault.modify(CHAPTER, chapter);
+  await book.settled(BOOK);
+  // A role stays in the list, so an empty list does not pass for one without the class.
+  await expect
+    .poll(async () => {
+      const offered = await classesOffered(panel);
+      return offered.includes(".part") && !offered.includes(`.${WRITTEN}`);
+    })
+    .toBe(true);
 
   await closed(book, panel, vault, own);
 });
@@ -259,6 +290,13 @@ async function within(panel: Panel, line: number, column: number): Promise<{ x: 
   const box = await panel.code.boundingBox();
   if (box === null) throw new Error("The editor's text is not on the page");
   return { x: point.x - box.x, y: point.y - box.y };
+}
+
+/** The labels offered after a `.` typed alone in the editor. */
+async function classesOffered(panel: Panel): Promise<string[]> {
+  await panel.replaceCss(".");
+  await expect(panel.completions.first()).toBeVisible();
+  return panel.completions.allInnerTexts();
 }
 
 // What this suite does not cover: the keys an author presses on a
