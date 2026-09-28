@@ -202,8 +202,7 @@ site-search button[data-open-modal] > kbd kbd {
 .sl-markdown-content :is(h2, h3, h4) {
   font-family: var(--display);
   font-weight: 500;
-  /* The face slants on its own axis rather than in an italic. */
-  font-variation-settings: 'wdth' 0, 'slnt' 100;
+  font-style: italic;
   letter-spacing: -0.015em;
   line-height: 1.2;
   color: var(--text);

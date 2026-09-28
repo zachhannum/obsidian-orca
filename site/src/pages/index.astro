@@ -213,9 +213,9 @@ const demo = {
 };
 
 /**
- * One line of the title. The face draws only capitals, so the line is
- * written with a capital for each letter drawn at full width, and the
- * rest are drawn narrow.
+ * One line of the title, written with a capital for each letter drawn
+ * at full width. The title is set in capitals, so the case the line is
+ * written in marks the wide letters and nothing else.
  */
 const widen = (line: string): string =>
   [...line]
@@ -747,10 +747,11 @@ const swap = {
   h1 {
     position: relative;
     margin: 0;
-    font-family: var(--display);
+    font-family: var(--title);
     font-size: var(--title-size);
     line-height: var(--title-leading);
-    font-weight: 700;
+    font-weight: 500;
+    text-transform: uppercase;
     color: var(--sky-text);
   }
   h1 .sunk {
@@ -772,15 +773,15 @@ const swap = {
   h1,
   h1 :global(*) {
     font-variation-settings:
-      'wdth' var(--wdth, 0),
+      'wdth' var(--wdth, 30),
       'slnt' var(--slnt, 0);
   }
   h1 :global(i) {
     font-style: normal;
-    --slnt: 100;
+    --slnt: -10;
   }
   h1 :global(.wide) {
-    --wdth: 100;
+    --wdth: 151;
   }
   .lede {
     margin: 34px 0 0;

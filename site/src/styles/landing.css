@@ -33,9 +33,9 @@
 .pg-dc{float:left;font-size:35px;line-height:28px;padding:1px 3px 0 0;margin-top:1px}
 .pg-folio{position:absolute;left:0;right:0;bottom:17px;text-align:center;font-size:7px;color:#6a6355}
 
-.row-h{margin:0;font-family:var(--display);font-weight:500;font-variation-settings:'wdth' 0;font-size:46px;line-height:1.05;letter-spacing:-.015em;color:var(--text)}
+.row-h{margin:0;font-family:var(--display);font-weight:500;font-size:46px;line-height:1.05;letter-spacing:-.015em;color:var(--text)}
 .row-h i{font-weight:500}
-.sec-h{margin:0;font-family:var(--display);font-weight:500;font-variation-settings:'wdth' 0;font-size:64px;line-height:1.02;letter-spacing:-.02em;color:var(--text)}
+.sec-h{margin:0;font-family:var(--display);font-weight:500;font-size:64px;line-height:1.02;letter-spacing:-.02em;color:var(--text)}
 .sec-h i{font-weight:500}
 .sec-p{margin:0;font-size:19px;line-height:1.6;color:var(--muted)}
 .snow{position:absolute;border-radius:50%;background:var(--speck);animation:drift ease-in-out infinite alternate;pointer-events:none}
