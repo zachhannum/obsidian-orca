@@ -18,13 +18,13 @@
           #sc-open .hlayer{position:absolute;inset:0}
           #sc-open .tail{position:absolute;left:0;top:0;width:560px;height:322px;will-change:transform}
           #sc-open .tail svg{width:100%;height:100%;display:block}
-          #sc-open .mark{position:absolute;left:226px;top:78px;font-family:'Dirtyline';font-size:70px;line-height:1;color:var(--ink);white-space:nowrap}
+          #sc-open .mark{position:absolute;left:226px;top:78px;font-family:'Faune Display';font-style:italic;font-weight:700;font-size:70px;line-height:1;color:var(--ink);white-space:nowrap}
           #sc-open .lede{position:absolute;left:120px;top:690px;width:1000px;font-size:30px;line-height:1.5;color:var(--muted)}
         </style>
         <div class="hlayer sea" style="color:var(--text)">${HL}</div>
         <div class="hlayer sky" style="color:var(--ink)">${HL}</div>
         <div class="tail">${O.tail}</div>
-        <div class="mark">oRcA</div>
+        <div class="mark">orca</div>
         <p class="lede">Each chapter is a Markdown note. One book note stores the details and the design. Preview the typeset book and export it to PDF, without leaving Obsidian.</p>`;
       tail = el.querySelector('.tail');
       mark = el.querySelector('.mark');

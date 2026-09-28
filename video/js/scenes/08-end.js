@@ -13,14 +13,14 @@
           #sc-end .ly{position:absolute;inset:0}
           #sc-end .tail{position:absolute;left:${960 - 230}px;top:0;width:460px;height:265px;transform-origin:50% 100%}
           #sc-end .tail svg{width:100%;height:100%;display:block}
-          #sc-end .mark{position:absolute;left:0;width:1920px;top:650px;text-align:center;font-family:'Dirtyline';font-size:150px;line-height:1;color:var(--text)}
+          #sc-end .mark{position:absolute;left:0;width:1920px;top:650px;text-align:center;font-family:'Faune Display';font-style:italic;font-weight:700;font-size:150px;line-height:1;color:var(--text)}
           #sc-end .tag{position:absolute;left:0;width:1920px;top:852px;text-align:center;font-size:32px;color:var(--muted)}
           #sc-end .url{position:absolute;left:0;width:1920px;top:916px;text-align:center;font-family:var(--display);font-size:22px;letter-spacing:.04em;color:var(--accent-soft)}
           #sc-end .dp{position:absolute;left:0;top:0;border-radius:50%;background:var(--ink)}
         </style>
         <div class="ly sea"><div class="tail" style="color:rgba(238,240,236,.07)">${O.tail}</div></div>
         <div class="ly sky"><div class="tail" style="color:var(--ink)">${O.tail}</div><div class="drops"></div></div>
-        <div class="mark">oRcA</div>
+        <div class="mark">orca</div>
         <div class="tag">A book designer inside Obsidian.</div>
         <div class="url">orca.typeworks.dev</div>`;
       skyL = el.querySelector('.ly.sky');

@@ -12,7 +12,7 @@ A 54-second film about orca, drawn in HTML and JavaScript. Every frame is a func
 - `js/audio.js` holds the score and the sound effects.
 - `render.mjs` writes `orca.mp4`, at 1920 × 1080 and 60 fps with two sub-frames of motion blur per frame.
 - `stills.mjs` writes single frames to `build/stills/` for review.
-- `fonts/` holds copies of the site's faces.
+- `fonts/` holds copies of the site's faces, and Faune Display Bold Italic for the name. Faune is by Alice Savoie for the Cnap, under CC BY-ND.
 - `assets/ui/` holds the frames of the window, and `assets/pages/` holds the first pages of the PDF the film exports. `npm run film`, at the root of the repo, takes both in real Obsidian on the sample book. `assets/ui/frames.js` gives the box of each control the film clicks and each row of text it types.
 - `ref/` holds the screenshots of the site that set the look.
 
