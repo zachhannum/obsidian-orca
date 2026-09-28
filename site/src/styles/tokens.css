@@ -49,10 +49,10 @@
   --speck: #c9cbf8;
   --button: #6366f1;
   --button-text: #ffffff;
-  --display: 'Geist',system-ui,sans-serif;
+  --display: 'Geist Mono',ui-monospace,monospace;
   --title: 'Roboto Flex',system-ui,sans-serif;
   --wordmark: 'Dirtyline',Georgia,serif;
-  --body: 'Source Serif 4',Georgia,serif;
+  --body: 'Geist',system-ui,sans-serif;
   --ui: 'Archivo',system-ui,sans-serif;
   --mono: 'DM Mono',ui-monospace,monospace;
   --r: 8px;
@@ -102,10 +102,10 @@
   --speck: #3730a3;
   --button: #0a0c0f;
   --button-text: #eef0ec;
-  --display: 'Geist',system-ui,sans-serif;
+  --display: 'Geist Mono',ui-monospace,monospace;
   --title: 'Roboto Flex',system-ui,sans-serif;
   --wordmark: 'Dirtyline',Georgia,serif;
-  --body: 'Source Serif 4',Georgia,serif;
+  --body: 'Geist',system-ui,sans-serif;
   --ui: 'Archivo',system-ui,sans-serif;
   --mono: 'DM Mono',ui-monospace,monospace;
   --r: 8px;
