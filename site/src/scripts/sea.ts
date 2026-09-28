@@ -132,7 +132,7 @@ export function surfaceAt(
 function through(points: readonly [number, number][]): string {
   const last = points.length - 1;
   const round = (value: number) => value.toFixed(1);
-  const point = (i: number) => points[Math.min(Math.max(i, 0), last)] as [number, number];
+  const point = (i: number) => points[Math.min(Math.max(i, 0), last)];
   let path = `M${round(point(0)[0])} ${round(point(0)[1])}`;
   for (let i = 0; i < last; i += 1) {
     const [ax, ay] = point(i - 1);
@@ -240,7 +240,7 @@ export function startSea(svg: SVGSVGElement, cut?: HTMLElement): () => void {
     path,
     wave: waveOf(path),
     under: false,
-    touch: { x: 0, force: 0 } as Touch,
+    touch: { x: 0, force: 0 },
     ripples: [] as Ripple[],
   }));
   const body = layers.find((layer) => layer.wave.kind === 'body');
@@ -322,28 +322,28 @@ export function startSea(svg: SVGSVGElement, cut?: HTMLElement): () => void {
         const target = layer.under ? hold : 0;
         touch.force += (target - touch.force) * Math.min(1, dt * (target > touch.force ? 8 : 2));
       }
-      while (ripples.length > 0 && (ripples[0] as Ripple).t < t - RIPPLE_LIFE) ripples.shift();
+      while (ripples.length > 0 && ripples[0].t < t - RIPPLE_LIFE) ripples.shift();
     }
     draw(t, true);
-    frame = requestAnimationFrame(tick);
+    frame = window.requestAnimationFrame(tick);
   };
 
   const settle = () => {
-    cancelAnimationFrame(frame);
+    window.cancelAnimationFrame(frame);
     window.removeEventListener('pointermove', onMove);
     if (still.matches) {
       draw(0, false);
       return;
     }
     if (mouse.matches) window.addEventListener('pointermove', onMove, { passive: true });
-    frame = requestAnimationFrame(tick);
+    frame = window.requestAnimationFrame(tick);
   };
   settle();
   still.addEventListener('change', settle);
   mouse.addEventListener('change', settle);
   window.addEventListener('resize', settle);
   return () => {
-    cancelAnimationFrame(frame);
+    window.cancelAnimationFrame(frame);
     window.removeEventListener('pointermove', onMove);
     still.removeEventListener('change', settle);
     mouse.removeEventListener('change', settle);
