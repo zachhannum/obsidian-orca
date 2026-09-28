@@ -5,7 +5,7 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 
 <a href={siteTitleHref} class="site-title">
   <Mark />
-  <span translate="no">{siteTitle}</span>
+  <span translate="no" aria-label={siteTitle}>oRcA</span>
 </a>
 
 <style>
@@ -19,8 +19,8 @@ const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
     min-width: 0;
   }
   span {
-    font-family: var(--display);
-    font-weight: 600;
+    font-family: var(--wordmark);
+    font-weight: 400;
     font-size: 25px;
     overflow: hidden;
   }
