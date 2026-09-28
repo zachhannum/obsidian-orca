@@ -213,26 +213,21 @@ const demo = {
 };
 
 /**
- * One line of the title, a span per letter. The weight steps from `from`
- * to `to` across the line. A letter in `wide` is drawn that many
- * character widths wide, and the line makes room for it.
+ * One line of the title. The face draws only capitals, so the line is
+ * written with a capital for each letter drawn at full width, and the
+ * rest are drawn narrow.
  */
-const ramp = (line: string, from: number, to: number, wide: Record<number, number>): string => {
-  const letters = [...line];
-  const last = Math.max(letters.length - 1, 1);
-  return letters
-    .map((letter, at) => {
-      const weight = Math.round(from + ((to - from) * at) / last);
-      const stretch = wide[at];
-      return stretch
-        ? `<span class="wide" style="font-weight:${weight};--wide:${stretch}">${letter}</span>`
-        : `<span style="font-weight:${weight}">${letter}</span>`;
-    })
+const widen = (line: string): string =>
+  [...line]
+    .map((letter) =>
+      letter !== letter.toLowerCase()
+        ? `<span class="wide">${letter.toLowerCase()}</span>`
+        : letter
+    )
     .join('');
-};
 
 /** The page title. The sky's copy and the sea's are both set from it. */
-const title = `${ramp('A book designer', 100, 800, { 3: 2, 13: 3 })}<br /><i>${ramp('inside Obsidian.', 800, 100, { 1: 3, 13: 2 })}</i>`;
+const title = `${widen('a boOk designEr')}<br /><i>${widen('insIde obsiDian.')}</i>`;
 
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
@@ -615,10 +610,7 @@ const swap = {
   .page {
     --header-h: 92px;
     --hero-pad: 64px;
-    /* The longer line is 19 character widths, stretched letters
-       counted, and a character is 0.6em wide. The title is sized so the
-       line fits, with a little room for the scrollbar. */
-    --title-size: min(110px, calc((100vw - 2 * var(--gutter)) / 11.6));
+    --title-size: clamp(42px, 7.6vw, 110px);
     --title-leading: 0.98;
     --title-dip: 1.46;
     --gutter: 64px;
@@ -775,16 +767,20 @@ const swap = {
   /* Both copies of the title are written in, so their letters carry no
      scope class and the selector reaches them globally. The h1 ahead of
      it is scoped, so the rule stays on this page. */
-  h1 :global(i) {
-    font-style: italic;
+  /* The face slants and widens on axes of its own. The settings are
+     not inherited as parts, so every letter restates both. */
+  h1,
+  h1 :global(*) {
+    font-variation-settings:
+      'wdth' var(--wdth, 0),
+      'slnt' var(--slnt, 0);
   }
-  /* The face is monospaced, so a stretched letter's box is a whole
-     number of character widths and the scale fills it exactly. */
+  h1 :global(i) {
+    font-style: normal;
+    --slnt: 100;
+  }
   h1 :global(.wide) {
-    display: inline-block;
-    width: calc(var(--wide) * 1ch);
-    transform: scaleX(var(--wide));
-    transform-origin: left;
+    --wdth: 100;
   }
   .lede {
     margin: 34px 0 0;
