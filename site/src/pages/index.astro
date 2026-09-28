@@ -12,6 +12,7 @@ import { GROUPS, atLevel, type Group } from '@/ui/groups';
 // plugin would show for the very book the pictures are of.
 import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
 import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
+import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/panel.css';
@@ -68,7 +69,7 @@ const shot = async (source: ImageMetadata): Promise<Shot> => {
   };
 };
 
-/** The pages the flip-through turns, in the order the spec rasterized them. */
+/** The pages the flip-through turns, from the title page on. */
 const rasterized = import.meta.glob<{ default: ImageMetadata }>('../shots/pages/page-*.png', {
   eager: true,
 });
@@ -77,15 +78,20 @@ const pages: Shot[] = await Promise.all(
     .sort()
     .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
 );
-const [plate, chapterPage] = pages;
+
+/** The opening of Chapter I, which stands in for the demo until it loads. */
+const opening = rasterized['../shots/pages/page-09.png'];
+if (opening === undefined) throw new Error('the flip-through has no page 9');
+const chapterPage = await shot(opening.default);
 
 /**
- * A leaf carries the recto before it on its front and the verso after
- * it on its back, so the pages under the stack are the first and last.
+ * A leaf carries a recto on its front and the verso after it on its
+ * back. The book opens closed, so no page lies under the stack on the
+ * left, and the last page lies under it on the right.
  */
 const leaves = pages
-  .slice(1, -1)
-  .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 2] as Shot }] : []));
+  .slice(0, -1)
+  .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 1] as Shot }] : []));
 
 /** The window picture, at the width the page is being read at. */
 const window_ = {
@@ -159,6 +165,18 @@ const images = imagesInCss(css).map(({ url, link }) => {
   return { url, src };
 });
 
+/**
+ * The book's title face, served beside the page. The engine carries EB
+ * Garamond, and the demo sends it the rest.
+ */
+const faces = Object.values(
+  import.meta.glob<string>('../../sample/fonts/IMFe*.ttf', {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  })
+);
+
 /** What the panel shows for every key, with the defaults filled in. */
 const shown: Record<string, string> = Object.fromEntries(
   Object.entries(writeDesign(effective(design))).map(([key, value]) => [key, String(value)])
@@ -168,7 +186,7 @@ const shown: Record<string, string> = Object.fromEntries(
 const own = Object.keys(writeDesign(design));
 
 /** The faces the engine carries, which are the ones the demo can set in. */
-const FACES = ['EB Garamond'];
+const FACES = ['EB Garamond', 'IM FELL English'];
 
 /**
  * The groups the demo draws, from the plugin's own table, holding the
@@ -210,6 +228,7 @@ const demo = {
   source: { name: `${CHAPTER}.md`, text: chapterNote },
   css,
   images,
+  faces,
 };
 
 /**
@@ -434,9 +453,9 @@ const swap = {
             <div class="demo-page">
               <img
                 class="standing"
-                src={chapterPage?.src}
-                width={chapterPage?.width}
-                height={chapterPage?.height}
+                src={chapterPage.src}
+                width={chapterPage.width}
+                height={chapterPage.height}
                 alt="The opening of Chapter I, typeset by Orca."
               />
               <div class="set" data-demo-page></div>
@@ -514,18 +533,11 @@ const swap = {
           >
             <div class="book">
               <img
-                class="under verso"
-                src={plate?.src}
-                width={plate?.width}
-                height={plate?.height}
-                alt={`Page ${String(FIRST)} of the sample book`}
-              />
-              <img
                 class="under recto"
                 src={pages.at(-1)?.src}
                 width={pages.at(-1)?.width}
                 height={pages.at(-1)?.height}
-                alt={`Page ${String(FIRST + pages.length - 1)} of the sample book`}
+                alt={`Page ${String(FIRST + pages.length)} of the sample book`}
               />
               {
                 leaves.map((leaf, at) => (
@@ -545,6 +557,9 @@ const swap = {
                 <Icon name="right" size={16} />
               </button>
             </div>
+            <a class="quiet" href={bookPdf} download="Twenty Thousand Leagues Under the Sea.pdf">
+              Download the whole book as a PDF
+            </a>
           </div>
         </section>
 
@@ -1054,6 +1069,21 @@ const swap = {
     height: var(--leaf-h);
     perspective: 2600px;
     box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95);
+    transition:
+      box-shadow 0.9s,
+      transform 0.9s cubic-bezier(0.3, 0.1, 0.2, 1);
+  }
+  /* A closed book is the title page alone, so it stands in the middle,
+     and the shadow and the spine are the first leaf's. */
+  .flip[data-at='0'] .book {
+    box-shadow: none;
+    transform: translateX(calc(var(--leaf-w) / -2));
+  }
+  .flip[data-at='0'] .book::after {
+    opacity: 0;
+  }
+  .flip[data-at='0'] .leaf[data-leaf='0'] {
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95);
   }
   .book::after {
     content: '';
@@ -1063,6 +1093,7 @@ const swap = {
     width: 44px;
     z-index: 60;
     pointer-events: none;
+    transition: opacity 0.9s;
     background: linear-gradient(
       to right,
       rgba(40, 30, 10, 0),

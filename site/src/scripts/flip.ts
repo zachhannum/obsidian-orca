@@ -6,8 +6,11 @@
  * it on its back, so turning one leaf moves the spread on by two pages.
  */
 
-/** The page the flip-through opens on, which is the plate facing Chapter I. */
-export const FIRST = 8;
+/**
+ * The page before the title page. The book opens closed, so this side
+ * of the first spread is empty and the title page stands alone.
+ */
+export const FIRST = 0;
 
 /** How one leaf stands while a spread is being read. */
 export interface Leaf {
@@ -37,6 +40,7 @@ export function spread(at: number): [number, number] {
 /** The line under the book, which names the pages on screen. */
 export function folio(at: number): string {
   const [verso, recto] = spread(at);
+  if (verso === 0) return `Page ${String(recto)}`;
   return `Pages ${String(verso)}–${String(recto)}`;
 }
 

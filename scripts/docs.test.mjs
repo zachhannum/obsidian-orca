@@ -271,7 +271,12 @@ test("the shell is centered on a chapter heading and reaches no line of the chap
   try {
     session.setDialect("obsidian");
     session.setSplit(0);
-    for (const face of ["EBGaramond[wght].ttf", "EBGaramond-Italic[wght].ttf"]) {
+    for (const face of [
+      "EBGaramond[wght].ttf",
+      "EBGaramond-Italic[wght].ttf",
+      "IMFeENrm28P.ttf",
+      "IMFeENit28P.ttf",
+    ]) {
       session.addFontFile(face, await readFile(path.join(root, "site/sample/fonts", face)));
     }
     session.addImage("nautilus.png", await readFile(path.join(root, "site/sample/images/nautilus.png")));
@@ -320,8 +325,13 @@ test("the book note carries the design the landing page shows", async () => {
       "body-align": "justify",
       "body-first-line-indent": "1.2em",
       "body-hyphens": "true",
+      "body-hanging-punctuation": "true",
       "chapter-begins": "next-page",
       "chapter-drop-cap": "3",
+      "chapter-drop-cap-font": "IM FELL English",
+      "chapter-first-line-caps": "small-caps",
+      "chapter-first-line-letter-spacing": "0.04em",
+      "chapter-title-from": "h1",
     },
   );
   // The chapter opens on its label, which is a level 2 heading.
@@ -637,9 +647,11 @@ test("the pages turn on a click, on the arrow buttons and from the keyboard", as
   // Five leaves stand between the first page and the last, so the book
   // reads as six spreads.
   const leaves = 5;
-  assert.deepEqual([...flip.spread(0)], [flip.FIRST, flip.FIRST + 1]);
-  assert.equal(flip.folio(0), `Pages ${flip.FIRST}–${flip.FIRST + 1}`);
-  assert.equal(flip.folio(leaves), `Pages ${flip.FIRST + 10}–${flip.FIRST + 11}`);
+  // The book opens closed, on the title page alone.
+  assert.deepEqual([...flip.spread(0)], [0, 1]);
+  assert.equal(flip.folio(0), "Page 1");
+  assert.equal(flip.folio(1), "Pages 2–3");
+  assert.equal(flip.folio(leaves), "Pages 10–11");
 
   const turned = (at) => flip.layout(leaves, at).filter((leaf) => leaf.turned).length;
   assert.equal(turned(0), 0);
@@ -664,11 +676,11 @@ test("every picture on the page is one the screenshot spec takes", async () => {
   const sources = [...landing.matchAll(/from '(\.\.\/[^']+\.(?:png|jpe?g|webp|svg))'/g)].map(
     (found) => found[1],
   );
-  // The sample vault's images are not pictures of orca. They are what
-  // the book's CSS names, and the engine draws them into the demo's page.
+  // The sample vault's images and faces are not pictures of orca. They
+  // are what the book names, and the engine sets the demo's page in them.
   const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)]
     .map((found) => found[1])
-    .filter((glob) => glob !== "../../sample/images/*");
+    .filter((glob) => !glob.startsWith("../../sample/"));
   assert.ok(sources.length > 0, "the page shows no picture");
   for (const source of [...sources, ...globbed]) {
     assert.match(source, /^\.\.\/shots\//, `${source} is not a picture the spec takes`);
