@@ -49,6 +49,18 @@
       "y": 133,
       "width": 24,
       "height": 24
+    },
+    "reset-chapter-drop-cap-font": {
+      "x": 228,
+      "y": 196,
+      "width": 24,
+      "height": 24
+    },
+    "reset-chapter-first-line-caps": {
+      "x": 228,
+      "y": 322,
+      "width": 24,
+      "height": 24
     }
   }
 }
