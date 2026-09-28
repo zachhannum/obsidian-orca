@@ -16,7 +16,7 @@ import {
 import { selectNextOccurrence } from "@codemirror/search";
 import { EditorState, type Transaction } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
-import { SUBSET } from "fleuron";
+import { SUBSET, type Names } from "fleuron";
 import { OWN_SHEET } from "@/style/sheet";
 import {
   cssExtensions,
@@ -33,6 +33,7 @@ import {
   selectorCompletion,
   valueCompletion,
   namedCompletion,
+  written,
   skippedIn,
   type Flag,
 } from "@/ui/editor";
@@ -103,13 +104,18 @@ test("a font-family value completes from the fonts the book carries", () => {
 type Source = (context: CompletionContext) => CompletionResult | null;
 
 /** The labels a source offers at the end of the text, as typing asks rather than a key. */
-function offered(source: Source, doc: string, at = doc.length): string[] | undefined {
+function offered(
+  source: Source,
+  doc: string,
+  at = doc.length,
+  notes: Names = { classes: [], ids: [] },
+): string[] | undefined {
   const named = [
     { role: "title-page", id: "title-page" },
     { role: "chapter", id: "the-harbor" },
     { role: "chapter", id: "the-lighthouse" },
   ] as const;
-  const state = editing(doc).update(sectioned(named)).state;
+  const state = editing(doc).update(sectioned(named), written(notes)).state;
   return source(new CompletionContext(state, at, false))?.options.map((option) => option.label);
 }
 
@@ -189,6 +195,29 @@ test("a selector completes from the ids and the classes the book's sections carr
   assert.equal(selector("p {\n  color: #ff"), undefined);
   assert.equal(selector("@page {\n  @top-left { content: #x"), undefined);
   assert.equal(selector("/* .ch"), undefined);
+});
+
+/** The names Chapter Fifteen in the fixture vault writes, one of them also a section's role. */
+const NOTES: Names = { classes: ["chapter", "chapter-opening", "epigraph"], ids: ["fifteen", "the-harbor"] };
+
+test("after a `.`, a selector completes from the classes the book's notes write, beside the section roles", () => {
+  // A name that is a role and a note's class is offered once.
+  assert.deepEqual(offered(selectorCompletion, "blockquote.", undefined, NOTES), [
+    ".title-page",
+    ".chapter",
+    ".chapter-opening",
+    ".epigraph",
+  ]);
+});
+
+test("after a `#`, a selector completes from the ids the book's notes write, beside the section ids", () => {
+  // An id that a section and a note both carry is offered once, as the section's.
+  assert.deepEqual(offered(selectorCompletion, "#", undefined, NOTES), [
+    "#title-page",
+    "#the-harbor",
+    "#the-lighthouse",
+    "#fifteen",
+  ]);
 });
 
 test("a selector completes the elements, pseudo-classes and at-rules the engine reads", () => {
@@ -390,9 +419,12 @@ test("Mod-/ wraps the selected lines in a comment, and takes it out of lines alr
 // The completion reads the engine's subset for names and keywords,
 // not its grammar. It offers no value inside a function, except the
 // names inside `var()` and `string()` and the counter styles that a
-// `content` value takes anywhere, and no unit
-// after a number. It does not offer `!important`, a page name
-// after `@page`, or a class the author's own markdown writes. The e2e
-// suite opens the list in Obsidian only to take a family with Tab, so
-// the detail line under a label and the Obsidian icon beside it go
-// untested.
+// `content` value takes anywhere, and no unit after a number. It does
+// not offer `!important` or a page name after `@page`. A class or an
+// id that a note writes is the engine's answer after the last render,
+// so a name typed into a note is offered once that edit renders. The
+// option does not say which note writes the name, and this tier fakes
+// the answer rather than ask the engine. The e2e suite opens the list
+// in Obsidian to take a family with Tab and to find a class a chapter
+// edit wrote, so the detail line under a label and the Obsidian icon
+// beside it go untested.
