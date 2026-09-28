@@ -227,7 +227,7 @@ const widen = (line: string): string =>
     .join('');
 
 /** The page title. The sky's copy and the sea's are both set from it. */
-const title = `${widen('a booK designEr')}<br /><i>${widen('iNside obSidiAn.')}</i>`;
+const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}</i>`;
 
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
@@ -779,7 +779,7 @@ const swap = {
   h1,
   h1 :global(*) {
     font-variation-settings:
-      'wdth' var(--wdth, 30),
+      'wdth' var(--wdth, 60),
       'slnt' var(--slnt, 0);
   }
   h1 :global(i) {
@@ -787,7 +787,7 @@ const swap = {
     --slnt: -10;
   }
   h1 :global(.wide) {
-    --wdth: 151;
+    --wdth: 150;
   }
   .lede {
     margin: 34px 0 0;
