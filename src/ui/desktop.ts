@@ -3,10 +3,9 @@
  * export to the vault or to a real path on disk.
  */
 
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { Destination, Sink } from "@/assets/destination";
 import { vaultWritePath } from "@/assets/destination";
+import { files, paths } from "@/assets/node";
 import type { VaultAdapter } from "@/assets/vault";
 
 /** The part of Electron's save dialog export asks. */
@@ -54,8 +53,8 @@ export function desktopSink(vault: VaultAdapter): Sink {
         await vault.writeBinary(vaultWritePath(destination.path), bytes);
         return;
       }
-      await mkdir(path.dirname(destination.path), { recursive: true });
-      await writeFile(destination.path, bytes);
+      await files.mkdir(paths.dirname(destination.path), { recursive: true });
+      await files.writeFile(destination.path, bytes);
     },
   };
 }

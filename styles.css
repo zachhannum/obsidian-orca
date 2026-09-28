@@ -1462,11 +1462,6 @@ button.orca-inspect-src:hover {
 .orca-inspect-decl.is-lost {
   opacity: 0.55;
   text-decoration: line-through;
-  /* Chrome 124 draws these in full. caniuse's partial mark is for
-     text-decoration-skip, which orca does not use. */
-  /* stylelint-disable plugin/no-unsupported-browser-features */
-  text-decoration-color: var(--text-faint);
-  /* stylelint-enable plugin/no-unsupported-browser-features */
 }
 
 .orca-inspect-decl.is-skipped .orca-inspect-p,

@@ -186,12 +186,14 @@ export type Inactive = "unset" | "overridden";
  */
 export function inactive(reason: Inactive | undefined): {
   className: string | undefined;
-  inert: boolean;
+  inert: "" | undefined;
   "data-inactive": Inactive | undefined;
 } {
   return {
     className: reason === undefined ? undefined : "is-inactive",
-    inert: reason !== undefined,
+    // React 18 does not know `inert`, and it drops a boolean on an
+    // attribute it does not know. An empty string writes the attribute.
+    inert: reason === undefined ? undefined : "",
     "data-inactive": reason,
   };
 }
