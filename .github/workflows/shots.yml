@@ -79,7 +79,10 @@ jobs:
         env:
           ORCA_FILM_OUT: ${{ github.workspace }}/film/assets
 
+      # The render takes minutes, so a pull request stops at the frames,
+      # which is where a change to a surface breaks the film spec.
       - name: render the loop
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: film
         run: |
           npm ci --prefer-offline --no-audit --no-fund

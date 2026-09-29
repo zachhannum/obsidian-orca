@@ -55,6 +55,13 @@ test("the shots job renders the landing page's loop from a pinned commit of orca
   assert.match(shots, /node loop\.mjs --into \.\.\/site\/src\/shots\n/);
 });
 
+test("only a push to main renders the loop", () => {
+  const from = shots.indexOf("      - name: render the loop");
+  assert.notEqual(from, -1, "nothing renders the loop");
+  const step = shots.slice(from, shots.indexOf("\n      - ", from + 1));
+  assert.match(step, /if: github\.ref == 'refs\/heads\/main' && github\.event_name == 'push'/);
+});
+
 test("a push to main that changes a picture opens a PR with the new pictures", () => {
   const from = shots.indexOf("      - name: open a pull request");
   assert.notEqual(from, -1, "nothing opens a pull request");
