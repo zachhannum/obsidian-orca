@@ -26,7 +26,7 @@ on:
 # The commit of orca-film that draws the loop. A change there reaches
 # the site when this moves.
 env:
-  ORCA_FILM_REF: 697f05d76e2fee37614a231d068bf5b695133961
+  ORCA_FILM_REF: f7802d428f47e02460867d7fe9c041b6009035a6
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -79,15 +79,19 @@ jobs:
         env:
           ORCA_FILM_OUT: ${{ github.workspace }}/film/assets
 
-      # The render takes minutes, so a pull request stops at the frames,
-      # which is where a change to a surface breaks the film spec.
+      # The render takes minutes, so a pull request takes the posters
+      # alone. The frames are where a change to a surface breaks the film
+      # spec, and they run either way.
       - name: render the loop
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: film
         run: |
           npm ci --prefer-offline --no-audit --no-fund
           npx playwright install chromium
-          node loop.mjs --into ../site/src/shots
+          if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" = push ]; then
+            node loop.mjs --into ../site/src/shots
+          else
+            node loop.mjs --posters --into ../site/src/shots
+          fi
 
       - name: list the pictures that moved
         if: ${{ !cancelled() }}
