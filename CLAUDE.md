@@ -240,7 +240,9 @@ site's tokens or the sample book. It runs on the same paths on main. The
 job runs `npm run shots`, which photographs real Obsidian on the sample
 vault and writes the pictures to `site/src/shots`. A picture is
 rasterized by the machine that took it, so this job is the one that
-takes them. On main it opens a PR with the pictures that changed.
+takes them. It also takes the film's frames and renders the landing
+page's loop with orca-film's `loop.mjs`, at the commit `ORCA_FILM_REF`
+pins. On main it opens a PR with the pictures that changed.
 
 `.github/workflows/release.yml` runs on a version tag. It builds and
 attaches `main.js`, `manifest.json` and `styles.css` to the release,

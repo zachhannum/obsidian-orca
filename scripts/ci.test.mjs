@@ -45,7 +45,14 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
     }
   }
   assert.match(shots, /- run: xvfb-run -a npm run shots\n/);
-  assert.match(shots, /apt-get install -y xvfb poppler-utils\n/);
+  assert.match(shots, /apt-get install -y xvfb poppler-utils ffmpeg\n/);
+});
+
+test("the shots job renders the landing page's loop from a pinned commit of orca-film", () => {
+  assert.match(shots, /ORCA_FILM_REF: [0-9a-f]{40}\n/);
+  assert.match(shots, /repository: zachhannum\/orca-film\n\s+ref: \$\{\{ env\.ORCA_FILM_REF \}\}/);
+  assert.match(shots, /run: xvfb-run -a npm run film\n/);
+  assert.match(shots, /node loop\.mjs --into \.\.\/site\/src\/shots\n/);
 });
 
 test("a push to main that changes a picture opens a PR with the new pictures", () => {
