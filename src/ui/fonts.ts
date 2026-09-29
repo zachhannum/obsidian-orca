@@ -158,7 +158,10 @@ export async function resolveUse(
   let crossed: Hashed[];
   try {
     crossed = await Promise.all(variant.faces.map((face) => crossing(places, face)));
-  } catch {
+  } catch (cause) {
+    // The author sees that the font did not read, and the parse error
+    // is for whoever debugs it.
+    console.error(`Orca: ${use.font} was not read.`, cause);
     return { use, registered: undefined, faces: [], fellBack, unread: true };
   }
   const faces = crossed.map((hashed) => ({ ...hashed, url: fontUrl(hashed.key) }));

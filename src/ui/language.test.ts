@@ -3,19 +3,16 @@ import { test } from "node:test";
 import { hyphenating } from "@/ui/language";
 
 test("the panel names the language hyphenation will actually use", () => {
-  const said = hyphenating("en-GB");
-  assert.match(said, /English/);
-  assert.match(said, /en-GB/);
-  assert.match(hyphenating("de"), /German \(de\)/);
+  assert.match(hyphenating("en-GB"), /English/);
+  assert.equal(hyphenating("de"), "German");
 });
 
 test("a book that sets no language is hyphenated as English, and the panel says so", () => {
-  assert.match(hyphenating(undefined), /English/);
-  assert.match(hyphenating(undefined), /until the book sets a language/);
+  assert.equal(hyphenating(undefined), "English (default)");
 });
 
 test("a tag the platform cannot name is shown as the author wrote it", () => {
-  assert.equal(hyphenating("zzz-nowhere"), "using zzz-nowhere");
+  assert.equal(hyphenating("zzz-nowhere"), "zzz-nowhere");
 });
 
 // What this tier does not cover: the patterns themselves.

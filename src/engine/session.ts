@@ -371,7 +371,7 @@ export class Session {
     const bytes = await routed(() => this.client.exportPdf());
     if (bytes === null) {
       throw new EngineError(
-        "a later render started before the export finished",
+        "the book changed during export. Try again.",
       );
     }
     return bytes;

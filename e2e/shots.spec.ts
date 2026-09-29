@@ -33,7 +33,7 @@ const GROUPS = [
   "Fonts",
   "Chapter openings",
   "Scene breaks",
-  "Heads & folios",
+  "Headers & page numbers",
   "Page breaks",
 ];
 
@@ -244,7 +244,7 @@ async function sized(site: Site, width: number, height: number): Promise<void> {
   );
 }
 
-/** The name a group gives its picture, as `heads-and-folios`. */
+/** The name a group gives its picture, as `headers-and-page-numbers`. */
 function slug(group: string): string {
   return group.replace(/ & /g, " and ").toLowerCase().replace(/ /g, "-");
 }

@@ -603,7 +603,7 @@ test("the panel offers every group a book designer works in", async ({
     "Fonts",
     "Chapter openings",
     "Scene breaks",
-    "Heads & folios",
+    "Headers & page numbers",
     "Page breaks",
   ]);
 });
@@ -1305,8 +1305,7 @@ test("the hyphenation switch says which language the engine will hyphenate in", 
 
   // The engine reads no language property, so the panel shows the
   // book's own language and not one from the design.
-  await expect(panel.said("body-hyphens")).toContainText("en-GB");
-  await expect(panel.said("body-hyphens")).toContainText("English");
+  await expect(panel.said("body-hyphens")).toHaveText("British English");
 });
 
 test("the book note's page draws the design read-only, in the panel's words", async ({
@@ -1456,7 +1455,7 @@ test("a click low in the panel leaves it scrolled where it was", async ({
   );
   expect(await panel.scrolled()).toEqual(at);
 
-  // A segment in Heads & folios.
+  // A segment in Headers & page numbers.
   painted = await book.painted();
   const format = panel.control("page-number-format");
   const there = await panel.scrollTo(format);

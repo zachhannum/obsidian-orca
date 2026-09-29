@@ -230,7 +230,7 @@ export function Panel({
   if (shown.kind === "reading") {
     return (
       <div className="orca-panel-empty" data-testid="orca-panel-reading">
-        Reading the fonts this machine has
+        Loading fonts…
       </div>
     );
   }
@@ -873,7 +873,7 @@ function Drop({
       className="clickable-icon orca-panel-reset"
       role="button"
       tabIndex={0}
-      aria-label={`Take ${font} out of the book`}
+      aria-label={`Remove ${font}`}
       data-testid="orca-panel-font-drop"
       data-font={font}
       onClick={() => {

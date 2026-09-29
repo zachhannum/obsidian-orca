@@ -885,7 +885,7 @@ export function Glyphs({
             ) : found.offered > 0 ? null : (
               <div className="orca-panel-none" data-testid="orca-panel-glyph-nothing">
                 {covered(spans) === 0
-                  ? `orca has no file for ${family}`
+                  ? `No font file for ${family}`
                   : "No glyph there"}
               </div>
             )}
@@ -904,7 +904,7 @@ export function Glyphs({
           </div>
           {spans === undefined ? null : (
             <div className="orca-panel-glyph-count">
-              {covered(spans)} code points in {family}
+              {covered(spans)} glyphs
             </div>
           )}
         </div>

@@ -59,7 +59,7 @@ test("the author's warnings are grouped by note, each at its line, and orca's ar
     },
     { route: "note", source: null, issues: [{ message: "f", place: undefined }] },
   ]);
-  assert.deepEqual(groups.map(groupTitle), ["Chapter Eleven", "The book's CSS", "No place named"]);
+  assert.deepEqual(groups.map(groupTitle), ["Chapter Eleven", "The book's CSS", "Other"]);
 });
 
 // What this tier does not cover: the console itself, the preview's

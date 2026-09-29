@@ -80,7 +80,7 @@ export async function startEngine(
     });
   };
 
-  const gone = (): string => dead?.message ?? "the engine stopped";
+  const gone = (): string => dead?.message ?? "the preview stopped";
 
   const stop = (): void => {
     if (stopped) return;
@@ -104,7 +104,7 @@ export async function startEngine(
       if (isStarted(data)) {
         if (data.orca === "failed") reject(new EngineError(data.message));
         else if (data.wire === WIRE_VERSION) resolve();
-        else reject(new EngineError(mismatch(data.wire)));
+        else reject(mismatch(data.wire));
         return;
       }
       const response = data as Response;
@@ -112,7 +112,7 @@ export async function startEngine(
       client.receive(response);
     };
     worker.onerror = (event) => {
-      const said = event.message === "" ? "the engine stopped" : event.message;
+      const said = event.message === "" ? "the preview stopped" : event.message;
       reject(new EngineError(said));
       died(said);
     };
@@ -140,12 +140,16 @@ export async function startEngine(
 
 /**
  * The display structure is positional, so a bundle and a module that
- * disagree about it fail at the first byte. The failure this catches is
- * a plugin updated without its module beside it.
+ * disagree about it fail at the first byte. The module ships inside
+ * the plugin, so a mismatch is a broken install, and the author is
+ * told to reinstall. The versions stay on the cause.
  */
-function mismatch(wire: number): string {
-  return (
+function mismatch(wire: number): EngineError {
+  const versions = new Error(
     `orca is built against fleuron ${VERSION}, which reads wire ` +
-    `${WIRE_VERSION}; the module beside it is wire ${wire}`
+      `${WIRE_VERSION}; the module it loaded is wire ${String(wire)}`,
   );
+  return new EngineError("the preview did not start. Reinstall the plugin.", {
+    cause: versions,
+  });
 }

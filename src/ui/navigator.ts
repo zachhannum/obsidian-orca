@@ -535,14 +535,14 @@ export class NavigatorView extends ItemView {
   private deleteBook(book: Shelved): void {
     confirm(this.app, {
       title: `Delete ${book.name}?`,
-      said: "The book note goes to the trash. The notes it lists are borrowed, and stay in the vault.",
+      said: "Only the book note is deleted.",
       verb: "Delete",
       done: () => {
         const note = this.app.vault.getFileByPath(book.path);
         if (note === null) return;
         void this.app.fileManager.trashFile(note).catch((cause: unknown) => {
           new Notice(
-            `Orca: the book was not deleted. ${
+            `Orca: could not delete the book. ${
               cause instanceof Error ? cause.message : String(cause)
             }`,
           );

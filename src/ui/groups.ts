@@ -355,7 +355,7 @@ export const GROUPS: readonly Group[] = [
     ],
   },
   {
-    name: "Heads & folios",
+    name: "Headers & page numbers",
     rows: [
       {
         label: "Left-page header",
@@ -384,13 +384,13 @@ export const GROUPS: readonly Group[] = [
         of: [{ kind: "segment", key: "page-number-format", choices: FORMATS }],
       },
       { label: "Header font", of: [{ kind: "font", key: "header-font" }] },
-      { label: "Folio font", of: [{ kind: "font", key: "folio-font" }] },
+      { label: "Page number font", of: [{ kind: "font", key: "folio-font" }] },
       {
         label: "Header style",
         of: [{ kind: "style", key: "header-style", choices: STYLES }],
       },
       {
-        label: "Folio style",
+        label: "Page number style",
         of: [{ kind: "style", key: "folio-style", choices: STYLES }],
       },
       {
@@ -407,7 +407,7 @@ export const GROUPS: readonly Group[] = [
           {
             kind: "flag",
             key: "suppress-head-on-openings",
-            said: "Hide the running head and page number on openings",
+            said: "Hide the header and page number on the first page of each chapter",
           },
         ],
       },

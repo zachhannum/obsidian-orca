@@ -829,7 +829,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
           pick(this.app, {
             items: shelf,
             label: (book) => book.basename,
-            placeholder: `Add ${note.basename} to which book`,
+            placeholder: `Add ${note.basename} to book`,
             chose: (book) => {
               void this.edits.addNote(book.path, note);
             },
@@ -1181,7 +1181,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     new Notice(
       cause instanceof EngineError
         ? `Orca: ${cause.message}`
-        : "Orca: the engine did not start",
+        : "Orca: the preview did not start",
     );
   }
 
@@ -1218,7 +1218,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       read: (path) => {
         const note = this.app.vault.getFileByPath(path);
         return note === null
-          ? Promise.reject(new Error(`${path} is gone`))
+          ? Promise.reject(new Error(`${path} was deleted`))
           : this.app.vault.cachedRead(note);
       },
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
@@ -1459,7 +1459,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     pick(this.app, {
       items: shelf,
       label: (book) => book.basename,
-      placeholder: "Open which book",
+      placeholder: "Open book",
       chose: (book) => {
         void this.openPreview({ book: book.path });
       },

@@ -687,7 +687,7 @@ export class PreviewView extends ItemView {
     // sit in is what a Tab or a click on a page reaches.
     well.tabIndex = 0;
     this.well = well;
-    this.report("Setting the book");
+    this.report("Loading preview…");
     const surface = well.createDiv({ cls: "orca-preview-sheets" });
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
@@ -1176,8 +1176,8 @@ export class PreviewView extends ItemView {
       }
       this.report(
         cause instanceof EngineError || cause instanceof BookError
-          ? cause.message
-          : "The book did not set",
+          ? sentence(cause.message)
+          : "The preview could not load",
       );
     }
   }
@@ -1791,23 +1791,18 @@ export class PreviewView extends ItemView {
       progress.again ? "rotate-cw" : "book",
     );
     const name = banner.createDiv({ cls: "orca-preview-setting-name" });
-    name.append("Setting ", name.createEl("i", { text: progress.name }));
-    if (progress.again) name.append(" again");
+    name.append("Loading ", name.createEl("i", { text: progress.name }), "…");
     const bar = banner.createDiv({ cls: "orca-preview-progress" });
     const fill = bar.createDiv({ cls: "orca-preview-progress-fill" });
     const done = progress.of === 0 ? 0 : progress.read / progress.of;
     fill.style.width = `${String(Math.round(done * 100))}%`;
-    const note = banner.createDiv({ cls: "orca-preview-setting-note" });
-    if (progress.again) {
-      note.append("nothing you wrote was lost");
-      note.createEl("br");
-      note.append(`you will come back to page ${String(this.at + 1)}`);
-    } else {
-      note.append(`${String(progress.read)} chapters of ${String(progress.of)}`);
-      if (progress.opening !== undefined) {
-        note.createEl("br");
-        note.append(`it will open at ${progress.opening}`);
-      }
+    // The pages from before stay under a book set again, so only a
+    // first setting counts its chapters.
+    if (!progress.again) {
+      banner.createDiv({
+        cls: "orca-preview-setting-note",
+        text: `${String(progress.read)} of ${String(progress.of)} chapters`,
+      });
     }
     this.post(banner, !progress.again);
   }
@@ -1828,11 +1823,11 @@ export class PreviewView extends ItemView {
       "alert-triangle",
     );
     const name = banner.createDiv({ cls: "orca-preview-setting-name" });
-    name.append("Orca could not set the book again");
+    name.append("The preview stopped");
     const note = banner.createDiv({ cls: "orca-preview-setting-note" });
-    note.append("the pages here are the ones from before");
+    note.append("These are the last pages it made.");
     note.createEl("br");
-    note.append("open the book again to try once more");
+    note.append("Reopen the book to try again.");
     const report = banner.createEl("button", {
       cls: "orca-preview-report",
       text: "Copy the report",
@@ -1901,4 +1896,9 @@ function readState(state: unknown): PreviewState {
 /** The state the workspace keeps: where a book opens is not part of it. */
 function kept({ over, followed, ...state }: PreviewState): PreviewState {
   return state;
+}
+
+/** A message from a lower module, capitalized to stand as a sentence. */
+function sentence(said: string): string {
+  return said.charAt(0).toUpperCase() + said.slice(1);
 }

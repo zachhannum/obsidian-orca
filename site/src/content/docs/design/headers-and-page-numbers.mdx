@@ -1,0 +1,55 @@
+---
+title: Headers & page numbers
+eyebrow: Design
+description: Headers, page numbers, and the type they are set in.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+A header is the line of text at the top of a page, such as the book title or the chapter title. The Headers & page numbers group in the design panel sets the headers and the page numbers.
+
+<Shot
+  name="panel-headers-and-page-numbers"
+  alt="The Headers & page numbers group of the design panel, with the two headers, Chapter title from, Header position, Page number, Number format, Header font, Page number font, Header style, Page number style, Capitals, Tracking and a switch."
+  caption="The Headers & page numbers group."
+  marks={['header-left-page', 'header-right-page', 'chapter-title-from', 'header-position', 'page-number-position', 'page-number-format', 'header-font', 'folio-font', 'header-style', 'folio-style', 'header-caps', 'header-letter-spacing', 'suppress-head-on-openings']}
+  numbered
+/>
+
+## Controls
+
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Left-page header | `Nothing` | `header-left-page` |
+| 2 | Right-page header | `Nothing` | `header-right-page` |
+| 3 | Chapter title from | `First heading` | `chapter-title-from` |
+| 4 | Header position | `Outside` | `header-position` |
+| 5 | Page number | `Bottom` | `page-number-position` |
+| 6 | Number format | `1, 2, 3` | `page-number-format` |
+| 7 | Header font | `EB Garamond` | `header-font` |
+| 8 | Page number font | `EB Garamond` | `folio-font` |
+| 9 | Header style | `Normal` | `header-style` |
+| 10 | Page number style | `Normal` | `folio-style` |
+| 11 | Capitals | `Normal` | `header-caps` |
+| 12 | Tracking | `None` | `header-letter-spacing` |
+| 13 | Hide the header and page number on the first page of each chapter | on | `suppress-head-on-openings` |
+
+## The chapter title
+
+By default, a header set to `Chapter title` reads the section's first heading, whatever level it is written at.
+
+The `Chapter title from` option picks the level to read instead. A chapter with no heading at that level reads its first heading instead.
+
+## Fonts and styles
+
+Unless you pick a font, the headers and the page numbers use the font from the Text group.
+
+`Header style` sets the weight and the slope of the headers, and `Page number style` sets them for the page number. The style options are Normal, Bold, Italic and Bold italic.
+
+## Capitals and tracking
+
+These two controls set the page number as well as the headers.
+
+## Openings
+
+An opening is the first page of a chapter.

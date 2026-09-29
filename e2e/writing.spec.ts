@@ -51,7 +51,7 @@ test("a change on disk reloads a clean view and asks one with an unwritten edit"
 
   await expect(note.changed).toBeVisible();
   await note.changed
-    .getByRole("button", { name: "Take what is on disk" })
+    .getByRole("button", { name: "Use the saved version" })
     .click();
 
   await expect(note.page).toContainText("Written outside");

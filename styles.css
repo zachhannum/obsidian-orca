@@ -605,7 +605,6 @@
   color: var(--text-normal);
 }
 
-.orca-book-versions,
 .orca-book-hint {
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);

@@ -198,7 +198,7 @@ export function InspectPane({
           </span>
         </button>
         {caret === undefined ? null : (
-          <span className="orca-inspect-note">at the cursor, line {caret}</span>
+          <span className="orca-inspect-note">Line {caret}</span>
         )}
       </div>
     </div>

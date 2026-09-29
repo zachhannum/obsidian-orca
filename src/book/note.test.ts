@@ -7,10 +7,10 @@ import { readText } from "@/assets/vault";
 import { readFrontmatter, type Properties } from "@/book/frontmatter";
 import {
   BOOK_KEY,
-  BookError,
   FIELD_KEYS,
   FONTS_KEY,
   FORMAT,
+  NewerBookError,
   applyBook,
   bookFormat,
   readBook,
@@ -126,15 +126,15 @@ test("a note at or below this format migrates in memory, and on disk waits for a
   }
 });
 
-test("a book from a newer orca does not open, and the error names both formats", async () => {
+test("a book from a newer orca does not open, and the error says a newer version made it", async () => {
   const { properties } = await note();
 
   assert.throws(
     () => readBook({ ...properties, [BOOK_KEY]: FORMAT + 1 }),
     (error: unknown) =>
-      error instanceof BookError &&
-      error.message.includes(`format ${FORMAT}`) &&
-      error.message.includes(`format ${FORMAT + 1}`),
+      error instanceof NewerBookError &&
+      error.message ===
+        "This book was made by a newer version of Orca than the one currently installed in this vault.",
   );
 });
 

@@ -487,5 +487,5 @@ export class DesignPanelView extends ItemView {
 
 /** The warning for a font whose files would not read. */
 function unreadable(font: string): string {
-  return `${font} has no file this machine could read. The book is set in the one orca carries.`;
+  return `Could not load ${font}. Using built-in font instead.`;
 }
