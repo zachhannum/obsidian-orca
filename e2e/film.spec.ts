@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Locator } from "@playwright/test";
 import { PREVIEW, type Book } from "./harness/book";
 import { Export } from "./harness/export";
@@ -17,10 +16,13 @@ const CHAPTER = "A Shifting Reef";
 const WRITING = `${FOLDER}/${CHAPTER}.md`;
 const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
 
-/** The folder the film reads its frames and its pages from. */
-const OUT = path.resolve(fileURLToPath(import.meta.url), "../../video/assets");
-const FRAMES = path.join(OUT, "ui");
-const PAGES = path.join(OUT, "pages");
+/**
+ * The film's assets folder, in its own repo, which the film reads its
+ * frames and its pages from. The spec writes nowhere else.
+ */
+const OUT = process.env["ORCA_FILM_OUT"];
+const FRAMES = path.join(OUT ?? "", "ui");
+const PAGES = path.join(OUT ?? "", "pages");
 
 /**
  * The window every frame is taken in. The film shows it at about its
@@ -93,7 +95,7 @@ interface Frame {
   name: string;
   marks: Record<string, Box>;
   rows?: Box[];
-  /** How far the design panel is scrolled, which the film animates between frames. */
+  /** The distance the design panel is scrolled, which the film animates between frames. */
   scroll?: number;
 }
 
@@ -256,6 +258,7 @@ async function editorHolds(site: Site, text: string): Promise<void> {
 }
 
 test("the film's frames are real Obsidian on the sample book", async ({ site }) => {
+  if (OUT === undefined) throw new Error("ORCA_FILM_OUT names no folder to write the frames to");
   await rm(FRAMES, { recursive: true, force: true });
   await mkdir(FRAMES, { recursive: true });
   const book = await noteText(site, BOOK);

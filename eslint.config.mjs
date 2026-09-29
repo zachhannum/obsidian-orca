@@ -15,7 +15,6 @@ export default defineConfig([
       "test-results/",
       "playwright-report/",
       "site/",
-      "video/",
       "fixture/",
       ".*",
     ],
