@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Locator } from "@playwright/test";
 import { PREVIEW, type Book } from "./harness/book";
 import { Export } from "./harness/export";
-import { Obsidian } from "./harness/obsidian";
+import { Obsidian, type Scheme } from "./harness/obsidian";
 import type { Box, Site } from "./harness/site";
 import { expect, test } from "./harness/test";
 
@@ -21,8 +21,13 @@ const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
  * frames and its pages from. The spec writes nowhere else.
  */
 const OUT = process.env["ORCA_FILM_OUT"];
-const FRAMES = path.join(OUT ?? "", "ui");
 const PAGES = path.join(OUT ?? "", "pages");
+
+/**
+ * The folder each scheme's frames go in. The film plays the dark ones,
+ * and the loop on the site's landing page plays both.
+ */
+const FOLDERS: Record<Scheme, string> = { dark: "ui", light: "ui-light" };
 
 /**
  * The window every frame is taken in. The film shows it at about its
@@ -99,7 +104,12 @@ interface Frame {
   scroll?: number;
 }
 
-const taken: Frame[] = [];
+/** The folder the frames of the run under way go in, and the frames it has taken. */
+let into = "";
+let taken: Frame[] = [];
+
+/** The frames each scheme took, which must point at the same boxes. */
+const tookIn = new Map<Scheme, Frame[]>();
 
 /**
  * Takes a picture of the whole window and keeps the boxes of the
@@ -132,7 +142,7 @@ async function frame(
     targets,
   );
   await site.obsidian.page.screenshot({
-    path: path.join(FRAMES, `${name}.jpg`),
+    path: path.join(into, `${name}.jpg`),
     type: "jpeg",
     quality: 88,
     scale: "device",
@@ -257,17 +267,36 @@ async function editorHolds(site: Site, text: string): Promise<void> {
   }, text);
 }
 
-test("the film's frames are real Obsidian on the sample book", async ({ site }) => {
+/**
+ * The colors the loop draws over a frame with: the CSS editor's ground,
+ * which hides the rows not yet typed, and the text, which is the caret.
+ */
+async function paintOf(site: Site): Promise<{ cover: string; caret: string }> {
+  return site.panel.editor.evaluate((editor) => {
+    let ground = "";
+    for (let at: Element | null = editor; at !== null && ground === ""; at = at.parentElement) {
+      const color = getComputedStyle(at).backgroundColor;
+      if (color !== "transparent" && color !== "rgba(0, 0, 0, 0)") ground = color;
+    }
+    const text = editor.querySelector(".cm-content") ?? editor;
+    return { cover: ground, caret: getComputedStyle(text).color };
+  });
+}
+
+/** Takes every frame in one scheme, and puts the notes and the panel back. */
+async function take(site: Site, scheme: Scheme): Promise<void> {
   if (OUT === undefined) throw new Error("ORCA_FILM_OUT names no folder to write the frames to");
-  await rm(FRAMES, { recursive: true, force: true });
-  await mkdir(FRAMES, { recursive: true });
+  into = path.join(OUT, FOLDERS[scheme]);
+  taken = [];
+  await rm(into, { recursive: true, force: true });
+  await mkdir(into, { recursive: true });
   const book = await noteText(site, BOOK);
   const chapter = await noteText(site, WRITING);
   const obsidian = site.obsidian;
   await putBack(site, BOOK, bare(book));
 
   await sized(site);
-  await obsidian.paint("dark");
+  await site.paint(scheme);
   await obsidian.asRendered();
   await site.navigator.reveal();
   await obsidian.sidebar(NAVIGATOR, "left");
@@ -379,6 +408,7 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
   await site.panel.code.press("ControlOrMeta+End");
   await site.panel.code.press("Enter");
   await frame(site, "css-1", { code: site.panel.editor });
+  const paint = await paintOf(site);
   const typedFrom = await site.book.painted();
   await site.panel.code.pressSequentially(RULE.slice(1));
   await expect.poll(async () => noteText(site, BOOK)).toMatch(/p\.part \{\s*color: #1d4e5b;/);
@@ -411,10 +441,39 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
 
   // A script rather than JSON, since the film is opened from disk and a
   // page there cannot fetch.
-  const listed = JSON.stringify({ window: WINDOW, density: DENSITY, frames: taken });
-  await writeFile(path.join(FRAMES, "frames.js"), `window.FRAMES = ${listed};\n`);
+  const listed = JSON.stringify({ window: WINDOW, density: DENSITY, scheme, paint, frames: taken });
+  await writeFile(path.join(into, "frames.js"), `window.FRAMES = ${listed};\n`);
+  // The loop draws its pointer from one set of boxes, so a scheme that
+  // moved a control would send it to the wrong place.
+  for (const [other, frames] of tookIn) {
+    if (other !== scheme) expect(taken).toEqual(frames);
+  }
+  tookIn.set(scheme, taken);
 
-  // The wall of pages the film closes on is the file the export wrote.
+  // The wall of pages is the same in both schemes, so one takes it.
+  if (scheme === "dark") await wall();
+
+  // One app runs the whole run, so the notes and the panel go back.
+  await obsidian.moving();
+  await putBack(site, BOOK, book);
+  await putBack(site, WRITING, chapter);
+  await site.panel.wrap.click();
+  await site.panel.toControls.click();
+  await settled(site.book);
+  // The other scheme opens its own panes.
+  await site.book.close();
+  await obsidian.detach(EDITOR);
+  await obsidian.detach("orca-book");
+}
+
+for (const scheme of ["dark", "light"] as const) {
+  test(`the film's frames are real Obsidian on the sample book, ${scheme}`, async ({ site }) =>
+    take(site, scheme));
+}
+
+/** Writes the first pages of the exported book, which the film closes on, and takes the file away. */
+async function wall(): Promise<void> {
+
   const exported = path.join(Obsidian.sample(), EXPORTED);
   const pdf = await readFile(exported);
   await rm(exported);
@@ -434,18 +493,10 @@ test("the film's frames are real Obsidian on the sample book", async ({ site }) 
     );
   }
   await rm(where, { recursive: true, force: true });
-
-  // One app runs the whole run, so the notes and the panel go back.
-  await obsidian.moving();
-  await putBack(site, BOOK, book);
-  await putBack(site, WRITING, chapter);
-  await site.panel.wrap.click();
-  await site.panel.toControls.click();
-  await settled(site.book);
-});
+}
 
 // What this spec does not cover: whether the film shows each frame
 // where its marks put it, which a look at the film answers; the frames
-// on any platform but the one they were taken on; the light scheme,
-// which the film does not use; and the pointer, which the film draws
-// itself because a picture of the window holds none.
+// on any platform but the one they were taken on; the marks of one
+// scheme when the other did not run first; and the pointer, which the
+// film draws itself because a picture of the window holds none.
