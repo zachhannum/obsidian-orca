@@ -48,16 +48,21 @@ test("a book that sets nothing sets one font in two sizes, with nothing the engi
   }
 });
 
-test("every design key has a default but a heading's, a head's and a folio's font, the drop cap's font, a scene break's font and size, and each font's variant", () => {
+test("every design key has a default but a heading's, a head's and a folio's font, the drop cap's font, a scene break's and a quote's font and size, each font's variant and an image's width", () => {
   const variant = (key: string) => key.endsWith("-font-variant");
-  // A heading, a running head and a folio take the body's font, so
-  // none of them carries a default of its own.
+  // A heading, a running head, a folio and a quote take the body's font,
+  // so none of them carries a default of its own.
   const follows = (key: string) =>
-    /^heading-\d-font$/.test(key) || key === "header-font" || key === "folio-font";
-  // A scene break with no font or size of its own takes the body's, so
-  // neither key has a default.
+    /^heading-\d-font$/.test(key) ||
+    key === "header-font" ||
+    key === "folio-font" ||
+    key === "quote-font" ||
+    key === "quote-size";
+  // A scene break with no font or size of its own takes the body's, and
+  // an image with no width set is drawn at its own, so no key has a
+  // default.
   const inherited = (key: string) =>
-    key === "scene-break-font" || key === "scene-break-size";
+    key === "scene-break-font" || key === "scene-break-size" || key === "image-width";
   const optional = (key: string) =>
     follows(key) || key === "chapter-drop-cap-font" || variant(key) || inherited(key);
 
@@ -66,8 +71,8 @@ test("every design key has a default but a heading's, a head's and a folio's fon
     DESIGN_KEYS.filter((key) => !optional(key)),
   );
   // The panel draws the effective design, where a heading, a drop cap,
-  // a running head and a folio with no font of their own show the body
-  // font. The default variant is stored as absent.
+  // a running head, a folio and a quote with no font of their own show
+  // the body font. The default variant is stored as absent.
   const shown = writeDesign(effective(emptyDesign()));
   assert.deepEqual(
     Object.keys(shown),
@@ -79,6 +84,8 @@ test("every design key has a default but a heading's, a head's and a folio's fon
   assert.equal(shown["chapter-drop-cap-font"], "EB Garamond");
   assert.equal(shown["header-font"], "EB Garamond");
   assert.equal(shown["folio-font"], "EB Garamond");
+  assert.equal(shown["quote-font"], "EB Garamond");
+  assert.equal(shown["quote-size"], shown["body-size"]);
 });
 
 test("a book's own keys win over the defaults, and a heading follows the body font", () => {

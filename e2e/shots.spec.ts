@@ -33,6 +33,9 @@ const GROUPS = [
   "Fonts",
   "Chapter openings",
   "Scene breaks",
+  "Quote",
+  "List",
+  "Image",
   "Heads & folios",
   "Page breaks",
 ];

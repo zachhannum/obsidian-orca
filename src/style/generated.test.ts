@@ -27,6 +27,7 @@ import {
   readDesign,
   type ChapterTitle,
   type Design,
+  type Written,
   type HeaderPosition,
   type PageNumberPosition,
 } from "@/style/design";
@@ -839,6 +840,20 @@ const BROKEN: Source[] = SOURCES.map((source, index) =>
     : source,
 );
 
+/**
+ * The sources of `ROLES`, with a quote and both kinds of list inside
+ * the last chapter. No image, because the engine warns about a picture
+ * whose bytes the book has not sent.
+ */
+const BLOCKED: Source[] = SOURCES.map((source, index) =>
+  index === SOURCES.length - 1
+    ? {
+        ...source,
+        text: `${source.text}\n> She said nothing more that evening.\n\n- first\n- second\n\n1. first\n`,
+      }
+    : source,
+);
+
 async function fixture(): Promise<Model> {
   return readModel(await readText(vault, BOOK));
 }
@@ -1229,6 +1244,61 @@ function styles(): Design {
   design.headers.folioStyle = "normal";
   return design;
 }
+
+/** The snapshots beside this spec, one per group the panel offers for a block. */
+const BLOCK_SNAPSHOTS: Readonly<Record<string, string>> = {
+  quote: "src/style/quote.snapshot.css",
+  list: "src/style/list.snapshot.css",
+  image: "src/style/image.snapshot.css",
+};
+
+/** A design that sets every key of one group and nothing else. */
+const BLOCK_DESIGNS: Readonly<Record<string, Record<string, Written>>> = {
+  quote: {
+    "quote-font": "Alegreya",
+    "quote-font-variant": "SC",
+    "quote-size": "9.5pt",
+    "quote-indent-left": "2em",
+    "quote-indent-right": "3em",
+    "quote-space-above": "1.5em",
+    "quote-space-below": "2em",
+  },
+  list: {
+    "list-marker": "square",
+    "list-indent": "2em",
+    "list-space-between": "0.25em",
+  },
+  image: {
+    "image-width": "2.5in",
+    "image-space-above": "1em",
+    "image-space-below": "1em",
+  },
+};
+
+test("each group the panel offers for a block generates the sheet checked in beside this spec", async () => {
+  const sections = named(ROLES);
+  for (const [group, file] of Object.entries(BLOCK_SNAPSHOTS)) {
+    const design = readDesign(BLOCK_DESIGNS[group] ?? {});
+    const css = generatedCss(design, { sections: named([]) });
+
+    assert.equal(css, await snapshot(css, file), `the ${group} sheet moved`);
+  }
+
+  // Every one of those sheets is CSS the pinned engine sets without a
+  // warning, over a book that holds a quote and both kinds of list.
+  const whole = readDesign(Object.assign({}, ...Object.values(BLOCK_DESIGNS)));
+  const output = await rendered(generatedCss(whole, { sections }), BLOCKED, sections);
+
+  assert.deepEqual(output.warnings, []);
+});
+
+test("a quote with no font of its own declares none, so it is set in the body's", () => {
+  const design = readDesign({ "quote-size": "9.5pt" });
+
+  const rules = generatedRules(design, { sections: named(ROLES) });
+
+  assert.equal(ruleFor(rules, "quote-size").css, "blockquote {\n  font-size: 9.5pt;\n}\n");
+});
 
 /** The one generated rule a setting key writes. */
 function ruleFor(rules: readonly GeneratedRule[], key: string): GeneratedRule {

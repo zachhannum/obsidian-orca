@@ -9,6 +9,7 @@ import {
   LEVELS,
   mergeDesign,
   type Design,
+  type Faced,
   type Length,
   type TypeSpec,
 } from "@/style/design";
@@ -79,6 +80,18 @@ export const DEFAULTS: Design = frozen({
     spaceAbove: 1,
     spaceBelow: 1,
   },
+  // The engine's own sheet sets `blockquote { margin: 1em 2em }` and
+  // `ul, ol { padding-left: 1.5em }`, and no margin on an item or an
+  // image. These defaults repeat it, so a book that sets none of these
+  // groups is set the same way as before the panel offered them.
+  quote: {
+    indentLeft: ems(2),
+    indentRight: ems(2),
+    spaceAbove: ems(1),
+    spaceBelow: ems(1),
+  },
+  list: { marker: "disc", indent: ems(1.5), spaceBetween: ems(0) },
+  image: { spaceAbove: ems(0), spaceBelow: ems(0) },
   headers: {
     leftPage: "none",
     rightPage: "none",
@@ -95,19 +108,22 @@ export const DEFAULTS: Design = frozen({
 });
 
 /**
- * Fills in every default under a design. A heading level with no font
- * of its own takes the body's font and variant as a pair. A level with
- * its own font and no variant keeps that font's default. A drop cap
- * with no font of its own takes the body's font, and sets no variant.
- * The running heads and the folios take the body's font, because a
- * margin box is set from the book's root the way a paragraph is.
+ * Fills in every default under a design. A heading level or a quote
+ * with no font of its own takes the body's font and variant as a pair.
+ * One with its own font and no variant keeps that font's default. A drop
+ * cap with no font of its own takes the body's font, and sets no
+ * variant. The running heads and the folios take the body's font,
+ * because a margin box is set from the book's root the way a paragraph
+ * is. A quote with no size of its own takes the body's size, which is
+ * how it is set.
  */
 export function effective(design: Design): Design {
   const merged = mergeDesign(structuredClone(DEFAULTS), design);
+  merged.quote.size ??= merged.body.size;
   const { font, fontVariant } = merged.body;
   if (font === undefined) return merged;
-  for (const level of LEVELS) {
-    const type = merged.headings[level];
+  const faced: Faced[] = [...LEVELS.map((level) => merged.headings[level]), merged.quote];
+  for (const type of faced) {
     if (type.font !== undefined) continue;
     type.font = font;
     if (fontVariant === undefined) delete type.fontVariant;

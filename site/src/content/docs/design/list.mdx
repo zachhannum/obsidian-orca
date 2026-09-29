@@ -1,0 +1,42 @@
+---
+title: List
+eyebrow: Design
+description: The marker of a bulleted list, its indent, and the space between items.
+---
+
+import Shot from '../../../components/Shot.astro';
+
+A list is a run of items a chapter sets one to a line. You write a bulleted list in markdown with a `-` before each item, and a numbered list with a number. The List group in the design panel sets the marker, the indent and the space between items.
+
+<Shot
+  name="panel-list"
+  alt="The List group of the design panel, with Marker, Indent and Space between."
+  caption="The List group."
+  marks={['list-marker', 'list-indent', 'list-space-between']}
+  numbered
+/>
+
+## Controls
+
+| # | Control | Default | Key |
+| --- | --- | --- | --- |
+| 1 | Marker | `Bullet` | `list-marker` |
+| 2 | Indent | `1.5em` | `list-indent` |
+| 3 | Space between | `0em` | `list-space-between` |
+
+## Marker
+
+`Marker` takes one of four values:
+
+- `Bullet` sets a filled round mark.
+- `Open circle` sets a hollow round mark.
+- `Square` sets a filled square mark.
+- `None` sets no mark, and the items keep their indent.
+
+`Marker` sets the mark of a bulleted list. A numbered list keeps its numbers.
+
+## Indent and space
+
+`Indent` is the indent of the whole list. The markers hang in it, so the text of every item lines up.
+
+`Space between` sits above every item but the first, so a list with no space between items sets one item to a line.

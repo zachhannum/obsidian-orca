@@ -176,6 +176,46 @@ export interface SceneDesign {
   spaceBelow?: number;
 }
 
+/**
+ * The type a block quote is set in, and the space around it. A quote
+ * with no font of its own takes the body's.
+ */
+export interface QuoteDesign {
+  font?: string;
+  /** The font's variant, by name. A font's default variant is stored as absent. */
+  fontVariant?: string;
+  size?: Length;
+  /** The indent on the left of a quote. */
+  indentLeft?: Length;
+  /** The indent on the right of a quote. */
+  indentRight?: Length;
+  /** The blank space above a quote. */
+  spaceAbove?: Length;
+  /** The blank space below a quote. */
+  spaceBelow?: Length;
+}
+
+/** The mark before each item of a bulleted list. A numbered list keeps its numbers. */
+export type Marker = "disc" | "circle" | "square" | "none";
+
+export interface ListDesign {
+  /** The mark before each item of a bulleted list. */
+  marker?: Marker;
+  /** The indent of a list, which its marks hang in. */
+  indent?: Length;
+  /** The blank space between two items. */
+  spaceBetween?: Length;
+}
+
+export interface ImageDesign {
+  /** The width an image is drawn at. An image with no width set takes its own. */
+  width?: Length;
+  /** The blank space above an image. */
+  spaceAbove?: Length;
+  /** The blank space below an image. */
+  spaceBelow?: Length;
+}
+
 export type HeaderSlot = "none" | "author" | "book-title" | "chapter-title";
 
 /**
@@ -226,6 +266,9 @@ export interface Design {
   headings: Headings;
   chapter: ChapterDesign;
   scene: SceneDesign;
+  quote: QuoteDesign;
+  list: ListDesign;
+  image: ImageDesign;
   headers: HeaderDesign;
 }
 
@@ -237,6 +280,9 @@ export function emptyDesign(): Design {
     headings: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} },
     chapter: {},
     scene: {},
+    quote: {},
+    list: {},
+    image: {},
     headers: {},
   };
 }
@@ -244,9 +290,9 @@ export function emptyDesign(): Design {
 /**
  * Every font a design names, the body's first, then each heading
  * level's, then the drop cap's, then the scene break's, then the running
- * heads' and the folio's. A family two places name is listed once,
- * however it is capitalized, because the index matches a name without
- * case.
+ * heads' and the folio's, then the block quote's. A family two places
+ * name is listed once, however it is capitalized, because the index
+ * matches a name without case.
  */
 export function designFonts(design: Design): string[] {
   const named = [
@@ -256,6 +302,7 @@ export function designFonts(design: Design): string[] {
     design.scene.font,
     design.headers.font,
     design.headers.folioFont,
+    design.quote.font,
   ];
   const seen = new Set<string>();
   const fonts: string[] = [];
@@ -278,12 +325,12 @@ export interface FontUse {
 /**
  * Every font and variant a design sets, the body's first, then each
  * heading level's, then the drop cap's, then the scene break's, then
- * the running heads' and the folio's. A level with no font of its own
- * takes the body's font and variant as a pair. A level with its own
- * font and no variant takes that font's default. A drop cap, a scene
- * break, a head and a folio each set a font alone, so each takes that
- * font's default variant. A pair two places set is listed once, however
- * it is capitalized.
+ * the running heads' and the folio's, then the block quote's. A level or
+ * a quote with no font of its own takes the body's font and variant as
+ * a pair. One with its own font and no variant takes that font's
+ * default. A drop cap, a scene break, a head and a folio each set a font
+ * alone, so each takes that font's default variant. A pair two places
+ * set is listed once, however it is capitalized.
  */
 export function designUses(design: Design): FontUse[] {
   const { font, fontVariant } = design.body;
@@ -297,6 +344,7 @@ export function designUses(design: Design): FontUse[] {
       design.headers.font,
       design.headers.folioFont,
     ].map((each) => (each === undefined ? undefined : { font: each, variant: undefined })),
+    headingUse(design.quote, body),
   ];
   const seen = new Set<string>();
   const uses: FontUse[] = [];
@@ -329,9 +377,15 @@ export function bookUses(design: Design, added: readonly string[]): FontUse[] {
   return uses;
 }
 
-/** The font and variant a heading level is set in, given the body's. */
+/** A place that names a font of its own: a heading level, or the block quote. */
+export interface Faced {
+  font?: string;
+  fontVariant?: string;
+}
+
+/** The font and variant one place is set in, given the body's. */
 export function headingUse(
-  type: TypeSpec,
+  type: Faced,
   body: FontUse | undefined,
 ): FontUse | undefined {
   if (type.font === undefined) return body;
@@ -620,6 +674,133 @@ const SCENE: readonly Field[] = [
   },
 ];
 
+const QUOTE: readonly Field[] = [
+  {
+    key: "quote-font",
+    property: "font-family",
+    read: ({ quote }) => quote.font,
+    write: ({ quote }, value) => {
+      const font = asText(value);
+      if (font !== undefined) quote.font = font;
+    },
+  },
+  {
+    // A variant picks among a font's faces and sets no CSS of its own.
+    key: "quote-font-variant",
+    property: "font-family",
+    read: ({ quote }) => quote.fontVariant,
+    write: ({ quote }, value) => {
+      const variant = asText(value);
+      if (variant !== undefined) quote.fontVariant = variant;
+    },
+  },
+  {
+    key: "quote-size",
+    property: "font-size",
+    read: ({ quote }) => written(quote.size),
+    write: ({ quote }, value) => {
+      const size = asLength(value);
+      if (size !== undefined) quote.size = size;
+    },
+  },
+  {
+    key: "quote-indent-left",
+    property: "margin-left",
+    read: ({ quote }) => written(quote.indentLeft),
+    write: ({ quote }, value) => {
+      const indent = asLength(value);
+      if (indent !== undefined) quote.indentLeft = indent;
+    },
+  },
+  {
+    key: "quote-indent-right",
+    property: "margin-right",
+    read: ({ quote }) => written(quote.indentRight),
+    write: ({ quote }, value) => {
+      const indent = asLength(value);
+      if (indent !== undefined) quote.indentRight = indent;
+    },
+  },
+  {
+    key: "quote-space-above",
+    property: "margin-top",
+    read: ({ quote }) => written(quote.spaceAbove),
+    write: ({ quote }, value) => {
+      const space = asLength(value);
+      if (space !== undefined) quote.spaceAbove = space;
+    },
+  },
+  {
+    key: "quote-space-below",
+    property: "margin-bottom",
+    read: ({ quote }) => written(quote.spaceBelow),
+    write: ({ quote }, value) => {
+      const space = asLength(value);
+      if (space !== undefined) quote.spaceBelow = space;
+    },
+  },
+];
+
+const LIST: readonly Field[] = [
+  {
+    key: "list-marker",
+    property: "list-style-type",
+    read: ({ list }) => list.marker,
+    write: ({ list }, value) => {
+      const marker = asWord(value, MARKERS);
+      if (marker !== undefined) list.marker = marker;
+    },
+  },
+  {
+    key: "list-indent",
+    property: "padding-left",
+    read: ({ list }) => written(list.indent),
+    write: ({ list }, value) => {
+      const indent = asLength(value);
+      if (indent !== undefined) list.indent = indent;
+    },
+  },
+  {
+    key: "list-space-between",
+    property: "margin-top",
+    read: ({ list }) => written(list.spaceBetween),
+    write: ({ list }, value) => {
+      const space = asLength(value);
+      if (space !== undefined) list.spaceBetween = space;
+    },
+  },
+];
+
+const IMAGE: readonly Field[] = [
+  {
+    key: "image-width",
+    property: "width",
+    read: ({ image }) => written(image.width),
+    write: ({ image }, value) => {
+      const width = asLength(value);
+      if (width !== undefined) image.width = width;
+    },
+  },
+  {
+    key: "image-space-above",
+    property: "margin-top",
+    read: ({ image }) => written(image.spaceAbove),
+    write: ({ image }, value) => {
+      const space = asLength(value);
+      if (space !== undefined) image.spaceAbove = space;
+    },
+  },
+  {
+    key: "image-space-below",
+    property: "margin-bottom",
+    read: ({ image }) => written(image.spaceBelow),
+    write: ({ image }, value) => {
+      const space = asLength(value);
+      if (space !== undefined) image.spaceBelow = space;
+    },
+  },
+];
+
 const HEADERS: readonly Field[] = [
   slot("header-left-page", "leftPage"),
   slot("header-right-page", "rightPage"),
@@ -731,6 +912,9 @@ const FIELDS: readonly Field[] = [
   ...LEVELS.flatMap(heading),
   ...CHAPTER,
   ...SCENE,
+  ...QUOTE,
+  ...LIST,
+  ...IMAGE,
   ...HEADERS,
 ];
 
@@ -793,6 +977,9 @@ export function mergeDesign(under: Design, over: Design): Design {
     headings,
     chapter: { ...under.chapter, ...over.chapter },
     scene: { ...under.scene, ...over.scene },
+    quote: { ...under.quote, ...over.quote },
+    list: { ...under.list, ...over.list },
+    image: { ...under.image, ...over.image },
     headers: { ...under.headers, ...over.headers },
   };
 }
@@ -900,6 +1087,7 @@ export const FONT_STYLES: readonly FontStyle[] = [
 ];
 
 const MARKS: readonly SceneMark[] = ["space", "ornament"];
+const MARKERS: readonly Marker[] = ["disc", "circle", "square", "none"];
 const SLOTS: readonly HeaderSlot[] = [
   "none",
   "author",
