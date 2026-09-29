@@ -100,13 +100,13 @@
     U+FEFF, U+FFFD;
 }
 
-/* The wordmark's face. It draws only the Latin-1 letters. */
+/* The wordmark's face, Faune Display Bold Italic. */
 @font-face {
-  font-family: 'Dirtyline';
-  font-style: normal;
+  font-family: 'Faune';
+  font-style: italic;
   font-display: block;
-  font-weight: 400;
-  src: url('../fonts/Dirtyline-36daysoftype-2022.woff2') format('woff2');
+  font-weight: 700;
+  src: url('../fonts/Faune-Display_Bold_Italic.woff2') format('woff2');
 }
 
 @font-face {
