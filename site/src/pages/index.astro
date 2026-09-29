@@ -15,6 +15,8 @@ import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md
 import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
 import loopDarkMp4 from '../shots/loop-dark.mp4?url';
 import loopLightMp4 from '../shots/loop-light.mp4?url';
+import loopDarkPoster from '../shots/loop-dark.png';
+import loopLightPoster from '../shots/loop-light.png';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/panel.css';
@@ -96,9 +98,10 @@ const leaves = pages
   .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 1] as Shot }] : []));
 
 /** The window picture, at the width the page is being read at. */
+/** Each scheme's loop, and its first frame, which shows until it plays. */
 const loops = {
-  dark: loopDarkMp4,
-  light: loopLightMp4,
+  dark: { clip: loopDarkMp4, poster: (await getImage({ src: loopDarkPoster, format: 'webp' })).src },
+  light: { clip: loopLightMp4, poster: (await getImage({ src: loopLightPoster, format: 'webp' })).src },
 };
 
 const window_ = {
@@ -353,6 +356,7 @@ const swap = {
                     <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
                     <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
                     <img
+                      loading="lazy"
                       src={window_[scheme].w1440.src}
                       width={window_[scheme].w1440.width}
                       height={window_[scheme].w1440.height}
@@ -361,6 +365,9 @@ const swap = {
                   </picture>
                   <video
                     class="loop"
+                    width="1200"
+                    height="750"
+                    poster={loops[scheme].poster}
                     muted
                     loop
                     playsinline
@@ -368,7 +375,7 @@ const swap = {
                     aria-label="Orca in Obsidian: a chapter is written, set as a book, styled in the design panel and in CSS, then exported to PDF."
                     data-loop
                   >
-                    <source src={loops[scheme]} type="video/mp4" />
+                    <source src={loops[scheme].clip} type="video/mp4" />
                   </video>
                 </div>
               ))
@@ -886,22 +893,27 @@ const swap = {
     border-radius: 12px;
     box-shadow: var(--o-win-shadow);
   }
-  /* The loop starts on another frame than the picture, so it fades in over it. */
+  /*
+   * The loop shows its first frame until it plays. Where it does not
+   * play, the picture of the preview and the panel stands in for it, and
+   * a lazy picture that is not shown is not fetched.
+   */
   .loop {
-    position: absolute;
-    inset: 0;
+    display: block;
     width: 100%;
-    height: 100%;
+    height: auto;
     border-radius: 12px;
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    box-shadow: var(--o-win-shadow);
   }
-  .loop.playing {
-    opacity: 1;
+  .frame .shot {
+    display: none;
   }
   @media (prefers-reduced-motion: reduce), (max-width: 639px) {
     .loop {
       display: none;
+    }
+    .frame .shot {
+      display: block;
     }
   }
   .on-light {

@@ -1,8 +1,7 @@
 /**
- * Plays the hero's loop of the window in the scheme on screen, over
- * the picture it starts from. The other scheme's clip is never
- * fetched, and a reader who asks for less motion, or reads on a phone,
- * keeps the picture.
+ * Plays the hero's loop of the window in the scheme on screen. The
+ * other scheme's clip is never fetched, and a reader who asks for less
+ * motion, or reads on a phone, is shown a picture in its place.
  */
 export function startLoop(clips: HTMLVideoElement[]): void {
   const still = matchMedia('(prefers-reduced-motion: reduce), (max-width: 639px)');
@@ -20,9 +19,6 @@ export function startLoop(clips: HTMLVideoElement[]): void {
     }
   };
 
-  for (const clip of clips) {
-    clip.addEventListener('playing', () => clip.classList.add('playing'));
-  }
   still.addEventListener('change', update);
   new MutationObserver(update).observe(document.documentElement, {
     attributes: true,
