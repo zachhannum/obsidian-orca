@@ -24,7 +24,7 @@ export default defineConfig({
   projects: [
     {
       name: "orca",
-      testIgnore: "**/shots.spec.ts",
+      testIgnore: ["**/shots.spec.ts", "**/film.spec.ts"],
       // A project of its own would otherwise put its name in the path,
       // and the snapshots beside the specs were taken without one.
       snapshotPathTemplate:
@@ -54,6 +54,15 @@ export default defineConfig({
           scale: "device",
         },
       },
+    },
+    {
+      // The film's frames are pictures of the window it plays, written
+      // to the folder ORCA_FILM_OUT names in the film's own repo.
+      // Nothing compares them to an earlier run.
+      name: "film",
+      testMatch: "**/film.spec.ts",
+      timeout: 120_000,
+      expect: { timeout: 30_000 },
     },
   ],
   reporter: [
