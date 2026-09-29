@@ -143,6 +143,10 @@ class FakeClient implements EngineClient {
   hit(): Promise<number | null> {
     return Promise.resolve(null);
   }
+
+  names(): Promise<{ classes: string[]; ids: string[] }> {
+    return Promise.resolve({ classes: [], ids: [] });
+  }
 }
 
 /** A client whose replies the test releases, one window at a time. */
@@ -598,6 +602,7 @@ test("a serialized client holds a second render back until the first answers", a
     inspect: () => Promise.resolve(null),
     inspectMarginBox: () => Promise.resolve(null),
     hit: () => Promise.resolve(null),
+    names: () => Promise.resolve({ classes: [], ids: [] }),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -631,6 +636,7 @@ test("a serialized client's queue moves on from a render that failed", async () 
     inspect: () => Promise.resolve(null),
     inspectMarginBox: () => Promise.resolve(null),
     hit: () => Promise.resolve(null),
+    names: () => Promise.resolve({ classes: [], ids: [] }),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -688,6 +694,7 @@ test("a book the engine refuses comes back as an engine error, not re-worded", a
     inspect: () => Promise.reject(new Error("no book")),
     inspectMarginBox: () => Promise.reject(new Error("no book")),
     hit: () => Promise.reject(new Error("no book")),
+    names: () => Promise.resolve({ classes: [], ids: [] }),
     current: 1,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -992,6 +999,7 @@ test("a serialized client answers an inspection while a render is still out", as
     inspect: () => Promise.resolve(answer),
     inspectMarginBox: () => Promise.resolve(answer),
     hit: () => Promise.resolve(7),
+    names: () => Promise.resolve({ classes: [], ids: [] }),
     current: 0,
     stages: { style: 0, lines: 0, flow: 0, paint: 0 },
   };
@@ -1026,6 +1034,33 @@ test("a page's margin boxes are asked about once per page per generation", async
   client.current += 1;
   await session.marginBoxAt(0, 150, 35);
   assert.equal(client.inspected.length, 3 * MARGIN_BOXES.length);
+});
+
+test("an edit that takes a class and an id out of a note takes them out of the names the book writes", async () => {
+  const vault = directoryVault(path.join(root, "fixture"));
+  const engine = await startEngine(engineModule().slice(0), nodeHost());
+  try {
+    const name = "Chapter Fifteen.md";
+    const text = await readText(vault, name);
+    const session = new Session(engine.client, faces());
+    await session.open(openBook({ name, text }));
+
+    const before = await session.names();
+    assert.ok(before.classes.includes("epigraph"));
+    assert.ok(before.ids.includes("entail"));
+
+    const edited = text.replace("{.epigraph}\n", "").replace(" {.plain #entail}", "");
+    assert.notEqual(edited, text);
+    await session.render([{ op: "edit", name, text: edited }]);
+    const after = await session.names();
+    assert.ok(!after.classes.includes("epigraph"));
+    assert.ok(!after.ids.includes("entail"));
+    // The names the edit left alone are still written.
+    assert.ok(after.classes.includes("character"));
+    assert.ok(after.ids.includes("fifteen"));
+  } finally {
+    engine.stop();
+  }
 });
 
 /** A sheet that sets a running head on every page. */

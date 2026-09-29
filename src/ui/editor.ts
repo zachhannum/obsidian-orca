@@ -57,7 +57,7 @@ import {
   type MouseSelectionStyle,
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
-import { SUBSET } from "fleuron";
+import { SUBSET, type Names } from "fleuron";
 import { classHighlighter } from "@lezer/highlight";
 import type { Named } from "@/book/names";
 import type { Place } from "@/style/origin";
@@ -80,6 +80,8 @@ export interface CssEditor {
   fonts(families: readonly string[]): void;
   /** Sets the sections a selector completes from. See {@link selectorCompletion}. */
   sections(named: readonly Named[]): void;
+  /** Sets the classes and ids the book's notes write, which a selector also completes from. */
+  written(names: Names): void;
   /** The line and column of the caret, both counted from 1. */
   caret(): { line: number; column: number };
   /** The warnings inside the rule that starts at a line and column. */
@@ -153,6 +155,22 @@ const sectionNamed = StateField.define<readonly Named[]>({
 /** The transaction that sets the sections a selector completes from. */
 export function sectioned(named: readonly Named[]): TransactionSpec {
   return { effects: renamed.of(named) };
+}
+
+/** Replaces the classes and ids the book's notes write. */
+const rewritten = StateEffect.define<Names>();
+
+const noteNamed = StateField.define<Names>({
+  create: () => ({ classes: [], ids: [] }),
+  update(names, tr) {
+    for (const effect of tr.effects) if (effect.is(rewritten)) return effect.value;
+    return names;
+  },
+});
+
+/** The transaction that sets the classes and ids the book's notes write. */
+export function written(names: Names): TransactionSpec {
+  return { effects: rewritten.of(names) };
 }
 
 /** The `font-family` value being written, and the text typed into it so far. */
@@ -404,8 +422,8 @@ export function namedCompletion(context: CompletionContext): CompletionResult | 
  * The selectors the engine reads, offered where a selector is written:
  * the elements the content tree makes, the pseudo-classes and
  * pseudo-elements, the at-rules and an `@page` rule's page selectors. A
- * class is a role that some section has, and an id is one that the
- * engine gets.
+ * class is a role that some section has or one that a note writes, and
+ * an id is one that the engine gets or one that a note writes.
  */
 export function selectorCompletion(context: CompletionContext): CompletionResult | null {
   const at = spot(context.state, context.pos);
@@ -419,15 +437,16 @@ export function selectorCompletion(context: CompletionContext): CompletionResult
   if (page && lead !== ":") return null;
   if (at.statement.trimStart().startsWith("@") && !page && lead !== "@") return null;
   const named = context.state.field(sectionNamed);
+  const notes = context.state.field(noteNamed);
   const options: Completion[] = page
     ? SUBSET.page.selectors.map((name) => ({ label: `:${name}`, type: "keyword" }))
-    : optionsAfter(lead, named);
+    : optionsAfter(lead, named, notes);
   if (options.length === 0) return null;
   return { from: word.from, options, validFor: /^(::?|[.#@])?[-\w]*$/ };
 }
 
 /** The selector options a lead character opens. */
-function optionsAfter(lead: string, named: readonly Named[]): Completion[] {
+function optionsAfter(lead: string, named: readonly Named[], notes: Names): Completion[] {
   switch (lead) {
     case "@":
       return ["@page", "@font-face"].map((label) => ({ label, type: "keyword" }));
@@ -443,12 +462,19 @@ function optionsAfter(lead: string, named: readonly Named[]): Completion[] {
         ...SUBSET.selectors.pseudo_elements.map(({ name }) => ({ label: name, type: "keyword" })),
       ];
     case ".":
-      return [...new Set(named.map((each) => each.role))].map((role) => ({
-        label: `.${role}`,
+      return [...new Set([...named.map((each) => each.role), ...notes.classes])].map((name) => ({
+        label: `.${name}`,
         type: "class",
       }));
-    case "#":
-      return named.map((each) => ({ label: `#${each.id}`, type: "class", detail: each.role }));
+    case "#": {
+      const sections = new Set(named.map((each) => each.id));
+      return [
+        ...named.map((each) => ({ label: `#${each.id}`, type: "class", detail: each.role })),
+        ...notes.ids
+          .filter((id) => !sections.has(id))
+          .map((id) => ({ label: `#${id}`, type: "class" })),
+      ];
+    }
     default:
       return SUBSET.selectors.elements.map((name) => ({ label: name, type: "type" }));
   }
@@ -541,7 +567,7 @@ function completionIcons(draw: DrawIcon): Parameters<typeof autocompletion>[0] {
 /**
  * The editor's extensions: the CSS grammar, the engine's warnings on
  * the text, and completion from the engine's subset, the book's
- * families and its sections' classes and ids. Nothing here
+ * families, and the classes and ids of its sections and its notes. Nothing here
  * lints. Every flag comes from a render, because the engine is the only
  * linter.
  */
@@ -550,6 +576,7 @@ export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): 
     cssLanguage,
     families,
     sectionNamed,
+    noteNamed,
     autocompletion({
       override: [
         fontCompletion,
@@ -887,6 +914,9 @@ export function mountEditor(
     },
     sections(named) {
       view.dispatch(sectioned(named));
+    },
+    written(names) {
+      view.dispatch(written(names));
     },
     caret() {
       const head = view.state.selection.main.head;

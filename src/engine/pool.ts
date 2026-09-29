@@ -297,6 +297,7 @@ function stamped(client: EngineClient, used: () => void): EngineClient {
     inspect: (node) => client.inspect(node),
     inspectMarginBox: (page, box) => client.inspectMarginBox(page, box),
     hit: (page, x, y) => client.hit(page, x, y),
+    names: () => client.names(),
     get current(): number {
       return client.current;
     },

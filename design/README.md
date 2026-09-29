@@ -151,7 +151,8 @@ its editor around these files and returns a URL. The artboard list and
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
   A selector completes from the classes and ids the book's sections
-  carry, after a `.` or a `#`. Property names, their keywords, the
+  carry, after a `.` or a `#`, and from the ones its notes write, as
+  the engine read them at the last render. Property names, their keywords, the
   elements, pseudo-classes and at-rules complete from the subset the
   engine exports, and from no list orca keeps. A name inside `var(`
   completes from the custom properties the sheet declares, and one
