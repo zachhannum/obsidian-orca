@@ -13,6 +13,8 @@ import { GROUPS, atLevel, type Group } from '@/ui/groups';
 import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
 import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
 import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
+import loopDarkMp4 from '../shots/loop-dark.mp4?url';
+import loopLightMp4 from '../shots/loop-light.mp4?url';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/panel.css';
@@ -94,6 +96,11 @@ const leaves = pages
   .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 1] as Shot }] : []));
 
 /** The window picture, at the width the page is being read at. */
+const loops = {
+  dark: loopDarkMp4,
+  light: loopLightMp4,
+};
+
 const window_ = {
   dark: {
     phone: await shot(phoneDark),
@@ -340,17 +347,30 @@ const swap = {
           <figure class="window">
             {
               (['dark', 'light'] as const).map((scheme) => (
-                <picture class={`shot on-${scheme}`}>
-                  <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
-                  <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
-                  <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
-                  <img
-                    src={window_[scheme].w1440.src}
-                    width={window_[scheme].w1440.width}
-                    height={window_[scheme].w1440.height}
-                    alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
-                  />
-                </picture>
+                <div class={`frame on-${scheme}`}>
+                  <picture class="shot">
+                    <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
+                    <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
+                    <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
+                    <img
+                      src={window_[scheme].w1440.src}
+                      width={window_[scheme].w1440.width}
+                      height={window_[scheme].w1440.height}
+                      alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
+                    />
+                  </picture>
+                  <video
+                    class="loop"
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                    aria-label="Orca in Obsidian: a chapter is written, set as a book, styled in the design panel and in CSS, then exported to PDF."
+                    data-loop
+                  >
+                    <source src={loops[scheme]} type="video/mp4" />
+                  </video>
+                </div>
               ))
             }
             <figcaption>
@@ -589,6 +609,7 @@ const swap = {
     <script>
       import { startDemo, whenSeen, type Demo } from '../scripts/demo';
       import { startFlip } from '../scripts/flip';
+      import { startLoop } from '../scripts/loop';
       import { startSea } from '../scripts/sea';
 
       const sea = document.querySelector<SVGSVGElement>('[data-sea]');
@@ -603,6 +624,7 @@ const swap = {
       if (panel !== null && said !== null) {
         startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
       }
+      startLoop([...document.querySelectorAll<HTMLVideoElement>('[data-loop]')]);
     </script>
   </body>
 </html>
@@ -853,12 +875,34 @@ const swap = {
     align-items: center;
     gap: 30px;
   }
+  .frame {
+    position: relative;
+    width: 100%;
+  }
   .shot img {
     display: block;
     width: 100%;
     height: auto;
     border-radius: 12px;
     box-shadow: var(--o-win-shadow);
+  }
+  /* The loop starts on another frame than the picture, so it fades in over it. */
+  .loop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .loop.playing {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce), (max-width: 639px) {
+    .loop {
+      display: none;
+    }
   }
   .on-light {
     display: none;
