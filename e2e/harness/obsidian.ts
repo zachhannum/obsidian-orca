@@ -15,7 +15,7 @@ import {
   type Page,
 } from "@playwright/test";
 import type { App, WorkspaceLeaf } from "obsidian";
-import { COPY, OPENED } from "./launch";
+import { COPY, OPENED, PLUGIN } from "./launch";
 
 /** The two pieces of the app the API does not declare. */
 interface Commands {
@@ -293,6 +293,35 @@ export class Obsidian {
     await this.page.waitForFunction(
       () => window.app?.workspace.layoutReady === true,
       undefined,
+      { timeout: APPEARING },
+    );
+  }
+
+  /**
+   * Turns Obsidian's mobile emulation on or off. The app keeps the
+   * setting in the renderer's storage and reloads the window, so orca
+   * loads again on the paths it takes on a phone. The desktop app's
+   * Node is still there under emulation.
+   */
+  async emulateMobile(on: boolean): Promise<void> {
+    await this.page.evaluate(async () => {
+      await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
+    });
+    const loaded = this.page.waitForEvent("load");
+    // The app reloads the window inside the call, so the call is left
+    // to run after the evaluate returns.
+    await this.page.evaluate((mobile) => {
+      window.setTimeout(() => {
+        (window.app as unknown as { emulateMobile(on: boolean): void }).emulateMobile(mobile);
+      });
+    }, on);
+    await loaded;
+    await this.page.waitForFunction(
+      ({ mobile, id }) =>
+        window.app?.workspace.layoutReady === true &&
+        window.app.plugins.plugins[id] !== undefined &&
+        document.body.classList.contains("emulate-mobile") === mobile,
+      { mobile: on, id: PLUGIN },
       { timeout: APPEARING },
     );
   }

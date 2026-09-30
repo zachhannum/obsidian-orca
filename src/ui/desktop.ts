@@ -18,8 +18,9 @@ interface SaveDialog {
   }): Promise<{ canceled: boolean; filePath?: string }>;
 }
 
+/** The desktop app hands a plugin Node's own `require` on the window. */
 interface Desktop {
-  require?: (id: string) => { remote?: { dialog?: SaveDialog } } | undefined;
+  require?: (id: string) => unknown;
 }
 
 /**
@@ -31,27 +32,28 @@ export function onDesktop(): boolean {
   return Platform.isDesktopApp && Platform.isDesktop;
 }
 
-let loading: Promise<Node> | undefined;
-
-/** Node's modules, loaded on the first call rather than with the plugin. */
+/**
+ * Node's modules, loaded on the first call rather than with the plugin.
+ * The renderer resolves no `node:` module through `import()`, so they
+ * come through the app's `require`.
+ */
 export async function node(): Promise<Node> {
   if (!Platform.isDesktop) throw new Error("Node is only on the desktop app");
-  loading ??= Promise.all([
-    import("node:fs/promises"),
-    import("node:path"),
-    import("node:os"),
-  ]).then(([files, paths, machine]) => ({
-    files: files as Files,
-    paths: paths as Paths,
-    machine: machine as Machine,
-  }));
-  return loading;
+  const load = (window as unknown as Desktop).require;
+  if (load === undefined) throw new Error("the app gives the plugin no Node");
+  return Promise.resolve({
+    files: load("node:fs/promises") as Files,
+    paths: load("node:path") as Paths,
+    machine: load("node:os") as Machine,
+  });
 }
 
 /** The save dialog, or undefined when the app gives the plugin no Electron. */
 function saveDialog(): SaveDialog | undefined {
-  const desktop = window as unknown as Desktop;
-  return desktop.require?.("electron")?.remote?.dialog;
+  const electron = (window as unknown as Desktop).require?.("electron") as
+    | { remote?: { dialog?: SaveDialog } }
+    | undefined;
+  return electron?.remote?.dialog;
 }
 
 /**
