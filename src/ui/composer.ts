@@ -582,6 +582,11 @@ export interface Progress {
   read: number;
   /** The sections the book has. */
   of: number;
+  /**
+   * The part of the work under way. The engine reports nothing
+   * while it lays the book out, so `laying` has no count to show.
+   */
+  phase: "reading" | "laying";
 }
 
 /** The vault and the engine, as much of them as setting a book takes. */
@@ -742,6 +747,7 @@ export class Composer {
       again: carried !== undefined,
       read,
       of: present.length,
+      phase: "reading",
     };
     opening.told?.(progress);
 
@@ -765,6 +771,7 @@ export class Composer {
       },
       (at) => assets.take(at),
     );
+    opening.told?.({ ...progress, read, phase: "laying" });
     // The url a page draws an embed from is made from the bytes that
     // crossed, so the preview decodes what the layout was set from.
     for (const image of images) assets.image(image.url, image);

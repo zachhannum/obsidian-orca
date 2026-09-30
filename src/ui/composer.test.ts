@@ -377,6 +377,25 @@ test("a book being set reports the sections it has read and the entry it opens a
   assert.equal(last.read, 8);
 });
 
+test("a book being set reads its notes, then lays out its pages with every note read", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client));
+  const told: Progress[] = [];
+
+  await composer.open(BOOK, { told: (at) => told.push(at) });
+
+  const phases = told.map((at) => at.phase);
+  const laying = phases.indexOf("laying");
+  // Every report before the last note is read counts; the one after it
+  // is the layout, which has no count of its own.
+  assert.ok(laying > 0);
+  assert.ok(phases.slice(0, laying).every((phase) => phase === "reading"));
+  assert.deepEqual(phases.slice(laying), ["laying"]);
+  const read = told.slice(0, laying).map((at) => at.read);
+  assert.deepEqual(read, [...read].sort((a, b) => a - b));
+  assert.equal(told[laying]?.read, told[laying]?.of);
+});
+
 test("a book already set is handed back rather than typeset again", async () => {
   const client = new FakeClient();
   const composer = new Composer(await setting(client));
