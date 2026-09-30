@@ -1,8 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { language } from "@codemirror/language";
-import { CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
-import { EditorState } from "@codemirror/state";
+import { foldable, language } from "@codemirror/language";
+import {
+  acceptCompletion,
+  CompletionContext,
+  insertBracket,
+  type CompletionResult,
+} from "@codemirror/autocomplete";
+import {
+  indentLess,
+  indentMore,
+  insertNewlineAndIndent,
+  toggleComment,
+} from "@codemirror/commands";
+import { selectNextOccurrence } from "@codemirror/search";
+import { EditorState, type Transaction } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
+import { SUBSET, type Names } from "fleuron";
 import { OWN_SHEET } from "@/style/sheet";
 import {
   cssExtensions,
@@ -14,6 +28,12 @@ import {
   inserted,
   revealed,
   ruleExtent,
+  propertyCompletion,
+  sectioned,
+  selectorCompletion,
+  valueCompletion,
+  namedCompletion,
+  written,
   skippedIn,
   type Flag,
 } from "@/ui/editor";
@@ -66,8 +86,7 @@ test("a font-family value completes from the fonts the book carries", () => {
   ]);
   // A name of more than one word goes in quoted, so it reads as one family.
   assert.equal(offered?.options[1]?.apply, '"Junicode Cond"');
-  // Only font-family completes. The engine is the only linter, so a
-  // property it refuses is a warning rather than a missing option.
+  // Only a font-family value completes a family.
   assert.equal(complete(doc.indexOf("font-size: ") + "font-size: ".length), null);
   assert.equal(complete(0), null);
 
@@ -80,6 +99,143 @@ test("a font-family value completes from the fonts the book carries", () => {
   );
   assert.deepEqual(narrowed?.options.map((option) => option.label), ["Junicode Cond"]);
   assert.equal(typing.sliceDoc(narrowed?.from, narrowed?.to), '"Junicode C');
+});
+
+type Source = (context: CompletionContext) => CompletionResult | null;
+
+/** The labels a source offers at the end of the text, as typing asks rather than a key. */
+function offered(
+  source: Source,
+  doc: string,
+  at = doc.length,
+  notes: Names = { classes: [], ids: [] },
+): string[] | undefined {
+  const named = [
+    { role: "title-page", id: "title-page" },
+    { role: "chapter", id: "the-harbor" },
+    { role: "chapter", id: "the-lighthouse" },
+  ] as const;
+  const state = editing(doc).update(sectioned(named), written(notes)).state;
+  return source(new CompletionContext(state, at, false))?.options.map((option) => option.label);
+}
+
+test("a property name completes, and the names offered are the ones the pinned engine sets", () => {
+  const names = (list: readonly { name: string }[]): string[] => list.map((each) => each.name);
+  assert.deepEqual(offered(propertyCompletion, "p {\n  font-s"), names(SUBSET.properties));
+  // An `@page` body declares the page's own properties and opens the
+  // margin boxes the engine draws, and no box it drops.
+  const page = offered(propertyCompletion, "@page :left {\n  mar");
+  assert.deepEqual(page?.slice(0, SUBSET.page.properties.length), names(SUBSET.page.properties));
+  assert.ok(page?.includes("@top-center"));
+  assert.ok(!page?.includes("@left-middle"));
+  assert.ok(offered(propertyCompletion, "@page {\n  @bottom-center {\n    cont")?.includes("content"));
+  assert.deepEqual(
+    offered(propertyCompletion, "@font-face {\n  sr"),
+    names(SUBSET.font_face.descriptors),
+  );
+  // A value, a selector and a block the engine does not read offer no name.
+  assert.equal(offered(propertyCompletion, "p {\n  color: re"), undefined);
+  assert.equal(offered(propertyCompletion, "p"), undefined);
+  assert.equal(offered(propertyCompletion, "@media print {\n  co"), undefined);
+});
+
+test("the values of the property at the caret complete", () => {
+  assert.deepEqual(offered(valueCompletion, "p {\n  font-style: "), [
+    "normal",
+    "italic",
+    "oblique",
+    "var()",
+  ]);
+  assert.ok(offered(valueCompletion, "p {\n  color: re")?.includes("rebeccapurple"));
+  assert.ok(offered(valueCompletion, "p {\n  font-family: Junicode, s")?.includes("serif"));
+  const size = offered(valueCompletion, "@page {\n  size: ");
+  assert.ok(size?.includes("a5") && size.includes("landscape"));
+  const content = offered(valueCompletion, "@page {\n  @top-center {\n    content: ");
+  assert.ok(content?.includes("counter()") && content.includes("upper-roman"));
+  // A hex colour and a number's unit are not keywords.
+  assert.equal(offered(valueCompletion, "p {\n  color: #ff"), undefined);
+  assert.equal(offered(valueCompletion, "p {\n  font-size: 1.5e"), undefined);
+  // A property the engine does not set has no values to offer.
+  assert.equal(offered(valueCompletion, "p {\n  text-wrap: "), undefined);
+});
+
+test("a completion carries its syntax as detail, under the label rather than beside the list", () => {
+  const state = editing("p {\n  font-s");
+  const options = propertyCompletion(new CompletionContext(state, state.doc.length, false))?.options;
+  const size = options?.find((option) => option.label === "font-size");
+  assert.equal(size?.detail, SUBSET.properties.find((each) => each.name === "font-size")?.syntax);
+  assert.equal(size?.info, undefined);
+});
+
+test("a name inside var() completes from the custom properties the sheet declares", () => {
+  const sheet = ":root {\n  --accent: teal;\n  /* --hidden: red; */\n}\np {\n  color: var(--a";
+  assert.deepEqual(offered(namedCompletion, sheet), ["--accent"]);
+  // Inside var() the property's own keywords give way to the names.
+  assert.equal(offered(valueCompletion, sheet), undefined);
+  assert.equal(offered(namedCompletion, "p {\n  color: re"), undefined);
+});
+
+test("a name inside string() completes from the names the sheet's string-set declarations set", () => {
+  const sheet =
+    'h1 {\n  string-set: chapter content(), part "a, b";\n}\nh2 { string-set: none; }\n' +
+    "@page {\n  @top-center {\n    content: string(";
+  assert.deepEqual(offered(namedCompletion, sheet), ["chapter", "part"]);
+  assert.equal(offered(valueCompletion, sheet), undefined);
+});
+
+test("a selector completes from the ids and the classes the book's sections carry", () => {
+  const selector = (doc: string, at?: number): string[] | undefined =>
+    offered(selectorCompletion, doc, at);
+  // A class is a role some section has, each once, and an id is each section's.
+  assert.deepEqual(selector("section."), [".title-page", ".chapter"]);
+  assert.deepEqual(selector("p { a: b }\n#the"), ["#title-page", "#the-harbor", "#the-lighthouse"]);
+  assert.deepEqual(selector("h1, .ch"), [".title-page", ".chapter"]);
+  // Inside a rule's braces a `#` starts a colour, not a selector, closed or not.
+  assert.equal(selector("p {\n  color: #ff\n}", "p {\n  color: #ff".length), undefined);
+  assert.equal(selector("p {\n  color: #ff"), undefined);
+  assert.equal(selector("@page {\n  @top-left { content: #x"), undefined);
+  assert.equal(selector("/* .ch"), undefined);
+});
+
+/** The names Chapter Fifteen in the fixture vault writes, one of them also a section's role. */
+const NOTES: Names = { classes: ["chapter", "chapter-opening", "epigraph"], ids: ["fifteen", "the-harbor"] };
+
+test("after a `.`, a selector completes from the classes the book's notes write, beside the section roles", () => {
+  // A name that is a role and a note's class is offered once.
+  assert.deepEqual(offered(selectorCompletion, "blockquote.", undefined, NOTES), [
+    ".title-page",
+    ".chapter",
+    ".chapter-opening",
+    ".epigraph",
+  ]);
+});
+
+test("after a `#`, a selector completes from the ids the book's notes write, beside the section ids", () => {
+  // An id that a section and a note both carry is offered once, as the section's.
+  assert.deepEqual(offered(selectorCompletion, "#", undefined, NOTES), [
+    "#title-page",
+    "#the-harbor",
+    "#the-lighthouse",
+    "#fifteen",
+  ]);
+});
+
+test("a selector completes the elements, pseudo-classes and at-rules the engine reads", () => {
+  const selector = (doc: string): string[] | undefined => offered(selectorCompletion, doc);
+  assert.deepEqual(selector("h"), SUBSET.selectors.elements);
+  assert.ok(selector("p:first")?.includes(":first-child"));
+  assert.deepEqual(
+    selector("p::"),
+    SUBSET.selectors.pseudo_elements.map(({ name }) => name),
+  );
+  assert.deepEqual(selector("@"), ["@page", "@font-face"]);
+  assert.deepEqual(
+    selector("@page :"),
+    SUBSET.page.selectors.map((name) => `:${name}`),
+  );
+  // An at-rule opens a statement, and a page name is not an element.
+  assert.equal(selector("p @"), undefined);
+  assert.equal(selector("@page ch"), undefined);
 });
 
 test("every flag in the editor comes from a warning the engine sent", () => {
@@ -162,8 +318,113 @@ test("an added rule goes in on its own lines with the caret inside it, as typing
   assert.equal(set.selection.main.head, "@page :left {\n  @top-left {\n    ".length);
 });
 
+/**
+ * Runs a command on a state and hands back the state it leaves. The
+ * target is typed `never` because `@codemirror/commands` types it
+ * against its own copy of `@codemirror/state`.
+ */
+function run(state: EditorState, command: (target: never) => boolean): EditorState {
+  let after = state;
+  const dispatch = (tr: Transaction): void => {
+    after = tr.state;
+  };
+  const ran = command({ state, dispatch } as never);
+  assert.ok(ran);
+  return after;
+}
+
+/** A state with the caret at a place, or a selection between two. */
+function at(doc: string, anchor: number, head = anchor): EditorState {
+  return editing(doc).update({ selection: { anchor, head } }).state;
+}
+
+/** Types one character as the author does, so the filters that watch input run. */
+function typed(state: EditorState, text: string): EditorState {
+  const bracket = insertBracket(state, text);
+  if (bracket !== null) return state.update(bracket).state;
+  return state.update(state.replaceSelection(text), { userEvent: "input.type" }).state;
+}
+
+test("a bracket or quote typed closes after the caret, and its closing character steps over it", () => {
+  for (const [open, close] of [["{", "}"], ["(", ")"], ["[", "]"], ['"', '"'], ["'", "'"]] as const) {
+    const opened = typed(at("", 0), open);
+    assert.equal(opened.doc.toString(), `${open}${close}`, open);
+    assert.equal(opened.selection.main.head, 1, open);
+    const closed = typed(opened, close);
+    assert.equal(closed.doc.toString(), `${open}${close}`, close);
+    assert.equal(closed.selection.main.head, 2, close);
+  }
+});
+
+test("Enter inside a rule indents the new line, and a } typed on an indented line outdents it", () => {
+  const inside = run(at("p {", 3), insertNewlineAndIndent);
+  assert.equal(inside.doc.toString(), "p {\n  ");
+  const declared = typed(typed(inside, "a"), ";");
+  const next = run(declared, insertNewlineAndIndent);
+  assert.equal(next.doc.toString(), "p {\n  a;\n  ");
+  assert.equal(typed(next, "}").doc.toString(), "p {\n  a;\n}");
+});
+
+test("Tab indents the selected lines and Shift-Tab outdents them, after the open option", () => {
+  const doc = "a: b;\nc: d;";
+  const indented = run(at(doc, 0, doc.length), indentMore);
+  assert.equal(indented.doc.toString(), "  a: b;\n  c: d;");
+  assert.equal(run(indented, indentLess).doc.toString(), doc);
+  // The first binding Tab reaches takes an option when the list is open.
+  const tab = editing()
+    .facet(keymap)
+    .flat()
+    .find((binding) => binding.key === "Tab");
+  assert.equal(tab?.run, acceptCompletion);
+});
+
+test("a rule folds from the line that opens it", () => {
+  const state = editing();
+  const first = state.doc.line(1);
+  assert.deepEqual(foldable(state, first.from, first.to), { from: 3, to: CSS.length - 1 });
+  const inner = state.doc.line(2);
+  assert.equal(foldable(state, inner.from, inner.to), null);
+});
+
+test("Mod-D selects the next copy of the selection", () => {
+  const doc = "p { a: b; }\nh1 { a: c; }";
+  const state = run(at(doc, 4, 5), selectNextOccurrence);
+  assert.deepEqual(
+    state.selection.ranges.map(({ from, to }) => [from, to]),
+    [
+      [4, 5],
+      [17, 18],
+    ],
+  );
+});
+
+test("Mod-/ wraps the selected lines in a comment, and takes it out of lines already inside one", () => {
+  const doc = "p {\n  a: b;\n  c: d;\n}";
+  const lines = at(doc, doc.indexOf("a"), doc.indexOf("d;") + 2);
+  const commented = run(lines, toggleComment);
+  assert.equal(commented.doc.toString(), "p {\n  /* a: b;\n  c: d; */\n}");
+  assert.equal(run(commented, toggleComment).doc.toString(), doc);
+});
+
 // What this tier does not cover: the editor on a page, which has no
 // DOM here, and the card a hover draws. The e2e suite types into it in
 // Obsidian and waits on the write, the render, the squiggle and its
 // card. Nor the font the engine carries, which no face registers and
-// the completion does not offer.
+// the completion does not offer. The editing keys run here as commands
+// on a state, not as keys pressed. The bracket highlight, the fold
+// gutter, the search panel, the selection matches and the Alt mouse
+// need a view, and the e2e suite presses them in Obsidian. Neither
+// tier presses them on a keyboard layout other than the runner's.
+//
+// The completion reads the engine's subset for names and keywords,
+// not its grammar. It offers no value inside a function, except the
+// names inside `var()` and `string()` and the counter styles that a
+// `content` value takes anywhere, and no unit after a number. It does
+// not offer `!important` or a page name after `@page`. A class or an
+// id that a note writes is the engine's answer after the last render,
+// so a name typed into a note is offered once that edit renders. The
+// option does not say which note writes the name, and this tier fakes
+// the answer rather than ask the engine. The e2e suite opens the list
+// in Obsidian to take a family with Tab and to find a class a chapter
+// edit wrote, so the detail line under a label and the Obsidian icon
+// beside it go untested.

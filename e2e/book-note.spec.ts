@@ -39,7 +39,7 @@ test("a note with the key opens in orca's view, and `Open as markdown` returns i
   await expect(note.page).toContainText("Pride and Prejudice");
 });
 
-test("a book from a newer orca does not open, names both formats, and offers `Open as markdown`", async ({
+test("a book from a newer orca does not open, says a newer version made it, and offers `Open as markdown`", async ({
   note,
   vault,
 }) => {
@@ -47,8 +47,10 @@ test("a book from a newer orca does not open, names both formats, and offers `Op
 
   await note.open(NEWER);
 
-  await expect(note.refused).toContainText("format 1");
-  await expect(note.refused).toContainText("format 2");
+  await expect(note.refused).toContainText(
+    "This book was made by a newer version of Orca than the one currently installed in this vault.",
+  );
+  await expect(note.refused).toContainText("Update Orca to open it.");
   // The book itself did not open.
   await expect(note.metadata("title")).toHaveCount(0);
 
@@ -75,9 +77,9 @@ test("an edit aimed at a book its view cannot write is refused out loud", async 
   const said = await obsidian.notices(async () => {
     await obsidian.fileMenu("Acknowledgements.md", "Add to book");
     await navigator.pick("Brobdingnag");
-    await expect(obsidian.notice()).toContainText("the book was not edited");
+    await expect(obsidian.notice()).toContainText("could not save the change");
   });
 
-  expect(said.join(" ")).toContain("the book was not edited");
+  expect(said.join(" ")).toContain("could not save the change");
   expect(await vault.read(AHEAD)).toEqual(newer("The Voyage to Brobdingnag"));
 });

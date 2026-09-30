@@ -12,7 +12,7 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import { BookError } from "@/book/note";
-import type { Section } from "@/book/order";
+import { entryName, type Section } from "@/book/order";
 import {
   chapters,
   placeOf,
@@ -42,6 +42,7 @@ import {
   isViewMode,
   nextPage,
   previousPage,
+  pressSheet,
   showPages,
   spanAt,
   turnedTo,
@@ -51,6 +52,7 @@ import {
   type Viewing,
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
+import { headingOn, headingsOf, outline, type Showing } from "@/ui/outline";
 import {
   INSPECT_OFF,
   clicked,
@@ -65,6 +67,7 @@ import {
   type Pin,
   type Target,
 } from "@/ui/inspect";
+import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
@@ -78,6 +81,13 @@ const NOWHERE = "-";
 
 /** The narrowest the warnings are worth hanging under the count, in pixels. */
 const NARROW = 240;
+
+/**
+ * The pages that turn in the book drawn while it is laid out, by the
+ * second each starts at. Each lands on the left page exactly, so the
+ * loop back to the right is not seen.
+ */
+const BOOK_TURNS = [0, -0.6, -1.2];
 
 /** The place in the manuscript a page opens at. */
 export interface Opens {
@@ -106,6 +116,12 @@ export interface PreviewState {
    * restored at startup opens at the folio instead.
    */
   over?: Shown[];
+  /**
+   * Set when a click on a link asks for the folio. The turn goes into
+   * the leaf's history, so Obsidian's back and forward return across it.
+   * The workspace never keeps it.
+   */
+  followed?: boolean;
 }
 
 /** The plugin, as much of it as the preview reaches: it owns the other leaves. */
@@ -138,6 +154,16 @@ export interface PreviewHandoff {
   exports(book: string): void;
   /** Adds a new chapter at the end of the book's body. */
   adds(book: string): void;
+  /**
+   * The deepest heading level a navigator lists, or nothing when none
+   * lists headings, which is the only reason to ask where they are.
+   */
+  outlined(): number | undefined;
+  /**
+   * Told the entry and the heading the painted span falls under, and
+   * nothing when the view closes.
+   */
+  showing(view: PreviewView, showing: Showing | undefined): void;
 }
 
 /** A box the pointer found, and the generation the answer is from. */
@@ -212,6 +238,8 @@ export class PreviewView extends ItemView {
   private named: number | undefined;
   /** The chapter the reader last turned to, which the span it opens on is named for. */
   private turnedTo: number | undefined;
+  /** The line of the heading the reader last turned to, which wins a page it shares. */
+  private askedLine: number | undefined;
   /** The first page being read, counting from 0. */
   private at = 0;
   /** The pages the painted span put on screen. */
@@ -282,8 +310,8 @@ export class PreviewView extends ItemView {
   /** The last pointer position, which the next animation frame asks about. */
   private pointer: { x: number; y: number } | undefined;
   private framing = false;
-  /** The trim of each painted page, counting from 0, in points. */
-  private trims = new Map<number, Box>();
+  /** Each painted page, by its place in the book counting from 0. */
+  private painted = new Map<number, Page>();
   /** Raised on each paint and resize, so the overlay measures the pages again. */
   private measured = 0;
 
@@ -321,6 +349,8 @@ export class PreviewView extends ItemView {
     await super.setState(state, result);
     const wanted = readState(state);
     const changed = wanted.book !== this.state.book;
+    result.history =
+      wanted.followed === true && !changed && wanted.folio !== this.state.folio;
     const reviewed = wanted.view !== undefined && wanted.view !== this.mode;
     if (wanted.view !== undefined) this.mode = wanted.view;
     this.over = wanted.over;
@@ -432,7 +462,9 @@ export class PreviewView extends ItemView {
     this.chapter = undefined;
     this.turns = [];
     this.named = undefined;
+    this.askedLine = undefined;
     this.reading(undefined);
+    this.handoff.showing(this, undefined);
     this.back = undefined;
     this.on = undefined;
     this.edit?.remove();
@@ -575,9 +607,25 @@ export class PreviewView extends ItemView {
    * and answers whether it turned. A section the book did not set
    * turns nothing.
    */
-  async turnToSection(at: number): Promise<boolean> {
+  async turnToSection(at: number, line?: number): Promise<boolean> {
     const chapter = this.turns.find((turn) => turn.at === at);
-    return chapter === undefined ? false : await this.turnToPlace(chapter);
+    if (chapter === undefined) return false;
+    const page = line === undefined ? undefined : await this.opensLine(at, line);
+    if (line === undefined || page === undefined) return await this.turnToPlace(chapter);
+    this.turnedTo = at;
+    this.askedLine = line;
+    this.namesAt(at);
+    await this.turn(page);
+    return true;
+  }
+
+  /** The page a line of a section's note opens on, or nothing where the engine set it on none. */
+  private async opensLine(at: number, line: number): Promise<number | undefined> {
+    try {
+      return (await this.composed?.linesOpen(at, [line]))?.[0];
+    } catch {
+      return undefined;
+    }
   }
 
   private async turnToPlace(chapter: Chapter): Promise<boolean> {
@@ -587,6 +635,7 @@ export class PreviewView extends ItemView {
     // that also carries the one before it is still named for the one
     // the reader asked for, and the next turn command steps from it.
     this.turnedTo = chapter.at;
+    this.askedLine = undefined;
     this.namesAt(chapter.at);
     await this.turn(at);
     return true;
@@ -645,12 +694,13 @@ export class PreviewView extends ItemView {
     // sit in is what a Tab or a click on a page reaches.
     well.tabIndex = 0;
     this.well = well;
-    this.report("Setting the book");
+    this.report("Loading preview…");
     const surface = well.createDiv({ cls: "orca-preview-sheets" });
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
     this.overlay = mountOverlay(surface);
     this.inspects(surface);
+    this.followsLinks(surface);
 
     this.registerDomEvent(folio, "change", () => {
       this.typed(folio.value);
@@ -787,6 +837,7 @@ export class PreviewView extends ItemView {
       this.pinning += 1;
       this.pinText = undefined;
     }
+    if (next.on) this.surface?.removeClass("is-on-link");
     this.inspectAction?.toggleClass("is-active", next.on);
     this.inspectAction?.setAttribute("aria-pressed", String(next.on));
     this.drawsOverlay();
@@ -811,7 +862,7 @@ export class PreviewView extends ItemView {
               generation: pin.generation,
             },
       unit: this.handoff.unit(),
-      trims: this.trims,
+      trims: this.painted,
       measured: this.measured,
     });
   }
@@ -855,6 +906,63 @@ export class PreviewView extends ItemView {
       event.preventDefault();
       this.setInspecting(next);
     });
+  }
+
+  /**
+   * Follows the link under a click, and shows the link cursor over one.
+   * Inspect mode takes every click for itself, and a click that ends a
+   * drag keeps the selection it made.
+   */
+  private followsLinks(surface: HTMLElement): void {
+    this.registerDomEvent(surface, "pointermove", (event) => {
+      const over =
+        !this.inspecting.on && this.linkAt(event.clientX, event.clientY) !== undefined;
+      surface.toggleClass("is-on-link", over);
+    });
+    this.registerDomEvent(surface, "pointerleave", () => {
+      surface.removeClass("is-on-link");
+    });
+    this.registerDomEvent(surface, "click", (event) => {
+      if (this.inspecting.on || event.defaultPrevented) return;
+      if (surface.ownerDocument.getSelection()?.isCollapsed === false) return;
+      const follow = this.linkAt(event.clientX, event.clientY);
+      if (follow === undefined) return;
+      event.preventDefault();
+      // Obsidian hands a url the window opens to the system's browser.
+      if (follow.kind === "open") surface.win.open(follow.url);
+      else void this.follows(follow.page);
+    });
+  }
+
+  /**
+   * Turns to the page a link names through the leaf, which records the
+   * turn. A leaf records history only for a navigation view, and one of
+   * those is where Obsidian opens the next note, so the preview is one
+   * only for this call.
+   */
+  private async follows(page: number): Promise<void> {
+    this.navigation = true;
+    try {
+      await this.leaf.setViewState({
+        type: PREVIEW_VIEW,
+        state: { ...this.getState(), folio: page + 1, followed: true },
+      });
+    } finally {
+      this.navigation = false;
+    }
+  }
+
+  /** The link under a point on the screen, on whichever painted page is there. */
+  private linkAt(x: number, y: number): Follow | undefined {
+    const surface = this.surface;
+    if (surface === undefined) return undefined;
+    for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
+      const page = this.painted.get(Number(sheet.dataset["page"]) - 1);
+      if (page === undefined) continue;
+      const point = pointOn(sheet.getBoundingClientRect(), page, x, y);
+      if (point !== undefined) return followAt(page, point.x, point.y);
+    }
+    return undefined;
   }
 
   private async hovers(at: { x: number; y: number }): Promise<void> {
@@ -918,7 +1026,7 @@ export class PreviewView extends ItemView {
     if (session === undefined || surface === undefined) return undefined;
     for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
       const page = Number(sheet.dataset["page"]) - 1;
-      const trim = this.trims.get(page);
+      const trim = this.painted.get(page);
       if (trim === undefined) continue;
       const point = pointOn(sheet.getBoundingClientRect(), trim, at.x, at.y);
       if (point === undefined) continue;
@@ -1075,8 +1183,8 @@ export class PreviewView extends ItemView {
       }
       this.report(
         cause instanceof EngineError || cause instanceof BookError
-          ? cause.message
-          : "The book did not set",
+          ? sentence(cause.message)
+          : "The preview could not load",
       );
     }
   }
@@ -1253,8 +1361,7 @@ export class PreviewView extends ItemView {
       this.empty();
       return;
     }
-    this.message?.remove();
-    this.message = undefined;
+    this.post(undefined, false);
     this.paint(session, reading, wanted, led);
   }
 
@@ -1293,21 +1400,22 @@ export class PreviewView extends ItemView {
     this.asked = reading.at + on;
     const read = reading.pages[on];
     this.blocks = read === undefined ? [] : heldOn(read);
-    showPages(surface, {
-      mode: this.mode,
-      leaves,
-      generation: session.generation,
-      stages: session.stages,
-      pages: reading.length,
-      note: this.showing ?? "",
-      columns: SEATS[this.mode] ?? this.columns,
-      rows: this.mode === "grid" ? this.rows : 1,
-    });
-    this.trims = new Map(
-      reading.pages.map((page, index) => [
-        reading.at + index,
-        { width: page.width, height: page.height },
-      ]),
+    showPages(
+      surface,
+      {
+        mode: this.mode,
+        leaves,
+        generation: session.generation,
+        stages: session.stages,
+        pages: reading.length,
+        note: this.showing ?? "",
+        columns: SEATS[this.mode] ?? this.columns,
+        rows: this.mode === "grid" ? this.rows : 1,
+      },
+      pressSheet,
+    );
+    this.painted = new Map(
+      reading.pages.map((page, index) => [reading.at + index, page]),
     );
     this.measured += 1;
     if (this.hovered?.generation !== session.generation) this.hovered = undefined;
@@ -1533,6 +1641,36 @@ export class PreviewView extends ItemView {
     // verso.
     const opens = sectionOn(reading.pages.slice(0, 1), places);
     if (opens !== undefined) this.reads(typeset.sections[opens]);
+    await this.marksShown(typeset, reading, naming);
+  }
+
+  /**
+   * Tells the navigator the entry the span is named for, and the
+   * heading in it the span falls under. The engine answers where each
+   * heading was set.
+   */
+  private async marksShown(typeset: Typeset, reading: Reading, naming: number): Promise<void> {
+    const book = this.book;
+    const at = this.named;
+    if (book === undefined || at === undefined) return;
+    const section = typeset.sections[at];
+    const deepest = this.handoff.outlined();
+    const cached =
+      deepest !== undefined && section?.kind === "note"
+        ? outline(headingsOf(this.app, section.path, deepest), entryName(section.entry))
+        : [];
+    const lines = cached.map((heading) => heading.line);
+    const [pages, opens] =
+      lines.length === 0
+        ? [[], undefined]
+        : await Promise.all([
+            typeset.linesOpen(at, lines).catch(() => lines.map(() => undefined)),
+            this.opensSection(at),
+          ]);
+    if (naming !== this.naming) return;
+    const span = { first: reading.at, last: reading.at + reading.pages.length - 1 };
+    const line = headingOn(pages, lines, span, this.askedLine, opens);
+    this.handoff.showing(this, { book, at, line });
   }
 
   /** Puts the chapter control on one section of the reading order. */
@@ -1650,37 +1788,46 @@ export class PreviewView extends ItemView {
   private setting(progress: Progress): void {
     const well = this.well;
     if (well === undefined) return;
-    this.message?.remove();
+    // The banner is drawn once a run and told each report after, so the
+    // pages keep turning rather than start over with every chapter.
+    const drawn = this.message;
+    const banner =
+      drawn?.dataset["testid"] === "orca-setting" && drawn.hasClass("mod-again") === progress.again
+        ? drawn
+        : this.settingBanner(well, progress);
+    banner.dataset["phase"] = progress.phase;
+    // The pages from before stay under a book set again, so only a
+    // first setting says where the work is.
+    const note = banner.querySelector(".orca-preview-setting-note");
+    note?.setText(
+      progress.phase === "laying"
+        ? "Laying out pages"
+        : `${String(progress.read)} of ${String(progress.of)} chapters`,
+    );
+  }
+
+  /** The banner of a book being set, with the book whose pages turn. */
+  private settingBanner(well: HTMLElement, progress: Progress): HTMLElement {
     const banner = well.createDiv({ cls: "orca-preview-setting" });
     banner.dataset["testid"] = "orca-setting";
     // A book being set for the first time has no pages yet. One being
     // set again has the pages from before, and they stay under it.
     if (progress.again) banner.addClass("mod-again");
-    setIcon(
-      banner.createDiv({ cls: "orca-preview-setting-icon" }),
-      progress.again ? "rotate-cw" : "book",
-    );
-    const name = banner.createDiv({ cls: "orca-preview-setting-name" });
-    name.append("Setting ", name.createEl("i", { text: progress.name }));
-    if (progress.again) name.append(" again");
-    const bar = banner.createDiv({ cls: "orca-preview-progress" });
-    const fill = bar.createDiv({ cls: "orca-preview-progress-fill" });
-    const done = progress.of === 0 ? 0 : progress.read / progress.of;
-    fill.style.width = `${String(Math.round(done * 100))}%`;
-    const note = banner.createDiv({ cls: "orca-preview-setting-note" });
-    if (progress.again) {
-      note.append("nothing you wrote was lost");
-      note.createEl("br");
-      note.append(`you will come back to page ${String(this.at + 1)}`);
-    } else {
-      note.append(`${String(progress.read)} chapters of ${String(progress.of)}`);
-      if (progress.opening !== undefined) {
-        note.createEl("br");
-        note.append(`it will open at ${progress.opening}`);
-      }
+    // The engine reports nothing while it lays the book out, so the
+    // wait is a book whose pages turn rather than a bar that fills.
+    const book = banner.createDiv({ cls: "orca-preview-book" });
+    book.createDiv({ cls: "orca-preview-book-cover" });
+    book.createDiv({ cls: "orca-preview-book-page mod-left" });
+    book.createDiv({ cls: "orca-preview-book-page mod-right" });
+    for (const delay of BOOK_TURNS) {
+      const page = book.createDiv({ cls: "orca-preview-book-page mod-right mod-turn" });
+      page.style.setProperty("--orca-turn-delay", `${String(delay)}s`);
     }
-    well.prepend(banner);
-    this.message = banner;
+    const name = banner.createDiv({ cls: "orca-preview-setting-name" });
+    name.append("Loading ", name.createEl("i", { text: progress.name }), "…");
+    if (!progress.again) banner.createDiv({ cls: "orca-preview-setting-note" });
+    this.post(banner, !progress.again);
+    return banner;
   }
 
   /**
@@ -1692,7 +1839,6 @@ export class PreviewView extends ItemView {
   private held(dead: EngineDead): void {
     const well = this.well;
     if (well === undefined) return;
-    this.message?.remove();
     const banner = well.createDiv({ cls: "orca-preview-setting mod-held" });
     banner.dataset["testid"] = "orca-held";
     setIcon(
@@ -1700,11 +1846,11 @@ export class PreviewView extends ItemView {
       "alert-triangle",
     );
     const name = banner.createDiv({ cls: "orca-preview-setting-name" });
-    name.append("Orca could not set the book again");
+    name.append("The preview stopped");
     const note = banner.createDiv({ cls: "orca-preview-setting-note" });
-    note.append("the pages here are the ones from before");
+    note.append("These are the last pages it made.");
     note.createEl("br");
-    note.append("open the book again to try once more");
+    note.append("Reopen the book to try again.");
     const report = banner.createEl("button", {
       cls: "orca-preview-report",
       text: "Copy the report",
@@ -1713,8 +1859,7 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(report, "click", () => {
       void navigator.clipboard.writeText(dead.log.join("\n"));
     });
-    well.prepend(banner);
-    this.message = banner;
+    this.post(banner, false);
   }
 
   /**
@@ -1725,7 +1870,6 @@ export class PreviewView extends ItemView {
     const well = this.well;
     const book = this.book;
     if (well === undefined || book === undefined) return;
-    this.message?.remove();
     const state = well.createDiv({ cls: "orca-preview-setting mod-empty" });
     state.dataset["testid"] = "orca-empty";
     setIcon(state.createDiv({ cls: "orca-preview-setting-icon" }), "book");
@@ -1736,19 +1880,23 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(adding, "click", () => {
       this.handoff.adds(book);
     });
-    well.prepend(state);
-    this.message = state;
+    this.post(state, true);
   }
 
   /** Puts a message in the well in place of the pages. */
   private report(text: string): void {
+    this.post(this.well?.createDiv({ cls: "orca-preview-message", text }), true);
+  }
+
+  /**
+   * Puts a message at the top of the well in place of the one before,
+   * and hides the pages under one that `covers` them.
+   */
+  private post(message: HTMLElement | undefined, covers: boolean): void {
     this.message?.remove();
-    const message = this.well?.createDiv({
-      cls: "orca-preview-message",
-      text,
-    });
-    if (message !== undefined) this.well?.prepend(message);
     this.message = message;
+    if (message !== undefined) this.well?.prepend(message);
+    this.well?.toggleClass("is-covered", message !== undefined && covers);
   }
 }
 
@@ -1764,10 +1912,16 @@ function readState(state: unknown): PreviewState {
   if (isViewMode(raw["view"])) made.view = raw["view"];
   const over = raw["over"];
   if (Array.isArray(over)) made.over = over as Shown[];
+  if (raw["followed"] === true) made.followed = true;
   return made;
 }
 
 /** The state the workspace keeps: where a book opens is not part of it. */
-function kept({ over, ...state }: PreviewState): PreviewState {
+function kept({ over, followed, ...state }: PreviewState): PreviewState {
   return state;
+}
+
+/** A message from a lower module, capitalized to stand as a sentence. */
+function sentence(said: string): string {
+  return said.charAt(0).toUpperCase() + said.slice(1);
 }

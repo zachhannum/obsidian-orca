@@ -1,10 +1,9 @@
 {
   "id": "orca",
   "name": "Orca",
-  "version": "0.0.1",
-  "engineVersion": "0.16.0",
+  "version": "0.3.0",
   "minAppVersion": "1.7.2",
-  "description": "A book designer in your vault: chapters stay notes, a typeset page sits beside them.",
+  "description": "Design and typeset books from your notes, with a live preview of every page.",
   "author": "Zach Hannum",
   "authorUrl": "https://github.com/zachhannum",
   "isDesktopOnly": true

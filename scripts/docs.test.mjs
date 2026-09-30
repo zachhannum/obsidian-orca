@@ -86,7 +86,7 @@ test("one tokens file holds both schemes, and Starlight's variables read from it
   const dark = block(tokens, ":root");
   const light = block(tokens, ":root[data-theme='light']");
   assert.deepEqual(Object.keys(dark), Object.keys(light));
-  assert.equal(dark["--bg"], "#0a0c0f");
+  assert.equal(dark["--bg"], "#000000");
   assert.equal(light["--bg"], "#eef0ec");
 
   const mapped = block(theme, ":root");
@@ -271,7 +271,12 @@ test("the shell is centered on a chapter heading and reaches no line of the chap
   try {
     session.setDialect("obsidian");
     session.setSplit(0);
-    for (const face of ["EBGaramond[wght].ttf", "EBGaramond-Italic[wght].ttf"]) {
+    for (const face of [
+      "EBGaramond[wght].ttf",
+      "EBGaramond-Italic[wght].ttf",
+      "IMFeENrm28P.ttf",
+      "IMFeENit28P.ttf",
+    ]) {
       session.addFontFile(face, await readFile(path.join(root, "site/sample/fonts", face)));
     }
     session.addImage("nautilus.png", await readFile(path.join(root, "site/sample/images/nautilus.png")));
@@ -320,8 +325,13 @@ test("the book note carries the design the landing page shows", async () => {
       "body-align": "justify",
       "body-first-line-indent": "1.2em",
       "body-hyphens": "true",
+      "body-hanging-punctuation": "true",
       "chapter-begins": "next-page",
       "chapter-drop-cap": "3",
+      "chapter-drop-cap-font": "IM FELL English",
+      "chapter-first-line-caps": "small-caps",
+      "chapter-first-line-letter-spacing": "0.04em",
+      "chapter-title-from": "h1",
     },
   );
   // The chapter opens on its label, which is a level 2 heading.
@@ -412,6 +422,27 @@ function luminance(hex) {
 }
 
 /** One length the page declares on `.page`, in pixels. */
+/** The value of a sum of products of numbers, which is all a calc() here holds. */
+function arithmetic(expression) {
+  assert.doesNotMatch(expression, /[()]/, `a calc() with brackets: ${expression}`);
+  const tokens = expression.match(/[\d.]+|[-+*/]/g);
+  assert.ok(tokens, `no arithmetic in ${expression}`);
+  let sum = 0;
+  let sign = 1;
+  let product = Number(tokens[0]);
+  for (let i = 1; i < tokens.length; i += 2) {
+    const [op, next] = [tokens[i], Number(tokens[i + 1])];
+    if (op === "*") product *= next;
+    else if (op === "/") product /= next;
+    else {
+      sum += sign * product;
+      sign = op === "-" ? -1 : 1;
+      product = next;
+    }
+  }
+  return sum + sign * product;
+}
+
 function metric(name) {
   const found = new RegExp(`--${name}:\\s*([^;]+);`).exec(landingStyle);
   assert.ok(found, `the page declares no --${name}`);
@@ -427,10 +458,8 @@ test("the surface moves, runs through the second line of the title, and the titl
   // The band the surface moves inside, measured down the page: the rest
   // line, less the deepest the middle dips, plus the tallest swell.
   const calc = /--sea-top:\s*calc\(([\s\S]*?)\);/.exec(landingStyle)[1];
-  const seaTop = Number(
-    new Function(
-      `return (${calc.replace(/var\(--([\w-]+)\)/g, (whole, name) => String(metric(name))).replace(/px/g, "")})`,
-    )(),
+  const seaTop = arithmetic(
+    calc.replace(/var\(--([\w-]+)\)/g, (whole, name) => String(metric(name))).replace(/px/g, ""),
   );
   const leading = metric("title-size") * metric("title-leading");
   const title = metric("header-h") + metric("hero-pad");
@@ -447,8 +476,8 @@ test("the surface moves, runs through the second line of the title, and the titl
   const h1 = /<h1>([\s\S]*?)<\/h1>/.exec(landing)[1];
   assert.equal(h1.match(/set:html=\{title\}/g).length, 2);
   assert.match(h1, /class="sunk"[^>]*data-sea-cut/);
-  assert.match(/\n  h1 \{([\s\S]*?)\n  \}/.exec(landingStyle)[1], /color: var\(--sky-text\)/);
-  const sunk = /\n  h1 \.sunk \{([\s\S]*?)\n  \}/.exec(landingStyle)[1];
+  assert.match(/\n {2}h1 \{([\s\S]*?)\n {2}\}/.exec(landingStyle)[1], /color: var\(--sky-text\)/);
+  const sunk = /\n {2}h1 \.sunk \{([\s\S]*?)\n {2}\}/.exec(landingStyle)[1];
   assert.match(sunk, /color: var\(--text\)/);
   assert.match(sunk, /clip-path:/);
 
@@ -456,7 +485,7 @@ test("the surface moves, runs through the second line of the title, and the titl
   assert.equal(metric("sea-rest"), REST);
 });
 
-test("the sea darkens from the surface to the end of the page", () => {
+test("the sea never lightens from the surface to the end of the page", () => {
   const body = /\.sea \.body \{([\s\S]*?)\}/.exec(landingStyle)[1];
   assert.match(body, /bottom: 0/);
   // The body reaches up under the lip, so no sky shows where they meet.
@@ -471,7 +500,8 @@ test("the sea darkens from the surface to the end of the page", () => {
     const deep = [0, 1, 2, 3].map((at) => luminance(ramp[`--sea-${at}`]));
     for (const [at, light] of deep.entries()) {
       if (at === 0) continue;
-      assert.ok(light < deep[at - 1], `${scheme} --sea-${at} is no darker than the one above it`);
+      // The dark sea is black from top to bottom, so a stop may match the one above it.
+      assert.ok(light <= deep[at - 1], `${scheme} --sea-${at} is lighter than the one above it`);
     }
   }
 });
@@ -485,14 +515,18 @@ test("with reduced motion on, the sea, the specks and the pane swap hold still",
 
   const drawn = [];
   let frames = 0;
+  const requestAnimationFrame = () => (frames += 1);
+  const cancelAnimationFrame = () => {};
   const { startSea } = await moduleOf("site/src/scripts/sea.ts", {
     window: {
       matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
       addEventListener() {},
       removeEventListener() {},
+      requestAnimationFrame,
+      cancelAnimationFrame,
     },
-    requestAnimationFrame: () => (frames += 1),
-    cancelAnimationFrame() {},
+    requestAnimationFrame,
+    cancelAnimationFrame,
     performance: { now: () => 0 },
   });
   const path = {
@@ -636,9 +670,11 @@ test("the pages turn on a click, on the arrow buttons and from the keyboard", as
   // Five leaves stand between the first page and the last, so the book
   // reads as six spreads.
   const leaves = 5;
-  assert.deepEqual([...flip.spread(0)], [flip.FIRST, flip.FIRST + 1]);
-  assert.equal(flip.folio(0), `Pages ${flip.FIRST}–${flip.FIRST + 1}`);
-  assert.equal(flip.folio(leaves), `Pages ${flip.FIRST + 10}–${flip.FIRST + 11}`);
+  // The book opens closed, on the title page alone.
+  assert.deepEqual([...flip.spread(0)], [0, 1]);
+  assert.equal(flip.folio(0), "Page 1");
+  assert.equal(flip.folio(1), "Pages 2–3");
+  assert.equal(flip.folio(leaves), "Pages 10–11");
 
   const turned = (at) => flip.layout(leaves, at).filter((leaf) => leaf.turned).length;
   assert.equal(turned(0), 0);
@@ -663,11 +699,11 @@ test("every picture on the page is one the screenshot spec takes", async () => {
   const sources = [...landing.matchAll(/from '(\.\.\/[^']+\.(?:png|jpe?g|webp|svg))'/g)].map(
     (found) => found[1],
   );
-  // The sample vault's images are not pictures of orca. They are what
-  // the book's CSS names, and the engine draws them into the demo's page.
+  // The sample vault's images and faces are not pictures of orca. They
+  // are what the book names, and the engine sets the demo's page in them.
   const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)]
     .map((found) => found[1])
-    .filter((glob) => glob !== "../../sample/images/*");
+    .filter((glob) => !glob.startsWith("../../sample/"));
   assert.ok(sources.length > 0, "the page shows no picture");
   for (const source of [...sources, ...globbed]) {
     assert.match(source, /^\.\.\/shots\//, `${source} is not a picture the spec takes`);

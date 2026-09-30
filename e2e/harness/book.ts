@@ -15,6 +15,8 @@ import { FLOATING, type Obsidian } from "./obsidian";
 /** The part of the plugin a spec reads a book's session through. */
 interface Holding {
   composer?: {
+    /** The vault the composer reads notes through, which `stalled` holds. */
+    vault?: { read(path: string): Promise<string> };
     opened(at: string):
       | Promise<{
           quiet: boolean;
@@ -54,7 +56,26 @@ declare global {
   interface Window {
     /** The recorder a spec installs while `noticed` runs. */
     orcaSetting?: { said: Notice[]; watch: MutationObserver } | undefined;
+    /** Lets the note reads a spec holds go on, while `stalled` runs. */
+    orcaGo?: (() => void) | undefined;
   }
+}
+
+/**
+ * One line of one link on a painted page, where a click lands on it.
+ * The painter marks each line of each link with its index in the
+ * page's links.
+ */
+export interface LinkMark {
+  /** The index of the link on its page. */
+  link: number;
+  /** The page it is on, counting from 1. */
+  page: number;
+  /** The middle of the line of the link, in the window's pixels. */
+  x: number;
+  y: number;
+  /** The words of the line it is set on. */
+  line: string;
 }
 
 /** One notice the pane put up while a book was being set. */
@@ -65,6 +86,10 @@ export interface Notice {
   again: boolean;
   /** The pages on screen under it. */
   pages: number;
+  /** The part of the work it said was under way. */
+  phase: string | undefined;
+  /** Whether anything in it was animated when it said this, or nothing for one gone by then. */
+  moving: boolean | undefined;
 }
 
 /** The trim the page is photographed at, in whole pixels. */
@@ -105,6 +130,9 @@ export class Book {
   /** The status bar item that reads `page 1 of 2`. */
   readonly status: Locator;
   readonly previous: Locator;
+  /** Obsidian's arrows over the pane, which walk the turns a link made. */
+  readonly back: Locator;
+  readonly forward: Locator;
   readonly next: Locator;
   /** The state the pane holds while a cold session typesets the whole book. */
   readonly setting: Locator;
@@ -142,6 +170,8 @@ export class Book {
     this.status = obsidian.page.getByTestId("orca-status");
     this.previous = pane.getByLabel("Previous page");
     this.next = pane.getByLabel("Next page");
+    this.back = obsidian.navigateIn(PREVIEW, "back");
+    this.forward = obsidian.navigateIn(PREVIEW, "forward");
     this.setting = pane.getByTestId("orca-setting");
     this.held = pane.getByTestId("orca-held");
     this.report = pane.getByTestId("orca-report");
@@ -169,22 +199,50 @@ export class Book {
   async noticed(during: () => Promise<void>): Promise<Notice[]> {
     await this.obsidian.page.evaluate(() => {
       const said: Notice[] = [];
-      const collect = (node: Node): void => {
-        if (!(node instanceof HTMLElement)) return;
-        const found = node.matches("[data-testid=\'orca-setting\']")
-          ? node
-          : node.querySelector("[data-testid=\'orca-setting\']");
-        if (found === null) return;
-        said.push({
+      const banner = "[data-testid='orca-setting']";
+      const collect = (found: Element): void => {
+        const notice: Notice = {
           said: found.textContent ?? "",
           again: found.classList.contains("mod-again"),
           pages: document.querySelectorAll(".orca-page").length,
-        });
+          phase: found.getAttribute("data-phase") ?? undefined,
+          // A banner a paint already took down has no style left to
+          // read.
+          moving: found.isConnected
+            ? [...found.querySelectorAll("*")].some(
+                (part) => getComputedStyle(part).animationName !== "none",
+              )
+            : undefined,
+        };
+        // The banner is told each report in place, so a notice is a
+        // change in what it says rather than each node that moved.
+        const last = said.at(-1);
+        if (last?.said === notice.said && last.phase === notice.phase) return;
+        said.push(notice);
       };
       const watch = new MutationObserver((records) => {
-        for (const record of records) for (const node of record.addedNodes) collect(node);
+        const seen = new Set<Element>();
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (!node.instanceOf(HTMLElement)) continue;
+            const found = node.matches(banner) ? node : node.querySelector(banner);
+            if (found !== null) seen.add(found);
+          }
+          const target = record.target.instanceOf(Element)
+            ? record.target
+            : record.target.parentElement;
+          const within = target?.closest(banner);
+          if (within !== null && within !== undefined) seen.add(within);
+        }
+        for (const found of seen) collect(found);
       });
-      watch.observe(document.body, { childList: true, subtree: true });
+      watch.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["data-phase"],
+      });
       window.orcaSetting = { said, watch };
     });
 
@@ -343,6 +401,92 @@ export class Book {
     return lines.join(" ");
   }
 
+  /** The painter's selection layer on every sheet, in reading order. */
+  lines(): Locator {
+    return this.surface.locator("text[data-selection-line]");
+  }
+
+  /**
+   * Drags the mouse from the start of one set line to the end of
+   * another, with real pointer events, the way a reader selects.
+   */
+  async drag(from: Locator, to: Locator): Promise<void> {
+    const start = await from.boundingBox();
+    const end = await to.boundingBox();
+    if (start === null || end === null) throw new Error("a line is not on screen");
+    // The layer is set in the book's own faces, and a face that loads
+    // after the paint moves the characters under the pointer.
+    await this.obsidian.page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+    const mouse = this.obsidian.page.mouse;
+    await mouse.move(start.x + 1, start.y + start.height / 2);
+    await mouse.down();
+    await mouse.move(end.x + end.width - 0.25, end.y + end.height / 2, { steps: 12 });
+    await mouse.up();
+  }
+
+  /**
+   * The window's selection after a drag: its text, whether
+   * both ends landed on the selection layer, and what a copy off the
+   * pages puts on the clipboard. The copy is dispatched rather than
+   * typed, since the clipboard itself is the operating system's.
+   */
+  async selected(): Promise<{ text: string; onLines: boolean; copied: string }> {
+    return this.obsidian.page.evaluate(() => {
+      const selection = document.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : undefined;
+      const onLine = (node: Node | undefined): boolean =>
+        (node instanceof Element ? node : node?.parentElement)?.closest(
+          "text[data-selection-line]",
+        ) != null;
+      const event = new ClipboardEvent("copy", {
+        bubbles: true,
+        clipboardData: new DataTransfer(),
+      });
+      document.querySelector("[data-testid='orca-sheets']")?.dispatchEvent(event);
+      const result = {
+        text: selection?.toString() ?? "",
+        onLines: onLine(range?.startContainer) && onLine(range?.endContainer),
+        copied: event.clipboardData?.getData("text/plain") ?? "",
+      };
+      selection?.removeAllRanges();
+      return result;
+    });
+  }
+
+  /**
+   * Every line of every link on the pages on screen, in the order the
+   * painter marked them.
+   */
+  async links(): Promise<LinkMark[]> {
+    return this.surface.evaluate((surface) =>
+      [...surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")].flatMap((sheet) => {
+        const lines = [...sheet.querySelectorAll("text[data-selection-line]")].map((line) => ({
+          box: line.getBoundingClientRect(),
+          text: line.textContent ?? "",
+        }));
+        return [...sheet.querySelectorAll("rect[data-link]")].map((mark) => {
+          const box = mark.getBoundingClientRect();
+          const y = box.top + box.height / 2;
+          const line = lines.find((one) => one.box.top <= y && y <= one.box.bottom);
+          return {
+            link: Number(mark.getAttribute("data-link")),
+            page: Number(sheet.dataset["page"]),
+            x: box.left + box.width / 2,
+            y,
+            line: line?.text ?? "",
+          };
+        });
+      }),
+    );
+  }
+
+  /** Clicks a point in the window, the way a mouse does. */
+  async click(at: { x: number; y: number }): Promise<void> {
+    await this.obsidian.page.mouse.click(at.x, at.y);
+  }
+
   /** The pages the view says it is showing. */
   async showing(): Promise<number> {
     return Number(await this.surface.getAttribute("data-count"));
@@ -378,6 +522,41 @@ export class Book {
 
   async close(): Promise<void> {
     await this.obsidian.detach(PREVIEW);
+  }
+
+  /**
+   * Holds every note the composer reads until `during` is done, then
+   * lets them go on. A fixture book sets in a moment on a warm engine,
+   * so a spec that must act while a book is still setting holds it.
+   */
+  async stalled(during: () => Promise<void>): Promise<void> {
+    await this.obsidian.page.evaluate((id) => {
+      const vault = (window.app.plugins.plugins[id] as Holding | undefined)?.composer?.vault;
+      if (vault === undefined) throw new Error("orca has no composer to hold");
+      const read = vault.read.bind(vault);
+      let go = (): void => undefined;
+      const held = new Promise<void>((resolve) => {
+        go = resolve;
+      });
+      vault.read = async (path) => {
+        await held;
+        return read(path);
+      };
+      window.orcaGo = () => {
+        vault.read = read;
+        go();
+      };
+    }, PLUGIN);
+    try {
+      await during();
+    } finally {
+      // One app runs the whole suite, so the reads go on even when
+      // `during` throws.
+      await this.obsidian.page.evaluate(() => {
+        window.orcaGo?.();
+        window.orcaGo = undefined;
+      });
+    }
   }
 
   /**
@@ -422,15 +601,18 @@ export class Book {
           ".orca-page { position: fixed;" +
           ` width: ${String(trim.width)}px; height: ${String(trim.height)}px;` +
           ` top: ${String(top)}px; left: ${String(left)}px }`;
-        const pose = document.createElement("style");
-        pose.id = id;
-        pose.textContent = stand(0, 0);
-        document.head.append(pose);
+        const sheets = (window.orcaSheets ??= {});
+        const pose = sheets[id] ?? new CSSStyleSheet();
+        pose.replaceSync(stand(0, 0));
+        if (!document.adoptedStyleSheets.includes(pose)) {
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, pose];
+        }
+        sheets[id] = pose;
         // A pane is the containing block for anything fixed inside it,
         // and which pane that is answers in pixels rather than in the
         // rules, so the offset is read off where the corner landed.
         const at = page.getBoundingClientRect();
-        pose.textContent = stand(want.top - at.top, want.left - at.left);
+        pose.replaceSync(stand(want.top - at.top, want.left - at.left));
       },
       [FLOATING, POSED, POSE] as const,
     );
@@ -439,7 +621,12 @@ export class Book {
   /** Puts the pane back the way the pose found it. */
   async stand(): Promise<void> {
     await this.obsidian.page.evaluate((id) => {
-      document.getElementById(id)?.remove();
+      const sheet = window.orcaSheets?.[id];
+      if (sheet === undefined) return;
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (adopted) => adopted !== sheet,
+      );
+      delete window.orcaSheets?.[id];
     }, POSED);
   }
 

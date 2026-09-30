@@ -25,9 +25,9 @@ export interface Clock {
 /** The clock a plugin runs on. */
 export const timers: Clock = {
   after(ms, fire) {
-    const timer = setTimeout(fire, ms);
+    const timer = window.setTimeout(fire, ms);
     return () => {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     };
   },
 };

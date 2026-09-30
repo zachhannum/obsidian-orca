@@ -5,7 +5,6 @@ import {
   readFile,
   readdir,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -13,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
+import { Script } from "node:vm";
 import { Worker } from "node:worker_threads";
 import { VERSION, WIRE_VERSION } from "fleuron";
 import workerSource from "virtual:worker";
@@ -92,8 +92,8 @@ function fakeHost(reply: unknown): WorkerHost & {
 
 test("the worker starts from a Blob URL built out of the bundle", async () => {
   // Anything esbuild left behind for a second file would be an import,
-  // and `new Function` would throw.
-  assert.doesNotThrow(() => new Function(workerSource));
+  // and a classic script does not compile one.
+  assert.doesNotThrow(() => new Script(workerSource));
   assert.ok(workerSource.length > 0);
 
   const host = fakeHost(ready);
@@ -118,17 +118,15 @@ test("the release is the plugin folder, with one JavaScript file in it", async (
     assert.equal(code, 0);
 
     const written = (await readdir(outdir)).sort();
-    assert.deepEqual(written, [
-      "fleuron_bg.wasm",
-      "main.js",
-      "manifest.json",
-      "styles.css",
-    ]);
-    assert.ok((await stat(path.join(outdir, "fleuron_bg.wasm"))).size > 0);
+    assert.deepEqual(written, ["main.js", "manifest.json", "styles.css"]);
 
-    // The worker travels inside the bundle rather than beside it.
+    // The worker and the engine module travel inside the bundle rather
+    // than beside it.
     const bundle = await readFile(path.join(outdir, "main.js"), "utf8");
     assert.ok(bundle.includes("createObjectURL"));
+    const require = createRequire(import.meta.url);
+    const module = await readFile(require.resolve("fleuron/fleuron_bg.wasm"));
+    assert.ok(bundle.includes(module.subarray(0, 3072).toString("base64")));
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }
@@ -196,7 +194,7 @@ test("stopping the worker refuses the requests it was still holding", async () =
   const rendering = handle.client.preview([{ op: "split", level: 0 }]);
   handle.stop();
 
-  await assert.rejects(rendering, /the engine stopped/);
+  await assert.rejects(rendering, /the preview stopped/);
 });
 
 test("a worker that cannot open the engine is torn down", async () => {
@@ -212,16 +210,18 @@ test("a worker that cannot open the engine is torn down", async () => {
   assert.deepEqual(host.released, ["blob:orca/0"]);
 });
 
-test("a wire mismatch refuses the book, naming both versions", async () => {
+test("a wire mismatch tells the author to reinstall, and keeps both versions on the cause", async () => {
   const host = fakeHost({ orca: "ready", wire: WIRE_VERSION + 1 });
 
   await assert.rejects(
     startEngine(new ArrayBuffer(8), host),
     (error: unknown) =>
       error instanceof EngineError &&
-      error.message.includes(`wire ${WIRE_VERSION};`) &&
-      error.message.includes(`wire ${WIRE_VERSION + 1}`) &&
-      error.message.includes(VERSION),
+      error.message === "the preview did not start. Reinstall the plugin." &&
+      error.cause instanceof Error &&
+      error.cause.message.includes(`wire ${String(WIRE_VERSION)};`) &&
+      error.cause.message.includes(`wire ${String(WIRE_VERSION + 1)}`) &&
+      error.cause.message.includes(VERSION),
   );
 
   assert.equal(host.worker().terminated, true);
@@ -263,36 +263,41 @@ test("the manifest keeps the plugin off mobile", async () => {
   assert.equal((await manifest()).isDesktopOnly, true);
 });
 
-test("the manifest names the plugin's version and the engine's", async () => {
-  const { version, engineVersion } = await manifest();
+test("the manifest names the plugin's version, and the package pins the engine", async () => {
+  const manifested = await manifest();
   const npm = await packaged();
 
-  assert.equal(version, npm.version);
-  assert.equal(engineVersion, VERSION);
-  // The dependency is pinned, so the manifest and the bundle name one
+  assert.equal(manifested.version, npm.version);
+  // The review holds a manifest to the fields Obsidian reads.
+  assert.equal("engineVersion" in manifested, false);
+  // The dependency is pinned, so the package and the bundle name one
   // engine.
   assert.equal(npm.dependencies.fleuron, VERSION);
 });
 
-test("a manifest naming another engine version fails the build", async () => {
+test("a package pinning another engine version fails the build", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-apart-"));
   try {
-    const apart = path.join(outdir, "manifest.json");
+    const npm = await packaged();
+    const apart = path.join(outdir, "package.json");
     await writeFile(
       apart,
-      JSON.stringify({ ...(await manifest()), engineVersion: "0.0.0" }),
+      JSON.stringify({
+        ...npm,
+        dependencies: { ...npm.dependencies, fleuron: "0.0.0" },
+      }),
     );
 
     const { code, stderr } = await build([
       `--out=${outdir}`,
-      `--manifest=${apart}`,
+      `--package=${apart}`,
     ]);
 
     assert.notEqual(code, 0);
     assert.match(stderr, /0\.0\.0/);
     assert.match(stderr, new RegExp(VERSION.replaceAll(".", "\\.")));
     // The build wrote no part of the release.
-    assert.deepEqual(await readdir(outdir), ["manifest.json"]);
+    assert.deepEqual(await readdir(outdir), ["package.json"]);
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }
@@ -336,7 +341,6 @@ function build(args: string[]): Promise<{ code: number; stderr: string }> {
 
 interface Manifest {
   version: string;
-  engineVersion: string;
   minAppVersion: string;
   isDesktopOnly: boolean;
 }
@@ -365,7 +369,7 @@ async function moduleBytes(): Promise<ArrayBuffer> {
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
+  );
 }
 
 // What this tier does not cover: the plugin's own load and unload, which

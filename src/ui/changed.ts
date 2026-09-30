@@ -26,19 +26,19 @@ export class Changed extends Modal {
     const pane = this.contentEl;
     pane.dataset["testid"] = "orca-book-changed";
     pane.createEl("p", {
-      text: "This note was written outside orca. Your edit is not in it.",
+      text: "This note changed outside Orca.",
     });
 
     const buttons = pane.createDiv({ cls: "modal-button-container" });
     new ButtonComponent(buttons)
-      .setButtonText("Take what is on disk")
+      .setButtonText("Use the saved version")
       .onClick(() => {
         this.chose(() => {
           this.choice.reload();
         });
       });
     new ButtonComponent(buttons)
-      .setButtonText("Keep my edit")
+      .setButtonText("Keep my changes")
       .setCta()
       .onClick(() => {
         this.chose(() => {

@@ -121,7 +121,7 @@ export class Edits {
 
   private refused(cause: unknown): void {
     new Notice(
-      `Orca: the book was not edited. ${
+      `Orca: could not save the change. ${
         cause instanceof Error ? cause.message : String(cause)
       }`,
     );

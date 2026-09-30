@@ -12,8 +12,7 @@ import type { Form, Names } from "@/book/marks";
  * drawn as it was written.
  */
 export function chipElement(names: Names, form: Form): HTMLElement {
-  const chip = document.createElement("span");
-  chip.className = "orca-run";
+  const chip = createSpan({ cls: "orca-run" });
   chip.dataset["testid"] = "orca-run";
   chip.dataset["form"] = form;
   if (names.id === undefined && names.classes.length === 0) {
@@ -30,8 +29,7 @@ export function chipElement(names: Names, form: Form): HTMLElement {
  * was written as.
  */
 export function breakElement(form: Form): HTMLElement {
-  const rule = document.createElement("span");
-  rule.className = "orca-break";
+  const rule = createSpan({ cls: "orca-break" });
   rule.dataset["testid"] = "orca-break";
   rule.dataset["form"] = form;
   rule.createEl("i").setText(form === "pagebreak" ? "page break" : "column break");

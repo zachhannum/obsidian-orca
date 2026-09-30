@@ -152,7 +152,10 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
                   <div className="orca-card-body">
                     <div className="orca-card-said">
                       <code>{override.property}</code> is overridden with value{" "}
-                      <code>{override.value}</code>
+                      <code>
+                        {override.value}
+                        {override.important ? " !important" : ""}
+                      </code>
                       {override.declared === override.property ? null : (
                         <>
                           {" "}
@@ -183,12 +186,14 @@ export type Inactive = "unset" | "overridden";
  */
 export function inactive(reason: Inactive | undefined): {
   className: string | undefined;
-  inert: boolean;
+  inert: "" | undefined;
   "data-inactive": Inactive | undefined;
 } {
   return {
     className: reason === undefined ? undefined : "is-inactive",
-    inert: reason !== undefined,
+    // React 18 does not know `inert`, and it drops a boolean on an
+    // attribute it does not know. An empty string writes the attribute.
+    inert: reason === undefined ? undefined : "",
     "data-inactive": reason,
   };
 }
@@ -880,7 +885,7 @@ export function Glyphs({
             ) : found.offered > 0 ? null : (
               <div className="orca-panel-none" data-testid="orca-panel-glyph-nothing">
                 {covered(spans) === 0
-                  ? `orca has no file for ${family}`
+                  ? `No font file for ${family}`
                   : "No glyph there"}
               </div>
             )}
@@ -899,7 +904,7 @@ export function Glyphs({
           </div>
           {spans === undefined ? null : (
             <div className="orca-panel-glyph-count">
-              {covered(spans)} code points in {family}
+              {covered(spans)} glyphs
             </div>
           )}
         </div>

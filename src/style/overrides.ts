@@ -1,6 +1,7 @@
 /**
  * The generated declarations the author's own sheet beats. It compares
- * names only: selectors, page preludes, margin boxes and properties.
+ * names only: selectors, page preludes, margin boxes, properties and
+ * `!important`.
  * Whether a value is valid is the engine's to say, so a declaration the
  * engine refused is passed in and never counts.
  */
@@ -25,8 +26,9 @@ export interface OwnDeclaration {
   page: string | undefined;
   box: string | undefined;
   property: string;
-  /** The value as written, with its whitespace collapsed. */
+  /** The value as written, with its whitespace collapsed and without `!important`. */
   value: string;
+  important: boolean;
   line: number;
   column: number;
 }
@@ -37,6 +39,7 @@ export interface Override extends Place {
   property: string;
   declared: string;
   value: string;
+  important: boolean;
 }
 
 /** The longhands each shorthand sets that a generated rule can declare. */
@@ -53,6 +56,8 @@ const SHORTHANDS: Readonly<Record<string, readonly string[]>> = {
     "font-stretch",
   ],
 };
+
+const IMPORTANT = /!\s*important$/i;
 
 /**
  * The declarations of top-level rules and page rules, in source order.
@@ -72,14 +77,16 @@ export function ownDeclarations(css: string): OwnDeclaration[] {
         if (name === null) continue;
         const { line, column } = placeOf(starts, name.from);
         const colon = css.indexOf(":", name.to);
-        const value =
+        const written =
           colon === -1 || colon >= child.to
             ? ""
             : withoutComments(css.slice(colon + 1, child.to))
                 .replace(/;\s*$/, "")
                 .replace(/\s+/g, " ")
                 .trim();
-        found.push({ ...context, property: nameOf(css, name), value, line, column });
+        const important = IMPORTANT.test(written);
+        const value = important ? written.replace(IMPORTANT, "").trim() : written;
+        found.push({ ...context, property: nameOf(css, name), value, important, line, column });
       } else if (child.name === "AtRule" && context.page !== undefined && context.box === undefined) {
         const keyword = child.getChild("AtKeyword");
         const inner = child.getChild("Block");
@@ -109,11 +116,14 @@ export function ownDeclarations(css: string): OwnDeclaration[] {
 
 /**
  * Each design key a generated declaration reads, mapped to the author
- * declaration that beats it. A declaration is beaten in the same
- * context, top level or the same page prelude and margin box, when the
- * author's selector list holds every selector of the generated list and
- * the property is the same or a shorthand of it. The last such author
- * declaration wins. A declaration at a refused place never counts.
+ * declaration that beats it. The author's property must be the same or
+ * a shorthand of it, in the same margin box. A declaration is beaten
+ * when the author's selector list holds every selector of the generated
+ * list, in the same page prelude. An `!important` one beats it too when
+ * its selectors match every element the generated list matches, since
+ * no generated declaration is important. An important winner beats a
+ * normal one, and the last one wins otherwise. A declaration at a
+ * refused place never counts.
  */
 export function overridden(
   rules: readonly GeneratedRule[],
@@ -128,17 +138,22 @@ export function overridden(
     const page = pagePrelude(rule.selector);
     const selectors = page === undefined ? selectorList(rule.selector) : [];
     for (const declaration of rule.declarations) {
-      const winner = counted
-        .filter(
-          (mine) =>
-            (page === undefined
-              ? mine.page === undefined &&
-                selectors.every((selector) => mine.selectors.includes(selector))
-              : mine.page === page && mine.box === declaration.box) &&
-            (mine.property === declaration.property ||
-              (SHORTHANDS[mine.property]?.includes(declaration.property) ?? false)),
-        )
-        .at(-1);
+      const winners = counted.filter(
+        (mine) =>
+          (mine.property === declaration.property ||
+            (SHORTHANDS[mine.property]?.includes(declaration.property) ?? false)) &&
+          (page === undefined
+            ? mine.page === undefined &&
+              (selectors.every((selector) => mine.selectors.includes(selector)) ||
+                (mine.important &&
+                  selectors.every((selector) =>
+                    mine.selectors.some((own) => covers(own, selector)),
+                  )))
+            : mine.page !== undefined &&
+              mine.box === declaration.box &&
+              (mine.page === page || (mine.important && mine.page === ""))),
+      );
+      const winner = winners.filter((mine) => mine.important).at(-1) ?? winners.at(-1);
       if (winner === undefined) continue;
       const place: Override = {
         sheet: OWN_SHEET,
@@ -147,6 +162,7 @@ export function overridden(
         property: declaration.property,
         declared: winner.property,
         value: winner.value,
+        important: winner.important,
       };
       for (const key of declaration.keys) {
         const earlier = beaten.get(key);
@@ -174,6 +190,92 @@ export function designOverridden(
     ownDeclarations(css),
     refused,
   );
+}
+
+/**
+ * Whether `own` matches every element `generated` matches, read from
+ * the names alone. Aligned from the subject, each compound of `own`
+ * holds only simple selectors of the generated compound, and each
+ * combinator is the same or looser. The subjects name the same
+ * pseudo-elements.
+ */
+function covers(own: string, generated: string): boolean {
+  const mine = complex(own);
+  const theirs = complex(generated);
+  if (mine.length > theirs.length) return false;
+  const subject = (compound: readonly string[]) =>
+    compound.filter((simple) => simple.startsWith("::")).join("");
+  if (subject(mine.at(-1)?.compound ?? []) !== subject(theirs.at(-1)?.compound ?? [])) {
+    return false;
+  }
+  for (let back = 1; back <= mine.length; back++) {
+    const a = mine[mine.length - back];
+    const b = theirs[theirs.length - back];
+    if (a === undefined || b === undefined) return false;
+    if (!a.compound.every((simple) => simple === "*" || b.compound.includes(simple))) return false;
+    if (back === mine.length) break;
+    if (!(a.combinator === b.combinator || LOOSER[a.combinator] === b.combinator)) return false;
+  }
+  return true;
+}
+
+/** The combinator each one is implied by: a child is a descendant, a next sibling a later one. */
+const LOOSER: Readonly<Record<string, string>> = { " ": ">", "~": "+" };
+
+/**
+ * A normalized selector as its compounds, each split into its simple
+ * selectors and carrying the combinator that joins it to the one
+ * before it.
+ */
+function complex(selector: string): { combinator: string; compound: string[] }[] {
+  const compounds: { combinator: string; compound: string[] }[] = [];
+  let combinator = "";
+  let compound: string[] = [];
+  let simple = "";
+  let depth = 0;
+  let quote: string | undefined;
+  const close = () => {
+    if (simple !== "") compound.push(simple);
+    simple = "";
+  };
+  for (let at = 0; at < selector.length; at++) {
+    const char = selector[at] ?? "";
+    if (quote !== undefined || depth > 0) {
+      if (quote !== undefined) {
+        if (char === "\\") simple += char + (selector[++at] ?? "");
+        else {
+          if (char === quote) quote = undefined;
+          simple += char;
+        }
+        continue;
+      }
+      if (char === '"' || char === "'") quote = char;
+      else if (char === "(" || char === "[") depth++;
+      else if (char === ")" || char === "]") depth--;
+      simple += char;
+      continue;
+    }
+    if (char === " " || char === ">" || char === "+" || char === "~") {
+      close();
+      compounds.push({ combinator, compound });
+      combinator = char;
+      compound = [];
+      continue;
+    }
+    if (char === "\\") {
+      simple += char + (selector[++at] ?? "");
+      continue;
+    }
+    const pseudoElement = char === ":" && selector[at + 1] === ":";
+    if (char === "." || char === "#" || char === "[" || char === ":") close();
+    if (char === '"' || char === "'") quote = char;
+    else if (char === "(" || char === "[") depth++;
+    simple += char;
+    if (pseudoElement) simple += selector[++at] ?? "";
+  }
+  close();
+  compounds.push({ combinator, compound });
+  return compounds;
 }
 
 function pagePrelude(selector: string): string | undefined {

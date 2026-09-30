@@ -11,12 +11,9 @@
 /** The line the panel draws beside the hyphenation switch. */
 export function hyphenating(language: string | undefined): string {
   if (language === undefined) {
-    return "using English, until the book sets a language";
+    return "English (default)";
   }
-  const named = languageName(language);
-  return named === undefined
-    ? `using ${language}`
-    : `using ${named} (${language})`;
+  return languageName(language) ?? language;
 }
 
 /** The language's name in English, or nothing for a tag with no English name. */

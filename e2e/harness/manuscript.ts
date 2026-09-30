@@ -142,8 +142,8 @@ export class Manuscript {
         // step waits for one before it reads.
         const painted = async (): Promise<void> => {
           await new Promise((settle) => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(settle);
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(settle);
             });
           });
         };

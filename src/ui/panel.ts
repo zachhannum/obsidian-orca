@@ -1,4 +1,4 @@
-import { ItemView, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Scope, setIcon, type WorkspaceLeaf } from "obsidian";
 import type { Cover } from "@/assets/cmap";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
@@ -81,6 +81,8 @@ export class DesignPanelView extends ItemView {
   /** The element CodeMirror draws in, beside the React root and never under it. */
   private editorHost: HTMLElement | undefined;
   private editor: CssEditor | undefined;
+  /** Counts the asks for the names the notes write, so a late answer is dropped. */
+  private naming = 0;
   /** The box pinned in the preview, which the inspect pane shows. */
   private pinned: Pin | undefined;
   private readonly writes = new Settled((book, css) => {
@@ -92,6 +94,10 @@ export class DesignPanelView extends ItemView {
     private readonly designing: Designing,
   ) {
     super(leaf);
+    // Obsidian's hotkeys see a key before CodeMirror does, and swallow
+    // the ones they bind, so a key the CSS editor binds goes to it first.
+    this.scope = new Scope(this.app.scope);
+    this.scope.register(null, null, (event) => (this.editor?.keydown(event) === true ? false : undefined));
   }
 
   override getViewType(): string {
@@ -214,6 +220,7 @@ export class DesignPanelView extends ItemView {
       editor = mountEditor(
         host,
         typeset.css,
+        setIcon,
         (css) => {
           this.recss(css);
         },
@@ -225,7 +232,23 @@ export class DesignPanelView extends ItemView {
       this.editor = editor;
     } else editor.show(typeset.css);
     editor.fonts(typeset.families);
+    editor.sections(typeset.named);
     editor.flag(cssFlags(typeset.session.warnings), typeset.cssWarned);
+    void this.written(typeset, editor);
+  }
+
+  /**
+   * Hands the editor the classes and ids the book's notes write. The
+   * engine is the only reader of the syntax that writes them, so the
+   * editor asks after every render rather than read the notes itself.
+   */
+  private async written(typeset: Typeset, editor: CssEditor): Promise<void> {
+    const run = (this.naming += 1);
+    // A completion goes without the names rather than stop the editor.
+    const names = await typeset.session.names().catch(() => undefined);
+    if (names === undefined || run !== this.naming) return;
+    if (this.showing !== typeset || this.editor !== editor) return;
+    editor.written(names);
   }
 
   /**
@@ -464,5 +487,5 @@ export class DesignPanelView extends ItemView {
 
 /** The warning for a font whose files would not read. */
 function unreadable(font: string): string {
-  return `${font} has no file this machine could read. The book is set in the one orca carries.`;
+  return `Could not load ${font}. Using built-in font instead.`;
 }

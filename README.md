@@ -1,29 +1,38 @@
 # Orca
 
-A book designer that runs inside Obsidian. The chapters stay notes in the vault, the book is a note beside them, and a preview pane shows the set page while you write.
+Orca is a book designer inside Obsidian. Each chapter is a Markdown note, and one book note stores the book details and the design. You preview the typeset book and export it to PDF without leaving Obsidian.
 
-The setting is done by [fleuron](https://github.com/zachhannum/fleuron), running as WebAssembly in a worker: markdown in, typeset pages out, styling as CSS, no DOM anywhere. Orca is the half fleuron does not have — a project, a design UI, and a place to put the result.
+Visit [orca.typeworks.dev](https://orca.typeworks.dev) for more info and docs.
 
-Desktop only.
+![Orca in Obsidian, with a chapter note, the design panel and the typeset page](https://raw.githubusercontent.com/zachhannum/obsidian-orca/main/site/src/shots/landing-dark-1440.png)
 
-## Three invariants
+## What orca does
 
-1. The panel never writes the author's CSS. Settings are data; the CSS they imply is generated at render time and never lands in the vault.
-2. The engine is the only linter. Every squiggle in the CSS editor comes from a fleuron warning. Orca parses a note to draw the chips over its attribute runs, and that parse settles no page.
-3. Preview and export come from one session. The PDF is drawn from the pages already on screen.
+- Chapters stay notes. The book note lists the chapters in reading order, as links. Its properties are the title, the author, the other metadata and the design.
+- You write chapters in Markdown. Switch the pane to the preview to see the typeset book, open at the page you are writing.
+- The design panel has a control for the trim size, the margins, the type, the headings and more. The preview updates with each change.
+- The design panel writes CSS for you, and you can add your own rules to the book note.
+- In inspect mode, a click on the page shows the CSS that styles that text, and which rules take effect.
+- Export writes the PDF from the pages on screen. Preflight finds missing fonts and images before you export.
 
-## Building
+## Get started
 
-```
-npm install
-npm run dev
-npm run lint
-npm test
-npm run e2e
-```
+Orca runs in Obsidian on the desktop, version 1.7.2 or later.
 
-`main.js` and the engine's `.wasm` are written beside `manifest.json`. Symlink the repo into a vault's `.obsidian/plugins/orca/` to run it.
+1. [Install Orca](https://orca.typeworks.dev/start/install/).
+2. In the file tree, right-click the folder that holds your chapters.
+3. Select `Create book from these notes`.
 
-## Status
+See [make a book](https://orca.typeworks.dev/start/make-a-book/) in the docs for more information. The [design section](https://orca.typeworks.dev/design/overview/) explains each control in the panel.
 
-One page is on screen, set from a note that ships with the plugin rather than one in the vault. The build order is milestones M0 through M4, and the tracking issue is #1.
+## The engine
+
+Orca sets the pages with [fleuron](https://github.com/zachhannum/fleuron), a typesetting engine that runs as WebAssembly inside the plugin.
+
+## Contributing
+
+Submit a bug or issue request [in the repo](https://github.com/zachhannum/obsidian-orca/issues). To build orca from source, read [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE)

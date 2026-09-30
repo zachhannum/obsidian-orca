@@ -103,6 +103,17 @@ export function byteOf(text: string, offset: number): number {
   return new TextEncoder().encode(text.slice(0, at)).length;
 }
 
+/** The byte line `line` of `text` opens on, counted from 0. A line past the end answers with the end. */
+export function lineByte(text: string, line: number): number {
+  let at = 0;
+  for (let seen = 0; seen < line; seen += 1) {
+    const next = text.indexOf("\n", at);
+    if (next < 0) return byteOf(text, text.length);
+    at = next + 1;
+  }
+  return byteOf(text, at);
+}
+
 /**
  * The character of `text` the byte at `byte` falls in. A byte inside a
  * character answers with the character it is part of, so the answer is

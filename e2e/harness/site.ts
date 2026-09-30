@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import type { Locator } from "@playwright/test";
 import { Book } from "./book";
 import { Navigator } from "./navigator";
-import { PLUGIN } from "./launch";
+import { configIn, PLUGIN } from "./launch";
 import { Obsidian, type Scheme } from "./obsidian";
 import { Panel } from "./panel";
 
@@ -126,7 +126,12 @@ async function faces(): Promise<string> {
   const files = [...new Set([...css.matchAll(/url\('([^']+)'\)/g)].map((m) => m[1] ?? ""))];
   const inlined = new Map<string, string>();
   for (const file of files) {
-    const bytes = await readFile(path.join(MODULES, file)).catch(() => undefined);
+    // A face the site keeps itself is a path beside the stylesheet; the
+    // rest are packages.
+    const from = file.startsWith(".")
+      ? path.resolve(path.dirname(FACES), file)
+      : path.join(MODULES, file);
+    const bytes = await readFile(from).catch(() => undefined);
     if (bytes === undefined) {
       throw new Error(`no ${file}; run \`npm ci\` in site to install the faces`);
     }
@@ -224,7 +229,7 @@ export class Site {
 
   static async open(from: Obsidian): Promise<Site> {
     const vault = Obsidian.sample();
-    const config = path.join(vault, ".obsidian");
+    const config = await configIn(vault);
     await mkdir(path.join(config, "snippets"), { recursive: true });
     await writeFile(
       path.join(config, "snippets", `${SNIPPET}.css`),

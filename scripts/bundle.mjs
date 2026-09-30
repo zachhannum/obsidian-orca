@@ -1,11 +1,10 @@
 /** The build, as a module, so its test runs the same build. */
 
 import { copyFile, mkdir, readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
-import builtins from "builtin-modules";
 import { VERSION, WIRE_VERSION, initSync, wireVersion } from "fleuron";
 
 const require = createRequire(import.meta.url);
@@ -16,6 +15,8 @@ export const root = path.resolve(fileURLToPath(import.meta.url), "../..");
 export const engineModule = require.resolve("fleuron/fleuron_bg.wasm");
 
 export const manifestFile = path.join(root, "manifest.json");
+
+export const packageFile = path.join(root, "package.json");
 
 export const external = [
   "obsidian",
@@ -31,11 +32,11 @@ export const external = [
   "@lezer/common",
   "@lezer/highlight",
   "@lezer/lr",
-  ...builtins,
+  ...builtinModules,
   // esbuild matches the specifier as written, and orca imports the
   // `node:` form. The plugin is desktop only, so Obsidian provides
   // these.
-  ...builtins.map((name) => `node:${name}`),
+  ...builtinModules.map((name) => `node:${name}`),
 ];
 
 /** esbuild reads `@/` out of its `paths`. */
@@ -82,6 +83,55 @@ export function inlineWorker({ production = false } = {}) {
   };
 }
 
+/**
+ * `virtual:module` is the engine module as base64, so the release is the
+ * three files Obsidian installs and nothing beside them.
+ */
+export function inlineModule() {
+  return {
+    name: "orca-inline-module",
+    setup(build) {
+      build.onResolve({ filter: /^virtual:module$/ }, () => ({
+        path: engineModule,
+        namespace: "orca-module",
+      }));
+      build.onLoad({ filter: /.*/, namespace: "orca-module" }, async () => ({
+        contents: `export default ${JSON.stringify((await readFile(engineModule)).toString("base64"))}`,
+        loader: "js",
+        watchFiles: [engineModule],
+      }));
+    },
+  };
+}
+
+/** A call that makes a script element, as the plugin review finds one. */
+export const scriptElement = /createElement\(\s*["'`]script["'`]\s*\)/i;
+
+/**
+ * Fails the build when the bundle makes a script element. The plugin
+ * review rejects one, and a dependency can bring it in: React 19 hoists
+ * a rendered `<script>` into the document head.
+ */
+export function noScriptElements() {
+  return {
+    name: "orca-no-script-elements",
+    setup(build) {
+      build.onEnd(async (result) => {
+        if (result.errors.length > 0) return;
+        const texts =
+          result.outputFiles?.map((file) => [file.path, file.text]) ??
+          [[build.initialOptions.outfile, await readFile(build.initialOptions.outfile, "utf8")]];
+        const errors = texts
+          .filter(([, text]) => scriptElement.test(text))
+          .map(([file]) => ({
+            text: `${path.basename(file)} creates a script element at runtime`,
+          }));
+        return { errors };
+      });
+    },
+  };
+}
+
 export function options({ production, outdir }) {
   return {
     entryPoints: [path.join(root, "src/main.ts")],
@@ -95,7 +145,7 @@ export function options({ production, outdir }) {
     sourcemap: production ? false : "inline",
     treeShaking: true,
     minify: production,
-    plugins: [inlineWorker({ production })],
+    plugins: [inlineWorker({ production }), inlineModule(), noScriptElements()],
     tsconfig,
     external,
   };
@@ -112,22 +162,16 @@ export async function copyPlugin(outdir, manifest = manifestFile) {
   await copyFile(path.join(root, "styles.css"), path.join(outdir, "styles.css"));
 }
 
-export async function copyModule(outdir, manifest = manifestFile) {
-  await checkEngine(engineModule, manifest);
-  await mkdir(outdir, { recursive: true });
-  await copyFile(engineModule, path.join(outdir, path.basename(engineModule)));
-}
-
 /**
- * `main.js` and the module beside it are one release: the manifest
- * records the fleuron the bundle was built against, and the module
- * writes the wire version the bundle reads.
+ * The package pins the fleuron the bundle is built against, and the
+ * module writes the wire version the bundle reads.
  */
-export async function checkEngine(module, manifest = manifestFile) {
-  const { engineVersion } = JSON.parse(await readFile(manifest, "utf8"));
-  if (engineVersion !== VERSION) {
+export async function checkEngine(module, pkg = packageFile) {
+  const { dependencies } = JSON.parse(await readFile(pkg, "utf8"));
+  const pinned = dependencies?.fleuron;
+  if (pinned !== VERSION) {
     throw new Error(
-      `${path.basename(manifest)} is engine ${engineVersion}; ` +
+      `${path.basename(pkg)} pins fleuron ${String(pinned)}; ` +
         `the bundle is built against fleuron ${VERSION}`,
     );
   }

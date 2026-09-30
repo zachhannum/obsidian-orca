@@ -1,10 +1,12 @@
 import esbuild from "esbuild";
 import process from "node:process";
 import {
-  copyModule,
+  checkEngine,
   copyPlugin,
+  engineModule,
   manifestFile,
   options,
+  packageFile,
   root,
 } from "./scripts/bundle.mjs";
 
@@ -18,7 +20,7 @@ const flag = (name, fallback) => {
 const outdir = flag("out", root);
 
 const manifest = flag("manifest", manifestFile);
-await copyModule(outdir, manifest);
+await checkEngine(engineModule, flag("package", packageFile));
 await copyPlugin(outdir, manifest);
 
 const context = await esbuild.context(options({ production, outdir }));

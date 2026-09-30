@@ -1,0 +1,19 @@
+---
+/* A key named in a step. `mod` is Obsidian's Mod key: Ctrl, and Cmd on
+   macOS. The page renders Ctrl, and the script names Cmd on a Mac. */
+interface Props {
+  name: 'mod';
+}
+
+const { name } = Astro.props;
+---
+
+<kbd class="key" data-key={name}>Ctrl</kbd>
+
+<script>
+  if (/Mac|iPhone|iPad/.test(navigator.userAgent)) {
+    for (const key of document.querySelectorAll<HTMLElement>('kbd[data-key="mod"]')) {
+      key.textContent = 'Cmd';
+    }
+  }
+</script>

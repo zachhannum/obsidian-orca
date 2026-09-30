@@ -5,6 +5,7 @@ import {
   anchorOf,
   byteOf,
   heldOn,
+  lineByte,
   nodesOn,
   offsetOf,
   opensOn,
@@ -25,6 +26,7 @@ function run(node: number | undefined): TextItem {
     kind: "text",
     x: 54,
     y: 73,
+    width: 30,
     fontId: 0,
     size: 12,
     text: "words",
@@ -322,6 +324,15 @@ test("a chapter opening on a dropped block is asked about under it too", () => {
   // Every line is asked about as the bytes the engine answers in.
   assert.deepEqual(writtenBytes("# Héading\n\nA note.\n"), [0, 12]);
   assert.deepEqual(writtenBytes("---\ntitle: X\n---\n"), []);
+});
+
+test("a line opens on the byte after the newline before it", () => {
+  const text = "---\ntitle: É\n---\n# One\n";
+  assert.equal(lineByte(text, 0), 0);
+  // The accent is two bytes, so every line after it opens one later.
+  assert.equal(lineByte(text, 3), 18);
+  assert.equal(lineByte(text, 4), 24);
+  assert.equal(lineByte(text, 9), 24);
 });
 
 // What this tier does not cover: the node a byte was read into, the

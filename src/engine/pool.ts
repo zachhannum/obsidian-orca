@@ -91,7 +91,7 @@ class Live {
       // worker runs a session nobody waits on.
       if (this.stopped) {
         engine.stop();
-        throw new EngineError("the engine stopped while it was starting");
+        throw new EngineError("the preview stopped while it was starting");
       }
       this.engine = engine;
       engine.dies(died);
@@ -153,12 +153,12 @@ export class Pool implements Engines {
     const running = this.live.get(book);
     if (running !== undefined) return running.client;
     if (this.closed) {
-      return Promise.reject(new EngineError("orca is unloaded"));
+      return Promise.reject(new EngineError("Orca was turned off."));
     }
     const log = this.deaths.get(book) ?? [];
     if (log.length > this.replays) {
       return Promise.reject(
-        new EngineDead("the engine stopped twice setting this book", log),
+        new EngineDead("the preview stopped twice while loading this book", log),
       );
     }
     this.evict(1);
@@ -297,6 +297,7 @@ function stamped(client: EngineClient, used: () => void): EngineClient {
     inspect: (node) => client.inspect(node),
     inspectMarginBox: (page, box) => client.inspectMarginBox(page, box),
     hit: (page, x, y) => client.hit(page, x, y),
+    names: () => client.names(),
     get current(): number {
       return client.current;
     },

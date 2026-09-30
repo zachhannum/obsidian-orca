@@ -12,6 +12,11 @@ import { GROUPS, atLevel, type Group } from '@/ui/groups';
 // plugin would show for the very book the pictures are of.
 import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
 import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
+import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
+import loopDarkMp4 from '../shots/loop-dark.mp4?url';
+import loopLightMp4 from '../shots/loop-light.mp4?url';
+import loopDarkPoster from '../shots/loop-dark.png';
+import loopLightPoster from '../shots/loop-light.png';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/panel.css';
@@ -68,7 +73,7 @@ const shot = async (source: ImageMetadata): Promise<Shot> => {
   };
 };
 
-/** The pages the flip-through turns, in the order the spec rasterized them. */
+/** The pages the flip-through turns, from the title page on. */
 const rasterized = import.meta.glob<{ default: ImageMetadata }>('../shots/pages/page-*.png', {
   eager: true,
 });
@@ -77,17 +82,28 @@ const pages: Shot[] = await Promise.all(
     .sort()
     .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
 );
-const [plate, chapterPage] = pages;
+
+/** The opening of Chapter I, which stands in for the demo until it loads. */
+const opening = rasterized['../shots/pages/page-09.png'];
+if (opening === undefined) throw new Error('the flip-through has no page 9');
+const chapterPage = await shot(opening.default);
 
 /**
- * A leaf carries the recto before it on its front and the verso after
- * it on its back, so the pages under the stack are the first and last.
+ * A leaf carries a recto on its front and the verso after it on its
+ * back. The book opens closed, so no page lies under the stack on the
+ * left, and the last page lies under it on the right.
  */
 const leaves = pages
-  .slice(1, -1)
-  .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 2] as Shot }] : []));
+  .slice(0, -1)
+  .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 1] as Shot }] : []));
 
 /** The window picture, at the width the page is being read at. */
+/** Each scheme's loop, and its first frame, which shows until it plays. */
+const loops = {
+  dark: { clip: loopDarkMp4, poster: (await getImage({ src: loopDarkPoster, format: 'webp' })).src },
+  light: { clip: loopLightMp4, poster: (await getImage({ src: loopLightPoster, format: 'webp' })).src },
+};
+
 const window_ = {
   dark: {
     phone: await shot(phoneDark),
@@ -159,6 +175,18 @@ const images = imagesInCss(css).map(({ url, link }) => {
   return { url, src };
 });
 
+/**
+ * The book's title face, served beside the page. The engine carries EB
+ * Garamond, and the demo sends it the rest.
+ */
+const faces = Object.values(
+  import.meta.glob<string>('../../sample/fonts/IMFe*.ttf', {
+    query: '?url',
+    import: 'default',
+    eager: true,
+  })
+);
+
 /** What the panel shows for every key, with the defaults filled in. */
 const shown: Record<string, string> = Object.fromEntries(
   Object.entries(writeDesign(effective(design))).map(([key, value]) => [key, String(value)])
@@ -168,7 +196,7 @@ const shown: Record<string, string> = Object.fromEntries(
 const own = Object.keys(writeDesign(design));
 
 /** The faces the engine carries, which are the ones the demo can set in. */
-const FACES = ['EB Garamond'];
+const FACES = ['EB Garamond', 'IM FELL English'];
 
 /**
  * The groups the demo draws, from the plugin's own table, holding the
@@ -210,10 +238,25 @@ const demo = {
   source: { name: `${CHAPTER}.md`, text: chapterNote },
   css,
   images,
+  faces,
 };
 
+/**
+ * One line of the title, written with a capital for each letter drawn
+ * at full width. The title is set in capitals, so the case the line is
+ * written in marks the wide letters and nothing else.
+ */
+const widen = (line: string): string =>
+  [...line]
+    .map((letter) =>
+      letter !== letter.toLowerCase()
+        ? `<span class="wide">${letter.toLowerCase()}</span>`
+        : letter
+    )
+    .join('');
+
 /** The page title. The sky's copy and the sea's are both set from it. */
-const title = 'A book designer<br /><i>inside Obsidian.</i>';
+const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}</i>`;
 
 /** The vault pictures, and the two the pane swaps between. */
 const vault = {
@@ -279,7 +322,7 @@ const swap = {
       <header>
         <a class="word" href="/">
           <Mark width={40} height={25} />
-          <span>orca</span>
+          <span aria-label="orca">orca</span>
         </a>
         <nav>
           <a href={docs}>Docs</a>
@@ -307,17 +350,34 @@ const swap = {
           <figure class="window">
             {
               (['dark', 'light'] as const).map((scheme) => (
-                <picture class={`shot on-${scheme}`}>
-                  <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
-                  <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
-                  <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
-                  <img
-                    src={window_[scheme].w1440.src}
-                    width={window_[scheme].w1440.width}
-                    height={window_[scheme].w1440.height}
-                    alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
-                  />
-                </picture>
+                <div class={`frame on-${scheme}`}>
+                  <picture class="shot">
+                    <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
+                    <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
+                    <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
+                    <img
+                      loading="lazy"
+                      src={window_[scheme].w1440.src}
+                      width={window_[scheme].w1440.width}
+                      height={window_[scheme].w1440.height}
+                      alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
+                    />
+                  </picture>
+                  <video
+                    class="loop"
+                    width="1200"
+                    height="750"
+                    poster={loops[scheme].poster}
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                    aria-label="Orca in Obsidian: a chapter is written, set as a book, styled in the design panel and in CSS, then exported to PDF."
+                    data-loop
+                  >
+                    <source src={loops[scheme].clip} type="video/mp4" />
+                  </video>
+                </div>
               ))
             }
             <figcaption>
@@ -420,9 +480,9 @@ const swap = {
             <div class="demo-page">
               <img
                 class="standing"
-                src={chapterPage?.src}
-                width={chapterPage?.width}
-                height={chapterPage?.height}
+                src={chapterPage.src}
+                width={chapterPage.width}
+                height={chapterPage.height}
                 alt="The opening of Chapter I, typeset by Orca."
               />
               <div class="set" data-demo-page></div>
@@ -500,18 +560,11 @@ const swap = {
           >
             <div class="book">
               <img
-                class="under verso"
-                src={plate?.src}
-                width={plate?.width}
-                height={plate?.height}
-                alt={`Page ${String(FIRST)} of the sample book`}
-              />
-              <img
                 class="under recto"
                 src={pages.at(-1)?.src}
                 width={pages.at(-1)?.width}
                 height={pages.at(-1)?.height}
-                alt={`Page ${String(FIRST + pages.length - 1)} of the sample book`}
+                alt={`Page ${String(FIRST + pages.length)} of the sample book`}
               />
               {
                 leaves.map((leaf, at) => (
@@ -531,6 +584,9 @@ const swap = {
                 <Icon name="right" size={16} />
               </button>
             </div>
+            <a class="quiet" href={bookPdf} download="Twenty Thousand Leagues Under the Sea.pdf">
+              Download the whole book as a PDF
+            </a>
           </div>
         </section>
 
@@ -548,7 +604,7 @@ const swap = {
       <footer>
         <a class="word small" href="/">
           <Mark width={26} height={16} />
-          <span>orca</span>
+          <span aria-label="orca">orca</span>
         </a>
         <nav>
           <a href={docs}>Docs</a>
@@ -560,6 +616,7 @@ const swap = {
     <script>
       import { startDemo, whenSeen, type Demo } from '../scripts/demo';
       import { startFlip } from '../scripts/flip';
+      import { startLoop } from '../scripts/loop';
       import { startSea } from '../scripts/sea';
 
       const sea = document.querySelector<SVGSVGElement>('[data-sea]');
@@ -574,6 +631,7 @@ const swap = {
       if (panel !== null && said !== null) {
         startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
       }
+      startLoop([...document.querySelectorAll<HTMLVideoElement>('[data-loop]')]);
     </script>
   </body>
 </html>
@@ -682,8 +740,9 @@ const swap = {
     text-decoration: none;
   }
   .word span {
-    font-family: var(--display);
-    font-weight: 600;
+    font-family: var(--wordmark);
+    font-style: italic;
+    font-weight: 700;
     font-size: 30px;
   }
   /* The footer's mark is the reading colour, so it is one flat white on
@@ -733,16 +792,20 @@ const swap = {
   h1 {
     position: relative;
     margin: 0;
-    font-family: var(--display);
+    font-family: var(--title);
     font-size: var(--title-size);
     line-height: var(--title-leading);
-    letter-spacing: -0.02em;
-    font-weight: 700;
+    font-weight: 500;
+    text-transform: uppercase;
     color: var(--sky-text);
   }
+  /* The sea's copy is clipped to its own box, and a slanted letter at
+     the start of a line leans out past the box's left edge. The box
+     reaches left by that much, and the padding puts the letters back. */
   h1 .sunk {
     position: absolute;
-    inset: 0;
+    inset: 0 0 0 -0.2em;
+    padding-inline-start: 0.2em;
     color: var(--text);
     /* The surface before the module runs, and the surface with the page
        read without scripts: the rest line, level. */
@@ -754,9 +817,20 @@ const swap = {
   /* Both copies of the title are written in, so their letters carry no
      scope class and the selector reaches them globally. The h1 ahead of
      it is scoped, so the rule stays on this page. */
+  /* The face slants and widens on axes of its own. The settings are
+     not inherited as parts, so every letter restates both. */
+  h1,
+  h1 :global(*) {
+    font-variation-settings:
+      'wdth' var(--wdth, 60),
+      'slnt' var(--slnt, 0);
+  }
   h1 :global(i) {
-    font-style: italic;
-    font-weight: 500;
+    font-style: normal;
+    --slnt: -10;
+  }
+  h1 :global(.wide) {
+    --wdth: 150;
   }
   .lede {
     margin: 34px 0 0;
@@ -808,12 +882,39 @@ const swap = {
     align-items: center;
     gap: 30px;
   }
+  .frame {
+    position: relative;
+    width: 100%;
+  }
   .shot img {
     display: block;
     width: 100%;
     height: auto;
     border-radius: 12px;
     box-shadow: var(--o-win-shadow);
+  }
+  /*
+   * The loop shows its first frame until it plays. Where it does not
+   * play, the picture of the preview and the panel stands in for it, and
+   * a lazy picture that is not shown is not fetched.
+   */
+  .loop {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: var(--o-win-shadow);
+  }
+  .frame .shot {
+    display: none;
+  }
+  @media (prefers-reduced-motion: reduce), (max-width: 639px) {
+    .loop {
+      display: none;
+    }
+    .frame .shot {
+      display: block;
+    }
   }
   .on-light {
     display: none;
@@ -1023,6 +1124,21 @@ const swap = {
     height: var(--leaf-h);
     perspective: 2600px;
     box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95);
+    transition:
+      box-shadow 0.9s,
+      transform 0.9s cubic-bezier(0.3, 0.1, 0.2, 1);
+  }
+  /* A closed book is the title page alone, so it stands in the middle,
+     and the shadow and the spine are the first leaf's. */
+  .flip[data-at='0'] .book {
+    box-shadow: none;
+    transform: translateX(calc(var(--leaf-w) / -2));
+  }
+  .flip[data-at='0'] .book::after {
+    opacity: 0;
+  }
+  .flip[data-at='0'] .leaf[data-leaf='0'] {
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95);
   }
   .book::after {
     content: '';
@@ -1032,6 +1148,7 @@ const swap = {
     width: 44px;
     z-index: 60;
     pointer-events: none;
+    transition: opacity 0.9s;
     background: linear-gradient(
       to right,
       rgba(40, 30, 10, 0),

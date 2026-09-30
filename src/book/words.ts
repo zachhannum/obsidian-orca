@@ -15,11 +15,15 @@ const WORD = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
 /** An embedded file, which puts an image on the page and no words. */
 const EMBED = /!\[\[[^\]]*\]\]/g;
 
+/** The destination of a markdown link, which the page does not print. */
+const DESTINATION = /\]\([^)\s]*(?:\s+"[^"]*")?\)/g;
+
 /**
- * Counts the words in a note's body. Its properties and its embeds are
- * not counted; a code block is, since its text is set on the page.
+ * Counts the words in a note's body. Its properties, its embeds and
+ * where its links go are not counted. A code block is, since its text
+ * is set on the page.
  */
 export function countWords(text: string): number {
   const { body } = readFrontmatter(text);
-  return body.replace(EMBED, " ").match(WORD)?.length ?? 0;
+  return body.replace(EMBED, " ").replace(DESTINATION, "]").match(WORD)?.length ?? 0;
 }

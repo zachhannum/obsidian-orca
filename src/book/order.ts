@@ -311,7 +311,7 @@ export function resolve(order: Order, links: Links, from: string): Resolution {
       sections.push({ kind: "missing", entry });
       warnings.push({
         entry,
-        said: `the vault has no note called ${entryName(entry)}, and the book is set without it`,
+        said: `The vault has no note called ${entryName(entry)}.`,
       });
       continue;
     }

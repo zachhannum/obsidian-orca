@@ -1,12 +1,10 @@
 /**
  * The Node tier, as a table on the job's summary page. GitHub renders
- * whatever a job appends to the file `GITHUB_STEP_SUMMARY` names, and
- * off a runner there is no file, so nothing is written.
+ * whatever a step writes to the file `GITHUB_STEP_SUMMARY` names, and
+ * the runner sends this reporter's output there.
  */
 
-import { appendFileSync } from "node:fs";
 import path from "node:path";
-import process from "node:process";
 import { root } from "./bundle.mjs";
 
 /** Maximum length of a failure message quoted in the summary. */
@@ -32,8 +30,7 @@ export default async function* summary(events) {
     files.set(at, tally);
   }
 
-  const out = process.env["GITHUB_STEP_SUMMARY"];
-  if (out !== undefined) appendFileSync(out, markdown(files, failures));
+  yield markdown(files, failures);
 }
 
 /**

@@ -6,7 +6,8 @@ import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
-import { shelve, type Shelving } from "@/ui/shelf";
+import type { Cached } from "@/ui/outline";
+import { members, shelve, type Shelving } from "@/ui/shelf";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -92,6 +93,47 @@ test("a note that is gone keeps its row, and the row says the note is missing", 
     rows.filter((row) => !row.named).map((row) => row.name),
     ["Chapter Twelve", "Chapter Four", "Chapter Fifteen"],
   );
+});
+
+test("the headings come from the cache the navigator is handed, and nothing is read for them", async () => {
+  const book = { path: BOOK, name: "Pride and Prejudice", model: await model() };
+  const asked: string[] = [];
+  const cache = (path: string): Cached[] | undefined => {
+    asked.push(path);
+    if (path !== "Chapter Fifteen.md") return undefined;
+    return [
+      { heading: "Chapter Fifteen", level: 1, position: { start: { line: 6 } } },
+      { heading: "The Parsonage", level: 1, position: { start: { line: 13 } } },
+    ];
+  };
+  const rows = shelve(book, { ...(await shelving(undefined)), headings: cache })
+    .groups.flatMap((group) => group.rows);
+
+  // Every note the book reads is asked about by its path.
+  assert.deepEqual(asked, rows.flatMap((row) => row.path ?? []));
+  const fifteen = rows.find((row) => row.name === "Chapter Fifteen");
+  assert.deepEqual(fifteen?.headings, [{ line: 13, words: "The Parsonage", depth: 0, trail: [{ words: "The Parsonage", nth: 0 }] }]);
+
+  // With no cache handed over, the rows list no headings at all.
+  const bare = shelve(book, await shelving(undefined)).groups.flatMap((group) => group.rows);
+  assert.ok(bare.every((row) => row.headings === undefined));
+});
+
+test("a heading renamed in a note the book reads changes the shelf the navigator compares", async () => {
+  const book = { path: BOOK, name: "Pride and Prejudice", model: await model() };
+  const cached = (words: string) => (path: string): Cached[] | undefined =>
+    path === "Chapter Fifteen.md"
+      ? [{ heading: words, level: 2, position: { start: { line: 22 } } }]
+      : undefined;
+  const vault = await shelving(undefined);
+  const before = shelve(book, { ...vault, headings: cached("The Entail") });
+  const after = shelve(book, { ...vault, headings: cached("The Settlement") });
+  assert.notEqual(JSON.stringify(before), JSON.stringify(after));
+
+  // A cache change in a note the book reads is one the navigator hears.
+  const read = members([before]);
+  assert.ok(read.has("Chapter Fifteen.md"));
+  assert.ok(!read.has("Unlisted.md"));
 });
 
 // What this tier does not cover: the markup the navigator draws from

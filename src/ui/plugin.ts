@@ -17,7 +17,7 @@ import type { Family, FontIndex } from "@/assets/fonts";
 import type { VaultAdapter } from "@/assets/vault";
 import { browserHost, startEngine } from "@/engine/bootstrap";
 import { EngineError } from "@/engine/errors";
-import { readModule } from "@/engine/module";
+import { engineModule } from "@/engine/module";
 import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
@@ -52,6 +52,7 @@ import {
 import type { Pin } from "@/ui/inspect";
 import { LIMITS, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
+import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
@@ -60,7 +61,8 @@ import {
   PreviewView,
   type PreviewState,
 } from "@/ui/preview";
-import { OrcaSettingTab, type Limited } from "@/ui/settings";
+import type { Limited } from "@/ui/definitions";
+import { OrcaSettingTab } from "@/ui/settings";
 import { Composer, type Composing, type Typeset } from "@/ui/composer";
 import type { Opened } from "@/ui/shelf";
 
@@ -107,8 +109,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
   limits: Limits = { ...LIMITS };
   /** The engines orca runs, one per book. */
   private engines: Pool | undefined;
-  /** The engine module, read once and kept for every worker. */
-  private bytes: Promise<ArrayBuffer> | undefined;
   /** Every edit to a book, routed to the note's one writer. */
   private readonly edits = new Edits(this.app, (path) => this.opened(path));
   /** Sets a book on the engine. Every preview reads the pages it typesets. */
@@ -140,6 +140,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
   private readonly asMarkdown = new WeakMap<WorkspaceLeaf, string>();
   /** The place each leaf left the manuscript it toggled away from. */
   private readonly manuscript = new WeakMap<WorkspaceLeaf, Place>();
+  /** The entry and heading each open preview last painted. */
+  private readonly shown = new Map<PreviewView, Showing>();
+  /** The preview the navigator marks the rows of: the one read last. */
+  private marked: PreviewView | undefined;
   /** The icon on each note that belongs to a book, and where it leads. */
   private readonly back = new WeakMap<
     MarkdownView,
@@ -147,10 +151,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
   >();
 
   override async onload(): Promise<void> {
-    // Orca reads the settings and the module while the views register,
-    // because Obsidian restores a leaf as soon as `onload` returns.
+    // Orca reads the settings while the views register, because
+    // Obsidian restores a leaf as soon as `onload` returns.
     const settings = this.saved();
-    const warmed = this.warmed();
     const engines = new Pool({
       start: (book) => this.startWorker(book),
       // Orca drops the book on a stopped engine, so the pane sets the
@@ -200,6 +203,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
             adds: (book) => {
               void this.addChapter(book);
             },
+            outlined: () =>
+              this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW).length > 0
+                ? this.listed()
+                : undefined,
+            showing: (view, showing) => {
+              this.showing(view, showing);
+            },
           },
           (text) => {
             this.reading(leaf, text);
@@ -235,7 +245,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
           preview: (book) => {
             void this.previewBook(book);
           },
-          turn: (book, at) => this.turnPreview(book, at),
+          turn: (book, at, line) => this.turnPreview(book, at, line),
+          headings: () => this.listed(),
         }),
     );
     this.registerView(
@@ -356,6 +367,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
         if (view instanceof MarkdownView && view.file !== null) {
           this.turned(view.file);
         }
+        if (view instanceof PreviewView && view !== this.marked) {
+          this.marked = view;
+          this.marks();
+        }
       }),
     );
     this.registerEvent(
@@ -400,7 +415,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       }),
     );
 
-    await Promise.all([settings, warmed]);
+    await settings;
   }
 
   /**
@@ -411,10 +426,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * sees.
    */
   private catchOpening(): void {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- the wrapper calls it on its own leaf
     const original = WorkspaceLeaf.prototype.setViewState as SetViewState;
-    const plugin = this;
+    const asBook = (leaf: WorkspaceLeaf, state: ViewState): ViewState => this.asBook(leaf, state);
     const caught: SetViewState = function (state, ...rest) {
-      return original.call(this, plugin.asBook(this, state), ...rest);
+      return original.call(this, asBook(this, state), ...rest);
     };
     WorkspaceLeaf.prototype.setViewState = caught;
     this.register(() => {
@@ -484,7 +500,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (view === null) return false;
     const to = view.chapterBy(step);
     if (to === undefined) return false;
-    if (!checking) view.turnToChapter(to);
+    if (!checking) void view.turnToChapter(to);
     return true;
   }
 
@@ -813,7 +829,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
           pick(this.app, {
             items: shelf,
             label: (book) => book.basename,
-            placeholder: `Add ${note.basename} to which book`,
+            placeholder: `Add ${note.basename} to book`,
             chose: (book) => {
               void this.edits.addNote(book.path, note);
             },
@@ -1131,9 +1147,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   private async startWorker(book: string): Promise<Engine> {
     try {
-      const module = await this.module();
       const handle = await startEngine(
-        module.slice(0),
+        engineModule().slice(0),
         browserHost,
         engineName(book),
       );
@@ -1142,8 +1157,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
       // document, and two renders at once race it.
       return {
         client: serialized(handle.client),
-        dies: handle.dies,
-        stop: handle.stop,
+        dies: (told) => {
+          handle.dies(told);
+        },
+        stop: () => {
+          handle.stop();
+        },
       };
     } catch (cause) {
       this.notice(cause);
@@ -1157,35 +1176,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (this.engines !== undefined) this.engines.ceiling = this.limits.sessions;
   }
 
-  /** Reads the engine module at load, and reports an install without one. */
-  private async warmed(): Promise<void> {
-    try {
-      await this.module();
-    } catch (cause) {
-      this.notice(cause);
-    }
-  }
-
-  /**
-   * Reads the engine module once, and gives the same bytes back after
-   * that. Orca does not keep a read that fails.
-   */
-  private module(): Promise<ArrayBuffer> {
-    this.bytes ??= readModule(this.files(), this.directory()).catch(
-      (cause: unknown) => {
-        this.bytes = undefined;
-        throw cause;
-      },
-    );
-    return this.bytes;
-  }
-
   /** Shows the engine's own message to the author. */
   private notice(cause: unknown): void {
     new Notice(
       cause instanceof EngineError
         ? `Orca: ${cause.message}`
-        : "Orca: the engine did not start",
+        : "Orca: the preview did not start",
     );
   }
 
@@ -1196,7 +1192,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
    */
   limit(limits: Limits): void {
     const remeasured = limits.unit !== this.limits.unit;
+    const outlined =
+      limits.headings !== this.limits.headings || limits.deepest !== this.limits.deepest;
     this.limits = limits;
+    if (outlined) {
+      for (const leaf of this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW)) {
+        if (leaf.view instanceof NavigatorView) leaf.view.redraw();
+      }
+    }
     if (this.engines !== undefined) this.engines.ceiling = limits.sessions;
     void this.saveData(limits);
     if (!remeasured) return;
@@ -1215,7 +1218,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       read: (path) => {
         const note = this.app.vault.getFileByPath(path);
         return note === null
-          ? Promise.reject(new Error(`${path} is gone`))
+          ? Promise.reject(new Error(`${path} was deleted`))
           : this.app.vault.cachedRead(note);
       },
       name: (path) => this.app.vault.getFileByPath(path)?.basename ?? path,
@@ -1456,7 +1459,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     pick(this.app, {
       items: shelf,
       label: (book) => book.basename,
-      placeholder: "Open which book",
+      placeholder: "Open book",
       chose: (book) => {
         void this.openPreview({ book: book.path });
       },
@@ -1547,11 +1550,41 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.openPanel();
   }
 
-  private async turnPreview(book: string, at: number): Promise<boolean> {
+  /** The deepest heading level the navigator lists, or nothing when it lists none. */
+  private listed(): number | undefined {
+    return this.limits.headings ? this.limits.deepest : undefined;
+  }
+
+  private async turnPreview(book: string, at: number, line?: number): Promise<boolean> {
     const { workspace } = this.app;
     const view = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
     if (!(view instanceof PreviewView) || view.book !== book) return false;
-    return await view.turnToSection(at);
+    return await view.turnToSection(at, line);
+  }
+
+  /**
+   * Keeps what a preview painted, and marks it in the navigator when it
+   * is the preview read last. A closed preview takes its mark with it.
+   */
+  private showing(view: PreviewView, showing: Showing | undefined): void {
+    if (showing === undefined) {
+      this.shown.delete(view);
+      if (this.marked === view) this.marked = undefined;
+    } else {
+      this.shown.set(view, showing);
+      const { workspace } = this.app;
+      const recent = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
+      if (this.marked === undefined || recent === view) this.marked = view;
+    }
+    this.marks();
+  }
+
+  /** Marks the rows of the preview read last in every navigator. */
+  private marks(): void {
+    const showing = this.marked === undefined ? undefined : this.shown.get(this.marked);
+    for (const leaf of this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW)) {
+      if (leaf.view instanceof NavigatorView) leaf.view.show(showing);
+    }
   }
 
   private async openPreview(state: PreviewState): Promise<void> {
@@ -1577,14 +1610,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
       },
       list: (folder) => adapter.list(at(folder)),
     };
-  }
-
-  private directory(): string {
-    const dir = this.manifest.dir;
-    if (dir === undefined) {
-      throw new EngineError("the plugin has no install directory");
-    }
-    return dir;
   }
 }
 

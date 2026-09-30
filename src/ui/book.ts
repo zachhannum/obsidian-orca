@@ -1,7 +1,7 @@
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { folderOf } from "@/book/folder";
 import { readModel, type Model } from "@/book/model";
-import { BookError } from "@/book/note";
+import { BookError, NewerBookError } from "@/book/note";
 import { resolve, type Section } from "@/book/order";
 import type { Range } from "@/book/pages";
 import { countWords } from "@/book/words";
@@ -239,7 +239,11 @@ export class BookView extends FileView {
     } catch (cause) {
       if (!(cause instanceof BookError)) throw cause;
       this.shown = undefined;
-      this.mounted?.paint({ kind: "refused", said: cause.message });
+      this.mounted?.paint({
+        kind: "refused",
+        said: cause.message,
+        newer: cause instanceof NewerBookError,
+      });
       return undefined;
     }
   }
@@ -292,7 +296,7 @@ export class BookView extends FileView {
       await this.writer?.flush();
     } catch (cause) {
       new Notice(
-        `Orca: the book note was not written. ${
+        `Orca: could not save the book. ${
           cause instanceof Error ? cause.message : String(cause)
         }`,
       );
@@ -463,7 +467,7 @@ export class BookView extends FileView {
         return 0;
       },
     );
-    reading.then((count) => {
+    void reading.then((count) => {
       // A change while the read was out has already dropped this one.
       if (this.counting.get(path) !== reading) return;
       this.counting.delete(path);

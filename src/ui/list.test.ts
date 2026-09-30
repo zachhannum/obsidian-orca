@@ -185,6 +185,25 @@ test("nothing moves above the entries the note opens with", () => {
   assert.equal(groupId("Body"), "g:Body");
 });
 
+test("a heading is never an item to drag, and an entry dropped keeps its headings", () => {
+  const groups = shelf();
+  const body = groups[1]?.rows[0];
+  assert.ok(body !== undefined);
+  body.headings = [
+    { line: 13, words: "The Parsonage", depth: 0, trail: [{ words: "The Parsonage", nth: 0 }] },
+  ];
+  const items = flatten(groups);
+
+  // The list dnd-kit sorts holds sections and entries, nothing else.
+  assert.equal(items.length, 9);
+  assert.ok(items.every((item) => item.kind === "group" || item.kind === "row"));
+
+  // The whole note moves, and its headings go with it.
+  const moved = moveRow(items, id(items, "One"), id(items, "Thanks"));
+  const one = moved?.items.find((item) => item.kind === "row" && item.row.name === "One");
+  assert.deepEqual(one?.kind === "row" ? one.row.headings : undefined, body.headings);
+});
+
 // What this tier does not cover: what dnd-kit does between the drag
 // starting and the drop, which is the e2e suite's, and the note the
 // place is written into, which is the reading order's own.

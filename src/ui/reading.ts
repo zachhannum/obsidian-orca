@@ -201,7 +201,7 @@ function prune(node: Node, stop: HTMLElement): void {
 function redrawSetext(element: HTMLElement, section: Section, mark: Drawn): void {
   const said = section.text.slice(mark.open ?? mark.from, mark.from).trimEnd();
   if (said === "") return;
-  const heading = element.doc.createElement(`h${String(mark.level ?? 2)}`);
+  const heading = element.doc.win.createEl(mark.level === 1 ? "h1" : "h2");
   heading.dataset["testid"] = "orca-setext";
   for (const [at, line] of said.split("\n").entries()) {
     if (at > 0) heading.createEl("br");

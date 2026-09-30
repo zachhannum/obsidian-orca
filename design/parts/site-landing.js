@@ -1,3 +1,5 @@
+/* global DCLogic -- the design host defines it before this script runs */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the design host reads Component by name
 class Component extends DCLogic {
   componentDidMount() {
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -7,12 +9,12 @@ class Component extends DCLogic {
         const t = (now - t0) / 1000;
         for (const p of document.querySelectorAll("[data-sea]")) p.setAttribute("d", this.seaPath(p.dataset, t));
       }
-      this.raf = requestAnimationFrame(tick);
+      this.raf = window.requestAnimationFrame(tick);
     };
-    this.raf = requestAnimationFrame(tick);
+    this.raf = window.requestAnimationFrame(tick);
   }
   componentWillUnmount() {
-    cancelAnimationFrame(this.raf);
+    window.cancelAnimationFrame(this.raf);
   }
   seaPath(ds, t) {
     const P = {

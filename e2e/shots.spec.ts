@@ -33,7 +33,7 @@ const GROUPS = [
   "Fonts",
   "Chapter openings",
   "Scene breaks",
-  "Heads & folios",
+  "Headers & page numbers",
   "Page breaks",
 ];
 
@@ -172,7 +172,11 @@ const EXPORT = "Export to PDF";
 /** The file the export writes beside the book note, named from its title. */
 const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
 
-/** The pages the flip-through turns, counted from the spread it opens on. */
+/**
+ * The pages the flip-through turns past the page the preview opens on.
+ * The flip-through starts at the title page, so it holds the front
+ * matter too.
+ */
 const FLIP = 12;
 
 /**
@@ -240,7 +244,7 @@ async function sized(site: Site, width: number, height: number): Promise<void> {
   );
 }
 
-/** The name a group gives its picture, as `heads-and-folios`. */
+/** The name a group gives its picture, as `headers-and-page-numbers`. */
 function slug(group: string): string {
   return group.replace(/ & /g, " and ").toLowerCase().replace(/ /g, "-");
 }
@@ -494,8 +498,10 @@ test("the vault picture is the file tree and the book note's own Markdown", asyn
     await site.paint(scheme);
     // The folder holds the book note beside the chapters it lists, and
     // the note itself is the Markdown, not a form drawn over it.
+    // The editor keeps only the lines near the view, and the top of the
+    // frontmatter is scrolled past, so the check reads a line below it.
     await expect(tree).toContainText(FOLDER);
-    await expect(note).toContainText("orca-book: 1");
+    await expect(note).toContainText("- `title-page`");
 
     await expect(tree).toHaveScreenshot(`vault-tree-${scheme}.png`);
     await expect(note).toHaveScreenshot(`vault-note-${scheme}.png`);
@@ -699,6 +705,9 @@ test("the flip-through's pages come from the book's own PDF", async ({
   const pdf = await readFile(exported);
   await rm(exported);
   expect(pdf.subarray(0, 5).toString("latin1")).toEqual("%PDF-");
+  // The site offers the same file for download. The engine dates it from
+  // the book, so the bytes change only when the book does.
+  expect(pdf).toMatchSnapshot("twenty-thousand-leagues.pdf");
 
   const where = await mkdtemp(path.join(tmpdir(), "orca-shots-"));
   const written = path.join(where, "sample.pdf");
@@ -708,7 +717,7 @@ test("the flip-through's pages come from the book's own PDF", async ({
     "-r",
     String(DPI),
     "-f",
-    String(first),
+    "1",
     "-l",
     String(first + FLIP - 1),
     written,
@@ -721,10 +730,10 @@ test("the flip-through's pages come from the book's own PDF", async ({
   const rendered = (await readdir(where))
     .filter((file) => file.endsWith(".png"))
     .sort();
-  expect(rendered).toHaveLength(FLIP);
+  expect(rendered).toHaveLength(first + FLIP - 1);
   for (const [at, file] of rendered.entries()) {
     const page = await readFile(path.join(where, file));
-    const folio = String(first + at).padStart(2, "0");
+    const folio = String(at + 1).padStart(2, "0");
     expect(page).toMatchSnapshot(["pages", `page-${folio}.png`]);
   }
 });
@@ -847,7 +856,7 @@ test("the make pictures are a folder of notes made into a book", async ({
     async (paths) => {
       for (const at of paths) {
         const found = window.app.vault.getAbstractFileByPath(at);
-        if (found !== null) await window.app.vault.delete(found, true);
+        if (found !== null) await window.app.fileManager.trashFile(found);
       }
     },
     [MADE, DRAFT],
@@ -856,8 +865,12 @@ test("the make pictures are a folder of notes made into a book", async ({
   await site.obsidian.asRendered();
 });
 
-/** The rule a CSS picture types: it overrides the indent control and holds a declaration fleuron skips. */
-const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;\n}";
+/**
+ * The rule a CSS picture types: it overrides the indent control and
+ * holds a declaration fleuron skips. The editor closes the brace and
+ * indents the lines, as it does for the author.
+ */
+const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;";
 
 /** The control that rule overrides. */
 const OVERRIDDEN = "body-first-line-indent";
@@ -1129,9 +1142,10 @@ test("the inspect picture is a pinned paragraph beside the rules that set it", a
   const selector = (await site.panel.selector.textContent()) ?? "";
   const section = selector.replace(/ > p$/, "");
   expect(section).toMatch(/^section#/);
-  // The rule is typed over three lines, since one line is wider than the
-  // editor and scrolls it sideways under its gutter.
-  await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};\n}`);
+  // The rule is typed over lines, since one line is wider than the
+  // editor and scrolls it sideways under its gutter. The editor closes
+  // the brace.
+  await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};`);
   await expect(site.panel.rulesIn("own").first()).toContainText(OWN_INDENT);
   pin = await inspect.pinned();
   await site.panel.inspecting(pin.key, pin.generation);
@@ -1375,7 +1389,7 @@ test("the Markdown pictures are each example set on its own page", async ({ site
   await site.obsidian.reopen(layout);
   await site.obsidian.page.evaluate(async (at) => {
     const found = window.app.vault.getAbstractFileByPath(at);
-    if (found !== null) await window.app.vault.delete(found, true);
+    if (found !== null) await window.app.fileManager.trashFile(found);
   }, MARKED);
 });
 

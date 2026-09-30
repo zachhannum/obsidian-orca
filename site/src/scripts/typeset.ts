@@ -5,8 +5,8 @@
  * generate are the plugin's own, so the page here is set the way the
  * plugin sets one. Nothing about the page is drawn by the browser.
  */
-import { Client, paintPage, styleOp, type Op } from 'fleuron';
-import { Session, documentFaces, serialized, type EngineClient } from '@/engine/session';
+import { Client, paintPage, styleOp, type Op, type Response } from 'fleuron';
+import { Session, documentFaces, serialized } from '@/engine/session';
 import type { Design } from '@/style/design';
 import type { Setting } from '@/style/generated';
 import { designSheets } from '@/style/sheet';
@@ -35,7 +35,8 @@ export interface Typeset {
  * Starts a session over one chapter and paints its first page into
  * `into`. The module is fetched on the first call, so a caller that
  * wants the page later starts this later. The book's own CSS rides last,
- * as it does in the plugin, and every image it names crosses first.
+ * as it does in the plugin, and every image and face it names crosses
+ * first.
  */
 export async function startTypeset(
   into: HTMLElement,
@@ -43,7 +44,8 @@ export async function startTypeset(
   setting: Setting,
   design: Design,
   css: string,
-  images: readonly Served[]
+  images: readonly Served[],
+  faces: readonly string[]
 ): Promise<Typeset> {
   const worker = new Worker(new URL('./typeset.worker.ts', import.meta.url), {
     type: 'module',
@@ -53,14 +55,14 @@ export async function startTypeset(
       worker.postMessage(request, transfer);
     },
   });
-  worker.addEventListener('message', ({ data }: MessageEvent) => {
+  worker.addEventListener('message', ({ data }: MessageEvent<Response>) => {
     client.receive(data);
   });
 
   // The faces the engine shaped with are registered on the document, so
   // the glyphs the painter places are drawn in the face they were
   // measured in.
-  const session = new Session(serialized(client as EngineClient), documentFaces(document));
+  const session = new Session(serialized(client), documentFaces(document));
 
   /**
    * The book, as the ops one chapter takes. The chapter is one section,
@@ -70,10 +72,19 @@ export async function startTypeset(
   const section = setting.sections[0];
   const bytes = await Promise.all(
     images.map(async ({ url, src }): Promise<Op> => {
-      const response = await fetch(src);
+      // The site is a web page, not a plugin, so there is no requestUrl.
+      const response = await window.fetch(src);
       return { op: 'image', url, bytes: new Uint8Array(await response.arrayBuffer()) };
     })
   );
+  const fonts = await Promise.all(
+    faces.map(async (src): Promise<Op> => {
+      // The site is a web page, not a plugin, so there is no requestUrl.
+      const response = await window.fetch(src);
+      return { op: 'font', bytes: new Uint8Array(await response.arrayBuffer()) };
+    })
+  );
+  bytes.push(...fonts);
   const served = new Map(images.map(({ url, src }) => [url, src]));
   const styled = (sets: Design): Op => styleOp(designSheets(sets, setting, css));
   const opened = (sets: Design): Op[] => [
@@ -96,11 +107,15 @@ export async function startTypeset(
     if (reading === undefined) return;
     const page = reading.pages[0];
     if (page === undefined) return;
-    into.innerHTML = paintPage(page, {
+    // The painter's markup is parsed as SVG, so the chapter's text
+    // inside it stays text.
+    const markup = paintPage(page, {
       fonts: reading.fonts,
       assets: reading.assets,
       asset: (asset) => served.get(asset.url),
     });
+    const parsed = new DOMParser().parseFromString(markup, 'image/svg+xml');
+    into.replaceChildren(document.importNode(parsed.documentElement, true));
     into.dataset['set'] = 'yes';
   };
 

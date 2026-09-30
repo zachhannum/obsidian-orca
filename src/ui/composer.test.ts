@@ -10,6 +10,7 @@ import { faceBytes } from "@/assets/sfnt";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
+import { lineByte } from "@/book/place";
 import type { Face } from "@/book/plan";
 import type { Design, FontUse } from "@/style/design";
 import { FACES_SHEET, OWN_SHEET } from "@/style/sheet";
@@ -54,7 +55,7 @@ class FakeClient implements EngineClient {
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   /** The text of each source the book op sent, by the name it sent it under. */
-  private sent: { name: string; text: string }[] = [];
+  protected sent: { name: string; text: string }[] = [];
 
   private get sources(): number {
     return this.sent.length;
@@ -140,6 +141,10 @@ class FakeClient implements EngineClient {
 
   hit(): Promise<null> {
     return Promise.resolve(null);
+  }
+
+  names(): Promise<{ classes: string[]; ids: string[] }> {
+    return Promise.resolve({ classes: [], ids: [] });
   }
 
   private pages(): Page[] {
@@ -304,6 +309,37 @@ test("a chapter opening on a block that set nothing opens under it", async () =>
   assert.equal(await book.opens(6), undefined);
 });
 
+test("a heading asks the engine where the line it opens on was set", async () => {
+  const client = new Asked();
+  const composer = new Composer(await setting(client));
+  const book = await composer.open(BOOK);
+  const text = client.written("Chapter Twelve.md");
+  client.asked.length = 0;
+
+  // Line 0 is the frontmatter, which is on no page.
+  assert.deepEqual(await book.linesOpen(5, [0, 5]), [undefined, 10]);
+  assert.deepEqual(client.asked, [
+    { source: "Chapter Twelve.md", byte: lineByte(text, 0) },
+    { source: "Chapter Twelve.md", byte: lineByte(text, 5) },
+  ]);
+  // A section with no note crossed has no line on any page.
+  assert.deepEqual(await book.linesOpen(6, [3]), [undefined]);
+});
+
+/** A client that keeps every byte it was asked to place. */
+class Asked extends FakeClient {
+  readonly asked: { source: string; byte: number }[] = [];
+
+  written(name: string): string {
+    return this.sent.find((sent) => sent.name === name)?.text ?? "";
+  }
+
+  override nodeAt(source: string, byte: number): Promise<number | null> {
+    this.asked.push({ source, byte });
+    return super.nodeAt(source, byte);
+  }
+}
+
 /**
  * A book whose every chapter opens on a block the engine set nothing
  * from: the first byte of a source was read into no node, and the
@@ -339,7 +375,45 @@ test("a book being set reports the sections it has read and the entry it opens a
   // before the first note is opened.
   assert.equal(first.read, 2);
   assert.equal(last.read, 8);
-  assert.equal(last.opening, "Chapter Twelve");
+});
+
+test("a book being set reads its notes, then lays out its pages with every note read", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client));
+  const told: Progress[] = [];
+
+  await composer.open(BOOK, { told: (at) => told.push(at) });
+
+  const phases = told.map((at) => at.phase);
+  const laying = phases.indexOf("laying");
+  // Every report before the last note is read counts; the one after it
+  // is the layout, which has no count of its own.
+  assert.ok(laying > 0);
+  assert.ok(phases.slice(0, laying).every((phase) => phase === "reading"));
+  assert.deepEqual(phases.slice(laying), ["laying"]);
+  const read = told.slice(0, laying).map((at) => at.read);
+  assert.deepEqual(read, [...read].sort((a, b) => a - b));
+  assert.equal(told[laying]?.read, told[laying]?.of);
+});
+
+test("a view that joins a book another surface started is told how far along it is", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client));
+  const told: Progress[] = [];
+
+  // The book note's own page starts the run and asks to hear nothing.
+  const started = composer.open(BOOK);
+  const joined = composer.open(BOOK, { told: (at) => told.push(at) });
+  assert.equal(joined, started);
+  await joined;
+
+  assert.ok(told.some((at) => at.phase === "reading"));
+  assert.equal(told.at(-1)?.phase, "laying");
+
+  // A book already set has nothing left to report.
+  const late: Progress[] = [];
+  await composer.open(BOOK, { told: (at) => late.push(at) });
+  assert.deepEqual(late, []);
 });
 
 test("a book already set is handed back rather than typeset again", async () => {

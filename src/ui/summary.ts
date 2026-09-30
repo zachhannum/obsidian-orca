@@ -41,7 +41,7 @@ export function summary(design: Design, unit: PageUnit): Summed[] {
     { label: "Chapters begin on", value: said("chapter-begins") },
     { label: "Scene breaks", value: sceneSaid(full) },
     {
-      label: "Running heads",
+      label: "Headers",
       value:
         left === "none" && right === "none"
           ? "None"

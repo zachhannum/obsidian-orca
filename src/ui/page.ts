@@ -134,8 +134,8 @@ export function seated(mode: ViewMode, leaves: Leaf[]): (Leaf | undefined)[] {
 }
 
 /** The node the pages are written into. */
-export interface Surface {
-  innerHTML: string;
+export interface Surface<N> {
+  replaceChildren(...nodes: N[]): void;
   readonly dataset: DOMStringMap;
   readonly style: { setProperty: (name: string, value: string) => void };
   querySelectorAll(selectors: string): Iterable<Marked>;
@@ -163,13 +163,38 @@ export interface Painted {
 }
 
 /**
+ * Builds one sheet from its attributes and the painter's SVG, which is
+ * absent for the empty seat beside a spread's first recto.
+ */
+export type Press<N> = (
+  attributes: Record<string, string>,
+  markup: string | undefined,
+) => N;
+
+/**
+ * Parses the painter's markup as SVG rather than HTML, so the author's
+ * note text inside it stays text: nothing in it runs or loads.
+ */
+export const pressSheet: Press<HTMLElement> = (attributes, markup) => {
+  const sheet = createDiv({ cls: "orca-page", attr: attributes });
+  if (markup === undefined) return sheet;
+  const parsed = new DOMParser().parseFromString(markup, "image/svg+xml");
+  sheet.append(document.importNode(parsed.documentElement, true));
+  return sheet;
+};
+
+/**
  * Writes a view's pages into the surface in one go, with the generation,
  * the stage runs and the span being read as attributes, which a test
  * waits on rather than a clock.
  */
-export function showPages(surface: Surface, painted: Painted): void {
+export function showPages<N>(
+  surface: Surface<N>,
+  painted: Painted,
+  press: Press<N>,
+): void {
   const seats = seated(painted.mode, painted.leaves);
-  surface.innerHTML = seats.map(sheet).join("");
+  surface.replaceChildren(...seats.map((leaf) => sheet(leaf, press)));
 
   // The box is the sheet, because the border and the shadow are drawn
   // on the box: one wider than the sheet hangs them off its edge.
@@ -201,7 +226,7 @@ export function showPages(surface: Surface, painted: Painted): void {
  * That is the one a screen reader should read, so the glyphs come out
  * of the tree and it is left in.
  */
-function readable(surface: Surface): void {
+function readable<N>(surface: Surface<N>): void {
   for (const glyph of surface.querySelectorAll(
     "text:not([data-selection-line])",
   )) {
@@ -209,14 +234,19 @@ function readable(surface: Surface): void {
   }
 }
 
-function sheet(leaf: Leaf | undefined): string {
+function sheet<N>(leaf: Leaf | undefined, press: Press<N>): N {
   if (leaf === undefined) {
-    return '<div class="orca-page" data-empty="true" aria-hidden="true"></div>';
+    return press({ "data-empty": "true", "aria-hidden": "true" }, undefined);
   }
   const page = String(leaf.page);
-  return (
-    `<div class="orca-page" role="group" aria-label="Page ${page}"` +
-    ` data-page="${page}" data-folio="${String(leaf.folio)}"` +
-    ` data-side="${leaf.side}">${leaf.markup}</div>`
+  return press(
+    {
+      role: "group",
+      "aria-label": `Page ${page}`,
+      "data-page": page,
+      "data-folio": String(leaf.folio),
+      "data-side": leaf.side,
+    },
+    leaf.markup,
   );
 }

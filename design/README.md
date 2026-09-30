@@ -90,6 +90,22 @@ its editor around these files and returns a URL. The artboard list and
   a chapter or a generated section of that book in the navigator turns
   the preview to it. A click with the Mod key opens a chapter as
   markdown in a new tab. Any other chapter click opens the note.
+- The navigator lists the headings inside each entry's note under the
+  entry, read from Obsidian's cache. A note that opens on a heading
+  with the entry's name leaves it out, because the entry's row says
+  it. The author folds the headings of one entry at a time, and a
+  heading folds the deeper headings under it. `Collapse all` in the
+  navigator header folds every entry and every heading level in it, and `Expand all` opens every
+  entry and heading again. Obsidian keeps every fold with the
+  workspace, so a reload opens the shelf as the author left it. A
+  heading's fold follows its words under the headings above it, so
+  text written elsewhere in the note keeps it. A setting
+  lists them, and it is off until the author turns it on. A second setting sets the deepest heading
+  level the navigator lists, and a heading below it has no row. A heading row turns a preview of the book to
+  the page the heading opens on, and a Mod click opens the note at its
+  line. A heading row never drags, and a dragged entry folds its
+  headings until it is dropped. The row for the page the preview
+  shows is marked, heading rows included.
 - The author's CSS is the design panel's second view, reached by an
   icon in the panel header. The book stays in the pane either way.
 - The design panel is in the right sidebar, and it does not open or
@@ -134,8 +150,15 @@ its editor around these files and returns a URL. The artboard list and
   warns.
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
-  Nothing else in the CSS completes, because the engine is the only
-  linter.
+  A selector completes from the classes and ids the book's sections
+  carry, after a `.` or a `#`, and from the ones its notes write, as
+  the engine read them at the last render. Property names, their keywords, the
+  elements, pseudo-classes and at-rules complete from the subset the
+  engine exports, and from no list orca keeps. A name inside `var(`
+  completes from the custom properties the sheet declares, and one
+  inside `string(` from the names its `string-set` declarations set. An option
+  shows an Obsidian icon for its kind and its syntax on a line under
+  its name, and Tab takes it.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - A change on disk reloads a book view with no unwritten edit. A view
@@ -154,9 +177,9 @@ its editor around these files and returns a URL. The artboard list and
   heading still comes from the note. A chapter's first line takes no
   style, because the engine sets none there.
 - A running head set to the chapter title reads the section's first
-  heading, whatever level it is written at. The Heads & folios group
-  picks the level to read instead, and a chapter with no heading there
-  reads its first.
+  heading, whatever level it is written at. The Headers & page
+  numbers group picks the level to read instead, and a chapter with no
+  heading there reads its first.
 - The running heads take a font of their own, and the folios take
   another, because a head is usually set in another face than the text
   and a folio in another face again. Neither row has a Variant row, so

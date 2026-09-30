@@ -8,15 +8,19 @@
 
     <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
       <div class="step-n"><b>1</b> Opening a long book for the first time</div>
-      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
-        <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--text-faint); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <div style="font-size: 13.5px; color: var(--text-normal)">Setting <i>Pride and Prejudice</i></div>
-        <div style="width: 190px; height: 4px; border-radius: 2px; background: var(--background-modifier-border); overflow: hidden">
-          <div style="width: 62%; height: 100%; background: var(--color-accent)"></div>
+      <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; text-align: center">
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px">
+          <div style="position: relative; width: 56px; height: 38px; transform: perspective(160px) rotateX(28deg); transform-style: preserve-3d"><div style="position: absolute; inset: 0; border-radius: 5px; background: var(--color-accent); transform: translateZ(-2px)"></div><div style="position: absolute; top: 2px; left: 2px; width: 26px; border-radius: 3px 0 0 3px; height: 34px; padding: 5px 4px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary)"></div><div style="position: absolute; top: 2px; left: 28px; width: 26px; border-radius: 0 3px 3px 0; height: 34px; padding: 5px 4px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary)"></div><div style="position: absolute; top: 2px; left: 28px; width: 26px; border-radius: 0 3px 3px 0; height: 34px; padding: 5px 4px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary); box-shadow: inset 0 0 0 1px var(--background-modifier-border); transform-origin: 0 50%; transform: rotateY(-70deg)"></div></div>
+          <div style="font-size: 13.5px; color: var(--text-normal)">Loading <i>Pride and Prejudice</i>…</div>
+          <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">15 of 24 chapters</div>
         </div>
-        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">18 chapters of 24<br>it will open at Chapter Twelve</div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-top: 1px dashed var(--background-modifier-border)">
+          <div style="position: relative; width: 56px; height: 38px; transform: perspective(160px) rotateX(28deg); transform-style: preserve-3d"><div style="position: absolute; inset: 0; border-radius: 5px; background: var(--color-accent); transform: translateZ(-2px)"></div><div style="position: absolute; top: 2px; left: 2px; width: 26px; border-radius: 3px 0 0 3px; height: 34px; padding: 5px 4px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary)"></div><div style="position: absolute; top: 2px; left: 28px; width: 26px; border-radius: 0 3px 3px 0; height: 34px; padding: 5px 4px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary)"></div><div style="position: absolute; top: 2px; left: 28px; width: 26px; border-radius: 0 3px 3px 0; height: 34px; padding: 5px 4px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary); box-shadow: inset 0 0 0 1px var(--background-modifier-border); transform-origin: 0 50%; transform: rotateY(-70deg)"></div></div>
+          <div style="font-size: 13.5px; color: var(--text-normal)">Loading <i>Pride and Prejudice</i>…</div>
+          <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">Laying out pages</div>
+        </div>
       </div>
-      <div class="step-note">A whole book has to be typeset before any page of it is right, and the first one has nothing cached. It happens once a session, and it needs a state rather than an empty pane.</div>
+      <div class="step-note">A whole book has to be typeset before any page of it is right, and the first one has nothing cached. It happens once a session, and it needs a state rather than an empty pane. An open book turns its pages until the first page is ready. The note counts the chapters while orca reads them, and then says that the pages are being laid out.</div>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 9px; min-height: 0">
@@ -24,14 +28,11 @@
       <div class="step-frame" style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--background-secondary)">
         <div class="paper" style="width: 92px; height: 138px; border-radius: 2px"></div>
         <div style="position: absolute; top: 10px; right: 10px; left: 10px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); box-shadow: 0 4px 14px rgba(0,0,0,0.3)">
-          <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; flex: none; stroke: var(--color-orange); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/><path d="M21 3v6h-6"/></svg>
+          <div style="position: relative; width: 34px; height: 23px; transform: perspective(160px) rotateX(28deg); transform-style: preserve-3d"><div style="position: absolute; inset: 0; border-radius: 3px; background: var(--color-orange); transform: translateZ(-2px)"></div><div style="position: absolute; top: 1px; left: 1px; width: 16px; border-radius: 2px 0 0 2px; height: 21px; padding: 3px 2px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary)"></div><div style="position: absolute; top: 1px; left: 17px; width: 16px; border-radius: 0 2px 2px 0; height: 21px; padding: 3px 2px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary)"></div><div style="position: absolute; top: 1px; left: 17px; width: 16px; border-radius: 0 2px 2px 0; height: 21px; padding: 3px 2px; box-sizing: border-box; background: repeating-linear-gradient(to bottom, var(--text-faint) 0 1px, transparent 1px 4px) content-box, var(--background-primary); box-shadow: inset 0 0 0 1px var(--background-modifier-border); transform-origin: 0 50%; transform: rotateY(-70deg)"></div></div>
           <div>
-            <div style="font-size: 11.5px; color: var(--text-normal)">Setting <i>Pride and Prejudice</i> again</div>
-            <div style="font-size: 10.5px; color: var(--text-faint); line-height: 1.45">nothing you wrote was lost<br>you will come back to page 147</div>
+            <div style="font-size: 11.5px; color: var(--text-normal)">Loading <i>Pride and Prejudice</i>…</div>
           </div>
-          <div style="margin-left: auto; width: 54px; height: 4px; border-radius: 2px; background: var(--background-modifier-border); overflow: hidden">
-            <div style="width: 80%; height: 100%; background: var(--color-orange)"></div>
-          </div>
+          
         </div>
       </div>
       <div class="step-note">Orca still has everything it sent, so recovery is deterministic and needs no decision from the author. The words never lived here in the first place — they are notes in the vault. The pages already painted stay under the notice.</div>
@@ -41,9 +42,8 @@
       <div class="step-n"><b>3</b> A book from a newer orca</div>
       <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
         <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--text-faint); fill: none; stroke-width: 1.75; stroke-linecap: round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <div style="font-size: 13.5px; color: var(--text-normal); line-height: 1.5">This book was made by a newer<br>version of orca than this one.</div>
-        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">orca reads format 1, and this book<br>is written in format 2</div>
-        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">Update the plugin to open it</div>
+        <div style="font-size: 13.5px; color: var(--text-normal); line-height: 1.5">This book was made by a newer version of Orca<br>than the one currently installed in this vault.</div>
+        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">Update Orca to open it.</div>
         <div class="btn" style="margin-top: 2px">Open as markdown</div>
       </div>
       <div class="step-note">The key that makes a note a book also says which format it is in, so an older orca can refuse cleanly instead of writing a shape it does not understand.</div>
@@ -54,10 +54,10 @@
       <div class="step-frame" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px">
         <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: var(--text-faint); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2v6h6"/><path d="M12 11v4"/><path d="M12 18h.01" stroke-width="2.2"/></svg>
         <div style="font-size: 13.5px; color: var(--text-normal)">The book changed on disk</div>
-        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">This note was written outside orca.<br>Your edit is not in it.</div>
+        <div style="font-size: 12px; color: var(--text-faint); line-height: 1.5">This note changed outside Orca.</div>
         <div style="display: flex; gap: 8px; margin-top: 2px">
-          <div class="btn">Take what is on disk</div>
-          <div class="btn mod-cta">Keep my edit</div>
+          <div class="btn">Use the saved version</div>
+          <div class="btn mod-cta">Keep my changes</div>
         </div>
       </div>
       <div class="step-note">The view is the only writer while it is open. A change from outside reloads a view with no unwritten edit. A view with one has two versions of the note, and the author picks the one that stays.</div>
@@ -70,8 +70,8 @@
         <div style="position: absolute; top: 10px; right: 10px; left: 10px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); box-shadow: 0 4px 14px rgba(0,0,0,0.3)">
           <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; flex: none; stroke: var(--color-orange); fill: none; stroke-width: 1.75; stroke-linecap: round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01" stroke-width="2.2"/></svg>
           <div>
-            <div style="font-size: 11.5px; color: var(--text-normal)">Orca could not set the book again</div>
-            <div style="font-size: 10.5px; color: var(--text-faint); line-height: 1.45">the pages here are the ones from before<br>open the book again to try once more</div>
+            <div style="font-size: 11.5px; color: var(--text-normal)">The preview stopped</div>
+            <div style="font-size: 10.5px; color: var(--text-faint); line-height: 1.45">These are the last pages it made.<br>Reopen the book to try again.</div>
           </div>
           <div class="btn" style="margin-left: auto; height: 22px; padding: 0 8px; font-size: 10.5px; white-space: nowrap">Copy the report</div>
         </div>

@@ -31,7 +31,7 @@ export function vaultWritePath(path: string): string {
     throw new AssetError(`${path} is outside the vault`);
   }
   if (segments.length === 0) {
-    throw new AssetError("the export has no file name in the vault");
+    throw new AssetError("Choose where to save the PDF.");
   }
   return segments.join("/");
 }

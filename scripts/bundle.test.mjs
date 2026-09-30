@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import esbuild from "esbuild";
-import { options } from "./bundle.mjs";
+import { noScriptElements, options } from "./bundle.mjs";
 
 test("the editor is CodeMirror as Obsidian ships it, and only the CSS grammar is bundled", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-bundle-"));
@@ -33,6 +33,33 @@ test("the editor is CodeMirror as Obsidian ships it, and only the CSS grammar is
     }
     assert.equal(bundled("@codemirror/lang-css"), true);
     assert.equal(bundled("@lezer/css"), true);
+  } finally {
+    await rm(outdir, { recursive: true, force: true });
+  }
+});
+
+test("the shipped bundle makes no script element, and a build that makes one fails", async () => {
+  const outdir = await mkdtemp(path.join(tmpdir(), "orca-bundle-"));
+  try {
+    const shipped = await esbuild.build({
+      ...options({ production: true, outdir }),
+      write: false,
+      logLevel: "silent",
+    });
+    assert.deepEqual(shipped.errors, []);
+
+    await assert.rejects(
+      esbuild.build({
+        stdin: { contents: 'document.createElement("script");' },
+        outfile: path.join(outdir, "main.js"),
+        bundle: true,
+        minify: true,
+        write: false,
+        logLevel: "silent",
+        plugins: [noScriptElements()],
+      }),
+      /creates a script element/,
+    );
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }

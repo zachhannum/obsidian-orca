@@ -64,7 +64,7 @@ export default defineConfig({
             'design/fonts',
             'design/chapter-openings',
             'design/scene-breaks',
-            'design/heads-and-folios',
+            'design/headers-and-page-numbers',
             'design/page-breaks',
             'design/custom-css',
             'design/inspect',

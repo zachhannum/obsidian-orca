@@ -4,7 +4,7 @@
  * launched rather than a browser of its own.
  */
 
-import { chromium, test as base } from "@playwright/test";
+import { test as base } from "@playwright/test";
 import { Book } from "./book";
 import { Export } from "./export";
 import { CDP, FIXTURE } from "./launch";
@@ -48,7 +48,7 @@ interface Shared {
 
 export const test = base.extend<Fixtures, Shared>({
   obsidian: [
-    async ({}, use, worker) => {
+    async ({ playwright }, use, worker) => {
       const endpoint = process.env[CDP];
       if (endpoint === undefined) throw new Error(`${CDP} is not set`);
       // A connection never sees a worker that started before it
@@ -56,7 +56,7 @@ export const test = base.extend<Fixtures, Shared>({
       // because a spec failed. That one reloads the window, so every
       // engine it looks for starts under its own connection.
       const fresh = worker.workerIndex > 0;
-      await use(await Obsidian.attach(await chromium.connectOverCDP(endpoint), fresh));
+      await use(await Obsidian.attach(await playwright.chromium.connectOverCDP(endpoint), fresh));
     },
     { scope: "worker" },
   ],
@@ -93,7 +93,9 @@ export const test = base.extend<Fixtures, Shared>({
   },
 
   navigator: async ({ obsidian }, use) => {
-    await use(new Navigator(obsidian));
+    const navigator = new Navigator(obsidian);
+    await use(navigator);
+    await navigator.reset();
   },
 
   panel: async ({ obsidian }, use) => {

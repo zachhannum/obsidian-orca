@@ -82,7 +82,7 @@ body {
 }
 
 /* The search box, drawn as the artboard's field. */
-site-search button[data-open-modal] {
+.header button[data-open-modal] {
   width: min(340px, 100%);
   height: 36px;
   gap: 8px;
@@ -94,12 +94,12 @@ site-search button[data-open-modal] {
   font-family: var(--ui);
   font-size: 14px;
 }
-site-search button[data-open-modal] > kbd {
+.header button[data-open-modal] > kbd {
   margin-inline-start: auto;
   background: none;
   color: var(--faint);
 }
-site-search button[data-open-modal] > kbd kbd {
+.header button[data-open-modal] > kbd kbd {
   font-family: var(--mono), system-ui;
   font-size: 11px;
   border: 1px solid var(--border);
@@ -241,6 +241,15 @@ site-search button[data-open-modal] > kbd kbd {
   padding: 1px 6px 1px 4px;
   border-radius: 3px;
   white-space: nowrap;
+}
+.sl-markdown-content .key {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code);
+  color: var(--codetext);
+  padding: 1px 5px;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 var(--codetext);
 }
 .sl-markdown-content .action svg {
   width: 1.15em;
@@ -397,12 +406,12 @@ site-search button[data-open-modal] > kbd kbd {
   width: 236px;
   max-width: none;
 }
-starlight-toc nav {
+.right-sidebar-panel nav {
   padding: 48px 0 0;
   font-family: var(--ui);
   font-size: 13.5px;
 }
-starlight-toc nav > h2 {
+.right-sidebar-panel nav > h2 {
   margin-top: 0;
   font-size: 12px;
   font-weight: 600;
@@ -411,18 +420,18 @@ starlight-toc nav > h2 {
   color: var(--faint);
   margin-bottom: 3px;
 }
-starlight-toc nav ul {
+.right-sidebar-panel nav ul {
   margin-top: 9px;
   padding-inline-start: 0;
 }
-starlight-toc a {
+.right-sidebar-panel a {
   display: block;
   padding: 4px 0;
   border-inline-start: 0;
   color: var(--muted);
   text-decoration: none;
 }
-starlight-toc a[aria-current='true'] {
+.right-sidebar-panel a[aria-current='true'] {
   color: var(--text);
 }
 

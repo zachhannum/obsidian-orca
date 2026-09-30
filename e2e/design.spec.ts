@@ -603,7 +603,7 @@ test("the panel offers every group a book designer works in", async ({
     "Fonts",
     "Chapter openings",
     "Scene breaks",
-    "Heads & folios",
+    "Headers & page numbers",
     "Page breaks",
   ]);
 });
@@ -733,6 +733,35 @@ test("a control the author's CSS overrides dims, takes no input and names the li
   await expect(row).not.toHaveAttribute("data-overridden");
   await expect(panel.overridden(key)).toHaveCount(0);
   await expect.poll(locked).toBe(false);
+
+  await written(vault, own);
+});
+
+test("an !important author rule from a selector the generated rule does not carry locks the control and says it is important", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  const own = await vault.read(BOOK);
+  vault.touch(BOOK);
+  await book.open();
+  const before = await book.painted();
+  await panel.open();
+  const key = "body-first-line-indent";
+  await expect(panel.row(key)).not.toHaveAttribute("data-overridden");
+
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  const typed = "\np { text-indent: 0 !important; }";
+  await panel.typeCss(typed);
+  await expect.poll(async () => vault.read(BOOK)).toContain(typed);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+
+  await panel.toControls.click();
+  await expect(panel.row(key)).toHaveAttribute("data-overridden", line);
+  await panel.overridden(key).hover();
+  await expect(panel.overriddenCard).toContainText("0 !important");
 
   await written(vault, own);
 });
@@ -1276,8 +1305,7 @@ test("the hyphenation switch says which language the engine will hyphenate in", 
 
   // The engine reads no language property, so the panel shows the
   // book's own language and not one from the design.
-  await expect(panel.said("body-hyphens")).toContainText("en-GB");
-  await expect(panel.said("body-hyphens")).toContainText("English");
+  await expect(panel.said("body-hyphens")).toHaveText("British English");
 });
 
 test("the book note's page draws the design read-only, in the panel's words", async ({
@@ -1427,7 +1455,7 @@ test("a click low in the panel leaves it scrolled where it was", async ({
   );
   expect(await panel.scrolled()).toEqual(at);
 
-  // A segment in Heads & folios.
+  // A segment in Headers & page numbers.
   painted = await book.painted();
   const format = panel.control("page-number-format");
   const there = await panel.scrollTo(format);

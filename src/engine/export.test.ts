@@ -81,6 +81,10 @@ class FakeClient implements EngineClient {
   hit(): Promise<number | null> {
     return Promise.resolve(null);
   }
+
+  names(): Promise<{ classes: string[]; ids: string[] }> {
+    return Promise.resolve({ classes: [], ids: [] });
+  }
 }
 
 const faces: FaceSet = {

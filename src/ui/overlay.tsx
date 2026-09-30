@@ -53,8 +53,7 @@ export const NO_OVERLAY: Overlaid = {
 
 /** Mounts the overlay beside the surface, inside the well that holds both. */
 export function mountOverlay(surface: HTMLElement): MountedOverlay {
-  const host = surface.ownerDocument.createElement("div");
-  host.className = "orca-inspect-host";
+  const host = surface.ownerDocument.win.createDiv({ cls: "orca-inspect-host" });
   surface.after(host);
   const root = createRoot(host);
   const draw = (overlaid: Overlaid): void => {

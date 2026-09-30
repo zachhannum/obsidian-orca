@@ -27,7 +27,7 @@ wins and the quick fix waits for its own PR.
 - fleuron is the engine and is pinned. The wire format is checked
   against the module before a book opens, so a mismatched build fails
   at the door rather than halfway through a render.
-- The three invariants (see README): the panel never writes the
+- The three invariants (see CONTRIBUTING.md): the panel never writes the
   author's CSS; the engine is the only linter; preview and export come
   from one session.
 - `book/` parses a note to draw the editor's marks, and that parse
@@ -214,7 +214,8 @@ production bundle, and the `e2e` job runs the suite on both platforms.
    outside `ui` imports `ui`, only `ui` imports Obsidian, an import
    inside `src` uses the `@/` alias, a doc comment opens with a name
    rather than a question word, a test file ends on what it does not
-   cover, and no spec waits on a clock
+   cover, and no spec waits on a clock. After it, ESLint and Stylelint
+   apply the rules the Obsidian plugin review applies
 2. production bundle: `npm run build`, so the shipped `main.js` is
    never only built by hand
 3. e2e job: build the plugin into the fixture vault, launch the pinned
@@ -239,7 +240,24 @@ site's tokens or the sample book. It runs on the same paths on main. The
 job runs `npm run shots`, which photographs real Obsidian on the sample
 vault and writes the pictures to `site/src/shots`. A picture is
 rasterized by the machine that took it, so this job is the one that
-takes them. On main it opens a PR with the pictures that changed.
+takes them. It also takes the film's frames and the landing page
+loop's posters with orca-film's `loop.mjs`, at the commit
+`ORCA_FILM_REF` pins, and on main it renders the loop itself. On main
+it opens a PR with the pictures that changed.
+
+`.github/workflows/release.yml` runs on a version tag. It builds and
+attaches `main.js`, `manifest.json` and `styles.css` to the release,
+and it refuses a tag that does not match `manifest.json` or
+`package.json`. The tag carries no `v`, which is what `.npmrc` is for.
+
+`cut-release.yml` is where a release starts, from the Actions tab. It
+runs `npm version`, which runs `version-bump.mjs` to rewrite
+`manifest.json` and `versions.json`, so no version number is typed by
+hand. It then pushes the version commit to main and the tag after it.
+Main's ruleset lets no push past but the release app's, which is the
+app fleuron releases with. The workflow mints a token from the
+`RELEASE_APP_ID` variable and the `RELEASE_APP_PRIVATE_KEY` secret, and
+the tag it pushes under that token starts `release.yml`.
 
 ## Documentation rules
 

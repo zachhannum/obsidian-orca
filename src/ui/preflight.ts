@@ -89,7 +89,7 @@ function usedIn(design: Design, use: FontUse): string {
   if (levels.length > 1) places.push(`headings ${runs(levels)}`);
   const { font: head, folioFont: folio } = design.headers;
   if (head !== undefined && useKey({ font: head, variant: undefined }) === key) {
-    places.push("running heads");
+    places.push("headers");
   }
   if (folio !== undefined && useKey({ font: folio, variant: undefined }) === key) {
     places.push("page numbers");

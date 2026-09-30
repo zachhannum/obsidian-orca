@@ -65,8 +65,14 @@ test("a worker killed under a render is set again, and the pages come back", asy
   for (const notice of noticed) {
     expect(notice.again, notice.said).toBe(true);
     expect(notice.pages, notice.said).toBeGreaterThan(0);
-    expect(notice.said).toContain("nothing you wrote was lost");
+    expect(notice.said).toContain("Loading");
   }
+  // The banner reads the notes again, then lays the book out, the same
+  // two parts a first open has.
+  const phases = noticed.map((notice) => notice.phase);
+  expect(phases).toContain("reading");
+  expect(phases.at(-1)).toBe("laying");
+  expect(noticed.at(-1)?.moving).toBe(true);
 
   // The book on the new engine is the book orca had, the edit
   // included, rather than the book it opened with.
@@ -87,9 +93,7 @@ test("the second death holds the pages and offers the report", async ({
 
   await book.kill(BOOK);
   await expect(book.held).toBeVisible();
-  await expect(book.held).toContainText(
-    "the pages here are the ones from before",
-  );
+  await expect(book.held).toContainText("These are the last pages it made.");
   await expect(book.report).toBeVisible();
 
   // The pages the engine that died set are the ones on screen, and

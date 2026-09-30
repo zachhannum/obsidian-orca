@@ -1,0 +1,49 @@
+# Where a release starts. It raises the version on `main` and cuts the
+# tag; the tag is what builds and attaches the plugin, in `release.yml`.
+name: cut a release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which part of the version to raise"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      # `main` takes no push from `GITHUB_TOKEN`. Its ruleset lets past
+      # only the release app, the one fleuron releases with. The token
+      # checkout keeps sends both pushes up as the app, and the tag needs
+      # that: one pushed under `GITHUB_TOKEN` starts no run.
+      - uses: actions/create-github-app-token@v3
+        id: app
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ steps.app.outputs.token }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      # `npm version` rewrites the manifest and `versions.json` through
+      # version-bump.mjs, which wants nothing installed.
+      - name: The bump and the tag
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "$BUMP" -m "Release %s"
+          version=$(node -p "require('./package.json').version")
+          # The branch first. Two refs are not one push, and a tag whose
+          # commit went nowhere is what the other order leaves behind.
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          git push origin "$version"

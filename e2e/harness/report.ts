@@ -6,6 +6,7 @@
 
 import { appendFileSync } from "node:fs";
 import process from "node:process";
+import { stripVTControlCharacters } from "node:util";
 import type {
   FullConfig,
   FullResult,
@@ -79,6 +80,6 @@ function seconds(ms: number): string {
 
 /** The error's message, without the colours it was printed in. */
 function quote(message: string): string {
-  const said = message.replace(/\u001b\[\d+m/g, "").replaceAll("```", "'''");
+  const said = stripVTControlCharacters(message).replaceAll("```", "'''");
   return said.length > QUOTED ? `${said.slice(0, QUOTED)}\n...` : said;
 }

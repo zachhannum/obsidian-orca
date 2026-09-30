@@ -6,7 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import esbuild from "esbuild";
-import { external, inlineWorker, root, tsconfig } from "./bundle.mjs";
+import { external, inlineModule, inlineWorker, root, tsconfig } from "./bundle.mjs";
 
 const outdir = path.join(root, "build/test");
 await rm(outdir, { recursive: true, force: true });
@@ -28,7 +28,7 @@ await esbuild.build({
   sourcemap: "inline",
   logLevel: "info",
   logOverride: { "empty-import-meta": "silent" },
-  plugins: [inlineWorker()],
+  plugins: [inlineWorker(), inlineModule()],
   tsconfig,
   external,
 });
@@ -44,14 +44,15 @@ for await (const file of glob("scripts/**/*.test.mjs", { cwd: root })) {
   specs.push(path.join(root, file));
 }
 
-// The spec reporter writes the console. The summary reporter writes
-// the job's summary page and yields nothing, so the two do not
-// interleave.
+// The spec reporter writes the console and the summary reporter the
+// step's summary page, so the two do not interleave. The page is the
+// step's own file, and nothing else in the step writes to it.
 const reporters = ["--test-reporter=spec", "--test-reporter-destination=stdout"];
-if (process.env.GITHUB_STEP_SUMMARY !== undefined) {
+const summary = process.env.GITHUB_STEP_SUMMARY;
+if (summary !== undefined) {
   reporters.push(
     `--test-reporter=${pathToFileURL(path.join(root, "scripts/summary.mjs"))}`,
-    "--test-reporter-destination=stdout",
+    `--test-reporter-destination=${summary}`,
   );
 }
 

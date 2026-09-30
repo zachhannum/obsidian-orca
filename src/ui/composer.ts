@@ -17,11 +17,11 @@ import { bookCss } from "@/book/css";
 import { imagesInCss } from "@/book/images";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
-import { sectionIds } from "@/book/names";
+import { sectionIds, type Named } from "@/book/names";
 import { BookError } from "@/book/note";
-import { entryName, resolve, type Section } from "@/book/order";
+import { resolve, type Section } from "@/book/order";
 import { sectionRanges, sourceNamed, type Range as Folio } from "@/book/pages";
-import { writtenBytes } from "@/book/place";
+import { lineByte, writtenBytes } from "@/book/place";
 import {
   bookImages,
   cssImages,
@@ -207,6 +207,32 @@ export class Typeset {
     return opens ?? (await this.setOn(source, bytes.slice(1)));
   }
 
+  /**
+   * The page each of these lines of a section's note opens on, counting
+   * from 0, or nothing for a line set on no page. The lines count into
+   * the text the engine holds.
+   */
+  async linesOpen(
+    at: number,
+    lines: readonly number[],
+  ): Promise<(number | undefined)[]> {
+    const source = sourceNamed(this.sections, at);
+    const text = source === undefined ? undefined : this.sent.get(source);
+    if (source === undefined || text === undefined) return lines.map(() => undefined);
+    const nodes = await Promise.all(
+      lines.map((line) => this.session.nodeAt(source, lineByte(text, line))),
+    );
+    const read = nodes.flatMap((node) => (node === undefined ? [] : [node]));
+    const folios = read.length === 0 ? [] : await this.session.foliosOf(read);
+    let next = 0;
+    return nodes.map((node) => {
+      if (node === undefined) return undefined;
+      const set = folios[next];
+      next += 1;
+      return set?.at;
+    });
+  }
+
   /** The page the first of these bytes of a source that reached one is set on. */
   private async setOn(
     source: string,
@@ -305,6 +331,11 @@ export class Typeset {
   /** The families the faces sheet registers, which the author's CSS can name. */
   get families(): string[] {
     return [...new Set(this.registered.map((each) => each.family))];
+  }
+
+  /** The role and id of each section the engine gets, which the author's CSS can select. */
+  get named(): readonly Named[] {
+    return this.setting.sections;
   }
 
   /** The design the book is set under, which the book note holds. */
@@ -551,8 +582,11 @@ export interface Progress {
   read: number;
   /** The sections the book has. */
   of: number;
-  /** The entry the book will open at, for a toggle that named one. */
-  opening: string | undefined;
+  /**
+   * The part of the work under way. The engine reports nothing
+   * while it lays the book out, so `laying` has no count to show.
+   */
+  phase: "reading" | "laying";
 }
 
 /** The vault and the engine, as much of them as setting a book takes. */
@@ -573,18 +607,22 @@ export interface Composing {
   faces: FaceSet;
 }
 
+type Told = (progress: Progress) => void;
+
 /** The place a book is asked to open at, and who is told while it sets. */
 export interface Opening {
   /** The note the writer came from, if they came from one. */
   note?: string | undefined;
   /** Told what the book is waiting on, until it is set. */
-  told?: ((progress: Progress) => void) | undefined;
+  told?: Told | undefined;
 }
 
 export class Composer {
   private readonly books = new Map<string, Promise<Typeset>>();
   /** The replay each book that died left behind, by its path. */
   private readonly again = new Map<string, Replay>();
+  /** Each book still setting: its last report and who hears the next. */
+  private readonly setting = new Map<string, { last: Progress | undefined; told: Set<Told> }>();
 
   constructor(
     private readonly vault: Composing,
@@ -593,20 +631,40 @@ export class Composer {
 
   /**
    * The book at this path, typeset. A book already set, or one still
-   * setting, is handed back as it stands, so only the caller that
-   * starts a run is told how far along it is.
+   * setting, is handed back as it stands. A caller that joins a run is
+   * told its last report at once and every one after it, so a view
+   * opened after another surface started the book still sees how far
+   * along it is.
    */
   open(path: string, opening: Opening = {}): Promise<Typeset> {
     const existing = this.books.get(path);
-    if (existing !== undefined) return existing;
+    if (existing !== undefined) {
+      const running = this.setting.get(path);
+      if (running !== undefined && opening.told !== undefined) {
+        running.told.add(opening.told);
+        if (running.last !== undefined) opening.told(running.last);
+      }
+      return existing;
+    }
+    const running = { last: undefined as Progress | undefined, told: new Set<Told>() };
+    if (opening.told !== undefined) running.told.add(opening.told);
+    this.setting.set(path, running);
     const carried = this.again.get(path);
     this.again.delete(path);
     // A reader opening a book that stopped is asking for another try.
     // Orca sets a book again after a death. Asking a third time is the
     // reader's own call rather than orca's.
     if (carried === undefined) this.vault.engines.retry(path);
-    const composing = this.compose(path, opening, carried);
+    const tell = (progress: Progress): void => {
+      running.last = progress;
+      for (const told of running.told) told(progress);
+    };
+    const composing = this.compose(path, carried, tell);
     this.books.set(path, composing);
+    const settled = (): void => {
+      if (this.setting.get(path) === running) this.setting.delete(path);
+    };
+    composing.then(settled, settled);
     // A run that fails is not kept, so the next open typesets the book
     // again rather than handing back the failure for the session's life.
     composing.catch(() => {
@@ -695,12 +753,12 @@ export class Composer {
 
   private async compose(
     path: string,
-    opening: Opening,
     carried: Replay | undefined,
+    tell: Told,
   ): Promise<Typeset> {
     const model = await this.vault.model(path);
     if (model === undefined) {
-      throw new BookError(`${path} is not a book orca reads`);
+      throw new BookError(`${path} is not an Orca book`);
     }
     const name = bookName({ path, name: this.vault.name(path), model });
     const { sections } = resolve(model.order, this.vault.links, path);
@@ -708,17 +766,14 @@ export class Composer {
     // A generated section is written here rather than read, so it is
     // done before the count starts.
     let read = present.filter((section) => section.kind === "generated").length;
-    const from = sections.find(
-      (section) => section.kind === "note" && section.path === opening.note,
-    );
     const progress: Progress = {
       name,
       again: carried !== undefined,
       read,
       of: present.length,
-      opening: from === undefined ? undefined : entryName(from.entry),
+      phase: "reading",
     };
-    opening.told?.(progress);
+    tell(progress);
 
     const sent = new Map<string, string>();
     const assets = new Registry(this.vault.files);
@@ -735,11 +790,12 @@ export class Composer {
         const text = carried?.sent.get(at) ?? (await this.vault.read(at));
         sent.set(at, text);
         read += 1;
-        opening.told?.({ ...progress, read });
+        tell({ ...progress, read });
         return text;
       },
       (at) => assets.take(at),
     );
+    tell({ ...progress, read, phase: "laying" });
     // The url a page draws an embed from is made from the bytes that
     // crossed, so the preview decodes what the layout was set from.
     for (const image of images) assets.image(image.url, image);

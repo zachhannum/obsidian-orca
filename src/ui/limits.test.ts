@@ -20,6 +20,21 @@ test("the ceiling is a setting, saved and read back in whole sessions", () => {
   assert.equal(sessionCount(Number.NaN), CEILING);
 });
 
+test("the navigator lists no headings until the setting is turned on", () => {
+  assert.equal(LIMITS.headings, false);
+  assert.deepEqual(readLimits({ headings: true }), { ...LIMITS, headings: true });
+  assert.deepEqual(readLimits({ headings: "no" }), LIMITS);
+});
+
+test("the navigator lists every heading level until the author picks a shallower one", () => {
+  assert.equal(LIMITS.deepest, 6);
+  assert.deepEqual(readLimits({ deepest: 2 }), { ...LIMITS, deepest: 2 });
+  // A level outside Markdown's six rounds to the nearest one it writes.
+  assert.equal(readLimits({ deepest: 0 }).deepest, 1);
+  assert.equal(readLimits({ deepest: 9.5 }).deepest, 6);
+  assert.equal(readLimits({ deepest: "2" }).deepest, 6);
+});
+
 test("a ceiling saved under the old name reads back as the same number", () => {
   assert.deepEqual(readLimits({ books: 4 }), { ...LIMITS, sessions: 4 });
   assert.deepEqual(readLimits({ books: 4, unit: "mm" }), {
