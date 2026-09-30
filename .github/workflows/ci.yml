@@ -40,6 +40,17 @@ jobs:
 
       - run: npm run build
 
+      # Local Linker installs a PR's build from this artifact, so a
+      # change can be tried in a vault or on a phone before it merges.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin
+          path: |
+            main.js
+            manifest.json
+            styles.css
+          if-no-files-found: error
+
   e2e:
     name: e2e on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

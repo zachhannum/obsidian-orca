@@ -35,6 +35,17 @@ test("the `checks` job runs the type check, the lint pass and the Node tier on e
   assert.match(workflow, /^on:\n {2}pull_request:\n {2}push:\n/m);
 });
 
+test("the `checks` job uploads the plugin files as the `plugin` artifact", () => {
+  const checks = job("checks");
+
+  assert.match(
+    checks,
+    /uses: actions\/upload-artifact@v4\n\s+with:\n\s+name: plugin\n\s+path: \|\n\s+main\.js\n\s+manifest\.json\n\s+styles\.css\n/,
+  );
+  // The artifact is built after the bundle, not before it.
+  assert.ok(checks.indexOf("- run: npm run build\n") < checks.indexOf("name: plugin\n"));
+});
+
 test("a PR that changes a surface or the tokens takes the site's pictures", () => {
   for (const on of ["pull_request", "push"]) {
     const from = shots.indexOf(`  ${on}:`);

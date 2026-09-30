@@ -217,7 +217,9 @@ production bundle, and the `e2e` job runs the suite on both platforms.
    cover, and no spec waits on a clock. After it, ESLint and Stylelint
    apply the rules the Obsidian plugin review applies
 2. production bundle: `npm run build`, so the shipped `main.js` is
-   never only built by hand
+   never only built by hand. The job uploads `main.js`, `manifest.json`
+   and `styles.css` as the `plugin` artifact, which Local Linker
+   installs a PR's build from
 3. e2e job: build the plugin into the fixture vault, launch the pinned
    Obsidian version, run the suite on Linux under a virtual display and
    on macOS, two retries, a trace on the first and a picture of the
