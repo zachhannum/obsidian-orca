@@ -1,6 +1,6 @@
 {
   "width": 252,
-  "height": 849,
+  "height": 865,
   "marks": {
     "chapter-title-from": {
       "x": 0,
@@ -112,13 +112,13 @@
     },
     "reset-suppress-head-on-openings": {
       "x": 228,
-      "y": 805,
+      "y": 813,
       "width": 24,
       "height": 24
     },
     "suppress-head-on-openings": {
       "x": 0,
-      "y": 808,
+      "y": 815,
       "width": 34,
       "height": 19
     }
