@@ -396,6 +396,26 @@ test("a book being set reads its notes, then lays out its pages with every note 
   assert.equal(told[laying]?.read, told[laying]?.of);
 });
 
+test("a view that joins a book another surface started is told how far along it is", async () => {
+  const client = new FakeClient();
+  const composer = new Composer(await setting(client));
+  const told: Progress[] = [];
+
+  // The book note's own page starts the run and asks to hear nothing.
+  const started = composer.open(BOOK);
+  const joined = composer.open(BOOK, { told: (at) => told.push(at) });
+  assert.equal(joined, started);
+  await joined;
+
+  assert.ok(told.some((at) => at.phase === "reading"));
+  assert.equal(told.at(-1)?.phase, "laying");
+
+  // A book already set has nothing left to report.
+  const late: Progress[] = [];
+  await composer.open(BOOK, { told: (at) => late.push(at) });
+  assert.deepEqual(late, []);
+});
+
 test("a book already set is handed back rather than typeset again", async () => {
   const client = new FakeClient();
   const composer = new Composer(await setting(client));
