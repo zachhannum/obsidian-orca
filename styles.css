@@ -360,7 +360,7 @@
 .orca-preview-book {
   --orca-book-page-width: 26px;
   --orca-book-page-height: 34px;
-  --orca-book-rim: 3px;
+  --orca-book-rim: 2px;
   --orca-book-cover: var(--color-accent);
   --orca-book-radius: 3px;
 
@@ -470,7 +470,7 @@
 .orca-preview-setting.mod-again .orca-preview-book {
   --orca-book-page-width: 16px;
   --orca-book-page-height: 21px;
-  --orca-book-rim: 2px;
+  --orca-book-rim: 1px;
   --orca-book-cover: var(--color-orange);
   --orca-book-radius: 2px;
 }

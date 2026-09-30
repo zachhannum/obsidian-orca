@@ -15,6 +15,8 @@ import { FLOATING, type Obsidian } from "./obsidian";
 /** The part of the plugin a spec reads a book's session through. */
 interface Holding {
   composer?: {
+    /** The vault the composer reads notes through, which `stalled` holds. */
+    vault?: { read(path: string): Promise<string> };
     opened(at: string):
       | Promise<{
           quiet: boolean;
@@ -54,6 +56,8 @@ declare global {
   interface Window {
     /** The recorder a spec installs while `noticed` runs. */
     orcaSetting?: { said: Notice[]; watch: MutationObserver } | undefined;
+    /** Lets the note reads a spec holds go on, while `stalled` runs. */
+    orcaGo?: (() => void) | undefined;
   }
 }
 
@@ -500,6 +504,41 @@ export class Book {
 
   async close(): Promise<void> {
     await this.obsidian.detach(PREVIEW);
+  }
+
+  /**
+   * Holds every note the composer reads until `during` is done, then
+   * lets them go on. A fixture book sets in a moment on a warm engine,
+   * so a spec that must act while a book is still setting holds it.
+   */
+  async stalled(during: () => Promise<void>): Promise<void> {
+    await this.obsidian.page.evaluate((id) => {
+      const vault = (window.app.plugins.plugins[id] as Holding | undefined)?.composer?.vault;
+      if (vault === undefined) throw new Error("orca has no composer to hold");
+      const read = vault.read.bind(vault);
+      let go = (): void => undefined;
+      const held = new Promise<void>((resolve) => {
+        go = resolve;
+      });
+      vault.read = async (path) => {
+        await held;
+        return read(path);
+      };
+      window.orcaGo = () => {
+        vault.read = read;
+        go();
+      };
+    }, PLUGIN);
+    try {
+      await during();
+    } finally {
+      // One app runs the whole suite, so the reads go on even when
+      // `during` throws.
+      await this.obsidian.page.evaluate(() => {
+        window.orcaGo?.();
+        window.orcaGo = undefined;
+      });
+    }
   }
 
   /**

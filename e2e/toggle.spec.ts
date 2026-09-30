@@ -506,6 +506,30 @@ test("a cold session says what the book is waiting on rather than showing an emp
   expect(last?.moving).toBe(true);
 });
 
+test("a preview opened from the book note says what the book is waiting on", async ({
+  book,
+  note,
+  vault,
+}) => {
+  // The book note's own page starts setting the book as it opens, so
+  // the preview joins a run it did not start. A preview already open
+  // would start the run itself, so the spec begins with none.
+  await book.close();
+  await vault.modify(BOOK, await vault.read(BOOK));
+
+  const noticed = await book.noticed(async () => {
+    await book.stalled(async () => {
+      await note.open(BOOK);
+      await note.preview.click();
+      await expect(book.setting).toHaveAttribute("data-phase", "reading");
+    });
+    await book.painted();
+  });
+
+  expect(noticed.at(-1)?.phase).toBe("laying");
+  expect(noticed.at(-1)?.said).toContain("Laying out pages");
+});
+
 test("the layout's bar stands still when the system asks for reduced motion", async ({
   book,
   manuscript,
