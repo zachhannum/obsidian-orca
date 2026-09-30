@@ -45,7 +45,23 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
     }
   }
   assert.match(shots, /- run: xvfb-run -a npm run shots\n/);
-  assert.match(shots, /apt-get install -y xvfb poppler-utils\n/);
+  assert.match(shots, /apt-get install -y xvfb poppler-utils ffmpeg\n/);
+});
+
+test("the shots job renders the landing page's loop from a pinned commit of orca-film", () => {
+  assert.match(shots, /ORCA_FILM_REF: [0-9a-f]{40}\n/);
+  assert.match(shots, /repository: zachhannum\/orca-film\n\s+ref: \$\{\{ env\.ORCA_FILM_REF \}\}/);
+  assert.match(shots, /run: xvfb-run -a npm run film\n/);
+});
+
+test("only a push to main renders the loop, and a pull request takes its posters", () => {
+  const from = shots.indexOf("      - name: render the loop");
+  assert.notEqual(from, -1, "nothing renders the loop");
+  const step = shots.slice(from, shots.indexOf("\n      - ", from + 1));
+  assert.match(
+    step,
+    /if \[ "\$GITHUB_REF" = refs\/heads\/main \] && \[ "\$GITHUB_EVENT_NAME" = push \]; then\n\s+node loop\.mjs --into \.\.\/site\/src\/shots\n\s+else\n\s+node loop\.mjs --posters --into \.\.\/site\/src\/shots\n/,
+  );
 });
 
 test("a push to main that changes a picture opens a PR with the new pictures", () => {

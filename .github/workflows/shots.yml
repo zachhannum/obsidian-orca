@@ -2,7 +2,8 @@ name: shots
 
 # The pictures on the docs site are photographs of real Obsidian, so a
 # change to a surface, to the site's colors or to the sample book takes
-# new ones.
+# new ones. The loop on the landing page is played from frames of real
+# Obsidian too, so it is taken again with them.
 on:
   pull_request:
     paths:
@@ -22,6 +23,11 @@ on:
       - "site/src/styles/tokens.css"
       - ".github/workflows/shots.yml"
 
+# The commit of orca-film that draws the loop. A change there reaches
+# the site when this moves.
+env:
+  ORCA_FILM_REF: fbf33766b11a478a1b6e5d20166dae4fb5c003fa
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -30,7 +36,7 @@ jobs:
   shots:
     name: photograph the sample book
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       contents: write
       pull-requests: write
@@ -58,9 +64,34 @@ jobs:
         run: |
           sudo apt-get update
           npx playwright install-deps chromium
-          sudo apt-get install -y xvfb poppler-utils
+          sudo apt-get install -y xvfb poppler-utils ffmpeg
 
       - run: xvfb-run -a npm run shots
+
+      - uses: actions/checkout@v5
+        with:
+          repository: zachhannum/orca-film
+          ref: ${{ env.ORCA_FILM_REF }}
+          path: film
+
+      - name: take the loop's frames
+        run: xvfb-run -a npm run film
+        env:
+          ORCA_FILM_OUT: ${{ github.workspace }}/film/assets
+
+      # The render takes minutes, so a pull request takes the posters
+      # alone. The frames are where a change to a surface breaks the film
+      # spec, and they run either way.
+      - name: render the loop
+        working-directory: film
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npx playwright install chromium
+          if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" = push ]; then
+            node loop.mjs --into ../site/src/shots
+          else
+            node loop.mjs --posters --into ../site/src/shots
+          fi
 
       - name: list the pictures that moved
         if: ${{ !cancelled() }}
