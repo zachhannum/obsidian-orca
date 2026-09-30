@@ -55,7 +55,7 @@ body {
 /* The header: the wordmark over the sidebar's width, then the search box,
    then the links. */
 .header {
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
 }
 @media (min-width: 50rem) {
   .header > .header {
