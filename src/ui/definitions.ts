@@ -26,7 +26,7 @@ export function settingDefinitions(orca: Limited): SettingDefinition[] {
   return [
     {
       name: "Page measurements",
-      desc: "The unit the design panel shows margins and a custom trim in.",
+      desc: "The unit for margins and custom trim sizes.",
       render: (setting) => {
         setting.addDropdown((dropdown) =>
           dropdown
@@ -40,7 +40,7 @@ export function settingDefinitions(orca: Limited): SettingDefinition[] {
     },
     {
       name: "Headings in the navigator",
-      desc: "List the headings inside each note under its entry.",
+      desc: "Show each note's headings in the navigator.",
       render: (setting) => {
         setting.addToggle((toggle) =>
           toggle.setValue(orca.limits.headings).onChange((headings) => {
@@ -52,7 +52,7 @@ export function settingDefinitions(orca: Limited): SettingDefinition[] {
     },
     {
       name: "Heading levels in the navigator",
-      desc: "List the headings down to this level. At 2, the navigator lists H1 and H2.",
+      desc: "List the headings down to this level.",
       render: (setting) => {
         levels = setting
           .addSlider((slider) =>
@@ -68,8 +68,8 @@ export function settingDefinitions(orca: Limited): SettingDefinition[] {
       },
     },
     {
-      name: "Max concurrent preview sessions",
-      desc: "The max number of live preview sessions Orca keeps running at one time.",
+      name: "Open previews at once",
+      desc: "How many book previews Orca keeps open at the same time.",
       render: (setting) => {
         setting.addSlider((slider) =>
           slider

@@ -19,7 +19,7 @@ import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { sectionIds, type Named } from "@/book/names";
 import { BookError } from "@/book/note";
-import { entryName, resolve, type Section } from "@/book/order";
+import { resolve, type Section } from "@/book/order";
 import { sectionRanges, sourceNamed, type Range as Folio } from "@/book/pages";
 import { lineByte, writtenBytes } from "@/book/place";
 import {
@@ -582,8 +582,6 @@ export interface Progress {
   read: number;
   /** The sections the book has. */
   of: number;
-  /** The entry the book will open at, for a toggle that named one. */
-  opening: string | undefined;
 }
 
 /** The vault and the engine, as much of them as setting a book takes. */
@@ -731,7 +729,7 @@ export class Composer {
   ): Promise<Typeset> {
     const model = await this.vault.model(path);
     if (model === undefined) {
-      throw new BookError(`${path} is not a book orca reads`);
+      throw new BookError(`${path} is not an Orca book`);
     }
     const name = bookName({ path, name: this.vault.name(path), model });
     const { sections } = resolve(model.order, this.vault.links, path);
@@ -739,15 +737,11 @@ export class Composer {
     // A generated section is written here rather than read, so it is
     // done before the count starts.
     let read = present.filter((section) => section.kind === "generated").length;
-    const from = sections.find(
-      (section) => section.kind === "note" && section.path === opening.note,
-    );
     const progress: Progress = {
       name,
       again: carried !== undefined,
       read,
       of: present.length,
-      opening: from === undefined ? undefined : entryName(from.entry),
     };
     opening.told?.(progress);
 

@@ -375,7 +375,6 @@ test("a book being set reports the sections it has read and the entry it opens a
   // before the first note is opened.
   assert.equal(first.read, 2);
   assert.equal(last.read, 8);
-  assert.equal(last.opening, "Chapter Twelve");
 });
 
 test("a book already set is handed back rather than typeset again", async () => {

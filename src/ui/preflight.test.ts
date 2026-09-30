@@ -31,7 +31,7 @@ test("a face that registered no file refuses, and names where the font is used",
   const plain = { font: "Charter", variant: undefined };
   assert.equal(
     preflight(book({ design: heads, unloaded: [{ use: plain, unread: false }] })).errors[0]?.place,
-    "Running heads, page numbers",
+    "Headers, page numbers",
   );
   assert.equal(checked.errors[0]?.fix, "Change font…");
   assert.equal(checked.fine, undefined);

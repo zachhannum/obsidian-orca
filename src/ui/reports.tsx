@@ -38,7 +38,7 @@ export type Shown =
       /** The design, read-only. */
       designed: readonly Summed[];
     }
-  | { kind: "refused"; said: string }
+  | { kind: "refused"; said: string; newer: boolean }
   | { kind: "none" };
 
 /** The page as the view holds it: painted, and let go. */
@@ -92,7 +92,7 @@ export function Page({
       {shown.kind === "book" ? (
         <Book report={shown.report} designed={shown.designed} acting={acting} />
       ) : shown.kind === "refused" ? (
-        <Refused said={shown.said} acting={acting} />
+        <Refused said={shown.said} newer={shown.newer} acting={acting} />
       ) : null}
     </div>
   );
@@ -174,9 +174,7 @@ function Book({
       <div className="orca-book-order">
         <div className="orca-order-head">
           <span className="orca-order-title">Reading order</span>
-          <span className="orca-order-hint">
-            read-only here, and clicking an entry focuses the navigator
-          </span>
+          <span className="orca-order-hint">Read-only</span>
         </div>
         <div className="orca-order" data-testid="orca-order">
           <div className="orca-order-columns">
@@ -245,19 +243,18 @@ function Entry({ line, acting }: { line: Line; acting: Acting }): JSX.Element {
 /** Paints the refusal message, with a way back to the editor. */
 function Refused({
   said,
+  newer,
   acting,
 }: {
   said: string;
+  newer: boolean;
   acting: Acting;
 }): JSX.Element {
   return (
     <div className="orca-book-refused" data-testid="orca-book-refused">
       <Icon name="lock" className="orca-book-icon" />
-      <div className="orca-book-said">
-        This book was made by a newer version of orca than this one.
-      </div>
-      <div className="orca-book-versions">{said}</div>
-      <div className="orca-book-hint">Update the plugin to open it</div>
+      <div className="orca-book-said">{said}</div>
+      {newer ? <div className="orca-book-hint">Update Orca to open it.</div> : null}
       <button
         type="button"
         onClick={() => {

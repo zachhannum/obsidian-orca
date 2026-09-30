@@ -26,10 +26,21 @@ export const FORMAT = 1;
 
 /** An error from `book`. Only `ui` turns one into something an author sees. */
 export class BookError extends Error {
-  override readonly name = "BookError";
+  override readonly name: string = "BookError";
 
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
+  }
+}
+
+/** A book in a format above `FORMAT`, which a newer orca wrote. */
+export class NewerBookError extends BookError {
+  override readonly name = "NewerBookError";
+
+  constructor() {
+    super(
+      "This book was made by a newer version of Orca than the one currently installed in this vault.",
+    );
   }
 }
 
@@ -113,17 +124,15 @@ export function bookFormat(properties: Properties): number | undefined {
  * The book in a note. A note below `FORMAT` is migrated on the way
  * in and keeps the format it was written in, so nothing is written
  * back until the author causes a save. A note above `FORMAT` is a book
- * this orca cannot read, and the error names both formats.
+ * this orca cannot read.
  */
 export function readBook(properties: Properties): Book {
   const format = bookFormat(properties);
   if (format === undefined) {
-    throw new BookError(`the note has no \`${BOOK_KEY}\` property`);
+    throw new BookError("This note is not an Orca book.");
   }
   if (format > FORMAT) {
-    throw new BookError(
-      `orca reads format ${FORMAT}, and this book is written in format ${format}`,
-    );
+    throw new NewerBookError();
   }
 
   const migrated = migrate(properties, format);
@@ -210,7 +219,9 @@ function migrate(properties: Properties, from: number): Properties {
   for (let format = from; format < FORMAT; format += 1) {
     const step = STEPS[format];
     if (step === undefined) {
-      throw new BookError(`orca reads format ${format} but cannot migrate it`);
+      throw new BookError(
+        "This book was made by an older version of Orca and cannot be opened.",
+      );
     }
     current = step(current);
   }

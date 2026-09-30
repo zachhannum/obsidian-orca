@@ -177,9 +177,9 @@ its editor around these files and returns a URL. The artboard list and
   heading still comes from the note. A chapter's first line takes no
   style, because the engine sets none there.
 - A running head set to the chapter title reads the section's first
-  heading, whatever level it is written at. The Heads & folios group
-  picks the level to read instead, and a chapter with no heading there
-  reads its first.
+  heading, whatever level it is written at. The Headers & page
+  numbers group picks the level to read instead, and a chapter with no
+  heading there reads its first.
 - The running heads take a font of their own, and the folios take
   another, because a head is usually set in another face than the text
   and a folio in another face again. Neither row has a Variant row, so

@@ -18,14 +18,14 @@ test("a book that sets nothing is summed up in its defaults, in the panel's word
       "Text",
       "Chapters begin on",
       "Scene breaks",
-      "Running heads",
+      "Headers",
       "Page numbers",
     ],
   );
   assert.equal(value(lines, "Trim"), "US trade (6 × 9 in)");
   assert.equal(value(lines, "Text"), "EB Garamond, 11pt on 16.5pt, justified");
   assert.equal(value(lines, "Chapters begin on"), "Next page");
-  assert.equal(value(lines, "Running heads"), "None");
+  assert.equal(value(lines, "Headers"), "None");
   assert.equal(value(lines, "Page numbers"), "Bottom (1, 2, 3)");
 });
 
@@ -46,7 +46,7 @@ test("the summary follows the keys the book sets", () => {
   const lines = summary(design, "in");
   assert.equal(value(lines, "Scene breaks"), "*");
   assert.equal(
-    value(lines, "Running heads"),
+    value(lines, "Headers"),
     "author on left pages, chapter title on right pages",
   );
 });

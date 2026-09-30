@@ -194,7 +194,7 @@ test("stopping the worker refuses the requests it was still holding", async () =
   const rendering = handle.client.preview([{ op: "split", level: 0 }]);
   handle.stop();
 
-  await assert.rejects(rendering, /the engine stopped/);
+  await assert.rejects(rendering, /the preview stopped/);
 });
 
 test("a worker that cannot open the engine is torn down", async () => {
@@ -210,16 +210,18 @@ test("a worker that cannot open the engine is torn down", async () => {
   assert.deepEqual(host.released, ["blob:orca/0"]);
 });
 
-test("a wire mismatch refuses the book, naming both versions", async () => {
+test("a wire mismatch tells the author to reinstall, and keeps both versions on the cause", async () => {
   const host = fakeHost({ orca: "ready", wire: WIRE_VERSION + 1 });
 
   await assert.rejects(
     startEngine(new ArrayBuffer(8), host),
     (error: unknown) =>
       error instanceof EngineError &&
-      error.message.includes(`wire ${WIRE_VERSION};`) &&
-      error.message.includes(`wire ${WIRE_VERSION + 1}`) &&
-      error.message.includes(VERSION),
+      error.message === "the preview did not start. Reinstall the plugin." &&
+      error.cause instanceof Error &&
+      error.cause.message.includes(`wire ${String(WIRE_VERSION)};`) &&
+      error.cause.message.includes(`wire ${String(WIRE_VERSION + 1)}`) &&
+      error.cause.message.includes(VERSION),
   );
 
   assert.equal(host.worker().terminated, true);

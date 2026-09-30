@@ -14,7 +14,7 @@ export const ACTIONS = {
   markdown: { icon: "file-text", label: "Open as markdown" },
   export: { icon: "download", label: "Export to PDF" },
   inspect: { icon: "crosshair", label: "Inspect the page" },
-  unpin: { icon: "x", label: "Take the pin off" },
+  unpin: { icon: "x", label: "Unpin" },
   css: { icon: "code", label: "CSS" },
   controls: { icon: "sliders-horizontal", label: "Controls" },
   wrap: { icon: "wrap-text", label: "Wrap long lines" },

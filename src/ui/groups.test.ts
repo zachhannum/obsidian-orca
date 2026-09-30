@@ -45,7 +45,7 @@ test("the panel offers every group a book designer works in", () => {
       "Headings",
       "Chapter openings",
       "Scene breaks",
-      "Heads & folios",
+      "Headers & page numbers",
       "Page breaks",
     ],
   );
@@ -337,7 +337,7 @@ test("a row the author's CSS overrides is named by the line that overrides it", 
 test("the capitals and the tracking rows sit with the places they set", () => {
   const openings = GROUPS.find((group) => group.name === "Chapter openings");
   const headings = GROUPS.find((group) => group.name === "Headings");
-  const heads = GROUPS.find((group) => group.name === "Heads & folios");
+  const heads = GROUPS.find((group) => group.name === "Headers & page numbers");
   assert.ok(openings !== undefined && headings !== undefined && heads !== undefined);
 
   assert.deepEqual(keysOf(openings), [
@@ -425,8 +425,8 @@ test("body text and every heading level share one alignment control, drawn with 
   assert.equal(defaultSaid(heading, "left", "in"), "Left");
 });
 
-test("the Heads & folios group picks the heading the chapter title is read from", () => {
-  const heads = GROUPS.find((group) => group.name === "Heads & folios");
+test("the Headers & page numbers group picks the heading the chapter title is read from", () => {
+  const heads = GROUPS.find((group) => group.name === "Headers & page numbers");
   assert.ok(heads !== undefined);
 
   // The row sits with the two slots it qualifies.

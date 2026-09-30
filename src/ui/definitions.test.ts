@@ -56,7 +56,7 @@ test("each of orca's settings has a definition settings search can find", () => 
       "Page measurements",
       "Headings in the navigator",
       "Heading levels in the navigator",
-      "Max concurrent preview sessions",
+      "Open previews at once",
     ],
   );
   for (const definition of definitions) assert.notEqual(definition.desc, "");

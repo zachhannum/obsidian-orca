@@ -490,10 +490,9 @@ test("a cold session says what the book is waiting on rather than showing an emp
 
   const last = said.at(-1) ?? "";
   expect(said.length).toBeGreaterThan(0);
-  expect(last).toContain("Setting");
+  expect(last).toContain("Loading");
   expect(last).toContain("Pride and Prejudice");
-  expect(last).toContain(`chapters of ${String(SECTIONS)}`);
-  expect(last).toContain("it will open at Chapter Twelve");
+  expect(last).toContain(`of ${String(SECTIONS)} chapters`);
 });
 
 test("a swap from a page that opens mid-paragraph leads to the paragraph that page begins", async ({
