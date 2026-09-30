@@ -6,7 +6,7 @@ Orca is an Obsidian plugin for the desktop. The typesetting is done by [fleuron]
 
 1. The panel never writes the author's CSS. Settings are data. The CSS they imply is generated at render time and never goes into the vault.
 2. The engine is the only linter. Every squiggle in the CSS editor comes from a fleuron warning. Orca parses a note to draw the chips over its attribute runs, and that parse settles no page.
-3. Preview and export come from one session. The PDF is drawn from the pages already on screen.
+3. Preview and export come from one session. The PDF is drawn from the pages already on screen. The EPUB comes from the same session and uses the same notes, CSS, faces and images. It uses no pages: a reading system makes its own pages, and the preview does not show them. The engine drops the page rules from the EPUB and gives no warning for them.
 
 ## Building
 
