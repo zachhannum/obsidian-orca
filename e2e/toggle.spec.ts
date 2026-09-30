@@ -482,17 +482,78 @@ test("a cold session says what the book is waiting on rather than showing an emp
   // book note that takes it off the shelf.
   await vault.modify(BOOK, await vault.read(BOOK));
 
-  const said = await book.settings(async () => {
+  const noticed = await book.noticed(async () => {
     await manuscript.open(CHAPTER);
     await manuscript.asBook.click();
     await book.painted();
   });
 
-  const last = said.at(-1) ?? "";
-  expect(said.length).toBeGreaterThan(0);
-  expect(last).toContain("Loading");
-  expect(last).toContain("Pride and Prejudice");
-  expect(last).toContain(`of ${String(SECTIONS)} chapters`);
+  // The count is the notes being read, and the last word before the
+  // first page is the layout, which the engine gives no count for. The
+  // book turns its pages through both.
+  const reading = noticed.filter((notice) => notice.phase === "reading");
+  const last = noticed.at(-1);
+  expect(reading.length).toBeGreaterThan(0);
+  for (const notice of reading) {
+    expect(notice.said).toContain("Loading");
+    expect(notice.said).toContain("Pride and Prejudice");
+    expect(notice.said).toMatch(new RegExp(`\\d+ of ${String(SECTIONS)} chapters`));
+    expect(notice.moving, notice.said).not.toBe(false);
+  }
+  expect(reading.at(-1)?.said).toContain(`${String(SECTIONS)} of ${String(SECTIONS)} chapters`);
+  expect(last?.phase).toBe("laying");
+  expect(last?.said).toContain("Laying out pages");
+  expect(last?.said).not.toContain("chapters");
+  expect(last?.moving).toBe(true);
+});
+
+test("a preview opened from the book note says what the book is waiting on", async ({
+  book,
+  note,
+  vault,
+}) => {
+  // The book note's own page starts setting the book as it opens, so
+  // the preview joins a run it did not start. A preview already open
+  // would start the run itself, so the spec begins with none.
+  await book.close();
+  await vault.modify(BOOK, await vault.read(BOOK));
+
+  const noticed = await book.noticed(async () => {
+    await book.stalled(async () => {
+      await note.open(BOOK);
+      await note.preview.click();
+      await expect(book.setting).toHaveAttribute("data-phase", "reading");
+    });
+    await book.painted();
+  });
+
+  expect(noticed.at(-1)?.phase).toBe("laying");
+  expect(noticed.at(-1)?.said).toContain("Laying out pages");
+});
+
+test("the book stands still when the system asks for reduced motion", async ({
+  book,
+  manuscript,
+  obsidian,
+  vault,
+}) => {
+  await vault.modify(BOOK, await vault.read(BOOK));
+  await obsidian.page.emulateMedia({ reducedMotion: "reduce" });
+
+  try {
+    const noticed = await book.noticed(async () => {
+      await manuscript.open(CHAPTER);
+      await manuscript.asBook.click();
+      await book.painted();
+    });
+
+    expect(noticed.at(-1)?.phase).toBe("laying");
+    for (const notice of noticed) expect(notice.moving, notice.said).not.toBe(true);
+  } finally {
+    // One app runs the whole suite, so the motion goes back for the
+    // specs after this one.
+    await obsidian.page.emulateMedia({ reducedMotion: null });
+  }
 });
 
 test("a swap from a page that opens mid-paragraph leads to the paragraph that page begins", async ({

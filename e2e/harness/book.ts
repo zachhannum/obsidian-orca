@@ -15,6 +15,8 @@ import { FLOATING, type Obsidian } from "./obsidian";
 /** The part of the plugin a spec reads a book's session through. */
 interface Holding {
   composer?: {
+    /** The vault the composer reads notes through, which `stalled` holds. */
+    vault?: { read(path: string): Promise<string> };
     opened(at: string):
       | Promise<{
           quiet: boolean;
@@ -54,6 +56,8 @@ declare global {
   interface Window {
     /** The recorder a spec installs while `noticed` runs. */
     orcaSetting?: { said: Notice[]; watch: MutationObserver } | undefined;
+    /** Lets the note reads a spec holds go on, while `stalled` runs. */
+    orcaGo?: (() => void) | undefined;
   }
 }
 
@@ -82,6 +86,10 @@ export interface Notice {
   again: boolean;
   /** The pages on screen under it. */
   pages: number;
+  /** The part of the work it said was under way. */
+  phase: string | undefined;
+  /** Whether anything in it was animated when it said this, or nothing for one gone by then. */
+  moving: boolean | undefined;
 }
 
 /** The trim the page is photographed at, in whole pixels. */
@@ -191,22 +199,50 @@ export class Book {
   async noticed(during: () => Promise<void>): Promise<Notice[]> {
     await this.obsidian.page.evaluate(() => {
       const said: Notice[] = [];
-      const collect = (node: Node): void => {
-        if (!node.instanceOf(HTMLElement)) return;
-        const found = node.matches("[data-testid='orca-setting']")
-          ? node
-          : node.querySelector("[data-testid='orca-setting']");
-        if (found === null) return;
-        said.push({
+      const banner = "[data-testid='orca-setting']";
+      const collect = (found: Element): void => {
+        const notice: Notice = {
           said: found.textContent ?? "",
           again: found.classList.contains("mod-again"),
           pages: document.querySelectorAll(".orca-page").length,
-        });
+          phase: found.getAttribute("data-phase") ?? undefined,
+          // A banner a paint already took down has no style left to
+          // read.
+          moving: found.isConnected
+            ? [...found.querySelectorAll("*")].some(
+                (part) => getComputedStyle(part).animationName !== "none",
+              )
+            : undefined,
+        };
+        // The banner is told each report in place, so a notice is a
+        // change in what it says rather than each node that moved.
+        const last = said.at(-1);
+        if (last?.said === notice.said && last.phase === notice.phase) return;
+        said.push(notice);
       };
       const watch = new MutationObserver((records) => {
-        for (const record of records) for (const node of record.addedNodes) collect(node);
+        const seen = new Set<Element>();
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (!node.instanceOf(HTMLElement)) continue;
+            const found = node.matches(banner) ? node : node.querySelector(banner);
+            if (found !== null) seen.add(found);
+          }
+          const target = record.target.instanceOf(Element)
+            ? record.target
+            : record.target.parentElement;
+          const within = target?.closest(banner);
+          if (within !== null && within !== undefined) seen.add(within);
+        }
+        for (const found of seen) collect(found);
       });
-      watch.observe(document.body, { childList: true, subtree: true });
+      watch.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["data-phase"],
+      });
       window.orcaSetting = { said, watch };
     });
 
@@ -486,6 +522,41 @@ export class Book {
 
   async close(): Promise<void> {
     await this.obsidian.detach(PREVIEW);
+  }
+
+  /**
+   * Holds every note the composer reads until `during` is done, then
+   * lets them go on. A fixture book sets in a moment on a warm engine,
+   * so a spec that must act while a book is still setting holds it.
+   */
+  async stalled(during: () => Promise<void>): Promise<void> {
+    await this.obsidian.page.evaluate((id) => {
+      const vault = (window.app.plugins.plugins[id] as Holding | undefined)?.composer?.vault;
+      if (vault === undefined) throw new Error("orca has no composer to hold");
+      const read = vault.read.bind(vault);
+      let go = (): void => undefined;
+      const held = new Promise<void>((resolve) => {
+        go = resolve;
+      });
+      vault.read = async (path) => {
+        await held;
+        return read(path);
+      };
+      window.orcaGo = () => {
+        vault.read = read;
+        go();
+      };
+    }, PLUGIN);
+    try {
+      await during();
+    } finally {
+      // One app runs the whole suite, so the reads go on even when
+      // `during` throws.
+      await this.obsidian.page.evaluate(() => {
+        window.orcaGo?.();
+        window.orcaGo = undefined;
+      });
+    }
   }
 
   /**
