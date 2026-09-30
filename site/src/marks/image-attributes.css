@@ -1,3 +1,9 @@
-.plate {
-  width: 50%;
+.shell {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 45%;
+  wrap-flow: start;
+  shape-outside: auto;
+  shape-margin: 9pt;
 }

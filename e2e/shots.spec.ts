@@ -1206,19 +1206,17 @@ test("the book note picture is the sample book's note open as its page", async (
 /** The folder the Markdown page's examples are written in, as a note and its CSS. */
 const EXAMPLES = path.resolve(fileURLToPath(import.meta.url), "../../site/src/marks");
 
-/**
- * Each example the Markdown page shows, by the words each page of its
- * picture opens on. The page break is the one example set on two pages.
- */
-const SET_ON: Record<string, string[]> = {
-  "attribute-line": ["This morning"],
-  "heading-attributes": ["The Hunting Party"],
-  "image-attributes": ["The Nautilus, as"],
-  span: ["We were on board"],
-  "setext-heading": ["The Coral Kingdom"],
-  "page-break": ["The night fell", "At dawn"],
-  "column-break": ["Above the waterline"],
+/** Each example the Markdown page pictures, by the words its page opens on. */
+const SET_ON: Record<string, string> = {
+  "attribute-line": "This morning",
+  "heading-attributes": "An Interlude",
+  "image-attributes": "The shell of",
+  span: "The Nautilus lay",
+  "setext-heading": "The Coral Kingdom",
 };
+
+/** The examples the page shows as written only, since a break is plainer said than pictured. */
+const UNPICTURED = ["column-break", "page-break"];
 
 /** The folder the examples and the books that set them go into. */
 const MARKED = "Marks";
@@ -1230,8 +1228,8 @@ function markedAt(name: string): string {
 
 /**
  * The example books' design, which is the sample book's text with no
- * heads. A title page comes first, so the chapter opens on a left-hand
- * page and a page break lands on the page facing it.
+ * heads. A title page comes first, so the book has a page before the
+ * chapter to turn from.
  */
 const MARKED_DESIGN = [
   "orca-book: 1",
@@ -1310,9 +1308,9 @@ test("the Markdown pictures are each example set on its own page", async ({ site
         : undefined,
     })),
   );
-  // Every example the page can show has a picture.
+  // Every example the page shows has a picture, or is said to have none.
   expect(written.filter((file) => file.endsWith(".md")).sort()).toEqual(
-    Object.keys(SET_ON).map((name) => `${name}.md`).sort(),
+    [...Object.keys(SET_ON), ...UNPICTURED].map((name) => `${name}.md`).sort(),
   );
 
   // A preview does not follow a book note written from outside the
@@ -1346,12 +1344,12 @@ test("the Markdown pictures are each example set on its own page", async ({ site
     await site.obsidian.collapse("right");
     await site.book.show("Spread", "spread");
     await site.book.choose(example.name);
-    const pages = (SET_ON[example.name] ?? []).map((words) =>
-      site.book.sheets.filter({
-        has: site.obsidian.page.locator("text[data-selection-line]", { hasText: words }),
+    const page = site.book.sheets.filter({
+      has: site.obsidian.page.locator("text[data-selection-line]", {
+        hasText: SET_ON[example.name] ?? "",
       }),
-    );
-    for (const page of pages) await expect(page).toBeVisible();
+    });
+    await expect(page).toBeVisible();
     // A spread opens with the first page alone on the right, so the
     // pane is settled once it has turned to the chapter.
     await settled(site.book);
@@ -1360,15 +1358,11 @@ test("the Markdown pictures are each example set on its own page", async ({ site
       await site.paint(scheme);
       await settled(site.book);
       await site.obsidian.still();
-      // The picture is the top of each page, down to the last thing the
+      // The picture is the top of the page, down to the last thing the
       // example set there.
-      const boxes = await Promise.all(
-        pages.map(async (page) => {
-          const sheet = await measured(page);
-          return { ...sheet, height: (await footOf(page, example.note)) + PAD - sheet.y };
-        }),
-      );
-      const clip = await around(site, boxes, PAD);
+      const sheet = await measured(page);
+      const height = (await footOf(page, example.note)) + PAD - sheet.y;
+      const clip = await around(site, [{ ...sheet, height }], PAD);
       await expect(site.obsidian.page).toHaveScreenshot(
         `mark-${example.name}-${scheme}.png`,
         { clip },
