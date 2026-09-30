@@ -1212,7 +1212,7 @@ const SET_ON: Record<string, string> = {
   "heading-attributes": "An Interlude",
   "image-attributes": "The shell of",
   span: "The Nautilus lay",
-  "setext-heading": "The Coral Kingdom",
+  "setext-heading": "The Coral",
 };
 
 /** The examples the page shows as written only, since a break is plainer said than pictured. */

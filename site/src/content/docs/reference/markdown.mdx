@@ -71,7 +71,7 @@ To style a few words, put square brackets around them and attributes directly af
 
 ## Setext headings
 
-To make a level 1 heading, underline its text with a row of `=`. For a level 2 heading, use a row of `-`. The text of a heading can be on more than one line. Write the lines one under the other and underline the last one, and orca prints them as one heading.
+To make a level 1 heading, underline its text with a row of `=`. For a level 2 heading, use a row of `-`. A setext heading can break across lines on the page. End each line but the last with a backslash, and underline the last line. Without the backslash, orca joins the lines into one.
 
 A row of dashes after a blank line is a scene break, not a heading.
 
@@ -79,8 +79,8 @@ A row of dashes after a blank line is a scene break, not a heading.
 
 <Shot
   name="mark-setext-heading"
-  alt="A chapter opening with a level 1 heading, a paragraph, a level 2 heading and a second paragraph."
-  caption="The two underlined headings, at level 1 and level 2."
+  alt="A chapter opening with a level 1 heading on two lines, a paragraph, a level 2 heading on two lines and a second paragraph."
+  caption="Each heading breaks where its line ends in a backslash."
 />
 
 ## Page breaks
