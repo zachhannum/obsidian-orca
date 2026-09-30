@@ -1,7 +1,7 @@
 ---
 title: Export to PDF
 eyebrow: Export
-description: Save the book as a PDF.
+description: Save the book as a PDF, an EPUB, or both.
 ---
 
 import Shot from '../../../components/Shot.astro';
@@ -13,13 +13,16 @@ To export the book, select <Action name="export" /> in the header of the preview
 
 <Shot
   name="export"
-  alt="The Export to PDF dialog, with Save to, Choose, Preflight showing No errors, and Export."
-  caption="The Export to PDF dialog, ready to export."
+  alt="The Export book dialog, with Formats, Save to, Choose, Preflight showing No errors, and Export."
+  caption="The Export book dialog, ready to export."
 />
 
-1. In `Save to`, edit the path of the file. By default, the file has the name of the book and is beside the book note.
-2. To save the file outside the vault, select `Choose…`.
-3. When `Preflight` shows `No errors`, select `Export`.
+1. In `Formats`, select each format to write. Orca writes one file for each format.
+2. In `Save to`, edit the path of the files, without the extension. By default, the files have the name of the book and are beside the book note.
+3. To save the files in a folder outside the vault, select `Choose…`.
+4. When `Preflight` shows `No errors`, select `Export`.
+
+A reading system makes the pages of an EPUB. So the preview shows the pages of the PDF, not the pages of the EPUB.
 
 ## Preflight errors
 
@@ -31,12 +34,12 @@ Preflight finds the errors that stop an export. You cannot export until you fix 
 | `Cannot read font file: <name>` | `Change font…` |
 | `Missing image: <url>` | `Go to line` |
 
-## The written file
+## The written files
 
 <Shot
   name="export-written"
-  alt="The Export to PDF dialog after export, with the file name, page count and size, and Open PDF and Done."
-  caption="The dialog after orca writes the file."
+  alt="The Export book dialog after export, with each file name, the page count and size of the PDF, the size of the EPUB, Open, and Done."
+  caption="The dialog after orca writes the files."
 />
 
-To open the file, select `Open PDF`.
+To open the PDF, select `Open` on its row.

@@ -161,6 +161,10 @@ its editor around these files and returns a URL. The artboard list and
   its name, and Tab takes it.
 - Export sits in the book preview's toolbar and on the book note's
   page.
+- Export lists every format with a checkbox, and every box is ticked
+  when the dialog opens. One export writes one file for each ticked
+  format. The files share one path, and each format adds its own
+  extension. `Choose…` picks a folder, not a file.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.
 - Chapter openings default to the next page. The right-hand page and
