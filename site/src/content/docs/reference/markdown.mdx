@@ -1,0 +1,105 @@
+---
+title: Markdown
+eyebrow: Reference
+description: The Markdown that orca reads in addition to Obsidian's own.
+---
+
+import Shot from '../../../components/Shot.astro';
+import Written from '../../../components/Written.astro';
+
+Orca reads the Markdown that you write in Obsidian, and a few additions. With attributes in curly braces, you give a paragraph, a heading, an image or a phrase a class or an id. Then you style it with [custom CSS](/design/custom-css/). Orca also reads setext headings, page breaks and column breaks.
+
+## Attributes
+
+`{.name}` adds a class, and `{#name}` adds an id. To add more than one, separate them with spaces, for example `{.letter #invitation}`. A name can use letters, digits, `-` and `_`, but it cannot start with a digit. If you add more than one id, orca uses the first.
+
+If the braces contain anything else, orca shows a warning. In a paragraph, the braces then print as plain text. A heading still prints as a heading.
+
+Attributes do not change the page by themselves. A rule in the book's custom CSS gives the element its style.
+
+## Paragraphs and other blocks
+
+To style a paragraph, a quote or another block, put attributes on the line above it. A blank line between the two is allowed. If no block comes after the attributes, orca prints them as text and shows a warning.
+
+Attributes above a row of dashes apply to the scene break.
+
+<Written name="attribute-line" />
+
+<Shot
+  name="mark-attribute-line"
+  alt="A page with a plain paragraph, then the letter set in italics and indented from both margins."
+  caption="Only the letter is indented and set in italics."
+/>
+
+## Headings
+
+To style a heading, put attributes at the end of its line.
+
+<Written name="heading-attributes" />
+
+<Shot
+  name="mark-heading-attributes"
+  alt="A chapter opening whose heading is set in spaced capitals over a thin rule."
+  caption="The heading is set in spaced capitals over a rule."
+/>
+
+## Images
+
+To style an image, put attributes directly after it, on the same line. Attributes on the next line apply to the block that comes after them.
+
+This example puts the shell in the top right corner of the page, and the text wraps around its outline.
+
+<Written name="image-attributes" />
+
+<Shot
+  name="mark-image-attributes"
+  alt="A page in which a paragraph wraps around the outline of a nautilus shell in the top right corner."
+  caption="The text wraps around the outline of the shell."
+/>
+
+## Phrases
+
+To style a few words, put square brackets around them and attributes directly after the closing bracket. The words must be on one line of the note. To put a bracket in the words, escape it with a backslash, for example `[Nautilus \[II\]]{.ship}`.
+
+<Written name="span" />
+
+<Shot
+  name="mark-span"
+  alt="A paragraph whose first words are set in small capitals."
+  caption="The first words of the paragraph are set in small capitals."
+/>
+
+## Setext headings
+
+To make a level 1 heading, underline its text with a row of `=`. For a level 2 heading, use a row of `-`. A setext heading can break across lines on the page. End each line but the last with a backslash, and underline the last line. Without the backslash, orca joins the lines into one.
+
+<Written name="setext-heading" />
+
+<Shot
+  name="mark-setext-heading"
+  alt="A chapter opening with a level 1 heading on two lines, a paragraph, a level 2 heading on two lines and a second paragraph."
+  caption="Each heading breaks where its line ends in a backslash."
+/>
+
+## Page breaks
+
+`\pagebreak` starts a new page. Put it on a line of its own, with a blank line above and below it. Anywhere else, it prints as text.
+
+<Written name="page-break" />
+
+## Column breaks
+
+`\columnbreak` starts a new column. It follows the same rules as `\pagebreak`.
+
+To set the book in columns, add `column-count` to an `@page` rule in the custom CSS. On a page with one column, a column break starts a new page.
+
+<Written name="column-break" />
+
+## What orca leaves out
+
+Some Obsidian Markdown does not print the way that Obsidian shows it. Orca shows a warning for each of these:
+
+- HTML blocks and inline HTML are left out.
+- A task list prints without its checkboxes.
+- Math prints as plain text.
+- An image inside a paragraph prints as a block after that paragraph.

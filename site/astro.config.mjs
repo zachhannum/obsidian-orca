@@ -2,6 +2,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { codeThemes } from './src/code-theme.mjs';
 
 // The landing page draws the design panel from the same table the plugin
 // draws it from, so the panel on the page cannot fall behind the plugin's.
@@ -16,32 +17,13 @@ const fleuron = fileURLToPath(import.meta.resolve('fleuron'));
 // GitHub Pages serves the site at its own domain, which public/CNAME holds.
 const site = 'https://orca.typeworks.dev';
 
-// The artboards set code in two colors: the key in glacier, the rest in the
-// reading color. Shiki takes a TextMate theme, so this is the whole of it.
-/** @type {(name: 'dark' | 'light', key: string, text: string) => any} */
-const codeTheme = (name, key, text) => ({
-  name,
-  type: name,
-  colors: {},
-  settings: [
-    { settings: { foreground: text } },
-    {
-      scope: ['entity.name.tag', 'support.type.property-name', 'variable.other.key'],
-      settings: { foreground: key },
-    },
-  ],
-});
-
 export default defineConfig({
   site,
   trailingSlash: 'always',
   vite: { resolve: { alias: { '@': plugin, fleuron } } },
   markdown: {
     shikiConfig: {
-      themes: {
-        dark: codeTheme('dark', '#6366f1', '#e9ece8'),
-        light: codeTheme('light', '#3730a3', '#0a0c0f'),
-      },
+      themes: codeThemes,
       defaultColor: false,
     },
   },
@@ -89,7 +71,10 @@ export default defineConfig({
           ],
         },
         { label: 'Export', items: ['export/export-to-pdf'] },
-        { label: 'Reference', items: ['reference/design-keys', 'reference/the-book-note'] },
+        {
+          label: 'Reference',
+          items: ['reference/design-keys', 'reference/the-book-note', 'reference/markdown'],
+        },
       ],
     }),
   ],

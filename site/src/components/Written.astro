@@ -1,0 +1,26 @@
+---
+/** An example from `src/marks` as it is written: the note, then the CSS it
+    needs when it needs one. The screenshot spec sets the same files, so the
+    picture beside the example cannot fall behind it. */
+import { Code } from 'astro:components';
+import { codeThemes } from '../code-theme.mjs';
+
+interface Props {
+  name: string;
+}
+
+const { name } = Astro.props;
+
+const files = import.meta.glob<string>('../marks/*.{md,css}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+const note = files[`../marks/${name}.md`];
+if (note === undefined) throw new Error(`no example ${name}.md in site/src/marks`);
+const css = files[`../marks/${name}.css`];
+---
+
+<Code code={note} lang="md" themes={codeThemes} defaultColor={false} />
+{css !== undefined && <Code code={css} lang="css" themes={codeThemes} defaultColor={false} />}

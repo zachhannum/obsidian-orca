@@ -125,7 +125,7 @@ test("the marks of a note come back in written order", () => {
 // what production asked the engine with before it parsed for itself,
 // so this is a second opinion rather than the same code twice.
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
@@ -503,6 +503,29 @@ test("orca and the engine agree on a run written beside a bracket and a heading"
   const text = "# [Chapter One]{.number} The Road {#road .title}\n";
 
   assert.deepEqual(orcaMarks(text), await engineMarks("heading.md", text));
+});
+
+/** The examples on the site's Markdown page, by the marks each is written to show. */
+const EXAMPLES: Record<string, Form[]> = {
+  "attribute-line.md": ["line"],
+  "column-break.md": ["columnbreak"],
+  "heading-attributes.md": ["heading"],
+  "image-attributes.md": ["image"],
+  "page-break.md": ["pagebreak"],
+  "setext-heading.md": ["setext", "setext"],
+  "span.md": ["span"],
+};
+
+test("the engine reads every mark the site's Markdown page shows", async () => {
+  const folder = path.join(root, "site", "src", "marks");
+  const written = (await readdir(folder)).filter((file) => file.endsWith(".md")).sort();
+  assert.deepEqual(written, Object.keys(EXAMPLES).sort());
+  for (const [name, forms] of Object.entries(EXAMPLES)) {
+    const text = await readFile(path.join(folder, name), "utf8");
+    const read = await engineMarks(name, text);
+    assert.deepEqual(read.map(([form]) => form), forms, name);
+    assert.deepEqual(orcaMarks(text), read, name);
+  }
 });
 
 test("every mark orca reads covers characters of the note it was read from", async () => {
