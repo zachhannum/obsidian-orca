@@ -10,6 +10,7 @@ import {
   Client,
   createEngine,
   styleOp,
+  type Epub,
   type LayoutOutput,
   type Op,
   type Page,
@@ -782,8 +783,8 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-/** A book in a vault, exported with the faces in its `fonts` folder, as a PDF file on disk. */
-async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
+/** The ops that send a book in a vault, with the faces in its `fonts` folder and its design. */
+async function bookOps(from: VaultAdapter, name: string): Promise<Op[]> {
   const model = readModel(await readText(from, name));
   const links = pathLinks(await under(from));
   const registry = new Registry(from);
@@ -804,21 +805,27 @@ async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
       .map((file) => registry.take(file)),
   );
 
+  return [
+    ...ops,
+    ...sendFaces(faces),
+    styleOp(
+      designSheets(model.book.design, {
+        sections: sectionIds(sections),
+        title,
+        author,
+        publisher,
+      }),
+    ),
+  ];
+}
+
+/** A book in a vault, exported with the faces in its `fonts` folder, as a PDF file on disk. */
+async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
+  const ops = await bookOps(from, name);
   const engine = await createEngine({ wasm: await moduleBytes() });
   let pdf: Uint8Array | null;
   try {
-    pdf = await connected(engine).exportPdf([
-      ...ops,
-      ...sendFaces(faces),
-      styleOp(
-        designSheets(model.book.design, {
-          sections: sectionIds(sections),
-          title,
-          author,
-          publisher,
-        }),
-      ),
-    ]);
+    pdf = await connected(engine).exportPdf(ops);
   } finally {
     engine.free();
   }
@@ -914,6 +921,24 @@ test("the site's sample book sets to a PDF that qpdf reads", async () => {
 
   const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });
   assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+});
+
+test("the fixture book exports as an EPUB, and no page rule in its sheets warns", async () => {
+  const ops = await bookOps(vault, BOOK);
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  let epub: Epub | null;
+  try {
+    epub = await connected(engine).exportEpub(ops);
+  } finally {
+    engine.free();
+  }
+  assert.ok(epub, "the export was overtaken");
+
+  // A zip opens on a local file header, and an EPUB's first file is its mimetype.
+  assert.deepEqual([...epub.bytes.subarray(0, 2)], [0x50, 0x4b]);
+  assert.match(new TextDecoder().decode(epub.bytes.subarray(30, 58)), /^mimetypeapplication\/epub\+zip/);
+  const paged = epub.warnings.filter((warning) => /@page|page rule|margin box/i.test(warning.message));
+  assert.deepEqual(paged, []);
 });
 
 test("in the exported fixture book, each contents entry prints the page its chapter opens on", async () => {

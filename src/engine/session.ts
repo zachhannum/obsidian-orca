@@ -2,6 +2,7 @@ import {
   faceFamily,
   type Asset,
   type Client,
+  type Epub,
   type FaceAttributes,
   type Folios,
   type FontRefEntry,
@@ -34,6 +35,7 @@ export interface Stages {
 export interface EngineClient {
   preview(ops?: Op[], range?: Range): Promise<LayoutOutput | null>;
   exportPdf(ops?: Op[]): Promise<Uint8Array | null>;
+  exportEpub(ops?: Op[]): Promise<Epub | null>;
   fontBytes(font: number): Promise<Uint8Array>;
   nodeAt(source: string, byte: number): Promise<number | null>;
   sourceOf(node: number): Promise<NodeSource | null>;
@@ -66,6 +68,7 @@ export function serialized(client: EngineClient): EngineClient {
   return {
     preview: (ops, range) => queued(() => client.preview(ops, range)),
     exportPdf: (ops) => queued(() => client.exportPdf(ops)),
+    exportEpub: (ops) => queued(() => client.exportEpub(ops)),
     fontBytes: (font) => client.fontBytes(font),
     // A question rather than a render: the engine answers it off the
     // book it holds without taking a turn in the queue.
@@ -184,6 +187,10 @@ export class Session {
   private readonly margins = new Map<number, Promise<Inspection[]>>();
   /** The generation {@link Session.margins} holds answers from. */
   private marginsAt = -1;
+  /** The last EPUB's warnings, and the generation it was written at. */
+  private epubbed: { at: number; warnings: Warning[] } | undefined;
+  /** The listeners told of each EPUB the session writes. */
+  private readonly exported = new Set<() => void>();
 
   constructor(
     private readonly client: EngineClient,
@@ -193,6 +200,24 @@ export class Session {
   /** Everything the last run had to complain about. */
   get warnings(): Warning[] {
     return this.layout?.warnings ?? [];
+  }
+
+  /**
+   * The last EPUB's warnings, as the engine wrote them. They hold
+   * only for the generation the EPUB was written at, so the next edit
+   * clears them.
+   */
+  get epubWarnings(): Warning[] {
+    const epubbed = this.epubbed;
+    return epubbed !== undefined && epubbed.at === this.generation ? epubbed.warnings : [];
+  }
+
+  /** Tells `told` after each EPUB the session writes, until the returned call. */
+  exports(told: () => void): () => void {
+    this.exported.add(told);
+    return () => {
+      this.exported.delete(told);
+    };
   }
 
   /** The book's length in pages, as the last reply counted it. */
@@ -375,6 +400,23 @@ export class Session {
       );
     }
     return bytes;
+  }
+
+  /**
+   * The book as a reflowable EPUB, from the session the pages were
+   * typeset in. It runs no layout stage, and its pages are the reading
+   * system's rather than the preview's.
+   */
+  async epub(): Promise<Uint8Array> {
+    const epub = await routed(() => this.client.exportEpub());
+    if (epub === null) {
+      throw new EngineError(
+        "the book changed during export. Try again.",
+      );
+    }
+    this.epubbed = { at: this.generation, warnings: epub.warnings };
+    for (const told of this.exported) told();
+    return epub.bytes;
   }
 
   /**
