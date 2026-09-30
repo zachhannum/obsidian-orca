@@ -26,7 +26,7 @@ on:
 # The commit of orca-film that draws the loop. A change there reaches
 # the site when this moves.
 env:
-  ORCA_FILM_REF: f7802d428f47e02460867d7fe9c041b6009035a6
+  ORCA_FILM_REF: fbf33766b11a478a1b6e5d20166dae4fb5c003fa
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
