@@ -167,7 +167,7 @@ const OPEN_PREVIEW = "Open preview";
 const AS_MARKDOWN = "Open as markdown";
 
 /** The preview's own action that opens the export dialog. */
-const EXPORT = "Export to PDF";
+const EXPORT = "Export book";
 
 /** The file the export writes beside the book note, named from its title. */
 const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;

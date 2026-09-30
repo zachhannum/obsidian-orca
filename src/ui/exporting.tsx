@@ -1,22 +1,29 @@
 /**
- * Draws the export dialog: where the file goes, the preflight, and the
- * write. The PDF comes from the session that drew the preview, so the
- * dialog lays nothing out.
+ * Draws the export dialog: the format, where the file goes, the
+ * preflight, and the write. The file comes from the session that drew
+ * the preview, so the dialog lays nothing out.
  */
 
 import { createRoot } from "react-dom/client";
 import { useEffect, useRef, useState, type JSX } from "react";
 import type { Destination } from "@/assets/destination";
-import type { ExportResult } from "@/engine/export";
+import { withExtension } from "@/book/export";
+import type { ExportResult, ExportTarget } from "@/engine/export";
 import { Icon } from "@/ui/icon";
 import { standing, type Blocker, type Checked } from "@/ui/preflight";
 
 export type Stage = "preflight" | "refused" | "ready" | "writing" | "written" | "failed";
 
+export type Format = ExportTarget<Record<string, never>>;
+
 /** The actions the dialog asks the modal to perform. */
 export interface Exporter {
+  /** The formats the dialog lists. The first is picked when it opens. */
+  formats: readonly Format[];
+  /** Told when the author picks a format. */
+  picked(format: Format): void;
   /** The file name and the vault path the dialog starts from. */
-  prepare(): Promise<{ name: string; path: string }>;
+  prepare(format: Format): Promise<{ name: string; path: string }>;
   /** Runs the preflight on the book as it stands now. */
   check(): Promise<Checked>;
   /** Told after each render of the book lands. Returns the way to stop. */
@@ -26,8 +33,8 @@ export interface Exporter {
    * Absent where the app has no disk to write to, and the dialog then
    * offers the vault path alone.
    */
-  choose?(name: string): Promise<string | undefined>;
-  write(destination: Destination): Promise<ExportResult>;
+  choose?(name: string, format: Format): Promise<string | undefined>;
+  write(destination: Destination, format: Format): Promise<ExportResult>;
   /** Opens a file the export wrote into the vault. */
   open(path: string): void;
   /** Goes to the place an error names. */
@@ -67,6 +74,9 @@ function Exporting({
   marked: HTMLElement;
 }): JSX.Element {
   const [stage, setStage] = useState<Stage>("preflight");
+  const first = exporter.formats[0];
+  if (first === undefined) throw new Error("the dialog has no format to list");
+  const [format, setFormat] = useState<Format>(first);
   const [name, setName] = useState("");
   const [destination, setDestination] = useState<Destination>({ kind: "vault", path: "" });
   const [checked, setChecked] = useState<Checked | undefined>(undefined);
@@ -86,7 +96,7 @@ function Exporting({
       if (now !== "failed") setStage(found.errors.length > 0 ? "refused" : "ready");
     };
     void (async () => {
-      const prepared = await exporter.prepare();
+      const prepared = await exporter.prepare(first);
       if (!live) return;
       setName(prepared.name);
       setDestination({ kind: "vault", path: prepared.path });
@@ -105,26 +115,24 @@ function Exporting({
       live = false;
       unwatch();
     };
-  }, [exporter]);
+  }, [exporter, first]);
 
   // The suite waits on these, so they are written after the commit.
   useEffect(() => {
     marked.dataset["state"] = stage;
+    marked.dataset["format"] = format.id;
     marked.dataset["errors"] = String(checked?.errors.length ?? 0);
-    if (result === undefined) {
-      delete marked.dataset["leaves"];
-      delete marked.dataset["bytes"];
-    } else {
-      marked.dataset["leaves"] = String(result.leaves);
-      marked.dataset["bytes"] = String(result.bytes);
-    }
-  }, [marked, stage, checked, result]);
+    if (result?.leaves === undefined) delete marked.dataset["leaves"];
+    else marked.dataset["leaves"] = String(result.leaves);
+    if (result === undefined) delete marked.dataset["bytes"];
+    else marked.dataset["bytes"] = String(result.bytes);
+  }, [marked, stage, format, checked, result]);
 
   const write = async (): Promise<void> => {
     setFailure(undefined);
     setStage("writing");
     try {
-      setResult(await exporter.write(destination));
+      setResult(await exporter.write(destination, format));
       setStage("written");
     } catch (cause) {
       setFailure(said(cause));
@@ -133,8 +141,17 @@ function Exporting({
   };
 
   const choose = async (): Promise<void> => {
-    const chosen = await exporter.choose?.(name);
+    const chosen = await exporter.choose?.(name, format);
     if (chosen !== undefined) setDestination({ kind: "disk", path: chosen });
+  };
+
+  const pick = (picked: Format): void => {
+    if (picked.id === format.id) return;
+    const known = exporter.formats.map((each) => each.extension);
+    setFormat(picked);
+    setName(withExtension(name, known, picked.extension));
+    setDestination({ ...destination, path: withExtension(destination.path, known, picked.extension) });
+    exporter.picked(picked);
   };
 
   const writing = stage === "writing";
@@ -148,11 +165,13 @@ function Exporting({
           <Icon name="check" className="orca-export-done-icon" />
           <div className="orca-export-done-name">{file}</div>
           <div className="orca-export-done-size">
-            {pages(result.leaves)} · {size(result.bytes)}
+            {result.leaves === undefined
+              ? size(result.bytes)
+              : `${pages(result.leaves)} · ${size(result.bytes)}`}
           </div>
         </div>
         <div className="modal-button-container orca-export-footer">
-          {destination.kind === "vault" ? (
+          {destination.kind === "vault" && format.id === "pdf" ? (
             <button
               type="button"
               data-testid="orca-export-open"
@@ -175,6 +194,33 @@ function Exporting({
   return (
     <div className="orca-export">
       <div className="orca-export-group">
+        <div className="orca-export-row">
+          <span className="orca-export-label">Format</span>
+          <div
+            className="orca-panel-segment orca-export-format"
+            data-testid="orca-export-format"
+            data-on={format.id}
+          >
+            {exporter.formats.map((each) => {
+              const on = each.id === format.id;
+              return (
+                <button
+                  key={each.id}
+                  type="button"
+                  className={on ? "orca-panel-choice is-on" : "orca-panel-choice"}
+                  data-testid={`orca-export-format-${each.id}`}
+                  aria-pressed={on}
+                  disabled={writing}
+                  onClick={() => {
+                    pick(each);
+                  }}
+                >
+                  {each.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <div className="orca-export-row">
           <span className="orca-export-label">Save to</span>
           <input

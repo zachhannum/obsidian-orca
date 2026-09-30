@@ -31,3 +31,11 @@ export function exportPath(
   const slash = book.lastIndexOf("/");
   return slash < 0 ? name : `${book.slice(0, slash)}/${name}`;
 }
+
+/** A path or name with its format's extension, in place of any `known` one it ended in. */
+export function withExtension(path: string, known: readonly string[], extension: string): string {
+  const lower = path.toLowerCase();
+  const old = known.find((each) => lower.endsWith(`.${each}`));
+  const stem = old === undefined ? path : path.slice(0, -(old.length + 1));
+  return `${stem}.${extension}`;
+}

@@ -11,6 +11,9 @@ const BOOK = "Pride and Prejudice.md";
 /** The file export names from the book's title, beside the book note. */
 const FILE = "Pride and Prejudice.pdf";
 
+/** The same, as an EPUB. */
+const EPUB = "Pride and Prejudice.epub";
+
 /** The words in every note the fixture book reads. */
 const BOOK_WORDS = 958;
 
@@ -87,6 +90,45 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   // not laid out again.
   expect(await book.stages()).toEqual(stages);
   await expect(book.surface).toHaveAttribute("data-generation", String(generation));
+});
+
+test("export writes the book as an EPUB from the open session, and its warnings join the list unchanged", async ({
+  book,
+  exporting,
+  vault,
+}) => {
+  await book.open();
+  const generation = await book.settled(BOOK);
+  const stages = await book.stages();
+  const before = await book.issues.allTextContents();
+  vault.touch(EPUB);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.format("epub");
+  await expect(exporting.destination).toHaveValue(EPUB);
+  await exporting.write.click();
+  await exporting.reaches("written");
+  // An EPUB has no pages of its own, so the result counts none.
+  await expect(exporting.dialog).not.toHaveAttribute("data-leaves");
+  await expect(exporting.openPdf).toHaveCount(0);
+
+  const bytes = await vault.bytes(EPUB);
+  await expect(exporting.dialog).toHaveAttribute("data-bytes", String(bytes.length));
+  // A zip opens on a local file header, and an EPUB's first file is its mimetype.
+  expect([...bytes.subarray(0, 2)]).toEqual([0x50, 0x4b]);
+  expect(new TextDecoder().decode(bytes.subarray(30, 58))).toMatch(/^mimetypeapplication\/epub\+zip/);
+
+  // The EPUB came off the session the preview reads, and runs no
+  // layout stage.
+  expect(await book.stages()).toEqual(stages);
+  await expect(book.surface).toHaveAttribute("data-generation", String(generation));
+
+  // The run's warnings still stand, and the panel's page rules add none.
+  const after = await book.issues.allTextContents();
+  for (const said of before) expect(after).toContain(said);
+  for (const said of after) expect(said).not.toMatch(/@page|page rule|margin box/i);
+  await exporting.close();
 });
 
 test("the dialog offers a path on disk through the OS", async ({ book, exporting }) => {

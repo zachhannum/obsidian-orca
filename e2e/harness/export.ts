@@ -13,7 +13,10 @@ import type { Obsidian } from "./obsidian";
 export const EXPORT_PDF = "orca:export-pdf";
 
 export class Export {
-  /** The modal, which carries `data-state`, `data-errors`, `data-leaves` and `data-bytes`. */
+  /**
+   * The modal, which carries `data-state`, `data-format`, `data-errors`,
+   * `data-bytes`, and `data-leaves` for a paged format.
+   */
   readonly dialog: Locator;
   /** The Save to field. */
   readonly destination: Locator;
@@ -53,6 +56,12 @@ export class Export {
     }, PREVIEW);
     await this.obsidian.command(EXPORT_PDF);
     await expect(this.dialog).toBeVisible();
+  }
+
+  /** Picks the format the dialog writes, by its target's id. */
+  async format(id: string): Promise<void> {
+    await this.dialog.getByTestId(`orca-export-format-${id}`).click();
+    await expect(this.dialog).toHaveAttribute("data-format", id);
   }
 
   /** Waits for the dialog to reach a state. */

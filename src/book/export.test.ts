@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { exportName, exportPath } from "@/book/export";
+import { exportName, exportPath, withExtension } from "@/book/export";
 
 const FORBIDDEN = /[/\\:*?"<>|\p{Cc}]/u;
 
@@ -68,6 +68,14 @@ test("any title gives a non-empty name with no forbidden character that ends wit
     assert.doesNotMatch(base, /[. ]$/, `seed ${seed}`);
     assert.doesNotMatch(base, /^\s|\s{2}/, `seed ${seed}`);
   }
+});
+
+test("a picked format swaps the extension a name or path ends in, and keeps the rest", () => {
+  const known = ["pdf", "epub"];
+  assert.equal(withExtension("Books/Pride and Prejudice.pdf", known, "epub"), "Books/Pride and Prejudice.epub");
+  assert.equal(withExtension("/Users/me/Book.EPUB", known, "pdf"), "/Users/me/Book.pdf");
+  assert.equal(withExtension("Books/Draft", known, "epub"), "Books/Draft.epub");
+  assert.equal(withExtension("Books/notes.txt", known, "epub"), "Books/notes.txt.epub");
 });
 
 // What this tier does not cover: Windows reserved names such as CON or

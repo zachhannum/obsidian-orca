@@ -1,16 +1,16 @@
 /**
  * The export dialog's modal. It owns the React root under its content,
- * and asks the session that drew the preview for the PDF.
+ * and asks the session that drew the preview for the file.
  */
 
 import { Modal, type App } from "obsidian";
 import type { VaultAdapter } from "@/assets/vault";
 import { exportPath, exportName } from "@/book/export";
 import type { BookMetadata } from "@/book/note";
-import { pdfTarget } from "@/engine/export";
+import { TARGETS } from "@/engine/export";
 import type { Composer, Typeset } from "@/ui/composer";
 import { chooseDiskPath, desktopSink, onDesktop } from "@/ui/desktop";
-import { mountExport, type Exporter, type Mounted } from "@/ui/exporting";
+import { mountExport, type Exporter, type Format, type Mounted } from "@/ui/exporting";
 import { preflight } from "@/ui/preflight";
 
 /** The plugin, as much of it as an export reaches. */
@@ -38,7 +38,7 @@ class ExportModal extends Modal {
   override onOpen(): void {
     this.modalEl.dataset["testid"] = "orca-export";
     this.modalEl.addClass("orca-export-modal");
-    this.setTitle(`Export to ${pdfTarget.label}`);
+    this.setTitle(titled(TARGETS[0]));
     const { composer, book } = this.exports;
     // The dialog holds the book, so its engine does not stop under an export.
     this.release = composer.hold(book);
@@ -64,11 +64,15 @@ class ExportModal extends Modal {
     const { book, files } = this.exports;
     const { workspace } = this.app;
     return {
-      prepare: async () => {
+      formats: TARGETS,
+      picked: (format) => {
+        this.setTitle(titled(format));
+      },
+      prepare: async (format) => {
         const metadata = (await this.exports.metadata()) ?? {};
         return {
-          name: exportName(metadata, pdfTarget.extension),
-          path: exportPath(book, metadata, pdfTarget.extension),
+          name: exportName(metadata, format.extension),
+          path: exportPath(book, metadata, format.extension),
         };
       },
       check: async () => {
@@ -97,12 +101,12 @@ class ExportModal extends Modal {
       },
       // Obsidian mobile has no path outside the vault to write to.
       ...(onDesktop()
-        ? { choose: (name: string) => chooseDiskPath(name, pdfTarget) }
+        ? { choose: (name: string, format: Format) => chooseDiskPath(name, format) }
         : {}),
-      write: async (destination) => {
+      write: async (destination, format) => {
         const typeset = await this.typeset();
         const sink = desktopSink(files);
-        return pdfTarget.run(typeset.session, (bytes) => sink.write(destination, bytes));
+        return format.run(typeset.session, (bytes) => sink.write(destination, bytes));
       },
       open: (path) => {
         void workspace.openLinkText(path, "", true);
@@ -122,6 +126,10 @@ class ExportModal extends Modal {
       },
     };
   }
+}
+
+function titled(format: Format): string {
+  return `Export to ${format.label}`;
 }
 
 /** Opens the export dialog on a book. */
