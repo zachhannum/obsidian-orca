@@ -8,11 +8,14 @@ import { expect, test } from "./harness/test";
 /** The book note in the fixture vault. It sits at the top of the vault. */
 const BOOK = "Pride and Prejudice.md";
 
-/** The file export names from the book's title, beside the book note. */
-const FILE = "Pride and Prejudice.pdf";
+/** The name export gives the files from the book's title, beside the book note. */
+const NAME = "Pride and Prejudice";
 
-/** The same, as an EPUB. */
-const EPUB = "Pride and Prejudice.epub";
+/** The PDF export writes. */
+const FILE = `${NAME}.pdf`;
+
+/** The EPUB export writes. */
+const EPUB = `${NAME}.epub`;
 
 /** The words in every note the fixture book reads. */
 const BOOK_WORDS = 958;
@@ -60,15 +63,17 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
 
   await exporting.open();
   await exporting.reaches("ready");
-  await expect(exporting.destination).toHaveValue(FILE);
+  await expect(exporting.destination).toHaveValue(NAME);
   await expect(exporting.fine).toHaveText("No errors");
+  await exporting.formats("pdf");
 
   await exporting.write.click();
   await exporting.reaches("written");
-  await expect(exporting.dialog).toHaveAttribute("data-leaves", pages ?? "");
+  await expect(exporting.files).toHaveCount(1);
+  await expect(exporting.file("pdf")).toHaveAttribute("data-leaves", pages ?? "");
 
   const bytes = await vault.bytes(FILE);
-  await expect(exporting.dialog).toHaveAttribute("data-bytes", String(bytes.length));
+  await expect(exporting.file("pdf")).toHaveAttribute("data-bytes", String(bytes.length));
   const folder = await mkdtemp(path.join(tmpdir(), "orca-export-"));
   try {
     const written = path.join(folder, FILE);
@@ -105,16 +110,16 @@ test("export writes the book as an EPUB from the open session, and its warnings 
 
   await exporting.open();
   await exporting.reaches("ready");
-  await exporting.format("epub");
-  await expect(exporting.destination).toHaveValue(EPUB);
+  await exporting.formats("epub");
   await exporting.write.click();
   await exporting.reaches("written");
   // An EPUB has no pages of its own, so the result counts none.
-  await expect(exporting.dialog).not.toHaveAttribute("data-leaves");
+  await expect(exporting.files).toHaveCount(1);
+  await expect(exporting.file("epub")).not.toHaveAttribute("data-leaves");
   await expect(exporting.openPdf).toHaveCount(0);
 
   const bytes = await vault.bytes(EPUB);
-  await expect(exporting.dialog).toHaveAttribute("data-bytes", String(bytes.length));
+  await expect(exporting.file("epub")).toHaveAttribute("data-bytes", String(bytes.length));
   // A zip opens on a local file header, and an EPUB's first file is its mimetype.
   expect([...bytes.subarray(0, 2)]).toEqual([0x50, 0x4b]);
   expect(new TextDecoder().decode(bytes.subarray(30, 58))).toMatch(/^mimetypeapplication\/epub\+zip/);
@@ -131,6 +136,45 @@ test("export writes the book as an EPUB from the open session, and its warnings 
   await exporting.close();
 });
 
+test("one export writes every format ticked, each beside the others under the book's name", async ({
+  book,
+  exporting,
+  vault,
+}) => {
+  await book.open();
+  const generation = await book.settled(BOOK);
+  const stages = await book.stages();
+  vault.touch(FILE);
+  vault.touch(EPUB);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  // Every format is ticked when the dialog opens.
+  await expect(exporting.dialog).toHaveAttribute("data-formats", "pdf epub");
+  await expect(exporting.dialog.getByTestId("orca-export-files")).toHaveText(`${FILE}, ${EPUB}`);
+  await exporting.write.click();
+  await exporting.reaches("written");
+
+  await expect(exporting.files).toHaveCount(2);
+  await expect(exporting.file("pdf")).toHaveAttribute("data-bytes", String((await vault.bytes(FILE)).length));
+  await expect(exporting.file("epub")).toHaveAttribute("data-bytes", String((await vault.bytes(EPUB)).length));
+  await expect(exporting.openPdf).toHaveCount(1);
+  expect(await book.stages()).toEqual(stages);
+  await expect(book.surface).toHaveAttribute("data-generation", String(generation));
+  await exporting.close();
+});
+
+test("with no format ticked, export will not write", async ({ book, exporting }) => {
+  await book.open();
+  await book.painted();
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.formats();
+  await expect(exporting.write).toBeDisabled();
+  await expect(exporting.said).toHaveText("Pick a format to export");
+});
+
 test("the dialog offers a path on disk through the OS", async ({ book, exporting }) => {
   await book.open();
   await book.painted();
@@ -138,7 +182,7 @@ test("the dialog offers a path on disk through the OS", async ({ book, exporting
   await exporting.open();
   await exporting.reaches("ready");
   await expect(exporting.choose).toBeEnabled();
-  // A native save dialog cannot be answered over CDP, so the OS-path
+  // A native folder dialog cannot be answered over CDP, so the OS-path
   // branch stops here. The sink it writes through is tested in the Node
   // tier.
 });
@@ -205,6 +249,7 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
 
   await exporting.open();
   await exporting.reaches("ready");
+  await exporting.formats("pdf");
   await exporting.write.click();
   await exporting.reaches("written");
 

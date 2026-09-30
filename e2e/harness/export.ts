@@ -13,12 +13,14 @@ import type { Obsidian } from "./obsidian";
 export const EXPORT_PDF = "orca:export-pdf";
 
 export class Export {
-  /**
-   * The modal, which carries `data-state`, `data-format`, `data-errors`,
-   * `data-bytes`, and `data-leaves` for a paged format.
-   */
+  /** The modal, which carries `data-state`, `data-formats` and `data-errors`. */
   readonly dialog: Locator;
-  /** The Save to field. */
+  /**
+   * The rows of a written export, one per file. Each carries
+   * `data-format`, `data-bytes`, and `data-leaves` for a paged format.
+   */
+  readonly files: Locator;
+  /** The Save to field, which holds the path the files share, before each extension. */
   readonly destination: Locator;
   /** The button that asks the OS where the file goes. */
   readonly choose: Locator;
@@ -30,11 +32,12 @@ export class Export {
   readonly fine: Locator;
   /** The footer line. */
   readonly said: Locator;
-  /** The button a written export offers, which opens the PDF in the vault. */
+  /** The button a written PDF's row offers, which opens it in the vault. */
   readonly openPdf: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.dialog = obsidian.page.getByTestId("orca-export");
+    this.files = this.dialog.getByTestId("orca-export-file");
     this.destination = this.dialog.getByTestId("orca-export-destination");
     this.choose = this.dialog.getByTestId("orca-export-choose");
     this.write = this.dialog.getByTestId("orca-export-write");
@@ -58,10 +61,18 @@ export class Export {
     await expect(this.dialog).toBeVisible();
   }
 
-  /** Picks the format the dialog writes, by its target's id. */
-  async format(id: string): Promise<void> {
-    await this.dialog.getByTestId(`orca-export-format-${id}`).click();
-    await expect(this.dialog).toHaveAttribute("data-format", id);
+  /** Ticks the formats named by their targets' ids, and only those. */
+  async formats(...ids: string[]): Promise<void> {
+    for (const box of await this.dialog.locator("[data-testid^='orca-export-format-']").all()) {
+      const id = ((await box.getAttribute("data-testid")) ?? "").slice("orca-export-format-".length);
+      await box.setChecked(ids.includes(id));
+    }
+    await expect(this.dialog).toHaveAttribute("data-formats", ids.join(" "));
+  }
+
+  /** The row of the file a written export wrote in one format. */
+  file(id: string): Locator {
+    return this.files.and(this.dialog.locator(`[data-format="${id}"]`));
   }
 
   /** Waits for the dialog to reach a state. */

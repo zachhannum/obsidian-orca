@@ -169,8 +169,8 @@ const AS_MARKDOWN = "Open as markdown";
 /** The preview's own action that opens the export dialog. */
 const EXPORT = "Export book";
 
-/** The file the export writes beside the book note, named from its title. */
-const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
+/** The path the export's files share beside the book note, named from its title. */
+const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea`;
 
 /**
  * The pages the flip-through turns past the page the preview opens on.
@@ -700,10 +700,12 @@ test("the flip-through's pages come from the book's own PDF", async ({
   await exporting.close();
   await sidecar("export-written", done);
 
-  // The checked-in sample vault has no PDF, so the export comes back out.
-  const exported = path.join(Obsidian.sample(), EXPORTED);
+  // The checked-in sample vault has no PDF or EPUB, so the export comes
+  // back out.
+  const exported = path.join(Obsidian.sample(), `${EXPORTED}.pdf`);
   const pdf = await readFile(exported);
   await rm(exported);
+  await rm(path.join(Obsidian.sample(), `${EXPORTED}.epub`));
   expect(pdf.subarray(0, 5).toString("latin1")).toEqual("%PDF-");
   // The site offers the same file for download. The engine dates it from
   // the book, so the bytes change only when the book does.

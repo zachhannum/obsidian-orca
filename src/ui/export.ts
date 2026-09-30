@@ -9,8 +9,8 @@ import { exportPath, exportName } from "@/book/export";
 import type { BookMetadata } from "@/book/note";
 import { TARGETS } from "@/engine/export";
 import type { Composer, Typeset } from "@/ui/composer";
-import { chooseDiskPath, desktopSink, onDesktop } from "@/ui/desktop";
-import { mountExport, type Exporter, type Format, type Mounted } from "@/ui/exporting";
+import { chooseDiskFolder, desktopSink, onDesktop } from "@/ui/desktop";
+import { mountExport, type Exporter, type Mounted } from "@/ui/exporting";
 import { preflight } from "@/ui/preflight";
 
 /** The plugin, as much of it as an export reaches. */
@@ -38,7 +38,7 @@ class ExportModal extends Modal {
   override onOpen(): void {
     this.modalEl.dataset["testid"] = "orca-export";
     this.modalEl.addClass("orca-export-modal");
-    this.setTitle(titled(TARGETS[0]));
+    this.setTitle("Export book");
     const { composer, book } = this.exports;
     // The dialog holds the book, so its engine does not stop under an export.
     this.release = composer.hold(book);
@@ -65,15 +65,9 @@ class ExportModal extends Modal {
     const { workspace } = this.app;
     return {
       formats: TARGETS,
-      picked: (format) => {
-        this.setTitle(titled(format));
-      },
-      prepare: async (format) => {
+      prepare: async () => {
         const metadata = (await this.exports.metadata()) ?? {};
-        return {
-          name: exportName(metadata, format.extension),
-          path: exportPath(book, metadata, format.extension),
-        };
+        return { name: exportName(metadata), path: exportPath(book, metadata) };
       },
       check: async () => {
         const typeset = await this.typeset();
@@ -100,9 +94,7 @@ class ExportModal extends Modal {
         };
       },
       // Obsidian mobile has no path outside the vault to write to.
-      ...(onDesktop()
-        ? { choose: (name: string, format: Format) => chooseDiskPath(name, format) }
-        : {}),
+      ...(onDesktop() ? { choose: () => chooseDiskFolder() } : {}),
       write: async (destination, format) => {
         const typeset = await this.typeset();
         const sink = desktopSink(files);
@@ -126,10 +118,6 @@ class ExportModal extends Modal {
       },
     };
   }
-}
-
-function titled(format: Format): string {
-  return `Export to ${format.label}`;
 }
 
 /** Opens the export dialog on a book. */
