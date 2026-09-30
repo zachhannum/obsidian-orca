@@ -6,7 +6,7 @@ wins and the quick fix waits for its own PR.
 
 ## Project shape
 
-- One Obsidian plugin, desktop only. esbuild bundles `src/main.ts` into
+- One Obsidian plugin, for desktop and mobile. esbuild bundles `src/main.ts` into
   a single `main.js` beside `manifest.json`; `npm run dev` watches.
 - Five modules under `src/`: `engine/` (worker bootstrap, client,
   session lifetime, stage counters), `book/` (note format, roles,

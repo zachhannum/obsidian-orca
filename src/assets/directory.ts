@@ -6,8 +6,14 @@
 
 import { vaultWritePath, type Sink } from "@/assets/destination";
 import { AssetError } from "@/assets/errors";
-import { files, paths } from "@/assets/node";
+import * as nodeFiles from "node:fs/promises";
+import * as nodePath from "node:path";
+import type { Files, Paths } from "@/assets/node";
 import type { Listing, VaultAdapter } from "@/assets/vault";
+
+// The Node tier's own vault, which the bundle never reaches.
+const files = nodeFiles as Files;
+const paths = nodePath as Paths;
 
 /**
  * A sink for the Node tier. A vault destination lands under the root;

@@ -21,8 +21,12 @@ export interface Exporter {
   check(): Promise<Checked>;
   /** Told after each render of the book lands. Returns the way to stop. */
   watch(changed: () => void): () => void;
-  /** Asks the OS for a path on disk. Undefined when the author cancels. */
-  choose(name: string): Promise<string | undefined>;
+  /**
+   * Asks the OS for a path on disk. Undefined when the author cancels.
+   * Absent where the app has no disk to write to, and the dialog then
+   * offers the vault path alone.
+   */
+  choose?(name: string): Promise<string | undefined>;
   write(destination: Destination): Promise<ExportResult>;
   /** Opens a file the export wrote into the vault. */
   open(path: string): void;
@@ -129,7 +133,7 @@ function Exporting({
   };
 
   const choose = async (): Promise<void> => {
-    const chosen = await exporter.choose(name);
+    const chosen = await exporter.choose?.(name);
     if (chosen !== undefined) setDestination({ kind: "disk", path: chosen });
   };
 
@@ -185,16 +189,18 @@ function Exporting({
               setDestination({ kind: "vault", path: event.currentTarget.value });
             }}
           />
-          <button
-            type="button"
-            data-testid="orca-export-choose"
-            disabled={writing}
-            onClick={() => {
-              void choose();
-            }}
-          >
-            Choose…
-          </button>
+          {exporter.choose === undefined ? null : (
+            <button
+              type="button"
+              data-testid="orca-export-choose"
+              disabled={writing}
+              onClick={() => {
+                void choose();
+              }}
+            >
+              Choose…
+            </button>
+          )}
         </div>
       </div>
 

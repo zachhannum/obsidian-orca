@@ -5,10 +5,6 @@
  * `any` to it and each use of one is a finding.
  */
 
-import * as nodeFiles from "node:fs/promises";
-import * as nodeOs from "node:os";
-import * as nodePath from "node:path";
-
 export interface Entry {
   name: string;
   isDirectory(): boolean;
@@ -48,8 +44,9 @@ export interface Machine {
   platform(): string;
 }
 
-export const files = nodeFiles as Files;
-
-export const paths = nodePath as Paths;
-
-export const machine = nodeOs as Machine;
+/** Node's modules, where the app has them. */
+export interface Node {
+  files: Files;
+  paths: Paths;
+  machine: Machine;
+}

@@ -22,6 +22,7 @@ import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
+import { node, onDesktop } from "@/ui/desktop";
 import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
@@ -116,10 +117,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** The families the machine has, read once and held for the session. */
   private families: Promise<FontIndex> | undefined;
   /** The directories and adapters the index is read through. */
-  private fonts: FontPlaces | undefined;
+  private fonts: Promise<FontPlaces> | undefined;
   /** The preview faces registered with the document, each family once. */
   private previews: Previews | undefined;
-  private coverages: Coverages | undefined;
+  private coverages: Promise<Coverages> | undefined;
   /** Every note the vault's books read, which is what carries the toggle. */
   private members = new Map<string, Member>();
 
@@ -1239,17 +1240,19 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * transfers its buffer, and the transfer empties it.
    */
   private async resolved(uses: readonly FontUse[]): Promise<ResolvedUse[]> {
-    const index = await this.fontIndex();
-    return Promise.all(uses.map((use) => resolveUse(this.places(), index, use)));
+    const [index, places] = await Promise.all([this.fontIndex(), this.places()]);
+    return Promise.all(uses.map((use) => resolveUse(places, index, use)));
   }
 
   /** Registers one face of each variant of a family with the document. */
-  private previewVariants(family: Family): Promise<void> {
-    return previewVariants(this.places(), family, this.documentPreviews());
+  private async previewVariants(family: Family): Promise<void> {
+    return previewVariants(await this.places(), family, this.documentPreviews());
   }
 
-  private documentCoverage(): Coverages {
-    this.coverages ??= documentCoverage(this.places(), this.documentPreviews());
+  private documentCoverage(): Promise<Coverages> {
+    this.coverages ??= this.places().then((places) =>
+      documentCoverage(places, this.documentPreviews()),
+    );
     return this.coverages;
   }
 
@@ -1268,7 +1271,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       index: () => this.fontIndex(),
       fonts: (uses) => this.resolved(uses),
       preview: (family) => this.previewVariants(family),
-      coverage: (family) => this.documentCoverage().of(family),
+      coverage: async (family) => (await this.documentCoverage()).of(family),
       unit: () => this.limits.unit,
       unpin: () => {
         for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
@@ -1393,14 +1396,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   private async scan(): Promise<FontIndex> {
-    const places = this.places();
+    const places = await this.places();
     const index = await readFontIndex(places);
     await previewFaces(places, index, this.documentPreviews());
     return index;
   }
 
-  private places(): FontPlaces {
-    this.fonts ??= fontPlaces(this.files());
+  private places(): Promise<FontPlaces> {
+    this.fonts ??= fontPlaces(this.files(), onDesktop() ? node : undefined);
     return this.fonts;
   }
 

@@ -27,7 +27,9 @@ export interface Used {
 export function variantName(style: string): string {
   const tokens: Token[] = [];
   for (const [chunk, text] of style.split(/[\s_-]+/).entries()) {
-    for (const part of text.split(/(?<=[a-z])(?=[A-Z])/)) {
+    // iOS before 16.4 reads no lookbehind, so a camel case break is
+    // marked with a space and split on that.
+    for (const part of text.replace(/([a-z])([A-Z])/g, "$1 $2").split(" ")) {
       if (part !== "") tokens.push({ chunk, text: part });
     }
   }

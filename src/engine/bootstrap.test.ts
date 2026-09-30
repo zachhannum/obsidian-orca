@@ -259,8 +259,8 @@ test("the bundled worker opens the engine from the bytes it is posted", async ()
   }
 });
 
-test("the manifest keeps the plugin off mobile", async () => {
-  assert.equal((await manifest()).isDesktopOnly, true);
+test("the manifest lets the plugin onto mobile", async () => {
+  assert.equal((await manifest()).isDesktopOnly, false);
 });
 
 test("the manifest names the plugin's version, and the package pins the engine", async () => {
