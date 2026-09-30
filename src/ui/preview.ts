@@ -1788,47 +1788,46 @@ export class PreviewView extends ItemView {
   private setting(progress: Progress): void {
     const well = this.well;
     if (well === undefined) return;
+    // The banner is drawn once a run and told each report after, so the
+    // pages keep turning rather than start over with every chapter.
+    const drawn = this.message;
+    const banner =
+      drawn?.dataset["testid"] === "orca-setting" && drawn.hasClass("mod-again") === progress.again
+        ? drawn
+        : this.settingBanner(well, progress);
+    banner.dataset["phase"] = progress.phase;
+    // The pages from before stay under a book set again, so only a
+    // first setting says where the work is.
+    const note = banner.querySelector(".orca-preview-setting-note");
+    note?.setText(
+      progress.phase === "laying"
+        ? "Laying out pages"
+        : `${String(progress.read)} of ${String(progress.of)} chapters`,
+    );
+  }
+
+  /** The banner of a book being set, with the book whose pages turn. */
+  private settingBanner(well: HTMLElement, progress: Progress): HTMLElement {
     const banner = well.createDiv({ cls: "orca-preview-setting" });
     banner.dataset["testid"] = "orca-setting";
-    banner.dataset["phase"] = progress.phase;
     // A book being set for the first time has no pages yet. One being
     // set again has the pages from before, and they stay under it.
     if (progress.again) banner.addClass("mod-again");
-    setIcon(
-      banner.createDiv({ cls: "orca-preview-setting-icon" }),
-      progress.again ? "rotate-cw" : "book",
-    );
+    // The engine reports nothing while it lays the book out, so the
+    // wait is a book whose pages turn rather than a bar that fills.
+    const book = banner.createDiv({ cls: "orca-preview-book" });
+    book.createDiv({ cls: "orca-preview-book-cover" });
+    book.createDiv({ cls: "orca-preview-book-page mod-left" });
+    book.createDiv({ cls: "orca-preview-book-page mod-right" });
+    for (const delay of BOOK_TURNS) {
+      const page = book.createDiv({ cls: "orca-preview-book-page mod-right mod-turn" });
+      page.style.setProperty("--orca-turn-delay", `${String(delay)}s`);
+    }
     const name = banner.createDiv({ cls: "orca-preview-setting-name" });
     name.append("Loading ", name.createEl("i", { text: progress.name }), "…");
-    const laying = progress.phase === "laying";
-    if (laying) {
-      // The engine reports nothing while it lays the book out, so the
-      // wait draws a book whose pages turn rather than a count.
-      const book = banner.createDiv({ cls: "orca-preview-book" });
-      book.createDiv({ cls: "orca-preview-book-cover" });
-      book.createDiv({ cls: "orca-preview-book-page mod-left" });
-      book.createDiv({ cls: "orca-preview-book-page mod-right" });
-      for (const delay of BOOK_TURNS) {
-        const page = book.createDiv({ cls: "orca-preview-book-page mod-right mod-turn" });
-        page.style.setProperty("--orca-turn-delay", `${String(delay)}s`);
-      }
-    } else {
-      const bar = banner.createDiv({ cls: "orca-preview-progress" });
-      const fill = bar.createDiv({ cls: "orca-preview-progress-fill" });
-      const done = progress.of === 0 ? 0 : progress.read / progress.of;
-      fill.style.width = `${String(Math.round(done * 100))}%`;
-    }
-    // The pages from before stay under a book set again, so only a
-    // first setting says where the work is.
-    if (!progress.again) {
-      banner.createDiv({
-        cls: "orca-preview-setting-note",
-        text: laying
-          ? "Laying out pages"
-          : `${String(progress.read)} of ${String(progress.of)} chapters`,
-      });
-    }
+    if (!progress.again) banner.createDiv({ cls: "orca-preview-setting-note" });
     this.post(banner, !progress.again);
+    return banner;
   }
 
   /**

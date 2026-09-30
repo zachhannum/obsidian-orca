@@ -88,7 +88,7 @@ export interface Notice {
   pages: number;
   /** The part of the work it said was under way. */
   phase: string | undefined;
-  /** Whether anything in it was animated when it appeared, or nothing for one gone by then. */
+  /** Whether anything in it was animated when it said this, or nothing for one gone by then. */
   moving: boolean | undefined;
 }
 
@@ -199,32 +199,50 @@ export class Book {
   async noticed(during: () => Promise<void>): Promise<Notice[]> {
     await this.obsidian.page.evaluate(() => {
       const said: Notice[] = [];
-      const collect = (node: Node): void => {
-        if (!node.instanceOf(HTMLElement)) return;
-        const found = node.matches("[data-testid='orca-setting']")
-          ? node
-          : node.querySelector("[data-testid='orca-setting']");
-        if (found === null) return;
-        said.push({
+      const banner = "[data-testid='orca-setting']";
+      const collect = (found: Element): void => {
+        const notice: Notice = {
           said: found.textContent ?? "",
           again: found.classList.contains("mod-again"),
           pages: document.querySelectorAll(".orca-page").length,
           phase: found.getAttribute("data-phase") ?? undefined,
-          // A banner the next report already replaced has no style
-          // left to read.
+          // A banner a paint already took down has no style left to
+          // read.
           moving: found.isConnected
             ? [...found.querySelectorAll("*")].some(
-                (part) =>
-                  getComputedStyle(part).animationName !== "none" ||
-                  getComputedStyle(part, "::before").animationName !== "none",
+                (part) => getComputedStyle(part).animationName !== "none",
               )
             : undefined,
-        });
+        };
+        // The banner is told each report in place, so a notice is a
+        // change in what it says rather than each node that moved.
+        const last = said.at(-1);
+        if (last?.said === notice.said && last.phase === notice.phase) return;
+        said.push(notice);
       };
       const watch = new MutationObserver((records) => {
-        for (const record of records) for (const node of record.addedNodes) collect(node);
+        const seen = new Set<Element>();
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (!node.instanceOf(HTMLElement)) continue;
+            const found = node.matches(banner) ? node : node.querySelector(banner);
+            if (found !== null) seen.add(found);
+          }
+          const target = record.target.instanceOf(Element)
+            ? record.target
+            : record.target.parentElement;
+          const within = target?.closest(banner);
+          if (within !== null && within !== undefined) seen.add(within);
+        }
+        for (const found of seen) collect(found);
       });
-      watch.observe(document.body, { childList: true, subtree: true });
+      watch.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["data-phase"],
+      });
       window.orcaSetting = { said, watch };
     });
 

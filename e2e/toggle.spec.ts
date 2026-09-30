@@ -489,7 +489,8 @@ test("a cold session says what the book is waiting on rather than showing an emp
   });
 
   // The count is the notes being read, and the last word before the
-  // first page is the layout, which the engine gives no count for.
+  // first page is the layout, which the engine gives no count for. The
+  // book turns its pages through both.
   const reading = noticed.filter((notice) => notice.phase === "reading");
   const last = noticed.at(-1);
   expect(reading.length).toBeGreaterThan(0);
@@ -497,7 +498,7 @@ test("a cold session says what the book is waiting on rather than showing an emp
     expect(notice.said).toContain("Loading");
     expect(notice.said).toContain("Pride and Prejudice");
     expect(notice.said).toMatch(new RegExp(`\\d+ of ${String(SECTIONS)} chapters`));
-    expect(notice.moving, notice.said).not.toBe(true);
+    expect(notice.moving, notice.said).not.toBe(false);
   }
   expect(reading.at(-1)?.said).toContain(`${String(SECTIONS)} of ${String(SECTIONS)} chapters`);
   expect(last?.phase).toBe("laying");
@@ -530,7 +531,7 @@ test("a preview opened from the book note says what the book is waiting on", asy
   expect(noticed.at(-1)?.said).toContain("Laying out pages");
 });
 
-test("the layout's bar stands still when the system asks for reduced motion", async ({
+test("the book stands still when the system asks for reduced motion", async ({
   book,
   manuscript,
   obsidian,
@@ -546,9 +547,8 @@ test("the layout's bar stands still when the system asks for reduced motion", as
       await book.painted();
     });
 
-    const last = noticed.at(-1);
-    expect(last?.phase).toBe("laying");
-    expect(last?.moving).toBe(false);
+    expect(noticed.at(-1)?.phase).toBe("laying");
+    for (const notice of noticed) expect(notice.moving, notice.said).not.toBe(true);
   } finally {
     // One app runs the whole suite, so the motion goes back for the
     // specs after this one.
