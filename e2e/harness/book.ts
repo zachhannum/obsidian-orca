@@ -82,6 +82,10 @@ export interface Notice {
   again: boolean;
   /** The pages on screen under it. */
   pages: number;
+  /** The part of the work it said was under way. */
+  phase: string | undefined;
+  /** Whether anything in it was animated when it appeared, or nothing for one gone by then. */
+  moving: boolean | undefined;
 }
 
 /** The trim the page is photographed at, in whole pixels. */
@@ -201,6 +205,16 @@ export class Book {
           said: found.textContent ?? "",
           again: found.classList.contains("mod-again"),
           pages: document.querySelectorAll(".orca-page").length,
+          phase: found.getAttribute("data-phase") ?? undefined,
+          // A banner the next report already replaced has no style
+          // left to read.
+          moving: found.isConnected
+            ? [...found.querySelectorAll("*")].some(
+                (part) =>
+                  getComputedStyle(part).animationName !== "none" ||
+                  getComputedStyle(part, "::before").animationName !== "none",
+              )
+            : undefined,
         });
       };
       const watch = new MutationObserver((records) => {

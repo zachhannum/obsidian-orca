@@ -67,6 +67,12 @@ test("a worker killed under a render is set again, and the pages come back", asy
     expect(notice.pages, notice.said).toBeGreaterThan(0);
     expect(notice.said).toContain("Loading");
   }
+  // The banner reads the notes again, then lays the book out, the same
+  // two parts a first open has.
+  const phases = noticed.map((notice) => notice.phase);
+  expect(phases).toContain("reading");
+  expect(phases.at(-1)).toBe("laying");
+  expect(noticed.at(-1)?.moving).toBe(true);
 
   // The book on the new engine is the book orca had, the edit
   // included, rather than the book it opened with.
