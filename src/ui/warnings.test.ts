@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { GENERATED_ORIGIN } from "@/book/plan";
 import { DESIGN_SHEET, FACES_SHEET, OWN_SHEET } from "@/style/sheet";
 import { THEME_SHEET } from "@/style/theme";
-import { cssFlags, groupTitle, issueGroups, routeOf } from "@/ui/warnings";
+import { cssFlags, groupTitle, issueGroups, routeOf, withEpub } from "@/ui/warnings";
 
 const MESSAGE = "unsupported property `position`";
 
@@ -60,6 +60,17 @@ test("the author's warnings are grouped by note, each at its line, and orca's ar
     { route: "note", source: null, issues: [{ message: "f", place: undefined }] },
   ]);
   assert.deepEqual(groups.map(groupTitle), ["Chapter Eleven", "The book's CSS", "Other"]);
+});
+
+test("an EPUB's warnings join the run's as the engine wrote them, each said once", () => {
+  const run = [{ message: MESSAGE, origin: `${OWN_SHEET}:4:3` }];
+  const epub = [
+    { message: MESSAGE, origin: `${OWN_SHEET}:4:3` },
+    { message: "a link to `#nowhere` reaches nothing", origin: "Chapter Twelve.md:6:1" },
+  ];
+
+  assert.deepEqual(withEpub(run, epub), [run[0], epub[1]]);
+  assert.deepEqual(withEpub([], epub), epub);
 });
 
 // What this tier does not cover: the console itself, the preview's

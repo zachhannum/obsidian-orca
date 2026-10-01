@@ -314,7 +314,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     });
     this.addCommand({
       id: "export-pdf",
-      name: "Export to PDF",
+      name: "Export book",
       checkCallback: (checking) => {
         const book = this.exportable();
         if (book === undefined) return false;

@@ -294,6 +294,10 @@ function stamped(client: EngineClient, used: () => void): EngineClient {
       used();
       return client.exportEpubFiles(ops);
     },
+    exportEpub: (ops) => {
+      used();
+      return client.exportEpub(ops);
+    },
     fontBytes: (font) => client.fontBytes(font),
     nodeAt: (source, byte) => client.nodeAt(source, byte),
     sourceOf: (node) => client.sourceOf(node),

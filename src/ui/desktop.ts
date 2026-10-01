@@ -1,5 +1,5 @@
 /**
- * The desktop adapter: the OS save dialog, and the sink that writes an
+ * The desktop adapter: the OS folder dialog, and the sink that writes an
  * export to the vault or to a real path on disk.
  */
 
@@ -9,13 +9,13 @@ import { vaultWritePath } from "@/assets/destination";
 import type { Files, Machine, Node, Paths } from "@/assets/node";
 import type { VaultAdapter } from "@/assets/vault";
 
-/** The part of Electron's save dialog export asks. */
-interface SaveDialog {
-  showSaveDialog(options: {
+/** The part of Electron's open dialog export asks. */
+interface OpenDialog {
+  showOpenDialog(options: {
     title: string;
-    defaultPath: string;
-    filters: { name: string; extensions: string[] }[];
-  }): Promise<{ canceled: boolean; filePath?: string }>;
+    buttonLabel: string;
+    properties: ("openDirectory" | "createDirectory")[];
+  }): Promise<{ canceled: boolean; filePaths: string[] }>;
 }
 
 /** The desktop app hands a plugin Node's own `require` on the window. */
@@ -48,30 +48,27 @@ export async function node(): Promise<Node> {
   });
 }
 
-/** The save dialog, or undefined when the app gives the plugin no Electron. */
-function saveDialog(): SaveDialog | undefined {
+/** The OS dialog, or undefined when the app gives the plugin no Electron. */
+function openDialog(): OpenDialog | undefined {
   const electron = (window as unknown as Desktop).require?.("electron") as
-    | { remote?: { dialog?: SaveDialog } }
+    | { remote?: { dialog?: OpenDialog } }
     | undefined;
   return electron?.remote?.dialog;
 }
 
 /**
- * Asks the OS where to write. Resolves undefined when the author cancels
- * or the app has no dialog to show.
+ * Asks the OS for the folder the files go in. Resolves undefined when
+ * the author cancels or the app has no dialog to show.
  */
-export async function chooseDiskPath(
-  name: string,
-  format: { label: string; extension: string },
-): Promise<string | undefined> {
-  const dialog = saveDialog();
+export async function chooseDiskFolder(): Promise<string | undefined> {
+  const dialog = openDialog();
   if (dialog === undefined) return undefined;
-  const chosen = await dialog.showSaveDialog({
-    title: `Export to ${format.label}`,
-    defaultPath: name,
-    filters: [{ name: format.label, extensions: [format.extension] }],
+  const chosen = await dialog.showOpenDialog({
+    title: "Export book",
+    buttonLabel: "Export here",
+    properties: ["openDirectory", "createDirectory"],
   });
-  return chosen.canceled ? undefined : chosen.filePath;
+  return chosen.canceled ? undefined : chosen.filePaths[0];
 }
 
 /**

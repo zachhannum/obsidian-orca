@@ -129,7 +129,7 @@ function Book({
           }}
         >
           <Icon name="download" className="orca-book-icon" />
-          Export to PDF
+          Export book
         </button>
       </div>
 

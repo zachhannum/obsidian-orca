@@ -9,7 +9,10 @@ import { expect, test } from "./harness/test";
 const BOOK = "Pride and Prejudice.md";
 
 /** The name the author types in place of the one export offers. */
-const FILE = "On the phone.pdf";
+const NAME = "On the phone";
+
+/** The file that name gives the PDF. */
+const FILE = `${NAME}.pdf`;
 
 /** A face the fixture vault carries. */
 const FIXTURE_FONT = "Alegreya";
@@ -47,7 +50,8 @@ test("under mobile emulation the book is set from the vault's faces and exports 
     await exporting.open();
     await exporting.reaches("ready");
     await expect(exporting.choose).toHaveCount(0);
-    await exporting.destination.fill(FILE);
+    await exporting.formats("pdf");
+    await exporting.destination.fill(NAME);
     await exporting.write.click();
     await exporting.reaches("written");
 

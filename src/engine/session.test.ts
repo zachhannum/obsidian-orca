@@ -10,6 +10,7 @@ import {
   paintPage,
   styleOp,
   type EpubFiles,
+  type Epub,
   type LayoutOutput,
   type Folios,
   type Inspection,
@@ -18,6 +19,7 @@ import {
   type Op,
   type Page,
   type Source,
+  type Warning,
 } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
@@ -57,6 +59,8 @@ class FakeClient implements EngineClient {
   readonly margins = new Map<string, Inspection>();
   /** Every margin box asked about, as `page:box`, in the order asked. */
   readonly inspected: string[] = [];
+  /** The warnings the next EPUB carries, as a test sets them. */
+  epubWarnings: Warning[] = [];
   current = 0;
   stages: Stages = { style: 0, lines: 0, flow: 0, paint: 0 };
   private book: Page[];
@@ -113,6 +117,10 @@ class FakeClient implements EngineClient {
 
   exportEpubFiles(): Promise<EpubFiles | null> {
     return Promise.resolve(null);
+  }
+
+  exportEpub(): Promise<Epub | null> {
+    return Promise.resolve({ bytes: new Uint8Array([0x50, 0x4b]), warnings: this.epubWarnings });
   }
 
   fontBytes(font: number): Promise<Uint8Array> {
@@ -601,6 +609,7 @@ test("a serialized client holds a second render back until the first answers", a
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     exportEpubFiles: () => Promise.resolve(null),
+    exportEpub: () => Promise.resolve(null),
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
@@ -636,6 +645,7 @@ test("a serialized client's queue moves on from a render that failed", async () 
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     exportEpubFiles: () => Promise.resolve(null),
+    exportEpub: () => Promise.resolve(null),
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
@@ -651,6 +661,74 @@ test("a serialized client's queue moves on from a render that failed", async () 
 
   await assert.rejects(wrapped.preview());
   assert.ok(await wrapped.preview());
+});
+
+test("an EPUB's warnings are the engine's own, held until the next edit", async () => {
+  const client = new FakeClient(typeset());
+  const session = new Session(client, faces());
+  await session.open(openBook(SAMPLE));
+  const said: Warning[] = [
+    { message: "a link to #nowhere reaches nothing", origin: "Chapter One.md:3:1" },
+  ];
+  client.epubWarnings = said;
+  let told = 0;
+  const release = session.exports(() => {
+    told += 1;
+  });
+
+  await session.epub();
+
+  assert.equal(told, 1);
+  assert.deepEqual(session.epubWarnings, said);
+  assert.deepEqual(session.warnings, []);
+
+  release();
+  await session.render([{ op: "split", level: 0 }]);
+
+  assert.equal(told, 1);
+  assert.deepEqual(session.epubWarnings, []);
+});
+
+test("a serialized client holds an EPUB back until the render before it answers", async () => {
+  const order: string[] = [];
+  let release = (): void => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const client: EngineClient = {
+    preview: async () => {
+      order.push("render");
+      await gate;
+      return typeset();
+    },
+    exportPdf: () => Promise.resolve(new Uint8Array()),
+    exportEpubFiles: () => Promise.resolve(null),
+    exportEpub: () => {
+      order.push("epub");
+      return Promise.resolve({ bytes: new Uint8Array(), warnings: [] });
+    },
+    fontBytes: () => Promise.resolve(new Uint8Array()),
+    nodeAt: () => Promise.resolve(null),
+    sourceOf: () => Promise.resolve(null),
+    foliosOf: () => Promise.resolve([]),
+    inspect: () => Promise.resolve(null),
+    inspectMarginBox: () => Promise.resolve(null),
+    hit: () => Promise.resolve(null),
+    names: () => Promise.resolve({ classes: [], ids: [] }),
+    current: 0,
+    stages: { style: 0, lines: 0, flow: 0, paint: 0 },
+  };
+  const wrapped = serialized(client);
+
+  const rendered = wrapped.preview();
+  const epub = wrapped.exportEpub();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(order, ["render"]);
+
+  release();
+  await Promise.all([rendered, epub]);
+  assert.deepEqual(order, ["render", "epub"]);
 });
 
 test("a serialized client reads current and stages live off the one it wraps", () => {
@@ -695,6 +773,7 @@ test("a book the engine refuses comes back as an engine error, not re-worded", a
     preview: () => Promise.reject(new Error("unknown property `leadin`")),
     exportPdf: () => Promise.reject(new Error("unknown property `leadin`")),
     exportEpubFiles: () => Promise.resolve(null),
+    exportEpub: () => Promise.reject(new Error("unknown property `leadin`")),
     fontBytes: () => Promise.reject(new Error("no faces")),
     nodeAt: () => Promise.reject(new Error("no book")),
     sourceOf: () => Promise.reject(new Error("no book")),
@@ -915,7 +994,7 @@ test("a note in the fixture vault sets to the files of an EPUB, and no stage run
     await session.open(openBook({ name, text: await readText(vault, name) }));
     const generation = session.generation;
     const stages = { ...session.stages };
-    const epub = await session.epub();
+    const epub = await session.epubFiles();
 
     assert.ok(epub !== undefined);
     assert.equal(epub.generation, generation);
@@ -936,7 +1015,7 @@ test("an EPUB an edit overtook comes back as nothing", async () => {
   const session = new Session(new FakeClient(typeset()), faces());
   await session.open(openBook(SAMPLE));
 
-  assert.equal(await session.epub(), undefined);
+  assert.equal(await session.epubFiles(), undefined);
 });
 
 /** The bundled worker, in a Node thread with `self` shimmed. */
@@ -1038,6 +1117,7 @@ test("a serialized client answers an inspection while a render is still out", as
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
     exportEpubFiles: () => Promise.resolve(null),
+    exportEpub: () => Promise.resolve(null),
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),

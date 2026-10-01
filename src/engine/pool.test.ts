@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { LayoutOutput } from "fleuron";
+import type { Epub, LayoutOutput } from "fleuron";
 import type { Clock } from "@/engine/loop";
 import { EngineDead, EngineError } from "@/engine/errors";
 import { Pool, type Engine } from "@/engine/pool";
@@ -49,6 +49,10 @@ class FakeClient implements EngineClient {
 
   exportEpubFiles(): Promise<null> {
     return Promise.resolve(null);
+  }
+
+  exportEpub(): Promise<Epub | null> {
+    return Promise.resolve({ bytes: new Uint8Array(), warnings: [] });
   }
 
   fontBytes(): Promise<Uint8Array> {

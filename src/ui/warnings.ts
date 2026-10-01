@@ -64,6 +64,17 @@ export function issueGroups(warnings: readonly Warning[]): IssueGroup[] {
   return [...groups.values()];
 }
 
+/**
+ * The run's warnings, then each EPUB warning the run did not already
+ * say. An EPUB repeats what reading the sources said, so a warning
+ * both named is listed once. Neither is re-worded.
+ */
+export function withEpub(run: readonly Warning[], epub: readonly Warning[]): Warning[] {
+  const key = (warning: Warning): string => `${warning.origin ?? ""}\0${warning.message}`;
+  const said = new Set(run.map(key));
+  return [...run, ...epub.filter((warning) => !said.has(key(warning)))];
+}
+
 /** The name a group is listed under: a note by its title. */
 export function groupTitle(group: IssueGroup): string {
   if (group.route === "css") return "The book's CSS";

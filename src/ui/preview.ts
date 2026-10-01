@@ -71,7 +71,7 @@ import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
-import { groupTitle, issueGroups, routeOf, type IssueGroup } from "@/ui/warnings";
+import { groupTitle, issueGroups, routeOf, withEpub, type IssueGroup } from "@/ui/warnings";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -1165,9 +1165,18 @@ export class PreviewView extends ItemView {
       // A render repaginates the book under the reader, so the pane
       // follows the content it was on rather than the page number it
       // was on.
-      this.unwatch = typeset.watch(() => {
+      const reflows = typeset.watch(() => {
         void this.reflowed();
       });
+      // An EPUB runs no layout, so its warnings arrive with no render.
+      const session = typeset.session;
+      const exports = session.exports(() => {
+        this.warns(session);
+      });
+      this.unwatch = () => {
+        reflows();
+        exports();
+      };
       this.offers(chapters(typeset.sections));
       // The book opens where the note asked it to, so the note is
       // already there and the opening turn leads it nowhere.
@@ -1449,7 +1458,7 @@ export class PreviewView extends ItemView {
     const issues = this.issues;
     if (chip === undefined || issues === undefined) return;
     const said: Warning[] = [];
-    for (const warning of session.warnings) {
+    for (const warning of withEpub(session.warnings, session.epubWarnings)) {
       const route = routeOf(warning);
       if (route === "orca") console.warn(`Orca: ${warning.message}`, warning.origin);
       else said.push(warning);
