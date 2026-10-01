@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
 import { test } from "node:test";
 import {
   DEVICES,
@@ -131,6 +134,30 @@ test("each ReadiumCSS sheet is in the bundle with its licence banner", () => {
   }
   assert.match(READIUM.before, /--RS__oldStyleTf:/);
   assert.match(READIUM.after, /column-width:var\(--RS__colWidth\)/);
+});
+
+test("the PreviewViews artboard names every device and every option of every setting", async () => {
+  const root = process.env["ORCA_ROOT"] ?? process.cwd();
+  const part = await readFile(path.join(root, "design/parts/PreviewViews.html"), "utf8");
+  for (const device of DEVICES) {
+    assert.ok(part.includes(`<span>${device.label}</span>`), `no ${device.label}`);
+    const size = `${String(device.width)} × ${String(device.height)}`;
+    assert.ok(part.includes(`${size}</span>`), `no ${size}`);
+  }
+  const labels = [
+    ...READER_FONTS,
+    ...READER_SPACINGS,
+    ...READER_MARGINS,
+    ...READER_ALIGNMENTS,
+    ...READER_THEMES,
+  ].map((option) => option.label);
+  for (const label of labels) {
+    assert.match(part, new RegExp(`[> ]${label.replace(".", "\\.")}[<,. ]`), `no ${label}`);
+  }
+  for (const size of [READER_SIZE_MIN, READER_SIZE_MAX, READER_DEFAULTS.size]) {
+    assert.ok(part.includes(`${String(size)}%`), `no ${String(size)}%`);
+  }
+  assert.ok(part.includes(`steps of ${String(READER_SIZE_STEP)}`));
 });
 
 // What this tier does not cover: a browser applying the sheets, so
