@@ -1,0 +1,243 @@
+/**
+ * The preview's EPUB view: the engine's EPUB in a sandboxed frame the
+ * size of a device's screen, paged by ReadiumCSS. No page is laid out
+ * for it, so the assertions are on the frame and on what it holds.
+ */
+
+import { DEVICES, READER_VARIABLES } from "@/style/reader";
+import type { Epub } from "./harness/epub";
+import { PLUGIN } from "./harness/launch";
+import { expect, test } from "./harness/test";
+
+/** The book note in the fixture vault, and the first chapter it lists. */
+const BOOK = "Pride and Prejudice.md";
+const CHAPTER = "Chapter Twelve.md";
+
+/** The heading of that chapter's document, and the words it opens on. */
+const CHAPTER_NAME = "Chapter Twelve";
+const OPENS = "In consequence of an agreement";
+
+/** The words an edit puts in their place. */
+const EDITED = "In defiance of every agreement";
+
+/** The one variable the defaults set. */
+const DEFAULTS = { "--RS__pageGutter": "32px" };
+
+/** The sepia theme's background, as a browser computes it. */
+const SEPIA = "rgb(250, 244, 232)";
+
+/** Turns screen by screen until the frame holds the document headed `name`. */
+async function turnTo(epub: Epub, name: string): Promise<void> {
+  const { sections } = await epub.turned();
+  for (;;) {
+    if ((await epub.heading()) === name) return;
+    const at = await epub.turned();
+    expect(at.section, `no section is headed ${name}`).toBeLessThan(sections);
+    await epub.turn();
+  }
+}
+
+/** The variables the view has set, without the properties ReadiumCSS does not read. */
+async function set(epub: Epub): Promise<Record<string, string>> {
+  const all = await epub.variables();
+  return Object.fromEntries(
+    Object.entries(all).filter(([name]) => READER_VARIABLES.includes(name)),
+  );
+}
+
+test("the EPUB view loads the engine's files into a sandboxed frame, finds the first chapter there, and pages through it", async ({
+  book,
+  epub,
+}) => {
+  await book.open();
+  const generation = await book.settled(BOOK);
+
+  expect(await epub.open()).toBe(generation);
+  expect(await epub.sandbox()).toBe("allow-same-origin");
+  // The engine's documents link a sheet of their own, so ReadiumCSS
+  // goes before it and after it and the default sheet stays out.
+  expect(await epub.sheets()).toEqual(["before", "own", "after"]);
+  expect(await epub.turned()).toMatchObject({ section: 1, screen: 1 });
+  await expect(epub.previous).toBeDisabled();
+
+  await turnTo(epub, CHAPTER_NAME);
+  expect(await epub.words()).toContain(OPENS);
+
+  const opened = await epub.turned();
+  expect(opened.screen).toBe(1);
+  expect(opened.screens).toBeGreaterThan(1);
+  expect((await epub.measured()).scrolled).toBe(0);
+
+  // A screen is a scroll of one frame width.
+  const turned = await epub.turn();
+  expect(turned).toEqual({ ...opened, screen: 2 });
+  const { width, scrolled } = await epub.measured();
+  expect(scrolled).toBe(width);
+
+  // The arrow keys turn as the buttons do.
+  await book.key("ArrowLeft");
+  await expect(epub.view).toHaveAttribute("data-screen", "1");
+
+  // A turn back off a section's first screen opens the one before at
+  // its last.
+  await epub.previous.click();
+  await expect(epub.view).toHaveAttribute("data-section", String(opened.section - 1));
+  const before = await epub.turned();
+  expect(before.screen).toBe(before.screens);
+});
+
+test("each device sets the frame to its screen size, scaled down to the pane and never up", async ({
+  book,
+  epub,
+}) => {
+  await book.open();
+  await book.settled(BOOK);
+  await epub.open();
+
+  for (const device of DEVICES) {
+    await epub.device.selectOption(device.id);
+    await expect(epub.view).toHaveAttribute("data-device", device.id);
+    const { width, height, drawn } = await epub.measured();
+    expect({ width, height }).toEqual({ width: device.width, height: device.height });
+    expect(drawn.width).toBeLessThanOrEqual(device.width);
+    expect(drawn.width / drawn.height).toBeCloseTo(device.width / device.height, 2);
+    const well = await epub.view.boundingBox();
+    expect(drawn.width).toBeLessThanOrEqual((well?.width ?? 0) + 1);
+    expect(drawn.height).toBeLessThanOrEqual((well?.height ?? 0) + 1);
+  }
+});
+
+test("each reader setting changes the ReadiumCSS variable it maps to", async ({ book, epub }) => {
+  await book.open();
+  await book.settled(BOOK);
+  await epub.open();
+  await turnTo(epub, CHAPTER_NAME);
+
+  expect(await set(epub)).toEqual(DEFAULTS);
+
+  await epub.settings.click();
+
+  await epub.setting("font").selectOption("oldStyle");
+  await expect
+    .poll(() => set(epub))
+    .toEqual({ ...DEFAULTS, "--USER__fontFamily": "var(--RS__oldStyleTf)" });
+  await epub.setting("font").selectOption("publisher");
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+
+  const { screens } = await epub.turned();
+  await epub.setting("size-up").click();
+  await epub.setting("size-up").click();
+  await expect(epub.setting("size")).toHaveValue("150%");
+  await expect.poll(() => set(epub)).toEqual({ ...DEFAULTS, "--USER__fontSize": "150%" });
+  // Larger type is more screens of it, and the view counts them again.
+  await expect
+    .poll(async () => (await epub.turned()).screens)
+    .toBeGreaterThan(screens);
+  await epub.setting("size-down").click();
+  await epub.setting("size-down").click();
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+
+  await epub.setting("spacing").selectOption("1.5");
+  await expect.poll(() => set(epub)).toEqual({ ...DEFAULTS, "--USER__lineHeight": "1.5" });
+  await epub.setting("spacing").selectOption("publisher");
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+
+  await epub.setting("margins-wide").click();
+  await expect.poll(() => set(epub)).toEqual({ "--RS__pageGutter": "56px" });
+  await epub.setting("margins-normal").click();
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+
+  await epub.setting("align-justify").click();
+  await expect.poll(() => set(epub)).toEqual({ ...DEFAULTS, "--USER__textAlign": "justify" });
+  await epub.setting("align-publisher").click();
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+
+  await epub.setting("theme-sepia").click();
+  await expect.poll(() => set(epub)).toEqual({
+    ...DEFAULTS,
+    "--USER__backgroundColor": "#faf4e8",
+    "--USER__textColor": "#121212",
+    "--USER__linkColor": "#305282",
+    "--USER__visitedColor": "#7b5281",
+  });
+  // ReadiumCSS reads the variable, so the screen takes the colour.
+  expect(await epub.computed("background-color")).toBe(SEPIA);
+  await epub.setting("theme-light").click();
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+});
+
+test("an edit repaints the EPUB view where the reader is", async ({ book, epub, vault }) => {
+  await book.open();
+  await book.settled(BOOK);
+  const generation = await epub.open();
+  await turnTo(epub, CHAPTER_NAME);
+  const at = await epub.turned();
+
+  const text = await vault.read(CHAPTER);
+  expect(text).toContain(OPENS);
+  await vault.modify(CHAPTER, text.replace(OPENS, EDITED));
+
+  await expect.poll(() => epub.painted()).toBeGreaterThan(generation);
+  await expect.poll(() => epub.words()).toContain(EDITED);
+  expect(await epub.words()).not.toContain(OPENS);
+  expect(await epub.heading()).toBe(CHAPTER_NAME);
+  expect(await epub.turned()).toMatchObject({ section: at.section, screen: at.screen });
+
+  await vault.restore();
+  await expect.poll(() => epub.words()).toContain(OPENS);
+});
+
+test("nothing the EPUB view does writes to the vault or to the plugin's data", async ({
+  book,
+  epub,
+  obsidian,
+  vault,
+}) => {
+  await book.open();
+  await book.settled(BOOK);
+  const data = await vault.data(PLUGIN);
+
+  const changes = await vault.changes(async () => {
+    await epub.open();
+    for (const device of DEVICES) {
+      await epub.device.selectOption(device.id);
+      await expect(epub.view).toHaveAttribute("data-device", device.id);
+    }
+    await epub.settings.click();
+    await epub.setting("font").selectOption("sans");
+    await epub.setting("size-up").click();
+    await epub.setting("spacing").selectOption("2");
+    await epub.setting("margins-narrow").click();
+    await epub.setting("align-start").click();
+    await epub.setting("theme-dark").click();
+    await expect.poll(() => set(epub)).toMatchObject({
+      "--USER__fontFamily": "var(--RS__sansTf)",
+      "--USER__fontSize": "125%",
+      "--USER__lineHeight": "2",
+      "--RS__pageGutter": "16px",
+      "--USER__textAlign": "start",
+      "--USER__backgroundColor": "#000000",
+    });
+    await epub.settings.click();
+    // The workspace keeps the page view the pane was in, and nothing
+    // of the EPUB view.
+    const layout = JSON.stringify(await obsidian.layout());
+    expect(layout).toContain('"view":"single"');
+    expect(layout).not.toContain("epub");
+    await turnTo(epub, CHAPTER_NAME);
+    await epub.turn();
+    // Back to the pages, which is the view the pane keeps.
+    await book.view("Single page").click();
+    await expect(epub.view).toHaveCount(0);
+  });
+
+  expect(changes).toEqual([]);
+  expect(await vault.data(PLUGIN)).toBe(data);
+});
+
+// What this suite does not cover: the view on a phone or a tablet, where
+// the bar wraps, and a book whose documents link no sheet, which the
+// engine does not write. A link inside the frame is not followed, and
+// nothing here clicks one. Whether a pane reopened comes back in its
+// page view is held only as far as the layout the workspace would
+// write, which names the page view and nothing of this one.
