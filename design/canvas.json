@@ -11,6 +11,10 @@
     {
       "id": "page-3",
       "name": "Docs site"
+    },
+    {
+      "id": "page-4",
+      "name": "Mobile"
     }
   ],
   "artboards": [
@@ -185,6 +189,159 @@
       "y": 0,
       "w": 390,
       "h": 900
+    },
+    {
+      "file": "MainPhone.dc.html",
+      "title": "The whole workspace, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 0,
+      "w": 1274,
+      "h": 1120
+    },
+    {
+      "file": "MainTablet.dc.html",
+      "title": "The whole workspace, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 0,
+      "w": 1228,
+      "h": 1040
+    },
+    {
+      "file": "NavigatorPhone.dc.html",
+      "title": "Navigator, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 1280,
+      "w": 1274,
+      "h": 1120
+    },
+    {
+      "file": "NavigatorTablet.dc.html",
+      "title": "Navigator, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 1280,
+      "w": 1228,
+      "h": 1040
+    },
+    {
+      "file": "DesignPanelPhone.dc.html",
+      "title": "Design panel, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 2560,
+      "w": 1692,
+      "h": 1200
+    },
+    {
+      "file": "DesignPanelTablet.dc.html",
+      "title": "Design panel, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 2560,
+      "w": 1228,
+      "h": 1040
+    },
+    {
+      "file": "BookPagePhone.dc.html",
+      "title": "The book note's page, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 3920,
+      "w": 856,
+      "h": 1230
+    },
+    {
+      "file": "BookPageTablet.dc.html",
+      "title": "The book note's page, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 3920,
+      "w": 1228,
+      "h": 1030
+    },
+    {
+      "file": "PreviewViewsPhone.dc.html",
+      "title": "Preview, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 5310,
+      "w": 1274,
+      "h": 1200
+    },
+    {
+      "file": "PreviewViewsTablet.dc.html",
+      "title": "Preview, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 5310,
+      "w": 1228,
+      "h": 1040
+    },
+    {
+      "file": "ExportPhone.dc.html",
+      "title": "Export, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 6670,
+      "w": 1274,
+      "h": 1130
+    },
+    {
+      "file": "ExportTablet.dc.html",
+      "title": "Export, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 6670,
+      "w": 1228,
+      "h": 1010
+    },
+    {
+      "file": "StatesPhone.dc.html",
+      "title": "States, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 7960,
+      "w": 2528,
+      "h": 1040
+    },
+    {
+      "file": "StatesTablet.dc.html",
+      "title": "States, tablet",
+      "page": "page-4",
+      "x": 2700,
+      "y": 7960,
+      "w": 1784,
+      "h": 1320
+    },
+    {
+      "file": "AdvancedTablet.dc.html",
+      "title": "The author's CSS, tablet",
+      "page": "page-4",
+      "x": 0,
+      "y": 9440,
+      "w": 1228,
+      "h": 1120
+    },
+    {
+      "file": "InspectTablet.dc.html",
+      "title": "Inspect, tablet",
+      "page": "page-4",
+      "x": 1348,
+      "y": 9440,
+      "w": 1228,
+      "h": 1120
+    },
+    {
+      "file": "FlowMobileDraftLoop.dc.html",
+      "title": "Flow 4, the draft loop on a phone",
+      "page": "page-2",
+      "x": 0,
+      "y": 2200,
+      "w": 1740,
+      "h": 1130
     }
   ],
   "annotations": [
@@ -227,6 +384,14 @@
       "y": -713,
       "w": 700,
       "text": "Settled in this round:\n\n- Manuscript and book are one pane, swapped by a single icon action in the note's header — which is what the plugin API gives free. MarkdownView inherits addAction from ItemView, and the swap is leaf.setViewState. A segmented control would mean hand-built DOM in a view we do not own.\n\n- Your CSS is the design panel's other view, reached by an icon action in the panel header, to match. The editor gets the whole column, and the book stays in the pane either way.\n\n- A control your CSS has taken over goes grey where it sits, in the controls view, carrying the line that took it — which is also the way to that line. The CSS view itself is just the editor.\n\n- Export sits in the book preview's toolbar and on the book note's page.\n\nStill open:\n\n- Chapter openings default to the right-hand page, which is what leaves the odd blank verso. Next page and Same page are both there if that is the wrong default.\n\n- The status line no longer shows the per-stage counts; they stay as attributes for the tests, so the epic's issue wants amending.\n\nWorth knowing for the build: the header icon has to be applied on active-leaf-change rather than once at startup, because a background leaf holds a DeferredView; and returning to the manuscript where the writer left it means capturing the leaf's ephemeral state before the swap and putting it back after — nothing does that for us."
+    },
+    {
+      "id": "mobile",
+      "page": "page-4",
+      "x": 0,
+      "y": -300,
+      "w": 900,
+      "text": "Orca on a phone and on a tablet. Each screen has a phone board on the left and a tablet board on the right.\n\nThe chrome is Obsidian mobile's, measured from the .is-mobile, .is-phone and .is-tablet rules of app.css. A phone has one view, two drawers and a bar along the bottom. A tablet keeps the tab strip, and its drawers pin beside the view.\n\nThe CSS view and inspect are desktop only on a phone, so each has a tablet board and no phone board."
     }
   ],
   "launch": {

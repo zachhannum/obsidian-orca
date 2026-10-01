@@ -54,8 +54,9 @@ wins and the quick fix waits for its own PR.
 
 ## The design
 
-Fourteen artboards in `design/` draw orca as it is meant to look and
-behave, and five more draw the docs site. They are the specification for every surface, not a sketch of
+Fourteen artboards in `design/` draw orca on the desktop as it is meant
+to look and behave. Seventeen more draw it on a phone and a tablet, and
+five draw the docs site. They are the specification for every surface, not a sketch of
 one, and UI work starts by opening the one it belongs to.
 
 - The screens are `Main`, `Navigator`, `DesignPanel`, `BookPage`,
@@ -63,8 +64,15 @@ one, and UI work starts by opening the one it belongs to.
   and `Manuscript`. The
   paths through them are `FlowMakeABook`, `FlowDraftLoop` and
   `FlowDesignExport`.
-- "What the screens settle" in `design/README.md` is decided. A build
-  implements those answers rather than reopening them.
+- A screen orca has on mobile has a phone artboard and a tablet
+  artboard beside the desktop one, named `MainPhone` and `MainTablet`.
+  `FlowMobileDraftLoop` is the draft loop on a phone.
+- "What the screens settle" in `design/README.md` is decided, and so is
+  "What the screens settle on mobile". A build implements those answers
+  rather than reopening them.
+- Mobile measurements come from the `.is-mobile`, `.is-phone` and
+  `.is-tablet` tokens in `chrome.css`, which are Obsidian mobile's
+  own.
 - Measurements, colour and type come from `chrome.css`, which is
   Obsidian's own ramp, header, ribbon and radii lifted from `app.css`.
   A surface the design does not draw extends that vocabulary rather

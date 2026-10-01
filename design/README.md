@@ -1,14 +1,19 @@
 # The v1 design
 
-Fourteen artboards draw the plugin: eleven screens and three flows.
-Five more draw the docs site. They show orca as it is meant to look and
-behave. They are HTML rather than pictures, so they can be edited and
+Fourteen artboards draw the plugin on the desktop: eleven screens and
+three flows. Seventeen more draw it on a phone and a tablet, and five
+draw the docs site. They show orca as it is meant to look and behave. They are HTML rather than pictures, so they can be edited and
 rebuilt instead of redrawn.
 
 Obsidian's own tokens are lifted from `app.css` in the installed
 build: its colour ramp, the 40px header, the 44px ribbon, 13px
 navigation type, its radii. They are in `chrome.css`. New surfaces
 extend that vocabulary rather than inventing one.
+
+Obsidian mobile's tokens are in `chrome.css` too, under `.is-mobile`,
+`.is-phone` and `.is-tablet`, the classes `app.css` keeps them under.
+A mobile part draws its device as a `.device` frame with those
+classes, and every measurement inside the frame is the mobile one.
 
 The docs site does not use Obsidian's tokens. Its own are in
 `site.css`.
@@ -277,6 +282,68 @@ its editor around these files and returns a URL. The artboard list and
   drawn from the text in front of it, so a chip lands on the keystroke
   that made it and a chapter with no preview open takes its marks. A
   note no book lists takes none.
+
+## What the screens settle on mobile
+
+The answers above hold on a phone and a tablet unless one of these
+replaces them.
+
+- A screen has a phone artboard and a tablet artboard, named for the
+  desktop one: `MainPhone`, `MainTablet`. `FlowMobileDraftLoop` draws
+  the draft loop on a phone.
+- The design panel is in the right drawer on a phone and on a tablet.
+  Opening a book puts its design in the drawer and leaves the drawer
+  shut. Orca opens no drawer on its own. On a tablet the drawer pins
+  beside the view, and the panel and the page are on screen together.
+- A phone has one pane. The header action swaps it between a chapter
+  and its page, as on desktop, and the pane keeps the page and the line
+  as it does there. `Open preview to the right` and `Open manuscript to
+  the left` are not offered on a phone. A tablet offers both.
+- A phone offers the single view and the grid. Two facing pages are
+  each under half the width of the screen, so the spread is not
+  offered, and a book left in the spread opens in the single view. A
+  tablet offers all three.
+- A swipe turns a page, a spread or a screenful. The arrows that turn
+  a page stay, under the page.
+- Mobile has no status bar. The page number and the count of warnings
+  are under the page. The warnings open over the page from the count,
+  and a tap on the page shuts them.
+- Nothing on mobile waits for a pointer. A tap on a lock opens its
+  card. A book's row in the navigator shows `Open preview` and `Add to
+  this book` at all times, and a missing note shows `Locate` and
+  `Remove`. The fold chevrons in the CSS view are always drawn, and
+  the card for a flagged declaration shows while the caret is in it.
+  No control has a tooltip.
+- A long press on a navigator row opens its menu: a sheet on a phone,
+  a menu beside the row on a tablet. `Open as markdown` in that menu
+  takes the place of the Mod click.
+- A chip in the editor has no hover on any platform. A tap on its line
+  puts the caret there, and the line shows its source.
+- A link in the preview has no hand over it. A tap follows it, and a
+  long press selects text.
+- A row the navigator can move ends in a drag handle on mobile, and a
+  drag starts only from the handle. A heading row has none.
+- With a preview of the book open, a tap on a chapter turns it and
+  closes a drawer that is not pinned.
+- Every control on mobile is at least 44px on its short side, which is
+  the size of Obsidian mobile's own buttons. A number field steps from
+  a button at each end.
+- The export dialog on mobile saves into the vault. It has a path in
+  the vault and no `Choose…`. Once the file is written, `Share` hands
+  it to the system share sheet, on a device that can share a file. The
+  file stays in the vault whether or not it is shared.
+- The Font control on mobile lists the face orca carries and the
+  families in the vault's `fonts/`. With no family in `fonts/`, a line
+  under the list names that folder.
+- The CSS view and inspect mode are desktop only on a phone. The panel
+  header draws no CSS icon there, the book view draws no inspect
+  action, and neither command is registered. A lock's card on a phone
+  goes to no line. A tablet offers both, in the pinned right drawer.
+- On a tablet a tap in inspect mode outlines a box and pins it in one
+  step. A pin opens no drawer. A tap on the pinned box, a tap where
+  there is no box and the pane's close button each remove the pin.
+- A phone is drawn with Obsidian's bar along the bottom edge. A build
+  of Obsidian that floats that bar changes nothing orca draws.
 
 ## What the site settles
 
