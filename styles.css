@@ -2784,3 +2784,141 @@ input.orca-panel-filter {
 .is-mobile .orca-book-refused button {
   min-height: var(--touch-size-m);
 }
+
+/* mobile: export */
+.is-phone .orca-export-modal {
+  width: calc(100vw - var(--size-4-6));
+  max-width: none;
+}
+
+.is-mobile .orca-export-row {
+  min-height: var(--touch-size-m);
+}
+
+.is-tablet .orca-export-label {
+  width: 150px;
+  color: var(--text-normal);
+}
+
+.is-tablet .orca-export-files {
+  padding-left: calc(150px + var(--size-4-2));
+}
+
+/* A phone has no room for a label beside its field, so the label is
+   the heading over it. */
+.is-phone .orca-export-row {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.is-phone .orca-export-label {
+  width: 100%;
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.is-phone .orca-export-files {
+  padding-left: 0;
+}
+
+.is-mobile .orca-export-format {
+  gap: var(--size-4-2);
+  min-width: var(--touch-size-m);
+  min-height: var(--touch-size-m);
+}
+
+.is-mobile .orca-export-destination {
+  height: var(--touch-size-m);
+}
+
+.is-mobile .orca-preview-issue.orca-export-error {
+  border-radius: 12px;
+}
+
+.is-mobile .orca-export-at {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.is-mobile .orca-export-at button {
+  min-width: var(--touch-size-m);
+  min-height: var(--touch-size-m);
+}
+
+.is-mobile .orca-export-progress {
+  height: 4px;
+  border-radius: 2px;
+}
+
+.is-mobile .orca-export-progress-bar {
+  border-radius: 2px;
+}
+
+/* The buttons are stacked, with Export over Cancel and the line that
+   says why over both. */
+.is-mobile .orca-export-footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--size-4-2);
+}
+
+.is-mobile .orca-export-footer button {
+  width: 100%;
+  min-height: var(--touch-size-m);
+  margin: 0;
+}
+
+.is-mobile .orca-export-footer button.mod-cta {
+  order: 1;
+}
+
+.is-mobile .orca-export-footer button:not(.mod-cta) {
+  order: 2;
+}
+
+.is-mobile .orca-export-said {
+  flex: none;
+  margin: 0;
+  text-align: center;
+}
+
+.is-mobile .orca-export-said:empty {
+  display: none;
+}
+
+.is-mobile .orca-export-done {
+  flex-direction: column;
+  gap: var(--size-4-2);
+  text-align: center;
+}
+
+.is-mobile .orca-export-done-icon {
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  border-radius: var(--touch-size-m);
+  background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
+  color: var(--text-accent);
+}
+
+.is-mobile .orca-export-done-icon svg {
+  width: var(--icon-l);
+  height: var(--icon-l);
+}
+
+.is-mobile .orca-export-done-name {
+  flex: none;
+  max-width: 100%;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.is-mobile .orca-export-done-size {
+  font-family: inherit;
+  color: var(--text-muted);
+}
