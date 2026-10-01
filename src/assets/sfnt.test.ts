@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
-import { faceBytes, faceOffsets, readFace, type Ranges } from "@/assets/sfnt";
+import { faceBytes, faceOffsets, fontKind, readFace, type Ranges } from "@/assets/sfnt";
 
 /** One table of a face, before it is placed in a file. */
 interface Table {
@@ -281,6 +281,17 @@ test("a short OS/2 table reads as a regular width and weight, and its slope come
 });
 
 /** The one face this tier reads from the machine, when the machine has it. */
+test("a file's first four bytes name its container", () => {
+  assert.equal(fontKind(Uint8Array.of(0, 1, 0, 0, 9)), "sfnt");
+  assert.equal(fontKind(ascii("OTTO")), "sfnt");
+  assert.equal(fontKind(ascii("true")), "sfnt");
+  assert.equal(fontKind(ascii("ttcf")), "collection");
+  assert.equal(fontKind(ascii("wOFF")), "woff");
+  assert.equal(fontKind(ascii("wOF2")), "woff2");
+  assert.equal(fontKind(ascii("%PDF")), undefined);
+  assert.equal(fontKind(ascii("OTT")), undefined);
+});
+
 const HELVETICA = "/System/Library/Fonts/Helvetica.ttc";
 
 test(
