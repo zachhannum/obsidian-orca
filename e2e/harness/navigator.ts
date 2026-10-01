@@ -38,6 +38,21 @@ export class Navigator {
     await expect(this.pane).toBeVisible();
   }
 
+  /**
+   * Opens the left drawer on the navigator again. Mobile closes the
+   * drawer when a note opens, and revealing a leaf that is already the
+   * drawer's own does not open it. A drawer opened while it is still
+   * sliding shut is taken off the page when the slide ends, so this
+   * waits for it to be gone first.
+   */
+  async drawer(): Promise<void> {
+    if (await this.obsidian.collapsed("left")) await expect(this.pane).toBeHidden();
+    await this.obsidian.page.evaluate(() => {
+      window.app.workspace.leftSplit.expand();
+    });
+    await this.reveal();
+  }
+
   /** One book on the shelf. */
   book(path: string): Locator {
     return this.pane.locator(`[data-book="${path}"]`);
@@ -185,6 +200,48 @@ export class Navigator {
    */
   async menuOn(row: Locator): Promise<void> {
     await this.opening(row, { button: "right" });
+  }
+
+  /** The actions at the end of a row, which fade as one. */
+  actions(row: Locator): Locator {
+    return row.locator(".orca-nav-actions");
+  }
+
+  /**
+   * Presses a row for long enough to open its menu, and waits for the
+   * menu. A long press reaches the row as a `contextmenu` event on
+   * Android and on iOS, so the event is sent in place of the press.
+   */
+  async press(row: Locator): Promise<void> {
+    await expect(async () => {
+      const at = await box(row);
+      await row.dispatchEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        clientX: at.x + GRIP,
+        clientY: at.y + at.height / 2,
+      });
+      await expect(this.obsidian.menu()).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  }
+
+  /**
+   * The open menu's box once it has stopped moving. A phone's sheet
+   * rises into place, so two readings that agree are the box at rest.
+   */
+  async menuBox(): Promise<{ x: number; y: number; width: number; height: number }> {
+    let last = "";
+    let found = await box(this.obsidian.menu());
+    await expect
+      .poll(async () => {
+        found = await box(this.obsidian.menu());
+        const moved = JSON.stringify(found) !== last;
+        last = JSON.stringify(found);
+        return moved;
+      })
+      .toBe(false);
+    return found;
   }
 
   /**
