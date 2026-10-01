@@ -323,7 +323,8 @@ replaces them.
 - A link in the preview has no hand over it. A tap follows it, and a
   long press selects text.
 - A row the navigator can move ends in a drag handle on mobile, and a
-  drag starts only from the handle. A heading row has none.
+  drag starts only from the handle. A section has one at the end of its
+  rule. A heading row has none.
 - With a preview of the book open, a tap on a chapter turns it and
   closes a drawer that is not pinned.
 - Every control on mobile is at least 44px on its short side, which is

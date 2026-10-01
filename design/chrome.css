@@ -468,3 +468,4 @@
 .insp-sheet .computed { font-size: var(--font-ui-smaller); }
 .insp-sheet .crumbs { font-size: 12.5px; }
 .is-mobile .view-action.is-active { color: var(--text-accent); }
+.is-mobile .nav-heading > .drag-handle { order: 2; align-self: auto; height: 28px; margin: 0 -8px 0 0; }
