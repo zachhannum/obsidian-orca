@@ -293,7 +293,8 @@ replaces them.
   the draft loop on a phone.
 - The design panel is in the right drawer on a phone and on a tablet.
   Opening a book puts its design in the drawer and leaves the drawer
-  shut. Orca opens no drawer on its own. On a tablet the drawer pins
+  shut. Orca opens no drawer on its own, except for an inspect pin on
+  a tablet. On a tablet the drawer pins
   beside the view, and the panel and the page are on screen together.
 - A phone has one pane. The header action swaps it between a chapter
   and its page, as on desktop, and the pane keeps the page and the line
@@ -338,17 +339,18 @@ replaces them.
 - The CSS view is the design panel's second view on a phone and a
   tablet, as on desktop. A tap on the line in a lock's card opens it at
   that line.
-- Inspect mode is offered on a phone and a tablet. A tap outlines a
-  box and pins it in one step, because there is no pointer to outline
-  it first. A pin opens no drawer. A tap on the pinned box, a tap where
-  there is no box and the pane's close button each remove the pin.
-- On a tablet the inspect pane is at the top of the CSS view, in the
-  right drawer, as on desktop.
-- On a phone the inspect pane is a sheet over the foot of the page.
-  It rises when a box is pinned, with the crumbs and the first rule
-  that matched. Pulled up, it has every rule, the computed values and
-  `Add a rule`. Pulled down past its foot, it closes and removes the
-  pin. The page moves up when the sheet would cover the pinned box.
+- Inspect mode on a phone and a tablet is the desktop's, with a tap
+  for the click. A touch screen has no pointer, so no box is outlined
+  before the tap.
+- On a tablet a pin opens the pane at the top of the CSS view and
+  turns the panel to that view, as on desktop. A pin opens the right
+  drawer when it is shut. It is the one thing orca opens a drawer for.
+- On a phone the right drawer covers the page, so the pane is a sheet
+  over the foot of the page instead. It rises when a box is pinned,
+  with the crumbs and the first rule that matched. Pulled up, it has
+  every rule, the computed values and `Add a rule`. Pulled down past
+  its foot, it closes and removes the pin. The page moves up when the
+  sheet would cover the pinned box.
 - On a phone a tap on a rule's line, on the control that wrote a rule,
   or on `Add a rule` opens the right drawer at that place. The pin is
   kept.
