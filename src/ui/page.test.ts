@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   fits,
+  gapOf,
   nextPage,
   previousPage,
   seated,
@@ -143,6 +144,25 @@ test("a grid fits as many sheets as the well has room for", () => {
     columns: 1,
     rows: 1,
   });
+});
+
+test("a phone's grid is two sheets across and a tablet's is six", () => {
+  const trim = { width: 432, height: 648 };
+
+  assert.deepEqual(fits({ width: 362, height: 560 }, trim, "phone"), {
+    columns: 2,
+    rows: 2,
+  });
+  assert.deepEqual(fits({ width: 1140, height: 560 }, trim, "tablet"), {
+    columns: 6,
+    rows: 2,
+  });
+  // The desktop fits more sheets in the same well, at its own tile.
+  assert.equal(fits({ width: 1140, height: 560 }, trim).columns, 8);
+  assert.equal(gapOf("grid", "phone"), 14);
+  assert.equal(gapOf("grid", "tablet"), 18);
+  assert.equal(gapOf("grid"), 12);
+  assert.equal(gapOf("spread", "phone"), gapOf("spread"));
 });
 
 test("a view's pages are the painter's markup in one write, not a node at a time", () => {

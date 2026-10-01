@@ -1,5 +1,6 @@
 import type { Side } from "fleuron";
 import type { Stages } from "@/engine/session";
+import type { Device } from "@/ui/device";
 
 /** The three ways the preview shows a book. */
 export const VIEW_MODES = ["single", "spread", "grid"] as const;
@@ -22,15 +23,22 @@ export interface Span {
   count: number;
 }
 
-/** The widest a grid draws a sheet. */
-const TILE = 132;
+/** The widest a grid draws a sheet, and the space it leaves between two. */
+const GRIDS: Record<Device, { tile: number; gap: number }> = {
+  desktop: { tile: 132, gap: 12 },
+  tablet: { tile: 160, gap: 18 },
+  phone: { tile: 150, gap: 14 },
+};
 
 /**
  * The space between sheets, in CSS pixels. The spread's is the spine,
- * so it is nearly nothing; the maths that fits a grid and the rules
+ * so it is nearly nothing. The maths that fits a grid and the rules
  * that draw one read the same number.
  */
-export const GAP: Record<ViewMode, number> = { single: 0, spread: 2, grid: 12 };
+export function gapOf(mode: ViewMode, device: Device = "desktop"): number {
+  if (mode === "grid") return GRIDS[device].gap;
+  return mode === "spread" ? 2 : 0;
+}
 
 /** The trim a view falls back to before a page has said what its is. */
 const UNSET: Box = { width: 2, height: 3 };
@@ -100,12 +108,16 @@ export function turnedTo(key: string, viewing: Viewing): number | undefined {
  * Measured before the request rather than after the paint, because the
  * count is what the view asks the engine for.
  */
-export function fits(well: Box, trim: Box): { columns: number; rows: number } {
+export function fits(
+  well: Box,
+  trim: Box,
+  device: Device = "desktop",
+): { columns: number; rows: number } {
   const shape = trim.width > 0 && trim.height > 0 ? trim : UNSET;
-  const gap = GAP.grid;
-  const tall = TILE * (shape.height / shape.width);
+  const { tile, gap } = GRIDS[device];
+  const tall = tile * (shape.height / shape.width);
   return {
-    columns: Math.max(Math.floor((well.width + gap) / (TILE + gap)), 1),
+    columns: Math.max(Math.floor((well.width + gap) / (tile + gap)), 1),
     rows: Math.max(Math.floor((well.height + gap) / (tall + gap)), 1),
   };
 }
@@ -160,6 +172,8 @@ export interface Painted {
   note: string;
   columns: number;
   rows: number;
+  /** The device the grid was fitted for, which is the desktop when absent. */
+  device?: Device;
 }
 
 /**
@@ -203,7 +217,7 @@ export function showPages<N>(
   surface.style.setProperty("--orca-trim-h", trim?.[2] ?? "");
   surface.style.setProperty("--orca-columns", String(painted.columns));
   surface.style.setProperty("--orca-rows", String(painted.rows));
-  surface.style.setProperty("--orca-gap", `${String(GAP[painted.mode])}px`);
+  surface.style.setProperty("--orca-gap", `${String(gapOf(painted.mode, painted.device))}px`);
 
   surface.dataset["generation"] = String(painted.generation);
   surface.dataset["stageStyle"] = String(painted.stages.style);
