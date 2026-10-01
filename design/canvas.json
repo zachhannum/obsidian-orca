@@ -268,8 +268,8 @@
       "page": "page-4",
       "x": 0,
       "y": 5310,
-      "w": 1274,
-      "h": 1200
+      "w": 1310,
+      "h": 2100
     },
     {
       "file": "PreviewViewsTablet.dc.html",
@@ -285,7 +285,7 @@
       "title": "Export, phone",
       "page": "page-4",
       "x": 0,
-      "y": 6670,
+      "y": 7570,
       "w": 1274,
       "h": 1130
     },
@@ -294,7 +294,7 @@
       "title": "Export, tablet",
       "page": "page-4",
       "x": 2700,
-      "y": 6670,
+      "y": 7570,
       "w": 1228,
       "h": 1010
     },
@@ -303,7 +303,7 @@
       "title": "States, phone",
       "page": "page-4",
       "x": 0,
-      "y": 7960,
+      "y": 8860,
       "w": 2528,
       "h": 1040
     },
@@ -312,7 +312,7 @@
       "title": "States, tablet",
       "page": "page-4",
       "x": 2700,
-      "y": 7960,
+      "y": 8860,
       "w": 1784,
       "h": 1320
     },
@@ -321,7 +321,7 @@
       "title": "The author's CSS, tablet",
       "page": "page-4",
       "x": 976,
-      "y": 9440,
+      "y": 10340,
       "w": 1228,
       "h": 1120
     },
@@ -330,7 +330,7 @@
       "title": "Inspect, tablet",
       "page": "page-4",
       "x": 2324,
-      "y": 9440,
+      "y": 10340,
       "w": 1228,
       "h": 1120
     },
@@ -348,7 +348,7 @@
       "title": "The author's CSS, phone",
       "page": "page-4",
       "x": 0,
-      "y": 9440,
+      "y": 10340,
       "w": 856,
       "h": 1150
     }

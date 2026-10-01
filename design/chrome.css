@@ -418,7 +418,7 @@
 
 /* ---- orca's own controls at touch size ---- */
 .is-mobile .seg { padding: 3px; border: none; border-radius: var(--touch-size-m); background: var(--interactive-normal); }
-.is-mobile .seg > div { white-space: nowrap; height: 38px; min-width: 44px; justify-content: center; padding: 0 12px; border-radius: var(--touch-size-m); font-size: var(--font-ui-small); }
+.is-mobile .seg > div { white-space: nowrap; height: 38px; min-width: 40px; justify-content: center; padding: 0 8px; border-radius: var(--touch-size-m); font-size: var(--font-ui-small); }
 .is-mobile .seg > div.is-on { background: var(--background-primary); }
 .is-mobile .lab { width: 120px; font-size: var(--font-ui-small); color: var(--text-normal); }
 .is-mobile .row { min-height: var(--touch-size-m); }
@@ -455,3 +455,9 @@
 .ord-row.mod-head { min-height: 32px; border-top: none; background: rgba(var(--mono-100), 0.04); font-size: 11px; letter-spacing: 0.03em; color: var(--text-faint); }
 .pre-err { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; border-left: 2px solid var(--color-red); background: rgba(251, 70, 76, 0.09); font-size: var(--font-ui-small); }
 .pre-err > svg { flex: none; margin-top: 2px; color: var(--color-red); }
+/* A phone on its side. The insets move to the ends, where the camera is. */
+.device.is-phone.is-landscape { width: 844px; height: 390px; --safe-area-inset-top: 12px; --safe-area-inset-bottom: 21px; --navbar-height: 67px; }
+.is-landscape > .sysbar { display: none; }
+.is-landscape .view-header, .is-landscape .orca-bar, .is-landscape .mobile-navbar { padding-left: 59px; padding-right: 59px; }
+.is-mobile .field.is-select > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-mobile .orca-bar > span, .is-mobile .orca-bar > .chip { flex: none; white-space: nowrap; }

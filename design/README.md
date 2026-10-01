@@ -299,10 +299,10 @@ replaces them.
   and its page, as on desktop, and the pane keeps the page and the line
   as it does there. `Open preview to the right` and `Open manuscript to
   the left` are not offered on a phone. A tablet offers both.
-- A phone offers the single view and the grid. Two facing pages are
-  each under half the width of the screen, so the spread is not
-  offered, and a book left in the spread opens in the single view. A
-  tablet offers all three.
+- A phone and a tablet offer the three views of the desktop. A phone
+  on its side shows a spread at the height of the pane. Upright, the
+  spread is drawn at the width of the screen. On its side, a phone has
+  the page number and the count of warnings in the preview's bar.
 - A swipe turns a page, a spread or a screenful. The arrows that turn
   a page stay, under the page.
 - Mobile has no status bar. The page number and the count of warnings
