@@ -2,7 +2,7 @@
 
   <div class="title-block">
     <h2>The preview is a page-through, not a scroller</h2>
-    <div class="sub">Three views, all page-throughs: single turns one page, spread turns two, grid turns a screenful. Each asks for exactly the pages it paints, plus the neighbours, so a page turn repaints without a round trip. The view a switch chose is kept: a pane opens again in it, and so does the next preview.</div>
+    <div class="sub">Three page views and a reflow view. The page views are page-throughs: single turns one page, spread turns two, grid turns a screenful. Each asks for exactly the pages it paints, plus the neighbours, so a page turn repaints without a round trip. The view a switch chose is kept: a pane opens again in it, and so does the next preview.</div>
   </div>
 
   <!-- spread view, full chrome -->
@@ -106,7 +106,65 @@
     </div>
   </div>
 
+  <!-- the EPUB view: a device's screen, the reader settings open -->
+  <div style="height: 530px; flex: none; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); display: flex; flex-direction: column; overflow: hidden; position: relative">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--divider-color); background: var(--orca-bar)">
+      <div class="seg">
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1"/></svg>Single</div>
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/></svg>Spread</div>
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="3" y="13" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/></svg>Grid</div>
+        <div class="is-on"><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg>EPUB</div>
+      </div>
+      <div style="flex: 1"></div>
+      <div style="position: relative; display: flex">
+        <div class="clickable-icon" style="height: 26px; background: var(--background-modifier-hover)"><svg class="icon-s icon" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg></div>
+        <div style="position: absolute; z-index: 5; top: calc(100% + 6px); right: 0; width: 320px; padding: 12px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); box-shadow: 0 8px 30px rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 8px">
+          <div class="row"><span class="lab">Font</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Publisher</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+          <div class="row"><span class="lab">Size</span><div class="numf"><div class="field is-default">100%</div><div class="stepper"><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></div><div><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div></div></div>
+          <div class="row"><span class="lab">Line spacing</span><div class="field is-select is-default" style="flex: 1; min-width: 0"><span>Publisher</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+          <div class="row"><span class="lab">Margins</span><div class="seg" style="flex: 1"><div style="flex: 1; justify-content: center">Narrow</div><div class="is-on is-default" style="flex: 1; justify-content: center">Normal</div><div style="flex: 1; justify-content: center">Wide</div></div></div>
+          <div class="row"><span class="lab">Alignment</span><div class="seg" style="flex: 1"><div class="is-on is-default" style="flex: 1; justify-content: center">Publisher</div><div style="flex: 1; justify-content: center">Start</div><div style="flex: 1; justify-content: center">Justify</div></div></div>
+          <div class="row"><span class="lab">Theme</span><div class="seg" style="flex: 1"><div class="is-on is-default" style="flex: 1; justify-content: center">Light</div><div style="flex: 1; justify-content: center">Sepia</div><div style="flex: 1; justify-content: center">Dark</div></div></div>
+        </div>
+      </div>
+      <div style="position: relative; display: flex">
+        <div class="field is-select" style="height: 26px; width: 180px; gap: 8px"><span>E-reader · 600 × 800</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div class="menu" style="position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; width: 180px; min-width: 0">
+          <div class="menu-item"><span>Phone</span><span style="margin-left: auto; color: var(--text-faint)">390 × 844</span></div>
+          <div class="menu-item is-active"><span>E-reader</span><span style="margin-left: auto; color: var(--text-faint)">600 × 800</span></div>
+          <div class="menu-item"><span>Tablet</span><span style="margin-left: auto; color: var(--text-faint)">820 × 1180</span></div>
+        </div>
+      </div>
+      <div style="width: 1px; height: 18px; background: var(--divider-color); margin: 0 4px"></div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m15 18-6-6 6-6"/></svg>
+        <svg class="icon-s icon" viewBox="0 0 24 24" style="color: var(--text-muted)"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+
+    <!-- the frame: 600 × 800 at half size, so it fits the pane -->
+    <div style="flex: 1; min-height: 0; display: flex; align-items: center; padding-left: 190px">
+      <div class="paper" style="width: 300px; height: 400px; padding: 26px 24px; border-radius: 12px; overflow: hidden">
+        <div class="body" style="font-size: 9px; line-height: 1.5">
+          <p class="first">Her answer, therefore, was not propitious, at least not to Elizabeth's wishes, for she was impatient to get home. Mrs. Bennet sent them word that they could not possibly have the carriage before Tuesday; and in her postscript it was added, that if Mr. Bingley and his sister pressed them to stay longer, she could spare them very well.</p>
+          <p>Against staying longer, however, Elizabeth was positively resolved, nor did she much expect it would be asked; and fearful, on the contrary, of being considered as intruding themselves needlessly long, she urged Jane to borrow Mr. Bingley's carriage immediately.</p>
+          <p>The communication excited many professions of concern; and enough was said of wishing them to stay at least till the following day to work on Jane; and till the morrow their going was deferred.</p>
+          <p>The master of the house heard with real sorrow that they were to go so soon, and repeatedly tried to persuade Miss Bennet that it would not be safe for her, that she was not enough recovered; but Jane was firm where she felt herself to be right.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px; padding: 7px 14px; border-top: 1px solid var(--divider-color); font-size: var(--font-ui-smaller); color: var(--text-muted)">
+      <span>section 6 of 9 · screen 2 of 14</span>
+      <span style="flex: 1"></span>
+      <span style="color: var(--text-faint)">paged by ReadiumCSS, with no page laid out</span>
+    </div>
+  </div>
+
   <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+    <div class="callout"><div><span class="k">Devices.</span> EPUB is the fourth view. It shows the engine's EPUB in a frame that ReadiumCSS pages, and it turns a screen at a time, then to the next section. A device is a screen size in CSS px: Phone is 390 × 844, E-reader is 600 × 800 and Tablet is 820 × 1180. A frame larger than the pane scales down to fit. Inspect is off in this view.</div></div>
+    <div class="callout"><div><span class="k">Reader settings.</span> Font is Publisher, Old style, Modern, Sans or Humanist. Size runs from 75% to 250% in steps of 25. Line spacing is Publisher, 1.2, 1.5, 1.75 or 2. Margins are Narrow, Normal or Wide. Alignment is Publisher, Start or Justify. Theme is Light, Sepia or Dark. Each starts at the publisher's, which is the author's CSS, and one moved off it overrides the CSS as a reading app does. The reading is ReadiumCSS's, not one reading app's.</div></div>
+    <div class="callout"><div><span class="k">Not kept.</span> The device and the settings last as long as the pane. Nothing keeps them: not the vault, not the plugin's data.</div></div>
     <div class="callout"><div><span class="k">Opened where you are reading.</span> The icon on a note swaps the pane to the book, turned to the page the pane is showing most of. The book pane keeps that page: a swap back to the manuscript, and a workspace reopened at startup, both come back to it. A reader who paged through the book comes back to the line that page opens at. <span style="color: var(--text-muted)">Open preview to the right</span>, on a chapter's own menu, splits instead, and the two panes follow each other paragraph by paragraph: scrolling the manuscript turns the book, and turning a page scrolls the manuscript.</div></div>
     <div class="callout"><div><span class="k">Turning by chapter.</span> The toolbar names the chapter the span is at, and turns the book to another. <span style="color: var(--text-muted)">Next chapter</span> and <span style="color: var(--text-muted)">Previous chapter</span> are commands, so a reader can bind a key to the turn. A page no section covers, such as a blank verso, is named for the chapter that opened before it.</div></div>
     <div class="callout"><div><span class="k">A click on a link.</span> A link to a place in the book turns the book to the page of that place, in every view, and a linked manuscript follows the turn. The back and forward arrows in the pane's header walk the turns links made. An entry in the contents is a link, and so is the page number it prints. A link to a website opens it in the browser and turns no page. The pointer over a link is a hand, and a drag over a link still selects its text. In inspect mode, a click on a link pins its box and follows nothing.</div></div>

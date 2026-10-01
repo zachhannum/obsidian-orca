@@ -170,6 +170,28 @@ its editor around these files and returns a URL. The artboard list and
   when the dialog opens. One export writes one file for each ticked
   format. The files share one path, and each format adds its own
   extension. `Choose…` picks a folder, not a file.
+- EPUB is the preview's fourth view, beside the three page views in
+  the bar's segmented control. It shows the engine's EPUB in a frame
+  that ReadiumCSS pages, and no page is laid out for it. The reading is
+  ReadiumCSS's, not one reading app's.
+- A device is a screen size in CSS px: Phone is 390 × 844, E-reader is
+  600 × 800 and Tablet is 820 × 1180. A frame larger than the pane
+  scales down to fit.
+- The EPUB view has six reader settings. Font is Publisher, Old style,
+  Modern, Sans or Humanist. Size runs from 75% to 250% in steps of 25
+  and starts at 100%. Line spacing is Publisher, 1.2, 1.5, 1.75 or 2.
+  Margins are Narrow, Normal or Wide. Alignment is Publisher, Start or
+  Justify. Theme is Light, Sepia or Dark. Each starts at the
+  publisher's, which is the author's CSS. A setting moved off it
+  overrides the CSS as a reading app does.
+- The EPUB view turns a screen at a time, then to the next section. In
+  it the chapter select, the folio, the total and the page arrows give
+  way to the device select, a settings button that opens the settings
+  under it, previous and next, and a status such as "section 6 of 9 ·
+  screen 2 of 14".
+- The device and the reader settings last as long as the pane. Nothing
+  keeps them: not the vault, not the plugin's data.
+- Inspect is off in the EPUB view.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.
 - Chapter openings default to the next page. The right-hand page and
