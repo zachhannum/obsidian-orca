@@ -1,7 +1,7 @@
 # The v1 design
 
 Fourteen artboards draw the plugin on the desktop: eleven screens and
-three flows. Eighteen more draw it on a phone and a tablet, and five
+three flows. Nineteen more draw it on a phone and a tablet, and five
 draw the docs site. They show orca as it is meant to look and behave. They are HTML rather than pictures, so they can be edited and
 rebuilt instead of redrawn.
 
@@ -338,13 +338,23 @@ replaces them.
 - The CSS view is the design panel's second view on a phone and a
   tablet, as on desktop. A tap on the line in a lock's card opens it at
   that line.
-- A phone does not offer inspect mode, because the drawer that holds
-  its pane covers the page. The book view draws no inspect action
-  there, and the command is not registered. A tablet offers it, in the
-  pinned right drawer.
-- On a tablet a tap in inspect mode outlines a box and pins it in one
-  step. A pin opens no drawer. A tap on the pinned box, a tap where
+- Inspect mode is offered on a phone and a tablet. A tap outlines a
+  box and pins it in one step, because there is no pointer to outline
+  it first. A pin opens no drawer. A tap on the pinned box, a tap where
   there is no box and the pane's close button each remove the pin.
+- On a tablet the inspect pane is at the top of the CSS view, in the
+  right drawer, as on desktop.
+- On a phone the inspect pane is a sheet over the foot of the page.
+  It rises when a box is pinned, with the crumbs and the first rule
+  that matched. Pulled up, it has every rule, the computed values and
+  `Add a rule`. Pulled down past its foot, it closes and removes the
+  pin. The page moves up when the sheet would cover the pinned box.
+- On a phone a tap on a rule's line, on the control that wrote a rule,
+  or on `Add a rule` opens the right drawer at that place. The pin is
+  kept.
+- On a phone `Inspect the page` is in the header's menu and is a
+  command. While inspect is on, a chip under the page reads
+  `Inspecting`, and its cross turns inspect off.
 - A phone is drawn with Obsidian's bar along the bottom edge. A build
   of Obsidian that floats that bar changes nothing orca draws.
 

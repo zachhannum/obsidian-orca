@@ -461,3 +461,10 @@
 .is-landscape .view-header, .is-landscape .orca-bar, .is-landscape .mobile-navbar { padding-left: 59px; padding-right: 59px; }
 .is-mobile .field.is-select > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .is-mobile .orca-bar > span, .is-mobile .orca-bar > .chip { flex: none; white-space: nowrap; }
+/* Inspect on a phone: the pane is a sheet over the foot of the page, and the page stays in reach above it. */
+.insp-sheet { position: absolute; z-index: 8; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 8px; padding: 0 16px var(--safe-area-inset-bottom); border-radius: var(--menu-radius) var(--menu-radius) 0 0; background: var(--background-secondary); box-shadow: 0 -8px 30px rgba(0,0,0,0.45); overflow: hidden; }
+.insp-sheet .rule { font-size: 12.5px; }
+.insp-sheet .rule-h .src { display: inline-flex; align-items: center; min-height: 28px; font-size: var(--font-ui-smaller); }
+.insp-sheet .computed { font-size: var(--font-ui-smaller); }
+.insp-sheet .crumbs { font-size: 12.5px; }
+.insp-on { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 6px 0 12px; border-radius: 16px; background: hsla(258, 88%, 66%, 0.15); color: var(--text-accent); font-size: var(--font-ui-smaller); white-space: nowrap; }
