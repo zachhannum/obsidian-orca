@@ -1,7 +1,7 @@
 # The v1 design
 
 Fourteen artboards draw the plugin on the desktop: eleven screens and
-three flows. Seventeen more draw it on a phone and a tablet, and five
+three flows. Eighteen more draw it on a phone and a tablet, and five
 draw the docs site. They show orca as it is meant to look and behave. They are HTML rather than pictures, so they can be edited and
 rebuilt instead of redrawn.
 
@@ -335,10 +335,13 @@ replaces them.
 - The Font control on mobile lists the face orca carries and the
   families in the vault's `fonts/`. With no family in `fonts/`, a line
   under the list names that folder.
-- The CSS view and inspect mode are desktop only on a phone. The panel
-  header draws no CSS icon there, the book view draws no inspect
-  action, and neither command is registered. A lock's card on a phone
-  goes to no line. A tablet offers both, in the pinned right drawer.
+- The CSS view is the design panel's second view on a phone and a
+  tablet, as on desktop. A tap on the line in a lock's card opens it at
+  that line.
+- Inspect mode is desktop only on a phone, where the drawer that holds
+  its pane covers the page. The book view draws no inspect action
+  there, and the command is not registered. A tablet offers it, in the
+  pinned right drawer.
 - On a tablet a tap in inspect mode outlines a box and pins it in one
   step. A pin opens no drawer. A tap on the pinned box, a tap where
   there is no box and the pane's close button each remove the pin.

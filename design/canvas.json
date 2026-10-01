@@ -320,7 +320,7 @@
       "file": "AdvancedTablet.dc.html",
       "title": "The author's CSS, tablet",
       "page": "page-4",
-      "x": 0,
+      "x": 976,
       "y": 9440,
       "w": 1228,
       "h": 1120
@@ -329,7 +329,7 @@
       "file": "InspectTablet.dc.html",
       "title": "Inspect, tablet",
       "page": "page-4",
-      "x": 1348,
+      "x": 2324,
       "y": 9440,
       "w": 1228,
       "h": 1120
@@ -342,6 +342,15 @@
       "y": 2200,
       "w": 1740,
       "h": 1130
+    },
+    {
+      "file": "AdvancedPhone.dc.html",
+      "title": "The author's CSS, phone",
+      "page": "page-4",
+      "x": 0,
+      "y": 9440,
+      "w": 856,
+      "h": 1150
     }
   ],
   "annotations": [
@@ -391,7 +400,7 @@
       "x": 0,
       "y": -300,
       "w": 900,
-      "text": "Orca on a phone and on a tablet. Each screen has a phone board on the left and a tablet board on the right.\n\nThe chrome is Obsidian mobile's, measured from the .is-mobile, .is-phone and .is-tablet rules of app.css. A phone has one view, two drawers and a bar along the bottom. A tablet keeps the tab strip, and its drawers pin beside the view.\n\nThe CSS view and inspect are desktop only on a phone, so each has a tablet board and no phone board."
+      "text": "Orca on a phone and on a tablet. Each screen has a phone board on the left and a tablet board on the right.\n\nThe chrome is Obsidian mobile's, measured from the .is-mobile, .is-phone and .is-tablet rules of app.css. A phone has one view, two drawers and a bar along the bottom. A tablet keeps the tab strip, and its drawers pin beside the view.\n\nInspect is desktop only on a phone, so it has a tablet board and no phone board."
     }
   ],
   "launch": {

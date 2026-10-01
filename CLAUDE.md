@@ -55,7 +55,7 @@ wins and the quick fix waits for its own PR.
 ## The design
 
 Fourteen artboards in `design/` draw orca on the desktop as it is meant
-to look and behave. Seventeen more draw it on a phone and a tablet, and
+to look and behave. Eighteen more draw it on a phone and a tablet, and
 five draw the docs site. They are the specification for every surface, not a sketch of
 one, and UI work starts by opening the one it belongs to.
 
