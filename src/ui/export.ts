@@ -9,7 +9,7 @@ import { exportPath, exportName } from "@/book/export";
 import type { BookMetadata } from "@/book/note";
 import { pdfTarget } from "@/engine/export";
 import type { Composer, Typeset } from "@/ui/composer";
-import { chooseDiskPath, desktopSink } from "@/ui/desktop";
+import { chooseDiskPath, desktopSink, onDesktop } from "@/ui/desktop";
 import { mountExport, type Exporter, type Mounted } from "@/ui/exporting";
 import { preflight } from "@/ui/preflight";
 
@@ -95,7 +95,10 @@ class ExportModal extends Modal {
           unwatch?.();
         };
       },
-      choose: (name) => chooseDiskPath(name, pdfTarget),
+      // Obsidian mobile has no path outside the vault to write to.
+      ...(onDesktop()
+        ? { choose: (name: string) => chooseDiskPath(name, pdfTarget) }
+        : {}),
       write: async (destination) => {
         const typeset = await this.typeset();
         const sink = desktopSink(files);

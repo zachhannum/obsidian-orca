@@ -6,7 +6,7 @@ wins and the quick fix waits for its own PR.
 
 ## Project shape
 
-- One Obsidian plugin, desktop only. esbuild bundles `src/main.ts` into
+- One Obsidian plugin, for desktop and mobile. esbuild bundles `src/main.ts` into
   a single `main.js` beside `manifest.json`; `npm run dev` watches.
 - Five modules under `src/`: `engine/` (worker bootstrap, client,
   session lifetime, stage counters), `book/` (note format, roles,
@@ -173,6 +173,9 @@ underneath them.
 - A native save dialog cannot be answered or stubbed over CDP. The
   OS-path export branch stops at the dialog, and that is written down
   rather than worked around.
+- A stray Obsidian is stopped by its process name, never with
+  `pkill -f obsidian`. The checkout's own path holds `obsidian-orca`,
+  so that pattern matches the shell running it and kills the command.
 - Playwright records video for a context it created, and a CDP
   attachment is handed one that already exists. A failed spec keeps a
   trace and a picture of the window instead.

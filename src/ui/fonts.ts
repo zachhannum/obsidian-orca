@@ -3,8 +3,8 @@
  *
  * A face installed on the machine is not in the vault, so the
  * platform's directories are read through the file system rather than
- * the vault adapter. Orca is desktop only, so the file system is
- * available.
+ * the vault adapter. Obsidian mobile has no file system to read, so
+ * there the index holds the vault's faces alone.
  */
 
 import { AssetError } from "@/assets/errors";
@@ -20,7 +20,7 @@ import {
   type FontIndex,
 } from "@/assets/fonts";
 import { coverage, type Cover } from "@/assets/cmap";
-import { files, machine, paths } from "@/assets/node";
+import type { Node } from "@/assets/node";
 import { faceBytes } from "@/assets/sfnt";
 import { contentKey, fontUrl, type Hashed } from "@/assets/registry";
 import { usedVariant, variantFamily } from "@/assets/variants";
@@ -39,9 +39,10 @@ export interface FontSource extends FontFiles {
 }
 
 /** The platform's own font directories, read through the file system. */
-export function platformFonts(): FontSource {
+export function platformFonts(node: () => Promise<Node>): FontSource {
   return {
     list: async (directory) => {
+      const { files, paths } = await node();
       const listing: Listing = { files: [], folders: [] };
       for (const entry of await files.readdir(directory, { withFileTypes: true })) {
         const into = entry.isDirectory() ? listing.folders : listing.files;
@@ -50,6 +51,7 @@ export function platformFonts(): FontSource {
       return listing;
     },
     read: async (file, at, length) => {
+      const { files } = await node();
       const handle = await files.open(file, "r");
       try {
         const into = new Uint8Array(length);
@@ -59,7 +61,7 @@ export function platformFonts(): FontSource {
         await handle.close();
       }
     },
-    whole: async (file) => new Uint8Array(await files.readFile(file)),
+    whole: async (file) => new Uint8Array(await (await node()).files.readFile(file)),
   };
 }
 
@@ -87,6 +89,13 @@ export function vaultFonts(vault: VaultAdapter): FontSource {
   };
 }
 
+/** A platform with no Node has no font directory to read. */
+const nowhere: FontSource = {
+  list: () => Promise.resolve({ files: [], folders: [] }),
+  read: () => Promise.reject(new AssetError("the platform has no fonts to read")),
+  whole: () => Promise.reject(new AssetError("the platform has no fonts to read")),
+};
+
 /** The places the index reads. A test substitutes its own directory. */
 export interface FontPlaces {
   platform: FontSource;
@@ -97,12 +106,25 @@ export interface FontPlaces {
   folder: string;
 }
 
-/** The places the running machine keeps faces. */
-export function fontPlaces(vault: VaultAdapter): FontPlaces {
+/**
+ * The places the running machine keeps faces. With no Node the platform
+ * has no directories, so the index reads the vault alone.
+ */
+export async function fontPlaces(
+  vault: VaultAdapter,
+  node: (() => Promise<Node>) | undefined,
+): Promise<FontPlaces> {
+  let directories: readonly string[] = [];
+  let platform = nowhere;
+  if (node !== undefined) {
+    const { machine } = await node();
+    directories = fontDirectories(machine.platform(), machine.homedir());
+    platform = platformFonts(node);
+  }
   return {
-    platform: platformFonts(),
+    platform,
     vault: vaultFonts(vault),
-    directories: fontDirectories(machine.platform(), machine.homedir()),
+    directories,
     folder: VAULT_FONTS,
   };
 }

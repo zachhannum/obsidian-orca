@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { directoryVault } from "@/assets/directory";
-import { vaultFonts } from "@/ui/fonts";
+import { fontPlaces, readFontIndex, vaultFonts } from "@/ui/fonts";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -25,6 +25,19 @@ test("a face still reads whole after an earlier read crossed to the worker", asy
   assert.ok(again.byteLength > 0);
   // The index reads ranges out of the same held file.
   assert.deepEqual(await fonts.read(FACE, 0, 4), again.subarray(0, 4));
+});
+
+test("with no Node the index reads only the vault's faces, so the picker lists only those", async () => {
+  const places = await fontPlaces(vault, undefined);
+  assert.deepEqual(places.directories, []);
+
+  const index = await readFontIndex(places);
+  assert.ok(index.families.length > 0);
+  assert.deepEqual(
+    index.families.filter((family) => family.where !== "vault").map((family) => family.name),
+    [],
+  );
+  assert.ok(index.families.some((family) => family.name === "Alegreya"));
 });
 
 // What this tier does not cover: the platform's own font directories,

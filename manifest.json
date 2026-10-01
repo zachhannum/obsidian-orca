@@ -6,5 +6,5 @@
   "description": "Design and typeset books from your notes, with a live preview of every page.",
   "author": "Zach Hannum",
   "authorUrl": "https://github.com/zachhannum",
-  "isDesktopOnly": true
+  "isDesktopOnly": false
 }

@@ -5,6 +5,7 @@
 
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
+import globals from "globals";
 
 export default defineConfig([
   {
@@ -45,6 +46,21 @@ export default defineConfig([
     languageOptions: {
       parserOptions: { projectService: false, project: "./tsconfig.review.json" },
     },
+  },
+  {
+    // These run in Node and never reach the bundle, so Node is there.
+    files: [
+      "*.mjs",
+      "*.ts",
+      "scripts/**",
+      "design/**",
+      "e2e/**",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "src/assets/directory.ts",
+    ],
+    languageOptions: { globals: globals.node },
+    rules: { "obsidianmd/no-nodejs-modules": "off" },
   },
   {
     // node:test hands back a promise the runner already waits on.
