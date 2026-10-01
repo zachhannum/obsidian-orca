@@ -66,6 +66,10 @@ Pictures of the parts on `feat/270-mobile-artboards`, for review. This branch is
 
 ![AdvancedTablet](AdvancedTablet.png)
 
+## InspectPhone
+
+![InspectPhone](InspectPhone.png)
+
 ## InspectTablet
 
 ![InspectTablet](InspectTablet.png)
