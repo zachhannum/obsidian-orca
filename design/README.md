@@ -334,9 +334,11 @@ replaces them.
   the vault and no `Choose…`. Once the file is written, `Share` hands
   it to the system share sheet, on a device that can share a file. The
   file stays in the vault whether or not it is shared.
-- The Font control on mobile lists the face orca carries and the
-  families in the vault's `fonts/`. With no family in `fonts/`, a line
-  under the list names that folder.
+- The Font control on mobile lists the fonts orca can read there: the
+  system's on a device that lets orca read them, and the families in
+  the vault's `fonts/`. Where orca can read no system fonts and
+  `fonts/` has none, the list has the face orca carries, and a line
+  under it names that folder.
 - The CSS view is the design panel's second view on a phone and a
   tablet, as on desktop. A tap on the line in a lock's card opens it at
   that line.
