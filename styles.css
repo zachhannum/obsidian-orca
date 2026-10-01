@@ -2712,3 +2712,75 @@ input.orca-panel-filter {
 .orca-preview-sheets.is-on-link * {
   cursor: var(--cursor-link);
 }
+
+/* mobile: book page */
+/* Obsidian mobile pads the view by 12px, and the page's own padding
+   brings the sides to the 24px the artboard draws. */
+.is-mobile .orca-book {
+  padding: var(--size-4-1) var(--size-4-3);
+}
+
+.is-phone .orca-book {
+  padding-block: 0;
+}
+
+.is-mobile .orca-book-name {
+  font-size: 28px;
+}
+
+.is-mobile .orca-book-line {
+  flex-wrap: wrap;
+}
+
+.is-mobile button.orca-book-export {
+  justify-content: center;
+  min-height: var(--touch-size-m);
+  margin-top: var(--size-4-3);
+}
+
+.is-phone button.orca-book-export {
+  align-self: stretch;
+  width: 100%;
+}
+
+.is-mobile .orca-book-metadata {
+  gap: 0;
+}
+
+.is-mobile .orca-book-label {
+  flex: none;
+  width: 7.5em;
+}
+
+.is-mobile .orca-book input.orca-book-value {
+  min-width: 0;
+  height: var(--touch-size-m);
+}
+
+/* A finger leaves a hover behind it, so a touch marks nothing. */
+.is-mobile .orca-book input.orca-book-value:hover:not(:focus) {
+  background: none;
+}
+
+.is-mobile .orca-order {
+  border-radius: var(--touch-size-xxs);
+}
+
+.is-mobile .orca-order-columns,
+.is-mobile .orca-order-row {
+  grid-template-columns: 1fr 64px 76px;
+  align-items: center;
+}
+
+.is-mobile .orca-order-row {
+  min-height: var(--touch-size-m);
+}
+
+.is-mobile .orca-order-row:hover {
+  background: none;
+  color: var(--text-muted);
+}
+
+.is-mobile .orca-book-refused button {
+  min-height: var(--touch-size-m);
+}
