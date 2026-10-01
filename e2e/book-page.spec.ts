@@ -75,6 +75,36 @@ test("a metadata edit on the page is written to the note once, on settle", async
   );
 });
 
+test("the first write gives the note an identifier, and a later write keeps it", async ({
+  note,
+  vault,
+}) => {
+  const identifier = /^identifier: (urn:uuid:[0-9a-f-]{36})$/m;
+  await note.open(BOOK);
+  // Opening the book writes nothing, so the note has none yet.
+  expect(await vault.read(BOOK)).not.toMatch(identifier);
+
+  const writes = await vault.writes(BOOK, async () => {
+    await note.metadata("cover").fill("device.png");
+    await expect.poll(async () => vault.read(BOOK)).toContain("cover: device.png");
+  });
+  // The identifier goes out with the edit, in the same revision.
+  expect(writes).toEqual(1);
+  const first = identifier.exec(await vault.read(BOOK))?.[1];
+  expect(first).toBeDefined();
+
+  await note.metadata("cover").fill("");
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("cover:");
+  expect(identifier.exec(await vault.read(BOOK))?.[1]).toEqual(first);
+
+  // The note read again is the same book.
+  await note.open("Chapter Twelve.md");
+  await note.open(BOOK);
+  await note.metadata("publisher").fill("Whitehall Press, London");
+  await expect.poll(async () => vault.read(BOOK)).toContain("Whitehall Press, London");
+  expect(identifier.exec(await vault.read(BOOK))?.[1]).toEqual(first);
+});
+
 test("a new title renames the book note, and a link to the book follows it", async ({
   note,
   obsidian,

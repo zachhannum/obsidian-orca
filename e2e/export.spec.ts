@@ -145,6 +145,33 @@ test("export writes the book as an EPUB from the open session, and its warnings 
   await exporting.close();
 });
 
+test("a cover that names no image in the vault shows in the Issues list once the EPUB is written", async ({
+  book,
+  exporting,
+  note,
+  vault,
+}) => {
+  const SAID = "Cover image nowhere.png did not load. It is left out of the EPUB.";
+  vault.touch(EPUB);
+  await note.open(BOOK);
+  await note.metadata("cover").fill("nowhere.png");
+  await expect.poll(async () => vault.read(BOOK)).toContain("cover: nowhere.png");
+
+  await book.open();
+  await book.settled(BOOK);
+  // The cover belongs to the EPUB, so the pages say nothing about it.
+  expect(await book.issues.allTextContents()).not.toContain(SAID);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.formats("epub");
+  await exporting.write.click();
+  await exporting.reaches("written");
+  await exporting.close();
+
+  await expect(book.issues.filter({ hasText: SAID })).toHaveCount(1);
+});
+
 test("one export writes every format ticked, each beside the others under the book's name", async ({
   book,
   exporting,

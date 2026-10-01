@@ -242,7 +242,7 @@ export class BookView extends FileView {
     try {
       const model = readModel(text);
       // A note with no identifier is given one here, and the first
-      // write puts it in the note. The engine has it from the start, so
+      // write of the properties puts it in the note. The engine has it from the start, so
       // a write that does not set the book again changes no identifier.
       const held = this.writer?.model.book.identifier;
       const book = identified(model.book, {}, () => held ?? newIdentifier());
