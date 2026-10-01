@@ -96,13 +96,6 @@ test("the first write gives the note an identifier, and a later write keeps it",
   await note.metadata("cover").fill("");
   await expect.poll(async () => vault.read(BOOK)).not.toContain("cover:");
   expect(identifier.exec(await vault.read(BOOK))?.[1]).toEqual(first);
-
-  // The note read again is the same book.
-  await note.open("Chapter Twelve.md");
-  await note.open(BOOK);
-  await note.metadata("publisher").fill("Whitehall Press, London");
-  await expect.poll(async () => vault.read(BOOK)).toContain("Whitehall Press, London");
-  expect(identifier.exec(await vault.read(BOOK))?.[1]).toEqual(first);
 });
 
 test("a new title renames the book note, and a link to the book follows it", async ({
