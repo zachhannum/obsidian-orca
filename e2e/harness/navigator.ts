@@ -40,17 +40,28 @@ export class Navigator {
 
   /**
    * Opens the left drawer on the navigator again. Mobile closes the
-   * drawer when a note opens, and revealing a leaf that is already the
-   * drawer's own does not open it. A drawer opened while it is still
-   * sliding shut is taken off the page when the slide ends, so this
-   * waits for it to be gone first.
+   * drawer when a note opens, some time after the note is open, and a
+   * drawer opened while it slides shut is taken off the page when the
+   * slide ends and still says it is open. So each try takes one step
+   * from what it finds: a shut drawer is opened once it is off the
+   * page, and one that is open and not drawn is shut for the next try.
    */
   async drawer(): Promise<void> {
-    if (await this.obsidian.collapsed("left")) await expect(this.pane).toBeHidden();
-    await this.obsidian.page.evaluate(() => {
-      window.app.workspace.leftSplit.expand();
-    });
-    await this.reveal();
+    await expect(async () => {
+      if (await this.obsidian.collapsed("left")) {
+        await expect(this.pane).toBeHidden({ timeout: 2_000 });
+        await this.obsidian.page.evaluate(async (type) => {
+          window.app.workspace.leftSplit.expand();
+          await window.app.workspace.ensureSideLeaf(type, "left", { reveal: true });
+        }, NAVIGATOR);
+      } else if (!(await this.pane.isVisible())) {
+        await this.obsidian.page.evaluate(() => {
+          window.app.workspace.leftSplit.collapse();
+        });
+      }
+      await expect(this.pane).toBeVisible({ timeout: 2_000 });
+      expect(await this.obsidian.collapsed("left")).toBe(false);
+    }).toPass({ timeout: 30_000 });
   }
 
   /** One book on the shelf. */
