@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PLUGIN } from "./harness/launch";
+import { DEVICES } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. It sits at the top of the vault. */
@@ -65,6 +66,44 @@ test("under mobile emulation the book is set from the vault's faces and exports 
       await rm(folder, { recursive: true, force: true });
     }
     await exporting.close();
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
+for (const device of ["phone", "tablet"] as const) {
+  test(`the harness runs a spec at a ${device}'s size, and Obsidian reads the window as a ${device}`, async ({
+    obsidian,
+  }) => {
+    const other = device === "phone" ? "tablet" : "phone";
+    await obsidian.mobile(device);
+    try {
+      // Obsidian writes these classes from `Platform`, which the window
+      // hands to plugins alone.
+      const body = obsidian.page.locator("body");
+      await expect(body).toHaveClass(/\bis-mobile\b/);
+      await expect(body).not.toHaveClass(new RegExp(`\\bis-${other}\\b`));
+      expect(
+        await obsidian.page.evaluate(() => ({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        })),
+      ).toEqual(DEVICES[device]);
+      await expect(obsidian.page.locator("body")).toHaveClass(new RegExp(`\\bis-${device}\\b`));
+    } finally {
+      await obsidian.emulateMobile(false);
+    }
+  });
+}
+
+test("a phone turned on its side is still a phone", async ({ obsidian }) => {
+  await obsidian.mobile("phone");
+  try {
+    await obsidian.turn();
+    await expect
+      .poll(() => obsidian.page.evaluate(() => window.innerWidth > window.innerHeight))
+      .toBe(true);
+    await expect(obsidian.page.locator("body")).toHaveClass(/\bis-phone\b/);
   } finally {
     await obsidian.emulateMobile(false);
   }
