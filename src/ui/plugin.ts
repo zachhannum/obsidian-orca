@@ -3,6 +3,7 @@ import {
   MarkdownView,
   Notice,
   addIcon,
+  apiVersion,
   Platform,
   Plugin,
   TFile,
@@ -58,6 +59,7 @@ import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { phoneRoutes } from "@/ui/phone";
+import { probeFonts } from "@/ui/probe";
 import { pick } from "@/ui/pick";
 import {
   PREVIEW_VIEW,
@@ -266,6 +268,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
       name: "Open a book",
       callback: () => {
         void this.reveal();
+      },
+    });
+    this.addCommand({
+      id: "probe-font-ranges",
+      name: "Probe font ranges",
+      callback: () => {
+        void this.probe();
       },
     });
     this.addCommand({
@@ -1402,6 +1411,17 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const index = await readFontIndex(places);
     await previewFaces(places, index, this.documentPreviews());
     return index;
+  }
+
+  private async probe(): Promise<void> {
+    const path = "orca-font-probe.md";
+    new Notice("Probing fonts");
+    const report = await probeFonts(
+      phoneRoutes(window),
+      `Obsidian ${apiVersion}`,
+    );
+    await this.app.vault.adapter.write(path, report);
+    new Notice(`Wrote ${path}`);
   }
 
   private places(): Promise<FontPlaces> {
