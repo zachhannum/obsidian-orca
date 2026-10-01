@@ -129,37 +129,34 @@ function bound(): {
     },
     (path, xhtml, links) => {
       seen.push({ path, links });
-      return `${xhtml}<!-- ${links.url("EPUB/book.css") ?? "none"} -->`;
+      return `${xhtml}<!-- ${links.sheet("EPUB/book.css") ?? "none"} -->`;
     },
   );
   return { made, live, seen, result };
 }
 
-test("files are bound after the files they name, and the spine's documents come back in reading order", () => {
+test("images and fonts are bound before the sheets and documents that name them, and the spine's documents come back in reading order", () => {
   const { made, seen, result } = bound();
   assert.deepEqual(
     made.map((each) => each.mediaType),
-    [
-      "font/otf",
-      "image/png",
-      "text/css",
-      "text/css",
-      "text/css",
-      "text/css",
-      "application/xhtml+xml",
-      "application/xhtml+xml",
-    ],
+    ["font/otf", "image/png", "application/xhtml+xml", "application/xhtml+xml"],
   );
-  assert.equal(made[2]?.body, 'a { src: url("blob:0") }');
   assert.deepEqual(
     seen.map((each) => each.path),
     ["EPUB/section-001.xhtml", "EPUB/section-002.xhtml"],
   );
-  assert.deepEqual(seen[0]?.links.sheets, { before: "blob:3", fallback: "blob:4", after: "blob:5" });
+  assert.deepEqual(seen[0]?.links.sheets, {
+    before: "/* before */",
+    fallback: "/* default */",
+    after: "/* after */",
+  });
+  // A sheet reaches a document as text, and makes no URL of its own.
+  assert.equal(seen[0]?.links.sheet("EPUB/book.css"), 'a { src: url("blob:0") }');
+  assert.equal(seen[0]?.links.sheet("EPUB/missing.css"), undefined);
   assert.equal(seen[0]?.links.url("EPUB/media/image-1.png"), "blob:1");
   assert.equal(seen[0]?.links.url("EPUB/missing.png"), undefined);
-  assert.deepEqual(result.documents, ["blob:6", "blob:7"]);
-  assert.equal(made[6]?.body, "<one/><!-- blob:2 -->");
+  assert.deepEqual(result.documents, ["blob:2", "blob:3"]);
+  assert.equal(made[2]?.body, '<one/><!-- a { src: url("blob:0") } -->');
 });
 
 test("revoke releases every URL that was made", () => {

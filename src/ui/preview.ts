@@ -67,8 +67,10 @@ import {
   type Pin,
   type Target,
 } from "@/ui/inspect";
+import { stepOf } from "@/ui/frame";
 import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
+import { mountReflow, type MountedReflow } from "@/ui/reflow";
 import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
 import { groupTitle, issueGroups, routeOf, withEpub, type IssueGroup } from "@/ui/warnings";
@@ -197,6 +199,19 @@ const VIEWS: { mode: ViewMode; icon: string; label: string }[] = [
 ];
 
 /**
+ * The fourth switch, which shows the book's EPUB in a frame. It is not
+ * a page view: no page is laid out for it, and neither the leaf nor the
+ * plugin's data keeps it, so a pane reopened opens in its page view.
+ */
+const EPUB = { view: "epub", icon: "tablet", label: "EPUB" };
+
+/** The class the pane carries while it shows the EPUB view. */
+const REFLOWING = "is-reflow";
+
+/** The class of the controls that page through the page views alone. */
+const PAGING = "orca-preview-paging";
+
+/**
  * The book, and the chrome to page through it: a view to read it in,
  * previous, next, and a folio you can type. All three views are
  * page-throughs, each turning by what it shows. The painter settles
@@ -314,6 +329,13 @@ export class PreviewView extends ItemView {
   private painted = new Map<number, Page>();
   /** Raised on each paint and resize, so the overlay measures the pages again. */
   private measured = 0;
+  /** The EPUB view, beside the surface in the well. */
+  private reflow: MountedReflow | undefined;
+  private reflowSwitch: HTMLButtonElement | undefined;
+  /** Whether the pane shows the EPUB view in place of the pages. */
+  private reflowing = false;
+  /** The ask the next EPUB has to answer, so a slow one is dropped. */
+  private asking = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -443,6 +465,12 @@ export class PreviewView extends ItemView {
     this.setInspecting(INSPECT_OFF);
     this.overlay?.unmount();
     this.overlay = undefined;
+    this.reflow?.unmount();
+    this.reflow = undefined;
+    this.reflowSwitch = undefined;
+    this.reflowing = false;
+    this.asking += 1;
+    this.contentEl.removeClass(REFLOWING);
     this.inspectAction?.remove();
     this.inspectAction = undefined;
     this.exportAction?.remove();
@@ -648,6 +676,14 @@ export class PreviewView extends ItemView {
     views.setAttribute("role", "group");
     views.setAttribute("aria-label", "View");
     for (const view of VIEWS) this.switchesTo(views, view);
+    const epub = views.createEl("button", { cls: "clickable-icon" });
+    epub.setAttribute("aria-label", EPUB.label);
+    epub.dataset["view"] = EPUB.view;
+    setIcon(epub, EPUB.icon);
+    this.reflowSwitch = epub;
+    this.registerDomEvent(epub, "click", () => {
+      this.showsEpub();
+    });
     this.marksView();
     bar.createDiv({ cls: "orca-preview-spacer" });
 
@@ -668,26 +704,27 @@ export class PreviewView extends ItemView {
     this.shuts(pane, warnings, issues);
 
     const chapter = bar.createEl("select", {
-      cls: "dropdown orca-preview-chapter",
+      cls: `dropdown orca-preview-chapter ${PAGING}`,
     });
     chapter.setAttribute("aria-label", "Chapter");
     chapter.dataset["testid"] = "orca-chapter";
     this.chapter = chapter;
-    bar.createDiv({ cls: "orca-preview-divider" });
+    bar.createDiv({ cls: `orca-preview-divider ${PAGING}` });
 
     this.back = this.turnsTo(bar, "chevron-left", "Previous page", () =>
       previousPage(this.viewing()),
     );
-    const folio = bar.createEl("input", { cls: "orca-preview-folio" });
+    const folio = bar.createEl("input", { cls: `orca-preview-folio ${PAGING}` });
     folio.type = "text";
     folio.inputMode = "numeric";
     folio.setAttribute("aria-label", "Page");
     folio.dataset["testid"] = "orca-folio";
     this.folio = folio;
-    this.total = bar.createSpan({ cls: "orca-preview-total" });
+    this.total = bar.createSpan({ cls: `orca-preview-total ${PAGING}` });
     this.on = this.turnsTo(bar, "chevron-right", "Next page", () =>
       nextPage(this.viewing()),
     );
+    const controls = bar.createDiv({ cls: "orca-reflow-controls" });
 
     const well = pane.createDiv({ cls: "orca-preview-well" });
     // The pane pages through from the keyboard, so the well the pages
@@ -699,6 +736,12 @@ export class PreviewView extends ItemView {
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
     this.overlay = mountOverlay(surface);
+    this.reflow = mountReflow(well.createDiv({ cls: "orca-reflow-host" }), {
+      controls,
+      reading: (text) => {
+        if (this.reflowing) this.reading(text);
+      },
+    });
     this.inspects(surface);
     this.followsLinks(surface);
 
@@ -719,6 +762,14 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(this.containerEl, "keydown", (event) => {
       // The folio is a field, so Home and End belong to its caret.
       if (event.target === folio) return;
+      if (this.reflowing) {
+        // An arrow in a select picks an option, so it turns no screen.
+        const step = event.target instanceof HTMLSelectElement ? undefined : stepOf(event.key);
+        if (step === undefined) return;
+        event.preventDefault();
+        this.reflow?.turn(step);
+        return;
+      }
       const to = turnedTo(event.key, this.viewing());
       if (to === undefined) return;
       event.preventDefault();
@@ -782,6 +833,8 @@ export class PreviewView extends ItemView {
 
   /** Turns inspect mode on, or off with the pin and the hover. */
   toggleInspect(): void {
+    // The EPUB view sets no page, so it has no box to inspect.
+    if (this.reflowing) return;
     this.setInspecting(this.inspecting.on ? INSPECT_OFF : { on: true, pin: undefined });
   }
 
@@ -1182,6 +1235,7 @@ export class PreviewView extends ItemView {
       // already there and the opening turn leads it nowhere.
       await this.turn(await this.opensAt(typeset), true);
       this.openedAt = this.state.folio;
+      void this.reflows();
     } catch (cause) {
       if (opening !== this.opening) return;
       // The engine of this book died more times than orca sets it
@@ -1263,7 +1317,7 @@ export class PreviewView extends ItemView {
     label: string,
     to: () => number,
   ): HTMLButtonElement {
-    const button = bar.createEl("button", { cls: "clickable-icon" });
+    const button = bar.createEl("button", { cls: `clickable-icon ${PAGING}` });
     button.setAttribute("aria-label", label);
     setIcon(button, icon);
     this.registerDomEvent(button, "click", () => {
@@ -1278,6 +1332,20 @@ export class PreviewView extends ItemView {
    * across a restart and the next preview opens in it.
    */
   private async show(mode: ViewMode): Promise<void> {
+    if (this.reflowing) {
+      this.reflowing = false;
+      this.asking += 1;
+      // Drawing nothing releases every URL the frame was reading.
+      this.reflow?.draw(undefined);
+      this.contentEl.removeClass(REFLOWING);
+      this.inspectAction?.removeAttribute("aria-disabled");
+      if (mode === this.mode) {
+        this.marksView();
+        this.measure();
+        await this.turn(this.at);
+        return;
+      }
+    }
     if (mode === this.mode) return;
     this.mode = mode;
     this.marksView();
@@ -1287,12 +1355,53 @@ export class PreviewView extends ItemView {
     await this.turn(this.at);
   }
 
+  /**
+   * Shows the book's EPUB in place of its pages. The switch tells
+   * neither the plugin nor the workspace, so nothing keeps it.
+   */
+  private showsEpub(): void {
+    if (this.reflowing) return;
+    this.reflowing = true;
+    this.setInspecting(INSPECT_OFF);
+    this.inspectAction?.setAttribute("aria-disabled", "true");
+    this.contentEl.addClass(REFLOWING);
+    this.marksView();
+    void this.reflows();
+  }
+
+  /**
+   * Asks the session for its EPUB and draws it. The ask runs no layout
+   * stage. An ask an edit overtook is dropped, because the render that
+   * overtook it asks again.
+   */
+  private async reflows(): Promise<void> {
+    if (!this.reflowing) return;
+    if (this.composed?.dropped === true) {
+      await this.compose();
+      return;
+    }
+    const session = this.session;
+    if (session === undefined) return;
+    const asking = (this.asking += 1);
+    try {
+      const book = await session.epubFiles();
+      if (asking !== this.asking || book === undefined) return;
+      this.reflow?.draw({ book, stages: session.stages });
+    } catch {
+      // The engine stopped under the ask. The screen already drawn
+      // stays while the book is set again on a new engine.
+    }
+  }
+
   /** Marks the switch of the view the book is being read in. */
   private marksView(): void {
     for (const [mode, button] of this.switches) {
-      button.toggleClass("is-on", mode === this.mode);
-      button.setAttribute("aria-pressed", String(mode === this.mode));
+      const on = !this.reflowing && mode === this.mode;
+      button.toggleClass("is-on", on);
+      button.setAttribute("aria-pressed", String(on));
     }
+    this.reflowSwitch?.toggleClass("is-on", this.reflowing);
+    this.reflowSwitch?.setAttribute("aria-pressed", String(this.reflowing));
   }
 
   /** The reader's place in the book, which a turn is worked out from. */
@@ -1312,7 +1421,8 @@ export class PreviewView extends ItemView {
   private measure(): void {
     this.showsIssues();
     const surface = this.surface;
-    if (surface === undefined) return;
+    // The EPUB view hides the surface, and a hidden surface fits no page.
+    if (surface === undefined || this.reflowing) return;
     const grid = fits(
       { width: surface.clientWidth, height: surface.clientHeight },
       this.trim,
@@ -1619,7 +1729,8 @@ export class PreviewView extends ItemView {
     const last = at + this.count;
     if (this.folio !== undefined) this.folio.value = String(first);
     this.total?.setText(`of ${String(pages)}`);
-    this.reading(
+    // The EPUB view writes its own place there.
+    if (!this.reflowing) this.reading(
       last > first
         ? `pages ${String(first)}–${String(last)} of ${String(pages)}`
         : `page ${String(first)} of ${String(pages)}`,
@@ -1733,6 +1844,12 @@ export class PreviewView extends ItemView {
    * engine wrote alone set no blocks of its own, and stays where it is.
    */
   private async reflowed(): Promise<void> {
+    // The EPUB view shows no page, so a render there asks for the
+    // EPUB again and reads none.
+    if (this.reflowing) {
+      await this.reflows();
+      return;
+    }
     await this.turn((await this.anchored()) ?? this.asked);
   }
 

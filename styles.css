@@ -304,6 +304,98 @@
   visibility: hidden;
 }
 
+/* The EPUB view takes the well in place of the pages, and the bar's
+   page controls give way to its own. */
+.orca-reflow-host {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.orca-preview.is-reflow .orca-reflow-host {
+  display: block;
+}
+
+.orca-preview.is-reflow .orca-preview-sheets,
+.orca-preview.is-reflow .orca-preview-well.is-covered > .orca-reflow-host,
+.orca-preview.is-reflow .orca-preview-bar .orca-preview-paging {
+  display: none;
+}
+
+/* The slot is out of the bar until the view is on, so an empty slot
+   adds no gap to it. */
+.orca-reflow-controls {
+  display: none;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-width: 0;
+}
+
+.orca-preview.is-reflow .orca-reflow-controls {
+  display: flex;
+}
+
+/* A pane narrower than its controls puts them on a second line. */
+.orca-preview.is-reflow .orca-preview-bar {
+  flex-wrap: wrap;
+}
+
+.orca-preview-bar select.orca-reflow-device {
+  height: 26px;
+  min-width: 0;
+  max-width: 180px;
+  font-size: var(--font-ui-small);
+}
+
+.orca-reflow-icon {
+  display: flex;
+}
+
+/* The settings hang from the bar and float over the frame, so opening
+   them moves nothing. Where they hang is measured onto them. */
+.orca-reflow-popover {
+  position: absolute;
+  z-index: var(--layer-menu);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  width: 320px;
+  max-width: calc(100% - var(--size-4-3) * 2);
+  padding: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+}
+
+.orca-reflow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* The screen is the device's size scaled to the well. The frame inside
+   it keeps the device's own size, so the book is laid out for the
+   device and not for the pane. */
+.orca-reflow-screen {
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-l);
+  background: #fff;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.18),
+    0 0 0 1px var(--background-modifier-border);
+}
+
+iframe.orca-reflow-frame {
+  display: block;
+  border: none;
+  background: #fff;
+  transform-origin: 0 0;
+}
+
 .orca-preview-message {
   color: var(--text-muted);
   font-size: var(--font-ui-small);

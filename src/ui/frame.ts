@@ -25,13 +25,21 @@ export interface Sheets<Value> {
   after: Value;
 }
 
-/** The names a document's ReadiumCSS links carry in `data-readium`. */
+/** The names a document's ReadiumCSS sheets carry in `data-readium`. */
 export type SheetName = "before" | "default" | "after";
 
-/** The URLs a document's references are rewritten to. */
+/**
+ * The files a document's references are rewritten to. A sheet is text
+ * rather than a URL: the frame inherits Obsidian's content security
+ * policy, which loads no stylesheet from a blob and does allow one
+ * written into the document.
+ */
 export interface Links {
   /** The URL of the file at a path, or nothing for a path the book has no file at. */
   url(path: string): string | undefined;
+  /** The text of the sheet at a path, with its own references rewritten. */
+  sheet(path: string): string | undefined;
+  /** The text of the ReadiumCSS sheets. */
   sheets: Sheets<string>;
 }
 
@@ -97,7 +105,7 @@ export function rewriteSheet(
 }
 
 /**
- * The ReadiumCSS sheets a document links, in the order of its head. The
+ * The ReadiumCSS sheets a document takes, in the order of its head. The
  * default sheet is for a document with no stylesheet of its own.
  */
 export function sheetOrder(styled: boolean): SheetName[] {
@@ -146,14 +154,14 @@ export function fitted(device: Box, well: Box): number {
 /** The URLs of the spine's documents, and the call that releases every URL made for them. */
 export interface Bound {
   documents: string[];
-  revoke(): void;
+  revoke: () => void;
 }
 
 /**
- * Makes a URL for each file of the book. A file is bound after the
- * files it names, so each reference is rewritten to a URL that already
- * exists. Images and fonts go first, then the sheets, then the
- * documents.
+ * Makes a URL for each image, font and document of the book. A file is
+ * bound after the files it names, so each reference is rewritten to a
+ * URL that already exists. Images and fonts go first, then the sheets
+ * are rewritten, then the documents take the sheets as text.
  */
 export function bindFiles(
   book: Bindable,
@@ -176,18 +184,12 @@ export function bindFiles(
     if (file.mediaType === CSS || file.mediaType === XHTML) continue;
     urls.set(file.path, bind(file.bytes, file.mediaType));
   }
+  const written = new Map<string, string>();
   for (const file of book.files) {
     if (file.mediaType !== CSS) continue;
-    urls.set(file.path, bind(rewriteSheet(file.path, text.decode(file.bytes), url), CSS));
+    written.set(file.path, rewriteSheet(file.path, text.decode(file.bytes), url));
   }
-  const links: Links = {
-    url,
-    sheets: {
-      before: bind(sheets.before, CSS),
-      fallback: bind(sheets.fallback, CSS),
-      after: bind(sheets.after, CSS),
-    },
-  };
+  const links: Links = { url, sheet: (path) => written.get(path), sheets };
   const documents: string[] = [];
   for (const path of book.spine) {
     const file = book.files.find((candidate) => candidate.path === path);
@@ -203,19 +205,30 @@ export function bindFiles(
 }
 
 const READIUM = "data-readium";
+const XHTML_SPACE = "http://www.w3.org/1999/xhtml";
 
 /**
  * Rewrites one document of the book for a frame that loads it from a
- * blob. Its references go to the URLs of the files they name, its head
- * takes the ReadiumCSS sheets, and its links stop being links: a link
- * a frame followed would load a document that has no ReadiumCSS.
+ * blob. Its references go to the URLs of the files they name, each
+ * sheet it links is written into it, its head takes the ReadiumCSS
+ * sheets, and its links stop being links: a link a frame followed
+ * would load a document that has no ReadiumCSS.
  */
 export function rewriteDocument(path: string, xhtml: string, links: Links): string {
   const parsed = new DOMParser().parseFromString(xhtml, XHTML);
   const head = parsed.querySelector("head");
   if (head === null) return xhtml;
-  const sheets = Array.from(parsed.querySelectorAll("link[href]"));
-  for (const link of sheets) point(link, "href", path, links);
+  const sheet = (css: string): Element => {
+    const style = parsed.createElementNS(XHTML_SPACE, "style");
+    style.textContent = css;
+    return style;
+  };
+  for (const link of Array.from(parsed.querySelectorAll("link[href]"))) {
+    const resolved = resolvePath(path, link.getAttribute("href") ?? "");
+    const css = resolved === undefined ? undefined : links.sheet(resolved);
+    if (css === undefined) point(link, "href", path, links);
+    else link.replaceWith(sheet(css));
+  }
   for (const element of Array.from(parsed.querySelectorAll("[src]"))) {
     point(element, "src", path, links);
   }
@@ -223,23 +236,18 @@ export function rewriteDocument(path: string, xhtml: string, links: Links): stri
     anchor.setAttribute("data-href", anchor.getAttribute("href") ?? "");
     anchor.removeAttribute("href");
   }
-  const styled =
-    parsed.querySelector("style") !== null ||
-    sheets.some((link) => (link.getAttribute("rel") ?? "").includes("stylesheet"));
-  const hrefs: Record<SheetName, string> = {
+  const styled = parsed.querySelector('style, link[rel~="stylesheet"]') !== null;
+  const texts: Record<SheetName, string> = {
     before: links.sheets.before,
     default: links.sheets.fallback,
     after: links.sheets.after,
   };
   const first = head.firstChild;
   for (const name of sheetOrder(styled)) {
-    const link = parsed.createElementNS("http://www.w3.org/1999/xhtml", "link");
-    link.setAttribute("rel", "stylesheet");
-    link.setAttribute("type", CSS);
-    link.setAttribute("href", hrefs[name]);
-    link.setAttribute(READIUM, name);
-    if (name === "after") head.append(link);
-    else head.insertBefore(link, first);
+    const style = sheet(texts[name]);
+    style.setAttribute(READIUM, name);
+    if (name === "after") head.append(style);
+    else head.insertBefore(style, first);
   }
   return new XMLSerializer().serializeToString(parsed);
 }
