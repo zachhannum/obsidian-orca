@@ -3517,3 +3517,100 @@ input.orca-panel-filter {
 .is-phone .orca-preview-well {
   padding: 14px;
 }
+
+/* mobile: states */
+
+.is-mobile .orca-preview-well.is-covered {
+  padding: 24px;
+}
+
+.is-mobile .orca-preview-setting {
+  gap: 14px;
+}
+
+.is-mobile .orca-preview-setting-name {
+  font-size: var(--font-ui-medium);
+  line-height: 1.45;
+}
+
+.is-mobile .orca-preview-setting-note {
+  font-size: var(--font-ui-smaller);
+}
+
+.is-mobile .orca-preview-setting.mod-empty button {
+  min-height: var(--touch-size-m);
+  margin-top: 0;
+}
+
+/* On a phone a button is as wide as the column. */
+.is-phone .orca-preview-setting.mod-empty {
+  width: 100%;
+}
+
+.is-phone .orca-preview-setting.mod-empty button {
+  width: 100%;
+  max-width: 320px;
+}
+
+/* A notice over the pages sits where Obsidian mobile puts its own. */
+.is-mobile .orca-preview-setting.mod-again,
+.is-mobile .orca-preview-setting.mod-held {
+  top: 8px;
+  right: 12px;
+  left: 12px;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: var(--touch-size-xxs);
+  box-shadow: none;
+}
+
+.is-tablet .orca-preview-setting.mod-again,
+.is-tablet .orca-preview-setting.mod-held {
+  right: 10px;
+  left: auto;
+  max-width: 440px;
+  border-radius: var(--radius-m);
+}
+
+.is-mobile .orca-preview-setting.mod-again .orca-preview-setting-name,
+.is-mobile .orca-preview-setting.mod-held .orca-preview-setting-name {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+/* The name sits over the note, between the icon and the button. */
+.is-mobile .orca-preview-setting.mod-held {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 2px 12px;
+}
+
+.is-mobile .orca-preview-setting.mod-held > .orca-preview-setting-icon,
+.is-mobile .orca-preview-setting.mod-held > .orca-preview-report {
+  grid-row: 1 / span 2;
+}
+
+.is-mobile .orca-preview-setting.mod-held > .orca-preview-report {
+  grid-column: 3;
+  min-height: var(--touch-size-m);
+  margin-left: 0;
+  padding: 0 14px;
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+/* The two versions are stacked, with the author's edit first. */
+.is-mobile .orca-changed-buttons {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.is-mobile .orca-changed-buttons button {
+  min-height: var(--touch-size-m);
+}
+
+.is-phone .orca-changed-buttons button {
+  width: 100%;
+  max-width: 320px;
+}

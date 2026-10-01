@@ -1,4 +1,5 @@
 import { ButtonComponent, Modal, type App } from "obsidian";
+import { device } from "@/ui/desktop";
 
 /** The two versions of the note, and which one the author keeps. */
 export interface Choice {
@@ -29,22 +30,28 @@ export class Changed extends Modal {
       text: "This note changed outside Orca.",
     });
 
-    const buttons = pane.createDiv({ cls: "modal-button-container" });
-    new ButtonComponent(buttons)
-      .setButtonText("Use the saved version")
-      .onClick(() => {
-        this.chose(() => {
-          this.choice.reload();
+    const buttons = pane.createDiv({ cls: "modal-button-container orca-changed-buttons" });
+    const reload = (): void => {
+      new ButtonComponent(buttons)
+        .setButtonText("Use the saved version")
+        .onClick(() => {
+          this.chose(() => {
+            this.choice.reload();
+          });
         });
-      });
-    new ButtonComponent(buttons)
-      .setButtonText("Keep my changes")
-      .setCta()
-      .onClick(() => {
-        this.chose(() => {
-          this.choice.keep();
+    };
+    const keep = (): void => {
+      new ButtonComponent(buttons)
+        .setButtonText("Keep my changes")
+        .setCta()
+        .onClick(() => {
+          this.chose(() => {
+            this.choice.keep();
+          });
         });
-      });
+    };
+    // The mobile artboards stack the two, with the author's edit first.
+    for (const draw of device() === "desktop" ? [reload, keep] : [keep, reload]) draw();
   }
 
   override onClose(): void {
