@@ -27,6 +27,22 @@ const KNOWN_FILES = [
   "CoreAddition/Georgia.ttf",
 ];
 
+/**
+ * Folders a font installed on the phone might be kept in. None is
+ * documented, so a refusal on all of them settles nothing by itself.
+ */
+const INSTALLED = [
+  "/private/var/mobile/Library/Fonts",
+  "/private/var/mobile/Library/UserFonts",
+  "/var/mobile/Library/Fonts",
+  "/Library/Fonts",
+  "/private/var/MobileAsset/AssetsV2/com_apple_MobileAsset_Font7",
+  "/private/var/MobileAsset/AssetsV2/com_apple_MobileAsset_Font8",
+  "/private/var/containers/Shared/SystemGroup",
+  "/private/var/mobile/Library/ConfigurationProfiles",
+  "/private/var/mobile/Library",
+];
+
 const FONT_FILE = /\.(ttf|otf|ttc|otc)$/i;
 
 /** The depth a listing follows folders to, and the entries a route's report shows. */
@@ -190,10 +206,14 @@ function routes(app: App): Route[] {
 }
 
 /** The font files a route lists under the directory, and every entry it saw. */
-async function listed(route: Route): Promise<{ seen: string[]; fonts: string[] }> {
+async function listed(
+  route: Route,
+  root = SYSTEM_FONTS,
+  deep = DEPTH,
+): Promise<{ seen: string[]; fonts: string[] }> {
   const seen: string[] = [];
-  let folders = [SYSTEM_FONTS];
-  for (let depth = 0; depth <= DEPTH; depth++) {
+  let folders = [root];
+  for (let depth = 0; depth <= deep; depth++) {
     const next: string[] = [];
     for (const folder of folders) {
       let entries: string[];
@@ -253,6 +273,55 @@ async function tried(route: Route): Promise<string[]> {
   return lines;
 }
 
+/**
+ * Each folder an installed font might be in, listed through the routes
+ * that reach outside the vault.
+ */
+async function installed(found: readonly Route[]): Promise<string[]> {
+  const lines = ["## Installed fonts"];
+  for (const route of found.filter((each) => each.name.startsWith("Capacitor"))) {
+    lines.push(`through ${route.name}`);
+    for (const folder of INSTALLED) {
+      try {
+        const { seen, fonts } = await listed(route, folder, 3);
+        lines.push(
+          `list ${folder}: ${String(seen.length)} entries, ${String(fonts.length)} font files`,
+        );
+        const shown = fonts.length > 0 ? fonts : seen;
+        for (const entry of shown.slice(0, SHOWN)) lines.push(`  ${entry}`);
+        const [first] = fonts;
+        if (first !== undefined) {
+          try {
+            lines.push(`read ${first}: ${await reading(route, first)}`);
+          } catch (cause) {
+            lines.push(`read ${first}: refused, ${said(cause)}`);
+          }
+        }
+      } catch (cause) {
+        lines.push(`list ${folder}: refused, ${said(cause)}`);
+      }
+    }
+  }
+  return lines;
+}
+
+/**
+ * True when the web view draws text in the family rather than in a
+ * fallback. The family's text is measured over each generic face, and
+ * a width that differs from the generic's own means the family drew.
+ */
+function draws(family: string): boolean {
+  const context = createEl("canvas").getContext("2d");
+  if (context === null) return false;
+  const width = (font: string): number => {
+    context.font = `72px ${font}`;
+    return context.measureText("mmmmmmmmlliWQ@ 0123").width;
+  };
+  return ["monospace", "serif", "sans-serif"].some(
+    (generic) => width(`"${family}", ${generic}`) !== width(generic),
+  );
+}
+
 async function device(): Promise<string[]> {
   const lines = [`Obsidian API ${apiVersion}`];
   const plugins = (window as unknown as { Capacitor?: Capacitor }).Capacitor?.Plugins;
@@ -272,14 +341,16 @@ async function device(): Promise<string[]> {
 /** The report, as text to paste into the issue. */
 export async function probeFonts(app: App): Promise<string> {
   const lines = ["# System fonts probe", ...(await device())];
-  for (const route of routes(app)) lines.push("", ...(await tried(route)));
+  const found = routes(app);
+  for (const route of found) lines.push("", ...(await tried(route)));
+  lines.push("", ...(await installed(found)));
   return lines.join("\n");
 }
 
 class Report extends Modal {
   constructor(
     app: App,
-    private readonly report: string,
+    private report: string,
   ) {
     super(app);
   }
@@ -290,7 +361,19 @@ class Report extends Modal {
     text.readOnly = true;
     text.rows = 16;
     text.setCssProps({ width: "100%" });
+    const family = this.contentEl.createEl("input", {
+      type: "text",
+      placeholder: "A family installed on the phone",
+    });
+    family.setCssProps({ width: "100%" });
     const buttons = this.contentEl.createDiv("modal-button-container");
+    new ButtonComponent(buttons).setButtonText("Check the family").onClick(() => {
+      const name = family.value.trim();
+      if (name === "") return;
+      const answer = draws(name) ? "drawn" : "not drawn, the fallback showed";
+      this.report += `\nweb view, family "${name}": ${answer}`;
+      text.value = this.report;
+    });
     new ButtonComponent(buttons).setButtonText("Copy").setCta().onClick(() => {
       void navigator.clipboard.writeText(this.report).then(
         () => new Notice("Copied the report."),
