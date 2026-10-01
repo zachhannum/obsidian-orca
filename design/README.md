@@ -352,9 +352,9 @@ replaces them.
 - On a phone a tap on a rule's line, on the control that wrote a rule,
   or on `Add a rule` opens the right drawer at that place. The pin is
   kept.
-- On a phone `Inspect the page` is in the header's menu and is a
-  command. While inspect is on, a chip under the page reads
-  `Inspecting`, and its cross turns inspect off.
+- `Inspect the page` is the target in the book view's header on a
+  phone and a tablet, as on desktop. On a phone the header is narrow,
+  and the title is cut short to make room for it.
 - A phone is drawn with Obsidian's bar along the bottom edge. A build
   of Obsidian that floats that bar changes nothing orca draws.
 
