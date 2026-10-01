@@ -503,10 +503,13 @@ for (const device of ["phone", "tablet"] as Device[]) {
         await book.close();
         await obsidian.detach(BOOK_PAGE);
         await book.open();
-        await settled(book);
+        // The book opens in the view the desktop pictures left it in,
+        // on a page whose first seat may be empty.
+        await expect(book.surface).toHaveAttribute("data-generation", /[1-9]\d*/);
+        await book.uncovered();
+        await book.show("Single page", "single");
         await book.choose(CHAPTER);
         await settled(book);
-        await book.uncovered();
         await book.footed("under");
         await pictured(site, `mobile-preview-${device}-${scheme}.png`);
 
