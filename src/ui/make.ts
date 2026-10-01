@@ -8,7 +8,7 @@
 import { TFile, type App, type TFolder } from "obsidian";
 import { byName, newBook } from "@/book/create";
 import { writeModel } from "@/book/model";
-import type { BookMetadata } from "@/book/note";
+import { identified, type BookMetadata } from "@/book/note";
 import { free } from "@/ui/naming";
 
 /** The default chapter name. */
@@ -56,7 +56,9 @@ async function createBook(
   metadata: BookMetadata,
 ): Promise<TFile> {
   const path = freePath(app, folder, name);
-  return app.vault.create(path, writeModel(newBook(metadata, links(path))));
+  const model = newBook(metadata, links(path));
+  const book = identified(model.book, {});
+  return app.vault.create(path, writeModel({ ...model, book }));
 }
 
 /** Creates a chapter note in the book's folder. */

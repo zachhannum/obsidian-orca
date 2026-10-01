@@ -2,12 +2,14 @@
  * The book's metadata, split between what the engine writes and what
  * orca sets.
  *
- * The engine's PDF writer is the one thing that reads metadata, and it
- * writes title, author, language and date into the document's own
- * information. The rest is orca's to set.
+ * The engine's PDF writer writes title, author, language and date into
+ * the document's own information. Its EPUB writer writes those into
+ * the package document, with the identifier and the cover. The rest is
+ * orca's to set.
  */
 
 import type { Metadata } from "fleuron";
+import { coverUrl } from "@/book/images";
 import type { Book } from "@/book/note";
 
 /** Publisher, series and isbn. The title page orca generates prints the series and the publisher. */
@@ -30,6 +32,9 @@ export function documentMetadata(book: Book): Metadata {
   const extra: Record<string, string> = {};
   if (language !== undefined) extra.language = language;
   if (date !== undefined) extra.date = date;
+  if (book.identifier !== undefined) extra.identifier = book.identifier;
+  const cover = coverUrl(book);
+  if (cover !== undefined) extra.cover = cover;
   if (Object.keys(extra).length > 0) metadata.extra = extra;
 
   return metadata;

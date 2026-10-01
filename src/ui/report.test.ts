@@ -80,6 +80,7 @@ test("every property orca owns is a field, and an emptied one comes off the note
       ["publisher", "Whitehall Press"],
       ["series", "The Bennet Novels"],
       ["isbn", "978-0-000-00000-0"],
+      ["cover", ""],
     ],
   );
 
@@ -95,6 +96,7 @@ test("every property orca owns is a field, and an emptied one comes off the note
       ["publisher", "Whitehall Press, London"],
       ["series", ""],
       ["isbn", "978-0-000-00000-0"],
+      ["cover", ""],
     ],
   );
   assert.equal(Object.hasOwn(edited.book.metadata, "series"), false);

@@ -1,7 +1,12 @@
 import { FileView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { folderOf } from "@/book/folder";
 import { readModel, type Model } from "@/book/model";
-import { BookError, NewerBookError } from "@/book/note";
+import {
+  BookError,
+  NewerBookError,
+  identified,
+  newIdentifier,
+} from "@/book/note";
 import { resolve, type Section } from "@/book/order";
 import type { Range } from "@/book/pages";
 import { countWords } from "@/book/words";
@@ -235,7 +240,13 @@ export class BookView extends FileView {
   /** The book in the note, or nothing when orca refused it. */
   private opened(text: string): Model | undefined {
     try {
-      return readModel(text);
+      const model = readModel(text);
+      // A note with no identifier is given one here, and the first
+      // write puts it in the note. The engine has it from the start, so
+      // a write that does not set the book again changes no identifier.
+      const held = this.writer?.model.book.identifier;
+      const book = identified(model.book, {}, () => held ?? newIdentifier());
+      return { ...model, book };
     } catch (cause) {
       if (!(cause instanceof BookError)) throw cause;
       this.shown = undefined;

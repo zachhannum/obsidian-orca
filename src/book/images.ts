@@ -12,6 +12,7 @@
  */
 
 import { readFrontmatter } from "@/book/frontmatter";
+import type { Book } from "@/book/note";
 
 /** One image a source names. */
 export interface Embed {
@@ -71,6 +72,21 @@ export function imagesIn(text: string): Embed[] {
     found.set(embed.url, embed);
   }
   return [...found.values()];
+}
+
+/** A property whose whole value is one wikilink, embedded or not. */
+const LINKED = /^!?\[\[([^\]]+)\]\]$/;
+
+/**
+ * The url the book's cover crosses under, which is the path its `cover`
+ * property names. A wikilink gives the path inside it, so a cover that
+ * a chapter also embeds has the url the chapter gives it.
+ */
+export function coverUrl(book: Book): string | undefined {
+  const written = book.metadata.cover?.trim() ?? "";
+  const linked = LINKED.exec(written)?.[1]?.split("|")[0]?.trim();
+  const url = linked ?? written;
+  return url === "" ? undefined : url;
 }
 
 function* wikilinks(body: string, head: number): Generator<Embed> {
