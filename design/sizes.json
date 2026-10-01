@@ -55,26 +55,117 @@
     "w": 1900,
     "h": 580
   },
+  "MainPhone": {
+    "w": 1274,
+    "h": 1120
+  },
+  "MainTablet": {
+    "w": 1228,
+    "h": 1040
+  },
+  "NavigatorPhone": {
+    "w": 1274,
+    "h": 1120
+  },
+  "NavigatorTablet": {
+    "w": 1228,
+    "h": 1040
+  },
+  "DesignPanelPhone": {
+    "w": 1692,
+    "h": 1200
+  },
+  "DesignPanelTablet": {
+    "w": 1228,
+    "h": 1040
+  },
+  "BookPagePhone": {
+    "w": 856,
+    "h": 1230
+  },
+  "BookPageTablet": {
+    "w": 1228,
+    "h": 1030
+  },
+  "PreviewViewsPhone": {
+    "w": 1310,
+    "h": 2100
+  },
+  "PreviewViewsTablet": {
+    "w": 1228,
+    "h": 1040
+  },
+  "ExportPhone": {
+    "w": 1274,
+    "h": 1130
+  },
+  "ExportTablet": {
+    "w": 1228,
+    "h": 1010
+  },
+  "StatesPhone": {
+    "w": 2528,
+    "h": 1040
+  },
+  "StatesTablet": {
+    "w": 1784,
+    "h": 1320
+  },
+  "FlowMobileDraftLoop": {
+    "w": 1740,
+    "h": 1130
+  },
+  "AdvancedTablet": {
+    "w": 1228,
+    "h": 1120
+  },
+  "InspectTablet": {
+    "w": 1228,
+    "h": 1120
+  },
+  "AdvancedPhone": {
+    "w": 856,
+    "h": 1150
+  },
+  "InspectPhone": {
+    "w": 1692,
+    "h": 1190
+  },
   "SiteLanding": {
     "w": 1440,
     "h": 6160,
     "sheet": "site.css",
     "script": "site-landing.js",
-    "props": { "animate": { "editor": "boolean", "default": true } }
+    "props": {
+      "animate": {
+        "editor": "boolean",
+        "default": true
+      }
+    }
   },
   "SiteLandingLight": {
     "w": 1440,
     "h": 1400,
     "sheet": "site.css",
     "script": "site-sea.js",
-    "props": { "animate": { "editor": "boolean", "default": true } }
+    "props": {
+      "animate": {
+        "editor": "boolean",
+        "default": true
+      }
+    }
   },
   "SiteLandingPhone": {
     "w": 390,
     "h": 900,
     "sheet": "site.css",
     "script": "site-sea.js",
-    "props": { "animate": { "editor": "boolean", "default": true } }
+    "props": {
+      "animate": {
+        "editor": "boolean",
+        "default": true
+      }
+    }
   },
   "SiteDocs": {
     "w": 1440,
