@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import type { Folios, LayoutOutput, NodeSource, Op, Page, Sheet } from "fleuron";
+import type { Epub, Folios, LayoutOutput, NodeSource, Op, Page, Sheet } from "fleuron";
 import { directoryVault } from "@/assets/directory";
 import { VAULT_FONTS, familyNamed, type FontIndex } from "@/assets/fonts";
 import { contentKey, fontUrl } from "@/assets/registry";
@@ -89,6 +89,10 @@ class FakeClient implements EngineClient {
   exportPdf(): Promise<Uint8Array | null> {
     this.exported.push(this.sheets);
     return Promise.resolve(new Uint8Array());
+  }
+
+  exportEpub(): Promise<Epub | null> {
+    return Promise.resolve({ bytes: new Uint8Array(), warnings: [] });
   }
 
   fontBytes(): Promise<Uint8Array> {

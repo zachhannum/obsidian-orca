@@ -5,35 +5,35 @@ import { exportName, exportPath } from "@/book/export";
 const FORBIDDEN = /[/\\:*?"<>|\p{Cc}]/u;
 
 test("the title names the file", () => {
-  assert.equal(exportName({ title: "The Long Road" }, "pdf"), "The Long Road.pdf");
+  assert.equal(exportName({ title: "The Long Road" }), "The Long Road");
 });
 
 test("a missing, empty or blank title falls back to Untitled", () => {
-  assert.equal(exportName({}, "pdf"), "Untitled.pdf");
-  assert.equal(exportName({ title: "" }, "pdf"), "Untitled.pdf");
-  assert.equal(exportName({ title: " \t\n " }, "pdf"), "Untitled.pdf");
+  assert.equal(exportName({}), "Untitled");
+  assert.equal(exportName({ title: "" }), "Untitled");
+  assert.equal(exportName({ title: " \t\n " }), "Untitled");
 });
 
 test("a title of only forbidden characters and dots falls back to Untitled", () => {
-  assert.equal(exportName({ title: '/:*?"<>|\\ ..' }, "pdf"), "Untitled.pdf");
+  assert.equal(exportName({ title: '/:*?"<>|\\ ..' }), "Untitled");
 });
 
 test("forbidden and control characters are stripped", () => {
-  assert.equal(exportName({ title: 'Part 1: A/B "Dawn"?\u0007' }, "pdf"), "Part 1 AB Dawn.pdf");
+  assert.equal(exportName({ title: 'Part 1: A/B "Dawn"?\u0007' }), "Part 1 AB Dawn");
 });
 
 test("runs of whitespace collapse to one space", () => {
-  assert.equal(exportName({ title: "  The \t Long\n\nRoad  " }, "pdf"), "The Long Road.pdf");
+  assert.equal(exportName({ title: "  The \t Long\n\nRoad  " }), "The Long Road");
 });
 
 test("trailing dots and spaces are trimmed", () => {
-  assert.equal(exportName({ title: "Wait for it. . ." }, "pdf"), "Wait for it.pdf");
+  assert.equal(exportName({ title: "Wait for it. . ." }), "Wait for it");
 });
 
 test("the default vault destination is the book note's folder and the export name", () => {
   const metadata = { title: "Pride and Prejudice" };
-  assert.equal(exportPath("Books/Austen/Pride.md", metadata, "pdf"), "Books/Austen/Pride and Prejudice.pdf");
-  assert.equal(exportPath("Pride.md", metadata, "pdf"), "Pride and Prejudice.pdf");
+  assert.equal(exportPath("Books/Austen/Pride.md", metadata), "Books/Austen/Pride and Prejudice");
+  assert.equal(exportPath("Pride.md", metadata), "Pride and Prejudice");
 });
 
 /** A small seeded generator, so a failing title can be run again. */
@@ -56,13 +56,11 @@ function title(next: () => number): string {
   return out;
 }
 
-test("any title gives a non-empty name with no forbidden character that ends with the extension", () => {
+test("any title gives a non-empty name with no forbidden character, which an extension can follow", () => {
   for (let seed = 1; seed <= 500; seed += 1) {
     const next = random(seed);
     const written = title(next);
-    const name = exportName({ title: written }, "pdf");
-    assert.ok(name.endsWith(".pdf"), `seed ${seed}`);
-    const base = name.slice(0, -".pdf".length);
+    const base = exportName({ title: written });
     assert.notEqual(base, "", `seed ${seed}`);
     assert.doesNotMatch(base, FORBIDDEN, `seed ${seed}`);
     assert.doesNotMatch(base, /[. ]$/, `seed ${seed}`);

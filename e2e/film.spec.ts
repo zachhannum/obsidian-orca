@@ -46,7 +46,7 @@ const STAGES = ["style", "lines", "flow", "paint"] as const;
 /** The views and actions the film clicks, by the names Obsidian gives them. */
 const EDITOR = "markdown";
 const OPEN_PREVIEW = "Open preview";
-const EXPORT = "Export to PDF";
+const EXPORT = "Export book";
 
 /** The book's colour beside black, and the rule of the book's CSS that sets it. */
 const TEAL = "#1d4e5b";
@@ -429,7 +429,7 @@ async function take(site: Site, scheme: Scheme): Promise<void> {
     await rowsIn(site.panel.editor, RULE_LINES),
   );
 
-  // Export to PDF, from the preview's own action.
+  // Export the book, from the preview's own action.
   const exporting = new Export(obsidian);
   await obsidian.actionIn(PREVIEW, EXPORT).click();
   await exporting.reaches("ready");

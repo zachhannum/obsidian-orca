@@ -12,7 +12,7 @@ export interface Action {
 export const ACTIONS = {
   preview: { icon: "scan-eye", label: "Open preview" },
   markdown: { icon: "file-text", label: "Open as markdown" },
-  export: { icon: "download", label: "Export to PDF" },
+  export: { icon: "download", label: "Export book" },
   inspect: { icon: "crosshair", label: "Inspect the page" },
   unpin: { icon: "x", label: "Unpin" },
   css: { icon: "code", label: "CSS" },

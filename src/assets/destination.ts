@@ -31,7 +31,7 @@ export function vaultWritePath(path: string): string {
     throw new AssetError(`${path} is outside the vault`);
   }
   if (segments.length === 0) {
-    throw new AssetError("Choose where to save the PDF.");
+    throw new AssetError("Choose where to save the book.");
   }
   return segments.join("/");
 }
