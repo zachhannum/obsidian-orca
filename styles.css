@@ -3063,3 +3063,243 @@ input.orca-panel-filter {
 .is-mobile .orca-nav-header button.orca-nav-action {
   --icon-size: var(--icon-l);
 }
+
+/* mobile: design panel */
+
+/* The line under a font list that holds the face orca carries. */
+.orca-panel-sources {
+  padding: var(--size-4-2) var(--size-4-3) var(--size-4-1);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-panel-folder {
+  font-family: var(--font-monospace);
+}
+
+/* The chip is set in the interface face, and its row in the face it names. */
+.orca-panel-built-in {
+  color: var(--text-faint);
+  font-family: var(--font-interface);
+}
+
+/* On a phone and a tablet, every control is as tall as a touch. */
+.is-mobile .orca-panel-header {
+  padding-block: 0 var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .orca-panel-title {
+  color: var(--text-normal);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.is-mobile .orca-panel-action {
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  color: var(--text-normal);
+}
+
+.is-mobile .orca-panel-name {
+  color: var(--text-muted);
+}
+
+.is-mobile .orca-panel-row {
+  min-height: var(--touch-size-m);
+}
+
+.is-mobile .orca-panel-label {
+  width: 120px;
+  color: var(--text-normal);
+}
+
+.is-mobile .orca-panel-row.mod-grid > .orca-panel-label {
+  padding-top: 12px;
+}
+
+.is-mobile .orca-panel-under {
+  margin-left: calc(120px + var(--size-4-2));
+}
+
+/* A switch with a label keeps the label on its line at any width, and
+   the switch is at the end of it. */
+.is-mobile .orca-panel-row.mod-flag {
+  flex-wrap: nowrap;
+}
+
+.is-mobile .orca-panel-row.mod-flag > .orca-panel-label {
+  flex: 1;
+  width: auto;
+}
+
+.is-mobile .orca-panel-row.mod-flag > .orca-panel-controls {
+  flex: none;
+}
+
+/* The toggle is Obsidian's, which is shorter than a touch, so the input
+   inside it takes the press over a taller box. */
+.is-mobile .orca-panel-switch {
+  position: relative;
+}
+
+.is-mobile .orca-panel-switch > input {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, var(--touch-size-m));
+  height: var(--touch-size-m);
+  margin: 0;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.is-mobile .orca-panel-reset-slot {
+  width: var(--touch-size-m);
+}
+
+.is-mobile .orca-panel-reset-slot > .orca-panel-reset {
+  height: var(--touch-size-m);
+}
+
+.is-mobile .orca-panel-row.mod-grid > .orca-panel-reset-slot,
+.is-mobile .orca-panel-row.mod-grid > .orca-panel-overridden {
+  margin-top: 0;
+}
+
+.is-mobile button.orca-panel-overridden {
+  justify-content: center;
+  min-width: var(--touch-size-m);
+  min-height: var(--touch-size-m);
+}
+
+.is-mobile button.orca-panel-tab {
+  height: var(--touch-size-m);
+}
+
+/* A choice is as tall as a touch, and its lit pill is drawn inside a
+   clear border, so the segment is no taller than the choice. */
+.is-mobile .orca-panel-segment {
+  gap: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--touch-size-m);
+  background: var(--interactive-normal);
+}
+
+.is-mobile button.orca-panel-choice {
+  height: var(--touch-size-m);
+  min-width: 40px;
+  border: 3px solid transparent;
+  border-radius: var(--touch-size-m);
+  background-clip: padding-box;
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile button.orca-panel-choice.is-on {
+  background-color: var(--background-primary);
+}
+
+/* A number field steps from a button at each end, each the size of a
+   touch. */
+.is-mobile :not(.orca-panel-cell) > .orca-panel-number.mod-ends {
+  align-items: center;
+  height: var(--touch-size-m);
+  border-radius: var(--touch-size-m);
+  background: var(--background-modifier-form-field);
+}
+
+.is-mobile :not(.orca-panel-cell) > .orca-panel-number.mod-ends > input.orca-panel-text {
+  width: 64px;
+  height: var(--touch-size-m);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-align: center;
+}
+
+.is-mobile .orca-panel-number.mod-ends > input.orca-panel-text.is-invalid {
+  color: var(--text-error);
+}
+
+.is-mobile .orca-panel-number.mod-ends > button.orca-panel-step {
+  flex: none;
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  border: none;
+  border-radius: var(--touch-size-m);
+  background: transparent;
+}
+
+.is-mobile .orca-panel-step .orca-panel-icon {
+  --icon-size: var(--icon-s);
+}
+
+/* Two margins share a line, which has no room for four buttons, so a
+   margin is typed. */
+.is-mobile .orca-panel-cell > .orca-panel-number.mod-ends > button.orca-panel-step {
+  display: none;
+}
+
+.is-mobile .orca-panel-cell > .orca-panel-number > input.orca-panel-text {
+  border-radius: var(--input-radius);
+  text-align: center;
+}
+
+.is-mobile .orca-panel-said {
+  text-align: center;
+}
+
+.is-mobile button.orca-panel-glyph,
+.is-mobile input.orca-panel-glyph {
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+}
+
+.is-mobile button.orca-panel-glyph-cell {
+  height: var(--touch-size-m);
+}
+
+/* The font list is drawn as Obsidian mobile draws a suggestion list. */
+.is-mobile .orca-panel-menu {
+  top: calc(var(--touch-size-m) + 6px);
+  padding: 6px;
+  border: none;
+  border-radius: var(--touch-size-xxs);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 45%);
+}
+
+.is-mobile input.orca-panel-filter {
+  height: var(--touch-size-m);
+}
+
+.is-mobile .orca-panel-rows {
+  margin-top: 6px;
+}
+
+.is-mobile .orca-panel-option {
+  gap: var(--size-4-2);
+  height: auto;
+  min-height: var(--touch-size-m);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--touch-size-xxs);
+}
+
+.is-mobile .orca-panel-field.is-added {
+  height: var(--touch-size-m);
+}
+
+@container (max-width: 360px) {
+  .is-mobile .orca-panel-label {
+    width: 100%;
+  }
+
+  .is-mobile .orca-panel-row.mod-grid > .orca-panel-label {
+    padding-top: 0;
+  }
+
+  .is-mobile .orca-panel-under {
+    margin-left: 0;
+  }
+}
