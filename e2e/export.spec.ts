@@ -152,6 +152,7 @@ test("a cover that names no image in the vault shows in the Issues list once the
   vault,
 }) => {
   const SAID = "Cover image nowhere.png did not load. It is left out of the EPUB.";
+  vault.touch(BOOK);
   vault.touch(EPUB);
   await note.open(BOOK);
   await note.metadata("cover").fill("nowhere.png");
