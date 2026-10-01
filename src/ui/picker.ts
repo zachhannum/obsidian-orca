@@ -17,6 +17,35 @@ import {
 import { usedVariant, type Variant } from "@/assets/variants";
 import { designFonts, designUses, type Design, type FontUse } from "@/style/design";
 
+/** The font that the engine carries. A book is set in it until the author picks a font. */
+export const CARRIED = "EB Garamond";
+
+/**
+ * Puts the family the engine carries at the head of an index read with
+ * no system fonts. A family of that name in the vault is listed in its
+ * place.
+ */
+export function withCarried(index: FontIndex, system: boolean): FontIndex {
+  if (system || has(index, CARRIED)) return index;
+  const carried: Family = { name: CARRIED, where: "engine", faces: [], variants: [] };
+  return { ...index, families: [carried, ...index.families] };
+}
+
+/** The line under a font list that holds the family the engine carries. */
+export interface Sourced {
+  /** The families listed, the carried one among them. */
+  families: number;
+  /** True when the vault's folder holds no family. */
+  empty: boolean;
+}
+
+/** The line under the font list. None where the system's fonts are listed, as on desktop. */
+export function sourced(index: FontIndex): Sourced | undefined {
+  if (!index.families.some((family) => family.where === "engine")) return undefined;
+  const families = index.families.length;
+  return { families, empty: families === 1 };
+}
+
 /** The picker's state. */
 export interface Picking {
   /** The fonts the typed string matches, in the order they are offered. */

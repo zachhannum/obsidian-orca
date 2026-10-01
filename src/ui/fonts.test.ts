@@ -4,6 +4,7 @@ import process from "node:process";
 import { test } from "node:test";
 import { directoryVault } from "@/assets/directory";
 import { fontPlaces, readFontIndex, vaultFonts } from "@/ui/fonts";
+import { CARRIED } from "@/ui/picker";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -27,15 +28,15 @@ test("a face still reads whole after an earlier read crossed to the worker", asy
   assert.deepEqual(await fonts.read(FACE, 0, 4), again.subarray(0, 4));
 });
 
-test("with no Node the index reads only the vault's faces, so the picker lists only those", async () => {
+test("with no Node the index reads only the vault's faces, so the picker lists those and the family the engine carries", async () => {
   const places = await fontPlaces(vault, undefined);
   assert.deepEqual(places.directories, []);
 
   const index = await readFontIndex(places);
-  assert.ok(index.families.length > 0);
+  assert.equal(index.families[0]?.name, CARRIED);
   assert.deepEqual(
     index.families.filter((family) => family.where !== "vault").map((family) => family.name),
-    [],
+    [CARRIED],
   );
   assert.ok(index.families.some((family) => family.name === "Alegreya"));
 });

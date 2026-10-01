@@ -28,7 +28,7 @@ import { readBytes, type Listing, type VaultAdapter } from "@/assets/vault";
 import type { Face } from "@/book/plan";
 import type { FontUse } from "@/style/design";
 import type { Registered } from "@/style/faces";
-import { previewFace, previewFamily } from "@/ui/picker";
+import { previewFace, previewFamily, withCarried } from "@/ui/picker";
 
 /**
  * Font files, read a range at a time for the index and whole for a
@@ -132,14 +132,15 @@ export async function fontPlaces(
 /**
  * The families the machine and the vault hold. The vault's faces are
  * scanned last and win a name collision, so a book carrying its own
- * face is set in that one.
+ * face is set in that one. With no system fonts to read, the index
+ * holds the family the engine carries too.
  */
 export async function readFontIndex(places: FontPlaces): Promise<FontIndex> {
   const [platform, vault] = await Promise.all([
     scanFonts(places.platform, places.directories, "platform"),
     scanFonts(places.vault, [places.folder], "vault"),
   ]);
-  return fontIndex(platform, vault);
+  return withCarried(fontIndex(platform, vault), places.directories.length > 0);
 }
 
 /** A font and variant a design sets, as the faces that cross and the rules that register them. */

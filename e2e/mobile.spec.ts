@@ -42,7 +42,8 @@ test("under mobile emulation the book is set from the vault's faces and exports 
     await panel.open();
     await panel.pick();
     expect(await panel.offered()).toContain(FIXTURE_FONT);
-    // The list is the index, and every family in the index is the vault's.
+    // The list is the index, and every family in the index is the vault's
+    // or the one the engine carries.
     const where = await obsidian.page.evaluate(async (id) => {
       const orca = window.app.plugins.plugins[id] as
         | { families?: Promise<{ families: { where: string }[] }> }
@@ -51,7 +52,7 @@ test("under mobile emulation the book is set from the vault's faces and exports 
       return index?.families.map((family) => family.where);
     }, PLUGIN);
     expect(where?.length).toBe(await panel.offering());
-    expect(new Set(where)).toEqual(new Set(["vault"]));
+    expect(new Set(where)).toEqual(new Set(["vault", "engine"]));
     await obsidian.page.keyboard.press("Escape");
 
     vault.touch(FILE);
