@@ -181,7 +181,7 @@ export const DEVICES: Record<Device, { width: number; height: number }> = {
 /** The short side of Obsidian mobile's own buttons, in CSS pixels. */
 export const TOUCH = 44;
 
-/** What a pointer can press, which a finger has to reach too. */
+/** The controls a pointer can press, which a finger has to reach too. */
 const PRESSED = "button, input, select, textarea, [role=button], [role=tab], .clickable-icon";
 
 /** The key Obsidian keeps mobile emulation under, in the renderer's storage. */
@@ -605,6 +605,14 @@ export class Obsidian {
         throw new Error(`no command called ${named}`);
       }
     }, id);
+  }
+
+  /** Whether the palette has a command at all. */
+  async registered(id: string): Promise<boolean> {
+    return this.page.evaluate(
+      (named) => window.app.commands.commands[named] !== undefined,
+      id,
+    );
   }
 
   /**

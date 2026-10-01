@@ -22,7 +22,8 @@ import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
-import { node, onDesktop } from "@/ui/desktop";
+import { device, node, onDesktop } from "@/ui/desktop";
+import { splits } from "@/ui/device";
 import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
@@ -273,35 +274,37 @@ export default class OrcaPlugin extends Plugin implements Limited {
         void this.openPanel();
       },
     });
-    this.addCommand({
-      id: "preview-to-the-right",
-      name: "Open preview to the right",
-      checkCallback: (checking) => {
-        const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-        const member =
-          file === null || file === undefined
-            ? undefined
-            : this.members.get(file.path);
-        if (member === undefined || file === null || file === undefined) {
-          return false;
-        }
-        if (!checking) void this.splitPreview(file, member);
-        return true;
-      },
-    });
-    this.addCommand({
-      id: "manuscript-to-the-left",
-      name: "Open manuscript to the left",
-      checkCallback: (checking) => {
-        const view = this.app.workspace.getActiveViewOfType(PreviewView);
-        const note = view?.note;
-        if (view === null || view === undefined || note === undefined) {
-          return false;
-        }
-        if (!checking) void this.splitManuscript(view, note);
-        return true;
-      },
-    });
+    if (splits(device())) {
+      this.addCommand({
+        id: "preview-to-the-right",
+        name: "Open preview to the right",
+        checkCallback: (checking) => {
+          const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+          const member =
+            file === null || file === undefined
+              ? undefined
+              : this.members.get(file.path);
+          if (member === undefined || file === null || file === undefined) {
+            return false;
+          }
+          if (!checking) void this.splitPreview(file, member);
+          return true;
+        },
+      });
+      this.addCommand({
+        id: "manuscript-to-the-left",
+        name: "Open manuscript to the left",
+        checkCallback: (checking) => {
+          const view = this.app.workspace.getActiveViewOfType(PreviewView);
+          const note = view?.note;
+          if (view === null || view === undefined || note === undefined) {
+            return false;
+          }
+          if (!checking) void this.splitManuscript(view, note);
+          return true;
+        },
+      });
+    }
     this.addCommand({
       id: "inspect-page",
       name: "Inspect the page",
@@ -802,7 +805,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** `Open preview to the right`, for a note that belongs to a book. */
   private offerSplitting(menu: Menu, note: TFile): void {
     const member = this.members.get(note.path);
-    if (member === undefined) return;
+    if (member === undefined || !splits(device())) return;
     menu.addItem((item) =>
       item
         .setTitle("Open preview to the right")

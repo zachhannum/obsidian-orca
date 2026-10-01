@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { TO_THE_LEFT, TO_THE_RIGHT } from "./harness/book";
 import { PLUGIN } from "./harness/launch";
 import { DEVICES } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
@@ -14,6 +15,12 @@ const NAME = "On the phone";
 
 /** The file that name gives the PDF. */
 const FILE = `${NAME}.pdf`;
+
+/** A chapter of that book. */
+const CHAPTER = "Chapter Twelve.md";
+
+/** The item a chapter's file menu splits the preview from. */
+const SPLIT = "Open preview to the right";
 
 /** A face the fixture vault carries. */
 const FIXTURE_FONT = "Alegreya";
@@ -104,6 +111,41 @@ test("a phone turned on its side is still a phone", async ({ obsidian }) => {
       .poll(() => obsidian.page.evaluate(() => window.innerWidth > window.innerHeight))
       .toBe(true);
     await expect(obsidian.page.locator("body")).toHaveClass(/\bis-phone\b/);
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
+test("a phone registers neither split command and draws no split in a chapter's menu", async ({
+  obsidian,
+  book,
+}) => {
+  await obsidian.mobile("phone");
+  try {
+    await book.open();
+    await book.settled(BOOK);
+    expect(await obsidian.registered(TO_THE_RIGHT)).toBe(false);
+    expect(await obsidian.registered(TO_THE_LEFT)).toBe(false);
+    // `Add to book` is asked of the same cache, so the menu is whole
+    // once the chapter's other item is on it.
+    await expect
+      .poll(async () => (await obsidian.fileMenu(CHAPTER)).length)
+      .toBeGreaterThan(0);
+    expect(await obsidian.fileMenu(CHAPTER)).not.toContain(SPLIT);
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
+test("a tablet offers both splits", async ({ obsidian, book }) => {
+  await obsidian.mobile("tablet");
+  try {
+    await book.open();
+    await book.settled(BOOK);
+    expect(await obsidian.registered(TO_THE_RIGHT)).toBe(true);
+    expect(await obsidian.registered(TO_THE_LEFT)).toBe(true);
+    await obsidian.fileMenu(CHAPTER, SPLIT);
+    await obsidian.detach("orca-book-preview");
   } finally {
     await obsidian.emulateMobile(false);
   }
