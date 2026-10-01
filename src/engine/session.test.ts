@@ -9,6 +9,7 @@ import { Worker, type Transferable } from "node:worker_threads";
 import {
   paintPage,
   styleOp,
+  type EpubFiles,
   type LayoutOutput,
   type Folios,
   type Inspection,
@@ -108,6 +109,10 @@ class FakeClient implements EngineClient {
 
   exportPdf(): Promise<Uint8Array | null> {
     return Promise.resolve(new Uint8Array());
+  }
+
+  exportEpubFiles(): Promise<EpubFiles | null> {
+    return Promise.resolve(null);
   }
 
   fontBytes(font: number): Promise<Uint8Array> {
@@ -595,6 +600,7 @@ test("a serialized client holds a second render back until the first answers", a
       return typeset();
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
+    exportEpubFiles: () => Promise.resolve(null),
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
@@ -629,6 +635,7 @@ test("a serialized client's queue moves on from a render that failed", async () 
         : Promise.resolve(typeset());
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
+    exportEpubFiles: () => Promise.resolve(null),
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
@@ -687,6 +694,7 @@ test("a book the engine refuses comes back as an engine error, not re-worded", a
   const refusing: EngineClient = {
     preview: () => Promise.reject(new Error("unknown property `leadin`")),
     exportPdf: () => Promise.reject(new Error("unknown property `leadin`")),
+    exportEpubFiles: () => Promise.resolve(null),
     fontBytes: () => Promise.reject(new Error("no faces")),
     nodeAt: () => Promise.reject(new Error("no book")),
     sourceOf: () => Promise.reject(new Error("no book")),
@@ -894,6 +902,43 @@ test("a note in the fixture vault sets to PDF bytes, with no application around 
   }
 });
 
+test("a note in the fixture vault sets to the files of an EPUB, and no stage runs to write them", async () => {
+  const vault = directoryVault(path.join(root, "fixture"));
+  const engine = await startEngine(
+    engineModule().slice(0),
+    nodeHost(),
+  );
+  try {
+    const name = "Chapter Twelve.md";
+    const session = new Session(engine.client, faces());
+
+    await session.open(openBook({ name, text: await readText(vault, name) }));
+    const generation = session.generation;
+    const stages = { ...session.stages };
+    const epub = await session.epub();
+
+    assert.ok(epub !== undefined);
+    assert.equal(epub.generation, generation);
+    assert.equal(session.generation, generation);
+    assert.deepEqual({ ...session.stages }, stages);
+    const paths = new Set(epub.files.map((file) => file.path));
+    assert.ok(epub.spine.length > 0);
+    for (const document of epub.spine) assert.ok(paths.has(document), document);
+    const types = epub.files.map((file) => file.mediaType);
+    assert.ok(types.includes("application/xhtml+xml"));
+    assert.ok(types.includes("text/css"));
+  } finally {
+    engine.stop();
+  }
+});
+
+test("an EPUB an edit overtook comes back as nothing", async () => {
+  const session = new Session(new FakeClient(typeset()), faces());
+  await session.open(openBook(SAMPLE));
+
+  assert.equal(await session.epub(), undefined);
+});
+
 /** The bundled worker, in a Node thread with `self` shimmed. */
 function nodeHost(): WorkerHost {
   const shim = `
@@ -992,6 +1037,7 @@ test("a serialized client answers an inspection while a render is still out", as
       return typeset();
     },
     exportPdf: () => Promise.resolve(new Uint8Array()),
+    exportEpubFiles: () => Promise.resolve(null),
     fontBytes: () => Promise.resolve(new Uint8Array()),
     nodeAt: () => Promise.resolve(null),
     sourceOf: () => Promise.resolve(null),
@@ -1190,5 +1236,7 @@ function margin(element: string, boxes: Inspection["boxes"]): Inspection {
 // So is the generation a real render comes back on. The view turns a
 // point on a spread into a page and a point on that page, so the view's
 // own tests cover that.
+// The EPUB's files are counted and named here and never opened: a frame
+// that loads them is the view's to prove, and `epubcheck` is not run.
 // Of the pseudo-elements, only `::first-letter` is hit here. A first
 // line and a generated box wait on the e2e run.
