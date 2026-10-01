@@ -513,6 +513,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * the item down with the leaf that was reading.
    */
   private reading(from: WorkspaceLeaf, text: string | undefined): void {
+    // Mobile has no status bar, and the preview draws the folio itself.
+    if (device() !== "desktop") return;
     if (text === undefined) {
       // The bar is the window's, not the leaf's, so a split that leaves
       // another preview reading keeps it.

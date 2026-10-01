@@ -3303,3 +3303,217 @@ input.orca-panel-filter {
     margin-left: 0;
   }
 }
+
+/* mobile: preview */
+
+/* A phone's bar floats over the foot of a view in some builds of
+   Obsidian, which name the room it takes. The pane stops above it, so
+   the foot is not under the bar. */
+.is-mobile .view-content.orca-preview {
+  padding-bottom: var(--view-bottom-spacing, 0);
+}
+
+/* The bar holds the views, the chapter and Export, each as tall as a
+   touch. */
+.is-mobile .orca-preview-bar {
+  gap: 8px;
+  min-height: var(--touch-size-l);
+  padding: 4px 12px;
+  border-bottom: none;
+  background: var(--background-primary);
+}
+
+.is-mobile .orca-preview-divider {
+  display: none;
+}
+
+/* The chapter fills the bar upright. On its side the bar also holds
+   the foot, and the spacer parts the two. */
+.is-mobile .orca-preview-spacer {
+  flex: none;
+}
+
+.is-mobile .orca-preview[data-foot="bar"] .orca-preview-spacer {
+  flex: 1;
+}
+
+.is-mobile .orca-preview-bar select.orca-preview-chapter {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  height: var(--touch-size-m);
+}
+
+.is-mobile .orca-preview[data-foot="bar"] select.orca-preview-chapter {
+  flex: none;
+  width: 220px;
+}
+
+.is-mobile .orca-preview-views {
+  flex: none;
+  gap: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--touch-size-m);
+  background: var(--interactive-normal);
+}
+
+/* The button is the size of a touch and the pill drawn in it is
+   smaller, so the border is the part of the button that is not drawn. */
+.is-mobile .orca-preview-views button.clickable-icon {
+  box-sizing: border-box;
+  width: 46px;
+  height: var(--touch-size-m);
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: var(--touch-size-m);
+  background-clip: padding-box;
+}
+
+.is-mobile .orca-preview-views button.clickable-icon.is-on {
+  background-color: var(--background-primary);
+  background-clip: padding-box;
+}
+
+.is-mobile .orca-preview-bar > button.clickable-icon,
+.is-mobile .orca-preview-foot > button.clickable-icon {
+  flex: none;
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  padding: 0;
+  border-radius: var(--touch-size-m);
+}
+
+.is-mobile .orca-preview-export .svg-icon {
+  width: var(--icon-l);
+  height: var(--icon-l);
+}
+
+/* The page number, the arrows and the count of warnings sit under the
+   page, where a desktop has its status bar. */
+.is-mobile .orca-preview-foot {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: var(--touch-size-l);
+  padding: 4px 12px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .orca-preview input.orca-preview-folio {
+  flex: none;
+  width: 64px;
+  height: var(--touch-size-m);
+  min-height: var(--touch-size-m);
+  padding: 0;
+  text-align: center;
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .orca-preview-total {
+  flex: none;
+  margin: 0 4px;
+  white-space: nowrap;
+}
+
+/* The count is a chip 22px tall inside a button the size of a touch. */
+.is-mobile .orca-preview button.orca-preview-warnings {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  margin: 0 -8px;
+  padding: 0 9px;
+  border: 11px solid transparent;
+  border-radius: var(--touch-size-m);
+  box-shadow: none;
+  background-color: rgba(233, 151, 63, 0.15);
+  background-clip: padding-box;
+  color: var(--color-orange);
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.is-mobile .orca-preview button.orca-preview-warnings.is-on {
+  background-color: rgba(233, 151, 63, 0.28);
+}
+
+/* The count is at the left of the foot and the arrows at its right. */
+.is-mobile .orca-preview-foot > button.orca-preview-warnings {
+  margin: 0 auto 0 -11px;
+}
+
+.is-mobile .orca-preview-warnings .orca-preview-opens {
+  display: none;
+}
+
+.is-mobile .orca-preview .orca-preview-issues {
+  max-height: 50vh;
+  padding: 12px;
+  border: none;
+  border-radius: var(--touch-size-xxs);
+  background: var(--background-secondary);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Under the page the warnings open over it, above the count. */
+.is-mobile .orca-preview-foot > .orca-preview-issues {
+  top: auto;
+  right: 12px;
+  bottom: calc(100% + 8px);
+  left: 12px;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.is-tablet .orca-preview-foot > .orca-preview-issues {
+  right: auto;
+  width: 400px;
+  max-width: calc(100% - 24px);
+}
+
+.is-mobile .orca-preview .orca-preview-issue-head {
+  padding: 0 4px 8px;
+}
+
+.is-mobile .orca-preview .orca-preview-issue {
+  padding: 10px 12px;
+  border-radius: 0 12px 12px 0;
+}
+
+.is-mobile .orca-preview .orca-preview-issue-said {
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .orca-preview .orca-preview-issue-at {
+  margin-top: 0;
+  font-size: 13px;
+}
+
+/* The place is a line as tall as a touch, with none of the pill
+   Obsidian mobile draws a button in. */
+.is-mobile .orca-preview button.orca-preview-issue-open {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-size-m);
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-accent);
+  font-weight: inherit;
+  text-align: left;
+}
+
+/* Upright, a spread is as wide as the screen leaves it. */
+.is-phone .orca-preview-well {
+  padding: 14px;
+}
