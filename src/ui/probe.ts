@@ -34,7 +34,6 @@ const KNOWN_FILES = [
 const INSTALLED = [
   "/private/var/mobile/Library/Fonts",
   "/private/var/mobile/Library/UserFonts",
-  "/var/mobile/Library/Fonts",
   "/Library/Fonts",
   "/private/var/MobileAsset/AssetsV2/com_apple_MobileAsset_Font7",
   "/private/var/MobileAsset/AssetsV2/com_apple_MobileAsset_Font8",
@@ -279,7 +278,8 @@ async function tried(route: Route): Promise<string[]> {
  */
 async function installed(found: readonly Route[]): Promise<string[]> {
   const lines = ["## Installed fonts"];
-  for (const route of found.filter((each) => each.name.startsWith("Capacitor"))) {
+  const readers = found.filter((each) => /file URL|convertFileSrc/.test(each.name));
+  for (const route of found.filter((each) => each.name.includes("file URL"))) {
     lines.push(`through ${route.name}`);
     for (const folder of INSTALLED) {
       try {
@@ -289,12 +289,19 @@ async function installed(found: readonly Route[]): Promise<string[]> {
         );
         const shown = fonts.length > 0 ? fonts : seen;
         for (const entry of shown.slice(0, SHOWN)) lines.push(`  ${entry}`);
-        const [first] = fonts;
-        if (first !== undefined) {
-          try {
-            lines.push(`read ${first}: ${await reading(route, first)}`);
-          } catch (cause) {
-            lines.push(`read ${first}: refused, ${said(cause)}`);
+        // An installed face is kept under a name with no extension,
+        // so a file with none is read to see what it opens with.
+        const files =
+          fonts.length > 0
+            ? fonts
+            : seen.filter((entry) => !entry.endsWith("/") && !/\.\w+$/.test(entry));
+        for (const file of files.slice(0, 2)) {
+          for (const reader of readers) {
+            try {
+              lines.push(`read ${file} by ${reader.name}: ${await reading(reader, file)}`);
+            } catch (cause) {
+              lines.push(`read ${file} by ${reader.name}: refused, ${said(cause)}`);
+            }
           }
         }
       } catch (cause) {
