@@ -338,7 +338,7 @@ replaces them.
 - The CSS view is the design panel's second view on a phone and a
   tablet, as on desktop. A tap on the line in a lock's card opens it at
   that line.
-- Inspect mode is desktop only on a phone, where the drawer that holds
+- A phone does not offer inspect mode, because the drawer that holds
   its pane covers the page. The book view draws no inspect action
   there, and the command is not registered. A tablet offers it, in the
   pinned right drawer.
