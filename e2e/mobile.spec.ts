@@ -154,5 +154,5 @@ test("a tablet offers both splits", async ({ obsidian, book }) => {
 
 // What this suite does not cover: Obsidian on a real phone, where Node
 // is absent rather than unused, which the Node tier's bundle test
-// stands in for; the phone layout; and the memory a real iOS device
-// allows.
+// stands in for; each surface's layout, which the specs beside this
+// one hold to its artboard; and the memory a real iOS device allows.

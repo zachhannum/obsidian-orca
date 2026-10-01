@@ -2960,6 +2960,18 @@ input.orca-panel-filter {
   background: var(--mobile-sidebar-background);
 }
 
+/* The view keeps room under the list for Obsidian's own bar, and a row
+   scrolled into that room would show under the buttons. */
+.is-phone .orca-nav-header::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 100vh;
+  background: inherit;
+}
+
 /* A row is as tall as a touch, and long words wrap. */
 .is-mobile .orca-nav-item {
   gap: var(--size-4-2);
