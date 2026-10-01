@@ -28,6 +28,7 @@ import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
 import { bookFromFolder, createChapter, emptyBook } from "@/ui/make";
 import { notedBook } from "@/ui/manuscript";
+import { showProbe } from "@/ui/probe";
 import { bookCss, withCss } from "@/book/css";
 import { folderOf } from "@/book/folder";
 import { add } from "@/book/order";
@@ -337,6 +338,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
       name: "New book",
       callback: () => {
         void this.newBook();
+      },
+    });
+    this.addCommand({
+      id: "probe-system-fonts",
+      name: "Probe system fonts",
+      callback: () => {
+        void showProbe(this.app);
       },
     });
 
