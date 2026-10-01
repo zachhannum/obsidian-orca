@@ -70,3 +70,11 @@ test("under mobile emulation the book is set from the vault's faces and exports 
 // is absent rather than unused, which the Node tier's bundle test
 // stands in for; the phone layout; and the memory a real iOS device
 // allows.
+//
+// Emulation has no Capacitor, so the index here is the one a phone
+// falls back to when its routes are not there. The Node tier checks
+// the routes, the read of a file with no suffix, the range handling
+// and the vault winning a family name, all against fakes. No tier
+// checks Capacitor's real routes, whether the web view answers a range
+// with 206, how long the scan of a phone's faces takes, or the picker
+// row and the PDF for a system face on a phone.

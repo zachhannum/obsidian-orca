@@ -129,9 +129,13 @@ its editor around these files and returns a URL. The artboard list and
   suits its unit. If orca cannot read the value in a field, a line
   under the row shows the error.
 - The Font control opens on the fonts the machine has, read out of the
-  platform's font directories and the vault's `fonts/`. Typing filters
-  that list rather than naming a font. Each row is set in its own
-  font.
+  platform's font directories and the vault's `fonts/`. On iOS those
+  are the phone's system faces and the faces a configuration profile
+  installed. Typing filters that list rather than naming a font. Each
+  row is set in its own font.
+- The list leaves out a face the platform keeps for its own interface.
+  The family name of such a face opens with a dot, as SF's does. This
+  holds on a phone as on a Mac.
 - A family whose faces come in more than one variant, such as a
   condensed width, shows a Variant row under Font. A family with one
   variant shows none. A book with no variant picked sets in the
