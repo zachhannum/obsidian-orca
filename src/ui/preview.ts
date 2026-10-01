@@ -1387,9 +1387,14 @@ export class PreviewView extends ItemView {
       const book = await session.epubFiles();
       if (asking !== this.asking || book === undefined) return;
       this.reflow?.draw({ book, stages: session.stages });
-    } catch {
+    } catch (cause) {
+      if (asking !== this.asking) return;
       // The engine stopped under the ask. The screen already drawn
       // stays while the book is set again on a new engine.
+      if (cause instanceof EngineDead) return;
+      this.report(
+        cause instanceof EngineError ? sentence(cause.message) : "The preview could not load",
+      );
     }
   }
 

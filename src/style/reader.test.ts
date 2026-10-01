@@ -140,9 +140,8 @@ test("the PreviewViews artboard names every device and every option of every set
   const root = process.env["ORCA_ROOT"] ?? process.cwd();
   const part = await readFile(path.join(root, "design/parts/PreviewViews.html"), "utf8");
   for (const device of DEVICES) {
-    assert.ok(part.includes(`<span>${device.label}</span>`), `no ${device.label}`);
-    const size = `${String(device.width)} × ${String(device.height)}`;
-    assert.ok(part.includes(`${size}</span>`), `no ${size}`);
+    const option = `${device.label} · ${String(device.width)} × ${String(device.height)}`;
+    assert.ok(part.includes(`<span>${option}</span>`), `no ${option}`);
   }
   const labels = [
     ...READER_FONTS,
