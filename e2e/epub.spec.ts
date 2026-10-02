@@ -14,6 +14,7 @@ import {
   deviceBox,
   readerInset,
 } from "@/style/reader";
+import type { Book } from "./harness/book";
 import type { Epub } from "./harness/epub";
 import { PLUGIN } from "./harness/launch";
 import { expect, test } from "./harness/test";
@@ -246,7 +247,54 @@ test("an edit repaints the EPUB view where the reader is", async ({ book, epub, 
   await expect.poll(() => epub.words()).toContain(OPENS);
 });
 
-test("nothing the EPUB view does writes to the vault or to the plugin's data", async ({
+/** A device and a value of each setting that is not the one a pane opens with. */
+const CHOSEN = {
+  device: "ipad",
+  settings: {
+    font: "sans",
+    size: 125,
+    spacing: 1.5,
+    margins: "wide",
+    vertical: "narrow",
+    align: "justify",
+    theme: "sepia",
+  },
+};
+
+/** The variables those settings put on the frame's root. */
+const CHOSEN_SET = {
+  "--USER__fontFamily": "var(--RS__sansTf)",
+  "--USER__fontSize": "125%",
+  "--USER__lineHeight": "1.5",
+  "--RS__pageGutter": "56px",
+  "--USER__textAlign": "justify",
+  "--USER__backgroundColor": "#faf4e8",
+  "--USER__textColor": "#121212",
+  "--USER__linkColor": "#305282",
+  "--USER__visitedColor": "#7b5281",
+};
+
+/** Holds that the pane is in the EPUB view on the chosen device with the chosen settings. */
+async function cameBack(book: Book, epub: Epub): Promise<void> {
+  await epub.painted();
+  await expect(epub.view).toHaveAttribute("data-device", CHOSEN.device);
+  // The page controls give way, as they do after the switch itself.
+  await expect(book.folio).toBeHidden();
+  await expect(book.view("EPUB")).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => set(epub)).toEqual(CHOSEN_SET);
+  // The top and bottom margins move no variable, so the frame says them.
+  expect((await epub.measured()).frame.top).toBe(16);
+  await epub.settings.click();
+  await expect(epub.setting("font")).toHaveValue(CHOSEN.settings.font);
+  await expect(epub.setting("size")).toHaveValue("125%");
+  await expect(epub.setting("spacing")).toHaveValue("1.5");
+  for (const key of ["margins-wide", "vertical-narrow", "align-justify", "theme-sepia"]) {
+    await expect(epub.setting(key)).toHaveAttribute("aria-pressed", "true");
+  }
+  await epub.settings.click();
+}
+
+test("the EPUB view, the device and every reader setting come back in a new pane, a workspace reopened and a window reloaded", async ({
   book,
   epub,
   obsidian,
@@ -254,7 +302,63 @@ test("nothing the EPUB view does writes to the vault or to the plugin's data", a
 }) => {
   await book.open();
   await book.settled(BOOK);
-  const data = await vault.data(PLUGIN);
+  await epub.open();
+  await epub.device.selectOption(CHOSEN.device);
+  await epub.settings.click();
+  await epub.setting("font").selectOption("sans");
+  await epub.setting("size-up").click();
+  await epub.setting("spacing").selectOption("1.5");
+  await epub.setting("margins-wide").click();
+  await epub.setting("vertical-narrow").click();
+  await epub.setting("align-justify").click();
+  await epub.setting("theme-sepia").click();
+  await epub.settings.click();
+  await expect.poll(() => set(epub)).toEqual(CHOSEN_SET);
+
+  // The plugin's data keeps the view beside the page view, and the
+  // device and the settings with it.
+  const kept = async (): Promise<unknown> => JSON.parse((await vault.data(PLUGIN)) ?? "{}");
+  await expect.poll(kept).toMatchObject({ view: "single", epub: true, reader: CHOSEN });
+
+  // The pane's own state keeps the view, so a workspace reopened comes
+  // back in it.
+  const layout = await obsidian.layout();
+  await book.close();
+  await expect(book.panes).toHaveCount(0);
+  await obsidian.reopen(layout);
+  await expect(book.panes).toHaveCount(1);
+  await cameBack(book, epub);
+
+  // A new pane opens as the last one was left.
+  await book.close();
+  await expect(book.panes).toHaveCount(0);
+  await book.open();
+  await cameBack(book, epub);
+
+  // A window reloaded reads all of it back from the plugin's data.
+  await book.close();
+  await expect(book.panes).toHaveCount(0);
+  await obsidian.reload();
+  await book.open();
+  await cameBack(book, epub);
+
+  // A page view chosen is kept the same way, and the EPUB view goes.
+  await book.view("Single page").click();
+  await expect(epub.view).toHaveCount(0);
+  await expect(book.folio).toBeVisible();
+  await expect.poll(kept).toMatchObject({ view: "single", epub: false, reader: CHOSEN });
+});
+
+test("nothing the EPUB view does writes to the vault, and the book note is untouched", async ({
+  book,
+  epub,
+  obsidian,
+  vault,
+}) => {
+  await book.open();
+  await book.settled(BOOK);
+  const note = await vault.bytes(BOOK);
+  const chapter = await vault.bytes(CHAPTER);
 
   const changes = await vault.changes(async () => {
     await epub.open();
@@ -279,11 +383,11 @@ test("nothing the EPUB view does writes to the vault or to the plugin's data", a
       "--USER__backgroundColor": "#000000",
     });
     await epub.settings.click();
-    // The workspace keeps the page view the pane was in, and nothing
-    // of the EPUB view.
+    // The workspace keeps the page view the pane was in beside the
+    // EPUB view, so the pane has one to go back to.
     const layout = JSON.stringify(await obsidian.layout());
     expect(layout).toContain('"view":"single"');
-    expect(layout).not.toContain("epub");
+    expect(layout).toContain('"epub":true');
     await turnTo(epub, CHAPTER_NAME);
     await epub.turn();
     // Back to the pages, which is the view the pane keeps.
@@ -292,12 +396,14 @@ test("nothing the EPUB view does writes to the vault or to the plugin's data", a
   });
 
   expect(changes).toEqual([]);
-  expect(await vault.data(PLUGIN)).toBe(data);
+  expect((await vault.bytes(BOOK)).equals(note)).toBe(true);
+  expect((await vault.bytes(CHAPTER)).equals(chapter)).toBe(true);
 });
 
 // What this suite does not cover: the view on a phone or a tablet, where
 // the bar wraps, and a book whose documents link no sheet, which the
 // engine does not write. A link inside the frame is not followed, and
-// nothing here clicks one. Whether a pane reopened comes back in its
-// page view is held only as far as the layout the workspace would
-// write, which names the page view and nothing of this one.
+// nothing here clicks one. Two panes open at once are not held to each
+// other: a change in one is kept, and the other shows it when it is
+// next opened. A data file from before the EPUB view was kept is read
+// in the Node tier.

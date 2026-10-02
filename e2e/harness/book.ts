@@ -9,6 +9,7 @@
 import { expect, type Locator, type Worker } from "@playwright/test";
 import { engineName } from "@/engine/pool";
 import type { Stages } from "@/engine/session";
+import { READER_STORED } from "@/style/reader";
 import { PLUGIN } from "./launch";
 import { FLOATING, type Obsidian } from "./obsidian";
 
@@ -560,16 +561,17 @@ export class Book {
   }
 
   /**
-   * Puts the view back to single, which is the view a spec starts in.
+   * Puts the view back to single with the EPUB view off and its device
+   * and settings at their defaults, which is what a spec starts in.
    * The view is the machine's rather than the pane's, so a spec that
    * switches it hands the next spec a book in that view.
    */
   async reset(): Promise<void> {
-    await this.obsidian.page.evaluate((id) => {
+    await this.obsidian.page.evaluate(({ id, reader }) => {
       const orca = window.app.plugins.plugins[id] as Holding | undefined;
       if (orca?.limits === undefined) return;
-      orca.limit?.({ ...orca.limits, view: "single" });
-    }, PLUGIN);
+      orca.limit?.({ ...orca.limits, view: "single", epub: false, reader });
+    }, { id: PLUGIN, reader: READER_STORED });
   }
 
   /**
