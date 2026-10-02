@@ -120,6 +120,54 @@ export function members(shelved: readonly Shelved[]): Set<string> {
   );
 }
 
+/** The orders a shelf sorts its books in. Vault order is the order the vault lists them. */
+export const SORT_ORDERS = ["vault", "name", "name-reverse"] as const;
+export type SortOrder = (typeof SORT_ORDERS)[number];
+
+export const SORT_LABELS: Record<SortOrder, string> = {
+  vault: "Vault order",
+  name: "Name (A to Z)",
+  "name-reverse": "Name (Z to A)",
+};
+
+/** A saved sort order, or the default when the value is not one. */
+export function readSort(saved: unknown): SortOrder {
+  return SORT_ORDERS.find((order) => order === saved) ?? "vault";
+}
+
+/** The books in the given order. Chapters keep the book's reading order. */
+export function sortShelf(
+  shelf: readonly Shelved[],
+  order: SortOrder,
+): Shelved[] {
+  if (order === "vault") return [...shelf];
+  const sign = order === "name" ? 1 : -1;
+  return [...shelf].sort(
+    (a, b) => sign * a.name.localeCompare(b.name, undefined, { numeric: true }),
+  );
+}
+
+/**
+ * The books and chapters whose name holds the query, ignoring case. A book
+ * whose own name matches keeps every chapter. Otherwise it keeps the
+ * chapters that match, and drops out when none does.
+ */
+export function filterShelf(
+  shelf: readonly Shelved[],
+  query: string,
+): Shelved[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return [...shelf];
+  const hit = (name: string) => name.toLowerCase().includes(needle);
+  return shelf.flatMap((book) => {
+    if (hit(book.name)) return [book];
+    const groups = book.groups
+      .map((group) => ({ ...group, rows: group.rows.filter((r) => hit(r.name)) }))
+      .filter((group) => group.rows.length > 0);
+    return groups.length === 0 ? [] : [{ ...book, groups }];
+  });
+}
+
 /**
  * A book holds the active note when the note is one of its sections or
  * the book note itself. A note in two books belongs to both.

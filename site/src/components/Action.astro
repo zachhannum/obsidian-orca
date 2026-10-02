@@ -3,6 +3,7 @@
     gives it. The pair comes from the plugin, so a button renamed there
     is renamed here. A pair with no glyph below stops the build. */
 import { ACTIONS } from '@/ui/actions';
+import arrowUpNarrowWide from 'lucide-static/icons/arrow-up-narrow-wide.svg?raw';
 import bookPlus from 'lucide-static/icons/book-plus.svg?raw';
 import chevronsDownUp from 'lucide-static/icons/chevrons-down-up.svg?raw';
 import chevronsUpDown from 'lucide-static/icons/chevrons-up-down.svg?raw';
@@ -11,6 +12,7 @@ import crosshair from 'lucide-static/icons/crosshair.svg?raw';
 import download from 'lucide-static/icons/download.svg?raw';
 import fileText from 'lucide-static/icons/file-text.svg?raw';
 import scanEye from 'lucide-static/icons/scan-eye.svg?raw';
+import search from 'lucide-static/icons/search.svg?raw';
 import slidersHorizontal from 'lucide-static/icons/sliders-horizontal.svg?raw';
 import wrapText from 'lucide-static/icons/wrap-text.svg?raw';
 import x from 'lucide-static/icons/x.svg?raw';
@@ -20,6 +22,7 @@ interface Props {
 }
 
 const GLYPHS: Record<string, string> = {
+  'arrow-up-narrow-wide': arrowUpNarrowWide,
   'book-plus': bookPlus,
   'chevrons-down-up': chevronsDownUp,
   'chevrons-up-down': chevronsUpDown,
@@ -28,6 +31,7 @@ const GLYPHS: Record<string, string> = {
   download,
   'file-text': fileText,
   'scan-eye': scanEye,
+  search,
   'sliders-horizontal': slidersHorizontal,
   'wrap-text': wrapText,
   x,
