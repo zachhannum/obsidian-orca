@@ -51,7 +51,8 @@ import inspectLight from '../shots/inspect-light.png';
 import exportDark from '../shots/export-dark.png';
 import exportLight from '../shots/export-light.png';
 
-const docs = '/start/install/';
+const root = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const docs = `${root}start/install/`;
 const repo = 'https://github.com/zachhannum/obsidian-orca';
 
 /** One picture the page shows: where it is served, and the box it fills. */
@@ -279,7 +280,7 @@ const swap = {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>orca</title>
     <meta name="description" content="A book designer that runs inside Obsidian." />
-    <link rel="icon" href="/favicon.svg" />
+    <link rel="icon" href={`${root}favicon.svg`} />
     <ThemeBoot />
   </head>
   <body>
@@ -320,7 +321,7 @@ const swap = {
       </div>
 
       <header>
-        <a class="word" href="/">
+        <a class="word" href={root}>
           <Mark width={40} height={25} />
           <span aria-label="orca">orca</span>
         </a>
@@ -602,7 +603,7 @@ const swap = {
       </main>
 
       <footer>
-        <a class="word small" href="/">
+        <a class="word small" href={root}>
           <Mark width={26} height={16} />
           <span aria-label="orca">orca</span>
         </a>

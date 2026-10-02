@@ -116,7 +116,9 @@ export const test = base.extend<Fixtures, Shared>({
       await use(site);
       await site.close();
     },
-    { scope: "worker" },
+    // Setting the book is a shard's first cost, and the other shards
+    // are setting theirs.
+    { scope: "worker", timeout: 90_000 },
   ],
 
   /**

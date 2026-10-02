@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const sizes = JSON.parse(readFileSync('sizes.json', 'utf8'));
 const sheets = {};
@@ -21,6 +22,84 @@ const THEME = `class Component extends DCLogic {
     return { theme: this.props.theme ?? 'dark' };
   }
 }`;
+
+// `--into <dir>` builds a folder a browser opens: one page per artboard and
+// an index that marks the ones changed against `--against <ref>`.
+const flag = (name) => {
+  const at = process.argv.indexOf(name);
+  return at === -1 ? undefined : process.argv[at + 1];
+};
+const into = flag('--into');
+const against = flag('--against');
+
+const changedFiles = () => {
+  if (!against) return new Set();
+  const out = execFileSync('git', ['diff', '--name-only', `${against}...HEAD`, '--', '.'], {
+    encoding: 'utf8',
+  });
+  return new Set(out.split('\n').filter(Boolean).map((f) => f.replace(/^design\//, '')));
+};
+
+const standalone = (name, s) => {
+  const css = s.sheet ?? 'chrome.css';
+  const site = css !== 'chrome.css';
+  const fonts = FONTS[css].map((f) => `family=${f}`).join('&');
+  const body = readFileSync(`parts/${name}.html`, 'utf8').trimEnd();
+  const script = s.script ? `<script>\n${readFileSync(`parts/${s.script}`, 'utf8')}\n</script>` : '';
+  // A plugin part draws dark unless the index link says light.
+  const frame = site ? '' : ' class="orca" data-theme="dark"';
+  const theme = site
+    ? ''
+    : `<script>document.querySelector('.orca').dataset.theme = new URLSearchParams(location.search).get('theme') ?? 'dark';</script>`;
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${name}</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?${fonts}&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: hsl(258, 88%, 66%); }
+${sheet(css).replace(/^/gm, '    ')}
+  </style>
+</head>
+<body>
+<div${frame} style="width: ${s.w}px; height: ${s.h}px; overflow: hidden;">
+${body}
+</div>
+${theme}
+${script}
+</body>
+</html>
+`;
+};
+
+const buildInto = (dir) => {
+  mkdirSync(dir, { recursive: true });
+  const changed = changedFiles();
+  const rows = Object.entries(sizes).map(([name, s]) => {
+    writeFileSync(`${dir}/${name}.html`, standalone(name, s));
+    const touched = [`parts/${name}.html`, s.script && `parts/${s.script}`, s.sheet ?? 'chrome.css'];
+    const mark = touched.some((f) => f && changed.has(f));
+    return { name, mark };
+  });
+  const canvas = JSON.parse(readFileSync('canvas.json', 'utf8'));
+  const data = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
+  const sheets = Object.fromEntries(Object.entries(sizes).map(([n, s]) => [n, s.sheet ?? 'chrome.css']));
+  const marked = rows.filter((r) => r.mark).map((r) => r.name);
+  const index = readFileSync('canvas.html', 'utf8')
+    .replace('/*CANVAS*/', () => data(canvas))
+    .replace('/*CHANGED*/', () => data(marked))
+    .replace('/*AGAINST*/', () => data(against ?? ''))
+    .replace('/*SHEETS*/', () => data(sheets));
+  writeFileSync(`${dir}/index.html`, index);
+  process.stdout.write(`${rows.length} artboards in ${dir}\n`);
+};
+
+if (into) {
+  buildInto(into);
+  process.exit(0);
+}
 
 for (const [name, s] of Object.entries(sizes)) {
   const css = s.sheet ?? 'chrome.css';
