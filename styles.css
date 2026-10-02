@@ -919,6 +919,7 @@ button.orca-nav-action {
 /* The icon's own span is as tall as a line of text, which is taller
    than the icon and would set it above the middle. */
 button.orca-nav-action > span,
+.orca-nav-host .nav-action-button > span,
 .orca-fold > span,
 button.orca-panel-glyph > .orca-panel-icon {
   display: flex;

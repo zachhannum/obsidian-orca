@@ -197,13 +197,31 @@ for (const device of ["phone", "tablet"] as const) {
 
       // The buttons are one row, centered in the pane as the file
       // explorer's are, and none of them is left out.
-      const pill = await navigator.toolbar.boundingBox();
+      const left = await navigator.button("New book").boundingBox();
+      const right = await navigator.button("Export").boundingBox();
       const pane = await navigator.pane.boundingBox();
-      if (pill === null || pane === null) throw new Error("nothing to measure");
-      expect(pill.width).toBeLessThan(first.width);
-      expect(Math.abs(pill.x + pill.width / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
+      if (left === null || right === null || pane === null) throw new Error("nothing to measure");
+      const middle = (left.x + right.x + right.width) / 2;
+      expect(Math.abs(middle - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
       for (const label of ["New book", "Search books", "Sort books", "Export"]) {
         await expect(navigator.button(label)).toHaveCount(1);
+      }
+
+      if (device === "phone") {
+        // The bar is at the foot of the pane, above the pane picker, and
+        // the native fade is painted over the list above it.
+        const picker = await obsidian.page
+          .locator(".workspace-drawer-tab-options")
+          .first()
+          .boundingBox();
+        if (picker === null) throw new Error("no pane picker");
+        const bar = await navigator.button("Export").boundingBox();
+        expect(bar?.y ?? 0).toBeLessThan(picker.y);
+        expect(picker.y - (bar?.y ?? 0) - (bar?.height ?? 0)).toBeLessThan(TOUCH);
+        const fade = await navigator.toolbar.evaluate(
+          (row) => getComputedStyle(row, "::after").backgroundImage,
+        );
+        expect(fade).toContain("gradient");
       }
 
       // Search filters the shelf by name, sort lists the books, and
@@ -215,8 +233,12 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
       await navigator.button("Search books").click();
       await navigator.button("Sort books").click();
-      await expect(obsidian.item("Name (A to Z)")).toHaveCount(1);
-      await obsidian.page.keyboard.press("Escape");
+      await expect(obsidian.item("Name (Z to A)")).toHaveCount(1);
+      await obsidian.item("Name (A to Z)").click();
+      await expect(navigator.button("Sort books")).toHaveClass(/is-active/);
+      await navigator.button("Sort books").click();
+      await obsidian.item("Vault order").click();
+      await expect(navigator.button("Sort books")).not.toHaveClass(/is-active/);
 
       // No row cuts its words short, so none has words to put in a tooltip.
       const cut = await navigator.pane.locator(".orca-label").evaluateAll(

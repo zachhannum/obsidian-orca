@@ -517,6 +517,12 @@ for (const device of ["phone", "tablet"] as Device[]) {
         await expect(navigator.book(BOOK)).toHaveCount(1);
         await pictured(site, `mobile-navigator-${device}-${scheme}.png`);
 
+        await obsidian.page.evaluate(async () => {
+          await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
+        });
+        await pictured(site, `mobile-explorer-${device}-${scheme}.png`);
+        await navigator.drawer();
+
         await book.uncovered();
         await panel.open();
         await pictured(site, `mobile-panel-${device}-${scheme}.png`);
@@ -938,6 +944,12 @@ test("the make pictures are a folder of notes made into a book", async ({
     await expect(note.page).toBeVisible();
     navigator.push(await site.marks(book, { book: made, note: drafted }));
     await expect(book).toHaveScreenshot(`make-navigator-${scheme}.png`);
+    // The file explorer's row, for the eye to hold orca's against.
+    await site.obsidian.page.evaluate(async () => {
+      await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
+    });
+    await expect(book).toHaveScreenshot(`make-explorer-${scheme}.png`);
+    await site.navigator.reveal();
     opened.push(
       await site.marks(page, {
         "as-markdown": site.obsidian.actionIn(BOOK_PAGE, AS_MARKDOWN),
