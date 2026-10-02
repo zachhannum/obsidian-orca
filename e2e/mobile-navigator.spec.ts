@@ -195,13 +195,28 @@ for (const device of ["phone", "tablet"] as const) {
       await navigator.button("Expand all").click();
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
 
-      // The two are one pill, as Obsidian mobile draws a toolbar.
+      // The buttons are one row, centered in the pane as the file
+      // explorer's are, and none of them is left out.
       const pill = await navigator.toolbar.boundingBox();
-      const other = await navigator.button("Collapse all").boundingBox();
-      if (pill === null || other === null) throw new Error("nothing to measure");
+      const pane = await navigator.pane.boundingBox();
+      if (pill === null || pane === null) throw new Error("nothing to measure");
       expect(pill.width).toBeLessThan(first.width);
-      expect(Math.round(pill.width)).toBe(Math.round(button.width + other.width));
-      await expect(navigator.toolbar).toHaveCSS("border-radius", `${String(TOUCH)}px`);
+      expect(Math.abs(pill.x + pill.width / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
+      for (const label of ["New book", "Search books", "Sort books", "Export"]) {
+        await expect(navigator.button(label)).toHaveCount(1);
+      }
+
+      // Search filters the shelf by name, sort lists the books, and
+      // Export with no book open says so.
+      await navigator.button("Search books").click();
+      await navigator.pane.getByTestId("orca-nav-search").fill("no such chapter");
+      await expect(navigator.pane.getByText("No matches")).toBeVisible();
+      await navigator.pane.getByTestId("orca-nav-search").fill(CHAPTER);
+      await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
+      await navigator.button("Search books").click();
+      await navigator.button("Sort books").click();
+      await expect(obsidian.item("Name (A to Z)")).toHaveCount(1);
+      await obsidian.page.keyboard.press("Escape");
 
       // No row cuts its words short, so none has words to put in a tooltip.
       const cut = await navigator.pane.locator(".orca-label").evaluateAll(
