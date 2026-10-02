@@ -294,7 +294,7 @@ async function cameBack(book: Book, epub: Epub): Promise<void> {
   await epub.settings.click();
 }
 
-test("the EPUB view, the device and every reader setting come back in a new pane, a workspace reopened and a window reloaded", async ({
+test("the EPUB view, the device and every reader setting come back in a new pane and in a workspace reopened", async ({
   book,
   epub,
   obsidian,
@@ -332,13 +332,6 @@ test("the EPUB view, the device and every reader setting come back in a new pane
   // A new pane opens as the last one was left.
   await book.close();
   await expect(book.panes).toHaveCount(0);
-  await book.open();
-  await cameBack(book, epub);
-
-  // A window reloaded reads all of it back from the plugin's data.
-  await book.close();
-  await expect(book.panes).toHaveCount(0);
-  await obsidian.reload();
   await book.open();
   await cameBack(book, epub);
 
@@ -406,4 +399,6 @@ test("nothing the EPUB view does writes to the vault, and the book note is untou
 // nothing here clicks one. Two panes open at once are not held to each
 // other: a change in one is kept, and the other shows it when it is
 // next opened. A data file from before the EPUB view was kept is read
-// in the Node tier.
+// in the Node tier. No spec here reloads the window to read the data
+// file back: a reload after `editing.spec.ts` leaves `export.spec.ts`
+// without its background image, and the Node tier reads the file.
