@@ -930,6 +930,7 @@ button.orca-nav-action {
 /* The icon's own span is as tall as a line of text, which is taller
    than the icon and would set it above the middle. */
 button.orca-nav-action > span,
+.orca-fold > span,
 button.orca-panel-glyph > .orca-panel-icon {
   display: flex;
 }
@@ -2948,9 +2949,21 @@ input.orca-panel-filter {
   padding: var(--size-4-1) 0 var(--size-4-2);
 }
 
-.is-phone .orca-navigator {
+/* The buttons are at the foot of the drawer however short the list. */
+.is-phone .orca-nav-host {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
+}
+
+.is-phone .orca-navigator {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
+.is-phone .orca-shelves {
+  flex: 1 0 auto;
 }
 
 .is-phone .orca-nav-header {

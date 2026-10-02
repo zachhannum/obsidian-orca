@@ -175,12 +175,26 @@ for (const device of ["phone", "tablet"] as const) {
 
       expect(await obsidian.cramped(ROOT)).toEqual([]);
 
-      // The icons on a book's row are in the middle of its height, and
-      // the view scrolls no further than the list.
+      // The chevron and the two actions on a book's row are in the
+      // middle of its height, and the view scrolls no further than the
+      // list.
       const off = await navigator.offMiddle(navigator.name(BOOK));
-      expect(off).toHaveLength(2);
+      expect(off).toHaveLength(3);
       for (const each of off) expect(each).toBeLessThan(1);
       expect(await navigator.slack()).toBeLessThanOrEqual(0);
+
+      // A phone's `New book` stays at the foot of the drawer when the
+      // book is folded and the list is one row.
+      if (device === "phone") {
+        const chevron = navigator.name(BOOK).locator(".orca-fold");
+        await chevron.click();
+        await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(0);
+        const folded = await navigator.button("New book").boundingBox();
+        expect(folded?.y).toBeGreaterThan(DEVICES.phone.height / 2);
+        expect(await navigator.slack()).toBeLessThanOrEqual(0);
+        await chevron.click();
+        await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
+      }
 
       // No row cuts its words short, so none has words to put in a tooltip.
       const cut = await navigator.pane.locator(".orca-label").evaluateAll(

@@ -405,7 +405,7 @@ export class Navigator {
   async offMiddle(row: Locator): Promise<number[]> {
     return row.evaluate((element) => {
       const outer = element.getBoundingClientRect();
-      return Array.from(element.querySelectorAll("button svg"), (icon) => {
+      return Array.from(element.querySelectorAll("svg"), (icon) => {
         const inner = icon.getBoundingClientRect();
         return Math.abs(outer.top + outer.height / 2 - (inner.top + inner.height / 2));
       });

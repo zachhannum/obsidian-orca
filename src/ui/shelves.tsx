@@ -160,7 +160,7 @@ export interface Mounted {
  * else empties the element underneath.
  */
 export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
-  const host = el.createDiv();
+  const host = el.createDiv({ cls: "orca-nav-host" });
   const root = createRoot(host);
   let shelf: Shelved[] = [];
   let generation = 0;
