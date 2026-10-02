@@ -65,16 +65,22 @@ test("a fold opened again leaves nothing behind", () => {
   assert.deepEqual(withBook(withBook({}, "B.md", true), "B.md", false), {});
 });
 
-test("collapse all folds every entry and every heading level, and expand all keeps only the books", () => {
+test("collapse all folds every book, every entry and every heading level, and expand all opens them all", () => {
   const bare: Row = { at: 1, name: "Sixteen", kind: "note", role: "chapter", named: false, path: "Sixteen.md" };
   const books = [shelf("A.md", [row([3, 5, 7]), bare]), shelf("B.md", [row([3, 5, 7])])];
+  // A book folds whether or not its entries list headings.
   assert.equal(foldable(books), true);
-  assert.equal(foldable([shelf("A.md", [bare])]), false);
+  assert.equal(foldable([shelf("A.md", [bare])]), true);
+  assert.equal(foldable([]), false);
 
   const start: Folds = withBook({}, "A.md", true);
   assert.equal(allCollapsed(start, books), false);
   const collapsed = collapseAll(start, books);
   assert.equal(allCollapsed(collapsed, books), true);
+  assert.equal(bookCollapsed(collapsed, "A.md"), true);
+  assert.equal(bookCollapsed(collapsed, "B.md"), true);
+  // A book opened again leaves the button at `Collapse all`.
+  assert.equal(allCollapsed(withBook(collapsed, "B.md", false), books), false);
   assert.equal(entryCollapsed(collapsed, "B.md", "Fifteen.md"), true);
   assert.equal(entryCollapsed(collapsed, "A.md", "Sixteen.md"), false);
   // Every level folds: The Parsonage holds the two below it, and they hold nothing.
@@ -84,9 +90,9 @@ test("collapse all folds every entry and every heading level, and expand all kee
   assert.ok(parsonage !== undefined);
   assert.equal(allCollapsed(withNote(collapsed, "B.md", "Fifteen.md", false, parsonage), books), false);
 
-  const expanded = expandAll(collapsed);
-  assert.deepEqual(expanded, { "A.md": { collapsed: true } });
-  assert.equal(bookCollapsed(expanded, "A.md"), true);
+  const expanded = expandAll();
+  assert.deepEqual(expanded, {});
+  assert.equal(bookCollapsed(expanded, "A.md"), false);
 });
 
 test("the folds a navigator saved read back, and anything else in the state folds nothing", () => {

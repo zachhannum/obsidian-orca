@@ -186,13 +186,14 @@ for (const device of ["phone", "tablet"] as const) {
       // A phone's `New book` stays at the foot of the drawer when the
       // book is folded and the list is one row.
       if (device === "phone") {
-        const chevron = navigator.name(BOOK).locator(".orca-fold");
-        await chevron.click();
+        // `Collapse all` is there with no heading listed, and folds
+        // the book.
+        await navigator.button("Collapse all").click();
         await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(0);
         const folded = await navigator.button("New book").boundingBox();
         expect(folded?.y).toBeGreaterThan(DEVICES.phone.height / 2);
         expect(await navigator.slack()).toBeLessThanOrEqual(0);
-        await chevron.click();
+        await navigator.button("Expand all").click();
         await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
       }
 

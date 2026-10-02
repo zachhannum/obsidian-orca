@@ -395,7 +395,7 @@ export function Shelf({
             icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
             label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
             onClick={() => {
-              setFolds(open ? collapseAll(folds, shelf) : expandAll(folds));
+              setFolds(open ? collapseAll(folds, shelf) : expandAll());
             }}
           />
         )}

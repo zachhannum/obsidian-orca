@@ -100,6 +100,11 @@ export class Navigator {
       .first();
   }
 
+  /** The chevron that folds a book. */
+  bookFold(path: string): Locator {
+    return this.name(path).locator(".orca-fold");
+  }
+
   /** The chevron that folds an entry's headings. */
   fold(book: string, name: string): Locator {
     return this.entry(book, name).getByTestId("orca-entry-fold");
