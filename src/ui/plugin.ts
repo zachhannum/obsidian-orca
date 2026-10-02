@@ -382,8 +382,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
         this.swap();
         if (file === null) return;
         // A book nobody can reorder is what a collapsed sidebar would
-        // otherwise mean.
-        if (isBook(this.notes(), file)) void this.show();
+        // otherwise mean. On mobile the sidebar is a drawer over the
+        // note, which shuts as the note opens.
+        if (device() === "desktop" && isBook(this.notes(), file)) void this.show();
         this.turned(file);
       }),
     );
