@@ -88,6 +88,16 @@ export class Controls {
   readonly options: Locator;
   /** The empty state, shown when nothing matches what was typed. */
   readonly nothing: Locator;
+  /** The chip on the row of the family the engine carries. */
+  readonly builtIn: Locator;
+  /** The line under the font list that says the vault has no fonts. */
+  readonly noFonts: Locator;
+  /** The line under the font list that counts the families and names their places. */
+  readonly fontsFrom: Locator;
+  /** The words in the panel's header that name the view. */
+  readonly title: Locator;
+  /** The names of the groups, as the panel draws them. */
+  readonly groupNames: Locator;
   /** The warning for a font the machine does not have. */
   readonly missing: Locator;
   /** The picker that adds a font to the book, which no design key names. */
@@ -167,7 +177,14 @@ export class Controls {
     this.rows = root.getByTestId("orca-panel-rows");
     this.options = root.getByTestId("orca-panel-option");
     this.nothing = root.getByTestId("orca-panel-nothing");
-    this.missing = root.getByTestId("orca-panel-missing");
+    this.builtIn = root.getByTestId("orca-panel-built-in");
+    this.noFonts = root.getByTestId("orca-panel-fonts-none");
+    this.fontsFrom = root.getByTestId("orca-panel-fonts-from");
+    this.title = root.getByTestId("orca-panel-title");
+    this.groupNames = root.getByTestId("orca-panel-group-name");
+    this.missing = root
+      .page()
+      .locator('[data-testid="orca-issue-group"][data-route="fonts"] .orca-preview-issue');
     this.addFont = root.getByTestId("orca-panel-font-add");
     this.addedFonts = root.getByTestId("orca-panel-font-added");
     this.toCss = root.getByTestId("orca-panel-css");
@@ -484,6 +501,19 @@ export class Controls {
     });
   }
 
+  /** A row's label, by a design key the row writes. */
+  label(key: string): Locator {
+    return this.root.locator(`[data-keys~="${key}"]`).getByTestId("orca-panel-label");
+  }
+
+  /** An element's box in the window. */
+  async box(element: Locator): Promise<Placed> {
+    return element.evaluate((drawn) => {
+      const { x, y, width, height } = drawn.getBoundingClientRect();
+      return { x, y, width, height };
+    });
+  }
+
   /** Opens the picker and waits for its filter. */
   async pick(): Promise<void> {
     await this.font.click();
@@ -497,7 +527,9 @@ export class Controls {
 
   /** The families in the list, in the order they are shown. */
   async offered(): Promise<string[]> {
-    return this.options.allTextContents();
+    return this.options.evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-font") ?? ""),
+    );
   }
 
   /** The number of fonts the list shows, which a filter changes. */
@@ -596,6 +628,18 @@ export class Controls {
     return this.root.getByTestId("orca-panel-glyph-block");
   }
 
+  /** The group the preview lists a book's missing fonts under. */
+  get fontGroup(): Locator {
+    return this.root
+      .page()
+      .locator('[data-testid="orca-issue-group"][data-route="fonts"]');
+  }
+
+  /** The button that opens the glyph browser. */
+  get glyphBrowse(): Locator {
+    return this.root.getByTestId("orca-panel-scene-break-ornament-browse");
+  }
+
   /** One cell of the browser, named by its code point. */
   glyphCell(code: string): Locator {
     return this.glyphCells.and(this.root.locator(`[data-code="${code}"]`));
@@ -671,6 +715,11 @@ export class Panel extends Controls {
   /** Sets the sidebar the panel is in to a width, and returns the width it had. */
   async resize(width: number): Promise<number> {
     return this.obsidian.sidebar(width);
+  }
+
+  /** The controls in the panel that are too small for a finger, each with its size. */
+  async cramped(): Promise<string[]> {
+    return this.obsidian.cramped(`[data-type="${PANEL}"]`);
   }
 
   /** The distance the panel is scrolled, in pixels. */

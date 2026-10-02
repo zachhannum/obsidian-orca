@@ -13,6 +13,7 @@
  * names. Filling the list sends nothing to the engine.
  */
 
+import { tally } from "@/ui/warnings";
 import { createRoot } from "react-dom/client";
 import {
   Fragment,
@@ -25,7 +26,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { Cover } from "@/assets/cmap";
-import { familyNamed, type Family, type FontIndex } from "@/assets/fonts";
+import { VAULT_FONTS, familyNamed, type Family, type FontIndex } from "@/assets/fonts";
 import { usedVariant, variantFamily, type Variant } from "@/assets/variants";
 import {
   LEVELS,
@@ -49,7 +50,6 @@ import {
   Select,
   Switch,
   Tabs,
-  Warning,
   type Settle,
   type Under,
   type Wrong,
@@ -70,11 +70,12 @@ import {
   type Row as Listed,
 } from "@/ui/groups";
 import { ACTIONS } from "@/ui/actions";
+import { device } from "@/ui/desktop";
 import { boxKey } from "@/ui/inspect";
 import { hyphenating } from "@/ui/language";
 import { InspectPane, type Inspecting } from "@/ui/pane";
 import { browsedFamily } from "@/ui/glyphs";
-import { offeredVariants, picking, previewFamily } from "@/ui/picker";
+import { CARRIED, offeredVariants, picking, previewFamily, sourced } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
 
 /** The actions the view performs for the panel. */
@@ -130,8 +131,8 @@ export type Shown =
       unit: PageUnit;
       /** The language that the book sets. The hyphenation patterns depend on it. */
       language: string | undefined;
-      /** One warning for each font the design names that the machine does not have. */
-      missing: readonly string[];
+      /** The count of fonts and variants the design names that the machine does not have. The preview lists them. */
+      missing: number;
       /** The warnings against the author's CSS, which the CSS view counts. */
       warned: number;
       /** The box pinned in the preview, which the CSS view draws the inspect pane for. */
@@ -147,9 +148,6 @@ export interface Mounted {
   paint(shown: Shown): void;
   unmount(): void;
 }
-
-/** The font that the engine carries. A book is set in it until the author picks a font. */
-export const CARRIED = "EB Garamond";
 
 /** The group that adds a font to the book without a design key naming it. */
 export const FONTS_GROUP = "Fonts";
@@ -235,15 +233,19 @@ export function Panel({
     );
   }
   const css = shown.viewing === "css";
+  const warned = css ? shown.warned : shown.missing;
   const header = (
     <div className="orca-panel-header">
-      <span className="orca-panel-title">{css ? "CSS" : "Design"}</span>
+      <span className="orca-panel-title" data-testid="orca-panel-title">{css ? "CSS" : "Design"}</span>
       <span className="orca-panel-book" data-testid="orca-panel-book">
         · {shown.name}
       </span>
-      {css && shown.warned > 0 ? (
-        <span className="orca-panel-warned" data-testid="orca-panel-warned">
-          {shown.warned === 1 ? "1 warning" : `${String(shown.warned)} warnings`}
+      {warned > 0 ? (
+        <span
+          className={css ? "orca-panel-warned" : "orca-panel-warned mod-error"}
+          data-testid="orca-panel-warned"
+        >
+          {css ? tally(0, warned) : tally(warned, 0)}
         </span>
       ) : null}
       {css ? (
@@ -343,7 +345,7 @@ export function Panel({
             data-group={group.name}
           >
             <div className="orca-panel-heading">
-              <span className="orca-panel-name">{group.name}</span>
+              <span className="orca-panel-name" data-testid="orca-panel-group-name">{group.name}</span>
             </div>
             {group.rows.map((line, at) => {
               const levels = line.of.find((control) => control.kind === "level");
@@ -370,9 +372,6 @@ export function Panel({
             <Fonts fonts={shown.fonts} index={shown.index} acting={acting} />
           ) : null}
         </Fragment>
-      ))}
-      {shown.missing.map((said) => (
-        <Warning key={said} said={said} testid="orca-panel-missing" />
       ))}
     </div>
   );
@@ -460,6 +459,7 @@ function Line({ line, drawing }: { line: Listed; drawing: Drawing }): JSX.Elemen
     <Row
       label={line.label}
       grid={grid}
+      flag={line.label !== "" && line.of.length === 1 && line.of[0]?.kind === "flag"}
       reset={reset}
       under={under}
       keys={keyed.map(({ key }) => key)}
@@ -823,7 +823,7 @@ function Fonts({
       data-group={FONTS_GROUP}
     >
       <div className="orca-panel-heading">
-        <span className="orca-panel-name">{FONTS_GROUP}</span>
+        <span className="orca-panel-name" data-testid="orca-panel-group-name">{FONTS_GROUP}</span>
       </div>
       {fonts.map((font) => (
         <Row
@@ -886,6 +886,25 @@ function Drop({
       }}
     >
       <Icon name="x" className="orca-panel-icon" />
+    </div>
+  );
+}
+
+/** The vault's font folder, as the font list writes it. */
+const FOLDER = <span className="orca-panel-folder">{VAULT_FONTS}/</span>;
+
+/** The line under a font list with no system fonts in it. It names the vault folder a font file goes in. */
+function Sources({ index }: { index: FontIndex }): JSX.Element | null {
+  const from = useMemo(() => sourced(index), [index]);
+  if (from === undefined) return null;
+  return from.empty ? (
+    <div className="orca-panel-sources" data-testid="orca-panel-fonts-none">
+      This vault has no fonts of its own. Add font files to {FOLDER} in this vault, and they
+      are listed here.
+    </div>
+  ) : (
+    <div className="orca-panel-sources" data-testid="orca-panel-fonts-from">
+      {from.families} families, from {FOLDER} and orca
     </div>
   );
 }
@@ -969,7 +988,7 @@ function Picker({
             type="text"
             className="orca-panel-filter"
             data-testid="orca-panel-filter"
-            placeholder="Filter"
+            placeholder={device() === "desktop" ? "Filter" : "Filter fonts"}
             value={typed}
             onChange={(event) => {
               setTyped(event.target.value);
@@ -1007,6 +1026,11 @@ function Picker({
                 }}
               >
                 {offer.name}
+                {offer.where !== "engine" ? null : (
+                  <span className="orca-chip orca-panel-built-in" data-testid="orca-panel-built-in">
+                    built in
+                  </span>
+                )}
               </div>
             ))}
             {picked.offered.length > 0 ? null : (
@@ -1018,6 +1042,7 @@ function Picker({
               </div>
             )}
           </div>
+          <Sources index={index} />
         </div>
       )}
     </div>

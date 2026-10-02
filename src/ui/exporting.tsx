@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import type { Destination } from "@/assets/destination";
 import type { ExportResult, ExportTarget } from "@/engine/export";
 import { Icon } from "@/ui/icon";
+import { folderOf } from "@/ui/kept";
 import { standing, type Blocker, type Checked } from "@/ui/preflight";
 
 export type Stage = "preflight" | "refused" | "ready" | "writing" | "written" | "failed";
@@ -176,8 +177,14 @@ function Exporting({
   const busy = stage === "writing";
   const errors = checked?.errors ?? [];
   const stem = fileName(destination.path);
+  // An app with no disk to choose keeps every file in the vault, and
+  // the dialog says so.
+  const vaulted = exporter.choose === undefined;
 
   if (stage === "written") {
+    const pdf = written.find(
+      ({ format, destination: file }) => file.kind === "vault" && format.id === "pdf",
+    );
     return (
       <div className="orca-export orca-export-written" data-testid="orca-export-written">
         {written.map(({ format, destination: file, result }) => (
@@ -195,8 +202,9 @@ function Exporting({
               {result.leaves === undefined
                 ? size(result.bytes)
                 : `${pages(result.leaves)} · ${size(result.bytes)}`}
+              {vaulted ? <Kept path={file.path} /> : null}
             </div>
-            {file.kind === "vault" && format.id === "pdf" ? (
+            {!vaulted && file.kind === "vault" && format.id === "pdf" ? (
               <button
                 type="button"
                 className="orca-export-done-open"
@@ -212,7 +220,24 @@ function Exporting({
           </div>
         ))}
         <div className="modal-button-container orca-export-footer">
-          <button type="button" className="mod-cta" onClick={() => exporter.close()}>
+          {vaulted && pdf !== undefined ? (
+            <button
+              type="button"
+              data-testid="orca-export-open"
+              onClick={() => {
+                exporter.open(pdf.destination.path);
+                exporter.close();
+              }}
+            >
+              Open the PDF
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={vaulted ? undefined : "mod-cta"}
+            data-testid="orca-export-done"
+            onClick={() => exporter.close()}
+          >
             Done
           </button>
         </div>
@@ -241,7 +266,9 @@ function Exporting({
           ))}
         </div>
         <div className="orca-export-row">
-          <span className="orca-export-label">Save to</span>
+          <span className="orca-export-label" data-testid="orca-export-label">
+            {vaulted ? "Save to this vault" : "Save to"}
+          </span>
           <input
             type="text"
             className="orca-export-destination"
@@ -317,7 +344,12 @@ function Exporting({
             "Pick a format to export"
           ) : null}
         </div>
-        <button type="button" disabled={busy} onClick={() => exporter.close()}>
+        <button
+          type="button"
+          data-testid="orca-export-cancel"
+          disabled={busy}
+          onClick={() => exporter.close()}
+        >
           Cancel
         </button>
         <button
@@ -366,6 +398,19 @@ function Card({ blocker, exporter }: { blocker: Blocker; exporter: Exporter }): 
         </div>
       </div>
     </div>
+  );
+}
+
+/** Says where in the vault a written file is. */
+function Kept({ path }: { path: string }): JSX.Element {
+  const folder = folderOf(path);
+  return folder === undefined ? (
+    <> · saved to this vault</>
+  ) : (
+    <>
+      {" "}
+      · saved to <span className="orca-export-mono">{folder}</span> in this vault
+    </>
   );
 }
 

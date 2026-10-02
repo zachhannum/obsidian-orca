@@ -8,6 +8,7 @@ import type { Destination, Sink } from "@/assets/destination";
 import { vaultWritePath } from "@/assets/destination";
 import type { Files, Machine, Node, Paths } from "@/assets/node";
 import type { VaultAdapter } from "@/assets/vault";
+import { type Device, deviceOf } from "@/ui/device";
 
 /** The part of Electron's open dialog export asks. */
 interface OpenDialog {
@@ -30,6 +31,11 @@ interface Desktop {
  */
 export function onDesktop(): boolean {
   return Platform.isDesktopApp && Platform.isDesktop;
+}
+
+/** The device Obsidian says the window is, which it settles as it loads. */
+export function device(): Device {
+  return deviceOf(Platform);
 }
 
 /**

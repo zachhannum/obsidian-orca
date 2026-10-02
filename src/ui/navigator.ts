@@ -8,6 +8,7 @@ import {
   type ViewStateResult,
   type WorkspaceLeaf,
 } from "obsidian";
+import type { MouseEvent as Pointed } from "react";
 import { linksIn } from "@/book/links";
 import type { Model } from "@/book/model";
 import { bookFormat } from "@/book/note";
@@ -28,14 +29,17 @@ import {
   type Place,
 } from "@/book/order";
 import { ROLES, type Role } from "@/book/roles";
+import { ACTIONS } from "@/ui/actions";
 import { isBook } from "@/ui/books";
 import { confirm } from "@/ui/confirm";
+import { device } from "@/ui/desktop";
 import type { Edits } from "@/ui/edits";
 import { createChapter, emptyBook } from "@/ui/make";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
 import { readFolds, type Folds } from "@/ui/folds";
 import { headingsOf, type Headed, type Showing } from "@/ui/outline";
+import { entryItems, menuPlace, menuTitle, type EntryItem } from "@/ui/rowmenu";
 import { members, shelve, type Row, type Shelved } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
@@ -168,13 +172,13 @@ export class NavigatorView extends ItemView {
         void this.openHeading(book, row, heading, event.nativeEvent);
       },
       bookMenu: (event, book) => {
-        this.bookMenu(event.nativeEvent, book);
+        this.bookMenu(event, book);
       },
       entryMenu: (event, book, row, after) => {
-        this.entryMenu(event.nativeEvent, book, row, after);
+        this.entryMenu(event, book, row, after);
       },
       groupMenu: (event, book, heading) => {
-        this.groupMenu(event.nativeEvent, book, heading);
+        this.groupMenu(event, book, heading);
       },
       addMenu: (event, book) => {
         this.addMenu(event.nativeEvent, book, undefined);
@@ -317,8 +321,38 @@ export class NavigatorView extends ItemView {
     return this.shelved.has(note.path) || isBook(noteIndex(this.app), note);
   }
 
-  private bookMenu(event: MouseEvent, book: Shelved): void {
+  /** Starts a row's menu. A phone's sheet opens under the row's name. */
+  private rowMenu(name: string): Menu {
     const menu = new Menu();
+    const title = menuTitle(device(), name);
+    if (title !== undefined) {
+      menu.addItem((item) => item.setTitle(title).setIsLabel(true));
+    }
+    return menu;
+  }
+
+  /** Shows a row's menu where the device puts one. */
+  private raise(menu: Menu, event: Pointed): void {
+    const on = device();
+    const pointer = event.nativeEvent;
+    if (on !== "tablet") {
+      menu.showAtMouseEvent(pointer);
+      return;
+    }
+    // The browser's own menu would open over this one.
+    event.preventDefault();
+    const row = event.currentTarget;
+    menu.showAtPosition(
+      menuPlace(on, row.getBoundingClientRect(), {
+        x: pointer.clientX,
+        y: pointer.clientY,
+      }),
+      row.ownerDocument,
+    );
+  }
+
+  private bookMenu(event: Pointed, book: Shelved): void {
+    const menu = this.rowMenu(book.name);
     menu.addItem((item) =>
       item
         .setTitle("Open the book note")
@@ -339,7 +373,7 @@ export class NavigatorView extends ItemView {
           this.deleteBook(book);
         }),
     );
-    menu.showAtMouseEvent(event);
+    this.raise(menu, event);
   }
 
   /**
@@ -400,8 +434,8 @@ export class NavigatorView extends ItemView {
   }
 
   /** A section is organizational, so its menu never mentions a role. */
-  private groupMenu(event: MouseEvent, book: Shelved, heading: string): void {
-    const menu = new Menu();
+  private groupMenu(event: Pointed, book: Shelved, heading: string): void {
+    const menu = this.rowMenu(heading);
     this.offerAdding(menu, book, heading);
     menu.addSeparator();
     menu.addItem((item) =>
@@ -424,67 +458,93 @@ export class NavigatorView extends ItemView {
           }));
         }),
     );
-    menu.showAtMouseEvent(event);
+    this.raise(menu, event);
   }
 
   private entryMenu(
-    event: MouseEvent,
+    event: Pointed,
     book: Shelved,
     row: Row,
     after: Place,
   ): void {
-    const menu = new Menu();
-    menu.addItem((item) =>
-      item
-        .setTitle("New chapter here")
-        .setIcon("file-plus")
-        .onClick(() => {
+    const menu = this.rowMenu(row.name);
+    const path = row.path;
+    const offers: Record<
+      EntryItem,
+      { title: string; icon: string; run: () => void }
+    > = {
+      markdown: {
+        title: ACTIONS.markdown.label,
+        icon: ACTIONS.markdown.icon,
+        run: () => {
+          if (path !== undefined) void this.openNote(path, "tab");
+        },
+      },
+      preview: {
+        title: ACTIONS.preview.label,
+        icon: ACTIONS.preview.icon,
+        run: () => {
+          void this.previewEntry(book, row);
+        },
+      },
+      chapter: {
+        title: "New chapter here",
+        icon: "file-plus",
+        run: () => {
           void this.newChapter(book, after);
-        }),
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle("Role for this entry…")
-        .setIcon("tag")
-        .onClick(() => {
+        },
+      },
+      role: {
+        title: "Role for this entry…",
+        icon: "tag",
+        run: () => {
           this.reroleEntry(book, row);
-        }),
-    );
-    if (row.kind === "missing") {
-      menu.addItem((item) =>
-        item
-          .setTitle("Locate the note…")
-          .setIcon("search")
-          .onClick(() => {
-            this.locate(book, row);
-          }),
-      );
-    } else if (row.path !== undefined) {
-      const path = row.path;
-      menu.addItem((item) =>
-        item
-          .setTitle("Reveal the note")
-          .setIcon("file-text")
-          .onClick(() => {
-            void this.openNote(path);
-          }),
-      );
-    }
-    // There is no delete here. Removing an entry takes it out of the
-    // book, and the note stays in the vault.
-    menu.addSeparator();
-    menu.addItem((item) =>
-      item
-        .setTitle("Remove from book")
-        .setIcon("minus")
-        .onClick(() => {
+        },
+      },
+      locate: {
+        title: "Locate the note…",
+        icon: "search",
+        run: () => {
+          this.locate(book, row);
+        },
+      },
+      reveal: {
+        title: "Reveal the note",
+        icon: "file-text",
+        run: () => {
+          if (path !== undefined) void this.openNote(path);
+        },
+      },
+      // There is no delete here. Removing an entry takes it out of the
+      // book, and the note stays in the vault.
+      remove: {
+        title: "Remove from book",
+        icon: "minus",
+        run: () => {
           this.change(book.path, (model) => ({
             ...model,
             order: remove(model.order, row.at),
           }));
-        }),
-    );
-    menu.showAtMouseEvent(event);
+        },
+      },
+    };
+    entryItems(device(), row).forEach((group, at) => {
+      if (at > 0) menu.addSeparator();
+      for (const name of group) {
+        const { title, icon, run } = offers[name];
+        menu.addItem((item) => item.setTitle(title).setIcon(icon).onClick(run));
+      }
+    });
+    this.raise(menu, event);
+  }
+
+  /**
+   * Turns the preview in the most recent tab to an entry, or opens the
+   * book's preview when that tab is no preview of it.
+   */
+  private async previewEntry(book: Shelved, row: Row): Promise<void> {
+    if (await this.handoff.turn(book.path, row.at)) return;
+    this.handoff.preview(book.path);
   }
 
   /** Picks a note from the vault and adds it to the book. */
@@ -630,13 +690,13 @@ export class NavigatorView extends ItemView {
   }
 
   /**
-   * Opens a note in the pane the author is reading in. `open` is
-   * Obsidian's own, and it is what puts this view in its leaf.
+   * Opens a note in the pane the author is reading in, or in a new tab.
+   * `open` is Obsidian's own, and it is what puts this view in its leaf.
    */
-  private async openNote(path: string): Promise<void> {
+  private async openNote(path: string, leaf: "tab" | false = false): Promise<void> {
     const note = this.app.vault.getFileByPath(path);
     if (note === null) return;
-    await this.app.workspace.getLeaf(false).openFile(note);
+    await this.app.workspace.getLeaf(leaf).openFile(note);
   }
 
   /**

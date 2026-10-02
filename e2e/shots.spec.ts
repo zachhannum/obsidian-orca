@@ -11,7 +11,7 @@ import { Inspect } from "./harness/inspect";
 import { DENSITY as DISPLAY, SAMPLE } from "./harness/launch";
 import { NAVIGATOR } from "./harness/navigator";
 import { BOOK as BOOK_PAGE, Note } from "./harness/note";
-import { Obsidian, type Scheme } from "./harness/obsidian";
+import { DEVICES, Obsidian, type Device, type Scheme } from "./harness/obsidian";
 import type { Box, Marks, Site } from "./harness/site";
 import { expect, test } from "./harness/test";
 
@@ -463,6 +463,104 @@ test("at phone width the picture is the preview pane alone", async ({
 
   await site.obsidian.moving();
 });
+
+/** A book note that lists nothing, for the picture of a book with no pages. */
+const EMPTY = "Empty book.md";
+
+/**
+ * Takes one picture of the whole window, once every slide a drawer or
+ * a dialog makes has ended.
+ */
+async function pictured(site: Site, name: string): Promise<void> {
+  await site.obsidian.unhovered();
+  await site.obsidian.page.evaluate(async () => {
+    const ending = document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity);
+    await Promise.allSettled(ending.map((animation) => animation.finished));
+  });
+  await expect(site.obsidian.page).toHaveScreenshot(name);
+}
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`the mobile pictures are each surface on a ${device}, in both schemes`, async ({
+    site,
+  }) => {
+    const { obsidian, book, navigator, panel } = site;
+    const exporting = new Export(obsidian);
+    const note = new Note(obsidian);
+    await obsidian.mobile(device, DENSITY);
+    try {
+      await obsidian.page.waitForFunction(
+        (size) => window.innerWidth === size.width && window.devicePixelRatio === size.density,
+        { width: DEVICES[device].width, density: DENSITY },
+      );
+      await obsidian.still();
+      for (const scheme of SCHEMES) {
+        await site.paint(scheme);
+
+        // Mobile keeps the tabs the last scheme opened.
+        await book.close();
+        await obsidian.detach(BOOK_PAGE);
+        await book.open();
+        // The book opens in the view the desktop pictures left it in,
+        // on a page whose first seat may be empty.
+        await expect(book.surface).toHaveAttribute("data-generation", /[1-9]\d*/);
+        await book.uncovered();
+        await book.show("Single page", "single");
+        await book.choose(CHAPTER);
+        await settled(book);
+        await book.footed(device === "phone" ? "under" : "bar");
+        await pictured(site, `mobile-preview-${device}-${scheme}.png`);
+
+        await navigator.drawer();
+        await expect(navigator.book(BOOK)).toHaveCount(1);
+        await pictured(site, `mobile-navigator-${device}-${scheme}.png`);
+
+        await book.uncovered();
+        await panel.open();
+        await pictured(site, `mobile-panel-${device}-${scheme}.png`);
+
+        await book.uncovered();
+        await exporting.open();
+        await exporting.reaches("ready");
+        await pictured(site, `mobile-export-${device}-${scheme}.png`);
+        await exporting.close();
+
+        await obsidian.open(BOOK);
+        await expect(note.column).toBeVisible();
+        await obsidian.collapse("left");
+        await obsidian.collapse("right");
+        await pictured(site, `mobile-book-page-${device}-${scheme}.png`);
+
+        await book.close();
+        await obsidian.detach(BOOK_PAGE);
+        await obsidian.page.evaluate(async (at) => {
+          await window.app.vault.create(at, "---\norca-book: 1\n---\n\n# Body\n");
+        }, EMPTY);
+        try {
+          await obsidian.open(EMPTY);
+          await obsidian.command("orca:open-book");
+          await expect(book.empty).toBeVisible();
+          await book.uncovered();
+          await pictured(site, `mobile-states-${device}-${scheme}.png`);
+        } finally {
+          await book.close();
+          await obsidian.detach(BOOK_PAGE);
+          await obsidian.page.evaluate(async (at) => {
+            const file = window.app.vault.getFileByPath(at);
+            if (file !== null) await window.app.fileManager.trashFile(file);
+          }, EMPTY);
+        }
+      }
+    } finally {
+      await book.close();
+      await obsidian.detach(BOOK_PAGE);
+      await obsidian.moving();
+      await obsidian.emulateMobile(false);
+    }
+  });
+}
 
 test("the vault picture is the file tree and the book note's own Markdown", async ({
   site,
@@ -1405,4 +1503,6 @@ test("the Markdown pictures are each example set on its own page", async ({ site
 // dialog; and what the design panel holds while a chapter rather than a
 // book is being read, which is why the swap pictures are of the pane
 // alone; and a mark written wrongly, which the Markdown page describes
-// and no picture shows.
+// and no picture shows; and the mobile pictures on a device, since they
+// are of desktop Obsidian emulating one, with no safe area and no
+// keyboard.

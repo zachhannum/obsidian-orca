@@ -954,6 +954,8 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
     { use: scene, unread: false },
     { use: head, unread: false },
   ]);
+  // Each is a warning the preview lists, read off how the use resolved.
+  assert.deepEqual(book.unfonted, ["Missing font: Junicode", "Missing font: Alegreya"]);
 
   const note = "Copyright.md";
   const text = `${await readText(vault, note)}\n\n![[nowhere.png]]\n`;
@@ -971,6 +973,18 @@ test("a book keeps the uses that loaded no face and the embeds that brought no b
     { use: scene, unread: false },
     { use: head, unread: false },
   ]);
+  assert.deepEqual(book.unfonted, [
+    "Could not load Nowhere Sans. Using built-in font instead.",
+    "Missing font: Junicode",
+    "Missing font: Alegreya",
+  ]);
+  // The family the engine carries needs no face, and a variant its
+  // family lacks warns by name.
+  const carried = { font: "EB Garamond", variant: undefined };
+  book.restyle(refonted(book.design, carried.font), [
+    { use: carried, registered: undefined, faces: [], fellBack: false, unread: false },
+  ]);
+  assert.deepEqual(book.unfonted, ["Missing font: Junicode", "Missing font: Alegreya"]);
 
   // An embed taken back out of the note stops standing.
   composer.retype(BOOK, note, `${text}.`.replace("![[nowhere.png]]", ""));

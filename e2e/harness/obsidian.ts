@@ -118,6 +118,8 @@ const CHROME = {
   suggestion: ".suggestion-item",
   notice: ".notice",
   status: ".status-bar",
+  /** The bar a phone floats over the foot of its screen. */
+  navbar: ".mobile-navbar",
   tooltip: ".tooltip",
   modal: ".modal",
   buttons: ".titlebar-button-container.mod-right",
@@ -165,6 +167,28 @@ const WINDOW = {
   mobile: false,
 };
 
+/** A device the run emulates. */
+export type Device = "phone" | "tablet";
+
+/**
+ * The size each device is emulated at. Obsidian calls a window a tablet
+ * when both sides are 600px or more and a phone otherwise, so a phone
+ * on its side is still a phone.
+ */
+export const DEVICES: Record<Device, { width: number; height: number }> = {
+  phone: { width: 390, height: 844 },
+  tablet: { width: 1180, height: 820 },
+};
+
+/** The short side of Obsidian mobile's own buttons, in CSS pixels. */
+export const TOUCH = 44;
+
+/** The controls a pointer can press, which a finger has to reach too. */
+const PRESSED = "button, input, select, textarea, [role=button], [role=tab], .clickable-icon";
+
+/** The key Obsidian keeps mobile emulation under, in the renderer's storage. */
+const EMULATING = "EmulateMobile";
+
 /** Timeout for the window to appear, in milliseconds. */
 const APPEARING = 60_000;
 
@@ -173,6 +197,9 @@ export class Obsidian {
     readonly page: Page,
     private readonly session: CDPSession,
   ) {}
+
+  /** The size the renderer was last given. */
+  private sized = { width: WINDOW.width, height: WINDOW.height };
 
   /**
    * Attaches to the window the named vault is open in, sizes it and
@@ -190,9 +217,12 @@ export class Obsidian {
     // Obsidian saves the layout some time after a leaf closes, and a
     // reload before then opens the leaves the last spec closed.
     if (fresh) {
-      await page.evaluate(async () => {
+      // Emulation is kept for every vault, so a spec that died inside
+      // it would leave the next one on a phone.
+      await page.evaluate(async (key) => {
         await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
-      });
+        window.localStorage.removeItem(key);
+      }, EMULATING);
       await page.reload();
     }
     await page.waitForFunction(
@@ -243,6 +273,7 @@ export class Obsidian {
    * it is.
    */
   async size(width: number, height: number, scale = 1): Promise<void> {
+    this.sized = { width, height };
     await this.session.send("Emulation.setDeviceMetricsOverride", {
       ...WINDOW,
       width,
@@ -304,6 +335,7 @@ export class Obsidian {
    * Node is still there under emulation.
    */
   async emulateMobile(on: boolean): Promise<void> {
+    if (!on) await this.size(WINDOW.width, WINDOW.height);
     await this.page.evaluate(async () => {
       await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
     });
@@ -323,6 +355,68 @@ export class Obsidian {
         document.body.classList.contains("emulate-mobile") === mobile,
       { mobile: on, id: PLUGIN },
       { timeout: APPEARING },
+    );
+  }
+
+  /**
+   * Emulates a device: the window takes its size and loads on the
+   * mobile paths. Obsidian reads the size as it loads, and an open view
+   * hears of no change after that, so a change of device loads the
+   * window again.
+   */
+  async mobile(device: Device, scale = 1): Promise<void> {
+    const { width, height } = DEVICES[device];
+    await this.size(width, height, scale);
+    const emulating = await this.page.evaluate(() =>
+      document.body.classList.contains("emulate-mobile"),
+    );
+    if (emulating) await this.reload();
+    else await this.emulateMobile(true);
+    await this.page.waitForFunction(
+      ({ kind, id }) =>
+        document.body.classList.contains(`is-${kind}`) &&
+        window.app.plugins.plugins[id] !== undefined,
+      { kind: device, id: PLUGIN },
+      { timeout: APPEARING },
+    );
+  }
+
+  /**
+   * Turns the device on its side, or upright again. Only the shape of
+   * the window changes: the window is not loaded again, as a device
+   * that is turned is not.
+   */
+  async turn(): Promise<void> {
+    await this.size(this.sized.height, this.sized.width);
+  }
+
+  /**
+   * The controls under a root that a finger cannot reach: each one
+   * drawn with a short side under the size of Obsidian mobile's own
+   * buttons. A control inside a label is reached through the label, so
+   * it takes the label's box.
+   */
+  async cramped(root: string): Promise<string[]> {
+    return this.page.evaluate(
+      ({ within, pressed, least }) => {
+        const small: string[] = [];
+        for (const top of document.querySelectorAll(within)) {
+          for (const control of top.querySelectorAll<HTMLElement>(pressed)) {
+            if (control.matches(":disabled") || !control.checkVisibility()) continue;
+            const box = (control.closest("label") ?? control).getBoundingClientRect();
+            if (box.width === 0 || box.height === 0) continue;
+            const short = Math.min(box.width, box.height);
+            if (short >= least - 0.5) continue;
+            const name =
+              control.getAttribute("data-testid") ??
+              control.getAttribute("aria-label") ??
+              control.className;
+            small.push(`${name} ${Math.round(box.width)}x${Math.round(box.height)}`);
+          }
+        }
+        return small;
+      },
+      { within: root, pressed: PRESSED, least: TOUCH },
     );
   }
 
@@ -515,6 +609,14 @@ export class Obsidian {
     }, id);
   }
 
+  /** Whether the palette has a command at all. */
+  async registered(id: string): Promise<boolean> {
+    return this.page.evaluate(
+      (named) => window.app.commands.commands[named] !== undefined,
+      id,
+    );
+  }
+
   /**
    * Whether a command offers itself to be run, which is what greys it
    * out of the palette. `executeCommandById` answers that it dispatched
@@ -691,6 +793,13 @@ export class Obsidian {
       const { leftSplit, rightSplit } = window.app.workspace;
       return (on === "left" ? leftSplit : rightSplit).collapsed;
     }, side);
+  }
+
+  /** The top of the bar a phone floats over the foot of its screen. */
+  async navbar(): Promise<number> {
+    const box = await this.page.locator(CHROME.navbar).boundingBox();
+    if (box === null) throw new Error("the window draws no bar at its foot");
+    return box.y;
   }
 
   /** Whether that sidebar is collapsed. */

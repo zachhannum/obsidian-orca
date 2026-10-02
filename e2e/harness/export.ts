@@ -12,7 +12,18 @@ import type { Obsidian } from "./obsidian";
 /** The command that opens the dialog on the active book. */
 export const EXPORT_PDF = "orca:export-pdf";
 
+/**
+ * The selector of what orca draws in the dialog, for a sweep of the
+ * controls under it. The modal's own close button is Obsidian's.
+ */
+export const DIALOG = ".orca-export-host";
+
 export class Export {
+  readonly cancel: Locator;
+  /** The button that shuts a written export. */
+  readonly done: Locator;
+  /** The label of the Save to field. */
+  readonly label: Locator;
   /** The modal, which carries `data-state`, `data-formats` and `data-errors`. */
   readonly dialog: Locator;
   /**
@@ -41,6 +52,9 @@ export class Export {
     this.destination = this.dialog.getByTestId("orca-export-destination");
     this.choose = this.dialog.getByTestId("orca-export-choose");
     this.write = this.dialog.getByTestId("orca-export-write");
+    this.cancel = this.dialog.getByTestId("orca-export-cancel");
+    this.done = this.dialog.getByTestId("orca-export-done");
+    this.label = this.dialog.getByTestId("orca-export-label");
     this.errors = this.dialog.getByTestId("orca-export-error");
     this.fine = this.dialog.getByTestId("orca-export-fine");
     this.said = this.dialog.getByTestId("orca-export-said");

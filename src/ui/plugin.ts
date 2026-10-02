@@ -3,6 +3,7 @@ import {
   MarkdownView,
   Notice,
   addIcon,
+  Platform,
   Plugin,
   TFile,
   TFolder,
@@ -22,7 +23,8 @@ import { Pool, engineName, type Engine } from "@/engine/pool";
 import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
-import { node, onDesktop } from "@/ui/desktop";
+import { device, node, onDesktop } from "@/ui/desktop";
+import { splits } from "@/ui/device";
 import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
@@ -56,6 +58,7 @@ import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
+import { phoneRoutes } from "@/ui/phone";
 import { pick } from "@/ui/pick";
 import {
   PREVIEW_VIEW,
@@ -281,35 +284,37 @@ export default class OrcaPlugin extends Plugin implements Limited {
         void this.openPanel();
       },
     });
-    this.addCommand({
-      id: "preview-to-the-right",
-      name: "Open preview to the right",
-      checkCallback: (checking) => {
-        const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-        const member =
-          file === null || file === undefined
-            ? undefined
-            : this.members.get(file.path);
-        if (member === undefined || file === null || file === undefined) {
-          return false;
-        }
-        if (!checking) void this.splitPreview(file, member);
-        return true;
-      },
-    });
-    this.addCommand({
-      id: "manuscript-to-the-left",
-      name: "Open manuscript to the left",
-      checkCallback: (checking) => {
-        const view = this.app.workspace.getActiveViewOfType(PreviewView);
-        const note = view?.note;
-        if (view === null || view === undefined || note === undefined) {
-          return false;
-        }
-        if (!checking) void this.splitManuscript(view, note);
-        return true;
-      },
-    });
+    if (splits(device())) {
+      this.addCommand({
+        id: "preview-to-the-right",
+        name: "Open preview to the right",
+        checkCallback: (checking) => {
+          const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+          const member =
+            file === null || file === undefined
+              ? undefined
+              : this.members.get(file.path);
+          if (member === undefined || file === null || file === undefined) {
+            return false;
+          }
+          if (!checking) void this.splitPreview(file, member);
+          return true;
+        },
+      });
+      this.addCommand({
+        id: "manuscript-to-the-left",
+        name: "Open manuscript to the left",
+        checkCallback: (checking) => {
+          const view = this.app.workspace.getActiveViewOfType(PreviewView);
+          const note = view?.note;
+          if (view === null || view === undefined || note === undefined) {
+            return false;
+          }
+          if (!checking) void this.splitManuscript(view, note);
+          return true;
+        },
+      });
+    }
     this.addCommand({
       id: "inspect-page",
       name: "Inspect the page",
@@ -387,8 +392,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
         this.swap();
         if (file === null) return;
         // A book nobody can reorder is what a collapsed sidebar would
-        // otherwise mean.
-        if (isBook(this.notes(), file)) void this.show();
+        // otherwise mean. On mobile the sidebar is a drawer over the
+        // note, which shuts as the note opens.
+        if (device() === "desktop" && isBook(this.notes(), file)) void this.show();
         this.turned(file);
       }),
     );
@@ -518,6 +524,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * the item down with the leaf that was reading.
    */
   private reading(from: WorkspaceLeaf, text: string | undefined): void {
+    // Mobile has no status bar, and the preview draws the folio itself.
+    if (device() !== "desktop") return;
     if (text === undefined) {
       // The bar is the window's, not the leaf's, so a split that leaves
       // another preview reading keeps it.
@@ -810,7 +818,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
   /** `Open preview to the right`, for a note that belongs to a book. */
   private offerSplitting(menu: Menu, note: TFile): void {
     const member = this.members.get(note.path);
-    if (member === undefined) return;
+    if (member === undefined || !splits(device())) return;
     menu.addItem((item) =>
       item
         .setTitle("Open preview to the right")
@@ -1411,7 +1419,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   private places(): Promise<FontPlaces> {
-    this.fonts ??= fontPlaces(this.files(), onDesktop() ? node : undefined);
+    this.fonts ??= fontPlaces(
+      this.files(),
+      onDesktop() ? node : undefined,
+      Platform.isIosApp ? phoneRoutes(window) : undefined,
+    );
     return this.fonts;
   }
 

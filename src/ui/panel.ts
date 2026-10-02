@@ -3,7 +3,6 @@ import type { Cover } from "@/assets/cmap";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
   bookUses,
-  designFonts,
   type Design,
   type FontUse,
   type PageUnit,
@@ -18,12 +17,6 @@ import { groupRules } from "@/style/layers";
 import type { ResolvedUse } from "@/ui/fonts";
 import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
 import type { Inspecting } from "@/ui/pane";
-import {
-  missingAdded,
-  missingFont,
-  missingFonts,
-  missingVariants,
-} from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -66,8 +59,6 @@ export interface Designing {
 export class DesignPanelView extends ItemView {
   private mounted: Mounted | undefined;
   private watching: (() => void) | undefined;
-  /** The last pick whose files would not read. The panel warns about it. */
-  private unread: string | undefined;
   /** Counts the paints, so a scan that lands late does not overwrite a later one. */
   private painting = 0;
   /** The fonts the machine has, once the first scan lands. */
@@ -266,10 +257,6 @@ export class DesignPanelView extends ItemView {
     if (typeset === undefined) return;
     const design = withFont(typeset.design, key, font.name);
     const resolved = await this.resolve(design, typeset.added);
-    const want = font.name.toLowerCase();
-    this.unread = resolved.some((each) => each.unread && each.use.font.toLowerCase() === want)
-      ? font.name
-      : undefined;
     await this.settle(typeset, design, resolved);
   }
 
@@ -431,7 +418,7 @@ export class DesignPanelView extends ItemView {
       unit: this.designing.unit(),
       language: typeset.language,
       fonts: typeset.added,
-      missing: this.warnings(index, typeset.design, typeset.added),
+      missing: typeset.unfonted.length,
       warned: flags.length,
       inspecting: this.inspecting(typeset),
       overridden: typeset.overridden(refused),
@@ -463,29 +450,4 @@ export class DesignPanelView extends ItemView {
     }));
     return { pin, layers, caret: editor?.caret().line };
   }
-
-  /**
-   * The warnings for the fonts and variants a book asks for: the body's,
-   * each heading level's and each font the book adds.
-   */
-  private warnings(index: FontIndex, design: Design, added: readonly string[]): string[] {
-    const unread = this.unread;
-    const missing = [
-      ...missingFonts(index, design),
-      ...missingVariants(index, design),
-      ...missingAdded(index, design, added),
-    ];
-    if (unread === undefined || !designFonts(design).includes(unread)) {
-      return missing;
-    }
-    return [
-      unreadable(unread),
-      ...missing.filter((said) => said !== missingFont(index, unread)),
-    ];
-  }
-}
-
-/** The warning for a font whose files would not read. */
-function unreadable(font: string): string {
-  return `Could not load ${font}. Using built-in font instead.`;
 }

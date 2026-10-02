@@ -41,6 +41,7 @@ import {
   type RefObject,
 } from "react";
 import { ACTIONS } from "@/ui/actions";
+import { device } from "@/ui/desktop";
 import type { Place } from "@/book/order";
 import { ROLES } from "@/book/roles";
 import {
@@ -159,7 +160,7 @@ export interface Mounted {
  * else empties the element underneath.
  */
 export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
-  const host = el.createDiv();
+  const host = el.createDiv({ cls: "orca-nav-host" });
   const root = createRoot(host);
   let shelf: Shelved[] = [];
   let generation = 0;
@@ -295,7 +296,8 @@ const clamp = (value: number, low: number, high: number): number =>
 
 /**
  * A row's words. Words the row cuts short with an ellipsis name
- * themselves in a tooltip, and words that fit raise none.
+ * themselves in a tooltip, and words that fit raise none. Mobile has
+ * no tooltip, and a row there wraps instead.
  */
 function Label({ words }: { words: string }): JSX.Element {
   return (
@@ -304,6 +306,7 @@ function Label({ words }: { words: string }): JSX.Element {
       // Obsidian raises its tooltip on the mouseover that follows, so
       // the words are set before it reads them.
       onPointerEnter={(event) => {
+        if (device() !== "desktop") return;
         const label = event.currentTarget;
         setTooltip(label, label.scrollWidth > label.clientWidth ? words : "");
       }}
@@ -325,7 +328,9 @@ function Action({
 }): JSX.Element {
   const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (ref.current !== null) setTooltip(ref.current, label);
+    if (ref.current !== null && device() === "desktop") {
+      setTooltip(ref.current, label);
+    }
   }, [label]);
   return (
     <button
@@ -387,7 +392,7 @@ export function Shelf({
             icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
             label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
             onClick={() => {
-              setFolds(open ? collapseAll(folds, shelf) : expandAll(folds));
+              setFolds(open ? collapseAll(folds, shelf) : expandAll());
             }}
           />
         )}

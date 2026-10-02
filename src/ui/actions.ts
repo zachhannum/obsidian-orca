@@ -18,7 +18,7 @@ export const ACTIONS = {
   css: { icon: "code", label: "CSS" },
   controls: { icon: "sliders-horizontal", label: "Controls" },
   wrap: { icon: "wrap-text", label: "Wrap long lines" },
-  newBook: { icon: "plus", label: "New book" },
+  newBook: { icon: "book-plus", label: "New book" },
   collapseAll: { icon: "chevrons-down-up", label: "Collapse all" },
   expandAll: { icon: "chevrons-up-down", label: "Expand all" },
 } as const satisfies Record<string, Action>;
