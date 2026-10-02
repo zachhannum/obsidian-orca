@@ -190,6 +190,12 @@ underneath them.
 
 ## PR creation and CI
 
+- An issue that needs code changes is not done until a PR is open for
+  it. Open the PR yourself when the work is committed and the local CI
+  mirror is green. Do not stop at a pushed branch.
+- CI must pass on the PR before a human reviews it. Watch the run, fix
+  a red job and push again. Do not hand over a PR with a failing or
+  pending check.
 - One issue per branch: `feat/<issue>-slug`, `chore/<issue>-slug`,
   `fix/<issue>-slug`.
 - PR description references the issue with `Closes #N`. The issue's
