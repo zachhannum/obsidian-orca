@@ -123,6 +123,9 @@ jobs:
       group: pages-branch
       cancel-in-progress: false
     steps:
+      # The action commits to the Pages branch from a clone.
+      - uses: actions/checkout@v5
+
       - uses: actions/download-artifact@v5
         if: github.event.action != 'closed'
         with:

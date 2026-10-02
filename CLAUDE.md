@@ -246,8 +246,8 @@ job keeps its HTML report as an artifact.
 site's tokens, and on the same paths on main. Its `build` job installs
 the site's own lockfile and runs `npm run build` in `site/`, which
 checks the tokens against `design/site.css` before it builds. On main
-the `deploy` job puts the result on the `gh-pages` branch, which GitHub
-Pages serves, keeps the `pr-preview` folder, and checks the live docs.
+the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
+serves, keeps the `pr-preview` folder, and checks the live docs.
 
 `.github/workflows/preview.yml` runs on a PR that touches `site/` or
 `design/`. It builds the docs under `SITE_BASE`, builds the artboards

@@ -61,6 +61,8 @@ jobs:
       group: pages-branch
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v5
+
       - uses: actions/download-artifact@v5
         with:
           name: site
