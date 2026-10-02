@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>orca design</title>
+<style>
+  :root { --bg: #f1efec; --dot: #d6d2cc; --card: #fff; --ink: #1f1d1b; --mute: #6f6a64; --line: #d9d5cf; --accent: #6d4ae8; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17161a; --dot: #2b2a30; --card: #222126; --ink: #ecebef; --mute: #9d9aa6; --line: #34333a; --accent: #9b83ff; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; overscroll-behavior: none; }
+  #view { position: fixed; inset: 0; touch-action: none; cursor: grab; background-image: radial-gradient(var(--dot) 1px, transparent 1px); }
+  #view.drag { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .board { position: absolute; }
+  .board .bar { position: absolute; left: 0; bottom: 100%; padding-bottom: 6px; display: flex; gap: 8px; white-space: nowrap; font-size: 12px; color: var(--mute); }
+  .board .bar b { color: var(--ink); font-weight: 600; }
+  .board .bar i { font-style: normal; background: var(--accent); color: #fff; border-radius: 9px; padding: 0 8px; }
+  .board .frame { position: absolute; inset: 0; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 6px 24px rgba(0,0,0,.12); overflow: hidden; }
+  .board.changed .frame { box-shadow: 0 0 0 2px var(--accent), 0 6px 24px rgba(0,0,0,.12); }
+  .board iframe { border: 0; width: 100%; height: 100%; pointer-events: none; background: transparent; }
+  .note { position: absolute; background: #fff6c8; color: #3b3510; padding: 16px 18px; font-size: 15px; line-height: 1.5; white-space: pre-wrap; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+  header { position: fixed; top: 0; left: 0; right: 0; z-index: 2; display: flex; gap: 6px; align-items: center; padding: 8px 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); overflow-x: auto; }
+  header h1 { font-size: 13px; margin: 0 8px 0 0; white-space: nowrap; }
+  header button { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; white-space: nowrap; cursor: pointer; }
+  header button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  header .gap { flex: 1; }
+  header .count { font-size: 11px; opacity: .85; margin-left: 4px; }
+  #base { color: var(--mute); white-space: nowrap; }
+</style>
+</head>
+<body>
+<header id="bar"><h1>The v1 design</h1></header>
+<div id="view"><div id="world"></div></div>
+<script>
+const CANVAS = /*CANVAS*/;
+const CHANGED = /*CHANGED*/;
+const AGAINST = /*AGAINST*/;
+const SHEETS = /*SHEETS*/;
+
+const $ = (id) => document.getElementById(id);
+const view = $('view'), world = $('world'), bar = $('bar');
+const view_ = { x: 0, y: 0, k: 1 };
+let theme = new URLSearchParams(location.search).get('theme') === 'light' ? 'light' : 'dark';
+let page = null;
+const key = (a) => a.file.replace('.dc.html', '');
+const isChanged = (a) => CHANGED.includes(key(a));
+
+function apply() { world.style.transform = `translate(${view_.x}px, ${view_.y}px) scale(${view_.k})`;
+  const s = 24 * view_.k; view.style.backgroundSize = `${s}px ${s}px`; view.style.backgroundPosition = `${view_.x}px ${view_.y}px`; }
+
+function zoomAt(cx, cy, k) {
+  k = Math.min(2, Math.max(0.03, k));
+  view_.x = cx - (cx - view_.x) * (k / view_.k); view_.y = cy - (cy - view_.y) * (k / view_.k); view_.k = k; apply();
+}
+
+function boxOf(items) {
+  const xs = items.flatMap((a) => [a.x, a.x + a.w]), ys = items.flatMap((a) => [a.y - 28, a.y + (a.h ?? 200)]);
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+function fit() {
+  const items = [...CANVAS.artboards, ...CANVAS.annotations].filter((a) => a.page === page);
+  if (!items.length) return;
+  const b = boxOf(items), top = 52, pad = 24;
+  const k = Math.min((innerWidth - pad * 2) / (b.x1 - b.x0), (innerHeight - top - pad) / (b.y1 - b.y0), 1);
+  view_.k = k; view_.x = (innerWidth - (b.x1 - b.x0) * k) / 2 - b.x0 * k; view_.y = top + (innerHeight - top - (b.y1 - b.y0) * k) / 2 - b.y0 * k; apply();
+}
+
+function draw() {
+  world.replaceChildren();
+  for (const a of CANVAS.artboards.filter((a) => a.page === page)) {
+    const el = document.createElement('div');
+    el.className = 'board' + (isChanged(a) ? ' changed' : '');
+    Object.assign(el.style, { left: a.x + 'px', top: a.y + 'px', width: a.w + 'px', height: a.h + 'px' });
+    el.dataset.href = key(a) + '.html' + (SHEETS[key(a)] === 'chrome.css' ? '?theme=' + theme : '');
+    const bar = document.createElement('div'); bar.className = 'bar';
+    bar.innerHTML = '<b></b><span></span>'; bar.firstChild.textContent = a.title; bar.lastChild.textContent = `${a.w}×${a.h}`;
+    if (isChanged(a)) { const i = document.createElement('i'); i.textContent = 'Changed'; bar.append(i); }
+    const frame = document.createElement('div'); frame.className = 'frame';
+    const f = document.createElement('iframe'); f.loading = 'lazy'; f.title = a.title; f.src = el.dataset.href;
+    frame.append(f); el.append(bar, frame); world.append(el);
+  }
+  for (const n of CANVAS.annotations.filter((n) => n.page === page)) {
+    const el = document.createElement('div'); el.className = 'note'; el.textContent = n.text;
+    Object.assign(el.style, { left: n.x + 'px', top: n.y + 'px', width: n.w + 'px' }); world.append(el);
+  }
+}
+
+function show(id) {
+  page = id; draw(); fit();
+  for (const b of bar.querySelectorAll('[data-page]')) b.setAttribute('aria-pressed', String(b.dataset.page === id));
+}
+
+function tools() {
+  for (const p of CANVAS.pages) {
+    const b = document.createElement('button'); b.dataset.page = p.id; b.textContent = p.name;
+    const n = CANVAS.artboards.filter((a) => a.page === p.id && isChanged(a)).length;
+    if (n) { const c = document.createElement('span'); c.className = 'count'; c.textContent = `· ${n} changed`; b.append(c); }
+    b.onclick = () => show(p.id); bar.append(b);
+  }
+  const gap = document.createElement('span'); gap.className = 'gap'; bar.append(gap);
+  const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; bar.append(b); return b; };
+  mk('Fit', fit);
+  mk('100%', () => zoomAt(innerWidth / 2, innerHeight / 2, 1));
+  const t = mk(theme === 'dark' ? 'Dark' : 'Light', () => { theme = theme === 'dark' ? 'light' : 'dark'; t.textContent = theme === 'dark' ? 'Dark' : 'Light'; draw(); });
+  t.title = 'The theme of the plugin artboards';
+  const base = document.createElement('span'); base.id = 'base'; base.textContent = AGAINST ? `Changed against ${AGAINST}` : ''; bar.append(base);
+}
+
+// Wheel pans, a pinch or ctrl+wheel zooms; a drag pans; a tap on an artboard opens it.
+view.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, view_.k * Math.exp(-e.deltaY * 0.01));
+  else { view_.x -= e.deltaX; view_.y -= e.deltaY; apply(); }
+}, { passive: false });
+
+const pointers = new Map(); let moved = 0, pinch = 0;
+view.addEventListener('pointerdown', (e) => { view.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; if (pointers.size === 2) pinch = 0; view.classList.add('drag'); });
+view.addEventListener('pointermove', (e) => {
+  const p = pointers.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p[0], dy = e.clientY - p[1]; moved += Math.abs(dx) + Math.abs(dy);
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()]; const before = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    const [c, d] = [...pointers.values()]; const after = Math.hypot(c[0] - d[0], c[1] - d[1]);
+    if (before > 0) zoomAt((c[0] + d[0]) / 2, (c[1] + d[1]) / 2, view_.k * (after / before));
+    return;
+  }
+  pointers.set(e.pointerId, [e.clientX, e.clientY]); view_.x += dx; view_.y += dy; apply();
+});
+const up = (e) => {
+  const tap = pointers.size === 1 && moved < 8 && e.type === 'pointerup';
+  pointers.delete(e.pointerId); if (!pointers.size) view.classList.remove('drag');
+  if (tap) { const board = document.elementsFromPoint(e.clientX, e.clientY).find((n) => n.classList?.contains('board')); if (board) location.href = board.dataset.href; }
+};
+view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+addEventListener('resize', fit);
+
+tools();
+const first = CANVAS.artboards.find(isChanged)?.page ?? CANVAS.launch.page ?? CANVAS.pages[0].id;
+show(first);
+</script>
+</body>
+</html>

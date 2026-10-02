@@ -34,6 +34,7 @@ The docs site does not use Obsidian's tokens. Its own are in
   names its stylesheet, its script and its tweaks.
 - `canvas.json`, where the artboards sit, the pages, the sticky notes.
 - `build.mjs`, which wraps each part into a `.dc.html`.
+- `canvas.html`, the page that draws the canvas in a preview.
 
 ## Rebuilding
 
@@ -49,8 +50,10 @@ node build.mjs --into <dir> --against <ref>
 ```
 
 This writes a page a browser opens for each part, and an index that
-marks the parts changed against `<ref>`. A pull request's preview is
-built this way.
+draws `canvas.json` as a canvas: every artboard where it sits, live, with
+the parts changed against `<ref>` marked. Drag or scroll to pan, pinch or
+hold ctrl and scroll to zoom, tap an artboard to open it. A pull request's
+preview is built this way.
 
 Publishing the canvas needs Claude Code's `design` skill, which seeds
 its editor around these files and returns a URL. The artboard list and

@@ -193,7 +193,7 @@ test("a preview builds the docs, the artboards or both, and never the pictures o
   assert.doesNotMatch(preview, /git (add|commit)/);
 });
 
-test("the artboards open from an index that marks the ones a branch changed", async () => {
+test("the artboards sit on a canvas that marks the ones a branch changed", async () => {
   const repo = await mkdtemp(path.join(tmpdir(), "design-"));
   const git = (...args) => execFileSync("git", args, { cwd: repo, stdio: "pipe" });
   await cp(path.join(root, "design"), path.join(repo, "design"), {
@@ -215,9 +215,14 @@ test("the artboards open from an index that marks the ones a branch changed", as
   const index = await readFile(path.join(out, "index.html"), "utf8");
   const sizes = JSON.parse(await read("design/sizes.json"));
   for (const name of Object.keys(sizes)) await access(path.join(out, `${name}.html`));
-  assert.deepEqual([...index.matchAll(/<li class="changed"><a href="([^"]+)"/g)].map((m) => m[1]), [
-    "Navigator.html",
-  ]);
+  const marked = /const CHANGED = (\[.*\]);/.exec(index);
+  assert.ok(marked, "no list of changed artboards");
+  assert.deepEqual(JSON.parse(marked[1]), ["Navigator"]);
+  // Every artboard the canvas places has a page to open.
+  const canvas = JSON.parse(await read("design/canvas.json"));
+  for (const board of canvas.artboards) {
+    await access(path.join(out, board.file.replace(".dc.html", ".html")));
+  }
   await rm(repo, { recursive: true });
 });
 

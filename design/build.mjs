@@ -40,8 +40,6 @@ const changedFiles = () => {
   return new Set(out.split('\n').filter(Boolean).map((f) => f.replace(/^design\//, '')));
 };
 
-const escape = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-
 const standalone = (name, s) => {
   const css = s.sheet ?? 'chrome.css';
   const site = css !== 'chrome.css';
@@ -83,33 +81,18 @@ const buildInto = (dir) => {
     writeFileSync(`${dir}/${name}.html`, standalone(name, s));
     const touched = [`parts/${name}.html`, s.script && `parts/${s.script}`, s.sheet ?? 'chrome.css'];
     const mark = touched.some((f) => f && changed.has(f));
-    const theme = (s.sheet ?? 'chrome.css') === 'chrome.css' ? ` · <a href="${name}.html?theme=light">light</a>` : '';
-    return { mark, html: `<li${mark ? ' class="changed"' : ''}><a href="${name}.html">${escape(name)}</a>${theme}${mark ? ' <b>changed</b>' : ''}</li>` };
+    return { name, mark };
   });
-  const list = [...rows.filter((r) => r.mark), ...rows.filter((r) => !r.mark)];
-  const note = against ? `Changed against ${escape(against)}.` : 'No base to compare with, so none is marked.';
-  writeFileSync(`${dir}/index.html`, `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>orca design</title>
-  <style>
-    body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
-    ul { padding-left: 1.2rem; }
-    b { font-size: 0.75em; text-transform: uppercase; color: #b45309; }
-    .changed { font-weight: 600; }
-  </style>
-</head>
-<body>
-<h1>The v1 design</h1>
-<p>${note}</p>
-<ul>
-${list.map((r) => r.html).join('\n')}
-</ul>
-</body>
-</html>
-`);
+  const canvas = JSON.parse(readFileSync('canvas.json', 'utf8'));
+  const data = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
+  const sheets = Object.fromEntries(Object.entries(sizes).map(([n, s]) => [n, s.sheet ?? 'chrome.css']));
+  const marked = rows.filter((r) => r.mark).map((r) => r.name);
+  const index = readFileSync('canvas.html', 'utf8')
+    .replace('/*CANVAS*/', () => data(canvas))
+    .replace('/*CHANGED*/', () => data(marked))
+    .replace('/*AGAINST*/', () => data(against ?? ''))
+    .replace('/*SHEETS*/', () => data(sheets));
+  writeFileSync(`${dir}/index.html`, index);
   process.stdout.write(`${rows.length} artboards in ${dir}\n`);
 };
 
