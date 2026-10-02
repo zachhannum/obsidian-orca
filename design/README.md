@@ -326,7 +326,8 @@ replaces them.
   and under the page in a narrower one. The warnings open over the
   page from the count, and a tap on the page shuts them.
 - The navigator's `New book` on mobile is a button with its name in
-  it. `Collapse all` beside it is an icon. On a phone the two are at
+  it. `Collapse all` beside it is an icon in a circle of the same
+  fill. On a phone the two are at
   the foot of the drawer, however short the list.
 - Nothing on mobile waits for a pointer. A tap on a lock opens its
   card. A book's row in the navigator shows `Open preview` and `Add to

@@ -3086,8 +3086,12 @@ input.orca-panel-filter {
   margin-left: calc(-1 * var(--size-4-2));
 }
 
+/* The drawer's buttons are one set: each is filled as Obsidian mobile
+   fills a button, an icon in a circle and a name in a pill. */
 .is-mobile .orca-nav-header button.orca-nav-action {
-  --icon-size: var(--icon-l);
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  --icon-size: var(--icon-s);
 }
 
 /* `New book` says what it makes, in the pill Obsidian mobile draws a
@@ -3096,11 +3100,8 @@ input.orca-panel-filter {
   gap: var(--size-4-2);
   width: auto;
   padding: 0 var(--size-4-4) 0 var(--size-4-3);
-  background: var(--interactive-normal);
-  color: var(--text-normal);
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
-  --icon-size: var(--icon-s);
 }
 
 /* mobile: design panel */
