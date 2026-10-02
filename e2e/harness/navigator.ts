@@ -303,6 +303,54 @@ export class Navigator {
   }
 
   /**
+   * Drags a row by its handle with a finger, over CDP, and lifts it on
+   * the row it lands on. The finger moves away before it travels, as
+   * the mouse does, so the drag starts where the handle is.
+   */
+  async touchDrag(from: Locator, to: Locator, onto: Onto): Promise<void> {
+    const handle = from.getByTestId("orca-handle");
+    const start = await box(handle);
+    const end = await box(to);
+    const x = start.x + start.width / 2;
+    const y = start.y + start.height / 2;
+    const land = onto === "above" ? end.y + 2 : end.y + end.height - 2;
+    const { obsidian } = this;
+    await obsidian.touch("touchStart", [{ x, y }]);
+    try {
+      for (let step = 1; step <= 5; step++) {
+        await obsidian.touch("touchMove", [{ x, y: y + step * 2 }]);
+      }
+      for (let step = 1; step <= 15; step++) {
+        await obsidian.touch("touchMove", [{ x, y: y + 10 + ((land - y - 10) * step) / 15 }]);
+      }
+      await obsidian.touch("touchMove", [{ x, y: land }]);
+      await obsidian.touch("touchEnd", []);
+    } catch (cause) {
+      await obsidian.touch("touchCancel", []);
+      throw cause;
+    }
+  }
+
+  /**
+   * Swipes a finger up the list from a point on a row, and returns how
+   * far the list scrolled and whether a drag began.
+   */
+  async swipe(from: Locator): Promise<{ scrolled: number; dragged: boolean }> {
+    const at = await box(from);
+    const x = at.x + GRIP;
+    const y = at.y + at.height / 2;
+    const before = await this.reach();
+    await this.obsidian.touch("touchStart", [{ x, y }]);
+    for (let step = 1; step <= 10; step++) {
+      await this.obsidian.touch("touchMove", [{ x, y: y - step * 6 }]);
+    }
+    const dragged = (await this.pane.locator(".is-dragged").count()) > 0;
+    await this.obsidian.touch("touchEnd", []);
+    const after = await this.reach();
+    return { scrolled: after.top - before.top, dragged };
+  }
+
+  /**
    * Drags one row onto another. dnd-kit starts a drag once the
    * pointer has travelled its activation distance, so the pointer moves
    * away before it travels to where it lands. `during` runs while the

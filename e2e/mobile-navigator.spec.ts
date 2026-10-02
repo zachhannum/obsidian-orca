@@ -272,10 +272,46 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
+test("on a phone a touch drag on a row's handle moves it and the note agrees, and a touch drag on the rest of the row starts none", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await obsidian.mobile("phone");
+  try {
+    await navigator.reveal();
+    await navigator.painted();
+    await expect(navigator.entry(BOOK, CHAPTER).getByTestId("orca-handle")).toBeVisible();
+    await expect(navigator.group(BOOK, SECTION).getByTestId("orca-handle")).toBeVisible();
+    expect(await navigator.pane.getByTestId("orca-handle").first().boundingBox()).toMatchObject({
+      width: TOUCH,
+    });
+
+    // A finger on the row's body scrolls the list and holds nothing.
+    const swipe = await navigator.swipe(navigator.entry(BOOK, CHAPTER));
+    expect(swipe.dragged).toBe(false);
+    if ((await navigator.reach()).most > 0) expect(swipe.scrolled).toBeGreaterThan(0);
+    expect(await vault.read(BOOK)).not.toContain("- [[Chapter Four]]\n- [[Volume the First]]");
+
+    await navigator.touchDrag(
+      navigator.entry(BOOK, "Chapter Four"),
+      navigator.entry(BOOK, "Volume the First"),
+      "above",
+    );
+    await expect
+      .poll(async () => vault.read(BOOK))
+      .toContain("- [[Chapter Four]]\n- [[Volume the First]] `part`\n");
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
 // What this suite does not cover: the press itself. A finger held on a
 // row for the time the system asks is a wait on a clock, so the
 // `contextmenu` event the press ends in is sent in its place. Nor does
 // it cover a real touch screen, where no pointer hovers at all: the
 // tooltip check here reads the page straight after the pointer arrives,
-// and a tooltip raised later would pass it. The drag handles and a tap
-// on a chapter that closes the drawer are not built here.
+// and a tooltip raised later would pass it. A tap
+// on a chapter that closes the drawer is not built here. Nor is a
+// drag on a tablet with a mouse, which takes the desktop path.

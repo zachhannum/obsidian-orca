@@ -170,6 +170,8 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     "Acknowledgements",
   ]);
 
+  // Desktop drags from the row and draws no handle.
+  await expect(navigator.pane.getByTestId("orca-handle")).toHaveCount(0);
   await navigator.drag(
     navigator.entry(BOOK, "Chapter Four"),
     navigator.entry(BOOK, "Volume the First"),
