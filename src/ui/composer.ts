@@ -10,6 +10,7 @@
  * same one opened again, waits for nothing.
  */
 
+import { CARRIED } from "@/ui/picker";
 import { styleOp, type Op, type Sheet } from "fleuron";
 import { Registry } from "@/assets/registry";
 import type { VaultAdapter } from "@/assets/vault";
@@ -115,6 +116,8 @@ export class Typeset {
   private registered: Registered[];
   /** The uses whose font files would not read, by their key. */
   private readonly unreadFaces = new Set<string>();
+  /** The uses whose family lacks the variant asked for, so the default one is set. */
+  private readonly fellBack = new Set<string>();
   /** The embeds each note has that brought no bytes, by the note's path. */
   private readonly unreadIn = new Map<string, Unread[]>();
   private own: string;
@@ -180,6 +183,7 @@ export class Typeset {
     this.registered = book.registered;
     for (const each of book.resolved ?? []) {
       if (each.unread) this.unreadFaces.add(useKey(each.use));
+      if (each.fellBack) this.fellBack.add(useKey(each.use));
     }
     for (const at of book.unread ?? []) {
       this.unreadIn.set(at.note, [...(this.unreadIn.get(at.note) ?? []), at]);
@@ -356,6 +360,30 @@ export class Typeset {
     });
   }
 
+  /**
+   * The warnings for the fonts the book asks for and does not get, one
+   * per font or variant. They are read off how each use resolved when
+   * it was set, so asking reads no font. The family the engine carries
+   * needs no face, and is never among them.
+   */
+  get unfonted(): string[] {
+    const held = new Set(this.registered.map(useKey));
+    const said = new Set<string>();
+    for (const use of bookUses(this.designed, this.addedFonts)) {
+      const key = useKey(use);
+      if (this.unreadFaces.has(key)) {
+        said.add(`Could not load ${use.font}. Using built-in font instead.`);
+      } else if (!held.has(key)) {
+        if (use.font.trim().toLowerCase() !== CARRIED.toLowerCase()) {
+          said.add(`Missing font: ${use.font}`);
+        }
+      } else if (use.variant !== undefined && this.fellBack.has(key)) {
+        said.add(`Missing variant: ${use.font} ${use.variant}`);
+      }
+    }
+    return [...said];
+  }
+
   /** The embeds that brought no bytes, by note in the order the notes were read. */
   get unread(): Unread[] {
     return [...this.unreadIn.values()].flat();
@@ -394,6 +422,8 @@ export class Typeset {
       else held.set(key, each.registered);
       if (each.unread) this.unreadFaces.add(key);
       else this.unreadFaces.delete(key);
+      if (each.fellBack) this.fellBack.add(key);
+      else this.fellBack.delete(key);
     }
     const uses = new Set(bookUses(this.designed, this.addedFonts).map(useKey));
     this.registered = [...held].flatMap(([key, each]) => (uses.has(key) ? [each] : []));

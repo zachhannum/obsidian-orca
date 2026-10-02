@@ -17,7 +17,6 @@ import { groupRules } from "@/style/layers";
 import type { ResolvedUse } from "@/ui/fonts";
 import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
 import type { Inspecting } from "@/ui/pane";
-import { fontWarnings } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -60,8 +59,6 @@ export interface Designing {
 export class DesignPanelView extends ItemView {
   private mounted: Mounted | undefined;
   private watching: (() => void) | undefined;
-  /** The last pick whose files would not read. The panel warns about it. */
-  private unread: string | undefined;
   /** Counts the paints, so a scan that lands late does not overwrite a later one. */
   private painting = 0;
   /** The fonts the machine has, once the first scan lands. */
@@ -260,10 +257,6 @@ export class DesignPanelView extends ItemView {
     if (typeset === undefined) return;
     const design = withFont(typeset.design, key, font.name);
     const resolved = await this.resolve(design, typeset.added);
-    const want = font.name.toLowerCase();
-    this.unread = resolved.some((each) => each.unread && each.use.font.toLowerCase() === want)
-      ? font.name
-      : undefined;
     await this.settle(typeset, design, resolved);
   }
 
@@ -425,7 +418,7 @@ export class DesignPanelView extends ItemView {
       unit: this.designing.unit(),
       language: typeset.language,
       fonts: typeset.added,
-      missing: fontWarnings(index, typeset.design, typeset.added, this.unread).length,
+      missing: typeset.unfonted.length,
       warned: flags.length,
       inspecting: this.inspecting(typeset),
       overridden: typeset.overridden(refused),

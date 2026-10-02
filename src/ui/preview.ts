@@ -71,10 +71,8 @@ import {
 } from "@/ui/inspect";
 import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
-import { bookUses, type PageUnit } from "@/style/design";
+import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
-import type { FontIndex } from "@/assets/fonts";
-import { fontWarnings } from "@/ui/picker";
 import {
   fontGroup,
   groupTitle,
@@ -149,8 +147,6 @@ export interface PreviewHandoff {
    * manuscript pane, or the author's CSS in the design panel.
    */
   opens(view: PreviewView, route: IssueGroup["route"], place: Place): void;
-  /** The fonts the machine has, which the warnings hold a book's fonts against. */
-  fonts(): Promise<FontIndex>;
   /**
    * Told when a box is pinned, when a paint finds the pin again, and
    * with nothing when the pin comes off. A pin found again is
@@ -238,8 +234,6 @@ export class PreviewView extends ItemView {
   private placed: Foot | undefined;
   private session: Session | undefined;
   private composed: Typeset | undefined;
-  /** The warnings for the fonts the book asks for and does not get, as last read. */
-  private unfonted: string[] = [];
   private readonly switches = new Map<ViewMode, HTMLButtonElement>();
   private watching: ResizeObserver | undefined;
   /** The book note this preview reads, and the note it opened at. */
@@ -1546,37 +1540,6 @@ export class PreviewView extends ItemView {
    * is listed here and also drawn on its line in the panel's editor.
    */
   private warns(session: Session): void {
-    this.lists(session);
-    void this.refonts(session);
-  }
-
-  /**
-   * Reads the fonts the book asks for against the ones the machine has,
-   * and lists the warnings again when that changed what they say.
-   */
-  private async refonts(session: Session): Promise<void> {
-    const typeset = this.composed;
-    if (typeset === undefined) return;
-    const said = await this.unfontedIn(typeset);
-    if (this.composed !== typeset || this.session !== session) return;
-    if (said.join("\n") === this.unfonted.join("\n")) return;
-    this.unfonted = said;
-    this.lists(session);
-  }
-
-  /**
-   * The warnings for the fonts a book asks for. A book that names no
-   * font has none, and is not a reason to read the machine's faces: the
-   * scan opens every font file the platform installs.
-   */
-  private async unfontedIn(typeset: Typeset): Promise<string[]> {
-    if (bookUses(typeset.design, typeset.added).length === 0) return [];
-    const index = await this.handoff.fonts();
-    const unread = typeset.unloaded.find((each) => each.unread)?.use.font;
-    return fontWarnings(index, typeset.design, typeset.added, unread);
-  }
-
-  private lists(session: Session): void {
     const chip = this.warnings;
     const issues = this.issues;
     if (chip === undefined || issues === undefined) return;
@@ -1587,7 +1550,9 @@ export class PreviewView extends ItemView {
       else said.push(warning);
     }
 
-    const fonts = this.unfonted;
+    // The fonts the book asked for and did not get, as the composer
+    // resolved them when it set the book.
+    const fonts = this.composed?.unfonted ?? [];
     const total = said.length + fonts.length;
     chip.toggleVisibility(total > 0);
     issues.empty();
