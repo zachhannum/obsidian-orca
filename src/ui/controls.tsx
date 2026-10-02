@@ -928,7 +928,7 @@ export function Glyphs({
   );
 }
 
-/** Draws a warning under a control. The warning comes from orca, not from the engine. */
+/** Draws one of the panel's own warnings, in the card the preview draws an engine's warning in. */
 export function Warning({
   said,
   testid,
@@ -937,9 +937,8 @@ export function Warning({
   testid: string;
 }): JSX.Element {
   return (
-    <div className="orca-panel-warning" data-testid={testid}>
-      <Icon name="alert-circle" className="orca-panel-icon" />
-      <span>{said}</span>
+    <div className="orca-preview-issue" data-testid={testid}>
+      <div className="orca-preview-issue-said">{said}</div>
     </div>
   );
 }

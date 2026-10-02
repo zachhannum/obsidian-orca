@@ -233,15 +233,16 @@ export function Panel({
     );
   }
   const css = shown.viewing === "css";
+  const warned = css ? shown.warned : shown.missing.length;
   const header = (
     <div className="orca-panel-header">
       <span className="orca-panel-title" data-testid="orca-panel-title">{css ? "CSS" : "Design"}</span>
       <span className="orca-panel-book" data-testid="orca-panel-book">
         · {shown.name}
       </span>
-      {css && shown.warned > 0 ? (
+      {warned > 0 ? (
         <span className="orca-panel-warned" data-testid="orca-panel-warned">
-          {shown.warned === 1 ? "1 warning" : `${String(shown.warned)} warnings`}
+          {warned === 1 ? "1 warning" : `${String(warned)} warnings`}
         </span>
       ) : null}
       {css ? (
@@ -333,6 +334,13 @@ export function Panel({
       data-viewing="controls"
     >
       {header}
+      {shown.missing.length === 0 ? null : (
+        <div className="orca-panel-warnings">
+          {shown.missing.map((said) => (
+            <Warning key={said} said={said} testid="orca-panel-missing" />
+          ))}
+        </div>
+      )}
       {GROUPS.map((group) => (
         <Fragment key={group.name}>
           <div
@@ -368,9 +376,6 @@ export function Panel({
             <Fonts fonts={shown.fonts} index={shown.index} acting={acting} />
           ) : null}
         </Fragment>
-      ))}
-      {shown.missing.map((said) => (
-        <Warning key={said} said={said} testid="orca-panel-missing" />
       ))}
     </div>
   );
