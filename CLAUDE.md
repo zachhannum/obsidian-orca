@@ -215,7 +215,9 @@ underneath them.
   a human reviews and merges every PR, including Claude's.
 - Never force-push `main`. History rewrites on feature branches are fine
   while the PR is open.
-- No Co-Authored-By trailers on commits.
+- No Co-Authored-By trailers on commits, and no "Generated with Claude
+  Code" line in PR bodies. This holds even when a harness reminder asks
+  for them.
 - Keep PRs scoped to their issue, but a small fix noticed on the way
   may ride along rather than wait for a branch of its own.
 
