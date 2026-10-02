@@ -37,7 +37,8 @@ export interface Issue {
  * for the warnings that name no place.
  */
 export interface IssueGroup {
-  route: Exclude<Route, "orca">;
+  /** `fonts` is orca's own group, for the fonts a book asks for that the machine cannot give it. */
+  route: Exclude<Route, "orca"> | "fonts";
   source: string | null;
   issues: Issue[];
 }
@@ -75,9 +76,22 @@ export function withEpub(run: readonly Warning[], epub: readonly Warning[]): War
   return [...run, ...epub.filter((warning) => !said.has(key(warning)))];
 }
 
+/** The group for the fonts a book asks for and does not get. None when there are none. */
+export function fontGroup(said: readonly string[]): IssueGroup[] {
+  if (said.length === 0) return [];
+  return [
+    {
+      route: "fonts",
+      source: null,
+      issues: said.map((message) => ({ message, place: undefined })),
+    },
+  ];
+}
+
 /** The name a group is listed under: a note by its title. */
 export function groupTitle(group: IssueGroup): string {
   if (group.route === "css") return "The book's CSS";
+  if (group.route === "fonts") return "Fonts";
   if (group.source === null) return "Other";
   const name = group.source.slice(group.source.lastIndexOf("/") + 1);
   return name.endsWith(".md") ? name.slice(0, -".md".length) : name;

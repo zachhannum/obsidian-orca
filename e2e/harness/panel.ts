@@ -182,7 +182,9 @@ export class Controls {
     this.fontsFrom = root.getByTestId("orca-panel-fonts-from");
     this.title = root.getByTestId("orca-panel-title");
     this.groupNames = root.getByTestId("orca-panel-group-name");
-    this.missing = root.getByTestId("orca-panel-missing");
+    this.missing = root
+      .page()
+      .locator('[data-testid="orca-issue-group"][data-route="fonts"] .orca-preview-issue');
     this.addFont = root.getByTestId("orca-panel-font-add");
     this.addedFonts = root.getByTestId("orca-panel-font-added");
     this.toCss = root.getByTestId("orca-panel-css");
@@ -624,6 +626,13 @@ export class Controls {
   /** The block headings the browser draws, in code point order. */
   get glyphBlocks(): Locator {
     return this.root.getByTestId("orca-panel-glyph-block");
+  }
+
+  /** The group the preview lists a book's missing fonts under. */
+  get fontGroup(): Locator {
+    return this.root
+      .page()
+      .locator('[data-testid="orca-issue-group"][data-route="fonts"]');
   }
 
   /** The button that opens the glyph browser. */

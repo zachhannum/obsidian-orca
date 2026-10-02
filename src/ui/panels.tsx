@@ -49,7 +49,6 @@ import {
   Select,
   Switch,
   Tabs,
-  Warning,
   type Settle,
   type Under,
   type Wrong,
@@ -131,8 +130,8 @@ export type Shown =
       unit: PageUnit;
       /** The language that the book sets. The hyphenation patterns depend on it. */
       language: string | undefined;
-      /** One warning for each font the design names that the machine does not have. */
-      missing: readonly string[];
+      /** The count of fonts and variants the design names that the machine does not have. The preview lists them. */
+      missing: number;
       /** The warnings against the author's CSS, which the CSS view counts. */
       warned: number;
       /** The box pinned in the preview, which the CSS view draws the inspect pane for. */
@@ -233,7 +232,7 @@ export function Panel({
     );
   }
   const css = shown.viewing === "css";
-  const warned = css ? shown.warned : shown.missing.length;
+  const warned = css ? shown.warned : shown.missing;
   const header = (
     <div className="orca-panel-header">
       <span className="orca-panel-title" data-testid="orca-panel-title">{css ? "CSS" : "Design"}</span>
@@ -334,13 +333,6 @@ export function Panel({
       data-viewing="controls"
     >
       {header}
-      {shown.missing.length === 0 ? null : (
-        <div className="orca-panel-warnings">
-          {shown.missing.map((said) => (
-            <Warning key={said} said={said} testid="orca-panel-missing" />
-          ))}
-        </div>
-      )}
       {GROUPS.map((group) => (
         <Fragment key={group.name}>
           <div

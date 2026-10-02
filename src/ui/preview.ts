@@ -73,7 +73,16 @@ import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
-import { groupTitle, issueGroups, routeOf, withEpub, type IssueGroup } from "@/ui/warnings";
+import type { FontIndex } from "@/assets/fonts";
+import { fontWarnings } from "@/ui/picker";
+import {
+  fontGroup,
+  groupTitle,
+  issueGroups,
+  routeOf,
+  withEpub,
+  type IssueGroup,
+} from "@/ui/warnings";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -140,6 +149,8 @@ export interface PreviewHandoff {
    * manuscript pane, or the author's CSS in the design panel.
    */
   opens(view: PreviewView, route: IssueGroup["route"], place: Place): void;
+  /** The fonts the machine has, which the warnings hold a book's fonts against. */
+  fonts(): Promise<FontIndex>;
   /**
    * Told when a box is pinned, when a paint finds the pin again, and
    * with nothing when the pin comes off. A pin found again is
@@ -227,6 +238,8 @@ export class PreviewView extends ItemView {
   private placed: Foot | undefined;
   private session: Session | undefined;
   private composed: Typeset | undefined;
+  /** The warnings for the fonts the book asks for and does not get, as last read. */
+  private unfonted: string[] = [];
   private readonly switches = new Map<ViewMode, HTMLButtonElement>();
   private watching: ResizeObserver | undefined;
   /** The book note this preview reads, and the note it opened at. */
@@ -1533,6 +1546,27 @@ export class PreviewView extends ItemView {
    * is listed here and also drawn on its line in the panel's editor.
    */
   private warns(session: Session): void {
+    this.lists(session);
+    void this.refonts(session);
+  }
+
+  /**
+   * Reads the fonts the book asks for against the ones the machine has,
+   * and lists the warnings again when that changed what they say.
+   */
+  private async refonts(session: Session): Promise<void> {
+    const typeset = this.composed;
+    if (typeset === undefined) return;
+    const index = await this.handoff.fonts();
+    if (this.composed !== typeset || this.session !== session) return;
+    const unread = typeset.unloaded.find((each) => each.unread)?.use.font;
+    const said = fontWarnings(index, typeset.design, typeset.added, unread);
+    if (said.join("\n") === this.unfonted.join("\n")) return;
+    this.unfonted = said;
+    this.lists(session);
+  }
+
+  private lists(session: Session): void {
     const chip = this.warnings;
     const issues = this.issues;
     if (chip === undefined || issues === undefined) return;
@@ -1543,22 +1577,25 @@ export class PreviewView extends ItemView {
       else said.push(warning);
     }
 
-    chip.toggleVisibility(said.length > 0);
+    const fonts = this.unfonted;
+    const total = said.length + fonts.length;
+    chip.toggleVisibility(total > 0);
     issues.empty();
-    if (said.length === 0) {
+    if (total === 0) {
       this.opened = false;
       this.showsIssues();
       return;
     }
 
-    const count = said.length === 1 ? "1 warning" : `${String(said.length)} warnings`;
+    const count = total === 1 ? "1 warning" : `${String(total)} warnings`;
     chip.empty();
     chip.createSpan({ text: count });
     setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
     chip.setAttribute("aria-label", count);
-    for (const group of issueGroups(said)) {
+    for (const group of [...issueGroups(said), ...fontGroup(fonts)]) {
       const set = issues.createDiv({ cls: "orca-preview-issue-group" });
       set.dataset["testid"] = "orca-issue-group";
+      set.dataset["route"] = group.route;
       const head = set.createDiv({ cls: "orca-preview-issue-head" });
       head.createSpan({ cls: "orca-preview-issue-title", text: groupTitle(group) });
       head.createSpan({

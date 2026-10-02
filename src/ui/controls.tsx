@@ -928,21 +928,6 @@ export function Glyphs({
   );
 }
 
-/** Draws one of the panel's own warnings, in the card the preview draws an engine's warning in. */
-export function Warning({
-  said,
-  testid,
-}: {
-  said: string;
-  testid: string;
-}): JSX.Element {
-  return (
-    <div className="orca-preview-issue" data-testid={testid}>
-      <div className="orca-preview-issue-said">{said}</div>
-    </div>
-  );
-}
-
 export function classes(...names: (string | false | undefined)[]): string {
   return names.filter((name) => typeof name === "string").join(" ");
 }

@@ -193,6 +193,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
             opens: (view, route, place) => {
               void (route === "css" ? this.opensCss(place) : this.opensNote(view, place));
             },
+            fonts: () => this.fontIndex(),
             inspected: (_view, pin, refreshed) => {
               void this.inspected(pin, refreshed);
             },

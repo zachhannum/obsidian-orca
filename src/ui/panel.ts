@@ -3,7 +3,6 @@ import type { Cover } from "@/assets/cmap";
 import type { Family, FontIndex } from "@/assets/fonts";
 import {
   bookUses,
-  designFonts,
   type Design,
   type FontUse,
   type PageUnit,
@@ -18,12 +17,7 @@ import { groupRules } from "@/style/layers";
 import type { ResolvedUse } from "@/ui/fonts";
 import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
 import type { Inspecting } from "@/ui/pane";
-import {
-  missingAdded,
-  missingFont,
-  missingFonts,
-  missingVariants,
-} from "@/ui/picker";
+import { fontWarnings } from "@/ui/picker";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
 import { cssFlags } from "@/ui/warnings";
 
@@ -431,7 +425,7 @@ export class DesignPanelView extends ItemView {
       unit: this.designing.unit(),
       language: typeset.language,
       fonts: typeset.added,
-      missing: this.warnings(index, typeset.design, typeset.added),
+      missing: fontWarnings(index, typeset.design, typeset.added, this.unread).length,
       warned: flags.length,
       inspecting: this.inspecting(typeset),
       overridden: typeset.overridden(refused),
@@ -463,29 +457,4 @@ export class DesignPanelView extends ItemView {
     }));
     return { pin, layers, caret: editor?.caret().line };
   }
-
-  /**
-   * The warnings for the fonts and variants a book asks for: the body's,
-   * each heading level's and each font the book adds.
-   */
-  private warnings(index: FontIndex, design: Design, added: readonly string[]): string[] {
-    const unread = this.unread;
-    const missing = [
-      ...missingFonts(index, design),
-      ...missingVariants(index, design),
-      ...missingAdded(index, design, added),
-    ];
-    if (unread === undefined || !designFonts(design).includes(unread)) {
-      return missing;
-    }
-    return [
-      unreadable(unread),
-      ...missing.filter((said) => said !== missingFont(index, unread)),
-    ];
-  }
-}
-
-/** The warning for a font whose files would not read. */
-function unreadable(font: string): string {
-  return `Could not load ${font}. Using built-in font instead.`;
 }

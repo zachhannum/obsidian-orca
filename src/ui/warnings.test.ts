@@ -3,7 +3,14 @@ import { test } from "node:test";
 import { GENERATED_ORIGIN } from "@/book/plan";
 import { DESIGN_SHEET, FACES_SHEET, OWN_SHEET } from "@/style/sheet";
 import { THEME_SHEET } from "@/style/theme";
-import { cssFlags, groupTitle, issueGroups, routeOf, withEpub } from "@/ui/warnings";
+import {
+  cssFlags,
+  fontGroup,
+  groupTitle,
+  issueGroups,
+  routeOf,
+  withEpub,
+} from "@/ui/warnings";
 
 const MESSAGE = "unsupported property `position`";
 
@@ -71,6 +78,16 @@ test("an EPUB's warnings join the run's as the engine wrote them, each said once
 
   assert.deepEqual(withEpub(run, epub), [run[0], epub[1]]);
   assert.deepEqual(withEpub([], epub), epub);
+});
+
+test("the fonts a book does not get are one group named Fonts, with no place to open, and none when there are none", () => {
+  assert.deepEqual(fontGroup([]), []);
+  const groups = fontGroup(["Missing font: Junicode", "Missing font: Alegreya"]);
+  assert.deepEqual(groups.map(groupTitle), ["Fonts"]);
+  assert.deepEqual(groups[0]?.issues, [
+    { message: "Missing font: Junicode", place: undefined },
+    { message: "Missing font: Alegreya", place: undefined },
+  ]);
 });
 
 // What this tier does not cover: the console itself, the preview's

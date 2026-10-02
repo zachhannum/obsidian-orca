@@ -144,20 +144,18 @@ for (const device of ["phone", "tablet"] as const) {
       await panel.option(CARRIED).click();
       await expect(panel.font).toHaveAttribute("data-default", "false");
       await expect.poll(async () => vault.read(BOOK)).toContain(`body-font: ${CARRIED}`);
-      await expect(panel.missing.first()).toBeVisible();
+      await expect(panel.missing).not.toHaveCount(0);
       await expect(panel.missing.filter({ hasText: CARRIED })).toHaveCount(0);
 
-      // The panel counts its own warnings in its header, as the CSS
-      // view does, and draws each over the groups in the card the
-      // preview draws a warning in.
+      // A missing font is a warning like any other: the preview lists
+      // it under `Fonts` and counts it, and the panel's header counts
+      // it as the CSS view counts its own.
       const missing = await panel.missing.count();
-      await expect(panel.warned).toHaveText(
-        missing === 1 ? "1 warning" : `${String(missing)} warnings`,
-      );
-      await expect(panel.missing.first()).toHaveClass(/orca-preview-issue/);
-      const last = await panel.box(panel.missing.last());
-      const group = await panel.box(panel.groups.first());
-      expect(last.y + last.height).toBeLessThanOrEqual(group.y);
+      const count = missing === 1 ? "1 warning" : `${String(missing)} warnings`;
+      await expect(panel.warned).toHaveText(count);
+      await expect(book.warnings).toHaveText(count);
+      await expect(panel.missing.first()).toHaveText(/^Missing font: /);
+      await expect(panel.fontGroup).toContainText("Fonts");
       await panel.reset("body-font").click();
       await expect(panel.font).toHaveAttribute("data-default", "true");
 

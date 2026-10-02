@@ -2438,15 +2438,6 @@ input.orca-panel-filter {
   font-size: var(--font-ui-small);
 }
 
-/* The panel's own warnings are over its groups, each in the card the
-   preview draws a warning in. */
-.orca-panel-warnings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-1);
-  margin-bottom: var(--size-4-3);
-}
-
 .orca-panel-icon {
   flex: none;
   --icon-size: var(--icon-xs);

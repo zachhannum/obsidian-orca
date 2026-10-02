@@ -125,6 +125,30 @@ export function missingVariants(index: FontIndex, design: Design): string[] {
   return designUses(design).flatMap((use) => missingVariant(index, use) ?? []);
 }
 
+/**
+ * The warnings for the fonts and variants a book asks for: the body's,
+ * each heading level's and each font the book adds. `unread` is a font
+ * the machine has whose files would not read, which warns as that
+ * rather than as missing.
+ */
+export function fontWarnings(
+  index: FontIndex,
+  design: Design,
+  added: readonly string[],
+  unread: string | undefined,
+): string[] {
+  const missing = [
+    ...missingFonts(index, design),
+    ...missingVariants(index, design),
+    ...missingAdded(index, design, added),
+  ];
+  if (unread === undefined || !designFonts(design).includes(unread)) return missing;
+  return [
+    `Could not load ${unread}. Using built-in font instead.`,
+    ...missing.filter((said) => said !== missingFont(index, unread)),
+  ];
+}
+
 /** The family a row of the picker registers its preview face under, apart from any family the book sets in. */
 export function previewFamily(family: string): string {
   return `orca-preview ${family}`;

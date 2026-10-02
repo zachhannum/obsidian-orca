@@ -158,9 +158,9 @@ its editor around these files and returns a URL. The artboard list and
   A font the machine no longer has warns the way a missing design font
   warns.
 - A font the design names and the machine does not have is a warning
-  of the panel's own. The header counts them as the CSS view counts
-  its warnings, and each is a card over the groups, drawn as the
-  preview draws a warning.
+  like any other. The preview counts it and lists it with the
+  warnings, in a group named `Fonts`. The panel's header counts the
+  missing fonts as the CSS view counts its warnings.
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
   A selector completes from the classes and ids the book's sections
