@@ -34,6 +34,8 @@ test("the navigator's buttons are drawn as the file explorer's are, and sit in t
         icon: icon.getBoundingClientRect().width,
         color: getComputedStyle(icon).color,
         gap: getComputedStyle(row).columnGap,
+        // How far the row is from the top of its pane.
+        top: box.top - (button.closest(".workspace-leaf-content")?.getBoundingClientRect().top ?? 0),
       };
     });
   await obsidian.page.evaluate(async () => {
@@ -49,7 +51,6 @@ test("the navigator's buttons are drawn as the file explorer's are, and sit in t
   const pane = await navigator.pane.boundingBox();
   if (first === null || last === null || pane === null) throw new Error("nothing to measure");
   expect(Math.abs((first.x + last.x + last.width) / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
-  expect(first.y).toBeLessThan(pane.y + 60);
 });
 
 test("a folder of notes becomes a book in sorted order, and `New book` makes an empty one", async ({
