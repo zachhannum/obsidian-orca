@@ -34,6 +34,9 @@ export default defineConfig({
       name: "shots",
       testMatch: "**/shots.spec.ts",
       snapshotPathTemplate: "site/src/shots/{arg}{ext}",
+      // Each test sets its own window, so the run can be sharded; the
+      // shards are scripts/shots.mjs's.
+      fullyParallel: true,
       // Setting the sample book costs a second, so a wait here that
       // runs past a few is a spec waiting on something that is never
       // coming. The bound is short enough to say so while a person is

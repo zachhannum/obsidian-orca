@@ -164,8 +164,9 @@ underneath them.
   `chromium.connectOverCDP`. Driving Obsidian goes through `window.app`
   in a page evaluate.
 - One app instance for the whole run: workers pinned to one,
-  parallelism off, specs serial. A test that must begin from a known
-  vault says so and puts it back.
+  parallelism off, specs serial. The `shots` project is the exception:
+  `npm run shots` runs it as shards, each with an Obsidian of its own. A test that must begin from a
+  known vault says so and puts it back.
 - **No assertion waits on a clock.** The preview carries the generation
   it last painted and its stage counters as data attributes, and every
   assertion waits on those. A timeout is how a debounce becomes flaky

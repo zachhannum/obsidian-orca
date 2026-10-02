@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/obsidian-setup
-      - run: xvfb-run -a npm run shots
+      - run: npm run shots
       - name: keep the pictures that changed
         run: git ls-files -m -o --exclude-standard -z site/src/shots | xargs -0 tar -cf ${{ runner.temp }}/spec.tar
       - uses: actions/upload-artifact@v4
