@@ -207,6 +207,23 @@ for (const device of ["phone", "tablet"] as const) {
         await expect(navigator.button(label)).toHaveCount(1);
       }
 
+      if (device === "tablet") {
+        // The bar is as far from the top of the pane as the file
+        // explorer's is, and measured the same way.
+        const top = (type: string) =>
+          obsidian.page.evaluate((of) => {
+            const leaf = document.querySelector(`.workspace-leaf-content[data-type="${of}"]`);
+            const bar = leaf?.querySelector(".nav-action-button");
+            if (!leaf || !bar) throw new Error("no bar");
+            return bar.getBoundingClientRect().top - leaf.getBoundingClientRect().top;
+          }, type);
+        const ours = await top("orca-navigator");
+        await obsidian.page.evaluate(async () => {
+          await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
+        });
+        expect(ours).toBe(await top("file-explorer"));
+        await navigator.drawer();
+      }
       if (device === "phone") {
         // The bar is at the foot of the pane, above the pane picker, and
         // the native fade is painted over the list above it.

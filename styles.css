@@ -685,7 +685,7 @@
 
 /* The file explorer's bar sits flush with the top of its pane, and so
    does this one. */
-body:not(.is-mobile) .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
+body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
   padding-top: 0;
 }
 
