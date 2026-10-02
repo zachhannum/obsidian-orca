@@ -324,7 +324,7 @@
 
 .orca-preview.is-reflow .orca-preview-sheets,
 .orca-preview.is-reflow .orca-preview-well.is-covered > .orca-reflow-host,
-.orca-preview.is-reflow .orca-preview-bar .orca-preview-paging {
+.orca-preview.is-reflow .orca-preview-paging {
   display: none;
 }
 
@@ -3930,6 +3930,7 @@ input.orca-panel-filter {
 
 .is-mobile .orca-preview-foot select.orca-reflow-device {
   flex: 1;
+  min-width: 0;
 }
 
 .is-mobile .orca-preview-bar > .orca-reflow-controls select.orca-reflow-device {
