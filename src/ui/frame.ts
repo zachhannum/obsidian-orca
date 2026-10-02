@@ -253,7 +253,8 @@ export function rewriteDocument(path: string, xhtml: string, links: Links): stri
   const texts: Record<SheetName, string> = {
     before: links.sheets.before,
     default: links.sheets.fallback,
-    after: links.sheets.after,
+    // The page never pans under a finger, so the browser leaves the drag to the swipe handler.
+    after: `${links.sheets.after}\nhtml, body { touch-action: none; }`,
   };
   const first = head.firstChild;
   for (const name of sheetOrder(styled)) {

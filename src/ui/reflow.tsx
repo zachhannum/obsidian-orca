@@ -326,6 +326,18 @@ function Reflow({
                         from = undefined;
                         if (step !== undefined) turner.turn?.(step);
                       });
+                      // A mouse drag turns too, for a window that emulates a phone.
+                      inside.addEventListener("pointerdown", (pressed) => {
+                        if (pressed.pointerType === "mouse") {
+                          from = { x: pressed.clientX, y: pressed.clientY };
+                        }
+                      });
+                      inside.addEventListener("pointerup", (released) => {
+                        if (released.pointerType !== "mouse" || from === undefined) return;
+                        const step = swipeOf(released.clientX - from.x, released.clientY - from.y);
+                        from = undefined;
+                        if (step !== undefined) turner.turn?.(step);
+                      });
                       void inside.fonts.ready.then(() => {
                         setFaces((seen) => seen + 1);
                       });
