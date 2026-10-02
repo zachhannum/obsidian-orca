@@ -521,6 +521,7 @@ for (const device of ["phone", "tablet"] as Device[]) {
           await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
         });
         await pictured(site, `mobile-explorer-${device}-${scheme}.png`);
+        await obsidian.detach("file-explorer");
         await navigator.drawer();
 
         await book.uncovered();
@@ -948,7 +949,10 @@ test("the make pictures are a folder of notes made into a book", async ({
     await site.obsidian.page.evaluate(async () => {
       await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
     });
-    await expect(book).toHaveScreenshot(`make-explorer-${scheme}.png`);
+    await expect(
+      site.obsidian.page.locator('.workspace-leaf-content[data-type="file-explorer"]'),
+    ).toHaveScreenshot(`make-explorer-${scheme}.png`);
+    await site.obsidian.detach("file-explorer");
     await site.navigator.reveal();
     opened.push(
       await site.marks(page, {
