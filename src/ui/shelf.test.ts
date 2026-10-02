@@ -15,6 +15,7 @@ import {
   sortShelf,
   type Shelved,
   type Shelving,
+  visibleRows,
 } from "@/ui/shelf";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
@@ -176,19 +177,20 @@ test("the sort orders books by name, either way, and keeps vault order by defaul
   assert.equal(readSort("bogus"), "vault");
 });
 
-test("the filter keeps a matching book whole, and otherwise only the matching chapters", () => {
+test("the filter shows the matching chapters of a book, with the places they have in the note", () => {
   const shelf = [
     shelved("Emma", "Volume One", "Volume Two"),
     shelved("Persuasion", "Anne", "Captain Wentworth"),
     shelved("Other", "Nothing"),
   ];
   assert.equal(filterShelf(shelf, "  ").length, 3);
-  const emma = filterShelf(shelf, "EMMA");
-  assert.equal(emma.length, 1);
-  assert.equal(emma[0]?.groups[0]?.rows.length, 2);
+  assert.equal(visibleRows(shelf[0] as Shelved, "EMMA"), undefined);
+  assert.deepEqual(filterShelf(shelf, "emma").map((book) => book.name), ["Emma"]);
   const went = filterShelf(shelf, "went");
   assert.deepEqual(went.map((book) => book.name), ["Persuasion"]);
-  assert.deepEqual(went[0]?.groups[0]?.rows.map((row) => row.name), ["Captain Wentworth"]);
+  // The book is whole, and the row that shows is the second of the note.
+  assert.equal(went[0]?.groups[0]?.rows.length, 2);
+  assert.deepEqual([...(visibleRows(went[0], "went") ?? [])], [1]);
   assert.deepEqual(filterShelf(shelf, "zzz"), []);
 });
 

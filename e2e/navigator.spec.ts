@@ -567,6 +567,23 @@ test("a chapter click turns the preview in the most recent tab, and a Mod click 
   await obsidian.detach("markdown");
 });
 
+test("a chapter clicked in a filtered shelf turns the preview to that chapter", async ({
+  book,
+  navigator,
+}) => {
+  await book.open();
+  await book.painted();
+  await expect(book.chapterName).not.toHaveText(CHAPTER);
+  await navigator.reveal();
+
+  await navigator.button("Search books").click();
+  await navigator.pane.getByTestId("orca-nav-search").fill(CHAPTER);
+  await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
+  await navigator.entry(BOOK, CHAPTER).click();
+  await expect(book.chapterName).toHaveText(CHAPTER);
+  await navigator.button("Search books").click();
+});
+
 test("a click on a generated section turns the preview to it", async ({
   book,
   navigator,

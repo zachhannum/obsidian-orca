@@ -148,23 +148,34 @@ export function sortShelf(
 }
 
 /**
- * The books and chapters whose name holds the query, ignoring case. A book
- * whose own name matches keeps every chapter. Otherwise it keeps the
- * chapters that match, and drops out when none does.
+ * The places of the rows a query shows in a book, or nothing when it
+ * shows every row. A book whose own name matches shows all its rows.
+ * The places are those of the whole book, which a filtered list must
+ * keep, since an edit and a preview name an entry by its place.
  */
+export function visibleRows(
+  book: Shelved,
+  query: string,
+): ReadonlySet<number> | undefined {
+  const needle = query.trim().toLowerCase();
+  if (needle === "" || book.name.toLowerCase().includes(needle)) return undefined;
+  return new Set(
+    book.groups.flatMap((group) =>
+      group.rows.flatMap((row) =>
+        row.name.toLowerCase().includes(needle) ? [row.at] : [],
+      ),
+    ),
+  );
+}
+
+/** The books the query shows something of, each still whole. */
 export function filterShelf(
   shelf: readonly Shelved[],
   query: string,
 ): Shelved[] {
-  const needle = query.trim().toLowerCase();
-  if (needle === "") return [...shelf];
-  const hit = (name: string) => name.toLowerCase().includes(needle);
-  return shelf.flatMap((book) => {
-    if (hit(book.name)) return [book];
-    const groups = book.groups
-      .map((group) => ({ ...group, rows: group.rows.filter((r) => hit(r.name)) }))
-      .filter((group) => group.rows.length > 0);
-    return groups.length === 0 ? [] : [{ ...book, groups }];
+  return shelf.filter((book) => {
+    const shown = visibleRows(book, query);
+    return shown === undefined || shown.size > 0;
   });
 }
 

@@ -78,7 +78,7 @@ import {
   type Headed,
   type Showing,
 } from "@/ui/outline";
-import { filterShelf, sortShelf, type Row, type Shelved, type SortOrder } from "@/ui/shelf";
+import { filterShelf, sortShelf, visibleRows, type Row, type Shelved, type SortOrder } from "@/ui/shelf";
 
 /** The actions a shelf row can ask the view to perform. */
 export interface Acting {
@@ -532,6 +532,7 @@ export function Shelf({
             <Book
               key={book.path}
               book={book}
+              visible={filtering ? visibleRows(book, query) : undefined}
               acting={acting}
               renaming={renaming}
               renamed={renamed}
@@ -555,6 +556,7 @@ function noFold(): void {
 
 function Book({
   book,
+  visible,
   acting,
   renaming,
   renamed,
@@ -565,6 +567,8 @@ function Book({
   setFolds,
 }: {
   book: Shelved;
+  /** The places of the rows a search shows, or nothing when it shows them all. */
+  visible: ReadonlySet<number> | undefined;
   acting: Acting;
   renaming: Renaming | undefined;
   renamed: (open: Renaming | undefined) => void;
@@ -597,7 +601,9 @@ function Book({
   }, [book.groups]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: visible === undefined ? { distance: 4 } : { distance: 1e9 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -643,6 +649,30 @@ function Book({
   );
   const ids = useMemo(() => items.map((item) => item.id), [items]);
   const where = useMemo(() => places(items), [items]);
+  // A search hides rows and leaves the list whole, so each row keeps the
+  // place it has in the note, which a click and an edit name it by.
+  const hidden = useMemo(() => {
+    const none = new Set<string>();
+    if (visible === undefined) return none;
+    let group: Item | undefined;
+    let shown = 0;
+    const close = (): void => {
+      if (group !== undefined && shown === 0) none.add(group.id);
+    };
+    for (const item of items) {
+      if (item.kind === "group") {
+        close();
+        group = item;
+        shown = 0;
+      } else if (visible.has(item.row.at)) {
+        shown += 1;
+      } else {
+        none.add(item.id);
+      }
+    }
+    close();
+    return none;
+  }, [items, visible]);
 
   function started({ active }: DragStartEvent): void {
     const id = String(active.id);
@@ -750,7 +780,7 @@ function Book({
               }}
             >
               {items.map((item, at) =>
-                item.kind === "group" ? (
+                hidden.has(item.id) ? null : item.kind === "group" ? (
                   <Heading
                     key={item.id}
                     book={book}
