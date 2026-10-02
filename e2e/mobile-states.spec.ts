@@ -113,14 +113,20 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(note.changed).toBeVisible();
       const buttons = note.changed.getByRole("button");
       await expect(buttons).toHaveText(CHOICES);
-      const keep = await buttons.nth(0).boundingBox();
-      const saved = await buttons.nth(1).boundingBox();
-      expect(keep && saved).toBeTruthy();
-      expect(saved?.y).toBeGreaterThanOrEqual((keep?.y ?? 0) + (keep?.height ?? 0));
-      expect(keep?.height).toBeGreaterThanOrEqual(TOUCH);
-      expect(saved?.height).toBeGreaterThanOrEqual(TOUCH);
+      // The page may still be sliding in, so the two are read in one
+      // look rather than one after the other.
+      const [keep, saved] = await buttons.evaluateAll((each) =>
+        each.map((button) => {
+          const { y, width, height } = button.getBoundingClientRect();
+          return { y, width, height };
+        }),
+      );
+      if (keep === undefined || saved === undefined) throw new Error("no buttons");
+      expect(saved.y).toBeGreaterThanOrEqual(keep.y + keep.height);
+      expect(keep.height).toBeGreaterThanOrEqual(TOUCH);
+      expect(saved.height).toBeGreaterThanOrEqual(TOUCH);
       // A phone's buttons are one width, which is the column's.
-      if (device === "phone") expect(keep?.width).toBe(saved?.width);
+      if (device === "phone") expect(keep.width).toBe(saved.width);
 
       await buttons.nth(1).click();
       await expect(note.page).toContainText("Written outside");
