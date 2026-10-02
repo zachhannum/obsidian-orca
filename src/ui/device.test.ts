@@ -19,11 +19,14 @@ test("a phone offers no split, and a tablet and the desktop do", () => {
   assert.equal(splits("desktop"), true);
 });
 
-test("the foot is in the status bar on desktop and under the page on mobile", () => {
+test("the foot is in the status bar on desktop, under the page on a phone and in the bar of a tablet's pane that has the width", () => {
   const upright = { width: 390, height: 700 };
   assert.equal(footPlace("desktop", upright), "status");
   assert.equal(footPlace("phone", upright), "under");
-  assert.equal(footPlace("tablet", { width: 1180, height: 700 }), "under");
+  assert.equal(footPlace("tablet", { width: 1180, height: 700 }), "bar");
+  assert.equal(footPlace("tablet", { width: 820, height: 1180 }), "bar");
+  assert.equal(footPlace("tablet", { width: 700, height: 700 }), "bar");
+  assert.equal(footPlace("tablet", { width: 699, height: 700 }), "under");
 });
 
 test("a phone on its side has the foot in the preview's bar", () => {
