@@ -41,9 +41,12 @@ jobs:
 
       - run: npm run build
 
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         with:
+          name: site
           path: site/dist
+          retention-days: 1
 
   deploy:
     name: deploy to GitHub Pages
@@ -52,16 +55,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      contents: write
+    # The previews write the same branch.
+    concurrency:
+      group: pages-branch
+      cancel-in-progress: false
     steps:
-      # The first deploy turns Pages on and points it at this workflow.
-      - uses: actions/configure-pages@v6
+      - uses: actions/download-artifact@v5
         with:
-          enablement: true
+          name: site
+          path: site/dist
 
-      - uses: actions/deploy-pages@v5
-        id: deploy
+      # Pages serves the gh-pages branch. The previews of open pull
+      # requests live in its pr-preview folder, which a deploy keeps.
+      - uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: site/dist
+          clean-exclude: pr-preview/
+
+      - name: check the live docs
+        working-directory: ${{ github.workspace }}
+        run: |
+          host="$(cat site/dist/CNAME)"
+          for page in "" start/install/; do
+            for _ in $(seq 1 30); do
+              curl -fsS "https://$host/$page" | grep -q "<title>" && continue 2
+              sleep 10
+            done
+            echo "https://$host/$page did not load"
+            exit 1
+          done

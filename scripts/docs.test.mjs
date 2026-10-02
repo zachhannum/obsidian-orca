@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, glob, readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { access, cp, glob, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
@@ -47,7 +49,7 @@ function entries(note, heading) {
   }));
 }
 
-const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, claude] =
+const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, preview, shots, claude] =
   await Promise.all([
     read("package.json"),
     read("site/package.json"),
@@ -58,6 +60,8 @@ const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, 
     read("site/astro.config.mjs"),
     read("site/public/CNAME"),
     read(".github/workflows/docs.yml"),
+    read(".github/workflows/preview.yml"),
+    read(".github/workflows/shots.yml"),
     read("CLAUDE.md"),
   ]);
 
@@ -141,17 +145,87 @@ test("the fonts come from the site, and each one has a fallback", () => {
 test("the site's own domain is the one Pages keeps", () => {
   const host = cname.trim();
   assert.match(config, new RegExp(`const site = 'https://${host}';`));
-  // A page at the domain root takes no base path.
-  assert.doesNotMatch(config, /^\s*base:/m);
+  // A page at the domain root takes no base path, and a preview sets one.
+  assert.match(config, /const base = process\.env\.SITE_BASE \|\| '\/';/);
 });
 
 test("a PR that touches the site builds it, and main goes to GitHub Pages", () => {
   assert.match(workflow, /^on:\n {2}pull_request:\n {4}paths:\n {6}- "site\/\*\*"/m);
   assert.match(workflow, /working-directory: site\n/);
   assert.match(workflow, /- run: npm run build\n/);
-  assert.match(workflow, /actions\/upload-pages-artifact@/);
-  assert.match(workflow, /actions\/deploy-pages@/);
+  assert.match(workflow, /JamesIves\/github-pages-deploy-action@/);
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/);
+});
+
+test("a deploy on main keeps the open previews, and checks the live docs", () => {
+  assert.match(workflow, /branch: gh-pages\n\s+folder: site\/dist\n\s+clean-exclude: pr-preview\/\n/);
+  assert.match(workflow, /name: check the live docs\n/);
+  assert.match(workflow, /group: pages-branch\n\s+cancel-in-progress: false\n/);
+});
+
+test("the docs build checks the tokens against design/site.css", () => {
+  assert.match(sitePackage, /"build": "node scripts\/check-tokens\.mjs && /);
+});
+
+test("a PR that touches the site or the design gets a preview in a folder of the Pages branch", () => {
+  const from = preview.indexOf("  pull_request:");
+  const paths = preview.slice(from, preview.indexOf("\nconcurrency:"));
+  assert.match(paths, /types: \[opened, reopened, synchronize, closed\]/);
+  assert.match(paths, /- "site\/\*\*"/);
+  assert.match(paths, /- "design\/\*\*"/);
+  assert.match(preview, /rossjrw\/pr-preview-action@v1/);
+  assert.match(preview, /preview-branch: gh-pages\n\s+umbrella-dir: pr-preview\n/);
+  // One comment, found again by its header, holds the link.
+  assert.match(preview, /sticky-pull-request-comment@v2\n\s+with:\n\s+header: preview\n/);
+  assert.match(preview, /SITE_BASE: \/pr-preview\/pr-\$\{\{ github\.event\.pull_request\.number \}\}/);
+});
+
+test("a preview builds the docs, the artboards or both, and never the pictures of a failed run", () => {
+  assert.match(preview, /node build\.mjs --into \.\.\/site\/dist\/design --against /);
+  assert.match(preview, /gh run download "\$run" --name shots --dir site\/src\/shots/);
+  assert.match(preview, /conclusion -q \.conclusion\)" = success/);
+  assert.match(preview, /stale\) echo; echo "The pictures were not taken again/);
+  assert.doesNotMatch(preview, /git (add|commit)/);
+});
+
+test("the artboards open from an index that marks the ones a branch changed", async () => {
+  const repo = await mkdtemp(path.join(tmpdir(), "design-"));
+  const git = (...args) => execFileSync("git", args, { cwd: repo, stdio: "pipe" });
+  await cp(path.join(root, "design"), path.join(repo, "design"), {
+    recursive: true,
+    filter: (from) => !from.endsWith(".dc.html"),
+  });
+  git("init", "-q", "-b", "main");
+  git("-c", "user.name=t", "-c", "user.email=t@t", "add", ".");
+  git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base");
+  git("checkout", "-qb", "branch");
+  const part = path.join(repo, "design/parts/Navigator.html");
+  await writeFile(part, `${await readFile(part, "utf8")}\n<!-- changed -->\n`);
+  git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "change");
+
+  const out = path.join(repo, "out");
+  execFileSync("node", ["build.mjs", "--into", out, "--against", "main"], {
+    cwd: path.join(repo, "design"),
+  });
+  const index = await readFile(path.join(out, "index.html"), "utf8");
+  const sizes = JSON.parse(await read("design/sizes.json"));
+  for (const name of Object.keys(sizes)) await access(path.join(out, `${name}.html`));
+  assert.deepEqual([...index.matchAll(/<li class="changed"><a href="([^"]+)"/g)].map((m) => m[1]), [
+    "Navigator.html",
+  ]);
+  await rm(repo, { recursive: true });
+});
+
+test("the preview waits on the shots workflow for the paths that start it", () => {
+  const paths = (text) => [...text.matchAll(/^\s+- "([^"]+)"$/gm)].map((m) => m[1]);
+  const shotsOn = shots.slice(shots.indexOf("  pull_request:"), shots.indexOf("  push:"));
+  const surface = /grep -qE '(\^\(src[^']*)' <<<"\$changed" && surface=true/.exec(preview);
+  assert.ok(surface, "no surface test");
+  const regex = new RegExp(surface[1]);
+  for (const glob of paths(shotsOn)) {
+    const file = glob.replace("**", "x");
+    assert.ok(regex.test(file), `${glob} does not start the wait`);
+  }
 });
 
 test("CLAUDE.md's CI section lists the docs workflow", () => {

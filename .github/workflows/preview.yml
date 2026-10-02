@@ -1,0 +1,160 @@
+name: preview
+
+# A pull request that touches the docs site or the design gets a preview:
+# a folder of the Pages site, with a link in one comment that every push
+# updates. Closing the pull request deletes the folder.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    paths:
+      - "site/**"
+      - "design/**"
+      - ".github/workflows/preview.yml"
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# A fork cannot push to the Pages branch, so only a branch of this
+# repository gets a preview.
+jobs:
+  build:
+    name: build the preview
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      pictures: ${{ steps.pictures.outputs.state }}
+      entry: ${{ steps.what.outputs.entry }}
+      host: ${{ steps.what.outputs.host }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SITE_BASE: /pr-preview/pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: choose what to build
+        id: what
+        run: |
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          docs=false
+          design=false
+          surface=false
+          grep -qE '^(site/|design/site\.css$)' <<<"$changed" && docs=true
+          grep -qE '^design/' <<<"$changed" && design=true
+          # The paths that start the shots workflow.
+          grep -qE '^(src/|styles\.css$|e2e/|site/sample/|site/src/marks/|site/src/styles/tokens\.css$|\.github/workflows/shots\.yml$)' <<<"$changed" && surface=true
+          if [ "$docs" = true ]; then entry=""; else entry="design/"; fi
+          echo "docs=$docs" >> "$GITHUB_OUTPUT"
+          echo "design=$design" >> "$GITHUB_OUTPUT"
+          echo "surface=$surface" >> "$GITHUB_OUTPUT"
+          echo "entry=$entry" >> "$GITHUB_OUTPUT"
+          echo "host=$(cat site/public/CNAME)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v5
+        if: steps.what.outputs.docs == 'true'
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci --prefer-offline --no-audit --no-fund
+        if: steps.what.outputs.docs == 'true'
+        working-directory: site
+
+      # The pictures are the shots workflow's, taken for this commit. They
+      # go over site/src/shots and are never committed. A run that failed
+      # or never started leaves the pictures the branch has.
+      - name: take the pictures the shots workflow took
+        id: pictures
+        if: steps.what.outputs.docs == 'true'
+        run: |
+          state=none
+          if [ "${{ steps.what.outputs.surface }}" = true ]; then
+            state=stale
+            sha="${{ github.event.pull_request.head.sha }}"
+            run=""
+            for _ in $(seq 1 18); do
+              run="$(gh run list --workflow shots.yml --commit "$sha" --event pull_request --json databaseId -q '.[0].databaseId')"
+              [ -n "$run" ] && break
+              sleep 10
+            done
+            if [ -n "$run" ]; then
+              gh run watch "$run" >/dev/null 2>&1 || true
+              if [ "$(gh run view "$run" --json conclusion -q .conclusion)" = success ]; then
+                gh run download "$run" --name shots --dir site/src/shots && state=fresh
+              fi
+            fi
+          fi
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+
+      - name: build the docs
+        if: steps.what.outputs.docs == 'true'
+        working-directory: site
+        run: npm run build
+
+      - name: build the artboards
+        if: steps.what.outputs.design == 'true'
+        working-directory: design
+        run: node build.mjs --into ../site/dist/design --against "origin/${{ github.base_ref }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview
+          path: site/dist
+          retention-days: 1
+
+  publish:
+    name: publish the preview
+    needs: build
+    if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository && (needs.build.result == 'success' || github.event.action == 'closed') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    # The docs deploy on main writes the same branch.
+    concurrency:
+      group: pages-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v5
+        if: github.event.action != 'closed'
+        with:
+          name: preview
+          path: site/dist
+
+      - uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: site/dist
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          comment: false
+
+      - name: say where the preview is
+        id: say
+        run: |
+          url="https://${{ needs.build.outputs.host }}/pr-preview/pr-${{ github.event.pull_request.number }}/${{ needs.build.outputs.entry }}"
+          {
+            echo "body<<EOF"
+            if [ "${{ github.event.action }}" = closed ]; then
+              echo "The preview of this pull request is deleted."
+            else
+              sha="${{ github.event.pull_request.head.sha }}"
+              echo "Preview of ${sha::7}: $url"
+              case "${{ needs.build.outputs.pictures }}" in
+                stale) echo; echo "The pictures were not taken again for this commit, so the docs show the ones on the branch." ;;
+              esac
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview
+          message: ${{ steps.say.outputs.body }}

@@ -44,6 +44,14 @@ node build.mjs
 Every part becomes a `.dc.html` beside it. Those are generated; edit
 the parts.
 
+```
+node build.mjs --into <dir> --against <ref>
+```
+
+This writes a page a browser opens for each part, and an index that
+marks the parts changed against `<ref>`. A pull request's preview is
+built this way.
+
 Publishing the canvas needs Claude Code's `design` skill, which seeds
 its editor around these files and returns a URL. The artboard list and
 `canvas.json` are what it takes.
