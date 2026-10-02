@@ -327,8 +327,8 @@ replaces them.
   and under the page in a narrower one. The warnings open over the
   page from the count, and a tap on the page shuts them.
 - The navigator's buttons are Obsidian's own, drawn the way the file
-  explorer draws its row on each device. They are `New book`, `Collapse
-  all`, a search, a sort and `Export`, and each acts on the whole shelf.
+  explorer draws its row on each device. They are `New book`, a search, a sort and `Collapse all`, which
+  is last as in the file explorer. Each acts on the whole shelf.
   An action on one book stays in that book's row. `New book` is a book
   with a plus on it, on desktop too. On desktop the row is centered along
   the top of the pane. On a tablet it is a pill at the top. On a phone

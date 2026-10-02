@@ -45,7 +45,7 @@ test("the navigator's buttons are drawn as the file explorer's are, and sit in t
   expect(ours).toEqual(native);
 
   const first = await navigator.button("New book").boundingBox();
-  const last = await navigator.button("Export").boundingBox();
+  const last = await navigator.toolbar.locator(".nav-action-button").last().boundingBox();
   const pane = await navigator.pane.boundingBox();
   if (first === null || last === null || pane === null) throw new Error("nothing to measure");
   expect(Math.abs((first.x + last.x + last.width) / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);

@@ -60,10 +60,6 @@ export interface Handoff {
   turn(book: string, at: number, line?: number): Promise<boolean>;
   /** The deepest heading level the author lists inside each entry, or nothing when they list none. */
   headings(): number | undefined;
-  /** The book the workspace is on, if it is on one. */
-  exportable(): string | undefined;
-  /** Opens the export of a book. */
-  exportBook(book: string): void;
 }
 
 /**
@@ -212,9 +208,6 @@ export class NavigatorView extends ItemView {
         this.sort = order;
         this.app.workspace.requestSaveLayout();
       },
-      exportShelf: () => {
-        this.exportShelf();
-      },
       locate: (book, row) => {
         this.locate(book, row);
       },
@@ -278,17 +271,6 @@ export class NavigatorView extends ItemView {
   redraw(): void {
     this.shown = "";
     this.refresh();
-  }
-
-  /** Exports the book the workspace is on, or the only book on the shelf. */
-  private exportShelf(): void {
-    const only = this.shelved.size === 1 ? [...this.shelved][0] : undefined;
-    const book = this.handoff.exportable() ?? only;
-    if (book === undefined) {
-      new Notice("Open a book to export it");
-      return;
-    }
-    this.handoff.exportBook(book);
   }
 
   /** Repaints the shelf once, however many events arrived. */

@@ -198,12 +198,12 @@ for (const device of ["phone", "tablet"] as const) {
       // The buttons are one row, centered in the pane as the file
       // explorer's are, and none of them is left out.
       const left = await navigator.button("New book").boundingBox();
-      const right = await navigator.button("Export").boundingBox();
+      const right = await navigator.toolbar.locator(".nav-action-button").last().boundingBox();
       const pane = await navigator.pane.boundingBox();
       if (left === null || right === null || pane === null) throw new Error("nothing to measure");
       const middle = (left.x + right.x + right.width) / 2;
       expect(Math.abs(middle - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
-      for (const label of ["New book", "Search books", "Sort books", "Export"]) {
+      for (const label of ["New book", "Search books", "Sort books"]) {
         await expect(navigator.button(label)).toHaveCount(1);
       }
 
@@ -215,7 +215,7 @@ for (const device of ["phone", "tablet"] as const) {
           .first()
           .boundingBox();
         if (picker === null) throw new Error("no pane picker");
-        const bar = await navigator.button("Export").boundingBox();
+        const bar = await navigator.toolbar.locator(".nav-action-button").last().boundingBox();
         expect(bar?.y ?? 0).toBeLessThan(picker.y);
         expect(picker.y - (bar?.y ?? 0) - (bar?.height ?? 0)).toBeLessThan(TOUCH);
         const fade = await navigator.toolbar.evaluate(
@@ -224,8 +224,7 @@ for (const device of ["phone", "tablet"] as const) {
         expect(fade).toContain("gradient");
       }
 
-      // Search filters the shelf by name, sort lists the books, and
-      // Export with no book open says so.
+      // Search filters the shelf by name, and sort orders the books.
       await navigator.button("Search books").click();
       await navigator.pane.getByTestId("orca-nav-search").fill("no such chapter");
       await expect(navigator.pane.getByText("No matches")).toBeVisible();

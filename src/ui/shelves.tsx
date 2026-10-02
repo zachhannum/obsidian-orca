@@ -101,8 +101,6 @@ export interface Acting {
   sortMenu(event: Pointed, current: SortOrder, choose: (order: SortOrder) => void): void;
   /** Told the order after the author picks one, so the view can keep it. */
   sorted(order: SortOrder): void;
-  /** Exports the open book. */
-  exportShelf(): void;
   locate(book: Shelved, row: Row): void;
   removeEntry(book: Shelved, row: Row): void;
   moveEntry(book: Shelved, from: number, to: Place): void;
@@ -474,15 +472,6 @@ export function Shelf({
               acting.newBook();
             }}
           />
-          {!foldable(rows) ? null : (
-            <Tool
-              icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
-              label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
-              onClick={() => {
-                keep(open ? collapseAll(kept, rows) : expandAll());
-              }}
-            />
-          )}
           <Tool
             icon={ACTIONS.search.icon}
             label={ACTIONS.search.label}
@@ -500,13 +489,15 @@ export function Shelf({
               acting.sortMenu(event, sort, setSort);
             }}
           />
-          <Tool
-            icon={ACTIONS.exportShelf.icon}
-            label={ACTIONS.exportShelf.label}
-            onClick={() => {
-              acting.exportShelf();
-            }}
-          />
+          {!foldable(rows) ? null : (
+            <Tool
+              icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
+              label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
+              onClick={() => {
+                keep(open ? collapseAll(kept, rows) : expandAll());
+              }}
+            />
+          )}
         </div>
       </div>
       {!searching ? null : (

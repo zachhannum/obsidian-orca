@@ -250,10 +250,6 @@ export default class OrcaPlugin extends Plugin implements Limited {
             void this.previewBook(book);
           },
           turn: (book, at, line) => this.turnPreview(book, at, line),
-          exportable: () => this.exportable(),
-          exportBook: (book) => {
-            this.exportBook(book);
-          },
           headings: () => this.listed(),
         }),
     );
