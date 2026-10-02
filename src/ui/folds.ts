@@ -71,35 +71,38 @@ export function withNote(
   return withBookFolds(folds, book, Object.keys(notes).length === 0 ? rest : { ...rest, notes });
 }
 
-/** Whether any entry on the shelf lists headings, which is when `Collapse all` shows. */
+/** Whether the shelf has a book to fold, which is when `Collapse all` shows. */
 export function foldable(shelf: readonly Shelved[]): boolean {
-  return shelf.some((book) => rowsWithHeadings(book).length > 0);
+  return shelf.length > 0;
 }
 
 /**
- * Whether every entry that lists headings is folded, and every heading
- * inside it with headings under it, which turns the button to
- * `Expand all`.
+ * Whether every book is folded, with every entry that lists headings
+ * and every heading inside it with headings under it, which turns the
+ * button to `Expand all`.
  */
 export function allCollapsed(folds: Folds, shelf: readonly Shelved[]): boolean {
-  return shelf.every((book) =>
-    rowsWithHeadings(book).every((row) => {
-      const note = row.path;
-      if (note === undefined || !entryCollapsed(folds, book.path, note)) return false;
-      const lines = collapsedLines(folds, book.path, row);
-      return parents(row).every((heading) => lines.has(heading.line));
-    }),
+  return shelf.every(
+    (book) =>
+      bookCollapsed(folds, book.path) &&
+      rowsWithHeadings(book).every((row) => {
+        const note = row.path;
+        if (note === undefined || !entryCollapsed(folds, book.path, note)) return false;
+        const lines = collapsedLines(folds, book.path, row);
+        return parents(row).every((heading) => lines.has(heading.line));
+      }),
   );
 }
 
 /**
- * Folds every entry that lists headings and every heading inside it
- * with headings under it, and keeps every other fold. An entry opened
- * afterwards shows its headings folded one level at a time.
+ * Folds every book, every entry that lists headings and every heading
+ * inside it with headings under it. A book opened afterwards shows its
+ * entries, and an entry its headings, folded one level at a time.
  */
 export function collapseAll(folds: Folds, shelf: readonly Shelved[]): Folds {
   let next = folds;
   for (const book of shelf) {
+    next = withBook(next, book.path, true);
     for (const row of rowsWithHeadings(book)) {
       const note = row.path;
       if (note === undefined) continue;
@@ -110,13 +113,9 @@ export function collapseAll(folds: Folds, shelf: readonly Shelved[]): Folds {
   return next;
 }
 
-/** Opens every entry and every heading. A folded book stays folded. */
-export function expandAll(folds: Folds): Folds {
-  const next: Folds = {};
-  for (const [book, kept] of Object.entries(folds)) {
-    if (kept.collapsed === true) next[book] = { collapsed: true };
-  }
-  return next;
+/** Opens every book, every entry and every heading. */
+export function expandAll(): Folds {
+  return {};
 }
 
 /** The folds a saved navigator state holds. A part that is not a fold is dropped. */

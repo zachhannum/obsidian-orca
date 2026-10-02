@@ -27,7 +27,16 @@ interface Editing {
   edit(change: (model: Model) => Model): void;
 }
 
+/** The page's selector, for a sweep of the controls under it. */
+export const PAGE = ".orca-book-host";
+
 export class Note {
+  /** The column the page is set in. */
+  readonly column: Locator;
+  /** The button that opens the export dialog. */
+  readonly exports: Locator;
+  /** Every row of the reading order. */
+  readonly entries: Locator;
   /** The page orca draws for the book note, carrying the model it was painted from. */
   readonly page: Locator;
   /** The state a book from a newer orca stops at. */
@@ -53,6 +62,9 @@ export class Note {
     this.line = this.page.getByTestId("orca-book-line");
     this.order = this.page.getByTestId("orca-order");
     this.design = this.page.getByTestId("orca-book-design");
+    this.column = this.page.getByTestId("orca-book-page");
+    this.exports = this.page.getByTestId("orca-book-export");
+    this.entries = this.order.getByTestId("orca-order-entry");
     this.preview = obsidian.actionIn(BOOK, OPEN_PREVIEW);
   }
 

@@ -36,6 +36,8 @@ import { EngineDead, EngineError } from "@/engine/errors";
 import type { Reading, Session } from "@/engine/session";
 import { ACTIONS } from "@/ui/actions";
 import { copiedText, type SelectionLine } from "@/ui/copy";
+import { device } from "@/ui/desktop";
+import { footPlace, type Foot } from "@/ui/device";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
@@ -71,7 +73,15 @@ import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import type { PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
-import { groupTitle, issueGroups, routeOf, withEpub, type IssueGroup } from "@/ui/warnings";
+import {
+  fontGroup,
+  groupTitle,
+  issueGroups,
+  routeOf,
+  tally,
+  withEpub,
+  type IssueGroup,
+} from "@/ui/warnings";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -218,6 +228,11 @@ export class PreviewView extends ItemView {
   private back: HTMLButtonElement | undefined;
   private on: HTMLButtonElement | undefined;
   private edit: HTMLElement | undefined;
+  private bar: HTMLElement | undefined;
+  private spacer: HTMLElement | undefined;
+  /** The row under the page, which holds the folio where there is no status bar. */
+  private foot: HTMLElement | undefined;
+  private placed: Foot | undefined;
   private session: Session | undefined;
   private composed: Typeset | undefined;
   private readonly switches = new Map<ViewMode, HTMLButtonElement>();
@@ -424,10 +439,12 @@ export class PreviewView extends ItemView {
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
     this.chrome(pane);
-    this.exportAction ??= this.addAction(ACTIONS.export.icon, ACTIONS.export.label, () => {
-      const book = this.state.book;
-      if (book !== undefined) this.handoff.exports(book);
-    });
+    // On mobile the artboard draws Export in the preview's bar.
+    if (device() === "desktop") {
+      this.exportAction ??= this.addAction(ACTIONS.export.icon, ACTIONS.export.label, () => {
+        this.exports();
+      });
+    }
     this.inspectAction ??= this.addAction(ACTIONS.inspect.icon, ACTIONS.inspect.label, () => {
       this.toggleInspect();
     });
@@ -467,6 +484,10 @@ export class PreviewView extends ItemView {
     this.handoff.showing(this, undefined);
     this.back = undefined;
     this.on = undefined;
+    this.bar = undefined;
+    this.spacer = undefined;
+    this.foot = undefined;
+    this.placed = undefined;
     this.edit?.remove();
     this.edit = undefined;
     this.switches.clear();
@@ -644,12 +665,15 @@ export class PreviewView extends ItemView {
   /** Draws the toolbar, the well the pages sit in, and the status line. */
   private chrome(pane: HTMLElement): void {
     const bar = pane.createDiv({ cls: "orca-preview-bar" });
+    bar.dataset["testid"] = "orca-preview-bar";
+    this.bar = bar;
     const views = bar.createDiv({ cls: "orca-preview-views" });
     views.setAttribute("role", "group");
     views.setAttribute("aria-label", "View");
     for (const view of VIEWS) this.switchesTo(views, view);
     this.marksView();
-    bar.createDiv({ cls: "orca-preview-spacer" });
+    const spacer = bar.createDiv({ cls: "orca-preview-spacer" });
+    this.spacer = spacer;
 
     const warnings = bar.createEl("button", { cls: "orca-preview-warnings" });
     warnings.dataset["testid"] = "orca-warnings";
@@ -685,9 +709,25 @@ export class PreviewView extends ItemView {
     folio.dataset["testid"] = "orca-folio";
     this.folio = folio;
     this.total = bar.createSpan({ cls: "orca-preview-total" });
+    this.total.dataset["testid"] = "orca-total";
     this.on = this.turnsTo(bar, "chevron-right", "Next page", () =>
       nextPage(this.viewing()),
     );
+
+    // The mobile artboards draw the chapter beside the views and
+    // Export at the end of the bar.
+    if (device() !== "desktop") {
+      spacer.before(chapter);
+      const exporting = bar.createEl("button", {
+        cls: "clickable-icon orca-preview-export",
+      });
+      exporting.setAttribute("aria-label", ACTIONS.export.label);
+      exporting.dataset["testid"] = "orca-preview-export";
+      setIcon(exporting, ACTIONS.export.icon);
+      this.registerDomEvent(exporting, "click", () => {
+        this.exports();
+      });
+    }
 
     const well = pane.createDiv({ cls: "orca-preview-well" });
     // The pane pages through from the keyboard, so the well the pages
@@ -701,6 +741,11 @@ export class PreviewView extends ItemView {
     this.overlay = mountOverlay(surface);
     this.inspects(surface);
     this.followsLinks(surface);
+
+    const foot = pane.createDiv({ cls: "orca-preview-foot" });
+    foot.dataset["testid"] = "orca-preview-foot";
+    this.foot = foot;
+    this.places();
 
     this.registerDomEvent(folio, "change", () => {
       this.typed(folio.value);
@@ -735,6 +780,45 @@ export class PreviewView extends ItemView {
     });
     watching.observe(surface);
     this.watching = watching;
+  }
+
+  /**
+   * Moves the count of warnings, the arrows and the folio to where the
+   * device has room for them: under the page on mobile, and in the bar
+   * on a phone on its side. The pane says which once they are there.
+   */
+  private places(): void {
+    const pane = this.contentEl;
+    const { bar, spacer, foot, warnings, issues, back, folio, total, on } = this;
+    if (bar === undefined || spacer === undefined || foot === undefined) return;
+    if (warnings === undefined || issues === undefined) return;
+    if (back === undefined || folio === undefined || total === undefined || on === undefined) {
+      return;
+    }
+    const place = footPlace(device(), {
+      width: pane.clientWidth,
+      height: pane.clientHeight,
+    });
+    if (place === this.placed) return;
+    this.placed = place;
+    const stepper = [back, folio, total, on];
+    if (place === "under") foot.append(warnings, issues, ...stepper);
+    else if (place === "bar") spacer.after(warnings, issues, ...stepper);
+    else {
+      spacer.after(warnings, issues);
+      bar.append(...stepper);
+    }
+    foot.toggle(place === "under");
+    // The sheet places the warnings over the page from the foot, so
+    // what was measured for the bar comes off.
+    issues.style.removeProperty("right");
+    issues.style.removeProperty("max-width");
+    pane.dataset["foot"] = place;
+  }
+
+  private exports(): void {
+    const book = this.state.book;
+    if (book !== undefined) this.handoff.exports(book);
   }
 
   /** Puts the way to markdown in the view's header. */
@@ -1310,12 +1394,14 @@ export class PreviewView extends ItemView {
    * changed, since the span it asks for is the span it shows.
    */
   private measure(): void {
+    this.places();
     this.showsIssues();
     const surface = this.surface;
     if (surface === undefined) return;
     const grid = fits(
       { width: surface.clientWidth, height: surface.clientHeight },
       this.trim,
+      device(),
     );
     this.columns = grid.columns;
     this.rows = grid.rows;
@@ -1420,6 +1506,7 @@ export class PreviewView extends ItemView {
         note: this.showing ?? "",
         columns: SEATS[this.mode] ?? this.columns,
         rows: this.mode === "grid" ? this.rows : 1,
+        device: device(),
       },
       pressSheet,
     );
@@ -1464,22 +1551,28 @@ export class PreviewView extends ItemView {
       else said.push(warning);
     }
 
-    chip.toggleVisibility(said.length > 0);
+    // The fonts the book asked for and did not get, as the composer
+    // resolved them when it set the book.
+    const fonts = this.composed?.unfonted ?? [];
+    const total = said.length + fonts.length;
+    chip.toggleVisibility(total > 0);
     issues.empty();
-    if (said.length === 0) {
+    if (total === 0) {
       this.opened = false;
       this.showsIssues();
       return;
     }
 
-    const count = said.length === 1 ? "1 warning" : `${String(said.length)} warnings`;
+    const count = tally(fonts.length, said.length);
+    chip.toggleClass("mod-error", fonts.length > 0);
     chip.empty();
     chip.createSpan({ text: count });
     setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
     chip.setAttribute("aria-label", count);
-    for (const group of issueGroups(said)) {
+    for (const group of [...issueGroups(said), ...fontGroup(fonts)]) {
       const set = issues.createDiv({ cls: "orca-preview-issue-group" });
       set.dataset["testid"] = "orca-issue-group";
+      set.dataset["route"] = group.route;
       const head = set.createDiv({ cls: "orca-preview-issue-head" });
       head.createSpan({ cls: "orca-preview-issue-title", text: groupTitle(group) });
       head.createSpan({
@@ -1487,7 +1580,9 @@ export class PreviewView extends ItemView {
         text: String(group.issues.length),
       });
       for (const issue of group.issues) {
-        const card = set.createDiv({ cls: "orca-preview-issue" });
+        const card = set.createDiv({
+          cls: group.route === "fonts" ? "orca-preview-issue mod-error" : "orca-preview-issue",
+        });
         card.createDiv({ cls: "orca-preview-issue-said", text: issue.message });
         const place = issue.place;
         if (place === undefined) continue;
@@ -1566,6 +1661,7 @@ export class PreviewView extends ItemView {
     const issues = this.issues;
     const chip = this.warnings;
     if (issues === undefined || chip === undefined) return;
+    if (this.placed === "under") return;
     const bar = chip.parentElement;
     if (bar === null) return;
     const edge = bar.getBoundingClientRect();
@@ -1618,7 +1714,15 @@ export class PreviewView extends ItemView {
     this.app.workspace.requestSaveLayout();
     const last = at + this.count;
     if (this.folio !== undefined) this.folio.value = String(first);
-    this.total?.setText(`of ${String(pages)}`);
+    // The mobile artboards name a screenful by its span, which is no
+    // page to type over.
+    const spans = this.mode === "grid" && last > first && device() !== "desktop";
+    this.folio?.toggle(!spans);
+    this.total?.setText(
+      spans
+        ? `${String(first)}–${String(last)} of ${String(pages)}`
+        : `of ${String(pages)}`,
+    );
     this.reading(
       last > first
         ? `pages ${String(first)}–${String(last)} of ${String(pages)}`

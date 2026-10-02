@@ -38,6 +38,32 @@ export class Navigator {
     await expect(this.pane).toBeVisible();
   }
 
+  /**
+   * Opens the left drawer on the navigator again. Mobile closes the
+   * drawer when a note opens, some time after the note is open, and a
+   * drawer opened while it slides shut is taken off the page when the
+   * slide ends and still says it is open. So each try takes one step
+   * from what it finds: a shut drawer is opened once it is off the
+   * page, and one that is open and not drawn is shut for the next try.
+   */
+  async drawer(): Promise<void> {
+    await expect(async () => {
+      if (await this.obsidian.collapsed("left")) {
+        await expect(this.pane).toBeHidden({ timeout: 2_000 });
+        await this.obsidian.page.evaluate(async (type) => {
+          window.app.workspace.leftSplit.expand();
+          await window.app.workspace.ensureSideLeaf(type, "left", { reveal: true });
+        }, NAVIGATOR);
+      } else if (!(await this.pane.isVisible())) {
+        await this.obsidian.page.evaluate(() => {
+          window.app.workspace.leftSplit.collapse();
+        });
+      }
+      await expect(this.pane).toBeVisible({ timeout: 2_000 });
+      expect(await this.obsidian.collapsed("left")).toBe(false);
+    }).toPass({ timeout: 30_000 });
+  }
+
   /** One book on the shelf. */
   book(path: string): Locator {
     return this.pane.locator(`[data-book="${path}"]`);
@@ -72,6 +98,11 @@ export class Navigator {
       .getByTestId("orca-outline")
       .filter({ hasText: words })
       .first();
+  }
+
+  /** The chevron that folds a book. */
+  bookFold(path: string): Locator {
+    return this.name(path).locator(".orca-fold");
   }
 
   /** The chevron that folds an entry's headings. */
@@ -162,6 +193,11 @@ export class Navigator {
     return this.book(book).getByTestId("orca-entry");
   }
 
+  /** The row the navigator's own buttons are in. */
+  get toolbar(): Locator {
+    return this.pane.locator(".orca-nav-header");
+  }
+
   /** A button in the navigator's own header. */
   button(label: string): Locator {
     return this.pane.locator(`[aria-label="${label}"]`);
@@ -185,6 +221,48 @@ export class Navigator {
    */
   async menuOn(row: Locator): Promise<void> {
     await this.opening(row, { button: "right" });
+  }
+
+  /** The actions at the end of a row, which fade as one. */
+  actions(row: Locator): Locator {
+    return row.locator(".orca-nav-actions");
+  }
+
+  /**
+   * Presses a row for long enough to open its menu, and waits for the
+   * menu. A long press reaches the row as a `contextmenu` event on
+   * Android and on iOS, so the event is sent in place of the press.
+   */
+  async press(row: Locator): Promise<void> {
+    await expect(async () => {
+      const at = await box(row);
+      await row.dispatchEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        clientX: at.x + GRIP,
+        clientY: at.y + at.height / 2,
+      });
+      await expect(this.obsidian.menu()).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  }
+
+  /**
+   * The open menu's box once it has stopped moving. A phone's sheet
+   * rises into place, so two readings that agree are the box at rest.
+   */
+  async menuBox(): Promise<{ x: number; y: number; width: number; height: number }> {
+    let last = "";
+    let found = await box(this.obsidian.menu());
+    await expect
+      .poll(async () => {
+        found = await box(this.obsidian.menu());
+        const moved = JSON.stringify(found) !== last;
+        last = JSON.stringify(found);
+        return moved;
+      })
+      .toBe(false);
+    return found;
   }
 
   /**
@@ -313,6 +391,38 @@ export class Navigator {
         top: node?.scrollTop ?? 0,
         most: node === null ? 0 : node.scrollHeight - node.clientHeight,
       };
+    });
+  }
+
+  /**
+   * The room the list scrolls past the end of what it draws, in pixels.
+   * A list shorter than its box leaves none. A phone scrolls the
+   * shelves and a tablet the view.
+   */
+  async slack(): Promise<number> {
+    return this.pane.evaluate((pane) => {
+      const shelves = pane.querySelector(".orca-shelves");
+      const inside = shelves !== null && getComputedStyle(shelves).overflowY === "auto";
+      const box = inside ? shelves : pane.closest(".view-content");
+      const last = inside ? shelves.lastElementChild : pane;
+      if (box === null || last === null) throw new Error("the navigator draws no list");
+      const drawn =
+        last.getBoundingClientRect().bottom -
+        box.getBoundingClientRect().top +
+        box.scrollTop +
+        parseFloat(getComputedStyle(box).paddingBottom);
+      return box.scrollHeight - Math.max(box.clientHeight, Math.ceil(drawn));
+    });
+  }
+
+  /** The distance from each icon on a row to the middle of the row's height, in pixels. */
+  async offMiddle(row: Locator): Promise<number[]> {
+    return row.evaluate((element) => {
+      const outer = element.getBoundingClientRect();
+      return Array.from(element.querySelectorAll("svg"), (icon) => {
+        const inner = icon.getBoundingClientRect();
+        return Math.abs(outer.top + outer.height / 2 - (inner.top + inner.height / 2));
+      });
     });
   }
 

@@ -639,14 +639,24 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
   await navigator.headingFold(BOOK, "The Parsonage").click();
 
-  // Collapse all folds every entry, and Expand all opens every entry and heading.
+  // Collapse all folds the book and every entry, and Expand all opens
+  // the book, every entry and every heading.
   await navigator.headingFold(BOOK, "The Parsonage").click();
   await navigator.button("Collapse all").click();
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await expect(navigator.entries(BOOK)).toHaveCount(0);
+  // The book opened on its own shows its entries, each still folded.
+  await navigator.bookFold(BOOK).click();
+  await expect(navigator.entry(BOOK, FIFTEEN)).toBeVisible();
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
   // Every level folded, so an entry opened on its own shows only its top headings.
   await navigator.fold(BOOK, FIFTEEN).click();
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
   await navigator.fold(BOOK, FIFTEEN).click();
+  // With the book open the button offers to fold it again, and with
+  // it folded, to open everything.
+  await expect(navigator.button("Collapse all")).toBeVisible();
+  await navigator.bookFold(BOOK).click();
   await navigator.button("Expand all").click();
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
   await expect(navigator.outline(BOOK, CHAPTER)).toHaveText(["An Evening"]);
@@ -663,7 +673,8 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   // The setting takes every heading row away, and gives them back.
   await navigator.outlines(false);
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
-  await expect(navigator.button("Collapse all")).toHaveCount(0);
+  // A book folds with no heading listed, so the button stays.
+  await expect(navigator.button("Collapse all")).toBeVisible();
   await navigator.outlines(true);
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 

@@ -14,8 +14,8 @@ export interface FontFiles {
   read(path: string, at: number, length: number): Promise<Uint8Array>;
 }
 
-/** The place a face was found. */
-export type Where = "platform" | "vault";
+/** The place a face was found. A family the engine carries has no file, so it has no faces. */
+export type Where = "platform" | "vault" | "engine";
 
 /** One face of a family. */
 export interface Face {

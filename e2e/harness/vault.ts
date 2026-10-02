@@ -19,6 +19,8 @@ declare global {
 export class Vault {
   private readonly touched = new Set<string>();
   private readonly folders = new Set<string>();
+  /** The folders moved aside, each by the path it came from. */
+  private readonly aside = new Map<string, string>();
 
   constructor(
     private readonly page: Page,
@@ -127,12 +129,40 @@ export class Vault {
   }
 
   /**
+   * Moves a folder aside, so the vault has none at its path. The files
+   * in it are not read or written, so a font comes back byte for byte.
+   */
+  async away(folder: string): Promise<void> {
+    const to = `${folder}.aside`;
+    this.aside.set(folder, to);
+    await this.page.evaluate(
+      async ({ from, to: at }) => window.app.vault.adapter.rename(from, at),
+      { from: folder, to },
+    );
+  }
+
+  /** Moves every folder that `away` moved back to its path. */
+  async back(): Promise<void> {
+    for (const [folder, at] of this.aside) {
+      await this.page.evaluate(
+        async ({ from, to }) => {
+          const { adapter } = window.app.vault;
+          if (await adapter.exists(from)) await adapter.rename(from, to);
+        },
+        { from: at, to: folder },
+      );
+    }
+    this.aside.clear();
+  }
+
+  /**
    * Puts back every file the spec touched, and returns once Obsidian
    * has indexed each one. A write the vault sees late is a change the
    * next spec gets: the book note parses as no book for a moment, and a
    * chapter crosses to the engine as an edit.
    */
   async restore(): Promise<void> {
+    await this.back();
     for (const file of this.touched) {
       const text = await readFile(path.join(this.fixture, file), "utf8").catch(
         () => undefined,

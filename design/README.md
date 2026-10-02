@@ -100,8 +100,9 @@ its editor around these files and returns a URL. The artboard list and
   with the entry's name leaves it out, because the entry's row says
   it. The author folds the headings of one entry at a time, and a
   heading folds the deeper headings under it. `Collapse all` in the
-  navigator header folds every entry and every heading level in it, and `Expand all` opens every
-  entry and heading again. Obsidian keeps every fold with the
+  navigator header folds every book, every entry and every heading
+  level, and `Expand all` opens them all again. It is there whenever
+  the shelf has a book. Obsidian keeps every fold with the
   workspace, so a reload opens the shelf as the author left it. A
   heading's fold follows its words under the headings above it, so
   text written elsewhere in the note keeps it. A setting
@@ -157,6 +158,12 @@ its editor around these files and returns a URL. The artboard list and
   row is set in that font, and the cross at its end takes it back out.
   A font the machine no longer has warns the way a missing design font
   warns.
+- A font the design names and the machine does not have is an error,
+  as it is at export. The preview lists it with the warnings, in a
+  group named `Fonts`, on a red card. The count says each kind, as in
+  `1 error, 2 warnings`, and is red when it holds an error. The
+  panel's header counts the errors as the CSS view counts its
+  warnings.
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
   A selector completes from the classes and ids the book's sections
@@ -310,13 +317,19 @@ replaces them.
   the left` are not offered on a phone. A tablet offers both.
 - A phone and a tablet offer the three views of the desktop. A phone
   on its side shows a spread at the height of the pane. Upright, the
-  spread is drawn at the width of the screen. On its side, a phone has
-  the page number and the count of warnings in the preview's bar.
+  spread is drawn at the width of the screen.
 - A swipe turns a page, a spread or a screenful. The arrows that turn
-  a page stay, under the page.
-- Mobile has no status bar. The page number and the count of warnings
-  are under the page. The warnings open over the page from the count,
-  and a tap on the page shuts them.
+  a page stay, beside the page number.
+- Mobile has no status bar. On an upright phone the page number, the
+  arrows and the count of warnings are under the page, clear of
+  Obsidian's own bar. On a phone on its side they are in the preview's
+  bar. A tablet has them in the bar too, in a pane 700px wide or more,
+  and under the page in a narrower one. The warnings open over the
+  page from the count, and a tap on the page shuts them.
+- The navigator's buttons on mobile are one pill, as Obsidian mobile
+  draws a toolbar, with `Collapse all` and `New book` as icons. `New
+  book` is a book with a plus on it, on desktop too. On a phone the pill is fixed at the foot of the drawer and the
+  list scrolls over it.
 - Nothing on mobile waits for a pointer. A tap on a lock opens its
   card. A book's row in the navigator shows `Open preview` and `Add to
   this book` at all times, and a missing note shows `Locate` and

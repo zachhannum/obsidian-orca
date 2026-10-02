@@ -101,6 +101,17 @@ const POSED = "orca-photograph";
 /** The type the preview is registered under. */
 export const PREVIEW = "orca-book-preview";
 
+/** The test id of the pane's own element, which is the root of what orca draws in it. */
+const ROOT = "orca-preview";
+
+/** Every control orca draws in a preview, for a spec that measures them. */
+export const PREVIEW_CONTROLS = `[data-testid="${ROOT}"]`;
+
+interface Box {
+  width: number;
+  height: number;
+}
+
 /** The note the surface names for a page nobody wrote. */
 export const NOWHERE = "-";
 
@@ -148,6 +159,14 @@ export class Book {
   readonly asMarkdown: Locator;
   /** Every pane reading a book. */
   readonly panes: Locator;
+  /** The preview's bar. */
+  readonly bar: Locator;
+  /** The row under the page, which mobile draws in place of a status bar. */
+  readonly foot: Locator;
+  /** The book's length beside the folio, or the span a mobile grid shows. */
+  readonly total: Locator;
+  /** The bar's own Export, which mobile draws there. */
+  readonly exportIn: Locator;
 
   private readonly pane: Locator;
 
@@ -179,6 +198,83 @@ export class Book {
     this.newChapter = pane.getByTestId("orca-new-chapter");
     this.asMarkdown = obsidian.action(AS_MARKDOWN);
     this.panes = pane;
+    this.bar = pane.getByTestId("orca-preview-bar");
+    this.foot = pane.getByTestId("orca-preview-foot");
+    this.total = pane.getByTestId("orca-total");
+    this.exportIn = pane.getByTestId("orca-preview-export");
+  }
+
+  /**
+   * Waits for the pane to say the folio, the arrows and the count of
+   * warnings are at `place`, and returns the row that holds them.
+   */
+  async footed(place: "under" | "bar" | "status"): Promise<Locator> {
+    await expect(this.pane.getByTestId(ROOT)).toHaveAttribute("data-foot", place);
+    return place === "under" ? this.foot : this.bar;
+  }
+
+  /**
+   * The room between the foot's controls and the bar Obsidian floats
+   * over the foot of a phone's screen.
+   */
+  async clearance(): Promise<number> {
+    const lowest = await this.foot.evaluate((foot) =>
+      Math.max(
+        ...Array.from(foot.children, (each) => each.getBoundingClientRect().bottom),
+      ),
+    );
+    return (await this.obsidian.navbar()) - lowest;
+  }
+
+  /**
+   * Writes a long place into the first open warning and returns how far
+   * the warnings then scroll sideways, in the list or in a card.
+   */
+  async issuesSpill(place: string): Promise<number> {
+    return this.pane.getByTestId("orca-issues").evaluate((list, words) => {
+      const open = list.querySelector('[data-testid="orca-issue-open"]');
+      if (open === null) throw new Error("no warning names a place");
+      open.textContent = words;
+      const cards = Array.from(list.querySelectorAll<HTMLElement>(".orca-preview-issue"));
+      const inner = Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth));
+      return Math.max(inner, list.scrollWidth - list.clientWidth);
+    }, place);
+  }
+
+  /**
+   * Shuts the drawers of a mobile window and waits for the pane to be
+   * back on screen. An open drawer pushes a phone's one pane off it.
+   */
+  async uncovered(): Promise<void> {
+    await this.obsidian.page.evaluate(() => {
+      window.app.workspace.leftSplit.collapse();
+      window.app.workspace.rightSplit.collapse();
+    });
+    await expect
+      .poll(async () => {
+        const box = await this.pane.getByTestId(ROOT).boundingBox();
+        const wide = await this.obsidian.page.evaluate(() => window.innerWidth);
+        return box !== null && box.x >= 0 && box.x + box.width <= wide + 1;
+      })
+      .toBe(true);
+  }
+
+  /** The sheets the view seats across. */
+  async columns(): Promise<number> {
+    return this.surface.evaluate((surface) =>
+      Number(surface.style.getPropertyValue("--orca-columns")),
+    );
+  }
+
+  /** The room the pages have, and the box of the sheet in the `at`th slot. */
+  async room(at: number): Promise<{ well: Box; sheet: Box }> {
+    return this.surface.evaluate((surface, slot) => {
+      const sheet = surface.querySelectorAll(".orca-page")[slot]?.getBoundingClientRect();
+      return {
+        well: { width: surface.clientWidth, height: surface.clientHeight },
+        sheet: { width: sheet?.width ?? 0, height: sheet?.height ?? 0 },
+      };
+    }, at);
   }
 
   /**

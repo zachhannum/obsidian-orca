@@ -8,12 +8,15 @@ import { familyVariants } from "@/assets/variants";
 import { emptyDesign } from "@/style/design";
 import { readFontIndex, resolveUse, vaultFonts } from "@/ui/fonts";
 import {
+  CARRIED,
   missingAdded,
   missingFont,
   missingFonts,
   missingVariant,
   missingVariants,
   picking,
+  sourced,
+  withCarried,
 } from "@/ui/picker";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
@@ -151,6 +154,61 @@ test("a font the book adds that the machine no longer has warns the way a design
   ]);
   design.headings[2].font = "junicode";
   assert.deepEqual(missingAdded(INDEX, design, ["Junicode"]), []);
+});
+
+/** An index of the vault's families alone, as a phone reads it. */
+function inVault(...names: string[]): FontIndex {
+  return {
+    families: names.map((name) => ({ ...family(name, "Regular"), where: "vault" as const })),
+    refused: [],
+  };
+}
+
+test("an index read with the system's fonts is left as it is, and has no line under it", () => {
+  assert.equal(withCarried(INDEX, true), INDEX);
+  assert.equal(sourced(INDEX), undefined);
+});
+
+test("with no system fonts and none in the vault, the list is the family the engine carries, and the line says the vault has none", () => {
+  const index = withCarried(inVault(), false);
+  const offered = picking(index, "", 0).offered;
+  assert.deepEqual(
+    offered.map((one) => [one.name, one.where, one.faces.length]),
+    [[CARRIED, "engine", 0]],
+  );
+  assert.deepEqual(sourced(index), { families: 1, empty: true });
+});
+
+test("with no system fonts, the carried family is listed ahead of the vault's, and the line counts them", () => {
+  const index = withCarried(inVault("Alegreya", "Junicode"), false);
+  assert.deepEqual(
+    picking(index, "", 0).offered.map((one) => one.name),
+    [CARRIED, "Alegreya", "Junicode"],
+  );
+  assert.deepEqual(sourced(index), { families: 3, empty: false });
+});
+
+test("a vault with its own files of the carried family lists those, and the list has no line", () => {
+  const vaults = inVault("Alegreya", CARRIED.toLowerCase());
+  const index = withCarried(vaults, false);
+  assert.equal(index, vaults);
+  assert.equal(sourced(index), undefined);
+});
+
+test("a book set in the carried family is not warned about, and no face crosses for it", async () => {
+  const index = withCarried(inVault(), false);
+  const design = emptyDesign();
+  design.body.font = CARRIED;
+  assert.deepEqual(missingFonts(index, design), []);
+  const places = {
+    platform: vaultFonts(vault),
+    vault: vaultFonts(vault),
+    directories: [],
+    folder: VAULT_FONTS,
+  };
+  const resolved = await resolveUse(places, index, { font: CARRIED, variant: undefined });
+  assert.equal(resolved.registered, undefined);
+  assert.equal(resolved.unread, false);
 });
 
 // What this tier does not cover: the panel's drawing, which is React

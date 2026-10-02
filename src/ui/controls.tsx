@@ -34,6 +34,7 @@ import {
   type Measure,
   type Typed,
 } from "@/ui/groups";
+import { device } from "@/ui/desktop";
 import { Icon } from "@/ui/icon";
 import { browsing, glyphName, COLUMNS } from "@/ui/glyphs";
 import { previewFamily } from "@/ui/picker";
@@ -206,6 +207,7 @@ export function inactive(reason: Inactive | undefined): {
 export function Row({
   label,
   grid,
+  flag = false,
   reset,
   under,
   keys = [],
@@ -215,6 +217,8 @@ export function Row({
 }: {
   label: string;
   grid: boolean;
+  /** True when the row is a label and one switch, which share a line on a phone. */
+  flag?: boolean;
   reset: ReactNode;
   under: readonly Under[];
   /** The design keys the row writes. The inspect pane finds the row by these keys. */
@@ -250,12 +254,13 @@ export function Row({
       data-keys={keys.length === 0 ? undefined : keys.join(" ")}
       data-dim={dim ? "" : undefined}
     >
-      <div className={grid ? "orca-panel-row mod-grid" : "orca-panel-row"}>
+      <div className={classes("orca-panel-row", grid && "mod-grid", flag && "mod-flag")}>
         <span
           className={classes(
             "orca-panel-label",
             (dim || overridden?.every === true) && "is-inactive",
           )}
+          data-testid="orca-panel-label"
         >
           {label}
         </span>
@@ -617,33 +622,43 @@ export function Field({
   if (measure === undefined) return input;
 
   const from = text ?? value;
+  const button = (by: 1 | -1, icon: string): JSX.Element => (
+    <button
+      key={by}
+      type="button"
+      tabIndex={-1}
+      className="orca-panel-step"
+      data-testid={`${testid}-${by === 1 ? "up" : "down"}`}
+      aria-label={stepSaid(measure, from, by, unit)}
+      // The field keeps the focus, so a step does not first commit
+      // what was typed and then step from the value before it.
+      onMouseDown={(event) => {
+        event.preventDefault();
+      }}
+      onClick={(event) => {
+        step(by, event.shiftKey ? 10 : 1);
+      }}
+    >
+      <Icon name={icon} className="orca-panel-icon" />
+    </button>
+  );
+  // A finger cannot press one half of a stacked stepper, so off desktop
+  // the field has a button at each end.
+  if (device() !== "desktop") {
+    return (
+      <div className="orca-panel-number mod-ends">
+        {button(-1, "minus")}
+        {input}
+        {button(1, "plus")}
+      </div>
+    );
+  }
   return (
     <div className="orca-panel-number">
       {input}
       <div className="orca-panel-stepper">
-        {([1, -1] as const).map((by) => (
-          <button
-            key={by}
-            type="button"
-            tabIndex={-1}
-            className="orca-panel-step"
-            data-testid={`${testid}-${by === 1 ? "up" : "down"}`}
-            aria-label={stepSaid(measure, from, by, unit)}
-            // The field keeps the focus, so a step does not first commit
-            // what was typed and then step from the value before it.
-            onMouseDown={(event) => {
-              event.preventDefault();
-            }}
-            onClick={(event) => {
-              step(by, event.shiftKey ? 10 : 1);
-            }}
-          >
-            <Icon
-              name={by === 1 ? "chevron-up" : "chevron-down"}
-              className="orca-panel-icon"
-            />
-          </button>
-        ))}
+        {button(1, "chevron-up")}
+        {button(-1, "chevron-down")}
       </div>
     </div>
   );
@@ -909,22 +924,6 @@ export function Glyphs({
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-/** Draws a warning under a control. The warning comes from orca, not from the engine. */
-export function Warning({
-  said,
-  testid,
-}: {
-  said: string;
-  testid: string;
-}): JSX.Element {
-  return (
-    <div className="orca-panel-warning" data-testid={testid}>
-      <Icon name="alert-circle" className="orca-panel-icon" />
-      <span>{said}</span>
     </div>
   );
 }

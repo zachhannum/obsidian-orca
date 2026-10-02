@@ -108,7 +108,7 @@ function Book({
   acting: Acting;
 }): JSX.Element {
   return (
-    <div className="orca-book-page">
+    <div className="orca-book-page" data-testid="orca-book-page">
       <div className="orca-book-head">
         <div className="orca-book-name">{report.name}</div>
         <div className="orca-book-line" data-testid="orca-book-line">
