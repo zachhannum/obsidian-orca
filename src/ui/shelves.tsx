@@ -320,10 +320,12 @@ function Label({ words }: { words: string }): JSX.Element {
 function Action({
   icon,
   label,
+  named = false,
   onClick,
 }: {
   icon: string;
   label: string;
+  named?: boolean;
   onClick: (event: Pointed) => void;
 }): JSX.Element {
   const ref = useRef<HTMLButtonElement>(null);
@@ -336,7 +338,7 @@ function Action({
     <button
       ref={ref}
       type="button"
-      className="orca-nav-action"
+      className={named ? "orca-nav-action mod-named" : "orca-nav-action"}
       aria-label={label}
       onPointerDown={(event) => {
         event.stopPropagation();
@@ -347,6 +349,7 @@ function Action({
       }}
     >
       <Icon name={icon} />
+      {named ? <span className="orca-nav-action-name">{label}</span> : null}
     </button>
   );
 }
@@ -399,6 +402,7 @@ export function Shelf({
         <Action
           icon={ACTIONS.newBook.icon}
           label={ACTIONS.newBook.label}
+          named={device() !== "desktop"}
           onClick={() => {
             acting.newBook();
           }}
