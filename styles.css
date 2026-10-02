@@ -159,6 +159,12 @@
   color: var(--text-normal);
 }
 
+/* A font the book did not get is an error, drawn as export draws one. */
+.orca-preview-issue.mod-error {
+  border-left-color: var(--color-red);
+  background: rgba(251, 70, 76, 0.09);
+}
+
 .orca-preview-issue-at {
   margin-top: 3px;
   font-family: var(--font-monospace);
@@ -3454,6 +3460,23 @@ input.orca-panel-filter {
   flex: none;
   margin: 0 4px;
   white-space: nowrap;
+}
+
+/* A count with an error in it is drawn in the error's colour. */
+.orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error,
+.is-mobile .orca-preview button.orca-preview-warnings.mod-error {
+  background-color: rgba(251, 70, 76, 0.15);
+  color: var(--color-red);
+}
+
+.orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error:hover,
+.orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error.is-on,
+.is-mobile .orca-preview button.orca-preview-warnings.mod-error.is-on {
+  background-color: rgba(251, 70, 76, 0.28);
+}
+
+.orca-panel-warned.mod-error {
+  color: var(--color-red);
 }
 
 /* The count is a chip 22px tall inside a button the size of a touch. */

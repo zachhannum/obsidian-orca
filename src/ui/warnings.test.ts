@@ -7,6 +7,7 @@ import {
   cssFlags,
   fontGroup,
   groupTitle,
+  tally,
   issueGroups,
   routeOf,
   withEpub,
@@ -88,6 +89,13 @@ test("the fonts a book does not get are one group named Fonts, with no place to 
     { message: "Missing font: Junicode", place: undefined },
     { message: "Missing font: Alegreya", place: undefined },
   ]);
+});
+
+test("the count says the errors first and then the warnings, and leaves out a kind there is none of", () => {
+  assert.equal(tally(0, 1), "1 warning");
+  assert.equal(tally(0, 3), "3 warnings");
+  assert.equal(tally(1, 0), "1 error");
+  assert.equal(tally(2, 1), "2 errors, 1 warning");
 });
 
 // What this tier does not cover: the console itself, the preview's

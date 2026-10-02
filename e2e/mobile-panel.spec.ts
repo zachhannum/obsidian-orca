@@ -147,13 +147,14 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(panel.missing).not.toHaveCount(0);
       await expect(panel.missing.filter({ hasText: CARRIED })).toHaveCount(0);
 
-      // A missing font is a warning like any other: the preview lists
-      // it under `Fonts` and counts it, and the panel's header counts
-      // it as the CSS view counts its own.
+      // A missing font is an error: the preview lists it under `Fonts`
+      // with the warnings, drawn as an error, and counts it apart from
+      // them. The panel's header counts it too.
       const missing = await panel.missing.count();
-      const count = missing === 1 ? "1 warning" : `${String(missing)} warnings`;
+      const count = missing === 1 ? "1 error" : `${String(missing)} errors`;
       await expect(panel.warned).toHaveText(count);
       await expect(book.warnings).toHaveText(count);
+      await expect(panel.missing.first()).toHaveClass(/mod-error/);
       await expect(panel.missing.first()).toHaveText(/^Missing font: /);
       await expect(panel.fontGroup).toContainText("Fonts");
       await panel.reset("body-font").click();

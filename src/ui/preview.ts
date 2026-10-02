@@ -78,6 +78,7 @@ import {
   groupTitle,
   issueGroups,
   routeOf,
+  tally,
   withEpub,
   type IssueGroup,
 } from "@/ui/warnings";
@@ -1562,7 +1563,8 @@ export class PreviewView extends ItemView {
       return;
     }
 
-    const count = total === 1 ? "1 warning" : `${String(total)} warnings`;
+    const count = tally(fonts.length, said.length);
+    chip.toggleClass("mod-error", fonts.length > 0);
     chip.empty();
     chip.createSpan({ text: count });
     setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
@@ -1578,7 +1580,9 @@ export class PreviewView extends ItemView {
         text: String(group.issues.length),
       });
       for (const issue of group.issues) {
-        const card = set.createDiv({ cls: "orca-preview-issue" });
+        const card = set.createDiv({
+          cls: group.route === "fonts" ? "orca-preview-issue mod-error" : "orca-preview-issue",
+        });
         card.createDiv({ cls: "orca-preview-issue-said", text: issue.message });
         const place = issue.place;
         if (place === undefined) continue;

@@ -13,6 +13,7 @@
  * names. Filling the list sends nothing to the engine.
  */
 
+import { tally } from "@/ui/warnings";
 import { createRoot } from "react-dom/client";
 import {
   Fragment,
@@ -240,8 +241,11 @@ export function Panel({
         · {shown.name}
       </span>
       {warned > 0 ? (
-        <span className="orca-panel-warned" data-testid="orca-panel-warned">
-          {warned === 1 ? "1 warning" : `${String(warned)} warnings`}
+        <span
+          className={css ? "orca-panel-warned" : "orca-panel-warned mod-error"}
+          data-testid="orca-panel-warned"
+        >
+          {css ? tally(0, warned) : tally(warned, 0)}
         </span>
       ) : null}
       {css ? (

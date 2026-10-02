@@ -157,10 +157,12 @@ its editor around these files and returns a URL. The artboard list and
   row is set in that font, and the cross at its end takes it back out.
   A font the machine no longer has warns the way a missing design font
   warns.
-- A font the design names and the machine does not have is a warning
-  like any other. The preview counts it and lists it with the
-  warnings, in a group named `Fonts`. The panel's header counts the
-  missing fonts as the CSS view counts its warnings.
+- A font the design names and the machine does not have is an error,
+  as it is at export. The preview lists it with the warnings, in a
+  group named `Fonts`, on a red card. The count says each kind, as in
+  `1 error, 2 warnings`, and is red when it holds an error. The
+  panel's header counts the errors as the CSS view counts its
+  warnings.
 - A `font-family` value in the CSS view completes from the fonts the
   book carries, the design's and the added ones. A name goes in quoted.
   A selector completes from the classes and ids the book's sections

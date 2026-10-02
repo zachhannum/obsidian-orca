@@ -88,6 +88,20 @@ export function fontGroup(said: readonly string[]): IssueGroup[] {
   ];
 }
 
+/**
+ * The words on the count: the errors first, then the warnings, each
+ * kind only when there is one. A font the book did not get is an
+ * error, as it is at export. What the engine says is a warning.
+ */
+export function tally(errors: number, warnings: number): string {
+  const said: string[] = [];
+  if (errors > 0) said.push(errors === 1 ? "1 error" : `${String(errors)} errors`);
+  if (warnings > 0) {
+    said.push(warnings === 1 ? "1 warning" : `${String(warnings)} warnings`);
+  }
+  return said.join(", ");
+}
+
 /** The name a group is listed under: a note by its title. */
 export function groupTitle(group: IssueGroup): string {
   if (group.route === "css") return "The book's CSS";
