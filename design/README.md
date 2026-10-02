@@ -189,8 +189,9 @@ its editor around these files and returns a URL. The artboard list and
   colour. A device larger than the pane scales down to fit, body
   included.
 - The EPUB view has seven reader settings. Font is Publisher, Old
-  style, Modern, Sans or Humanist. Size runs from 75% to 250% in steps
-  of 25 and starts at 100%. Line spacing is Publisher, 1.2, 1.5, 1.75
+  style, Modern, Sans or Humanist. Text size is a smaller letter and a
+  larger one, with the step between them. It has eight steps and
+  starts at the second, which is the publisher's. Line spacing is Publisher, 1.2, 1.5, 1.75
   or 2. Side margins are Narrow, Normal or Wide. Top and bottom are
   Narrow, Normal or Wide. Alignment is Publisher, Start or Justify.
   Theme is Light, Sepia or Dark. Each starts at the publisher's, which

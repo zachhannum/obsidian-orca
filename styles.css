@@ -371,9 +371,31 @@
   width: 8em;
 }
 
-/* The size reads with its percent sign at a phone's larger type. */
-.orca-reflow-popover .orca-panel-number > input.orca-panel-text {
-  width: 6em;
+/* The text size is a smaller letter, the step, and a larger letter. */
+button.orca-panel-choice.orca-reflow-smaller {
+  font-size: 11px;
+}
+
+button.orca-panel-choice.orca-reflow-larger {
+  font-size: 17px;
+}
+
+button.orca-panel-choice:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.orca-reflow-step {
+  flex: 1 1 0;
+  align-self: center;
+  text-align: center;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.orca-reflow-step.is-default {
+  color: var(--text-faint);
 }
 
 /* On a phone Obsidian's navigation floats over the foot of the view,

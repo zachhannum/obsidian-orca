@@ -23,6 +23,7 @@ import {
   deviceBox,
   readerInset,
   readerPage,
+  readerSizeStep,
   readerStored,
   readerVariables,
   type ReaderSettings,
@@ -116,6 +117,12 @@ test("the bundled ReadiumCSS reads every variable the mapping sets", () => {
   for (const name of referenced) {
     assert.ok(sheets.includes(`${name}:`), `${name} is not defined in ReadiumCSS`);
   }
+});
+
+test("the text size is a step of eight, and the publisher's is the second", () => {
+  assert.deepEqual(readerSizeStep(READER_SIZE_MIN), { step: 1, steps: 8 });
+  assert.deepEqual(readerSizeStep(READER_DEFAULTS.size), { step: 2, steps: 8 });
+  assert.deepEqual(readerSizeStep(READER_SIZE_MAX), { step: 8, steps: 8 });
 });
 
 test("the size steps land on the author's size", () => {
@@ -301,10 +308,13 @@ test("the PreviewViews artboard names every device and every option of every set
   for (const label of labels) {
     assert.match(part, new RegExp(`[> ]${label.replace(".", "\\.")}[<,. ]`), `no ${label}`);
   }
-  for (const size of [READER_SIZE_MIN, READER_SIZE_MAX, READER_DEFAULTS.size]) {
-    assert.ok(part.includes(`${String(size)}%`), `no ${String(size)}%`);
-  }
-  assert.ok(part.includes(`steps of ${String(READER_SIZE_STEP)}`));
+  // The text size is drawn as its step, and no percent reaches the author.
+  const { step, steps } = readerSizeStep(READER_DEFAULTS.size);
+  assert.ok(part.includes(`>${String(step)} of ${String(steps)}<`), "no step");
+  const words = part
+    .slice(part.indexOf("<!-- the EPUB view"), part.indexOf("Opened where you are reading."))
+    .replace(/<[^>]*>/g, " ");
+  assert.doesNotMatch(words, /\d\s*%/);
 });
 
 // What this tier does not cover: a browser applying the sheets, so

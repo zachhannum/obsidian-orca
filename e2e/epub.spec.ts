@@ -148,16 +148,17 @@ test("each reader setting changes the ReadiumCSS variable it maps to", async ({ 
   await expect.poll(() => set(epub)).toEqual(DEFAULTS);
 
   const { screens } = await epub.turned();
-  await epub.setting("size-up").click();
-  await epub.setting("size-up").click();
-  await expect(epub.setting("size")).toHaveValue("150%");
+  await epub.setting("size-larger").click();
+  await epub.setting("size-larger").click();
+  await expect(epub.setting("size")).toContainText("4 of 8");
+  await expect(epub.setting("size")).not.toContainText("%");
   await expect.poll(() => set(epub)).toEqual({ ...DEFAULTS, "--USER__fontSize": "150%" });
   // Larger type is more screens of it, and the view counts them again.
   await expect
     .poll(async () => (await epub.turned()).screens)
     .toBeGreaterThan(screens);
-  await epub.setting("size-down").click();
-  await epub.setting("size-down").click();
+  await epub.setting("size-smaller").click();
+  await epub.setting("size-smaller").click();
   await expect.poll(() => set(epub)).toEqual(DEFAULTS);
 
   await epub.setting("spacing").selectOption("1.5");
@@ -175,8 +176,10 @@ test("each reader setting changes the ReadiumCSS variable it maps to", async ({ 
   // its largest here, so the chapter is screens enough to show it.
   const normal = await epub.measured();
   for (let size = READER_DEFAULTS.size; size < READER_SIZE_MAX; size += READER_SIZE_STEP) {
-    await epub.setting("size-up").click();
+    await epub.setting("size-larger").click();
   }
+  // The last step is the largest, and the letter that goes past it is off.
+  await expect(epub.setting("size-larger")).toBeDisabled();
   const largest = { ...DEFAULTS, "--USER__fontSize": `${String(READER_SIZE_MAX)}%` };
   await expect.poll(() => set(epub)).toEqual(largest);
   await epub.setting("vertical-narrow").click();
@@ -202,7 +205,7 @@ test("each reader setting changes the ReadiumCSS variable it maps to", async ({ 
   expect(await set(epub)).toEqual(largest);
   await epub.setting("vertical-normal").click();
   for (let size = READER_SIZE_MAX; size > READER_DEFAULTS.size; size -= READER_SIZE_STEP) {
-    await epub.setting("size-down").click();
+    await epub.setting("size-smaller").click();
   }
   await expect.poll(() => set(epub)).toEqual(DEFAULTS);
   await expect.poll(async () => (await epub.measured()).frame).toEqual(normal.frame);
@@ -286,7 +289,7 @@ async function cameBack(book: Book, epub: Epub): Promise<void> {
   expect((await epub.measured()).frame.top).toBe(16);
   await epub.settings.click();
   await expect(epub.setting("font")).toHaveValue(CHOSEN.settings.font);
-  await expect(epub.setting("size")).toHaveValue("125%");
+  await expect(epub.setting("size")).toContainText("3 of 8");
   await expect(epub.setting("spacing")).toHaveValue("1.5");
   for (const key of ["margins-wide", "vertical-narrow", "align-justify", "theme-sepia"]) {
     await expect(epub.setting(key)).toHaveAttribute("aria-pressed", "true");
@@ -306,7 +309,7 @@ test("the EPUB view, the device and every reader setting come back in a new pane
   await epub.device.selectOption(CHOSEN.device);
   await epub.settings.click();
   await epub.setting("font").selectOption("sans");
-  await epub.setting("size-up").click();
+  await epub.setting("size-larger").click();
   await epub.setting("spacing").selectOption("1.5");
   await epub.setting("margins-wide").click();
   await epub.setting("vertical-narrow").click();
@@ -361,7 +364,7 @@ test("nothing the EPUB view does writes to the vault, and the book note is untou
     }
     await epub.settings.click();
     await epub.setting("font").selectOption("sans");
-    await epub.setting("size-up").click();
+    await epub.setting("size-larger").click();
     await epub.setting("spacing").selectOption("2");
     await epub.setting("margins-narrow").click();
     await epub.setting("vertical-wide").click();

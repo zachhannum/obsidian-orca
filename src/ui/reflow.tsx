@@ -29,6 +29,7 @@ import {
   deviceBox,
   readerInset,
   readerPage,
+  readerSizeStep,
   readerVariables,
   type ReaderSettings,
   type ReaderStored,
@@ -458,6 +459,7 @@ function Settings({
     settle({ ...settings, ...change });
   };
   const spacing = settings.spacing === undefined ? PUBLISHER : String(settings.spacing);
+  const sized = readerSizeStep(settings.size);
   return (
     <>
       <button
@@ -492,42 +494,18 @@ function Settings({
               }}
             />
           </Line>
-          <Line label={READER_LABELS.size}>
-            <div className="orca-panel-number">
-              <input
-                type="text"
-                readOnly
+          <Line label={READER_LABELS.size} testid="orca-reflow-setting-size">
+            <div className="orca-panel-segment">
+              <Sized by={-1} settings={settings} set={set} />
+              <span
                 className={classes(
-                  "orca-panel-text",
+                  "orca-reflow-step",
                   settings.size === READER_DEFAULTS.size && "is-default",
                 )}
-                aria-label={READER_LABELS.size}
-                data-testid="orca-reflow-setting-size"
-                value={`${String(settings.size)}%`}
-              />
-              <div className="orca-panel-stepper">
-                {([1, -1] as const).map((by) => {
-                  const next = settings.size + by * READER_SIZE_STEP;
-                  return (
-                    <button
-                      key={by}
-                      type="button"
-                      className="orca-panel-step"
-                      data-testid={`orca-reflow-setting-size-${by === 1 ? "up" : "down"}`}
-                      aria-label={by === 1 ? "Larger" : "Smaller"}
-                      disabled={next < READER_SIZE_MIN || next > READER_SIZE_MAX}
-                      onClick={() => {
-                        set({ size: next });
-                      }}
-                    >
-                      <Icon
-                        name={by === 1 ? "chevron-up" : "chevron-down"}
-                        className="orca-panel-icon"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
+              >
+                {`${String(sized.step)} of ${String(sized.steps)}`}
+              </span>
+              <Sized by={1} settings={settings} set={set} />
             </div>
           </Line>
           <Line label={READER_LABELS.spacing}>
@@ -602,9 +580,44 @@ function Settings({
   );
 }
 
-function Line({ label, children }: { label: string; children: ReactNode }): JSX.Element {
+/** Draws the letter that sets the text one step smaller or larger. */
+function Sized({
+  by,
+  settings,
+  set,
+}: {
+  by: 1 | -1;
+  settings: ReaderSettings;
+  set: (change: Partial<ReaderSettings>) => void;
+}): JSX.Element {
+  const next = settings.size + by * READER_SIZE_STEP;
   return (
-    <div className="orca-panel-row">
+    <button
+      type="button"
+      className={classes("orca-panel-choice", by === 1 ? "orca-reflow-larger" : "orca-reflow-smaller")}
+      data-testid={`orca-reflow-setting-size-${by === 1 ? "larger" : "smaller"}`}
+      aria-label={by === 1 ? "Larger" : "Smaller"}
+      disabled={next < READER_SIZE_MIN || next > READER_SIZE_MAX}
+      onClick={() => {
+        set({ size: next });
+      }}
+    >
+      A
+    </button>
+  );
+}
+
+function Line({
+  label,
+  testid,
+  children,
+}: {
+  label: string;
+  testid?: string;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <div className="orca-panel-row" data-testid={testid}>
       <span className="orca-panel-label">{label}</span>
       <div className="orca-panel-controls">{children}</div>
     </div>

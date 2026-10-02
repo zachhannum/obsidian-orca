@@ -190,7 +190,7 @@ export const READER_DEFAULTS: ReaderSettings = {
 /** The name each setting goes by in the reader settings. */
 export const READER_LABELS: Record<keyof ReaderSettings, string> = {
   font: "Font",
-  size: "Size",
+  size: "Text size",
   spacing: "Line spacing",
   margins: "Side margins",
   vertical: "Top and bottom",
@@ -214,6 +214,14 @@ export const READER_FONTS: readonly ReaderOption<ReaderFont>[] = [
 export const READER_SIZE_MIN = 75;
 export const READER_SIZE_MAX = 250;
 export const READER_SIZE_STEP = 25;
+
+/** The step a size is, counting from 1, and how many steps there are. */
+export function readerSizeStep(size: number): { step: number; steps: number } {
+  return {
+    step: (size - READER_SIZE_MIN) / READER_SIZE_STEP + 1,
+    steps: (READER_SIZE_MAX - READER_SIZE_MIN) / READER_SIZE_STEP + 1,
+  };
+}
 
 export const READER_SPACINGS: readonly ReaderOption<number | undefined>[] = [
   { value: undefined, label: "Publisher" },
