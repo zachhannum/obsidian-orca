@@ -14,17 +14,23 @@ import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode 
 import type { Reflowable, Stages } from "@/engine/session";
 import {
   DEVICES,
+  DEVICE_DEFAULT,
+  DEVICE_GROUPS,
   READER_ALIGNMENTS,
   READER_DEFAULTS,
   READER_FONTS,
+  READER_LABELS,
   READER_MARGINS,
   READER_SIZE_MAX,
   READER_SIZE_MIN,
   READER_SIZE_STEP,
   READER_SPACINGS,
   READER_THEMES,
+  READER_VERTICALS,
+  deviceBox,
+  readerInset,
+  readerPage,
   readerVariables,
-  type Device,
   type ReaderSettings,
 } from "@/style/reader";
 import { READIUM } from "@/style/readium";
@@ -70,9 +76,6 @@ interface Turner {
 /** The value the lists give a setting left to the publisher. */
 const PUBLISHER = "publisher";
 
-/** The device a pane opens on. */
-const OPENS_ON: Device["id"] = "reader";
-
 /** The room between the settings and the edge of the bar, in pixels. */
 const GUTTER = 12;
 
@@ -81,7 +84,7 @@ export function mountReflow(host: HTMLElement, slots: ReflowSlots): MountedReflo
   const root = createRoot(host);
   const turner: Turner = { turn: undefined };
   const draw = (shown: Reflowed | undefined): void => {
-    root.render(<Reflow shown={shown} host={host} slots={slots} turner={turner} />);
+    root.render(<Reflow shown={shown} slots={slots} turner={turner} />);
   };
   draw(undefined);
   return {
@@ -102,16 +105,14 @@ interface Bound {
 
 function Reflow({
   shown,
-  host,
   slots,
   turner,
 }: {
   shown: Reflowed | undefined;
-  host: HTMLElement;
   slots: ReflowSlots;
   turner: Turner;
 }): JSX.Element | null {
-  const [deviceId, setDeviceId] = useState(OPENS_ON);
+  const [deviceId, setDeviceId] = useState(DEVICE_DEFAULT);
   const [settings, setSettings] = useState<ReaderSettings>(READER_DEFAULTS);
   const [place, setPlace] = useState<Place>({ section: 0, screen: 0 });
   const [bound, setBound] = useState<Bound | undefined>(undefined);
@@ -122,6 +123,7 @@ function Reflow({
   const [screens, setScreens] = useState(1);
   const [well, setWell] = useState<Box>({ width: 0, height: 0 });
   const pane = useRef<HTMLDivElement>(null);
+  const room = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
 
   const device = DEVICES.find((each) => each.id === deviceId);
@@ -163,15 +165,20 @@ function Reflow({
     return made.revoke;
   }, [shown]);
 
+  // The device fits the room the status line leaves it, so the room is
+  // what is measured.
+  const showing = shown !== undefined;
   useEffect(() => {
+    const element = room.current;
+    if (element === null) return;
     const watching = new ResizeObserver(() => {
-      setWell({ width: host.clientWidth, height: host.clientHeight });
+      setWell({ width: element.clientWidth, height: element.clientHeight });
     });
-    watching.observe(host);
+    watching.observe(element);
     return () => {
       watching.disconnect();
     };
-  }, [host]);
+  }, [showing]);
 
   // ReadiumCSS lays a document out as columns one screen wide, so a
   // screen is a scroll of one frame width. The count is read after the
@@ -205,10 +212,7 @@ function Reflow({
     data["sections"] = String(bound.documents.length);
     data["screen"] = String(screen + 1);
     data["screens"] = String(count);
-    slots.reading(
-      `section ${String(place.section + 1)} of ${String(bound.documents.length)} · ` +
-        `screen ${String(screen + 1)} of ${String(count)}`,
-    );
+    slots.reading(reading(place.section, bound.documents.length, screen, count));
   }, [ready, bound, settings, device, place, faces, slots]);
 
   const turn = (step: number): void => {
@@ -230,46 +234,91 @@ function Reflow({
   });
 
   if (shown === undefined || device === undefined) return null;
-  const scale = fitted(device, well);
+  const body = deviceBox(device);
+  const scale = fitted(body, well);
+  const inset = readerInset(settings, device);
+  const dark = settings.theme === "dark";
   return (
     <>
       <div ref={pane} className="orca-reflow" data-testid="orca-reflow">
-        {src === undefined ? null : (
-          <div
-            className="orca-reflow-screen"
-            style={{ width: device.width * scale, height: device.height * scale }}
-          >
-            <iframe
-              ref={frame}
-              className="orca-reflow-frame"
-              data-testid="orca-reflow-frame"
-              title="EPUB"
-              sandbox="allow-same-origin"
-              src={src}
-              style={{
-                width: device.width,
-                height: device.height,
-                transform: `scale(${String(scale)})`,
-              }}
-              onLoad={(event) => {
-                const inside = event.currentTarget.contentDocument;
-                if (inside === null) return;
-                // The frame takes the focus on a click, and its keys
-                // never reach the pane.
-                inside.addEventListener("keydown", (pressed) => {
-                  const step = stepOf(pressed.key);
-                  if (step === undefined) return;
-                  pressed.preventDefault();
-                  turner.turn?.(step);
-                });
-                void inside.fonts.ready.then(() => {
-                  setFaces((seen) => seen + 1);
-                });
-                setLoaded(inside.URL);
-              }}
-            />
-          </div>
-        )}
+        <div ref={room} className="orca-reflow-room">
+          {src === undefined ? null : (
+            <div
+              className="orca-reflow-fit"
+              style={{ width: body.width * scale, height: body.height * scale }}
+            >
+              <div
+                className={`orca-reflow-body mod-${device.kind}`}
+                data-testid="orca-reflow-body"
+                style={{
+                  width: body.width,
+                  height: body.height,
+                  padding:
+                    `${String(device.bezel.top)}px ${String(device.bezel.right)}px ` +
+                    `${String(device.bezel.bottom)}px ${String(device.bezel.left)}px`,
+                  borderRadius: device.radius + device.bezel.left,
+                  transform: `scale(${String(scale)})`,
+                }}
+              >
+                {device.camera === "bezel" ? (
+                  <div
+                    className="orca-reflow-camera"
+                    style={{ top: device.bezel.top / 2 }}
+                  />
+                ) : null}
+                <div
+                  className={classes("orca-reflow-screen", dark && "mod-dark")}
+                  data-testid="orca-reflow-screen"
+                  style={{
+                    width: device.width,
+                    height: device.height,
+                    paddingTop: inset.top,
+                    borderRadius: device.radius,
+                    background: readerPage(settings),
+                  }}
+                >
+                  <iframe
+                    ref={frame}
+                    className="orca-reflow-frame"
+                    data-testid="orca-reflow-frame"
+                    title="EPUB"
+                    sandbox="allow-same-origin"
+                    src={src}
+                    style={{
+                      width: device.width,
+                      height: device.height - inset.top - inset.bottom,
+                    }}
+                    onLoad={(event) => {
+                      const inside = event.currentTarget.contentDocument;
+                      if (inside === null) return;
+                      // The frame takes the focus on a click, and its keys
+                      // never reach the pane.
+                      inside.addEventListener("keydown", (pressed) => {
+                        const step = stepOf(pressed.key);
+                        if (step === undefined) return;
+                        pressed.preventDefault();
+                        turner.turn?.(step);
+                      });
+                      void inside.fonts.ready.then(() => {
+                        setFaces((seen) => seen + 1);
+                      });
+                      setLoaded(inside.URL);
+                    }}
+                  />
+                  {device.camera === "island" || device.camera === "hole" ? (
+                    <div className={`orca-reflow-camera mod-${device.camera}`} />
+                  ) : null}
+                  {device.safe.bottom > 0 ? <div className="orca-reflow-home" /> : null}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="orca-reflow-status" data-testid="orca-reflow-status">
+          {ready && place.screen !== "last"
+            ? reading(place.section, sections, Math.min(place.screen, screens - 1), screens)
+            : ""}
+        </div>
       </div>
       {createPortal(
         <>
@@ -284,10 +333,14 @@ function Reflow({
               if (chosen !== undefined) setDeviceId(chosen.id);
             }}
           >
-            {DEVICES.map((each) => (
-              <option key={each.id} value={each.id}>
-                {`${each.label} · ${String(each.width)} × ${String(each.height)}`}
-              </option>
+            {DEVICE_GROUPS.map((group) => (
+              <optgroup key={group.kind} label={group.label}>
+                {DEVICES.filter((each) => each.kind === group.kind).map((each) => (
+                  <option key={each.id} value={each.id}>
+                    {`${each.label} · ${String(each.width)} × ${String(each.height)}`}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <div className="orca-preview-divider" />
@@ -319,6 +372,14 @@ function Reflow({
         slots.controls,
       )}
     </>
+  );
+}
+
+/** The reader's place as the status line says it, counting from 1. */
+function reading(section: number, sections: number, screen: number, screens: number): string {
+  return (
+    `section ${String(section + 1)} of ${String(sections)} · ` +
+    `screen ${String(screen + 1)} of ${String(screens)}`
   );
 }
 
@@ -406,7 +467,7 @@ function Settings({
           data-testid="orca-reflow-popover"
           style={hung ?? { visibility: "hidden" }}
         >
-          <Line label="Font">
+          <Line label={READER_LABELS.font}>
             <Select
               value={settings.font}
               faint={settings.font === READER_DEFAULTS.font}
@@ -418,7 +479,7 @@ function Settings({
               }}
             />
           </Line>
-          <Line label="Size">
+          <Line label={READER_LABELS.size}>
             <div className="orca-panel-number">
               <input
                 type="text"
@@ -427,7 +488,7 @@ function Settings({
                   "orca-panel-text",
                   settings.size === READER_DEFAULTS.size && "is-default",
                 )}
-                aria-label="Size"
+                aria-label={READER_LABELS.size}
                 data-testid="orca-reflow-setting-size"
                 value={`${String(settings.size)}%`}
               />
@@ -456,7 +517,7 @@ function Settings({
               </div>
             </div>
           </Line>
-          <Line label="Line spacing">
+          <Line label={READER_LABELS.spacing}>
             <Select
               value={spacing}
               faint={settings.spacing === undefined}
@@ -471,7 +532,7 @@ function Settings({
               }}
             />
           </Line>
-          <Line label="Margins">
+          <Line label={READER_LABELS.margins}>
             <Segment
               value={settings.margins}
               faint={settings.margins === READER_DEFAULTS.margins}
@@ -483,7 +544,19 @@ function Settings({
               }}
             />
           </Line>
-          <Line label="Alignment">
+          <Line label={READER_LABELS.vertical}>
+            <Segment
+              value={settings.vertical}
+              faint={settings.vertical === READER_DEFAULTS.vertical}
+              choices={READER_VERTICALS}
+              testid="orca-reflow-setting-vertical"
+              settle={(value) => {
+                const chosen = READER_VERTICALS.find((each) => each.value === value);
+                if (chosen !== undefined) set({ vertical: chosen.value });
+              }}
+            />
+          </Line>
+          <Line label={READER_LABELS.align}>
             <Segment
               value={settings.align ?? PUBLISHER}
               faint={settings.align === undefined}
@@ -498,7 +571,7 @@ function Settings({
               }}
             />
           </Line>
-          <Line label="Theme">
+          <Line label={READER_LABELS.theme}>
             <Segment
               value={settings.theme}
               faint={settings.theme === READER_DEFAULTS.theme}

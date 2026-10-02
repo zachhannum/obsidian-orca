@@ -145,7 +145,7 @@ export function stepOf(key: string): number | undefined {
   return STEPS[key];
 }
 
-/** The scale that fits a device's screen in the well. It never enlarges the screen. */
+/** The scale that fits a device, body included, in the well. It never enlarges the device. */
 export function fitted(device: Box, well: Box): number {
   if (well.width <= 0 || well.height <= 0) return 1;
   return Math.min(1, well.width / device.width, well.height / device.height);

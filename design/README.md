@@ -174,21 +174,36 @@ its editor around these files and returns a URL. The artboard list and
   the bar's segmented control. It shows the engine's EPUB in a frame
   that ReadiumCSS pages, and no page is laid out for it. The reading is
   ReadiumCSS's, not one reading app's.
-- A device is a screen size in CSS px: Phone is 390 × 844, E-reader is
-  600 × 800 and Tablet is 820 × 1180. A frame larger than the pane
-  scales down to fit.
-- The EPUB view has six reader settings. Font is Publisher, Old style,
-  Modern, Sans or Humanist. Size runs from 75% to 250% in steps of 25
-  and starts at 100%. Line spacing is Publisher, 1.2, 1.5, 1.75 or 2.
-  Margins are Narrow, Normal or Wide. Alignment is Publisher, Start or
-  Justify. Theme is Light, Sepia or Dark. Each starts at the
-  publisher's, which is the author's CSS. A setting moved off it
-  overrides the CSS as a reading app does.
+- A device in the EPUB view is a named one, in three groups. Phones
+  are iPhone at 393 × 852 and Android phone at 412 × 915. Tablets are
+  iPad at 820 × 1180, Android tablet at 800 × 1280 and Kindle Fire at
+  601 × 962. E-readers are Kindle Paperwhite at 632 × 840, Kobo Clara
+  at 536 × 724 and Nook GlowLight at 536 × 724. The pane opens on the
+  Kindle Paperwhite.
+- A device's size is its screen in CSS px. An e-reader has no browser
+  to measure, so its size is approximate: the panel's resolution
+  halved.
+- A device is drawn with its body. A phone has its camera and the bar
+  that goes home. A tablet has an even bezel with a camera in it. An
+  e-reader has a matte body with a thicker chin, and its screen has no
+  colour. A device larger than the pane scales down to fit, body
+  included.
+- The EPUB view has seven reader settings. Font is Publisher, Old
+  style, Modern, Sans or Humanist. Size runs from 75% to 250% in steps
+  of 25 and starts at 100%. Line spacing is Publisher, 1.2, 1.5, 1.75
+  or 2. Side margins are Narrow, Normal or Wide. Top and bottom are
+  Narrow, Normal or Wide. Alignment is Publisher, Start or Justify.
+  Theme is Light, Sepia or Dark. Each starts at the publisher's, which
+  is the author's CSS. A setting moved off it overrides the CSS as a
+  reading app does.
+- The top and bottom margins set the text inside the screen, as a
+  reading app sets its web view. On a phone they also clear the camera
+  and the bar that goes home.
 - The EPUB view turns a screen at a time, then to the next section. In
   it the chapter select, the folio, the total and the page arrows give
   way to the device select, a settings button that opens the settings
-  under it, previous and next, and a status such as "section 6 of 9 ·
-  screen 2 of 14".
+  under it, and previous and next. A status such as "section 6 of 9 ·
+  screen 2 of 14" is under the device.
 - The device and the reader settings last as long as the pane. Nothing
   keeps them: not the vault, not the plugin's data.
 - Inspect is off in the EPUB view.

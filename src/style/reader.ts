@@ -1,17 +1,161 @@
-export interface Device {
-  id: "phone" | "reader" | "tablet";
-  label: string;
-  /** CSS pixels. */
-  width: number;
-  /** CSS pixels. */
-  height: number;
+export type DeviceKind = "phone" | "tablet" | "ink";
+
+/** A length on each side of a screen, in CSS pixels. */
+export interface Edges {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
 }
 
+/**
+ * A device a book is read on. The screen is in CSS pixels, which is
+ * the size a web view on the device lays a document out in, not the
+ * panel's own resolution. An e-ink reader has no browser to quote, so
+ * its screen is the panel's resolution halved.
+ */
+export interface Device {
+  /** The name `data-device` carries. */
+  id: string;
+  label: string;
+  /** An `ink` screen has no colour. */
+  kind: DeviceKind;
+  width: number;
+  height: number;
+  /** The radius of the screen's corners. */
+  radius: number;
+  /** The body around the screen. */
+  bezel: Edges;
+  /**
+   * The camera's place. An `island` and a `hole` sit over the top of
+   * the screen, and a `bezel` camera sits in the body above it.
+   */
+  camera: "island" | "hole" | "bezel" | "none";
+  /**
+   * The top and bottom of the screen the system keeps for itself: the
+   * camera and the clock at the top, and the bar that goes home at the
+   * bottom. A reading app sets no text there.
+   */
+  safe: { top: number; bottom: number };
+}
+
+const even = (bezel: number): Edges => ({ top: bezel, right: bezel, bottom: bezel, left: bezel });
+const chin = (top: number, side: number, bottom: number): Edges => ({
+  top,
+  right: side,
+  bottom,
+  left: side,
+});
+const NONE = { top: 0, bottom: 0 };
+
 export const DEVICES: readonly Device[] = [
-  { id: "phone", label: "Phone", width: 390, height: 844 },
-  { id: "reader", label: "E-reader", width: 600, height: 800 },
-  { id: "tablet", label: "Tablet", width: 820, height: 1180 },
+  {
+    id: "iphone",
+    label: "iPhone",
+    kind: "phone",
+    width: 393,
+    height: 852,
+    radius: 47,
+    bezel: even(12),
+    camera: "island",
+    safe: { top: 59, bottom: 34 },
+  },
+  {
+    id: "android-phone",
+    label: "Android phone",
+    kind: "phone",
+    width: 412,
+    height: 915,
+    radius: 30,
+    bezel: even(10),
+    camera: "hole",
+    safe: { top: 40, bottom: 24 },
+  },
+  {
+    id: "ipad",
+    label: "iPad",
+    kind: "tablet",
+    width: 820,
+    height: 1180,
+    radius: 18,
+    bezel: even(30),
+    camera: "bezel",
+    safe: NONE,
+  },
+  {
+    id: "android-tablet",
+    label: "Android tablet",
+    kind: "tablet",
+    width: 800,
+    height: 1280,
+    radius: 12,
+    bezel: even(28),
+    camera: "bezel",
+    safe: NONE,
+  },
+  {
+    id: "kindle-fire",
+    label: "Kindle Fire",
+    kind: "tablet",
+    width: 601,
+    height: 962,
+    radius: 4,
+    bezel: even(40),
+    camera: "bezel",
+    safe: NONE,
+  },
+  {
+    id: "kindle-paperwhite",
+    label: "Kindle Paperwhite",
+    kind: "ink",
+    width: 632,
+    height: 840,
+    radius: 0,
+    bezel: chin(44, 40, 80),
+    camera: "none",
+    safe: NONE,
+  },
+  {
+    id: "kobo-clara",
+    label: "Kobo Clara",
+    kind: "ink",
+    width: 536,
+    height: 724,
+    radius: 0,
+    bezel: chin(48, 44, 84),
+    camera: "none",
+    safe: NONE,
+  },
+  {
+    id: "nook-glowlight",
+    label: "Nook GlowLight",
+    kind: "ink",
+    width: 536,
+    height: 724,
+    radius: 0,
+    bezel: chin(56, 60, 92),
+    camera: "none",
+    safe: NONE,
+  },
 ];
+
+/** The device a pane opens on. */
+export const DEVICE_DEFAULT = "kindle-paperwhite";
+
+/** The kinds, in the order the device list groups them. */
+export const DEVICE_GROUPS: readonly { kind: DeviceKind; label: string }[] = [
+  { kind: "phone", label: "Phones" },
+  { kind: "tablet", label: "Tablets" },
+  { kind: "ink", label: "E-readers" },
+];
+
+/** The size of a device with its body, which is what has to fit a pane. */
+export function deviceBox(device: Device): { width: number; height: number } {
+  return {
+    width: device.width + device.bezel.left + device.bezel.right,
+    height: device.height + device.bezel.top + device.bezel.bottom,
+  };
+}
 
 export type ReaderFont = "publisher" | "oldStyle" | "modern" | "sans" | "humanist";
 export type ReaderMargins = "narrow" | "normal" | "wide";
@@ -24,7 +168,10 @@ export interface ReaderSettings {
   size: number;
   /** Unset keeps the author's line height. */
   spacing: number | undefined;
+  /** The room at each side of the text. */
   margins: ReaderMargins;
+  /** The room above and below the text. */
+  vertical: ReaderMargins;
   /** Unset keeps the author's alignment. */
   align: ReaderAlign | undefined;
   theme: ReaderTheme;
@@ -35,8 +182,20 @@ export const READER_DEFAULTS: ReaderSettings = {
   size: 100,
   spacing: undefined,
   margins: "normal",
+  vertical: "normal",
   align: undefined,
   theme: "light",
+};
+
+/** The name each setting goes by in the reader settings. */
+export const READER_LABELS: Record<keyof ReaderSettings, string> = {
+  font: "Font",
+  size: "Size",
+  spacing: "Line spacing",
+  margins: "Side margins",
+  vertical: "Top and bottom",
+  align: "Alignment",
+  theme: "Theme",
 };
 
 export interface ReaderOption<Value> {
@@ -69,6 +228,8 @@ export const READER_MARGINS: readonly ReaderOption<ReaderMargins>[] = [
   { value: "normal", label: "Normal" },
   { value: "wide", label: "Wide" },
 ];
+
+export const READER_VERTICALS: readonly ReaderOption<ReaderMargins>[] = READER_MARGINS;
 
 export const READER_ALIGNMENTS: readonly ReaderOption<ReaderAlign | undefined>[] = [
   { value: undefined, label: "Publisher" },
@@ -119,6 +280,12 @@ const GUTTERS: Record<ReaderMargins, string> = {
   wide: "56px",
 };
 
+const INSETS: Record<ReaderMargins, number> = {
+  narrow: 16,
+  normal: 32,
+  wide: 56,
+};
+
 interface Colours {
   background: string;
   text: string;
@@ -134,6 +301,28 @@ const COLOURS: Record<ReaderTheme, Colours | undefined> = {
   sepia: { background: "#faf4e8", text: "#121212", link: "#305282", visited: "#7b5281" },
   dark: { background: "#000000", text: "#FEFEFE", link: "#63caff", visited: "#0099E5" },
 };
+
+/** The page colour ReadiumCSS draws where a theme names none. */
+const PAPER = "#FFFFFF";
+
+/** The colour of the page in the reader's theme, which the screen around the text is painted in. */
+export function readerPage(settings: ReaderSettings): string {
+  return COLOURS[settings.theme]?.background ?? PAPER;
+}
+
+/**
+ * The room a reading app leaves above and below the text, in CSS
+ * pixels. ReadiumCSS has a variable for the sides alone, so an app
+ * makes this room by setting its web view inside the screen. The room
+ * also clears what the device keeps of the screen for itself.
+ */
+export function readerInset(
+  settings: ReaderSettings,
+  device: Device,
+): { top: number; bottom: number } {
+  const room = INSETS[settings.vertical];
+  return { top: device.safe.top + room, bottom: device.safe.bottom + room };
+}
 
 /** A name with no value is taken off the root, which gives the property back to the author's CSS. */
 export function readerVariables(settings: ReaderSettings): ReadonlyMap<string, string | undefined> {

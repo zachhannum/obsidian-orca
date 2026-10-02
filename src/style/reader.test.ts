@@ -5,9 +5,12 @@ import process from "node:process";
 import { test } from "node:test";
 import {
   DEVICES,
+  DEVICE_DEFAULT,
+  DEVICE_GROUPS,
   READER_ALIGNMENTS,
   READER_DEFAULTS,
   READER_FONTS,
+  READER_LABELS,
   READER_MARGINS,
   READER_SIZE_MAX,
   READER_SIZE_MIN,
@@ -15,6 +18,10 @@ import {
   READER_SPACINGS,
   READER_THEMES,
   READER_VARIABLES,
+  READER_VERTICALS,
+  deviceBox,
+  readerInset,
+  readerPage,
   readerVariables,
   type ReaderSettings,
 } from "@/style/reader";
@@ -113,15 +120,71 @@ test("the size steps land on the author's size", () => {
   assert.equal((READER_SIZE_MAX - READER_SIZE_MIN) % READER_SIZE_STEP, 0);
 });
 
-test("the devices are a phone, an e-reader and a tablet", () => {
+test("the devices are named ones, each with a screen in CSS pixels and a body around it", () => {
   assert.deepEqual(
-    DEVICES.map((device) => [device.label, device.width, device.height]),
+    DEVICES.map((device) => [device.id, device.kind, device.width, device.height]),
     [
-      ["Phone", 390, 844],
-      ["E-reader", 600, 800],
-      ["Tablet", 820, 1180],
+      ["iphone", "phone", 393, 852],
+      ["android-phone", "phone", 412, 915],
+      ["ipad", "tablet", 820, 1180],
+      ["android-tablet", "tablet", 800, 1280],
+      ["kindle-fire", "tablet", 601, 962],
+      ["kindle-paperwhite", "ink", 632, 840],
+      ["kobo-clara", "ink", 536, 724],
+      ["nook-glowlight", "ink", 536, 724],
     ],
   );
+  assert.equal(new Set(DEVICES.map((device) => device.id)).size, DEVICES.length);
+  for (const device of DEVICES) {
+    assert.ok(device.width > 0 && device.height > device.width, device.id);
+    for (const side of Object.values(device.bezel)) assert.ok(side > 0, device.id);
+    assert.ok(device.radius >= 0, device.id);
+    assert.ok(device.safe.top >= 0 && device.safe.bottom >= 0, device.id);
+    assert.deepEqual(deviceBox(device), {
+      width: device.width + device.bezel.left + device.bezel.right,
+      height: device.height + device.bezel.top + device.bezel.bottom,
+    });
+    assert.ok(DEVICE_GROUPS.some((group) => group.kind === device.kind), device.id);
+  }
+  // An e-reader's chin is thicker than the rest of its body.
+  for (const device of DEVICES.filter((each) => each.kind === "ink")) {
+    assert.ok(device.bezel.bottom > device.bezel.top, device.id);
+  }
+  assert.equal(DEVICES.find((device) => device.id === DEVICE_DEFAULT)?.label, "Kindle Paperwhite");
+  assert.deepEqual(
+    DEVICE_GROUPS.map((group) => group.label),
+    ["Phones", "Tablets", "E-readers"],
+  );
+});
+
+test("the top and bottom margins inset the text, past what the device keeps of its screen", () => {
+  const device = (id: string): (typeof DEVICES)[number] => {
+    const found = DEVICES.find((each) => each.id === id);
+    assert.ok(found !== undefined, id);
+    return found;
+  };
+  const paperwhite = device("kindle-paperwhite");
+  assert.deepEqual(readerInset(READER_DEFAULTS, paperwhite), { top: 32, bottom: 32 });
+  assert.deepEqual(readerInset({ ...READER_DEFAULTS, vertical: "narrow" }, paperwhite), {
+    top: 16,
+    bottom: 16,
+  });
+  assert.deepEqual(readerInset({ ...READER_DEFAULTS, vertical: "wide" }, paperwhite), {
+    top: 56,
+    bottom: 56,
+  });
+  // The island and the bar that goes home are the system's.
+  assert.deepEqual(readerInset(READER_DEFAULTS, device("iphone")), { top: 91, bottom: 66 });
+  // The setting moves no ReadiumCSS variable.
+  assert.deepEqual(changed({ vertical: "wide" }), {});
+});
+
+test("the screen around the text is the colour of the theme's page", () => {
+  assert.equal(readerPage(READER_DEFAULTS), "#FFFFFF");
+  for (const theme of ["sepia", "dark"] as const) {
+    const settings = { ...READER_DEFAULTS, theme };
+    assert.equal(readerPage(settings), readerVariables(settings).get("--USER__backgroundColor"));
+  }
 });
 
 test("each ReadiumCSS sheet is in the bundle with its licence banner", () => {
@@ -143,10 +206,17 @@ test("the PreviewViews artboard names every device and every option of every set
     const option = `${device.label} · ${String(device.width)} × ${String(device.height)}`;
     assert.ok(part.includes(`<span>${option}</span>`), `no ${option}`);
   }
+  for (const group of DEVICE_GROUPS) {
+    assert.ok(part.includes(`>${group.label}</div>`), `no ${group.label}`);
+  }
+  for (const label of Object.values(READER_LABELS)) {
+    assert.ok(part.includes(`<span class="lab">${label}</span>`), `no ${label}`);
+  }
   const labels = [
     ...READER_FONTS,
     ...READER_SPACINGS,
     ...READER_MARGINS,
+    ...READER_VERTICALS,
     ...READER_ALIGNMENTS,
     ...READER_THEMES,
   ].map((option) => option.label);

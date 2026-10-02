@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { DEVICES, deviceBox } from "@/style/reader";
 import {
   bindFiles,
   fitted,
@@ -95,6 +96,15 @@ test("a screen larger than the well scales down to fit it, and a smaller one is 
   assert.equal(fitted({ width: 600, height: 800 }, { width: 150, height: 800 }), 0.25);
   assert.equal(fitted({ width: 390, height: 844 }, { width: 2000, height: 2000 }), 1);
   assert.equal(fitted({ width: 390, height: 844 }, { width: 0, height: 0 }), 1);
+});
+
+test("a device is fitted by its body, so the bezel stays inside the well", () => {
+  for (const device of DEVICES) {
+    const box = deviceBox(device);
+    assert.equal(fitted(box, { width: box.width / 2, height: box.height }), 0.5, device.id);
+    // A well the size of the screen alone is too small for the body.
+    assert.ok(fitted(box, { width: device.width, height: device.height }) < 1, device.id);
+  }
 });
 
 /** A book of two documents, a sheet, a font and an image, bound with counted URLs. */
