@@ -4,7 +4,16 @@
  * for it, so the assertions are on the frame and on what it holds.
  */
 
-import { DEVICES, READER_VARIABLES } from "@/style/reader";
+import {
+  DEVICES,
+  DEVICE_DEFAULT,
+  READER_DEFAULTS,
+  READER_SIZE_MAX,
+  READER_SIZE_STEP,
+  READER_VARIABLES,
+  deviceBox,
+  readerInset,
+} from "@/style/reader";
 import type { Epub } from "./harness/epub";
 import { PLUGIN } from "./harness/launch";
 import { expect, test } from "./harness/test";
@@ -71,8 +80,11 @@ test("the EPUB view loads the engine's files into a sandboxed frame, finds the f
   // A screen is a scroll of one frame width.
   const turned = await epub.turn();
   expect(turned).toEqual({ ...opened, screen: 2 });
-  const { width, scrolled } = await epub.measured();
-  expect(scrolled).toBe(width);
+  const { frame, scrolled } = await epub.measured();
+  expect(scrolled).toBe(frame.width);
+  await expect(epub.status).toHaveText(
+    `section ${String(turned.section)} of ${String(turned.sections)} · screen 2 of ${String(turned.screens)}`,
+  );
 
   // The arrow keys turn as the buttons do.
   await book.key("ArrowLeft");
@@ -86,21 +98,31 @@ test("the EPUB view loads the engine's files into a sandboxed frame, finds the f
   expect(before.screen).toBe(before.screens);
 });
 
-test("each device sets the frame to its screen size, scaled down to the pane and never up", async ({
+test("each device sets the screen to its size, with the frame inset in it and the body scaled to the pane", async ({
   book,
   epub,
 }) => {
   await book.open();
   await book.settled(BOOK);
   await epub.open();
+  await expect(epub.view).toHaveAttribute("data-device", DEVICE_DEFAULT);
 
   for (const device of DEVICES) {
     await epub.device.selectOption(device.id);
     await expect(epub.view).toHaveAttribute("data-device", device.id);
-    const { width, height, drawn } = await epub.measured();
-    expect({ width, height }).toEqual({ width: device.width, height: device.height });
-    expect(drawn.width).toBeLessThanOrEqual(device.width);
-    expect(drawn.width / drawn.height).toBeCloseTo(device.width / device.height, 2);
+    const { screen, frame, drawn } = await epub.measured();
+    expect(screen).toEqual({ width: device.width, height: device.height });
+    // The frame is the screen less the room above and below the text.
+    const inset = readerInset(READER_DEFAULTS, device);
+    expect(frame).toEqual({
+      width: device.width,
+      height: device.height - inset.top - inset.bottom,
+      top: inset.top,
+    });
+    // The body is never drawn larger than it is, and it keeps its shape.
+    const body = deviceBox(device);
+    expect(drawn.width).toBeLessThanOrEqual(body.width + 1);
+    expect(drawn.width / drawn.height).toBeCloseTo(body.width / body.height, 2);
     const well = await epub.view.boundingBox();
     expect(drawn.width).toBeLessThanOrEqual((well?.width ?? 0) + 1);
     expect(drawn.height).toBeLessThanOrEqual((well?.height ?? 0) + 1);
@@ -146,6 +168,43 @@ test("each reader setting changes the ReadiumCSS variable it maps to", async ({ 
   await expect.poll(() => set(epub)).toEqual({ "--RS__pageGutter": "56px" });
   await epub.setting("margins-normal").click();
   await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+
+  // The top and bottom margins are the frame's inset in the screen. No
+  // variable moves, and a shorter frame is more screens. The type is at
+  // its largest here, so the chapter is screens enough to show it.
+  const normal = await epub.measured();
+  for (let size = READER_DEFAULTS.size; size < READER_SIZE_MAX; size += READER_SIZE_STEP) {
+    await epub.setting("size-up").click();
+  }
+  const largest = { ...DEFAULTS, "--USER__fontSize": `${String(READER_SIZE_MAX)}%` };
+  await expect.poll(() => set(epub)).toEqual(largest);
+  await epub.setting("vertical-narrow").click();
+  await expect
+    .poll(async () => (await epub.measured()).frame)
+    .toEqual({
+      width: normal.frame.width,
+      height: normal.screen.height - 2 * 16,
+      top: 16,
+    });
+  const narrow = await epub.turned();
+  await epub.setting("vertical-wide").click();
+  await expect
+    .poll(async () => (await epub.measured()).frame)
+    .toEqual({
+      width: normal.frame.width,
+      height: normal.screen.height - 2 * 56,
+      top: 56,
+    });
+  await expect
+    .poll(async () => (await epub.turned()).screens)
+    .toBeGreaterThan(narrow.screens);
+  expect(await set(epub)).toEqual(largest);
+  await epub.setting("vertical-normal").click();
+  for (let size = READER_SIZE_MAX; size > READER_DEFAULTS.size; size -= READER_SIZE_STEP) {
+    await epub.setting("size-down").click();
+  }
+  await expect.poll(() => set(epub)).toEqual(DEFAULTS);
+  await expect.poll(async () => (await epub.measured()).frame).toEqual(normal.frame);
 
   await epub.setting("align-justify").click();
   await expect.poll(() => set(epub)).toEqual({ ...DEFAULTS, "--USER__textAlign": "justify" });
@@ -208,6 +267,7 @@ test("nothing the EPUB view does writes to the vault or to the plugin's data", a
     await epub.setting("size-up").click();
     await epub.setting("spacing").selectOption("2");
     await epub.setting("margins-narrow").click();
+    await epub.setting("vertical-wide").click();
     await epub.setting("align-start").click();
     await epub.setting("theme-dark").click();
     await expect.poll(() => set(epub)).toMatchObject({

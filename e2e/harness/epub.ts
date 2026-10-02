@@ -26,6 +26,12 @@ export class Epub {
   /** The node that carries the generation, the device and the place. */
   readonly view: Locator;
   readonly frame: Locator;
+  /** The device's screen, which the frame sits inside. */
+  readonly screen: Locator;
+  /** The device with its body, which is what is scaled to the pane. */
+  readonly body: Locator;
+  /** The line under the device that says the section and the screen. */
+  readonly status: Locator;
   readonly device: Locator;
   /** The button that opens the reader settings. */
   readonly settings: Locator;
@@ -39,6 +45,9 @@ export class Epub {
     this.pane = pane;
     this.view = pane.getByTestId("orca-reflow");
     this.frame = pane.getByTestId("orca-reflow-frame");
+    this.screen = pane.getByTestId("orca-reflow-screen");
+    this.body = pane.getByTestId("orca-reflow-body");
+    this.status = pane.getByTestId("orca-reflow-status");
     this.device = pane.getByTestId("orca-reflow-device");
     this.settings = pane.getByTestId("orca-reflow-settings");
     this.previous = pane.getByTestId("orca-reflow-previous");
@@ -143,23 +152,25 @@ export class Epub {
   }
 
   /**
-   * The frame's own size in CSS pixels, which a scale leaves alone, the
-   * size it is drawn at, and how far its document is scrolled sideways.
+   * The screen and the frame in CSS pixels, which a scale leaves alone,
+   * the frame's distance from the top of the screen, the size the body
+   * is drawn at, and how far the document is scrolled sideways.
    */
   async measured(): Promise<{
-    width: number;
-    height: number;
+    screen: { width: number; height: number };
+    frame: { width: number; height: number; top: number };
     drawn: { width: number; height: number };
     scrolled: number;
   }> {
-    return this.frame.evaluate((frame: HTMLIFrameElement) => {
-      const drawn = frame.getBoundingClientRect();
+    const drawn = await this.body.boundingBox();
+    const sizes = await this.frame.evaluate((frame: HTMLIFrameElement) => {
+      const screen = frame.parentElement;
       return {
-        width: frame.offsetWidth,
-        height: frame.offsetHeight,
-        drawn: { width: drawn.width, height: drawn.height },
+        screen: { width: screen?.offsetWidth ?? 0, height: screen?.offsetHeight ?? 0 },
+        frame: { width: frame.offsetWidth, height: frame.offsetHeight, top: frame.offsetTop },
         scrolled: frame.contentDocument?.scrollingElement?.scrollLeft ?? -1,
       };
     });
+    return { ...sizes, drawn: { width: drawn?.width ?? 0, height: drawn?.height ?? 0 } };
   }
 }
