@@ -1,0 +1,30 @@
+name: obsidian setup
+description: Install the plugin's and the site's packages, the Obsidian cache and the libraries a spec needs.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: "22"
+        cache: npm
+
+    - run: npm ci --prefer-offline --no-audit --no-fund
+      shell: bash
+
+    # The site's faces go inside Obsidian, so the spec reads them out
+    # of the site's own packages.
+    - run: npm ci --prefer-offline --no-audit --no-fund
+      shell: bash
+      working-directory: site
+
+    - uses: actions/cache@v4
+      with:
+        path: ~/.obsidian-cache
+        key: obsidian-${{ runner.os }}-${{ hashFiles('e2e/harness/launch.ts') }}
+
+    - name: system libraries
+      shell: bash
+      run: |
+        sudo apt-get update
+        npx playwright install-deps chromium
+        sudo apt-get install -y xvfb poppler-utils

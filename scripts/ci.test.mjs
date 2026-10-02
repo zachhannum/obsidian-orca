@@ -6,9 +6,10 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [workflow, shots, release, cut, spec, claude] = await Promise.all([
+const [workflow, shots, setup, release, cut, spec, claude] = await Promise.all([
   read(".github/workflows/ci.yml"),
   read(".github/workflows/shots.yml"),
+  read(".github/actions/obsidian-setup/action.yml"),
   read(".github/workflows/release.yml"),
   read(".github/workflows/cut-release.yml"),
   read("e2e/shots.spec.ts"),
@@ -56,7 +57,21 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
     }
   }
   assert.match(shots, /- run: xvfb-run -a npm run shots\n/);
-  assert.match(shots, /apt-get install -y xvfb poppler-utils ffmpeg\n/);
+  assert.match(setup, /apt-get install -y xvfb poppler-utils\n/);
+});
+
+test("the spec, the frames and the loop run as jobs that start together", () => {
+  const block = (name) => {
+    const from = shots.indexOf(`\n  ${name}:\n`);
+    assert.notEqual(from, -1, `no ${name} job`);
+    const next = /\n {2}\w[\w-]*:\n/.exec(shots.slice(from + 1));
+    return shots.slice(from, next === null ? undefined : from + 1 + next.index);
+  };
+  assert.doesNotMatch(block("spec"), /needs:/);
+  assert.doesNotMatch(block("frames"), /needs:/);
+  // The render reads the frames, so it waits for them and for nothing else.
+  assert.match(block("loop"), /needs: frames\n/);
+  assert.match(block("shots"), /needs: \[spec, loop\]\n/);
 });
 
 test("the shots job renders the landing page's loop from a pinned commit of orca-film", () => {

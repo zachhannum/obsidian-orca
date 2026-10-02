@@ -35,40 +35,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  shots:
-    name: photograph the sample book
+  spec:
+    name: take the screenshots
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "22"
-          cache: npm
-
-      - run: npm ci --prefer-offline --no-audit --no-fund
-
-      # The site's faces go inside Obsidian, so the spec reads them out
-      # of the site's own packages.
-      - run: npm ci --prefer-offline --no-audit --no-fund
-        working-directory: site
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.obsidian-cache
-          key: obsidian-${{ runner.os }}-${{ hashFiles('e2e/harness/launch.ts') }}
-
-      - name: system libraries
-        run: |
-          sudo apt-get update
-          npx playwright install-deps chromium
-          sudo apt-get install -y xvfb poppler-utils ffmpeg
-
+      - uses: ./.github/actions/obsidian-setup
       - run: xvfb-run -a npm run shots
+      - name: keep the pictures that changed
+        run: git ls-files -m -o --exclude-standard -z site/src/shots | xargs -0 tar -cf ${{ runner.temp }}/spec.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shots-spec
+          path: ${{ runner.temp }}/spec.tar
+          retention-days: 1
+
+  frames:
+    name: take the loop's frames
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/obsidian-setup
+      - name: take the loop's frames
+        run: xvfb-run -a npm run film
+        env:
+          ORCA_FILM_OUT: ${{ github.workspace }}/frames
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shots-frames
+          path: frames/
+          retention-days: 1
+
+  loop:
+    name: render the loop
+    needs: frames
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
 
       - uses: actions/checkout@v5
         with:
@@ -76,10 +82,19 @@ jobs:
           ref: ${{ env.ORCA_FILM_REF }}
           path: film
 
-      - name: take the loop's frames
-        run: xvfb-run -a npm run film
-        env:
-          ORCA_FILM_OUT: ${{ github.workspace }}/film/assets
+      - uses: actions/download-artifact@v5
+        with:
+          name: shots-frames
+          path: film/assets
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
       # The render takes minutes, so a pull request takes the posters
       # alone. The frames are where a change to a surface breaks the film
@@ -88,15 +103,46 @@ jobs:
         working-directory: film
         run: |
           npm ci --prefer-offline --no-audit --no-fund
-          npx playwright install chromium
+          npx playwright install --with-deps chromium
           if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" = push ]; then
             node loop.mjs --into ../site/src/shots
           else
             node loop.mjs --posters --into ../site/src/shots
           fi
 
+      - name: keep the pictures that changed
+        run: git ls-files -m -o --exclude-standard -z site/src/shots | xargs -0 tar -cf ${{ runner.temp }}/loop.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shots-loop
+          path: ${{ runner.temp }}/loop.tar
+          retention-days: 1
+
+  shots:
+    name: collect the pictures
+    needs: [spec, loop]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: shots-*
+          exclude: shots-frames
+          path: ${{ runner.temp }}/parts
+
+      - name: put the pictures in place
+        run: |
+          for tar in "$RUNNER_TEMP"/parts/*/*.tar; do
+            tar -xf "$tar"
+          done
+
       - name: list the pictures that moved
-        if: ${{ !cancelled() }}
         run: |
           {
             echo "## Pictures that moved"
@@ -112,7 +158,6 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
         with:
           name: shots
           path: site/src/shots/
