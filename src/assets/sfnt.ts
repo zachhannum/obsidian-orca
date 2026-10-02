@@ -27,6 +27,22 @@ export interface Ranges {
   (at: number, length: number): Promise<Uint8Array>;
 }
 
+/** The container a font file is in. */
+export type FontKind = "sfnt" | "collection" | "woff" | "woff2";
+
+/** The container a file's first four bytes name. Fewer bytes, or other bytes, name none. */
+export function fontKind(first4: Uint8Array): FontKind | undefined {
+  if (first4.length < 4) return undefined;
+  const view = viewing(first4);
+  if (view.getUint32(0) === 0x00010000) return "sfnt";
+  const tag = tagAt(view, 0);
+  if (tag === "OTTO" || tag === "true") return "sfnt";
+  if (tag === COLLECTION) return "collection";
+  if (tag === "wOFF") return "woff";
+  if (tag === "wOF2") return "woff2";
+  return undefined;
+}
+
 /** The offset each face of a file begins at. A file of one face has one offset. */
 export async function faceOffsets(read: Ranges): Promise<number[]> {
   const head = viewing(await slice(read, 0, HEADER));
