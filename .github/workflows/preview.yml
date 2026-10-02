@@ -86,7 +86,8 @@ jobs:
             if [ -n "$run" ]; then
               gh run watch "$run" >/dev/null 2>&1 || true
               if [ "$(gh run view "$run" --json conclusion -q .conclusion)" = success ]; then
-                gh run download "$run" --name shots --dir site/src/shots && state=fresh
+                gh run download "$run" --name shots --dir "$RUNNER_TEMP/shots" &&
+                  cp -r "$RUNNER_TEMP/shots/." site/src/shots/ && state=fresh
               fi
             fi
           fi

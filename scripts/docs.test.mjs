@@ -182,7 +182,8 @@ test("a PR that touches the site or the design gets a preview in a folder of the
 
 test("a preview builds the docs, the artboards or both, and never the pictures of a failed run", () => {
   assert.match(preview, /node build\.mjs --into \.\.\/site\/dist\/design --against /);
-  assert.match(preview, /gh run download "\$run" --name shots --dir site\/src\/shots/);
+  assert.match(preview, /gh run download "\$run" --name shots --dir "\$RUNNER_TEMP\/shots"/);
+  assert.match(preview, /cp -r "\$RUNNER_TEMP\/shots\/\." site\/src\/shots\//);
   assert.match(preview, /conclusion -q \.conclusion\)" = success/);
   assert.match(preview, /stale\) echo; echo "The pictures were not taken again/);
   assert.doesNotMatch(preview, /git (add|commit)/);
