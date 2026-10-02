@@ -10,116 +10,14 @@ import {
   matching,
   scanFonts,
   VAULT_FONTS,
+  MANAGED_FONTS,
   type FontFiles,
   type FontIndex,
   type Found,
 } from "@/assets/fonts";
-import { readText, type Listing } from "@/assets/vault";
+import { face, fontFiles } from "@/assets/fakes";
+import { readText } from "@/assets/vault";
 import { readModel } from "@/book/model";
-
-function utf16(text: string): Uint8Array {
-  const bytes = new Uint8Array(text.length * 2);
-  const view = new DataView(bytes.buffer);
-  for (const [at, letter] of [...text].entries()) {
-    view.setUint16(at * 2, letter.charCodeAt(0));
-  }
-  return bytes;
-}
-
-/** Makes a name table with each name once, in Windows English. */
-function nameTable(names: readonly (readonly [number, string])[]): Uint8Array {
-  const records = names.map(([id, text]) => ({ id, bytes: utf16(text) }));
-  const strings = 6 + records.length * 12;
-  const out = new Uint8Array(
-    strings + records.reduce((sum, { bytes }) => sum + bytes.length, 0),
-  );
-  const view = new DataView(out.buffer);
-  view.setUint16(2, records.length);
-  view.setUint16(4, strings);
-  let at = 6;
-  let held = 0;
-  for (const { id, bytes } of records) {
-    view.setUint16(at, 3);
-    view.setUint16(at + 2, 1);
-    view.setUint16(at + 4, 0x0409);
-    view.setUint16(at + 6, id);
-    view.setUint16(at + 8, bytes.length);
-    view.setUint16(at + 10, held);
-    out.set(bytes, strings + held);
-    held += bytes.length;
-    at += 12;
-  }
-  return out;
-}
-
-/** Makes a file of one face with these names and this `fsType`. */
-function face(family: string, style: string, fsType = 0): Uint8Array {
-  const os2 = new Uint8Array(96);
-  new DataView(os2.buffer).setUint16(8, fsType);
-  const tables = [
-    {
-      tag: "name",
-      bytes: nameTable([
-        [1, family],
-        [2, style],
-        [6, `${family}-${style}`],
-      ]),
-    },
-    { tag: "OS/2", bytes: os2 },
-  ];
-  let at = 12 + tables.length * 16;
-  const placed = tables.map((table) => {
-    const spot = at;
-    at += table.bytes.length + ((4 - (table.bytes.length % 4)) % 4);
-    return { ...table, at: spot };
-  });
-  const out = new Uint8Array(at);
-  const view = new DataView(out.buffer);
-  view.setUint32(0, 0x00010000);
-  view.setUint16(4, tables.length);
-  let record = 12;
-  for (const table of placed) {
-    out.set(
-      Uint8Array.from(table.tag, (letter) => letter.charCodeAt(0)),
-      record,
-    );
-    view.setUint32(record + 8, table.at);
-    view.setUint32(record + 12, table.bytes.length);
-    out.set(table.bytes, table.at);
-    record += 16;
-  }
-  return out;
-}
-
-/** Font files at fixed paths. A directory none of them is under is not there. */
-function fontFiles(files: Readonly<Record<string, Uint8Array>>): FontFiles {
-  return {
-    list: async (directory) => {
-      const under = `${directory.replace(/\/+$/, "")}/`;
-      const listing: Listing = { files: [], folders: [] };
-      const folders = new Set<string>();
-      for (const path of Object.keys(files)) {
-        if (!path.startsWith(under)) continue;
-        const rest = path.slice(under.length);
-        const cut = rest.indexOf("/");
-        if (cut === -1) listing.files.push(path);
-        else folders.add(under + rest.slice(0, cut));
-      }
-      if (listing.files.length === 0 && folders.size === 0) {
-        throw new Error(`no directory at ${directory}`);
-      }
-      listing.folders.push(...folders);
-      listing.files.sort();
-      listing.folders.sort();
-      return listing;
-    },
-    read: async (path, at, length) => {
-      const bytes = files[path];
-      if (bytes === undefined) throw new Error(`no file at ${path}`);
-      return bytes.subarray(at, at + length);
-    },
-  };
-}
 
 test("the platform's faces and the vault's are one index, and the vault wins the name", async () => {
   const files = fontFiles({
@@ -208,6 +106,36 @@ test("each platform's own font directories are named", () => {
     "/home/reader/.local/share/fonts",
     "/home/reader/.fonts",
   ]);
+  assert.deepEqual(fontDirectories("ios", ""), ["/System/Library/Fonts"]);
+});
+
+test("a file with no font suffix is opened by its bytes only when the scan asks", async () => {
+  const woff = face("Webbed", "Regular");
+  woff.set([0x77, 0x4f, 0x46, 0x46]);
+  const files = fontFiles({
+    [`${MANAGED_FONTS}/0A1B`]: face("Halyard", "Regular"),
+    [`${MANAGED_FONTS}/2C3D`]: woff,
+    [`${MANAGED_FONTS}/4E5F`]: new Uint8Array(64),
+    [`${MANAGED_FONTS}/6A`]: new Uint8Array(2),
+    [`${MANAGED_FONTS}/Sablon.ttf`]: face("Sablon", "Regular"),
+  });
+
+  const sniffed = await scanFonts(files, [MANAGED_FONTS], "platform", { byBytes: true });
+  assert.deepEqual(
+    sniffed.faces.map((one) => [one.family, one.path]),
+    [
+      ["Halyard", `${MANAGED_FONTS}/0A1B`],
+      ["Sablon", `${MANAGED_FONTS}/Sablon.ttf`],
+    ],
+    "a WOFF file and a file that is not a font are left closed",
+  );
+  assert.deepEqual(sniffed.refused, []);
+
+  const named = await scanFonts(files, [MANAGED_FONTS], "platform");
+  assert.deepEqual(
+    named.faces.map((one) => one.family),
+    ["Sablon"],
+  );
 });
 
 test("the faces of a family are in style order, whatever order the files were listed in", async () => {
@@ -259,4 +187,5 @@ test("the sample book's own faces are in its vault, under the family its note na
 // What this tier does not cover: the platform's real font
 // directories, which no runner is guaranteed to have, and the walk
 // stopping at four folders deep, which needs a loop of linked folders
-// a fake cannot build.
+// a fake cannot build. It does not cover the files iOS keeps in its
+// managed directory, which only a device with a profile has.

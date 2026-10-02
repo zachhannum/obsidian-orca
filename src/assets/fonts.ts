@@ -4,7 +4,7 @@
  * from a folder in the vault.
  */
 
-import { faceOffsets, readFace, type Refusal, type Ranges } from "@/assets/sfnt";
+import { faceOffsets, fontKind, readFace, type Refusal, type Ranges } from "@/assets/sfnt";
 import { familyVariants, type Variant } from "@/assets/variants";
 import type { Listing } from "@/assets/vault";
 
@@ -62,8 +62,21 @@ export interface FontIndex {
 /** The vault folder for a book's own faces. */
 export const VAULT_FONTS = "fonts";
 
-/** The font directories for `darwin`, `win32`, or any other platform. */
+/**
+ * The iOS directory for faces a configuration profile installs. Its
+ * files have no suffix, so a scan of it reads them by their bytes.
+ */
+export const MANAGED_FONTS = "/private/var/mobile/Library/Fonts/Managed";
+
+/** A choice one scan makes. */
+export interface ScanOptions {
+  /** Opens a file with no font suffix when its first bytes are an sfnt's or a collection's. */
+  byBytes?: boolean;
+}
+
+/** The font directories for `darwin`, `win32`, `ios`, or any other platform. */
 export function fontDirectories(platform: string, home: string): string[] {
+  if (platform === "ios") return ["/System/Library/Fonts"];
   if (platform === "darwin") {
     return ["/System/Library/Fonts", "/Library/Fonts", `${home}/Library/Fonts`];
   }
@@ -86,11 +99,13 @@ export async function scanFonts(
   files: FontFiles,
   directories: readonly string[],
   where: Where,
+  options: ScanOptions = {},
 ): Promise<Found> {
   const found: Found = { faces: [], refused: [] };
   const seen = new Set<string>();
+  const byBytes = options.byBytes === true;
   for (const directory of directories) {
-    await walk(files, directory, 0, where, found, seen);
+    await walk(files, directory, 0, where, found, seen, byBytes);
   }
   return found;
 }
@@ -151,6 +166,7 @@ async function walk(
   where: Where,
   found: Found,
   seen: Set<string>,
+  byBytes: boolean,
 ): Promise<void> {
   if (depth >= DEPTH || seen.has(directory)) return;
   seen.add(directory);
@@ -163,10 +179,12 @@ async function walk(
     return;
   }
   for (const file of listing.files) {
-    if (sfnt(file)) await open(files, file, where, found);
+    if (sfnt(file) || (byBytes && (await sniffed(files, file)))) {
+      await open(files, file, where, found);
+    }
   }
   for (const folder of listing.folders) {
-    await walk(files, folder, depth + 1, where, found, seen);
+    await walk(files, folder, depth + 1, where, found, seen, byBytes);
   }
 }
 
@@ -218,6 +236,16 @@ function keep(families: Map<string, Family>, face: Face): void {
 function sfnt(path: string): boolean {
   const name = path.toLowerCase();
   return SFNT.some((suffix) => name.endsWith(suffix));
+}
+
+/** Whether a file opens as an sfnt or a collection. Nothing downstream decodes WOFF. */
+async function sniffed(files: FontFiles, path: string): Promise<boolean> {
+  try {
+    const kind = fontKind(await files.read(path, 0, 4));
+    return kind === "sfnt" || kind === "collection";
+  } catch {
+    return false;
+  }
 }
 
 /** Names sort by their code units, so an index is the same on every run. */

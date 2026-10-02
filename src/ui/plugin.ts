@@ -3,6 +3,7 @@ import {
   MarkdownView,
   Notice,
   addIcon,
+  Platform,
   Plugin,
   TFile,
   TFolder,
@@ -57,6 +58,7 @@ import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
+import { phoneRoutes } from "@/ui/phone";
 import { pick } from "@/ui/pick";
 import {
   PREVIEW_VIEW,
@@ -1409,7 +1411,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   private places(): Promise<FontPlaces> {
-    this.fonts ??= fontPlaces(this.files(), onDesktop() ? node : undefined);
+    this.fonts ??= fontPlaces(
+      this.files(),
+      onDesktop() ? node : undefined,
+      Platform.isIosApp ? phoneRoutes(window) : undefined,
+    );
     return this.fonts;
   }
 

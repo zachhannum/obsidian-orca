@@ -3,12 +3,14 @@
  *
  * A face installed on the machine is not in the vault, so the
  * platform's directories are read through the file system rather than
- * the vault adapter. Obsidian mobile has no file system to read, so
- * there the index holds the vault's faces alone.
+ * the vault adapter. A phone has no file system to read, so its faces
+ * are read over the web view's routes. With neither, the index holds
+ * the vault's faces alone.
  */
 
 import { AssetError } from "@/assets/errors";
 import {
+  MANAGED_FONTS,
   VAULT_FONTS,
   familyNamed,
   fontDirectories,
@@ -18,9 +20,11 @@ import {
   type Family,
   type FontFiles,
   type FontIndex,
+  type Found,
 } from "@/assets/fonts";
 import { coverage, type Cover } from "@/assets/cmap";
 import type { Node } from "@/assets/node";
+import { phoneFonts, type PhoneRoutes } from "@/assets/phone";
 import { faceBytes } from "@/assets/sfnt";
 import { contentKey, fontUrl, type Hashed } from "@/assets/registry";
 import { usedVariant, variantFamily } from "@/assets/variants";
@@ -89,7 +93,7 @@ export function vaultFonts(vault: VaultAdapter): FontSource {
   };
 }
 
-/** A platform with no Node has no font directory to read. */
+/** A platform with no Node and no routes has no font directory to read. */
 const nowhere: FontSource = {
   list: () => Promise.resolve({ files: [], folders: [] }),
   read: () => Promise.reject(new AssetError("the platform has no fonts to read")),
@@ -102,29 +106,42 @@ export interface FontPlaces {
   vault: FontSource;
   /** The platform's own directories. */
   directories: readonly string[];
+  /**
+   * The platform directories whose files carry no suffix, so a font
+   * among them is known by its first bytes.
+   */
+  unnamed?: readonly string[];
   /** The vault folder a book's own faces are in. */
   folder: string;
 }
 
 /**
- * The places the running machine keeps faces. With no Node the platform
- * has no directories, so the index reads the vault alone.
+ * The places the running machine keeps faces. A phone's are read over
+ * its routes. With no Node and no routes the platform has no
+ * directories, so the index reads the vault alone.
  */
 export async function fontPlaces(
   vault: VaultAdapter,
   node: (() => Promise<Node>) | undefined,
+  phone?: PhoneRoutes,
 ): Promise<FontPlaces> {
   let directories: readonly string[] = [];
+  let unnamed: readonly string[] = [];
   let platform = nowhere;
   if (node !== undefined) {
     const { machine } = await node();
     directories = fontDirectories(machine.platform(), machine.homedir());
     platform = platformFonts(node);
+  } else if (phone !== undefined) {
+    directories = fontDirectories("ios", "");
+    unnamed = [MANAGED_FONTS];
+    platform = phoneFonts(phone);
   }
   return {
     platform,
     vault: vaultFonts(vault),
     directories,
+    unnamed,
     folder: VAULT_FONTS,
   };
 }
@@ -137,10 +154,28 @@ export async function fontPlaces(
  */
 export async function readFontIndex(places: FontPlaces): Promise<FontIndex> {
   const [platform, vault] = await Promise.all([
-    scanFonts(places.platform, places.directories, "platform"),
+    scanPlatform(places),
     scanFonts(places.vault, [places.folder], "vault"),
   ]);
-  return withCarried(fontIndex(platform, vault), places.directories.length > 0);
+  // A place that lists and then will not read gives no system face,
+  // so what was read is asked rather than what was listed.
+  return withCarried(fontIndex(platform, vault), platform.faces.length > 0);
+}
+
+/**
+ * Scans the platform's directories one after the other. A phone's
+ * source holds one file at a time, and two scans at once would each
+ * drop the file the other holds.
+ */
+async function scanPlatform(places: FontPlaces): Promise<Found> {
+  const named = await scanFonts(places.platform, places.directories, "platform");
+  const unnamed = places.unnamed ?? [];
+  if (unnamed.length === 0) return named;
+  const sniffed = await scanFonts(places.platform, unnamed, "platform", { byBytes: true });
+  return {
+    faces: [...named.faces, ...sniffed.faces],
+    refused: [...named.refused, ...sniffed.refused],
+  };
 }
 
 /** A font and variant a design sets, as the faces that cross and the rules that register them. */
