@@ -61,6 +61,9 @@ interface Bridge {
 /** The plugins the app loaded, by id. The API does not declare them. */
 interface Plugins {
   plugins: Record<string, unknown>;
+  /** Turns a plugin off without writing the choice, as an update does. */
+  disablePlugin(id: string): Promise<void>;
+  enablePlugin(id: string): Promise<boolean>;
 }
 
 /** Obsidian's own plugins, which the API does not declare either. */
@@ -639,6 +642,34 @@ export class Obsidian {
       if (found === undefined) throw new Error(`no command called ${named}`);
       return found.checkCallback?.(true) === true;
     }, id);
+  }
+
+  /**
+   * Turns orca off and on again in the running app, without the flag
+   * that keeps it off. Obsidian keeps the plugin's tabs across it, as
+   * it does when it updates the plugin.
+   */
+  async reloadPlugin(): Promise<void> {
+    await this.page.evaluate(async (id) => {
+      await window.app.plugins.disablePlugin(id);
+      await window.app.plugins.enablePlugin(id);
+    }, PLUGIN);
+  }
+
+  /** The tabs of one view type, in any sidebar or pane. */
+  async tabs(type: string): Promise<number> {
+    return this.page.evaluate((named) => {
+      let found = 0;
+      window.app.workspace.iterateAllLeaves((leaf) => {
+        if (leaf.getViewState().type === named) found += 1;
+      });
+      return found;
+    }, type);
+  }
+
+  /** The tabs that show the placeholder for a plugin that is not active. */
+  ghosts(): Locator {
+    return this.page.locator(".workspace-leaf-content[data-type='deferred']");
   }
 
   /** The workspace as it would be written to disk, for a spec that reopens it. */
