@@ -366,6 +366,9 @@
 .nav-buttons { flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 0 8px; color: var(--text-muted); }
 .nav-buttons > div { display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); }
 .nav-buttons .icon { width: var(--icon-l); height: var(--icon-l); }
+/* `New book` says what it makes. */
+.nav-buttons > .mod-named { gap: 8px; width: auto; padding: 0 16px 0 12px; border-radius: var(--touch-size-m); background: var(--interactive-normal); color: var(--text-normal); font-size: var(--font-ui-small); font-weight: var(--font-medium); }
+.nav-buttons > .mod-named .icon { width: var(--icon-s); height: var(--icon-s); }
 
 /* ---- rows, menus and modals at touch size ---- */
 .is-mobile .nav-item { height: auto; min-height: var(--touch-size-m); gap: 8px; padding: var(--nav-item-padding); border-radius: var(--nav-item-radius); font-size: var(--font-ui-medium); line-height: 1.3; color: var(--text-normal); }
