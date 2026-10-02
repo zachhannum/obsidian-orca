@@ -72,6 +72,7 @@ import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import { mountReflow, type MountedReflow } from "@/ui/reflow";
 import type { PageUnit } from "@/style/design";
+import type { ReaderStored } from "@/style/reader";
 import type { Place } from "@/style/origin";
 import { groupTitle, issueGroups, routeOf, withEpub, type IssueGroup } from "@/ui/warnings";
 
@@ -112,6 +113,8 @@ export interface PreviewState {
   folio?: number;
   /** The view the book is being read in. */
   view?: ViewMode;
+  /** Set when the pane shows the EPUB view in place of that page view. */
+  epub?: boolean;
   /**
    * The blocks the manuscript is showing. They say where a book opens
    * rather than where it is, so the workspace never keeps them: a leaf
@@ -152,6 +155,14 @@ export interface PreviewHandoff {
   view(): ViewMode;
   /** Told which view the author switched to, so the next preview opens in it. */
   viewed(mode: ViewMode): void;
+  /** Whether a preview opens in the EPUB view, which it does when the last switch chose it. */
+  epub(): boolean;
+  /** Told the author switched to the EPUB view, so the next preview opens in it. */
+  epubbed(): void;
+  /** The device and the reader settings the EPUB view opens with. */
+  reader(): ReaderStored;
+  /** Told the device and the reader settings after a change, so the plugin keeps them. */
+  reads(reader: ReaderStored): void;
   /** Opens the export dialog on the book this view reads. */
   exports(book: string): void;
   /** Adds a new chapter at the end of the book's body. */
@@ -200,8 +211,9 @@ const VIEWS: { mode: ViewMode; icon: string; label: string }[] = [
 
 /**
  * The fourth switch, which shows the book's EPUB in a frame. It is not
- * a page view: no page is laid out for it, and neither the leaf nor the
- * plugin's data keeps it, so a pane reopened opens in its page view.
+ * a page view: no page is laid out for it. It is kept beside the page
+ * view, in the leaf and in the plugin's data, so a pane that leaves it
+ * goes back to the page view it had.
  */
 const EPUB = { view: "epub", icon: "tablet", label: "EPUB" };
 
@@ -346,6 +358,7 @@ export class PreviewView extends ItemView {
   ) {
     super(leaf);
     this.mode = handoff.view();
+    this.reflowing = handoff.epub();
   }
 
   override getViewType(): string {
@@ -361,7 +374,7 @@ export class PreviewView extends ItemView {
   }
 
   override getState(): Record<string, unknown> {
-    return { ...super.getState(), ...this.state, view: this.mode };
+    return { ...super.getState(), ...this.state, view: this.mode, epub: this.reflowing };
   }
 
   override async setState(
@@ -375,6 +388,10 @@ export class PreviewView extends ItemView {
       wanted.followed === true && !changed && wanted.folio !== this.state.folio;
     const reviewed = wanted.view !== undefined && wanted.view !== this.mode;
     if (wanted.view !== undefined) this.mode = wanted.view;
+    // A state that names a page view is a whole one, so it also says
+    // whether the pane shows the EPUB view in its place.
+    const reflowed = wanted.view !== undefined && (wanted.epub === true) !== this.reflowing;
+    if (reflowed) this.setReflowing(wanted.epub === true);
     this.over = wanted.over;
     this.state = kept(wanted);
     this.attach();
@@ -382,7 +399,8 @@ export class PreviewView extends ItemView {
     if (changed) await this.compose();
     else if (wanted.folio !== undefined) await this.turn(wanted.folio - 1);
     else if (wanted.note !== undefined) await this.turnTo(wanted.note, wanted.over);
-    else if (reviewed) await this.turn(this.at);
+    else if (reviewed || reflowed) await this.turn(this.at);
+    if (reflowed && !changed) void this.reflows();
   }
 
   /** The page this preview is turned to, counting from 1, once it has one. */
@@ -445,6 +463,8 @@ export class PreviewView extends ItemView {
     pane.empty();
     pane.addClass("orca-preview");
     pane.dataset["testid"] = "orca-preview";
+    // A pane that opens in the EPUB view never draws the page controls.
+    pane.toggleClass(REFLOWING, this.reflowing);
     this.chrome(pane);
     this.exportAction ??= this.addAction(ACTIONS.export.icon, ACTIONS.export.label, () => {
       const book = this.state.book;
@@ -454,6 +474,7 @@ export class PreviewView extends ItemView {
       this.toggleInspect();
     });
     this.inspectAction.setAttribute("aria-pressed", "false");
+    if (this.reflowing) this.inspectAction.setAttribute("aria-disabled", "true");
     this.ordersActions();
     // The workspace may have handed this leaf its state before the
     // chrome existed to draw it on, and a paint into a pane with no
@@ -468,7 +489,6 @@ export class PreviewView extends ItemView {
     this.reflow?.unmount();
     this.reflow = undefined;
     this.reflowSwitch = undefined;
-    this.reflowing = false;
     this.asking += 1;
     this.contentEl.removeClass(REFLOWING);
     this.inspectAction?.remove();
@@ -740,6 +760,10 @@ export class PreviewView extends ItemView {
       controls,
       reading: (text) => {
         if (this.reflowing) this.reading(text);
+      },
+      stored: this.handoff.reader(),
+      keeps: (reader) => {
+        this.handoff.reads(reader);
       },
     });
     this.inspects(surface);
@@ -1332,21 +1356,9 @@ export class PreviewView extends ItemView {
    * across a restart and the next preview opens in it.
    */
   private async show(mode: ViewMode): Promise<void> {
-    if (this.reflowing) {
-      this.reflowing = false;
-      this.asking += 1;
-      // Drawing nothing releases every URL the frame was reading.
-      this.reflow?.draw(undefined);
-      this.contentEl.removeClass(REFLOWING);
-      this.inspectAction?.removeAttribute("aria-disabled");
-      if (mode === this.mode) {
-        this.marksView();
-        this.measure();
-        await this.turn(this.at);
-        return;
-      }
-    }
-    if (mode === this.mode) return;
+    const left = this.reflowing;
+    if (left) this.setReflowing(false);
+    if (mode === this.mode && !left) return;
     this.mode = mode;
     this.marksView();
     this.handoff.viewed(mode);
@@ -1356,17 +1368,31 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Shows the book's EPUB in place of its pages. The switch tells
-   * neither the plugin nor the workspace, so nothing keeps it.
+   * Shows the book's EPUB in place of its pages. The view is the
+   * leaf's and the machine's both, as a page view is.
    */
   private showsEpub(): void {
     if (this.reflowing) return;
-    this.reflowing = true;
-    this.setInspecting(INSPECT_OFF);
-    this.inspectAction?.setAttribute("aria-disabled", "true");
-    this.contentEl.addClass(REFLOWING);
-    this.marksView();
+    this.setReflowing(true);
+    this.handoff.epubbed();
+    this.app.workspace.requestSaveLayout();
     void this.reflows();
+  }
+
+  /** Puts the pane in the EPUB view or takes it out, and keeps nothing. */
+  private setReflowing(on: boolean): void {
+    this.reflowing = on;
+    this.asking += 1;
+    if (on) {
+      this.setInspecting(INSPECT_OFF);
+      this.inspectAction?.setAttribute("aria-disabled", "true");
+    } else {
+      // Drawing nothing releases every URL the frame was reading.
+      this.reflow?.draw(undefined);
+      this.inspectAction?.removeAttribute("aria-disabled");
+    }
+    this.contentEl.toggleClass(REFLOWING, on);
+    this.marksView();
   }
 
   /**
@@ -2041,6 +2067,7 @@ function readState(state: unknown): PreviewState {
   if (raw["linked"] === true) made.linked = true;
   if (typeof raw["folio"] === "number") made.folio = raw["folio"];
   if (isViewMode(raw["view"])) made.view = raw["view"];
+  if (raw["epub"] === true) made.epub = true;
   const over = raw["over"];
   if (Array.isArray(over)) made.over = over as Shown[];
   if (raw["followed"] === true) made.followed = true;

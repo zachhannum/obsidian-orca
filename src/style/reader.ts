@@ -302,6 +302,53 @@ const COLOURS: Record<ReaderTheme, Colours | undefined> = {
   dark: { background: "#000000", text: "#FEFEFE", link: "#63caff", visited: "#0099E5" },
 };
 
+/** The device and the reader settings the plugin keeps between panes. */
+export interface ReaderStored {
+  device: string;
+  settings: ReaderSettings;
+}
+
+export const READER_STORED: ReaderStored = { device: DEVICE_DEFAULT, settings: READER_DEFAULTS };
+
+function offered<Value>(options: readonly ReaderOption<Value>[], value: unknown, or: Value): Value {
+  const found = options.find((option) => option.value === value);
+  return found === undefined ? or : found.value;
+}
+
+/**
+ * Reads the device and the settings back from the plugin's data. A
+ * field the data lacks, or holds a value the lists do not offer for,
+ * reads as that field's default and leaves the others as they were
+ * saved. A setting left to the publisher is saved as no key at all.
+ */
+export function readerStored(value: unknown): ReaderStored {
+  const saved = record(value);
+  const kept = record(saved["settings"]);
+  const size = kept["size"];
+  return {
+    device: DEVICES.find((device) => device.id === saved["device"])?.id ?? DEVICE_DEFAULT,
+    settings: {
+      font: offered(READER_FONTS, kept["font"], READER_DEFAULTS.font),
+      size:
+        typeof size === "number" &&
+        size >= READER_SIZE_MIN &&
+        size <= READER_SIZE_MAX &&
+        (size - READER_SIZE_MIN) % READER_SIZE_STEP === 0
+          ? size
+          : READER_DEFAULTS.size,
+      spacing: offered(READER_SPACINGS, kept["spacing"], READER_DEFAULTS.spacing),
+      margins: offered(READER_MARGINS, kept["margins"], READER_DEFAULTS.margins),
+      vertical: offered(READER_VERTICALS, kept["vertical"], READER_DEFAULTS.vertical),
+      align: offered(READER_ALIGNMENTS, kept["align"], READER_DEFAULTS.align),
+      theme: offered(READER_THEMES, kept["theme"], READER_DEFAULTS.theme),
+    },
+  };
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
 /** The page colour ReadiumCSS draws where a theme names none. */
 const PAPER = "#FFFFFF";
 

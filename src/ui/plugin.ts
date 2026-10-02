@@ -196,7 +196,15 @@ export default class OrcaPlugin extends Plugin implements Limited {
             unit: () => this.limits.unit,
             view: () => this.limits.view,
             viewed: (view) => {
-              this.limit({ ...this.limits, view });
+              this.limit({ ...this.limits, view, epub: false });
+            },
+            epub: () => this.limits.epub,
+            epubbed: () => {
+              this.limit({ ...this.limits, epub: true });
+            },
+            reader: () => this.limits.reader,
+            reads: (reader) => {
+              this.limit({ ...this.limits, reader });
             },
             exports: (book) => {
               this.exportBook(book);

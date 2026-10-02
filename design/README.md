@@ -204,8 +204,10 @@ its editor around these files and returns a URL. The artboard list and
   way to the device select, a settings button that opens the settings
   under it, and previous and next. A status such as "section 6 of 9 ·
   screen 2 of 14" is under the device.
-- The device and the reader settings last as long as the pane. Nothing
-  keeps them: not the vault, not the plugin's data.
+- The EPUB view, the device and the reader settings are kept. The
+  plugin's data keeps all three, so the next preview opens as the last
+  one was left, and the pane's own state keeps the view, as it keeps a
+  page view. No note is written.
 - Inspect is off in the EPUB view.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.

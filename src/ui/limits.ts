@@ -7,6 +7,7 @@
 
 import { CEILING } from "@/engine/pool";
 import { PAGE_UNITS, type PageUnit } from "@/style/design";
+import { READER_STORED, readerStored, type ReaderStored } from "@/style/reader";
 import { isViewMode, type ViewMode } from "@/ui/page";
 
 export interface Limits {
@@ -19,6 +20,14 @@ export interface Limits {
    * opens in. A pane restored with the workspace keeps its own.
    */
   view: ViewMode;
+  /**
+   * Whether the last switch chose the EPUB view. It is kept beside the
+   * page view and not as one, so a pane that leaves the EPUB view goes
+   * back to the page view it had.
+   */
+  epub: boolean;
+  /** The device and the reader settings every EPUB view opens with. */
+  reader: ReaderStored;
   /** Whether the navigator lists the headings inside each entry's note. */
   headings: boolean;
   /** The deepest heading level the navigator lists, from 1 to 6. */
@@ -32,6 +41,8 @@ export const LIMITS: Limits = {
   sessions: CEILING,
   unit: "in",
   view: "single",
+  epub: false,
+  reader: READER_STORED,
   headings: false,
   deepest: DEEPEST_LEVEL,
 };
@@ -50,6 +61,8 @@ export function readLimits(saved: unknown): Limits {
   const sessions = kept ?? older;
   const unit = "unit" in saved ? saved.unit : undefined;
   const view = "view" in saved ? saved.view : undefined;
+  const epub = "epub" in saved ? saved.epub : undefined;
+  const reader = "reader" in saved ? saved.reader : undefined;
   const headings = "headings" in saved ? saved.headings : undefined;
   const deepest = "deepest" in saved ? saved.deepest : undefined;
   return {
@@ -57,6 +70,8 @@ export function readLimits(saved: unknown): Limits {
       typeof sessions === "number" ? sessionCount(sessions) : LIMITS.sessions,
     unit: isPageUnit(unit) ? unit : LIMITS.unit,
     view: isViewMode(view) ? view : LIMITS.view,
+    epub: epub === true,
+    reader: readerStored(reader),
     headings: typeof headings === "boolean" ? headings : LIMITS.headings,
     deepest: typeof deepest === "number" ? headingLevel(deepest) : LIMITS.deepest,
   };

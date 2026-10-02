@@ -4,8 +4,8 @@
  * settings and the turns on the preview's bar.
  *
  * The frame is sandboxed without scripts, so nothing a book carries
- * runs. The device, the settings and the place are state here and
- * nowhere else, so they last as long as the pane.
+ * runs. The device and the settings open as the plugin kept them, and
+ * each change is reported for the plugin to keep. Nothing here writes.
  */
 
 import { createPortal } from "react-dom";
@@ -14,7 +14,6 @@ import { useEffect, useLayoutEffect, useRef, useState, type JSX, type ReactNode 
 import type { Reflowable, Stages } from "@/engine/session";
 import {
   DEVICES,
-  DEVICE_DEFAULT,
   DEVICE_GROUPS,
   READER_ALIGNMENTS,
   READER_DEFAULTS,
@@ -32,6 +31,7 @@ import {
   readerPage,
   readerVariables,
   type ReaderSettings,
+  type ReaderStored,
 } from "@/style/reader";
 import { READIUM } from "@/style/readium";
 import { Segment, Select, classes } from "@/ui/controls";
@@ -58,6 +58,10 @@ export interface ReflowSlots {
   controls: HTMLElement;
   /** Writes the section and screen being read into the window's status bar. */
   reading(text: string): void;
+  /** The device and the settings the view opens with. */
+  stored: ReaderStored;
+  /** Told the device and the settings after each change, so the plugin keeps them. */
+  keeps(stored: ReaderStored): void;
 }
 
 export interface MountedReflow {
@@ -112,8 +116,8 @@ function Reflow({
   slots: ReflowSlots;
   turner: Turner;
 }): JSX.Element | null {
-  const [deviceId, setDeviceId] = useState(DEVICE_DEFAULT);
-  const [settings, setSettings] = useState<ReaderSettings>(READER_DEFAULTS);
+  const [deviceId, setDeviceId] = useState(slots.stored.device);
+  const [settings, setSettings] = useState<ReaderSettings>(slots.stored.settings);
   const [place, setPlace] = useState<Place>({ section: 0, screen: 0 });
   const [bound, setBound] = useState<Bound | undefined>(undefined);
   /** The URL of the document the frame has finished loading. */
@@ -322,7 +326,14 @@ function Reflow({
       </div>
       {createPortal(
         <>
-          <Settings bar={slots.controls} settings={settings} settle={setSettings} />
+          <Settings
+            bar={slots.controls}
+            settings={settings}
+            settle={(next) => {
+              setSettings(next);
+              slots.keeps({ device: deviceId, settings: next });
+            }}
+          />
           <select
             className="dropdown orca-reflow-device"
             aria-label="Device"
@@ -330,7 +341,9 @@ function Reflow({
             value={device.id}
             onChange={(event) => {
               const chosen = DEVICES.find((each) => each.id === event.target.value);
-              if (chosen !== undefined) setDeviceId(chosen.id);
+              if (chosen === undefined) return;
+              setDeviceId(chosen.id);
+              slots.keeps({ device: chosen.id, settings });
             }}
           >
             {DEVICE_GROUPS.map((group) => (

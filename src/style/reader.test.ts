@@ -16,14 +16,17 @@ import {
   READER_SIZE_MIN,
   READER_SIZE_STEP,
   READER_SPACINGS,
+  READER_STORED,
   READER_THEMES,
   READER_VARIABLES,
   READER_VERTICALS,
   deviceBox,
   readerInset,
   readerPage,
+  readerStored,
   readerVariables,
   type ReaderSettings,
+  type ReaderStored,
 } from "@/style/reader";
 import { READIUM } from "@/style/readium";
 
@@ -185,6 +188,81 @@ test("the screen around the text is the colour of the theme's page", () => {
     const settings = { ...READER_DEFAULTS, theme };
     assert.equal(readerPage(settings), readerVariables(settings).get("--USER__backgroundColor"));
   }
+});
+
+/** A stored value drawn from the lists, by a generator seeded so a failure repeats. */
+function drawn(seed: number): ReaderStored {
+  let state = seed;
+  const pick = <Value>(from: readonly Value[]): Value => {
+    state = (state * 1103515245 + 12345) % 2147483648;
+    return from[state % from.length] as Value;
+  };
+  const sizes: number[] = [];
+  for (let size = READER_SIZE_MIN; size <= READER_SIZE_MAX; size += READER_SIZE_STEP) {
+    sizes.push(size);
+  }
+  return {
+    device: pick(DEVICES).id,
+    settings: {
+      font: pick(READER_FONTS).value,
+      size: pick(sizes),
+      spacing: pick(READER_SPACINGS).value,
+      margins: pick(READER_MARGINS).value,
+      vertical: pick(READER_VERTICALS).value,
+      align: pick(READER_ALIGNMENTS).value,
+      theme: pick(READER_THEMES).value,
+    },
+  };
+}
+
+test("any device and settings the lists offer are read back from the plugin's data as they were saved", () => {
+  for (let seed = 1; seed <= 500; seed += 1) {
+    const stored = drawn(seed);
+    // The data is JSON, which drops a setting left to the publisher.
+    const saved: unknown = JSON.parse(JSON.stringify(stored));
+    assert.deepEqual(readerStored(saved), stored, `seed ${String(seed)}`);
+  }
+  assert.deepEqual(readerStored(READER_STORED), READER_STORED);
+});
+
+test("a stored field the lists do not offer reads as its default, and the other fields stay", () => {
+  for (const junk of [undefined, null, 4, "junk", [], { device: 7, settings: "none" }]) {
+    assert.deepEqual(readerStored(junk), READER_STORED);
+  }
+  const stored = drawn(7);
+  const withSetting = (key: keyof ReaderSettings, value: unknown): unknown => ({
+    device: stored.device,
+    settings: { ...stored.settings, [key]: value },
+  });
+  const junk: Record<keyof ReaderSettings, unknown[]> = {
+    font: ["comic", 3, null],
+    size: [50, 275, 110, "125", Number.NaN, null],
+    spacing: [1.3, "1.5", 0],
+    margins: ["huge", 16, null],
+    vertical: ["huge", 32, null],
+    align: ["center", true],
+    theme: ["night", 0, null],
+  };
+  for (const key of Object.keys(junk) as (keyof ReaderSettings)[]) {
+    for (const value of junk[key]) {
+      assert.deepEqual(
+        readerStored(withSetting(key, value)),
+        { device: stored.device, settings: { ...stored.settings, [key]: READER_DEFAULTS[key] } },
+        `${key}: ${String(value)}`,
+      );
+    }
+  }
+  for (const device of ["kindle", 3, null, undefined]) {
+    assert.deepEqual(readerStored({ device, settings: stored.settings }), {
+      device: DEVICE_DEFAULT,
+      settings: stored.settings,
+    });
+  }
+  // A missing key is that setting's default.
+  assert.deepEqual(readerStored({ device: "ipad", settings: { theme: "sepia" } }), {
+    device: "ipad",
+    settings: { ...READER_DEFAULTS, theme: "sepia" },
+  });
 });
 
 test("each ReadiumCSS sheet is in the bundle with its licence banner", () => {
