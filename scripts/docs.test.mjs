@@ -157,6 +157,10 @@ test("a PR that touches the site builds it, and main goes to GitHub Pages", () =
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/);
 });
 
+test("the Pages branch is served as written, so Astro's underscore folder loads", async () => {
+  await access(path.join(root, "site/public/.nojekyll"));
+});
+
 test("a deploy on main keeps the open previews, and checks the live docs", () => {
   assert.match(workflow, /branch: gh-pages\n\s+folder: site\/dist\n\s+clean-exclude: pr-preview\/\n/);
   assert.match(workflow, /name: check the live docs\n/);
