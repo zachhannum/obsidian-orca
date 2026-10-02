@@ -921,6 +921,13 @@ button.orca-nav-action {
   --icon-size: var(--icon-xs);
 }
 
+/* The icon's own span is as tall as a line of text, which is taller
+   than the icon and would set it above the middle. */
+button.orca-nav-action > span,
+button.orca-panel-glyph > .orca-panel-icon {
+  display: flex;
+}
+
 button.orca-nav-action:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
@@ -2431,16 +2438,13 @@ input.orca-panel-filter {
   font-size: var(--font-ui-small);
 }
 
-.orca-panel-warning {
+/* The panel's own warnings are over its groups, each in the card the
+   preview draws a warning in. */
+.orca-panel-warnings {
   display: flex;
-  align-items: flex-start;
-  gap: var(--size-4-2);
-  padding: var(--size-4-2);
-  border-left: 2px solid var(--color-orange);
-  background: var(--background-modifier-error-hover);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  line-height: 1.4;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  margin-bottom: var(--size-4-3);
 }
 
 .orca-panel-icon {
@@ -2961,15 +2965,15 @@ input.orca-panel-filter {
 }
 
 /* The view keeps room under the list for Obsidian's own bar, and a row
-   scrolled into that room would show under the buttons. */
-.is-phone .orca-nav-header::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  height: 100vh;
-  background: inherit;
+   scrolled into that room would show under the buttons. A shadow adds
+   nothing to what the view scrolls, so the room is filled with shadows
+   of the row. */
+.is-phone .orca-nav-header {
+  box-shadow:
+    0 40px 0 var(--mobile-sidebar-background),
+    0 80px 0 var(--mobile-sidebar-background),
+    0 120px 0 var(--mobile-sidebar-background),
+    0 160px 0 var(--mobile-sidebar-background);
 }
 
 /* A row is as tall as a touch, and long words wrap. */
@@ -3074,6 +3078,19 @@ input.orca-panel-filter {
 
 .is-mobile .orca-nav-header button.orca-nav-action {
   --icon-size: var(--icon-l);
+}
+
+/* `New book` says what it makes, in the pill Obsidian mobile draws a
+   button in. */
+.is-mobile .orca-nav-header button.orca-nav-action.mod-named {
+  gap: var(--size-4-2);
+  width: auto;
+  padding: 0 var(--size-4-4) 0 var(--size-4-3);
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  --icon-size: var(--icon-s);
 }
 
 /* mobile: design panel */
@@ -3316,6 +3333,12 @@ input.orca-panel-filter {
   }
 }
 
+/* A touch that drags the sheet past its end stops there, and neither
+   stretches the sheet nor moves the drawer around it. */
+.is-mobile .orca-editor-host .cm-scroller {
+  overscroll-behavior: none;
+}
+
 /* mobile: preview */
 
 /* A phone's bar floats over the foot of a view in some builds of
@@ -3323,6 +3346,10 @@ input.orca-panel-filter {
    the foot is not under the bar. */
 .is-mobile .view-content.orca-preview {
   padding-bottom: var(--view-bottom-spacing, 0);
+}
+
+.is-phone .view-content.orca-preview {
+  padding-bottom: calc(var(--view-bottom-spacing, 0px) + var(--size-4-3));
 }
 
 /* The bar holds the views, the chapter and Export, each as tall as a
@@ -3357,8 +3384,14 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-preview[data-foot="bar"] select.orca-preview-chapter {
-  flex: none;
-  width: 220px;
+  flex: 0 1 220px;
+}
+
+/* The warnings hang from the bar where the bar holds their count. */
+.is-mobile .orca-preview-bar > .orca-preview-issues {
+  right: 12px;
+  width: 400px;
+  max-width: calc(100% - 24px);
 }
 
 .is-mobile .orca-preview-views {
@@ -3516,6 +3549,8 @@ input.orca-panel-filter {
 .is-mobile .orca-preview button.orca-preview-issue-open {
   display: flex;
   align-items: center;
+  max-width: 100%;
+  height: auto;
   min-height: var(--touch-size-m);
   padding: 0;
   border-radius: 0;
@@ -3523,6 +3558,18 @@ input.orca-panel-filter {
   color: var(--text-accent);
   font-weight: inherit;
   text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* A long path wraps inside its card, and the list scrolls one way. */
+.is-mobile .orca-preview .orca-preview-issues {
+  overflow-x: hidden;
+}
+
+.is-mobile .orca-preview .orca-preview-issue {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Upright, a spread is as wide as the screen leaves it. */
