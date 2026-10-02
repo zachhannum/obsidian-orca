@@ -259,6 +259,7 @@ export class PreviewView extends ItemView {
   private spacer: HTMLElement | undefined;
   /** The row under the page, which holds the folio where there is no status bar. */
   private foot: HTMLElement | undefined;
+  private controls: HTMLElement | undefined;
   private placed: Foot | undefined;
   private session: Session | undefined;
   private composed: Typeset | undefined;
@@ -770,6 +771,7 @@ export class PreviewView extends ItemView {
       nextPage(this.viewing()),
     );
     const controls = bar.createDiv({ cls: "orca-reflow-controls" });
+    this.controls = controls;
 
     // The mobile artboards draw the chapter beside the views and
     // Export at the end of the bar.
@@ -854,6 +856,9 @@ export class PreviewView extends ItemView {
       this.measure();
     });
     watching.observe(surface);
+    // The EPUB view hides the surface, so the pane is what turning the
+    // device moves.
+    watching.observe(pane);
     this.watching = watching;
   }
 
@@ -884,6 +889,17 @@ export class PreviewView extends ItemView {
       bar.append(...stepper);
     }
     foot.toggle(place === "under");
+    // The EPUB view's controls go where the page's are: under the page
+    // when the bar has no room for them.
+    const controls = this.controls;
+    if (controls !== undefined && place !== "status") {
+      if (place === "under") foot.prepend(controls);
+      else {
+        const exporting = bar.querySelector(".orca-preview-export");
+        if (exporting === null) bar.append(controls);
+        else exporting.before(controls);
+      }
+    }
     // The sheet places the warnings over the page from the foot, so
     // what was measured for the bar comes off.
     issues.style.removeProperty("right");

@@ -145,6 +145,19 @@ export function stepOf(key: string): number | undefined {
   return STEPS[key];
 }
 
+/** The horizontal travel of a touch, in pixels, that counts as a swipe. */
+export const SWIPE = 40;
+
+/**
+ * The screens a touch turns by: a swipe left turns on and a swipe right
+ * turns back. A touch that travels less than `SWIPE`, or more up than
+ * across, turns none.
+ */
+export function swipeOf(across: number, down: number): number | undefined {
+  if (Math.abs(across) < SWIPE || Math.abs(across) < Math.abs(down) * 1.5) return undefined;
+  return across < 0 ? 1 : -1;
+}
+
 /** The scale that fits a device, body included, in the well. It never enlarges the device. */
 export function fitted(device: Box, well: Box): number {
   if (well.width <= 0 || well.height <= 0) return 1;

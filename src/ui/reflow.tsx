@@ -41,6 +41,7 @@ import {
   fitted,
   rewriteDocument,
   stepOf,
+  swipeOf,
   turnedBy,
   type Box,
   type Place,
@@ -304,6 +305,27 @@ function Reflow({
                         pressed.preventDefault();
                         turner.turn?.(step);
                       });
+                      // A swipe turns as a key does. The page under it never
+                      // pans, so a drag cannot move the frame off its screen.
+                      inside.addEventListener(
+                        "touchmove",
+                        (touched) => {
+                          touched.preventDefault();
+                        },
+                        { passive: false },
+                      );
+                      let from: { x: number; y: number } | undefined;
+                      inside.addEventListener("touchstart", (touched) => {
+                        const at = touched.touches[0];
+                        from = at === undefined ? undefined : { x: at.clientX, y: at.clientY };
+                      });
+                      inside.addEventListener("touchend", (touched) => {
+                        const at = touched.changedTouches[0];
+                        if (from === undefined || at === undefined) return;
+                        const step = swipeOf(at.clientX - from.x, at.clientY - from.y);
+                        from = undefined;
+                        if (step !== undefined) turner.turn?.(step);
+                      });
                       void inside.fonts.ready.then(() => {
                         setFaces((seen) => seen + 1);
                       });
@@ -408,7 +430,7 @@ function Settings({
   settle: (settings: ReaderSettings) => void;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [hung, setHung] = useState<{ top: number; right: number } | undefined>(undefined);
+  const [hung, setHung] = useState<{ top?: number; right?: number } | undefined>(undefined);
   const opener = useRef<HTMLButtonElement>(null);
   const popover = useRef<HTMLDivElement>(null);
 
@@ -443,6 +465,12 @@ function Settings({
     const button = opener.current;
     const hanging = popover.current;
     const from = hanging?.offsetParent;
+    // Under the page the settings are a sheet above their button, which
+    // the stylesheet places, so nothing is measured onto them.
+    if (open && bar.closest(".orca-preview-foot") !== null) {
+      setHung({});
+      return;
+    }
     if (!open || button === null || hanging === null || from === null || from === undefined) {
       return;
     }
@@ -453,7 +481,7 @@ function Settings({
       top: under.bottom - edge.top + 4,
       right: Math.min(Math.max(edge.right - under.right, GUTTER), room),
     });
-  }, [open]);
+  }, [open, bar]);
 
   const set = (change: Partial<ReaderSettings>): void => {
     settle({ ...settings, ...change });

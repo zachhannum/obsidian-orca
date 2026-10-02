@@ -360,6 +360,14 @@ replaces them.
   spread is drawn at the width of the screen.
 - A swipe turns a page, a spread or a screenful. The arrows that turn
   a page stay, beside the page number.
+- EPUB is the fourth view on a phone and on a tablet. Its controls are
+  the settings button, the device select and the two arrows, each as
+  tall as a touch. They go where the page's foot goes. Under the page
+  they fill the foot, and in the bar they sit before Export. The count
+  of warnings is not drawn in the EPUB view.
+- The reader settings open above their button under the page, as the
+  warnings do, and hang under it in the bar. A swipe turns a screen
+  and then the section, and the arrows do the same.
 - Mobile has no status bar. On an upright phone the page number, the
   arrows and the count of warnings are under the page, clear of
   Obsidian's own bar. On a phone on its side they are in the preview's

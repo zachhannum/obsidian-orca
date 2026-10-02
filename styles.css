@@ -3900,3 +3900,59 @@ input.orca-panel-filter {
   width: 100%;
   max-width: 320px;
 }
+
+/* mobile: the EPUB view */
+
+/* The controls are as tall as a touch. Under the page they fill the
+   foot, with the device taking what the buttons leave. */
+.is-mobile .orca-reflow-controls {
+  flex: 1;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.is-mobile .orca-preview-foot > .orca-reflow-controls {
+  justify-content: stretch;
+}
+
+.is-mobile .orca-reflow-controls button.clickable-icon {
+  flex: none;
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  padding: 0;
+  border-radius: var(--touch-size-m);
+}
+
+.is-mobile .orca-preview-bar select.orca-reflow-device {
+  height: var(--touch-size-m);
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .orca-preview-foot select.orca-reflow-device {
+  flex: 1;
+}
+
+.is-mobile .orca-preview-bar > .orca-reflow-controls select.orca-reflow-device {
+  flex: 0 1 260px;
+}
+
+/* The EPUB view has no warnings of its own to count. */
+.is-mobile .orca-preview.is-reflow .orca-preview-warnings,
+.is-mobile .orca-preview.is-reflow .orca-preview-issues {
+  display: none;
+}
+
+/* Under the page the settings open above their button, as the
+   warnings do. */
+.orca-preview-foot .orca-reflow-popover {
+  right: 12px;
+  bottom: 100%;
+  left: 12px;
+  width: auto;
+  max-width: none;
+  margin-bottom: 4px;
+}
+
+.is-mobile .orca-reflow-popover .orca-panel-label {
+  width: 8em;
+}
