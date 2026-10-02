@@ -71,7 +71,7 @@ import {
 } from "@/ui/inspect";
 import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
-import type { PageUnit } from "@/style/design";
+import { bookUses, type PageUnit } from "@/style/design";
 import type { Place } from "@/style/origin";
 import type { FontIndex } from "@/assets/fonts";
 import { fontWarnings } from "@/ui/picker";
@@ -1557,13 +1557,23 @@ export class PreviewView extends ItemView {
   private async refonts(session: Session): Promise<void> {
     const typeset = this.composed;
     if (typeset === undefined) return;
-    const index = await this.handoff.fonts();
+    const said = await this.unfontedIn(typeset);
     if (this.composed !== typeset || this.session !== session) return;
-    const unread = typeset.unloaded.find((each) => each.unread)?.use.font;
-    const said = fontWarnings(index, typeset.design, typeset.added, unread);
     if (said.join("\n") === this.unfonted.join("\n")) return;
     this.unfonted = said;
     this.lists(session);
+  }
+
+  /**
+   * The warnings for the fonts a book asks for. A book that names no
+   * font has none, and is not a reason to read the machine's faces: the
+   * scan opens every font file the platform installs.
+   */
+  private async unfontedIn(typeset: Typeset): Promise<string[]> {
+    if (bookUses(typeset.design, typeset.added).length === 0) return [];
+    const index = await this.handoff.fonts();
+    const unread = typeset.unloaded.find((each) => each.unread)?.use.font;
+    return fontWarnings(index, typeset.design, typeset.added, unread);
   }
 
   private lists(session: Session): void {
