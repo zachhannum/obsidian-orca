@@ -384,6 +384,34 @@ export class Navigator {
     });
   }
 
+  /**
+   * The room the view scrolls past the end of what the navigator draws,
+   * in pixels. A list shorter than the view leaves none.
+   */
+  async slack(): Promise<number> {
+    return this.pane.evaluate((pane) => {
+      const view = pane.parentElement;
+      if (view === null) throw new Error("the navigator is in no view");
+      const drawn =
+        pane.getBoundingClientRect().bottom -
+        view.getBoundingClientRect().top +
+        view.scrollTop +
+        parseFloat(getComputedStyle(view).paddingBottom);
+      return view.scrollHeight - Math.max(view.clientHeight, Math.ceil(drawn));
+    });
+  }
+
+  /** The distance from each icon on a row to the middle of the row's height, in pixels. */
+  async offMiddle(row: Locator): Promise<number[]> {
+    return row.evaluate((element) => {
+      const outer = element.getBoundingClientRect();
+      return Array.from(element.querySelectorAll("button svg"), (icon) => {
+        const inner = icon.getBoundingClientRect();
+        return Math.abs(outer.top + outer.height / 2 - (inner.top + inner.height / 2));
+      });
+    });
+  }
+
   /** Answers the delete confirmation by clicking the button named. */
   async answer(verb: string): Promise<void> {
     const modal = this.obsidian.page.getByTestId("orca-confirm");

@@ -146,6 +146,18 @@ for (const device of ["phone", "tablet"] as const) {
       await expect.poll(async () => vault.read(BOOK)).toContain(`body-font: ${CARRIED}`);
       await expect(panel.missing.first()).toBeVisible();
       await expect(panel.missing.filter({ hasText: CARRIED })).toHaveCount(0);
+
+      // The panel counts its own warnings in its header, as the CSS
+      // view does, and draws each over the groups in the card the
+      // preview draws a warning in.
+      const missing = await panel.missing.count();
+      await expect(panel.warned).toHaveText(
+        missing === 1 ? "1 warning" : `${String(missing)} warnings`,
+      );
+      await expect(panel.missing.first()).toHaveClass(/orca-preview-issue/);
+      const last = await panel.box(panel.missing.last());
+      const group = await panel.box(panel.groups.first());
+      expect(last.y + last.height).toBeLessThanOrEqual(group.y);
       await panel.reset("body-font").click();
       await expect(panel.font).toHaveAttribute("data-default", "true");
 
@@ -190,6 +202,8 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(panel.up("body-size")).toBeVisible();
       await expect(panel.down("body-size")).toBeVisible();
       expect(await panel.cramped()).toEqual([]);
+      // The icon in the button that browses the glyphs is in its middle.
+      expect(await panel.offCenter(panel.glyphBrowse)).toBeLessThan(1);
 
       await panel.pick();
       expect(await panel.cramped()).toEqual([]);

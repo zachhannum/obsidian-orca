@@ -1,5 +1,8 @@
 import { PREVIEW } from "./harness/book";
 import { DEVICES, TOUCH } from "./harness/obsidian";
+
+/** The view a book note opens in. */
+const BOOK_PAGE = "orca-book";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. */
@@ -115,6 +118,31 @@ for (const device of ["phone", "tablet"] as const) {
     }
   });
 
+  test(`on a ${device} a tap on a book opens its page and shuts the drawer`, async ({
+    navigator,
+    obsidian,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      await navigator.drawer();
+      await navigator.name(BOOK).locator(".orca-label").click();
+      await expect
+        .poll(async () =>
+          obsidian.page.evaluate(() =>
+            window.app.workspace.getMostRecentLeaf()?.view.getViewType(),
+          ),
+        )
+        .toBe(BOOK_PAGE);
+      // A drawer that is open and draws nothing says it is not shut, so
+      // both are read.
+      await expect(navigator.pane).toBeHidden();
+      expect(await obsidian.collapsed("left")).toBe(true);
+      await obsidian.detach(BOOK_PAGE);
+    } finally {
+      await obsidian.emulateMobile(false);
+    }
+  });
+
   test(`on a ${device} the navigator's rows are a touch tall, its buttons are ${device === "phone" ? "under" : "over"} the list, and nothing in it is smaller than a touch or has a tooltip`, async ({
     navigator,
     obsidian,
@@ -136,7 +164,9 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCSS("font-size", "16px");
       await expect(navigator.pane.getByText("Books", { exact: true })).toBeHidden();
 
-      // `New book` is in the row of buttons Obsidian gives a drawer.
+      // `New book` is in the row of buttons Obsidian gives a drawer,
+      // and it says what it makes.
+      await expect(navigator.button("New book")).toHaveText("New book");
       const button = await navigator.button("New book").boundingBox();
       const first = await navigator.name(BOOK).boundingBox();
       if (button === null || first === null) throw new Error("nothing to measure");
@@ -144,6 +174,13 @@ for (const device of ["phone", "tablet"] as const) {
       else expect(button.y + button.height).toBeLessThanOrEqual(first.y + 1);
 
       expect(await obsidian.cramped(ROOT)).toEqual([]);
+
+      // The icons on a book's row are in the middle of its height, and
+      // the view scrolls no further than the list.
+      const off = await navigator.offMiddle(navigator.name(BOOK));
+      expect(off).toHaveLength(2);
+      for (const each of off) expect(each).toBeLessThan(1);
+      expect(await navigator.slack()).toBeLessThanOrEqual(0);
 
       // No row cuts its words short, so none has words to put in a tooltip.
       const cut = await navigator.pane.locator(".orca-label").evaluateAll(
@@ -167,4 +204,4 @@ for (const device of ["phone", "tablet"] as const) {
 // it cover a real touch screen, where no pointer hovers at all: the
 // tooltip check here reads the page straight after the pointer arrives,
 // and a tooltip raised later would pass it. The drag handles and a tap
-// that closes the drawer are not built here.
+// on a chapter that closes the drawer are not built here.

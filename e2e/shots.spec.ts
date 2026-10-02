@@ -510,7 +510,7 @@ for (const device of ["phone", "tablet"] as Device[]) {
         await book.show("Single page", "single");
         await book.choose(CHAPTER);
         await settled(book);
-        await book.footed("under");
+        await book.footed(device === "phone" ? "under" : "bar");
         await pictured(site, `mobile-preview-${device}-${scheme}.png`);
 
         await navigator.drawer();

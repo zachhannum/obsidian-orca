@@ -626,6 +626,11 @@ export class Controls {
     return this.root.getByTestId("orca-panel-glyph-block");
   }
 
+  /** The button that opens the glyph browser. */
+  get glyphBrowse(): Locator {
+    return this.root.getByTestId("orca-panel-scene-break-ornament-browse");
+  }
+
   /** One cell of the browser, named by its code point. */
   glyphCell(code: string): Locator {
     return this.glyphCells.and(this.root.locator(`[data-code="${code}"]`));

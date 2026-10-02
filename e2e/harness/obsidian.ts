@@ -118,6 +118,8 @@ const CHROME = {
   suggestion: ".suggestion-item",
   notice: ".notice",
   status: ".status-bar",
+  /** The bar a phone floats over the foot of its screen. */
+  navbar: ".mobile-navbar",
   tooltip: ".tooltip",
   modal: ".modal",
   buttons: ".titlebar-button-container.mod-right",
@@ -791,6 +793,13 @@ export class Obsidian {
       const { leftSplit, rightSplit } = window.app.workspace;
       return (on === "left" ? leftSplit : rightSplit).collapsed;
     }, side);
+  }
+
+  /** The top of the bar a phone floats over the foot of its screen. */
+  async navbar(): Promise<number> {
+    const box = await this.page.locator(CHROME.navbar).boundingBox();
+    if (box === null) throw new Error("the window draws no bar at its foot");
+    return box.y;
   }
 
   /** Whether that sidebar is collapsed. */

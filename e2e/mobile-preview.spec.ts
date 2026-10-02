@@ -19,11 +19,21 @@ const ACROSS = { phone: 2, tablet: 6 } as const;
 const LAST_NOTE = "Acknowledgements.md";
 const DEVICE = "![[device.png]]";
 
+/** The place each device draws the folio, the arrows and the count. */
+const PLACE = { phone: "under", tablet: "bar" } as const;
+
+/** The widest a tablet's bar draws the chapter. */
+const CHAPTER_WIDTH = 220;
+
+/** A place too long for one line of a phone's card. */
+const LONG_PLACE =
+  "Manuscript/Part the Second/A chapter with a very long name indeed.md:1234:56";
+
 /** The space a spread leaves between its two pages. */
 const SPINE = 2;
 
 for (const device of ["phone", "tablet"] as const) {
-  test(`a ${device} writes no status bar item, and draws the folio, the arrows and the count under the page`, async ({
+  test(`a ${device} writes no status bar item, and draws the folio, the arrows and the count ${device === "phone" ? "under the page" : "in the preview's bar"}`, async ({
     obsidian,
     book,
   }) => {
@@ -36,7 +46,7 @@ for (const device of ["phone", "tablet"] as const) {
       await book.settled(BOOK);
       await book.uncovered();
 
-      const foot = await book.footed("under");
+      const foot = await book.footed(PLACE[device]);
       await expect(book.status).toHaveCount(0);
       await expect(foot).toBeVisible();
       await expect(foot.getByTestId("orca-folio")).toHaveValue("1");
@@ -44,15 +54,24 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(foot.getByLabel("Previous page")).toHaveCount(1);
       await expect(foot.getByLabel("Next page")).toHaveCount(1);
       await expect(foot.getByTestId("orca-warnings")).toHaveCount(1);
-      // The foot is under the pages rather than over them.
-      const well = await book.surface.boundingBox();
-      const under = await foot.boundingBox();
-      expect(under?.y).toBeGreaterThanOrEqual((well?.y ?? 0) + (well?.height ?? 0));
-
       // The bar keeps the views, the chapter and Export.
-      await expect(book.bar.getByTestId("orca-chapter")).toBeVisible();
+      const chapter = book.bar.getByTestId("orca-chapter");
+      await expect(chapter).toBeVisible();
       await expect(book.exportIn).toBeVisible();
-      await expect(book.bar.getByTestId("orca-folio")).toHaveCount(0);
+      if (device === "phone") {
+        // The foot is under the pages rather than over them, and clear
+        // of the bar Obsidian floats over the foot of the screen.
+        const well = await book.surface.boundingBox();
+        const under = await foot.boundingBox();
+        expect(under?.y).toBeGreaterThanOrEqual((well?.y ?? 0) + (well?.height ?? 0));
+        expect(await book.clearance()).toBeGreaterThanOrEqual(12);
+        await expect(book.bar.getByTestId("orca-folio")).toHaveCount(0);
+      } else {
+        // A tablet's bar has the width for them, and the chapter is no
+        // wider than a name needs.
+        await expect(book.foot).toBeHidden();
+        expect((await chapter.boundingBox())?.width).toBeLessThanOrEqual(CHAPTER_WIDTH);
+      }
 
       await book.next.click();
       await expect(book.surface).toHaveAttribute("data-first", "2");
@@ -74,7 +93,7 @@ for (const device of ["phone", "tablet"] as const) {
       await book.open();
       await book.settled(BOOK);
       await book.uncovered();
-      await book.footed("under");
+      await book.footed(PLACE[device]);
 
       for (const [label, mode] of VIEWS) {
         await expect(book.view(label)).toBeVisible();
@@ -113,7 +132,7 @@ for (const device of ["phone", "tablet"] as const) {
       await book.open();
       await book.settled(BOOK);
       await book.uncovered();
-      await book.footed("under");
+      await book.footed(PLACE[device]);
       // A page with one either side of it, so neither arrow is off.
       await book.next.click();
       await expect(book.surface).toHaveAttribute("data-first", "2");
@@ -167,21 +186,22 @@ test("a phone on its side has the folio, the arrows and the count in the preview
   }
 });
 
-test("a tablet on its side keeps them under the page", async ({ obsidian, book }) => {
+test("a tablet has them in the preview's bar, upright and on its side", async ({ obsidian, book }) => {
   await obsidian.mobile("tablet");
   try {
     await book.close();
     await book.open();
     await book.settled(BOOK);
     await book.uncovered();
-    await book.footed("under");
+    await book.footed("bar");
 
     await obsidian.turn();
     await expect
       .poll(() => obsidian.page.evaluate(() => window.innerHeight > window.innerWidth))
       .toBe(true);
-    const foot = await book.footed("under");
-    await expect(foot.getByTestId("orca-folio")).toHaveValue("1");
+    const bar = await book.footed("bar");
+    await expect(bar.getByTestId("orca-folio")).toHaveValue("1");
+    await expect(book.foot).toBeHidden();
   } finally {
     await book.close();
     await obsidian.emulateMobile(false);
@@ -234,7 +254,7 @@ test("a phone's spread is as wide as the screen upright, and as tall as the pane
 });
 
 for (const device of ["phone", "tablet"] as const) {
-  test(`on a ${device} the warnings open over the page from the count, and a tap on the page shuts them`, async ({
+  test(`on a ${device} the warnings open over the page from the count, a long place wraps inside its card, and a tap on the page shuts them`, async ({
     obsidian,
     book,
     vault,
@@ -246,7 +266,7 @@ for (const device of ["phone", "tablet"] as const) {
       await book.open();
       const painted = await book.settled(BOOK);
       await book.uncovered();
-      const foot = await book.footed("under");
+      const foot = await book.footed(PLACE[device]);
 
       const note = await vault.read(LAST_NOTE);
       await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
@@ -259,14 +279,24 @@ for (const device of ["phone", "tablet"] as const) {
       await count.click();
       await expect(book.issues.first()).toBeVisible();
       await expect(count).toHaveAttribute("aria-expanded", "true");
-      // They are over the pages and above the foot, and the pages have
-      // not moved to make room.
+      // They are over the pages, above a phone's foot and under a
+      // tablet's bar, and the pages have not moved to make room.
       const panel = await book.issues.first().boundingBox();
-      const under = await foot.boundingBox();
+      const held = await foot.boundingBox();
       const well = await book.surface.boundingBox();
-      expect(panel && under && well).toBeTruthy();
-      expect((panel?.y ?? 0) + (panel?.height ?? 0)).toBeLessThanOrEqual(under?.y ?? 0);
-      expect(panel?.y).toBeGreaterThan(well?.y ?? 0);
+      expect(panel && held && well).toBeTruthy();
+      if (device === "phone") {
+        expect((panel?.y ?? 0) + (panel?.height ?? 0)).toBeLessThanOrEqual(held?.y ?? 0);
+        expect(panel?.y).toBeGreaterThan(well?.y ?? 0);
+      } else {
+        expect(panel?.y).toBeGreaterThanOrEqual((held?.y ?? 0) + (held?.height ?? 0));
+        expect((panel?.y ?? 0) + (panel?.height ?? 0)).toBeLessThan(
+          (well?.y ?? 0) + (well?.height ?? 0),
+        );
+      }
+      // A place longer than the card wraps in it, and nothing scrolls
+      // sideways.
+      expect(await book.issuesSpill(LONG_PLACE)).toBe(0);
       // The place a warning names is a control too.
       expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
 
@@ -284,4 +314,4 @@ for (const device of ["phone", "tablet"] as const) {
 // which the preview does not answer yet; the insets a real phone's
 // notch and home bar take from the bar and the foot, which emulation
 // leaves at nothing; and the warnings opened from the bar of a phone
-// on its side, where they hang as they do on desktop.
+// on its side, where they hang as they do on a tablet.

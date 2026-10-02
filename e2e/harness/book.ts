@@ -214,6 +214,34 @@ export class Book {
   }
 
   /**
+   * The room between the foot's controls and the bar Obsidian floats
+   * over the foot of a phone's screen.
+   */
+  async clearance(): Promise<number> {
+    const lowest = await this.foot.evaluate((foot) =>
+      Math.max(
+        ...Array.from(foot.children, (each) => each.getBoundingClientRect().bottom),
+      ),
+    );
+    return (await this.obsidian.navbar()) - lowest;
+  }
+
+  /**
+   * Writes a long place into the first open warning and returns how far
+   * the warnings then scroll sideways, in the list or in a card.
+   */
+  async issuesSpill(place: string): Promise<number> {
+    return this.pane.getByTestId("orca-issues").evaluate((list, words) => {
+      const open = list.querySelector('[data-testid="orca-issue-open"]');
+      if (open === null) throw new Error("no warning names a place");
+      open.textContent = words;
+      const cards = Array.from(list.querySelectorAll<HTMLElement>(".orca-preview-issue"));
+      const inner = Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth));
+      return Math.max(inner, list.scrollWidth - list.clientWidth);
+    }, place);
+  }
+
+  /**
    * Shuts the drawers of a mobile window and waits for the pane to be
    * back on screen. An open drawer pushes a phone's one pane off it.
    */
