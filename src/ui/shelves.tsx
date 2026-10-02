@@ -78,7 +78,7 @@ import {
   type Headed,
   type Showing,
 } from "@/ui/outline";
-import type { Row, Shelved } from "@/ui/shelf";
+import { filterShelf, sortShelf, visibleRows, type Row, type Shelved, type SortOrder } from "@/ui/shelf";
 
 /** The actions a shelf row can ask the view to perform. */
 export interface Acting {
@@ -97,6 +97,10 @@ export interface Acting {
   /** The `+` a book row carries, which is the one way to add to it. */
   addMenu(event: Pointed, book: Shelved): void;
   newBook(): void;
+  /** The menu of sort orders, which calls `choose` with the one picked. */
+  sortMenu(event: Pointed, current: SortOrder, choose: (order: SortOrder) => void): void;
+  /** Told the order after the author picks one, so the view can keep it. */
+  sorted(order: SortOrder): void;
   locate(book: Shelved, row: Row): void;
   removeEntry(book: Shelved, row: Row): void;
   moveEntry(book: Shelved, from: number, to: Place): void;
@@ -128,6 +132,8 @@ export interface Shelves {
   /** The books, entries and headings folded on the shelf, which a reorder keeps. */
   folds: Folds;
   setFolds: (folds: Folds) => void;
+  sort: SortOrder;
+  setSort: (order: SortOrder) => void;
 }
 
 /** An entry asked for by its book and its place in the reading order. */
@@ -151,6 +157,8 @@ export interface Mounted {
   show(showing: Showing | undefined): void;
   /** Puts back the folds the view kept, without telling the view again. */
   fold(folds: Folds): void;
+  /** Puts back the sort order the view kept, without telling the view again. */
+  order(sort: SortOrder): void;
   unmount(): void;
 }
 
@@ -168,6 +176,7 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
   let wanted: Wanted | undefined;
   let showing: Showing | undefined;
   let folds: Folds = {};
+  let sort: SortOrder = "vault";
 
   const draw = (): void => {
     root.render(
@@ -191,6 +200,12 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
           folds = next;
           draw();
           acting.folded(next);
+        }}
+        sort={sort}
+        setSort={(next) => {
+          sort = next;
+          draw();
+          acting.sorted(next);
         }}
       />,
     );
@@ -218,6 +233,10 @@ export function mountShelf(el: HTMLElement, acting: Acting): Mounted {
     },
     fold(kept) {
       folds = kept;
+      draw();
+    },
+    order(kept) {
+      sort = kept;
       draw();
     },
     unmount() {
@@ -351,6 +370,53 @@ function Action({
   );
 }
 
+/**
+ * One button of the bar, in Obsidian's own markup so the file explorer's
+ * rules draw it. Pressing it never starts a drag.
+ */
+function Tool({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  active?: boolean;
+  onClick: (event: Pointed) => void;
+}): JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (ref.current !== null && device() === "desktop") {
+      setTooltip(ref.current, label);
+    }
+  }, [label]);
+  return (
+    <div
+      ref={ref}
+      role="button"
+      tabIndex={0}
+      className={`clickable-icon nav-action-button${active === true ? " is-active" : ""}`}
+      aria-label={label}
+      data-testid={`orca-tool-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick(event);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.currentTarget.click();
+      }}
+    >
+      <Icon name={icon} />
+    </div>
+  );
+}
+
 export function Shelf({
   shelf,
   generation,
@@ -360,11 +426,23 @@ export function Shelf({
   wanted,
   located,
   showing,
-  folds,
-  setFolds,
+  folds: kept,
+  setFolds: keep,
+  sort,
+  setSort,
 }: Shelves): JSX.Element {
   const pane = useRef<HTMLDivElement>(null);
-  const open = !allCollapsed(folds, shelf);
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState("");
+  // The filter shows every match unfolded and leaves the saved folds alone.
+  const filtering = searching && query.trim() !== "";
+  const folds = filtering ? expandAll() : kept;
+  const setFolds = filtering ? noFold : keep;
+  const rows = useMemo(
+    () => sortShelf(filtering ? filterShelf(shelf, query) : shelf, sort),
+    [shelf, query, sort, filtering],
+  );
+  const open = !allCollapsed(kept, rows);
   // The suite waits on the generation the pane has painted, so it is
   // written after the commit and never during one.
   useEffect(() => {
@@ -385,33 +463,76 @@ export function Shelf({
 
   return (
     <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
-      <div className="orca-nav-header">
-        <span className="orca-nav-title">Books</span>
-        {!foldable(shelf) ? null : (
-          <Action
-            icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
-            label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
+      <div className="nav-header">
+        <div className="nav-buttons-container">
+          <Tool
+            icon={ACTIONS.newBook.icon}
+            label={ACTIONS.newBook.label}
             onClick={() => {
-              setFolds(open ? collapseAll(folds, shelf) : expandAll());
+              acting.newBook();
             }}
           />
-        )}
-        <Action
-          icon={ACTIONS.newBook.icon}
-          label={ACTIONS.newBook.label}
-          onClick={() => {
-            acting.newBook();
-          }}
-        />
+          <Tool
+            icon={ACTIONS.search.icon}
+            label={ACTIONS.search.label}
+            active={searching}
+            onClick={() => {
+              setSearching(!searching);
+              setQuery("");
+            }}
+          />
+          <Tool
+            icon={ACTIONS.sort.icon}
+            label={ACTIONS.sort.label}
+            active={sort !== "vault"}
+            onClick={(event) => {
+              acting.sortMenu(event, sort, setSort);
+            }}
+          />
+          {!foldable(rows) ? null : (
+            <Tool
+              icon={open ? ACTIONS.collapseAll.icon : ACTIONS.expandAll.icon}
+              label={open ? ACTIONS.collapseAll.label : ACTIONS.expandAll.label}
+              onClick={() => {
+                keep(open ? collapseAll(kept, rows) : expandAll());
+              }}
+            />
+          )}
+        </div>
       </div>
+      {!searching ? null : (
+        <div className="orca-nav-search">
+          <div className="search-input-container">
+            <input
+              type="search"
+              autoFocus
+              placeholder="Search books and chapters"
+              aria-label="Search books and chapters"
+              data-testid="orca-nav-search"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                setSearching(false);
+                setQuery("");
+              }}
+            />
+          </div>
+        </div>
+      )}
       <div className="orca-shelves">
-        {shelf.length === 0 ? (
-          <div className="orca-nav-quiet">No books in this vault</div>
+        {rows.length === 0 ? (
+          <div className="orca-nav-quiet">
+            {filtering ? "No matches" : "No books in this vault"}
+          </div>
         ) : (
-          shelf.map((book) => (
+          rows.map((book) => (
             <Book
               key={book.path}
               book={book}
+              visible={filtering ? visibleRows(book, query) : undefined}
               acting={acting}
               renaming={renaming}
               renamed={renamed}
@@ -428,8 +549,14 @@ export function Shelf({
   );
 }
 
+/** The folds a filtered shelf leaves as they are. */
+function noFold(): void {
+  // A filtered shelf is drawn unfolded, so a fold has nothing to keep.
+}
+
 function Book({
   book,
+  visible,
   acting,
   renaming,
   renamed,
@@ -440,6 +567,8 @@ function Book({
   setFolds,
 }: {
   book: Shelved;
+  /** The places of the rows a search shows, or nothing when it shows them all. */
+  visible: ReadonlySet<number> | undefined;
   acting: Acting;
   renaming: Renaming | undefined;
   renamed: (open: Renaming | undefined) => void;
@@ -472,7 +601,9 @@ function Book({
   }, [book.groups]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: visible === undefined ? { distance: 4 } : { distance: 1e9 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -518,6 +649,30 @@ function Book({
   );
   const ids = useMemo(() => items.map((item) => item.id), [items]);
   const where = useMemo(() => places(items), [items]);
+  // A search hides rows and leaves the list whole, so each row keeps the
+  // place it has in the note, which a click and an edit name it by.
+  const hidden = useMemo(() => {
+    const none = new Set<string>();
+    if (visible === undefined) return none;
+    let group: Item | undefined;
+    let shown = 0;
+    const close = (): void => {
+      if (group !== undefined && shown === 0) none.add(group.id);
+    };
+    for (const item of items) {
+      if (item.kind === "group") {
+        close();
+        group = item;
+        shown = 0;
+      } else if (visible.has(item.row.at)) {
+        shown += 1;
+      } else {
+        none.add(item.id);
+      }
+    }
+    close();
+    return none;
+  }, [items, visible]);
 
   function started({ active }: DragStartEvent): void {
     const id = String(active.id);
@@ -625,7 +780,7 @@ function Book({
               }}
             >
               {items.map((item, at) =>
-                item.kind === "group" ? (
+                hidden.has(item.id) ? null : item.kind === "group" ? (
                   <Heading
                     key={item.id}
                     book={book}

@@ -326,10 +326,14 @@ replaces them.
   bar. A tablet has them in the bar too, in a pane 700px wide or more,
   and under the page in a narrower one. The warnings open over the
   page from the count, and a tap on the page shuts them.
-- The navigator's buttons on mobile are one pill, as Obsidian mobile
-  draws a toolbar, with `Collapse all` and `New book` as icons. `New
-  book` is a book with a plus on it, on desktop too. On a phone the pill is fixed at the foot of the drawer and the
-  list scrolls over it.
+- The navigator's buttons are Obsidian's own, drawn the way the file
+  explorer draws its row on each device. They are `New book`, a search, a sort and `Collapse all`, which
+  is last as in the file explorer. Each acts on the whole shelf.
+  An action on one book stays in that book's row. `New book` is a book
+  with a plus on it, on desktop too. On desktop the row is centered along
+  the top of the pane. On a tablet it is a pill at the top. On a phone
+  it is centered along the bottom, above the pane picker, and the list
+  fades out above it as it does in the file explorer.
 - Nothing on mobile waits for a pointer. A tap on a lock opens its
   card. A book's row in the navigator shows `Open preview` and `Add to
   this book` at all times, and a missing note shows `Locate` and

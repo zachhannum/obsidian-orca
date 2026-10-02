@@ -195,7 +195,7 @@ export class Navigator {
 
   /** The row the navigator's own buttons are in. */
   get toolbar(): Locator {
-    return this.pane.locator(".orca-nav-header");
+    return this.pane.locator(".nav-buttons-container");
   }
 
   /** A button in the navigator's own header. */
