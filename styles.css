@@ -2927,7 +2927,6 @@ input.orca-panel-filter {
 
 /* mobile: navigator */
 
-/* The view scrolls the list, so the buttons under it can stay in reach. */
 .is-mobile .orca-navigator {
   overflow: visible;
   --orca-row-pad: 8px;
@@ -2937,53 +2936,49 @@ input.orca-panel-filter {
   --orca-row-pad: 6px;
 }
 
-/* Obsidian names the drawer's tab, and its buttons stand in a row of
-   their own: over the list on a tablet, under it on a phone. */
+/* Obsidian names the drawer's tab, and its buttons are one pill, as
+   Obsidian mobile draws a toolbar: over the list on a tablet, under it
+   on a phone. */
 .is-mobile .orca-nav-title {
   display: none;
 }
 
 .is-mobile .orca-nav-header {
-  justify-content: center;
-  gap: var(--size-4-2);
-  padding: var(--size-4-1) 0 var(--size-4-2);
+  gap: 0;
+  width: fit-content;
+  margin: 0 auto var(--size-4-2);
+  padding: 0;
+  border-radius: var(--touch-size-m);
+  background: var(--interactive-normal);
 }
 
-/* The buttons are at the foot of the drawer however short the list. */
+/* On a phone the list scrolls and the pill does not: the view holds
+   the two in a column, with the pill at its foot. */
+.is-phone .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
+  overflow: hidden;
+}
+
 .is-phone .orca-nav-host {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
+  height: 100%;
 }
 
 .is-phone .orca-navigator {
   display: flex;
-  flex: 1 0 auto;
   flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
 }
 
 .is-phone .orca-shelves {
-  flex: 1 0 auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .is-phone .orca-nav-header {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
+  flex: none;
   order: 1;
-  background: var(--mobile-sidebar-background);
-}
-
-/* The view keeps room under the list for Obsidian's own bar, and a row
-   scrolled into that room would show under the buttons. A shadow adds
-   nothing to what the view scrolls, so the room is filled with shadows
-   of the row. */
-.is-phone .orca-nav-header {
-  box-shadow:
-    0 40px 0 var(--mobile-sidebar-background),
-    0 80px 0 var(--mobile-sidebar-background),
-    0 120px 0 var(--mobile-sidebar-background),
-    0 160px 0 var(--mobile-sidebar-background);
+  margin: var(--size-4-2) auto 0;
 }
 
 /* A row is as tall as a touch, and long words wrap. */
@@ -3086,22 +3081,9 @@ input.orca-panel-filter {
   margin-left: calc(-1 * var(--size-4-2));
 }
 
-/* The drawer's buttons are one set: each is filled as Obsidian mobile
-   fills a button, an icon in a circle and a name in a pill. */
 .is-mobile .orca-nav-header button.orca-nav-action {
-  background: var(--interactive-normal);
   color: var(--text-normal);
   --icon-size: var(--icon-s);
-}
-
-/* `New book` says what it makes, in the pill Obsidian mobile draws a
-   button in. */
-.is-mobile .orca-nav-header button.orca-nav-action.mod-named {
-  gap: var(--size-4-2);
-  width: auto;
-  padding: 0 var(--size-4-4) 0 var(--size-4-3);
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-medium);
 }
 
 /* mobile: design panel */

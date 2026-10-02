@@ -193,6 +193,11 @@ export class Navigator {
     return this.book(book).getByTestId("orca-entry");
   }
 
+  /** The row the navigator's own buttons are in. */
+  get toolbar(): Locator {
+    return this.pane.locator(".orca-nav-header");
+  }
+
   /** A button in the navigator's own header. */
   button(label: string): Locator {
     return this.pane.locator(`[aria-label="${label}"]`);
@@ -390,19 +395,23 @@ export class Navigator {
   }
 
   /**
-   * The room the view scrolls past the end of what the navigator draws,
-   * in pixels. A list shorter than the view leaves none.
+   * The room the list scrolls past the end of what it draws, in pixels.
+   * A list shorter than its box leaves none. A phone scrolls the
+   * shelves and a tablet the view.
    */
   async slack(): Promise<number> {
     return this.pane.evaluate((pane) => {
-      const view = pane.parentElement;
-      if (view === null) throw new Error("the navigator is in no view");
+      const shelves = pane.querySelector(".orca-shelves");
+      const inside = shelves !== null && getComputedStyle(shelves).overflowY === "auto";
+      const box = inside ? shelves : pane.closest(".view-content");
+      const last = inside ? shelves.lastElementChild : pane;
+      if (box === null || last === null) throw new Error("the navigator draws no list");
       const drawn =
-        pane.getBoundingClientRect().bottom -
-        view.getBoundingClientRect().top +
-        view.scrollTop +
-        parseFloat(getComputedStyle(view).paddingBottom);
-      return view.scrollHeight - Math.max(view.clientHeight, Math.ceil(drawn));
+        last.getBoundingClientRect().bottom -
+        box.getBoundingClientRect().top +
+        box.scrollTop +
+        parseFloat(getComputedStyle(box).paddingBottom);
+      return box.scrollHeight - Math.max(box.clientHeight, Math.ceil(drawn));
     });
   }
 

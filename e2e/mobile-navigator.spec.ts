@@ -165,8 +165,8 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(navigator.pane.getByText("Books", { exact: true })).toBeHidden();
 
       // `New book` is in the row of buttons Obsidian gives a drawer,
-      // and it says what it makes.
-      await expect(navigator.button("New book")).toHaveText("New book");
+      // under the icon of a book with a plus on it.
+      await expect(navigator.button("New book").locator("svg")).toHaveClass(/lucide-book-plus/);
       const button = await navigator.button("New book").boundingBox();
       const first = await navigator.name(BOOK).boundingBox();
       if (button === null || first === null) throw new Error("nothing to measure");
@@ -183,19 +183,25 @@ for (const device of ["phone", "tablet"] as const) {
       for (const each of off) expect(each).toBeLessThan(1);
       expect(await navigator.slack()).toBeLessThanOrEqual(0);
 
-      // A phone's `New book` stays at the foot of the drawer when the
-      // book is folded and the list is one row.
-      if (device === "phone") {
-        // `Collapse all` is there with no heading listed, and folds
-        // the book.
-        await navigator.button("Collapse all").click();
-        await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(0);
-        const folded = await navigator.button("New book").boundingBox();
-        expect(folded?.y).toBeGreaterThan(DEVICES.phone.height / 2);
-        expect(await navigator.slack()).toBeLessThanOrEqual(0);
-        await navigator.button("Expand all").click();
-        await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
-      }
+      // `Collapse all` is there with no heading listed, and folds the
+      // book. The buttons are where they were, to the pixel, and on a
+      // phone that is the foot of the drawer.
+      await navigator.button("Collapse all").click();
+      await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(0);
+      const folded = await navigator.button("New book").boundingBox();
+      expect(folded?.y).toBe(button.y);
+      if (device === "phone") expect(button.y).toBeGreaterThan(DEVICES.phone.height / 2);
+      expect(await navigator.slack()).toBeLessThanOrEqual(0);
+      await navigator.button("Expand all").click();
+      await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
+
+      // The two are one pill, as Obsidian mobile draws a toolbar.
+      const pill = await navigator.toolbar.boundingBox();
+      const other = await navigator.button("Collapse all").boundingBox();
+      if (pill === null || other === null) throw new Error("nothing to measure");
+      expect(pill.width).toBeLessThan(first.width);
+      expect(Math.round(pill.width)).toBe(Math.round(button.width + other.width));
+      await expect(navigator.toolbar).toHaveCSS("border-radius", `${String(TOUCH)}px`);
 
       // No row cuts its words short, so none has words to put in a tooltip.
       const cut = await navigator.pane.locator(".orca-label").evaluateAll(
