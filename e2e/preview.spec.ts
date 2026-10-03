@@ -446,7 +446,7 @@ test("an embed is painted from the bytes the engine set the page from", async ({
   // from the url the registry made out of the bytes that crossed.
   await expect(book.images).toHaveCount(1);
   await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
-  await expect(book.warnings).toBeHidden();
+  await expect(book.count).toBeHidden();
 });
 
 test("an embed with no file behind it is a warning the author can see", async ({
@@ -470,7 +470,7 @@ test("an embed with no file behind it is a warning the author can see", async ({
 
   // Opened, each one is the engine's own line and the line it named,
   // under the note it is in.
-  await book.warnings.click();
+  await book.count.click();
   await expect(book.issues.first()).toBeVisible();
   await expect(book.issues.first()).toContainText(
     "No image was supplied for nothing here.png. The image is skipped.",
@@ -480,7 +480,7 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await expect(book.issueGroups.first()).toContainText(LAST);
 
   // The panel hangs under the count rather than off the end of the bar.
-  const count = await book.warnings.boundingBox();
+  const count = await book.count.boundingBox();
   const panel = await book.issues.first().boundingBox();
   expect(count && panel).toBeTruthy();
   expect(panel?.x).toBeLessThan(count?.x ?? 0);
@@ -496,15 +496,15 @@ test("an embed with no file behind it is a warning the author can see", async ({
   const below = (panel?.y ?? 0) + (panel?.height ?? 0) - (sheets?.y ?? 0) + 12;
   await book.surface.click({ position: { x: 8, y: below } });
   await expect(book.issues.first()).toBeHidden();
-  await book.warnings.click();
+  await book.count.click();
   await expect(book.issues.first()).toBeVisible();
   await book.key("Escape");
   await expect(book.issues.first()).toBeHidden();
 
   // The count is still there to open them again.
-  await book.warnings.click();
+  await book.count.click();
   await expect(book.issues.first()).toBeVisible();
-  await book.warnings.click();
+  await book.count.click();
   await expect(book.issues.first()).toBeHidden();
 
   // The page is set without the image rather than left broken.
@@ -514,7 +514,7 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await expect(book.images).toHaveCount(0);
 
   // The line opens the note beside the book, with the caret on it.
-  await book.warnings.click();
+  await book.count.click();
   await book.issueOpens.first().click();
   await expect.poll(async () => manuscript.showing()).toEqual([LAST_NOTE]);
   await expect.poll(async () => manuscript.caret()).toEqual({ line: 5, ch: 0 });
@@ -541,5 +541,5 @@ test("an embed added while drafting crosses without the book being opened again"
   await expect(book.surface).toHaveAttribute("data-first", String(BACK));
   await expect(book.images).toHaveCount(1);
   await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
-  await expect(book.warnings).toBeHidden();
+  await expect(book.count).toBeHidden();
 });

@@ -85,7 +85,7 @@ its editor around these files and returns a URL. The artboard list and
   the line that page opens at, with the caret on it. One who turned no
   page comes back to the line they were writing on.
 - One ribbon icon, the orca tail. A click on it shows the navigator.
-  The count of warnings is the one on the preview bar, and the icon
+  The count of issues is the one on the preview bar, and the icon
   carries none.
 - Each book's row in the navigator has `Open preview` beside `Add to
   this book`. The book note's page has `Open preview` in its header,
@@ -384,7 +384,7 @@ replaces them.
   the settings button, the device select and the two arrows, each as
   tall as a touch. They go where the page's foot goes. Under the page
   they fill the foot, and in the bar they sit before Export.
-- The count of warnings is drawn in the EPUB view too, beside the EPUB
+- The count of issues is drawn in the EPUB view too, beside the EPUB
   controls. Under the page the controls leave no room for words, so
   the count is an icon and a number in a pill at the left of the foot.
   The pill is as wide as what it holds, in the middle of a target the
@@ -401,7 +401,7 @@ replaces them.
   On a phone a long title ends in an ellipsis, so the line stays on
   one line and the page and the percentage stay whole.
 - Mobile has no status bar. On an upright phone the page number, the
-  arrows and the count of warnings are under the page, clear of
+  arrows and the count of issues are under the page, clear of
   Obsidian's own bar. On a phone on its side they are in the preview's
   bar. A tablet has them in the bar too, in a pane 700px wide or more,
   and under the page in a narrower one. The warnings open over the

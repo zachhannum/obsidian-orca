@@ -84,7 +84,7 @@ import {
   tally,
   withEpub,
   type IssueGroup,
-} from "@/ui/warnings";
+} from "@/ui/issues";
 
 /** The type the preview is registered under. */
 export const PREVIEW_VIEW = "orca-book-preview";
@@ -247,7 +247,7 @@ export class PreviewView extends ItemView {
   private well: HTMLElement | undefined;
   private surface: HTMLElement | undefined;
   private message: HTMLElement | undefined;
-  private warnings: HTMLButtonElement | undefined;
+  private issuesCount: HTMLButtonElement | undefined;
   private issues: HTMLElement | undefined;
   private folio: HTMLInputElement | undefined;
   private total: HTMLElement | undefined;
@@ -520,7 +520,7 @@ export class PreviewView extends ItemView {
     this.well = undefined;
     this.surface = undefined;
     this.message = undefined;
-    this.warnings = undefined;
+    this.issuesCount = undefined;
     this.issues = undefined;
     this.opened = false;
     this.folio = undefined;
@@ -732,11 +732,11 @@ export class PreviewView extends ItemView {
     const spacer = bar.createDiv({ cls: "orca-preview-spacer" });
     this.spacer = spacer;
 
-    const warnings = bar.createEl("button", { cls: "orca-preview-warnings" });
-    warnings.dataset["testid"] = "orca-warnings";
-    warnings.toggleVisibility(false);
-    this.warnings = warnings;
-    this.registerDomEvent(warnings, "click", () => {
+    const count = bar.createEl("button", { cls: "orca-preview-issues-count" });
+    count.dataset["testid"] = "orca-issues-count";
+    count.toggleVisibility(false);
+    this.issuesCount = count;
+    this.registerDomEvent(count, "click", () => {
       this.opened = !this.opened;
       this.showsIssues();
     });
@@ -746,7 +746,7 @@ export class PreviewView extends ItemView {
     issues.toggleVisibility(false);
     this.issues = issues;
 
-    this.shuts(pane, warnings, issues);
+    this.shuts(pane, count, issues);
 
     const chapter = bar.createEl("select", {
       cls: `dropdown orca-preview-chapter ${PAGING}`,
@@ -863,15 +863,15 @@ export class PreviewView extends ItemView {
   }
 
   /**
-   * Moves the count of warnings, the arrows and the folio to where the
+   * Moves the count of issues, the arrows and the folio to where the
    * device has room for them: under the page on mobile, and in the bar
    * on a phone on its side. The pane says which once they are there.
    */
   private places(): void {
     const pane = this.contentEl;
-    const { bar, spacer, foot, warnings, issues, back, folio, total, on } = this;
+    const { bar, spacer, foot, issuesCount: count, issues, back, folio, total, on } = this;
     if (bar === undefined || spacer === undefined || foot === undefined) return;
-    if (warnings === undefined || issues === undefined) return;
+    if (count === undefined || issues === undefined) return;
     if (back === undefined || folio === undefined || total === undefined || on === undefined) {
       return;
     }
@@ -882,15 +882,15 @@ export class PreviewView extends ItemView {
     if (place === this.placed) return;
     this.placed = place;
     const stepper = [back, folio, total, on];
-    if (place === "under") foot.append(warnings, issues, ...stepper);
-    else if (place === "bar") spacer.after(warnings, issues, ...stepper);
+    if (place === "under") foot.append(count, issues, ...stepper);
+    else if (place === "bar") spacer.after(count, issues, ...stepper);
     else {
-      spacer.after(warnings, issues);
+      spacer.after(count, issues);
       bar.append(...stepper);
     }
     foot.toggle(place === "under");
     // The EPUB view's controls go where the page's are: under the page
-    // when the bar has no room for them, right of the count of warnings.
+    // when the bar has no room for them, right of the count of issues.
     const controls = this.controls;
     if (controls !== undefined && place !== "status") {
       if (place === "under") issues.after(controls);
@@ -1698,7 +1698,7 @@ export class PreviewView extends ItemView {
    * is listed here and also drawn on its line in the panel's editor.
    */
   private warns(session: Session): void {
-    const chip = this.warnings;
+    const chip = this.issuesCount;
     const issues = this.issues;
     if (chip === undefined || issues === undefined) return;
     const said: Warning[] = [];
@@ -1813,8 +1813,8 @@ export class PreviewView extends ItemView {
     const open = this.opened && issues.childElementCount > 0;
     if (open) this.placesIssues();
     issues.toggleVisibility(open);
-    this.warnings?.setAttribute("aria-expanded", String(open));
-    this.warnings?.toggleClass("is-on", open);
+    this.issuesCount?.setAttribute("aria-expanded", String(open));
+    this.issuesCount?.toggleClass("is-on", open);
   }
 
   /**
@@ -1826,7 +1826,7 @@ export class PreviewView extends ItemView {
    */
   private placesIssues(): void {
     const issues = this.issues;
-    const chip = this.warnings;
+    const chip = this.issuesCount;
     if (issues === undefined || chip === undefined) return;
     if (this.placed === "under") return;
     const bar = chip.parentElement;

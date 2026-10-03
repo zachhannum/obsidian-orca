@@ -126,7 +126,7 @@ for (const device of ["phone", "tablet"] as const) {
 }
 
 for (const device of ["phone", "tablet"] as const) {
-  test(`on a ${device} the EPUB view draws the count of warnings ${device === "phone" ? "as an icon and a number under the page" : "in words in the bar"}, and a tap on it opens them`, async ({
+  test(`on a ${device} the EPUB view draws the count of issues ${device === "phone" ? "as an icon and a number under the page" : "in words in the bar"}, and a tap on it opens them`, async ({
     obsidian,
     book,
     epub,
@@ -148,7 +148,7 @@ for (const device of ["phone", "tablet"] as const) {
       await epub.open();
 
       const place = await book.footed(PLACE[device]);
-      const count = place.getByTestId("orca-warnings");
+      const count = place.getByTestId("orca-issues-count");
       await expect(count).toBeVisible();
       const said = await count.getAttribute("aria-label");
       expect(said).toMatch(/^(\d+ errors?, )?\d+ warnings?$/);

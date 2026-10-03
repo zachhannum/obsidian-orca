@@ -11,7 +11,7 @@ import {
   issueGroups,
   routeOf,
   withEpub,
-} from "@/ui/warnings";
+} from "@/ui/issues";
 
 const MESSAGE = "unsupported property `position`";
 

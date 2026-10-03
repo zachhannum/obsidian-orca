@@ -132,7 +132,7 @@ export class Book {
   /** The images the painted pages draw. */
   readonly images: Locator;
   /** The bar's count of what the last run had to complain about. */
-  readonly warnings: Locator;
+  readonly count: Locator;
   /** The words of the count, which are its text where the words are drawn. */
   readonly counted: Locator;
   /** The warnings themselves, as the count opens them. */
@@ -180,8 +180,8 @@ export class Book {
     this.sheets = this.surface.locator(".orca-page");
     this.page = this.surface.locator("svg").first();
     this.images = this.surface.locator("image");
-    this.warnings = pane.getByTestId("orca-warnings");
-    this.counted = this.warnings.locator(".orca-preview-said");
+    this.count = pane.getByTestId("orca-issues-count");
+    this.counted = this.count.locator(".orca-preview-said");
     this.issues = pane.getByTestId("orca-issues").locator(".orca-preview-issue");
     this.issueGroups = pane.getByTestId("orca-issue-group");
     this.issueOpens = pane.getByTestId("orca-issue-open");

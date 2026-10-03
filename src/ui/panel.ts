@@ -18,7 +18,7 @@ import type { ResolvedUse } from "@/ui/fonts";
 import { controlOf, withFont, withKey, withVariant } from "@/ui/groups";
 import type { Inspecting } from "@/ui/pane";
 import { mountPanel, type Mounted, type Shown, type Viewing } from "@/ui/panels";
-import { cssFlags } from "@/ui/warnings";
+import { cssFlags } from "@/ui/issues";
 
 /** The type the design panel is registered under. */
 export const PANEL_VIEW = "orca-design";

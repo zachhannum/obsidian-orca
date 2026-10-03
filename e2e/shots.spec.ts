@@ -1054,24 +1054,24 @@ test("the CSS pictures are the sample book's own CSS, a warning on a rule, and t
     });
 
     await site.obsidian.unhovered();
-    await site.book.warnings.click();
+    await site.book.count.click();
     await expect(site.book.issueOpens.first()).toBeVisible();
     const list = site.obsidian.view(PREVIEW).getByTestId("orca-issues");
     const opened = await around(
       site,
-      [await measured(site.book.warnings), await measured(list)],
+      [await measured(site.book.count), await measured(list)],
       PAD,
     );
     bar.push(
       await site.marks(opened, {
-        warnings: site.book.warnings,
+        warnings: site.book.count,
         place: site.book.issueOpens.first(),
       }),
     );
     await expect(site.obsidian.page).toHaveScreenshot(`preview-warnings-${scheme}.png`, {
       clip: opened,
     });
-    await site.book.warnings.click();
+    await site.book.count.click();
     await expect(list).toBeHidden();
   }
   await sidecar("css-warning", warning);
