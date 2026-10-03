@@ -1,28 +1,28 @@
 {
   "width": 620,
-  "height": 248,
+  "height": 312,
   "marks": {
     "choose": {
       "x": 524,
-      "y": 53,
+      "y": 77,
       "width": 80,
       "height": 30
     },
     "destination": {
       "x": 112,
-      "y": 53,
+      "y": 77,
       "width": 404,
       "height": 30
     },
     "fine": {
       "x": 16,
-      "y": 139,
+      "y": 203,
       "width": 588,
       "height": 25
     },
     "write": {
       "x": 542,
-      "y": 203,
+      "y": 267,
       "width": 62,
       "height": 30
     }
