@@ -154,6 +154,32 @@ test("a control whose generated declaration still wins stays live", () => {
   }
 });
 
+test("an author rule on a space measured in body lines leaves the line spacing control live", () => {
+  const design = emptyDesign();
+  design.body.lineSpacing = { value: 14, unit: "pt" };
+  design.headings[6].spaceAbove = 1;
+  design.headings[6].spaceBelow = 1;
+  design.scene.spaceBelow = 1;
+
+  const beaten = (css: string) => Object.keys(Object.fromEntries(designOverridden(design, SETTING, css)));
+
+  assert.deepEqual(beaten("h6 { margin-bottom: 2em; }"), ["heading-6-space-below"]);
+  assert.deepEqual(beaten("h6 { margin: 0; }").sort(), [
+    "heading-6-space-above",
+    "heading-6-space-below",
+  ]);
+  assert.deepEqual(beaten("hr { margin-bottom: 0; }"), ["scene-break-space-below"]);
+  assert.deepEqual(beaten("book { line-height: 1.5; }"), ["body-line-spacing"]);
+
+  // A warning on the margin is still traced to both controls.
+  const heading = generatedRules(design, SETTING).find((rule) => rule.selector === "h6");
+  assert.deepEqual(heading?.from.keys, [
+    "heading-6-space-above",
+    "body-line-spacing",
+    "heading-6-space-below",
+  ]);
+});
+
 // What this tier does not cover: an author rule on a different selector
 // that wins by specificity; selectors that match the same elements
 // written differently without !important, such as p ~ p or :where();

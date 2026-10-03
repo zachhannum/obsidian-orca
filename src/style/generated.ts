@@ -124,9 +124,14 @@ interface Rule {
   declarations: readonly DeclarationFrom[];
 }
 
-/** A declaration, and the setting keys its value reads. */
+/**
+ * A declaration, and the setting keys that write it. `scale` holds the
+ * keys its value is only measured in. A rule is traced to both, and
+ * the author's CSS overrides `keys` alone when it beats the declaration.
+ */
 interface Declaration extends DeclarationFrom {
   text: string;
+  scale: readonly string[];
 }
 
 /** The text a margin box prints, and the setting keys that put it there. */
@@ -520,16 +525,20 @@ function typeLines(
   lines.push(...typeset(type.caps, type.letterSpacing, `heading-${level}`));
   lines.push(...set("text-align", type.align, [`heading-${level}-align`]));
   lines.push(
-    ...set("margin-top", lined(type.spaceAbove, design), [
-      `heading-${level}-space-above`,
-      ...spacing(design),
-    ]),
+    ...set(
+      "margin-top",
+      lined(type.spaceAbove, design),
+      [`heading-${level}-space-above`],
+      spacing(design),
+    ),
   );
   lines.push(
-    ...set("margin-bottom", lined(type.spaceBelow, design), [
-      `heading-${level}-space-below`,
-      ...spacing(design),
-    ]),
+    ...set(
+      "margin-bottom",
+      lined(type.spaceBelow, design),
+      [`heading-${level}-space-below`],
+      spacing(design),
+    ),
   );
   return lines;
 }
@@ -543,10 +552,11 @@ function typeLines(
 function openingSpace(design: Design, level: Level): Declaration[] {
   const above = design.headings[level].spaceAbove;
   if (above === undefined) return [];
-  const keys = [`heading-${level}-space-above`, ...spacing(design)];
+  const keys = [`heading-${level}-space-above`];
+  const lines = spacing(design);
   return [
-    declared("padding-top", bodyLines(above, design), keys),
-    declared("margin-top", "0", keys),
+    declared("padding-top", bodyLines(above, design), keys, lines),
+    declared("margin-top", "0", keys, lines),
   ];
 }
 
@@ -693,16 +703,16 @@ function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] 
     ),
     block(
       `${page} > :first-child`,
-      [declared("padding-top", bodyLines(TITLE_SINK, design), lines)],
+      [declared("padding-top", bodyLines(TITLE_SINK, design), [], lines)],
       role,
     ),
-    block(`${page} > p + h1,\n${page} > h1 + p`, [declared("padding-top", line, lines)], role),
+    block(`${page} > p + h1,\n${page} > h1 + p`, [declared("padding-top", line, [], lines)], role),
   ];
   if (setting.publisher !== undefined && setting.publisher !== "") {
     rules.push(
       block(
         `${page} > p:last-child`,
-        [declared("padding-top", bodyLines(IMPRINT_GAP, design), lines)],
+        [declared("padding-top", bodyLines(IMPRINT_GAP, design), [], lines)],
         role,
       ),
     );
@@ -754,7 +764,7 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
         declared("text-align", "right"),
         declared("line-height", "0"),
         declared("position", "relative"),
-        declared("top", `-${bodyLines(0.5, design)}`, lines),
+        declared("top", `-${bodyLines(0.5, design)}`, [], lines),
         declared("break-before", "avoid"),
       ],
       role,
@@ -769,8 +779,8 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
       [
         declared("font-variant-caps", "small-caps"),
         declared("letter-spacing", "0.08em"),
-        declared("margin-top", bodyLines(1, design), lines),
-        declared("margin-bottom", bodyLines(0.5, design), lines),
+        declared("margin-top", bodyLines(1, design), [], lines),
+        declared("margin-bottom", bodyLines(0.5, design), [], lines),
         declared("break-after", "avoid"),
       ],
       role,
@@ -796,7 +806,8 @@ function sceneRules(design: Design, registered: readonly Registered[]): (Rule | 
       scene.spaceAbove === undefined
         ? undefined
         : bodyLines(scene.spaceAbove, design),
-      ["scene-break-space-above", ...spacing(design)],
+      ["scene-break-space-above"],
+      spacing(design),
     ),
   );
   lines.push(
@@ -805,7 +816,8 @@ function sceneRules(design: Design, registered: readonly Registered[]): (Rule | 
       scene.spaceBelow === undefined
         ? undefined
         : bodyLines(scene.spaceBelow, design),
-      ["scene-break-space-below", ...spacing(design)],
+      ["scene-break-space-below"],
+      spacing(design),
     ),
   );
   return [block("hr", lines)];
@@ -943,16 +955,18 @@ function set(
   property: string,
   value: string | undefined,
   keys: readonly string[] = [],
+  scale: readonly string[] = [],
 ): Declaration[] {
-  return value === undefined ? [] : [declared(property, value, keys)];
+  return value === undefined ? [] : [declared(property, value, keys, scale)];
 }
 
 function declared(
   property: string,
   value: string,
   keys: readonly string[] = [],
+  scale: readonly string[] = [],
 ): Declaration {
-  return { text: `${property}: ${value};`, property, keys };
+  return { text: `${property}: ${value};`, property, keys, scale };
 }
 
 function boxed(
@@ -961,7 +975,7 @@ function boxed(
   value: string,
   keys: readonly string[],
 ): Declaration {
-  return { text: `${property}: ${value};`, property, box, keys };
+  return { text: `${property}: ${value};`, property, box, keys, scale: [] };
 }
 
 /** The declarations of one margin box, each carrying the box it sits in. */
@@ -979,7 +993,7 @@ function block(
   role?: Role,
 ): Rule | undefined {
   if (selector === "" || lines.length === 0) return undefined;
-  const keys = [...new Set(lines.flatMap((line) => line.keys))];
+  const keys = [...new Set(lines.flatMap((line) => [...line.keys, ...line.scale]))];
   return {
     css: `${selector} {\n${ruleLines(lines).join("\n")}\n}\n`,
     from: role === undefined ? { keys } : { keys, role },
