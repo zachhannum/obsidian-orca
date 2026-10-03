@@ -1,7 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { boxOf, NEAR, type Box } from "./harness/box";
 import { DIALOG, type Export } from "./harness/export";
-import { DEVICES, type Obsidian } from "./harness/obsidian";
+import { DEVICES, TOUCH, type Obsidian } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. It sits at the top of the vault. */
@@ -96,7 +96,7 @@ for (const device of ["phone", "tablet"] as const) {
     }
   });
 
-  test(`on a ${device} a refused export says why over its buttons, and its link is at touch size`, async ({
+  test(`on a ${device} a refused export says why over its buttons, and its fix is a link at touch size`, async ({
     obsidian,
     book,
     exporting,
@@ -117,6 +117,14 @@ for (const device of ["phone", "tablet"] as const) {
       inside(await boxOf(exporting.dialog), device);
       await stacked(exporting.said, exporting.write, exporting.cancel);
       await touchable(obsidian, exporting);
+      // Obsidian mobile fills a button and raises it, and a link has neither.
+      const fix = await exporting.fixes.first().evaluate((link) => {
+        const { backgroundColor, boxShadow } = getComputedStyle(link);
+        return { backgroundColor, boxShadow, height: link.getBoundingClientRect().height };
+      });
+      expect(fix.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+      expect(fix.boxShadow).toBe("none");
+      expect(fix.height).toBeGreaterThanOrEqual(TOUCH);
 
       await exporting.close();
       await vault.restore();

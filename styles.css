@@ -3881,27 +3881,29 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   max-width: calc(100% - 24px);
 }
 
-.is-mobile .orca-preview .orca-preview-issue-head {
+.is-mobile .orca-preview-issues .orca-preview-issue-head {
   padding: 0 4px 8px;
 }
 
-.is-mobile .orca-preview .orca-preview-issue {
+.is-mobile .orca-preview-issues .orca-preview-issue {
   padding: 10px 12px;
   border-radius: 0 12px 12px 0;
 }
 
-.is-mobile .orca-preview .orca-preview-issue-said {
+.is-mobile .orca-preview-issues .orca-preview-issue-said {
   font-size: var(--font-ui-small);
 }
 
-.is-mobile .orca-preview .orca-preview-issue-at {
+.is-mobile .orca-preview-issues .orca-preview-issue-at {
   margin-top: 0;
   font-size: 13px;
 }
 
 /* The place is a line as tall as a touch, with none of the pill
-   Obsidian mobile draws a button in. */
-.is-mobile .orca-preview button.orca-preview-issue-open {
+   Obsidian mobile draws a button in. The fix on an export error is the
+   same link. */
+.is-mobile .orca-preview-issues button.orca-preview-issue-open,
+.is-mobile .orca-export-at button.orca-preview-issue-open {
   display: flex;
   align-items: center;
   max-width: 100%;
@@ -3910,6 +3912,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   padding: 0;
   border-radius: 0;
   background: none;
+  box-shadow: none;
   color: var(--text-accent);
   font-weight: inherit;
   text-align: left;
@@ -3922,7 +3925,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   overflow-x: hidden;
 }
 
-.is-mobile .orca-preview .orca-preview-issue {
+.is-mobile .orca-preview-issues .orca-preview-issue {
   min-width: 0;
   overflow-wrap: anywhere;
 }
