@@ -811,6 +811,89 @@ test("the outline around a pinned drop cap is the letter, not the paragraph", as
   expect(Math.abs(letter.y - paragraph.y)).toBeLessThan(paragraph.height / 2);
 });
 
+test("on a zoomed page the boxes are cut at the edge the page is cut at", async ({
+  book,
+  inspect,
+  panel,
+}) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CHAPTER_TITLE);
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
+  await inspect.on();
+  await pinParagraph(book, inspect, panel);
+  const edge = inspect.outline("pinned").getByTestId("orca-inspect-edge").first();
+  const fitted = await inspect.rectOf(edge);
+
+  for (let step = 0; step < 4; step++) await book.zoomIn.click();
+  await book.zoomed(300);
+
+  // The overlay is the node after the sheets, and it clips what it draws.
+  const overlay = book.surface.locator("xpath=following-sibling::*[1]");
+  expect(await overlay.boundingBox()).toEqual(await book.surface.boundingBox());
+  await expect(overlay).toHaveCSS("overflow", "hidden");
+  // The outline is still on the paragraph, three times the size.
+  await expect.poll(async () => (await inspect.rectOf(edge)).width / fitted.width).toBeCloseTo(3, 1);
+
+  await book.zoomPercent.click();
+  await book.zoomed(100);
+});
+
+/** Each way of moving the page before a pin, with no box drawn while it moves. */
+const MOVES = ["zoomed with inspect off", "zoomed", "zoomed and fitted again", "zoomed and dragged"] as const;
+
+for (const move of MOVES) {
+  test(`a pin on a page ${move} is outlined where it was clicked`, async ({
+    book,
+    inspect,
+    obsidian,
+  }) => {
+    await book.open();
+    await book.painted();
+    await book.choose(CHAPTER_TITLE);
+    await expect(book.surface).toHaveAttribute("data-first", String(OPENING));
+    if (move !== "zoomed with inspect off") await inspect.on();
+
+    // The opening paragraph stays on screen at this zoom. A scroll to
+    // it would have the overlay measure the page again.
+    for (let step = 0; step < 2; step++) await book.zoomIn.click();
+    await book.zoomed(150);
+    if (move === "zoomed and fitted again") {
+      await book.zoomPercent.click();
+      await book.zoomed(100);
+    }
+    if (move === "zoomed and dragged") {
+      const well = await book.surface.boundingBox();
+      if (well === null) throw new Error("no page is on screen");
+      const from = { x: well.x + well.width / 2, y: well.y + well.height / 2 };
+      const pan = (await book.surface.getAttribute("data-pan")) ?? "";
+      const { mouse, keyboard } = obsidian.page;
+      await mouse.move(from.x, from.y);
+      await keyboard.down("Space");
+      await mouse.down();
+      await mouse.move(from.x + 10, from.y + 30, { steps: 5 });
+      await mouse.up();
+      await keyboard.up("Space");
+      await expect(book.surface).not.toHaveAttribute("data-pan", pan);
+    }
+    if (move === "zoomed with inspect off") await inspect.on();
+
+    const line = inspect.line(OPENING, FIRST_PARAGRAPH);
+    const clicked = await inspect.startOf(line);
+    await inspect.pinLine(line);
+    const outline = await inspect.rectOf(
+      inspect.outline("pinned").getByTestId("orca-inspect-edge").first(),
+    );
+    expect(clicked.x).toBeGreaterThan(outline.x - 2);
+    expect(clicked.x).toBeLessThan(outline.x + outline.width + 2);
+    expect(clicked.y).toBeGreaterThan(outline.y - 2);
+    expect(clicked.y).toBeLessThan(outline.y + outline.height + 2);
+
+    await book.zoomPercent.click();
+    await book.zoomed(100);
+  });
+}
+
 test("the crumb for the element pins the element, and its rules replace the drop cap's", async ({
   book,
   inspect,

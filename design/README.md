@@ -253,6 +253,26 @@ its editor around these files and returns a URL. The artboard list and
   one was left, and the pane's own state keeps the view, as it keeps a
   page view. No note is written.
 - Inspect is off in the EPUB view.
+- The single and spread views zoom. The grid and the EPUB view do not.
+  The grid is the zoomed-out check, and the EPUB view has its own text
+  size.
+- Fit is 100%, and the zoom runs from 100% to 800%. A page is never
+  smaller than fit.
+- The zoom control is a stepper in the preview's bar, in the single and
+  spread views. It is a minus button, the percentage and a plus button,
+  and a click on the percentage returns to fit. The Mod key with plus
+  zooms in, with minus zooms out and with 0 returns to fit, while the
+  preview has focus. A pinch on a trackpad zooms about the pointer, and
+  so does the wheel with the Mod key held.
+- On a zoomed page, a drag with the Space key held moves the page.
+  The pointer is a hand while the key is down. With the key up, a drag
+  selects text.
+- The zoom stays when the page turns, and the page it turns to shows
+  from its top.
+- The zoom is not kept with the book. A book opens at fit, and a pane
+  keeps its zoom while it is open.
+- A zoomed page is drawn at the zoomed size, so the type stays sharp.
+  A selection and a link work as they do at fit.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.
 - Chapter openings default to the next page. The right-hand page and
@@ -392,6 +412,10 @@ replaces them.
   spread is drawn at the width of the screen.
 - A swipe turns a page, a spread or a screenful. The arrows that turn
   a page stay, beside the page number.
+- A phone and a tablet have no zoom control in the bar. A pinch zooms
+  the single and spread views about the point between the fingers. On
+  a zoomed page a drag with one finger moves the page. At fit, a swipe
+  turns the page.
 - EPUB is the fourth view on a phone and on a tablet. Its controls are
   the settings button, the device select and the two arrows, each as
   tall as a touch. They go where the page's foot goes. Under the page

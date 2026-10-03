@@ -50,6 +50,7 @@
    off the bar. */
 .orca-preview-bar select.orca-preview-chapter {
   height: 26px;
+  min-width: 0;
   max-width: 180px;
   font-size: var(--font-ui-small);
 }
@@ -229,8 +230,10 @@
 }
 
 .orca-preview-total {
+  flex: none;
   color: var(--text-faint);
   font-size: var(--font-ui-small);
+  white-space: nowrap;
 }
 
 .orca-preview-well {
@@ -240,14 +243,21 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: var(--size-4-5);
+  --orca-well-pad: var(--size-4-5);
+  padding: var(--orca-well-pad);
   overflow: hidden;
   container-type: size;
 }
 
+/* The ring is for a reader who came to the pages with the keyboard.
+   A key pressed after a click, as Space is to move a zoomed page, also
+   makes the focus visible, and draws no ring. */
 .orca-preview-well:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--color-accent);
   outline: none;
+}
+
+.orca-preview-well.is-tabbed:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 /* Every view lays its sheets out on one grid, so the well's room is
@@ -258,6 +268,7 @@
   --orca-columns: 1;
   --orca-rows: 1;
   --orca-gap: 0px;
+  --orca-zoom: 1;
   display: grid;
   grid-template-columns: repeat(var(--orca-columns), auto);
   gap: var(--orca-gap);
@@ -276,15 +287,79 @@
    edge. */
 .orca-page {
   aspect-ratio: var(--orca-trim-w) / var(--orca-trim-h);
-  height: min(
-    calc(
-      (100cqh - (var(--orca-rows) - 1) * var(--orca-gap)) / var(--orca-rows)
-    ),
-    calc(
+  height: calc(
+    min(
+      (100cqh - (var(--orca-rows) - 1) * var(--orca-gap)) / var(--orca-rows),
       (100cqw - (var(--orca-columns) - 1) * var(--orca-gap)) /
       var(--orca-columns) * var(--orca-trim-h) / var(--orca-trim-w)
-    )
+    ) * var(--orca-zoom)
   );
+}
+
+/* A zoomed page is larger than the well, so the sheets scroll under
+   it. A page centered past the well's edge starts at the edge instead,
+   so the scroll reaches all of it. The scrollbars are hidden, since one
+   that took room from the well would change the size a page fits at. */
+.orca-preview-sheets.is-zoomed {
+  overflow: auto;
+  align-content: safe center;
+  justify-content: safe center;
+  scrollbar-width: none;
+}
+
+.orca-preview-sheets.is-zoomed::-webkit-scrollbar {
+  display: none;
+}
+
+/* While Space is held the pointer is a hand, and a drag moves the page
+   in place of selecting its text. */
+.orca-preview-sheets.is-hand,
+.orca-preview-sheets.is-hand * {
+  cursor: grab;
+  user-select: none;
+}
+
+.orca-preview-sheets.is-hand.is-gripped,
+.orca-preview-sheets.is-hand.is-gripped * {
+  cursor: grabbing;
+}
+
+/* The browser pans a zoomed page under one finger and leaves two
+   fingers to the preview, which zooms by them. */
+.orca-preview-well {
+  touch-action: pan-x pan-y;
+}
+
+/* The zoom's slot holds nothing where the view does not zoom, and an
+   empty slot adds no gap to the bar. */
+.orca-zoom {
+  display: inline-flex;
+  align-items: center;
+}
+
+.orca-zoom:empty {
+  display: none;
+}
+
+.orca-zoom button.orca-zoom-percent {
+  min-width: 4ch;
+  height: auto;
+  padding: var(--size-2-1) var(--size-2-2);
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  cursor: var(--cursor);
+}
+
+.orca-zoom button.orca-zoom-percent:hover {
+  color: var(--text-normal);
+}
+
+.orca-zoom button.clickable-icon:disabled {
+  opacity: 0.4;
 }
 
 .orca-page svg {
@@ -2904,6 +2979,13 @@ input.orca-panel-filter {
   pointer-events: none;
 }
 
+/* A zoomed page is cut at the edge of the sheets, inside the well's
+   padding, so the boxes drawn over it are cut at the same edge. */
+.orca-preview-sheets.is-zoomed + .orca-inspect-host {
+  inset: var(--orca-well-pad);
+  overflow: hidden;
+}
+
 .orca-inspect-frame,
 .orca-inspect {
   position: absolute;
@@ -4113,7 +4195,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
 
 /* Upright, a spread is as wide as the screen leaves it. */
 .is-phone .orca-preview-well {
-  padding: 14px;
+  --orca-well-pad: 14px;
 }
 
 /* mobile: states */

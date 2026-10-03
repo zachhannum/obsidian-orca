@@ -79,6 +79,27 @@ test("a click on a contents entry turns the book to the page that chapter opens 
   await expect(book.chapterName).toHaveText(CHAPTER);
 });
 
+test("a click on a contents entry on a zoomed page turns the book the same way", async ({ book }) => {
+  await book.open();
+  await book.painted();
+  await book.choose(CONTENTS);
+  await expect(book.chapterName).toHaveText(CONTENTS);
+  await entryOf(book, CHAPTER);
+  await book.zoomIn.click();
+  await book.zoomed(125);
+
+  // The mark is read again, since the zoom moved it.
+  const [label] = await entryOf(book, CHAPTER);
+  await book.click(label);
+
+  await expect(book.surface).toHaveAttribute("data-first", String(OPENS));
+  await expect(book.chapterName).toHaveText(CHAPTER);
+  await book.zoomed(125);
+
+  await book.zoomPercent.click();
+  await book.zoomed(100);
+});
+
 test("a click on the page number an entry prints turns the book the same way", async ({
   book,
 }) => {
