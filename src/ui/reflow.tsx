@@ -46,6 +46,7 @@ import {
   type Place,
 } from "@/ui/frame";
 import { Icon } from "@/ui/icon";
+import { chapters, status, statusText, type Chapter, type Status } from "@/ui/progress";
 
 /** A book's EPUB files, and what the render they were written from cost. */
 export interface Reflowed {
@@ -57,7 +58,7 @@ export interface Reflowed {
 export interface ReflowSlots {
   /** The node on the preview's bar that takes the view's controls. */
   controls: HTMLElement;
-  /** Writes the section and screen being read into the window's status bar. */
+  /** Writes the chapter, page and percentage being read into the window's status bar. */
   reading(text: string): void;
   /** The device and the settings the view opens with. */
   stored: ReaderStored;
@@ -106,6 +107,8 @@ interface Bound {
   generation: number;
   stages: Stages;
   documents: string[];
+  /** The title and length of each document, in the order of `documents`. */
+  chapters: Chapter[];
 }
 
 function Reflow({
@@ -159,6 +162,7 @@ function Reflow({
       generation: shown.book.generation,
       stages: shown.stages,
       documents: made.documents,
+      chapters: chapters(shown.book),
     });
     // An edit can leave the book with fewer sections than the reader
     // was into.
@@ -217,7 +221,7 @@ function Reflow({
     data["sections"] = String(bound.documents.length);
     data["screen"] = String(screen + 1);
     data["screens"] = String(count);
-    slots.reading(reading(place.section, bound.documents.length, screen, count));
+    slots.reading(statusText(status(bound.chapters, place.section, screen + 1, count)));
   }, [ready, bound, settings, device, place, faces, slots]);
 
   const turn = (step: number): void => {
@@ -320,9 +324,16 @@ function Reflow({
           )}
         </div>
         <div className="orca-reflow-status" data-testid="orca-reflow-status">
-          {ready && place.screen !== "last"
-            ? reading(place.section, sections, Math.min(place.screen, screens - 1), screens)
-            : ""}
+          {ready && place.screen !== "last" && bound !== undefined ? (
+            <Reading
+              line={status(
+                bound.chapters,
+                place.section,
+                Math.min(place.screen, screens - 1) + 1,
+                screens,
+              )}
+            />
+          ) : null}
         </div>
       </div>
       {createPortal(
@@ -389,11 +400,20 @@ function Reflow({
   );
 }
 
-/** The reader's place as the status line says it, counting from 1. */
-function reading(section: number, sections: number, screen: number, screens: number): string {
+/** Draws the status line. A long title is cut short so the page and percentage stay whole. */
+function Reading({ line }: { line: Status }): JSX.Element {
   return (
-    `section ${String(section + 1)} of ${String(sections)} · ` +
-    `screen ${String(screen + 1)} of ${String(screens)}`
+    <>
+      {line.title === undefined ? null : (
+        <span className="orca-reflow-title" data-testid="orca-reflow-title">
+          {line.title}
+        </span>
+      )}
+      {line.title === undefined ? null : <span className="orca-reflow-dot">{" · "}</span>}
+      <span className="orca-reflow-place" data-testid="orca-reflow-place">
+        {line.place}
+      </span>
+    </>
   );
 }
 

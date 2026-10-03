@@ -30,7 +30,7 @@ export class Epub {
   readonly screen: Locator;
   /** The device with its body, which is what is scaled to the pane. */
   readonly body: Locator;
-  /** The line under the device that says the section and the screen. */
+  /** The line under the device that says the chapter, the page in it and how far through the book. */
   readonly status: Locator;
   readonly device: Locator;
   /** The button that opens the reader settings. */

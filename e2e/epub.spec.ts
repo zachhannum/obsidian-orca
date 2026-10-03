@@ -69,6 +69,8 @@ test("the EPUB view loads the engine's files into a sandboxed frame, finds the f
   expect(await epub.sheets()).toEqual(["before", "own", "after"]);
   expect(await epub.turned()).toMatchObject({ section: 1, screen: 1 });
   await expect(epub.previous).toBeDisabled();
+  // The first page of the book is no way through it.
+  await expect(epub.status).toHaveText(/^(.+ · )?page 1 of \d+ · 0%$/);
 
   await turnTo(epub, CHAPTER_NAME);
   expect(await epub.words()).toContain(OPENS);
@@ -83,9 +85,12 @@ test("the EPUB view loads the engine's files into a sandboxed frame, finds the f
   expect(turned).toEqual({ ...opened, screen: 2 });
   const { frame, scrolled } = await epub.measured();
   expect(scrolled).toBe(frame.width);
+  // The status line names the chapter as the book's table of contents
+  // does, the page within it, and how far through the book that is.
   await expect(epub.status).toHaveText(
-    `section ${String(turned.section)} of ${String(turned.sections)} · screen 2 of ${String(turned.screens)}`,
+    new RegExp(`^${CHAPTER_NAME} · page 2 of ${String(turned.screens)} · \\d+%$`),
   );
+  await expect(epub.view.getByTestId("orca-reflow-title")).toHaveText(CHAPTER_NAME);
 
   // The arrow keys turn as the buttons do.
   await book.key("ArrowLeft");

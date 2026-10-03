@@ -405,8 +405,13 @@ button.orca-panel-choice:disabled {
   white-space: nowrap;
 }
 
-.orca-reflow-step.is-default {
-  color: var(--text-faint);
+/* In the reader settings a choice is drawn in one colour whether it is
+   in force or not, as Obsidian's own segmented control is. The one in
+   force is marked by its raised pill alone. */
+.orca-reflow-popover button.orca-panel-choice.is-on,
+.orca-reflow-popover button.orca-panel-choice.is-on.is-default {
+  color: var(--text-muted);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .orca-reflow {
@@ -426,12 +431,31 @@ button.orca-panel-choice:disabled {
   min-height: 0;
 }
 
+/* The status line stays on one line. A long title ends in an ellipsis,
+   and the page and the percentage after it stay whole. */
 .orca-reflow-status {
+  display: flex;
   flex: none;
+  justify-content: center;
+  min-width: 0;
   min-height: 1.4em;
-  text-align: center;
+  padding: 0 var(--size-4-3);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.orca-reflow-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orca-reflow-dot,
+.orca-reflow-place {
+  flex: none;
+  white-space: pre;
 }
 
 /* The box the scaled device takes in the room. The device inside it
@@ -3983,4 +4007,16 @@ input.orca-panel-filter {
 .is-mobile .orca-reflow-popover .orca-panel-label {
   width: 8em;
   white-space: nowrap;
+}
+
+/* A shadow is drawn at the edge of the border, so in the sheet the room
+   around the pill is the segment's padding and the pill casts its
+   shadow from its own edge. */
+.is-mobile .orca-reflow-popover .orca-panel-segment {
+  padding: 3px;
+}
+
+.is-mobile .orca-reflow-popover button.orca-panel-choice {
+  height: calc(var(--touch-size-m) - 6px);
+  border: none;
 }

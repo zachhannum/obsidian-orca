@@ -286,6 +286,59 @@ test("a phone on its side has the EPUB view's controls in the bar", async ({
   }
 });
 
+test("on a phone a long title is cut short on the status line, and the page and the percentage stay whole", async ({
+  obsidian,
+  book,
+  epub,
+}) => {
+  await obsidian.mobile("phone");
+  await obsidian.size(360, 780);
+  try {
+    await book.close();
+    await book.open();
+    await book.settled(BOOK);
+    await book.uncovered();
+    await epub.open();
+    await book.footed("under");
+
+    // The book opens on a document its contents may not list, so the
+    // view is turned to the first one that has a title.
+    const title = epub.view.getByTestId("orca-reflow-title");
+    while ((await title.count()) === 0) await epub.turn();
+
+    const drawn = await epub.status.evaluate((line) => {
+      const name = line.querySelector('[data-testid="orca-reflow-title"]');
+      const place = line.querySelector('[data-testid="orca-reflow-place"]');
+      const words = name?.firstChild;
+      if (name === null || place === null || words === null || words === undefined) return undefined;
+      const short = line.getBoundingClientRect().height;
+      words.nodeValue = "In Which a Title Runs On Far Past the Width of Any Phone ".repeat(3);
+      const outer = line.getBoundingClientRect();
+      const kept = place.getBoundingClientRect();
+      return {
+        grew: outer.height - short,
+        cut: name.scrollWidth > name.clientWidth,
+        ellipsis: getComputedStyle(name).textOverflow,
+        lines: place.getClientRects().length,
+        whole: place.scrollWidth <= place.clientWidth,
+        inside: kept.left >= outer.left - 0.5 && kept.right <= outer.right + 0.5,
+      };
+    });
+    expect(drawn).toEqual({
+      grew: 0,
+      cut: true,
+      ellipsis: "ellipsis",
+      lines: 1,
+      whole: true,
+      inside: true,
+    });
+    await expect(epub.status.getByTestId("orca-reflow-place")).toHaveText(/^page \d+ of \d+ · \d+%$/);
+  } finally {
+    await book.close();
+    await obsidian.emulateMobile(false);
+  }
+});
+
 // What this suite does not cover: a swipe, since the EPUB view has
 // none and its arrows and keys turn a screen; the camera and home bar
 // of a real phone, which emulation draws at nothing; and the EPUB view
