@@ -37,7 +37,7 @@ import type { Reading, Session } from "@/engine/session";
 import { ACTIONS } from "@/ui/actions";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import { device } from "@/ui/desktop";
-import { footPlace, type Foot } from "@/ui/device";
+import { footPlace, sheetCover, sheets, type Foot } from "@/ui/device";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
@@ -73,6 +73,7 @@ import { stepOf } from "@/ui/frame";
 import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
 import { mountReflow, type MountedReflow } from "@/ui/reflow";
+import { openSheet, type Sheet } from "@/ui/sheet";
 import type { PageUnit } from "@/style/design";
 import type { ReaderStored } from "@/style/reader";
 import type { Place } from "@/style/origin";
@@ -331,6 +332,8 @@ export class PreviewView extends ItemView {
    * page being read, so nothing opens it but the author.
    */
   private opened = false;
+  /** The sheet a phone opens the warnings in, while it is open. */
+  private warned: Sheet | undefined;
   /** The overlay inspect mode draws, beside the surface in the well. */
   private overlay: MountedOverlay | undefined;
   /** The header action that turns inspect mode on and off. */
@@ -501,6 +504,7 @@ export class PreviewView extends ItemView {
   }
 
   override onClose(): Promise<void> {
+    this.warned?.close();
     this.setInspecting(INSPECT_OFF);
     this.overlay?.unmount();
     this.overlay = undefined;
@@ -771,6 +775,7 @@ export class PreviewView extends ItemView {
       nextPage(this.viewing()),
     );
     const controls = bar.createDiv({ cls: "orca-reflow-controls" });
+    controls.dataset["testid"] = "orca-reflow-controls";
     this.controls = controls;
 
     // The mobile artboards draw the chapter beside the views and
@@ -807,6 +812,7 @@ export class PreviewView extends ItemView {
       keeps: (reader) => {
         this.handoff.reads(reader);
       },
+      ...(sheets(device()) ? { sheet: (closed) => this.sheetsReader(well, closed) } : {}),
     });
     this.inspects(surface);
     this.followsLinks(surface);
@@ -881,6 +887,8 @@ export class PreviewView extends ItemView {
     });
     if (place === this.placed) return;
     this.placed = place;
+    // An open sheet holds the list, which is about to move.
+    this.warned?.close();
     const stepper = [back, folio, total, on];
     if (place === "under") foot.append(count, issues, ...stepper);
     else if (place === "bar") spacer.after(count, issues, ...stepper);
@@ -900,8 +908,8 @@ export class PreviewView extends ItemView {
         else exporting.before(controls);
       }
     }
-    // The sheet places the warnings over the page from the foot, so
-    // what was measured for the bar comes off.
+    // The stylesheet places the warnings over the page from the foot,
+    // so what was measured for the bar comes off.
     issues.style.removeProperty("right");
     issues.style.removeProperty("max-width");
     pane.dataset["foot"] = place;
@@ -1736,6 +1744,7 @@ export class PreviewView extends ItemView {
     setIcon(pill.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
     chip.setAttribute("aria-label", count);
     chip.setAttribute("title", count);
+    this.warned?.title(count);
     for (const group of [...issueGroups(said), ...fontGroup(fonts)]) {
       const set = issues.createDiv({ cls: "orca-preview-issue-group" });
       set.dataset["testid"] = "orca-issue-group";
@@ -1762,6 +1771,8 @@ export class PreviewView extends ItemView {
         // The cards are drawn again on every run, so the listener goes
         // with the card rather than onto the view.
         open.addEventListener("click", () => {
+          // A sheet is over the whole screen, and the note opens under it.
+          this.warned?.close();
           this.handoff.opens(this, group.route, place);
         });
       }
@@ -1811,10 +1822,73 @@ export class PreviewView extends ItemView {
     const issues = this.issues;
     if (issues === undefined) return;
     const open = this.opened && issues.childElementCount > 0;
-    if (open) this.placesIssues();
-    issues.toggleVisibility(open);
+    if (sheets(device())) this.sheetsIssues(issues, open);
+    else {
+      if (open) this.placesIssues();
+      issues.toggleVisibility(open);
+    }
     this.issuesCount?.setAttribute("aria-expanded", String(open));
     this.issuesCount?.toggleClass("is-on", open);
+  }
+
+  /**
+   * Opens the sheet the reader settings are drawn in. Nothing is dimmed
+   * behind it, and the well gives up what the sheet covers, so the
+   * device is drawn whole above the sheet.
+   */
+  private sheetsReader(well: HTMLElement, closed: () => void): Sheet {
+    const covered = "--orca-sheet-cover";
+    const sheet = openSheet(this.app, {
+      title: "Reader settings",
+      testid: "orca-reader-sheet",
+      cls: "orca-reader-sheet",
+      clear: true,
+      closed: () => {
+        covering.disconnect();
+        well.style.removeProperty(covered);
+        closed();
+      },
+    });
+    // The height the sheet is laid out at, which the slide that opens
+    // it does not change.
+    const covering = new ResizeObserver(() => {
+      const cover = sheetCover(
+        well.win.innerHeight,
+        sheet.frame.offsetHeight,
+        well.getBoundingClientRect().bottom,
+      );
+      well.style.setProperty(covered, `${String(cover)}px`);
+    });
+    covering.observe(sheet.frame);
+    return sheet;
+  }
+
+  /**
+   * Opens the warnings in a sheet, or closes the sheet they are in. The
+   * list is the one element a run fills, so it moves into the sheet and
+   * back beside its count.
+   */
+  private sheetsIssues(issues: HTMLElement, open: boolean): void {
+    if (!open) {
+      this.warned?.close();
+      return;
+    }
+    if (this.warned !== undefined) return;
+    const sheet = openSheet(this.app, {
+      title: this.issuesCount?.getAttribute("aria-label") ?? "",
+      testid: "orca-warnings",
+      cls: "orca-warnings",
+      closed: () => {
+        this.warned = undefined;
+        this.issuesCount?.after(issues);
+        issues.toggleVisibility(false);
+        this.opened = false;
+        this.showsIssues();
+      },
+    });
+    this.warned = sheet;
+    sheet.el.append(issues);
+    issues.toggleVisibility(true);
   }
 
   /**

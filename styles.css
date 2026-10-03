@@ -2414,16 +2414,60 @@ button.orca-book-export {
   width: min(620px, calc(100vw - var(--size-4-8)));
 }
 
-.orca-export {
+/* The dialog is as tall as the screen allows, and the list of errors is
+   the one part of it that gives way and scrolls. */
+.orca-export-modal .modal-content {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.orca-export-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.orca-export {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: var(--size-4-4);
+  min-height: 0;
+}
+
+.orca-export > * {
+  flex: none;
 }
 
 .orca-export-group {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
+}
+
+.orca-export > .orca-export-preflight {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.orca-export-preflight > * {
+  flex: none;
+}
+
+.orca-export-preflight > .orca-export-list {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.orca-export-list > * {
+  flex: none;
 }
 
 .orca-export-row {
@@ -3061,10 +3105,96 @@ input.orca-panel-filter {
   min-height: var(--touch-size-m);
 }
 
+/* mobile: sheets. A sheet is Obsidian's modal, docked to the foot of a
+   phone's screen. The keyboard does not shrink the modal's container,
+   so the sheet ends above it. A sheet is never as tall as the screen:
+   the page stays in sight over it, and what does not fit scrolls. */
+.is-phone .modal-container.orca-sheet {
+  bottom: var(--keyboard-height, 0px);
+}
+
+.is-phone .modal-container.orca-sheet .modal {
+  --dialog-max-height: calc((100vh - var(--keyboard-height, 0px)) * 0.8);
+}
+
+.is-phone .orca-sheet .modal-header {
+  padding-top: 0;
+}
+
+.is-phone .orca-sheet .modal-title {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* The grabber is as tall as a touch, and the title is drawn over its
+   lower part. */
+.orca-sheet-grabber {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: var(--touch-size-m);
+  margin-bottom: calc(var(--size-4-6) - var(--touch-size-m));
+  cursor: pointer;
+}
+
+.orca-sheet-grabber .menu-grabber {
+  flex: none;
+  width: 15%;
+  margin-bottom: 0;
+}
+
+.orca-sheet-title {
+  position: relative;
+  pointer-events: none;
+}
+
+.modal-container.orca-sheet-clear .modal-bg {
+  background-color: transparent;
+}
+
+.is-phone .orca-warnings > .modal-content,
+.is-phone .orca-reader-sheet > .modal-content {
+  padding-bottom: calc(var(--size-4-4) + var(--safe-area-inset-bottom));
+}
+
+.is-phone .orca-reader-sheet .orca-reflow-popover {
+  position: static;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* The well gives up what the reader's sheet covers, so the device is
+   drawn whole above the sheet. */
+.is-phone .orca-preview.is-reflow .orca-preview-well {
+  padding-bottom: calc(14px + var(--orca-sheet-cover, 0px));
+}
+
+/* In a sheet the list is the sheet's content, and the sheet is what
+   scrolls. */
+.orca-warnings .orca-preview-issues {
+  position: static;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
 /* mobile: export */
 .is-phone .orca-export-modal {
-  width: calc(100vw - var(--size-4-6));
-  max-width: none;
+  width: var(--dialog-width);
+  max-width: var(--dialog-max-width);
 }
 
 .is-mobile .orca-export-row {
@@ -3837,27 +3967,29 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   max-width: calc(100% - 24px);
 }
 
-.is-mobile .orca-preview .orca-preview-issue-head {
+.is-mobile .orca-preview-issues .orca-preview-issue-head {
   padding: 0 4px 8px;
 }
 
-.is-mobile .orca-preview .orca-preview-issue {
+.is-mobile .orca-preview-issues .orca-preview-issue {
   padding: 10px 12px;
   border-radius: 0 12px 12px 0;
 }
 
-.is-mobile .orca-preview .orca-preview-issue-said {
+.is-mobile .orca-preview-issues .orca-preview-issue-said {
   font-size: var(--font-ui-small);
 }
 
-.is-mobile .orca-preview .orca-preview-issue-at {
+.is-mobile .orca-preview-issues .orca-preview-issue-at {
   margin-top: 0;
   font-size: 13px;
 }
 
 /* The place is a line as tall as a touch, with none of the pill
-   Obsidian mobile draws a button in. */
-.is-mobile .orca-preview button.orca-preview-issue-open {
+   Obsidian mobile draws a button in. The fix on an export error is the
+   same link. */
+.is-mobile .orca-preview-issues button.orca-preview-issue-open,
+.is-mobile .orca-export-at button.orca-preview-issue-open {
   display: flex;
   align-items: center;
   max-width: 100%;
@@ -3866,6 +3998,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   padding: 0;
   border-radius: 0;
   background: none;
+  box-shadow: none;
   color: var(--text-accent);
   font-weight: inherit;
   text-align: left;
@@ -3878,7 +4011,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   overflow-x: hidden;
 }
 
-.is-mobile .orca-preview .orca-preview-issue {
+.is-mobile .orca-preview-issues .orca-preview-issue {
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -4051,8 +4184,8 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   flex: 0 1 260px;
 }
 
-/* Under the page the settings open above their button, as the
-   warnings do. */
+/* Under the page of a tablet's narrow pane the settings open above
+   their button, as the warnings do. A phone draws them in a sheet. */
 .orca-preview-foot .orca-reflow-popover {
   right: 12px;
   bottom: calc(100% + 8px);
@@ -4061,7 +4194,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   max-width: none;
 }
 
-/* On mobile the sheet is drawn as the warnings' sheet is, over the
+/* On a tablet the settings are drawn as the warnings are, over the
    device and its page. */
 .is-mobile .orca-reflow-popover {
   border-radius: var(--touch-size-xxs);
@@ -4073,7 +4206,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   white-space: nowrap;
 }
 
-/* A shadow is drawn at the edge of the border, so in the sheet the room
+/* A shadow is drawn at the edge of the border, so on mobile the room
    around the pill is the segment's padding and the pill casts its
    shadow from its own edge. */
 .is-mobile .orca-reflow-popover .orca-panel-segment {

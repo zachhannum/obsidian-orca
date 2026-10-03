@@ -301,14 +301,21 @@ function Exporting({
 
       <div className="orca-export-divider" />
 
-      <div className="orca-export-group" data-testid="orca-export-preflight">
+      <div
+        className="orca-export-group orca-export-preflight"
+        data-testid="orca-export-preflight"
+      >
         <div className="orca-export-heading">Preflight</div>
         {checked === undefined ? (
           <div className="orca-export-checking">Checking…</div>
         ) : null}
-        {errors.map((blocker, at) => (
-          <Card key={at} blocker={blocker} exporter={exporter} />
-        ))}
+        {errors.length === 0 ? null : (
+          <div className="orca-export-list" data-testid="orca-export-list">
+            {errors.map((blocker, at) => (
+              <Card key={at} blocker={blocker} exporter={exporter} />
+            ))}
+          </div>
+        )}
         {checked?.fine === undefined ? null : (
           <div className="orca-export-fine" data-testid="orca-export-fine">
             <Icon name="check" className="orca-export-fine-icon" />
@@ -389,6 +396,7 @@ function Card({ blocker, exporter }: { blocker: Blocker; exporter: Exporter }): 
           <button
             type="button"
             className="orca-preview-issue-open"
+            data-testid="orca-export-fix"
             onClick={() => {
               exporter.fix(blocker);
             }}

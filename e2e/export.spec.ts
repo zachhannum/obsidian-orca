@@ -33,6 +33,15 @@ const FOLIO = /^\d+(–\d+)?$/;
 /** The note an embed that will not read is written into. */
 const EMBEDS = "Acknowledgements.md";
 
+/** More errors than a dialog has room for on any screen. */
+const MANY = 24;
+
+/** One embed with no file behind it for each of those errors. */
+const MANY_EMBEDS = Array.from(
+  { length: MANY },
+  (_, at) => `![[nowhere-${String(at)}.png]]`,
+).join("\n\n");
+
 /** The count of notes the fixture book reads that embed an image. */
 const EMBEDDED = 2;
 
@@ -215,6 +224,34 @@ test("an embed with no file behind it stands as an error, and export will not wr
   await book.settled(BOOK);
 });
 
+test("with more errors than the dialog has room for, the list scrolls and Export and Cancel stay on the screen", async ({
+  book,
+  exporting,
+  vault,
+}) => {
+  await book.open();
+  await book.painted();
+  const text = await vault.read(EMBEDS);
+  await vault.modify(EMBEDS, `${text.trimEnd()}\n\n${MANY_EMBEDS}\n`);
+
+  await exporting.open();
+  await exporting.reaches("refused");
+  await expect(exporting.dialog).toHaveAttribute("data-errors", String(MANY));
+  await expect(exporting.errors).toHaveCount(MANY);
+
+  const scrolled = await exporting.scrolled();
+  expect(scrolled.hidden).toBeGreaterThan(0);
+  expect(scrolled.spill).toBeLessThanOrEqual(0);
+  expect(scrolled.moved).toBe(0);
+  expect(scrolled.formats).toBe(true);
+  expect(scrolled.buttons).toBe(true);
+  expect(scrolled.last).toBe(true);
+
+  await exporting.close();
+  await vault.restore();
+  await book.settled(BOOK);
+});
+
 test("an image the book's CSS names is painted behind the pages, and the PDF carries it", async ({
   book,
   exporting,
@@ -276,4 +313,5 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
 // What this suite does not cover: the write to a path on disk, which
 // stops at the native dialog; a face that would not embed, since every
 // face the fixture uses ships in the vault; and a failed write, which
-// the Node tier's sink tests reach.
+// the Node tier's sink tests reach. The list of errors holds no
+// warning yet, so a warning in it is not covered either.

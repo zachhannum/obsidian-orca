@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deviceOf, footPlace, splits } from "@/ui/device";
+import { deviceOf, footPlace, sheetCover, sheets, splits } from "@/ui/device";
 
 const DESKTOP = { isMobile: false, isPhone: false, isTablet: false };
 const PHONE = { isMobile: true, isPhone: true, isTablet: false };
@@ -34,7 +34,20 @@ test("a phone on its side has the foot in the preview's bar", () => {
   assert.equal(footPlace("phone", { width: 300, height: 300 }), "under");
 });
 
+test("a phone opens a sheet, and a tablet and the desktop do not", () => {
+  assert.equal(sheets("phone"), true);
+  assert.equal(sheets("tablet"), false);
+  assert.equal(sheets("desktop"), false);
+});
+
+test("a sheet covers the part of a pane below the sheet's top", () => {
+  assert.equal(sheetCover(844, 420, 700), 276);
+  assert.equal(sheetCover(844, 100, 700), 0);
+  assert.equal(sheetCover(844, 0, 700), 0);
+  assert.equal(sheetCover(390, 500, 300), 300);
+});
+
 // What this tier does not cover: the flags themselves, which Obsidian
-// sets from the window's size as it loads, and the surfaces that read
-// the device, which the e2e suite opens at a phone's size and a
-// tablet's.
+// sets from the window's size as it loads, the height of a sheet, which
+// the browser lays out, and the surfaces that read the device, which
+// the e2e suite opens at a phone's size and a tablet's.

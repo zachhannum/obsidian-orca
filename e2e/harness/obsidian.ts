@@ -125,6 +125,10 @@ const CHROME = {
   navbar: ".mobile-navbar",
   tooltip: ".tooltip",
   modal: ".modal",
+  /** The container of a modal a phone docks to the foot of its screen. */
+  docked: ".modal-container.mod-confirmation",
+  /** The cover a modal dims the window with. A tap on it closes the modal. */
+  backdrop: ".modal-bg",
   buttons: ".titlebar-button-container.mod-right",
   folder: (path: string) => `.nav-folder-title[data-path="${path}"]`,
   settings: ".modal.mod-settings",
@@ -185,6 +189,9 @@ export const DEVICES: Record<Device, { width: number; height: number }> = {
 
 /** The short side of Obsidian mobile's own buttons, in CSS pixels. */
 export const TOUCH = 44;
+
+/** The most of the screen above the keyboard that a sheet is as tall as. */
+export const SHEET = 0.8;
 
 /** The controls a pointer can press, which a finger has to reach too. */
 const PRESSED = "button, input, select, textarea, [role=button], [role=tab], .clickable-icon";
@@ -862,6 +869,33 @@ export class Obsidian {
       };
       split.setPinned(want.on);
     }, { on, side });
+  }
+
+  /**
+   * The sheets on the screen that hold a test id: the modals Obsidian
+   * docks to the foot of a phone's screen. With no id, every one.
+   */
+  sheet(testid?: string): Locator {
+    const docked = this.page.locator(CHROME.docked);
+    return testid === undefined ? docked : docked.filter({ has: this.page.getByTestId(testid) });
+  }
+
+  /** The cover behind a sheet. A tap on it closes the sheet. */
+  backdrop(testid: string): Locator {
+    return this.sheet(testid).locator(CHROME.backdrop);
+  }
+
+  /**
+   * Raises the keyboard as far as a sheet can tell: emulation raises
+   * none, so this sets the height Obsidian mobile reports for one.
+   * `undefined` puts it away.
+   */
+  async keyboard(height: number | undefined): Promise<void> {
+    await this.page.evaluate((px) => {
+      const { style } = document.documentElement;
+      if (px === undefined) style.removeProperty("--keyboard-height");
+      else style.setProperty("--keyboard-height", `${String(px)}px`);
+    }, height);
   }
 
   /** The top of the bar a phone floats over the foot of its screen. */

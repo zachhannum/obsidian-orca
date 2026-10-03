@@ -412,11 +412,13 @@
 .is-tablet .menu { border: none; }
 .is-tablet .menu-item { height: auto; padding: 6px 10px; }
 .modal-bg { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--background-modifier-cover); }
-.modal-bg.mod-sheet { align-items: flex-end; }
+.modal-bg.mod-confirmation { align-items: flex-end; }
+.modal-bg.mod-clear { background: none; }
 .modal { position: relative; display: flex; flex-direction: column; width: 560px; max-width: 80%; max-height: 85%; border-radius: var(--modal-radius); background: var(--modal-background); overflow: hidden; }
 .is-phone .modal { width: calc(100% - 24px); max-width: none; max-height: calc(100% - var(--safe-area-inset-top)); }
-.is-phone .mod-sheet > .modal { width: 100%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
+.is-phone .mod-confirmation > .modal { width: 100%; max-height: 80%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
 .modal-header { flex: none; display: flex; align-items: flex-end; justify-content: center; padding: 24px 20px 16px; }
+.is-phone .mod-confirmation .modal-header { padding-top: 0; }
 .modal-title { font-size: var(--font-ui-large); font-weight: var(--font-semibold); }
 .is-phone .modal-title { font-size: var(--font-ui-medium); text-align: center; }
 .is-tablet .modal-header { justify-content: flex-start; }

@@ -135,6 +135,12 @@ export class Book {
   readonly count: Locator;
   /** The words of the count, which are its text where the words are drawn. */
   readonly counted: Locator;
+  /** The sheet a phone opens the warnings in. */
+  readonly warnings: Locator;
+  /** The grabber at the top of that sheet. A tap on it closes the sheet. */
+  readonly grabber: Locator;
+  /** The list of warnings, in the pane or in the sheet. */
+  readonly list: Locator;
   /** The warnings themselves, as the count opens them. */
   readonly issues: Locator;
   /** The warnings of one note, or of the author's CSS, under its name. */
@@ -182,9 +188,13 @@ export class Book {
     this.images = this.surface.locator("image");
     this.count = pane.getByTestId("orca-issues-count");
     this.counted = this.count.locator(".orca-preview-said");
-    this.issues = pane.getByTestId("orca-issues").locator(".orca-preview-issue");
-    this.issueGroups = pane.getByTestId("orca-issue-group");
-    this.issueOpens = pane.getByTestId("orca-issue-open");
+    // A phone moves the list into a sheet, which is outside the pane.
+    this.warnings = obsidian.page.getByTestId("orca-warnings");
+    this.grabber = this.warnings.getByTestId("orca-sheet-grabber");
+    this.list = pane.getByTestId("orca-issues").or(this.warnings.getByTestId("orca-issues"));
+    this.issues = this.list.locator(".orca-preview-issue");
+    this.issueGroups = this.list.getByTestId("orca-issue-group");
+    this.issueOpens = this.list.getByTestId("orca-issue-open");
     this.folio = pane.getByTestId("orca-folio");
     this.chapter = pane.getByTestId("orca-chapter");
     this.chapterName = this.chapter.locator("option:checked");
@@ -235,7 +245,7 @@ export class Book {
    * the warnings then scroll sideways, in the list or in a card.
    */
   async issuesSpill(place: string): Promise<number> {
-    return this.pane.getByTestId("orca-issues").evaluate((list, words) => {
+    return this.list.evaluate((list, words) => {
       const open = list.querySelector('[data-testid="orca-issue-open"]');
       if (open === null) throw new Error("no warning names a place");
       open.textContent = words;
