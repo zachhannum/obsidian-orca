@@ -313,7 +313,10 @@ test("the PreviewViews artboard names every device and every option of every set
   assert.ok(part.includes(`>${String(step)} of ${String(steps)}<`), "no step");
   const words = part
     .slice(part.indexOf("<!-- the EPUB view"), part.indexOf("Opened where you are reading."))
-    .replace(/<[^>]*>/g, " ");
+    .replace(/<[^>]*>/g, " ")
+    // The status line's percentage is how far through the book the
+    // reader is, and it is no text size.
+    .replace(/page \d+ of \d+ · \d+%/g, "");
   assert.doesNotMatch(words, /\d\s*%/);
 });
 

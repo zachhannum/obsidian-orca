@@ -219,14 +219,23 @@ its editor around these files and returns a URL. The artboard list and
   Theme is Light, Sepia or Dark. Each starts at the publisher's, which
   is the author's CSS. A setting moved off it overrides the CSS as a
   reading app does.
+- A reader setting with a few choices draws them all in one colour.
+  The choice in force is marked by its raised pill alone, as in
+  Obsidian's own segmented control and the bar's view switch.
 - The top and bottom margins set the text inside the screen, as a
   reading app sets its web view. On a phone they also clear the camera
   and the bar that goes home.
 - The EPUB view turns a screen at a time, then to the next section. In
   it the chapter select, the folio, the total and the page arrows give
   way to the device select, a settings button that opens the settings
-  under it, and previous and next. A status such as "section 6 of 9 ·
-  screen 2 of 14" is under the device.
+  under it, and previous and next.
+- A status line is under the device, as a reading app has one, such as
+  "Chapter Twelve · page 2 of 14 · 41%". The title is the one the
+  book's own contents give the document on screen, and a document the
+  contents do not list shows no title. The page is the screen within
+  that document. The percentage is an estimate that weights each
+  document by its length, rounded down. It reads 100% only on the last
+  page of the book.
 - The EPUB view, the device and the reader settings are kept. The
   plugin's data keeps all three, so the next preview opens as the last
   one was left, and the pane's own state keeps the view, as it keeps a
@@ -386,6 +395,10 @@ replaces them.
   warnings do, and hang under it in the bar. The sheet is opaque and
   drawn over the device. The arrows turn a screen and then the
   section. The EPUB view has no swipe.
+- The status line under the device is the desktop's: the chapter's
+  title, the page in that chapter and the percentage through the book.
+  On a phone a long title ends in an ellipsis, so the line stays on
+  one line and the page and the percentage stay whole.
 - Mobile has no status bar. On an upright phone the page number, the
   arrows and the count of warnings are under the page, clear of
   Obsidian's own bar. On a phone on its side they are in the preview's
