@@ -164,8 +164,9 @@ underneath them.
   `chromium.connectOverCDP`. Driving Obsidian goes through `window.app`
   in a page evaluate.
 - One app instance for the whole run: workers pinned to one,
-  parallelism off, specs serial. A test that must begin from a known
-  vault says so and puts it back.
+  parallelism off, specs serial. The `shots` project is the exception:
+  `npm run shots` runs it as shards, each with an Obsidian of its own. A test that must begin from a
+  known vault says so and puts it back.
 - **No assertion waits on a clock.** The preview carries the generation
   it last painted and its stage counters as data attributes, and every
   assertion waits on those. A timeout is how a debounce becomes flaky
@@ -258,7 +259,17 @@ job keeps its HTML report as an artifact.
 site's tokens, and on the same paths on main. Its `build` job installs
 the site's own lockfile and runs `npm run build` in `site/`, which
 checks the tokens against `design/site.css` before it builds. On main
-the `deploy` job puts the result on GitHub Pages.
+the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
+serves, keeps the `pr-preview` folder, and checks the live docs.
+
+`.github/workflows/preview.yml` runs on a PR that touches `site/` or
+`design/`. It builds the docs under `SITE_BASE`, builds the artboards
+with `node build.mjs --into`, and publishes them to
+`pr-preview/pr-<number>/` with `rossjrw/pr-preview-action`. One sticky
+comment holds the link. When the PR changes a surface, the build waits
+for the shots run of the same commit and lays its pictures over
+`site/src/shots` without committing them. Closing the PR deletes the
+folder.
 
 `.github/workflows/shots.yml` runs on a PR that touches a surface, the
 site's tokens or the sample book. It runs on the same paths on main. The

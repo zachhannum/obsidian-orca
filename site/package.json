@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "node scripts/check-tokens.mjs && astro check && astro build",
+    "build": "node scripts/check-tokens.mjs && astro check && astro build && node scripts/rebase.mjs",
     "preview": "astro preview",
     "lint": "astro sync && eslint --max-warnings 0 ."
   },
