@@ -325,6 +325,25 @@ export default class OrcaPlugin extends Plugin implements Limited {
         return true;
       },
     });
+    // The keys are bound on the preview's own scope, since Obsidian
+    // binds them to the window's zoom everywhere else.
+    const zooms: [string, string, (view: PreviewView) => void][] = [
+      ["zoom-in", "Zoom in on the preview", (view) => view.zoomIn()],
+      ["zoom-out", "Zoom out of the preview", (view) => view.zoomOut()],
+      ["zoom-fit", "Fit the preview to the pane", (view) => view.zoomFit()],
+    ];
+    for (const [id, name, zoom] of zooms) {
+      this.addCommand({
+        id,
+        name,
+        checkCallback: (checking) => {
+          const view = this.app.workspace.getActiveViewOfType(PreviewView);
+          if (view?.zoomable !== true) return false;
+          if (!checking) zoom(view);
+          return true;
+        },
+      });
+    }
     this.addCommand({
       id: "export-pdf",
       name: "Export book",

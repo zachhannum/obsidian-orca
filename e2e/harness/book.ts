@@ -170,6 +170,10 @@ export class Book {
   readonly total: Locator;
   /** The bar's own Export, which mobile draws there. */
   readonly exportIn: Locator;
+  /** The zoom control's two steps, and the percentage between them. */
+  readonly zoomIn: Locator;
+  readonly zoomOut: Locator;
+  readonly zoomPercent: Locator;
 
   private readonly pane: Locator;
 
@@ -206,6 +210,9 @@ export class Book {
     this.foot = pane.getByTestId("orca-preview-foot");
     this.total = pane.getByTestId("orca-total");
     this.exportIn = pane.getByTestId("orca-preview-export");
+    this.zoomIn = pane.getByTestId("orca-zoom-in");
+    this.zoomOut = pane.getByTestId("orca-zoom-out");
+    this.zoomPercent = pane.getByTestId("orca-zoom-percent");
   }
 
   /**
@@ -279,6 +286,45 @@ export class Book {
         sheet: { width: sheet?.width ?? 0, height: sheet?.height ?? 0 },
       };
     }, at);
+  }
+
+  /** Waits for the surface to say its pages are drawn at `percent`. */
+  async zoomed(percent: number): Promise<void> {
+    await expect(this.surface).toHaveAttribute("data-zoom", String(percent));
+  }
+
+  /** The zoom the surface says its pages are drawn at, as a percentage. */
+  async zoom(): Promise<number> {
+    return Number(await this.surface.getAttribute("data-zoom"));
+  }
+
+  /**
+   * The place on the first sheet that a point in the window is over, as
+   * a share of the sheet's width and height. A zoom about a point keeps
+   * this.
+   */
+  async share(point: { x: number; y: number }): Promise<{ x: number; y: number }> {
+    return this.surface.evaluate((surface, at) => {
+      const sheet = surface.querySelector(".orca-page")?.getBoundingClientRect();
+      if (sheet === undefined) throw new Error("no page is on screen");
+      return { x: (at.x - sheet.left) / sheet.width, y: (at.y - sheet.top) / sheet.height };
+    }, point);
+  }
+
+  /**
+   * The size the first page itself is laid out at, and whether a
+   * transform scales it or anything around it inside the pane.
+   */
+  async drawn(): Promise<{ width: number; scaled: boolean }> {
+    return this.page.evaluate((svg) => {
+      let scaled = false;
+      for (let node: Element | null = svg; node !== null; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.transform !== "none" || style.scale !== "none") scaled = true;
+        if (node.matches("[data-testid='orca-preview']")) break;
+      }
+      return { width: Number.parseFloat(getComputedStyle(svg).width), scaled };
+    });
   }
 
   /**

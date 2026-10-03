@@ -21,9 +21,9 @@ export interface Zoomed {
 export interface Zooming {
   /** Whether the device draws the control. */
   control: boolean;
-  in(): void;
-  out(): void;
-  fit(): void;
+  in: () => void;
+  out: () => void;
+  fit: () => void;
 }
 
 export interface MountedZoom {

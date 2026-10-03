@@ -203,11 +203,12 @@ export class Obsidian {
 
   /**
    * Sends one touch event over CDP. A finger is a point that goes down,
-   * moves and lifts, and `points` is empty on the lift.
+   * moves and lifts, and `points` is empty on the lift. Two fingers
+   * each carry an `id`, which says which point is which finger's.
    */
   async touch(
     type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel",
-    points: { x: number; y: number }[],
+    points: { x: number; y: number; id?: number }[],
   ): Promise<void> {
     await this.session.send("Input.dispatchTouchEvent", { type, touchPoints: points });
   }

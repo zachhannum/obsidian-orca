@@ -310,8 +310,69 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
-// What this suite does not cover: a swipe, a pinch and the share sheet,
-// which the preview does not answer yet; the insets a real phone's
+test("on a phone a pinch zooms the page about the point between the fingers, and a drag moves it", async ({
+  obsidian,
+  book,
+}) => {
+  await obsidian.mobile("phone");
+  try {
+    await book.close();
+    await book.open();
+    await book.settled(BOOK);
+    await book.uncovered();
+    // A touch screen zooms by pinch, so the bar draws no control.
+    await book.zoomed(100);
+    await expect(book.zoomIn).toHaveCount(0);
+    await expect(book.zoomPercent).toHaveCount(0);
+
+    const sheet = await book.seat(0).boundingBox();
+    if (sheet === null) throw new Error("no page is on screen");
+    const middle = { x: sheet.x + sheet.width * 0.4, y: sheet.y + sheet.height * 0.4 };
+    const before = await book.share(middle);
+    const fingers = (apart: number): { x: number; y: number; id: number }[] => [
+      { x: middle.x - apart / 2, y: middle.y, id: 0 },
+      { x: middle.x + apart / 2, y: middle.y, id: 1 },
+    ];
+
+    await obsidian.touch("touchStart", fingers(60));
+    try {
+      for (let step = 1; step <= 10; step++) {
+        await obsidian.touch("touchMove", fingers(60 + step * 12));
+      }
+      // The fingers end three times as far apart as they began.
+      await book.zoomed(300);
+      await obsidian.touch("touchEnd", []);
+    } catch (cause) {
+      await obsidian.touch("touchCancel", []);
+      throw cause;
+    }
+
+    const after = await book.share(middle);
+    expect(after.x).toBeCloseTo(before.x, 2);
+    expect(after.y).toBeCloseTo(before.y, 2);
+
+    // One finger moves the zoomed page, and the zoom stays.
+    const pan = (await book.surface.getAttribute("data-pan")) ?? "";
+    await obsidian.touch("touchStart", [middle]);
+    for (let step = 1; step <= 10; step++) {
+      await obsidian.touch("touchMove", [{ x: middle.x - step * 6, y: middle.y - step * 6 }]);
+    }
+    await obsidian.touch("touchEnd", []);
+    await expect(book.surface).not.toHaveAttribute("data-pan", pan);
+    await book.zoomed(300);
+    const moved = await book.share(middle);
+    expect(moved.x).toBeGreaterThan(after.x);
+    expect(moved.y).toBeGreaterThan(after.y);
+  } finally {
+    await book.close();
+    await obsidian.emulateMobile(false);
+  }
+});
+
+// What this suite does not cover: a swipe and the share sheet, which
+// the preview does not answer yet; a drag across a zoomed page on a
+// real phone, where Obsidian's own drawers listen for the same finger;
+// the insets a real phone's
 // notch and home bar take from the bar and the foot, which emulation
 // leaves at nothing; and the warnings opened from the bar of a phone
 // on its side, where they hang as they do on a tablet.
