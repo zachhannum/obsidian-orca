@@ -384,7 +384,9 @@
 .is-mobile .nav-children { margin-left: 16px; padding-left: 0; }
 .is-mobile .nav-children .nav-item { padding-left: 14px; }
 .is-mobile .nav-children .nav-item.mod-heading { padding-left: 34px; }
-.is-mobile .shelf { border-radius: var(--touch-size-xxs); }
+/* The list has the card's corner, so a card the scroll cuts is still round. */
+.is-mobile .drawer-body:has(> .shelf) { margin: 4px 16px 0; padding: 0; border-radius: var(--touch-size-xxs); }
+.is-mobile .shelf { margin-right: 0; margin-left: 0; border-radius: var(--touch-size-xxs); }
 .is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--touch-size-xxs) - 1px); }
 .is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0; }
 .is-mobile .shelf > .nav-children { margin: 0; padding: 0 4px 4px; }
