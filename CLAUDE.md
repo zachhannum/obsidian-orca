@@ -209,6 +209,10 @@ underneath them.
   and `npm run e2e` when the change touches a surface. Pushing
   red and letting CI find it wastes a cycle; CI is verification, not
   development.
+- A hook (`scripts/push-gate.mjs`) refuses `git push` and `gh pr create`
+  until `node scripts/mirror.mjs` has passed on HEAD. Add `--e2e` when
+  the change touches a surface. A tool that will not run is fixed or
+  reported to the user, never pushed around.
 - After opening the PR, watch it to green (`gh run watch`) before
   handing it to review.
 - **Claude does not merge.** CI green is the floor, not the finish line;
