@@ -12,6 +12,9 @@ const BOOK = "Pride and Prejudice.md";
 const CHAPTER = "Chapter Twelve";
 const SECTION = "Body";
 
+/** A second chapter, which the preview turns to from the first. */
+const OTHER = "Chapter Fifteen";
+
 /** An entry of that book whose note the vault does not have. */
 const MISSING = "Chapter Four";
 
@@ -139,6 +142,48 @@ for (const device of ["phone", "tablet"] as const) {
       expect(await obsidian.collapsed("left")).toBe(true);
       await obsidian.detach(BOOK_PAGE);
     } finally {
+      await obsidian.emulateMobile(false);
+    }
+  });
+
+  test(`on a ${device} a tap on a chapter with the preview open turns the preview to it and shuts the drawer${device === "tablet" ? ", and a pinned drawer stays open" : ""}`, async ({
+    book,
+    navigator,
+    obsidian,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      // Mobile keeps a workspace of its own, so a preview an earlier
+      // spec left in it is closed here, and this one's before leaving.
+      await book.close();
+      await book.open();
+      await book.settled(BOOK);
+      await expect(book.chapterName).not.toHaveText(CHAPTER);
+
+      await navigator.drawer();
+      await navigator.entry(BOOK, CHAPTER).locator(".orca-label").click();
+      await expect(book.chapterName).toHaveText(CHAPTER);
+      // A drawer that is open and draws nothing says it is not shut, so
+      // both are read.
+      await expect(navigator.pane).toBeHidden();
+      expect(await obsidian.collapsed("left")).toBe(true);
+
+      if (device === "tablet") {
+        // A note that opens leaves a pinned drawer where it is, and so
+        // does a turn.
+        await obsidian.pin(true);
+        try {
+          await navigator.reveal();
+          await navigator.entry(BOOK, OTHER).locator(".orca-label").click();
+          await expect(book.chapterName).toHaveText(OTHER);
+          await expect(navigator.pane).toBeVisible();
+          expect(await obsidian.collapsed("left")).toBe(false);
+        } finally {
+          await obsidian.pin(false);
+        }
+      }
+    } finally {
+      await book.close();
       await obsidian.emulateMobile(false);
     }
   });
@@ -312,6 +357,7 @@ test("on a phone a touch drag on a row's handle moves it and the note agrees, an
 // `contextmenu` event the press ends in is sent in its place. Nor does
 // it cover a real touch screen, where no pointer hovers at all: the
 // tooltip check here reads the page straight after the pointer arrives,
-// and a tooltip raised later would pass it. A tap
-// on a chapter that closes the drawer is not built here. Nor is a
-// drag on a tablet with a mouse, which takes the desktop path.
+// and a tooltip raised later would pass it. Nor is a
+// drag on a tablet with a mouse, which takes the desktop path. The
+// drawer of a real phone is not covered either: emulation shuts the
+// drawer through the same call, and draws it with no finger on it.
