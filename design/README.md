@@ -423,6 +423,9 @@ replaces them.
   Obsidian docks its confirmations with, and an Obsidian without that
   class centers the dialog. A tap on the grabber, a pull on the title
   or a tap outside the sheet closes it. A tablet has no sheet.
+- A sheet is never as tall as the screen. It stops at four fifths of
+  the height above the keyboard, so the page stays in sight over it,
+  and what does not fit scrolls inside it.
 - The navigator's buttons are Obsidian's own, drawn the way the file
   explorer draws its row on each device. They are `New book`, a search, a sort and `Collapse all`, which
   is last as in the file explorer. Each acts on the whole shelf.

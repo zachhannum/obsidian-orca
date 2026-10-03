@@ -371,5 +371,6 @@ test("on a phone the count opens the warnings as a sheet, which closes from its 
 // What this suite does not cover: a swipe, a pinch and the share sheet,
 // which the preview does not answer yet; the insets a real phone's
 // notch and home bar take from the bar and the foot, which emulation
-// leaves at nothing; the warnings sheet on a phone on its side; and the
+// leaves at nothing; the warnings sheet on a phone on its side, and
+// with more warnings than it has room for; and the
 // pull on the title that drags a sheet shut, which is Obsidian's own.

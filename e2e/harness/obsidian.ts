@@ -190,6 +190,9 @@ export const DEVICES: Record<Device, { width: number; height: number }> = {
 /** The short side of Obsidian mobile's own buttons, in CSS pixels. */
 export const TOUCH = 44;
 
+/** The most of the screen above the keyboard that a sheet is as tall as. */
+export const SHEET = 0.8;
+
 /** The controls a pointer can press, which a finger has to reach too. */
 const PRESSED = "button, input, select, textarea, [role=button], [role=tab], .clickable-icon";
 

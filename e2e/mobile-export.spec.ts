@@ -1,7 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { boxOf, NEAR, type Box } from "./harness/box";
 import { DIALOG, type Export } from "./harness/export";
-import { DEVICES, TOUCH, type Obsidian } from "./harness/obsidian";
+import { DEVICES, SHEET, TOUCH, type Obsidian } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. It sits at the top of the vault. */
@@ -165,7 +165,13 @@ for (const device of ["phone", "tablet"] as const) {
       await exporting.open();
       await exporting.reaches("refused");
       await expect(exporting.dialog).toHaveAttribute("data-errors", String(MANY));
-      inside(await boxOf(exporting.dialog), device);
+      const dialog = await boxOf(exporting.dialog);
+      inside(dialog, device);
+      // A sheet with more than it has room for is still not the whole
+      // screen: the page is in sight over it.
+      if (device === "phone") {
+        expect(dialog.height).toBeLessThanOrEqual(DEVICES.phone.height * SHEET + NEAR);
+      }
 
       const scrolled = await exporting.scrolled();
       expect(scrolled.hidden).toBeGreaterThan(0);
@@ -200,7 +206,7 @@ test("on a phone the export dialog ends above the keyboard, with the path and bo
     await exporting.destination.focus();
     const above = DEVICES.phone.height - KEYBOARD;
     const dialog = await boxOf(exporting.dialog);
-    expect(dialog.y).toBeGreaterThanOrEqual(0);
+    expect(dialog.height).toBeLessThanOrEqual(above * SHEET + NEAR);
     expect(Math.abs(dialog.y + dialog.height - above)).toBeLessThanOrEqual(NEAR);
     for (const part of [exporting.destination, exporting.write, exporting.cancel]) {
       const box = await boxOf(part);

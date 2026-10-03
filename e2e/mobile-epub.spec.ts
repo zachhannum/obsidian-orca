@@ -1,6 +1,6 @@
 import { PREVIEW, PREVIEW_CONTROLS } from "./harness/book";
 import { boxOf, NEAR } from "./harness/box";
-import { DEVICES, TOUCH } from "./harness/obsidian";
+import { DEVICES, SHEET, TOUCH } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. */
@@ -364,7 +364,7 @@ test("on a phone the reader settings open as a sheet with nothing dimmed, and th
   }
 });
 
-test("a phone on its side has the EPUB view's controls in the bar", async ({
+test("a phone on its side has the EPUB view's controls in the bar, and the reader settings' sheet leaves the page in sight", async ({
   obsidian,
   book,
   epub,
@@ -387,6 +387,19 @@ test("a phone on its side has the EPUB view's controls in the bar", async ({
     const body = await epub.body.boundingBox();
     if (well === null || body === null) throw new Error("a box is missing");
     expect(Math.abs(body.x + body.width / 2 - (well.x + well.width / 2))).toBeLessThanOrEqual(1);
+
+    // The settings are taller than a phone on its side, so the sheet
+    // stops short of the top and its rows scroll inside it.
+    await epub.settings.click();
+    await expect(epub.controls).toHaveAttribute("data-settings", "sheet");
+    const sheet = await boxOf(epub.sheet);
+    const tall = DEVICES.phone.width;
+    expect(sheet.height).toBeLessThanOrEqual(tall * SHEET + NEAR);
+    expect(Math.abs(sheet.y + sheet.height - tall)).toBeLessThanOrEqual(NEAR);
+    await epub.setting("theme-dark").scrollIntoViewIfNeeded();
+    await expect(epub.setting("theme-dark")).toBeInViewport();
+    await epub.grabber.click();
+    await expect(epub.controls).toHaveAttribute("data-settings", "shut");
   } finally {
     await book.close();
     await obsidian.emulateMobile(false);
@@ -449,5 +462,5 @@ test("on a phone a long title is cut short on the status line, and the page and 
 // What this suite does not cover: a swipe, since the EPUB view has
 // none and its arrows and keys turn a screen; the camera and home bar
 // of a real phone, which emulation draws at nothing; the EPUB view in a
-// tablet's pane under 700px; and the reader settings' sheet on a phone
-// on its side.
+// tablet's pane under 700px; and the device above the reader settings'
+// sheet on a phone on its side, where little room is left for it.

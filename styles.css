@@ -3107,15 +3107,14 @@ input.orca-panel-filter {
 
 /* mobile: sheets. A sheet is Obsidian's modal, docked to the foot of a
    phone's screen. The keyboard does not shrink the modal's container,
-   so the sheet ends above it. */
+   so the sheet ends above it. A sheet is never as tall as the screen:
+   the page stays in sight over it, and what does not fit scrolls. */
 .is-phone .modal-container.orca-sheet {
   bottom: var(--keyboard-height, 0px);
 }
 
 .is-phone .modal-container.orca-sheet .modal {
-  --dialog-max-height: calc(
-    100vh - var(--safe-area-inset-top) - var(--keyboard-height, 0px)
-  );
+  --dialog-max-height: calc((100vh - var(--keyboard-height, 0px)) * 0.8);
 }
 
 .is-phone .orca-sheet .modal-header {
