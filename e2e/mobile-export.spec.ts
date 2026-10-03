@@ -1,3 +1,7 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Locator } from "@playwright/test";
 import { boxOf, NEAR, type Box } from "./harness/box";
 import { DIALOG, type Export } from "./harness/export";
@@ -50,11 +54,15 @@ async function stacked(...buttons: Locator[]): Promise<void> {
   }
 }
 
-/** Checks what the dialog has on a phone and a tablet alike, in the state it is in. */
+/**
+ * Checks what the dialog has on a phone and a tablet alike, in the state
+ * it is in. Emulation runs in a window that cannot share a file, so a
+ * spec that has not stood in for the share sheet sees no Share.
+ */
 async function touchable(obsidian: Obsidian, exporting: Export): Promise<void> {
   expect(await obsidian.cramped(DIALOG)).toEqual([]);
   await expect(exporting.choose).toHaveCount(0);
-  await expect(exporting.dialog.getByText("Share")).toHaveCount(0);
+  await expect(exporting.share).toHaveCount(0);
 }
 
 for (const device of ["phone", "tablet"] as const) {
@@ -105,6 +113,82 @@ for (const device of ["phone", "tablet"] as const) {
       inside(await boxOf(exporting.dialog), device);
       await stacked(exporting.openPdf, exporting.done);
       await touchable(obsidian, exporting);
+      await exporting.close();
+    } finally {
+      await obsidian.emulateMobile(false);
+    }
+  });
+
+  test(`on a ${device} a written export shares the PDF the session drew, and a cancelled share changes nothing`, async ({
+    obsidian,
+    book,
+    exporting,
+    vault,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      await book.open();
+      await book.settled(BOOK);
+      vault.touch(FILE);
+      vault.touch(EPUB);
+      await exporting.sharing();
+
+      await exporting.open();
+      await exporting.reaches("ready");
+      await expect(exporting.share).toHaveCount(0);
+      await exporting.write.click();
+      await exporting.reaches("written");
+
+      // The written state the artboard draws: the name, the pages and
+      // the size, over Share, Open the PDF and Done.
+      const row = exporting.file("pdf");
+      await expect(row).toContainText(FILE);
+      await expect(row).toContainText(/[\d,]+ pages · [\d.]+ (KB|MB) · saved to this vault/);
+      await expect(exporting.share).toHaveText("Share");
+      await expect(exporting.share).toHaveClass(/mod-cta/);
+      await expect(exporting.openPdf).toHaveText("Open the PDF");
+      await stacked(exporting.share, exporting.openPdf, exporting.done);
+      inside(await boxOf(exporting.dialog), device);
+      expect(await obsidian.cramped(DIALOG)).toEqual([]);
+
+      await exporting.cancels(true);
+      const said = await obsidian.notices(async () => {
+        await exporting.share.click();
+        await expect.poll(async () => (await exporting.handed()).length).toBe(1);
+        await expect(exporting.share).toBeEnabled();
+      });
+      expect(said).toEqual([]);
+      await exporting.reaches("written");
+      await expect(exporting.files).toHaveCount(2);
+      await stacked(exporting.share, exporting.openPdf, exporting.done);
+
+      await exporting.cancels(false);
+      await exporting.share.click();
+      await expect.poll(async () => (await exporting.handed()).length).toBe(2);
+      await expect(exporting.share).toBeEnabled();
+      await exporting.reaches("written");
+
+      // Both taps hand over the file export wrote, under the book's
+      // file name, and it is the PDF the session draws.
+      const written = await vault.bytes(FILE);
+      const drawn = await book.pdf(BOOK);
+      for (const file of await exporting.handed()) {
+        expect(file.name).toBe(FILE);
+        expect(file.type).toBe("application/pdf");
+        expect(file.bytes.equals(written)).toBe(true);
+        expect(file.bytes.equals(drawn)).toBe(true);
+      }
+      const folder = mkdtempSync(join(tmpdir(), "orca-shared-"));
+      try {
+        const shared = join(folder, FILE);
+        writeFileSync(shared, (await exporting.handed())[1]?.bytes ?? Buffer.alloc(0));
+        const check = spawnSync("qpdf", ["--check", shared], { encoding: "utf8" });
+        expect(check.status, check.stdout + check.stderr).toBe(0);
+      } finally {
+        rmSync(folder, { recursive: true, force: true });
+      }
+      // The file stays in the vault after it is shared.
+      expect((await vault.bytes(FILE)).equals(written)).toBe(true);
       await exporting.close();
     } finally {
       await obsidian.emulateMobile(false);
@@ -226,8 +310,10 @@ test("on a phone the export dialog ends above the keyboard, with the path and bo
 });
 
 // What this suite does not cover: the dialog against its artboard pixel
-// for pixel, which emulation cannot give; `Share`, which the dialog
-// does not have yet; the writing state, which is gone before a spec
+// for pixel, which emulation cannot give; the share sheet, which is the
+// operating system's own window, so a stand-in for `navigator.share`
+// takes the file; a share that fails for a reason other than the
+// author's cancel, which shows a notice; the writing state, which is gone before a spec
 // can measure it; a failed write, which nothing here can cause and
 // which draws the refused state's line; the keyboard itself, which
 // emulation does not raise, so the spec sets the height Obsidian

@@ -36,6 +36,13 @@ export interface Exporter {
    */
   choose?(): Promise<string | undefined>;
   write(destination: Destination, format: Format): Promise<ExportResult>;
+  /**
+   * Reads a file the export wrote into the vault, and returns the call
+   * that hands it to the system share sheet. The read comes first, so
+   * the tap that shares waits on nothing. Absent on a device that
+   * cannot share a file, and the dialog then has no Share.
+   */
+  share?(path: string): Promise<() => Promise<void>>;
   /** Opens a file the export wrote into the vault. */
   open(path: string): void;
   /** Goes to the place an error names. */
@@ -91,6 +98,8 @@ function Exporting({
   const [writing, setWriting] = useState<string | undefined>(undefined);
   const [written, setWritten] = useState<Written[]>([]);
   const [failure, setFailure] = useState<string | undefined>(undefined);
+  const [hand, setHand] = useState<(() => Promise<void>) | undefined>(undefined);
+  const [sharing, setSharing] = useState(false);
   const staged = useRef<Stage>(stage);
   staged.current = stage;
 
@@ -135,6 +144,30 @@ function Exporting({
     marked.dataset["formats"] = ids;
     marked.dataset["errors"] = String(checked?.errors.length ?? 0);
   }, [marked, stage, ids, checked]);
+
+  const pdf =
+    stage === "written"
+      ? written.find(
+          ({ format, destination: file }) => file.kind === "vault" && format.id === "pdf",
+        )
+      : undefined;
+  const shared = pdf?.destination.path;
+
+  useEffect(() => {
+    if (shared === undefined || exporter.share === undefined) return;
+    let live = true;
+    // A file that will not read back leaves Share off, and the file is
+    // still in the vault to open.
+    void exporter.share(shared).then(
+      (handing) => {
+        if (live) setHand(() => handing);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [exporter, shared]);
 
   // Each format writes in turn, because the engine holds one book and
   // answers one render at a time.
@@ -182,9 +215,6 @@ function Exporting({
   const vaulted = exporter.choose === undefined;
 
   if (stage === "written") {
-    const pdf = written.find(
-      ({ format, destination: file }) => file.kind === "vault" && format.id === "pdf",
-    );
     return (
       <div className="orca-export orca-export-written" data-testid="orca-export-written">
         {written.map(({ format, destination: file, result }) => (
@@ -220,6 +250,24 @@ function Exporting({
           </div>
         ))}
         <div className="modal-button-container orca-export-footer">
+          {pdf !== undefined && exporter.share !== undefined ? (
+            <button
+              type="button"
+              className="mod-cta orca-export-share"
+              data-testid="orca-export-share"
+              disabled={hand === undefined || sharing}
+              onClick={() => {
+                if (hand === undefined) return;
+                setSharing(true);
+                void hand().finally(() => {
+                  setSharing(false);
+                });
+              }}
+            >
+              <Icon name="share" className="orca-export-share-icon" />
+              Share
+            </button>
+          ) : null}
           {vaulted && pdf !== undefined ? (
             <button
               type="button"

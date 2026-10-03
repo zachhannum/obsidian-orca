@@ -3,7 +3,8 @@
  * and asks the session that drew the preview for the file.
  */
 
-import { Modal, type App } from "obsidian";
+import { Modal, Notice, type App } from "obsidian";
+import { vaultWritePath } from "@/assets/destination";
 import type { VaultAdapter } from "@/assets/vault";
 import { exportPath, exportName } from "@/book/export";
 import type { BookMetadata } from "@/book/note";
@@ -12,6 +13,7 @@ import type { Composer, Typeset } from "@/ui/composer";
 import { chooseDiskFolder, desktopSink, onDesktop } from "@/ui/desktop";
 import { mountExport, type Exporter, type Mounted } from "@/ui/exporting";
 import { preflight } from "@/ui/preflight";
+import { sharer } from "@/ui/share";
 import { docks } from "@/ui/sheet";
 
 /** The plugin, as much of it as an export reaches. */
@@ -64,6 +66,8 @@ class ExportModal extends Modal {
   private exporter(): Exporter {
     const { book, files } = this.exports;
     const { workspace } = this.app;
+    // The desktop app has a path on disk to offer instead.
+    const share = onDesktop() ? undefined : sharer(navigator, "application/pdf");
     return {
       formats: TARGETS,
       prepare: async () => {
@@ -101,6 +105,22 @@ class ExportModal extends Modal {
         const sink = desktopSink(files);
         return format.run(typeset.session, (bytes) => sink.write(destination, bytes));
       },
+      ...(share === undefined
+        ? {}
+        : {
+            share: async (path) => {
+              const name = path.slice(path.lastIndexOf("/") + 1);
+              const bytes = await files.readBinary(vaultWritePath(path));
+              return async () => {
+                try {
+                  await share({ name, bytes });
+                } catch (cause) {
+                  const message = cause instanceof Error ? cause.message : String(cause);
+                  new Notice(`Share failed: ${message}`);
+                }
+              };
+            },
+          }),
       open: (path) => {
         void workspace.openLinkText(path, "", true);
       },
