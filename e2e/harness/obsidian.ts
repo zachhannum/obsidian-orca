@@ -898,6 +898,31 @@ export class Obsidian {
     }, height);
   }
 
+  /** Opens a sidebar as the author does, and waits for it to be open. */
+  async expand(side: Side): Promise<void> {
+    await this.page.evaluate((on) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      (on === "left" ? leftSplit : rightSplit).expand();
+    }, side);
+    await this.page.waitForFunction((on) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      return !(on === "left" ? leftSplit : rightSplit).collapsed;
+    }, side);
+  }
+
+  /**
+   * Makes a view the tab of the drawer it is in, and leaves the drawer
+   * as it is. The API declares no call that picks a drawer's tab.
+   */
+  async fronts(type: string): Promise<void> {
+    await this.page.evaluate((view) => {
+      const leaf = window.app.workspace.getLeavesOfType(view)[0];
+      if (leaf === undefined) throw new Error(`no ${view} is open`);
+      const drawer = leaf.getRoot() as unknown as { openLeaf(leaf: unknown): void };
+      drawer.openLeaf(leaf);
+    }, type);
+  }
+
   /** The top of the bar a phone floats over the foot of its screen. */
   async navbar(): Promise<number> {
     const box = await this.page.locator(CHROME.navbar).boundingBox();
