@@ -162,9 +162,9 @@ for (const device of ["phone", "tablet"] as const) {
         expect(at?.height).toBeGreaterThanOrEqual(TOUCH);
       }
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCSS("font-size", "16px");
-      // The book is a card on mobile too, with the corner mobile draws.
+      // The book is a card on mobile too, with the corner Obsidian's mobile cards have.
       await expect(navigator.book(BOOK)).toHaveCSS("border-top-width", "1px");
-      await expect(navigator.book(BOOK)).toHaveCSS("border-top-left-radius", "12px");
+      await expect(navigator.book(BOOK)).toHaveCSS("border-top-left-radius", "24px");
       await expect(navigator.pane.getByText("Books", { exact: true })).toBeHidden();
 
       // `New book` is in the row of buttons Obsidian gives a drawer,

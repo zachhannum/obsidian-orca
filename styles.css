@@ -3250,17 +3250,18 @@ input.orca-panel-filter {
   overflow-wrap: anywhere;
 }
 
+/* The corner is the one Obsidian's mobile cards have. */
 .is-mobile .orca-shelf {
-  border-radius: var(--radius-l);
+  border-radius: var(--touch-size-xxs);
 }
 
 .is-mobile .orca-shelf-name {
   padding-left: var(--size-4-2);
-  border-radius: calc(var(--radius-l) - 1px);
+  border-radius: calc(var(--touch-size-xxs) - 1px);
 }
 
 .is-mobile .orca-shelf.is-open > .orca-shelf-name {
-  border-radius: calc(var(--radius-l) - 1px) calc(var(--radius-l) - 1px) 0 0;
+  border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0;
 }
 
 .is-mobile .orca-outline {

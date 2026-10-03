@@ -425,6 +425,9 @@ replaces them.
   `Remove`. The fold chevrons in the CSS view are always drawn, and
   the card for a flagged declaration shows while the caret is in it.
   No control has a tooltip.
+- A book's card on mobile has the corner Obsidian's mobile cards have,
+  so a folded book is a pill and the rows of an open book follow its
+  edge.
 - A long press on a navigator row opens its menu: a sheet on a phone,
   a menu beside the row on a tablet. `Open as markdown` in that menu
   takes the place of the Mod click.

@@ -384,9 +384,9 @@
 .is-mobile .nav-children { margin-left: 16px; padding-left: 0; }
 .is-mobile .nav-children .nav-item { padding-left: 14px; }
 .is-mobile .nav-children .nav-item.mod-heading { padding-left: 34px; }
-.is-mobile .shelf { border-radius: var(--radius-l); }
-.is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--radius-l) - 1px); }
-.is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--radius-l) - 1px) calc(var(--radius-l) - 1px) 0 0; }
+.is-mobile .shelf { border-radius: var(--touch-size-xxs); }
+.is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--touch-size-xxs) - 1px); }
+.is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0; }
 .is-mobile .shelf > .nav-children { margin: 0; padding: 0 4px 4px; }
 .is-mobile .book-icon { width: var(--icon-s); height: var(--icon-s); }
 .is-mobile .nav-heading { height: var(--touch-size-m); margin-top: 0; padding: 0 8px 0 14px; font-size: 11px; }
