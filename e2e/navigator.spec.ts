@@ -71,11 +71,9 @@ test("each book is a card with a border, round corners and a tint over the sideb
   // The tint is the theme's mono color at part strength, so the sidebar shows through it.
   const tint = (book: string, strength: number) =>
     navigator.book(book).evaluate((card, alpha) => {
-      const probe = card.createSpan();
-      probe.setCssProps({ "background-color": `rgba(var(--mono-rgb-100), ${alpha})` });
-      const color = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return color;
+      const mono = getComputedStyle(card).getPropertyValue("--mono-rgb-100");
+      const channels = mono.split(",").map((channel) => channel.trim());
+      return `rgba(${channels.join(", ")}, ${alpha})`;
     }, strength);
   await expect(navigator.book(SECOND)).toHaveCSS("background-color", await tint(SECOND, 0.03));
   await expect(navigator.book(BOOK)).toHaveCSS("background-color", await tint(BOOK, 0.06));
