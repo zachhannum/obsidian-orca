@@ -386,8 +386,9 @@ replaces them.
   they fill the foot, and in the bar they sit before Export.
 - The count of warnings is drawn in the EPUB view too, beside the EPUB
   controls. Under the page the controls leave no room for words, so
-  the count is an icon and a number at the left of the foot, one touch
-  wide. It is red if there is an error and orange if not, and its label
+  the count is an icon and a number in a pill at the left of the foot.
+  The pill is as wide as what it holds, in the middle of a target the
+  size of a touch. It is red if there is an error and orange if not, and its label
   and the warnings it opens say the rest. In the bar it keeps its
   words, just before the controls. A tap on it opens the warnings, as
   it does in the page views.

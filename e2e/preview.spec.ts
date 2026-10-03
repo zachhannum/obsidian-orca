@@ -464,7 +464,7 @@ test("an embed with no file behind it is a warning the author can see", async ({
 
   // The count is what the run puts on screen. It opens over the page
   // rather than moving it, so nothing opens it but the author.
-  await expect(book.warnings).toHaveText("1 warning");
+  await expect(book.counted).toHaveText("1 warning");
   await expect(book.issues).toHaveCount(1);
   await expect(book.issues.first()).toBeHidden();
 

@@ -1725,13 +1725,15 @@ export class PreviewView extends ItemView {
     chip.empty();
     // The stylesheet shows one of the two forms: the words in the bar,
     // or an icon and the number where the EPUB view's controls leave no
-    // room for words. The number is drawn from an attribute, so the
-    // chip's text is the words in both.
-    const alert = chip.createSpan({ cls: "orca-preview-alert" });
+    // room for words. On mobile the button is the touch target and the
+    // pill inside it is what is tinted, so the pill is as wide as what
+    // it holds.
+    const pill = chip.createSpan({ cls: "orca-preview-pill" });
+    const alert = pill.createSpan({ cls: "orca-preview-alert" });
     setIcon(alert, "alert-triangle");
-    alert.dataset["count"] = String(total);
-    chip.createSpan({ cls: "orca-preview-said", text: count });
-    setIcon(chip.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
+    alert.createSpan({ cls: "orca-preview-number", text: String(total) });
+    pill.createSpan({ cls: "orca-preview-said", text: count });
+    setIcon(pill.createSpan({ cls: "orca-preview-opens" }), "chevron-down");
     chip.setAttribute("aria-label", count);
     chip.setAttribute("title", count);
     for (const group of [...issueGroups(said), ...fontGroup(fonts)]) {

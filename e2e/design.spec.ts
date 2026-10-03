@@ -926,7 +926,7 @@ test("a declaration the engine cannot set is flagged on its line in the CSS view
   await expect(panel.card).toContainText(`book.css:${line}:`);
 
   // The same warning is one of the preview's, with the same place.
-  await expect(book.warnings).toHaveText("1 warning");
+  await expect(book.counted).toHaveText("1 warning");
   await book.warnings.click();
   await expect(book.issues.first()).toContainText("float");
   await expect(book.issueOpens.first()).toHaveText(new RegExp(`^book\\.css:${line}:\\d+$`));

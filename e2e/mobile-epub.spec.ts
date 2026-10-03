@@ -32,6 +32,50 @@ function overlapping(node: HTMLElement): string[] {
   return found;
 }
 
+/**
+ * Measures the pill the count draws under the page, with `digits` as
+ * its number: the button is a touch or more each way, the pill is
+ * inside it and in its middle, the pill is round at its ends and
+ * tinted, the icon and the number are inside the pill and level with
+ * each other, and the button stops short of the settings button.
+ */
+function pilled(button: HTMLElement, digits: string): Record<string, boolean> | undefined {
+  const pill = button.querySelector(".orca-preview-pill");
+  const icon = button.querySelector(".orca-preview-alert svg");
+  const number = button.querySelector(".orca-preview-number");
+  const settings = button.ownerDocument.querySelector('[data-testid="orca-reflow-settings"]');
+  if (pill === null || icon === null || number === null || settings === null) return undefined;
+  const written = number.textContent;
+  number.textContent = digits;
+  const touch = Number.parseFloat(getComputedStyle(button).getPropertyValue("--touch-size-m"));
+  const outer = button.getBoundingClientRect();
+  const drawn = pill.getBoundingClientRect();
+  const style = getComputedStyle(pill);
+  const within = (box: DOMRect, of: DOMRect): boolean =>
+    box.left >= of.left - 0.5 &&
+    box.right <= of.right + 0.5 &&
+    box.top >= of.top - 0.5 &&
+    box.bottom <= of.bottom + 0.5;
+  const middle = (box: DOMRect): number => box.top + box.height / 2;
+  const glyph = icon.getBoundingClientRect();
+  const figure = number.getBoundingClientRect();
+  const found = {
+    wide: outer.width >= touch - 0.5,
+    tall: outer.height >= touch - 0.5,
+    inside: within(drawn, outer),
+    centred:
+      Math.abs(drawn.left + drawn.width / 2 - (outer.left + outer.width / 2)) <= 1 &&
+      Math.abs(middle(drawn) - middle(outer)) <= 1,
+    round: Number.parseFloat(style.borderTopLeftRadius) >= drawn.height / 2 - 0.5,
+    tinted: style.backgroundColor !== "rgba(0, 0, 0, 0)" && pill.scrollWidth <= pill.clientWidth,
+    holds: within(glyph, drawn) && within(figure, drawn),
+    level: Math.abs(middle(glyph) - middle(figure)) <= 1.5 && Math.abs(middle(glyph) - middle(drawn)) <= 1.5,
+    clear: outer.right <= settings.getBoundingClientRect().left + 1,
+  };
+  number.textContent = written;
+  return found;
+}
+
 /** The test ids of the controls the view puts on the bar or the foot. */
 const CONTROLS = [
   "orca-reflow-settings",
@@ -112,19 +156,30 @@ for (const device of ["phone", "tablet"] as const) {
       const words = count.locator(".orca-preview-said");
       const alert = count.locator(".orca-preview-alert");
       if (device === "phone") {
-        // Under the page the count is an icon and the total, one touch
-        // wide, and its label spells it out.
+        // Under the page the count is an icon and the total, in a pill
+        // in the middle of a button at least one touch wide and tall.
         await expect(words).toBeHidden();
         await expect(alert).toBeVisible();
         await expect(alert.locator("svg")).toBeVisible();
         const total = (said ?? "").match(/\d+/g)?.reduce((sum, n) => sum + Number(n), 0);
-        expect(
-          await alert.evaluate((node) => getComputedStyle(node, "::after").content),
-        ).toBe(`"${String(total)}"`);
-        const box = await count.boundingBox();
+        await expect(alert.locator(".orca-preview-number")).toHaveText(String(total));
         const touch = await count.evaluate((node) =>
           Number.parseFloat(getComputedStyle(node).getPropertyValue("--touch-size-m")),
         );
+        for (const digits of [String(total), "12", "128"]) {
+          expect(await count.evaluate(pilled, digits), `a count of ${digits}`).toEqual({
+            wide: true,
+            tall: true,
+            inside: true,
+            centred: true,
+            round: true,
+            tinted: true,
+            holds: true,
+            level: true,
+            clear: true,
+          });
+        }
+        const box = await count.boundingBox();
         expect(Math.abs((box?.width ?? 0) - touch)).toBeLessThanOrEqual(0.5);
       } else {
         // In the bar the count keeps its words.

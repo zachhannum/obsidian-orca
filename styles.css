@@ -73,6 +73,12 @@
   flex: none;
 }
 
+/* The pill holds the count. On desktop the button is the pill. */
+.orca-preview-warnings .orca-preview-pill {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* The icon form of the count is drawn only where its words do not fit. */
 .orca-preview-warnings .orca-preview-alert {
   display: none;
@@ -3696,15 +3702,19 @@ input.orca-panel-filter {
 }
 
 /* A count with an error in it is drawn in the error's colour. */
+body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error,
+.is-mobile .orca-preview button.orca-preview-warnings.mod-error .orca-preview-pill {
+  background-color: rgba(251, 70, 76, 0.15);
+}
+
 .orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error,
 .is-mobile .orca-preview button.orca-preview-warnings.mod-error {
-  background-color: rgba(251, 70, 76, 0.15);
   color: var(--color-red);
 }
 
-.orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error:hover,
-.orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error.is-on,
-.is-mobile .orca-preview button.orca-preview-warnings.mod-error.is-on {
+body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error:hover,
+body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-warnings.mod-error.is-on,
+.is-mobile .orca-preview button.orca-preview-warnings.mod-error.is-on .orca-preview-pill {
   background-color: rgba(251, 70, 76, 0.28);
 }
 
@@ -3712,21 +3722,23 @@ input.orca-panel-filter {
   color: var(--color-red);
 }
 
-/* The count is a chip 22px tall inside a button the size of a touch. */
+/* The button is a clear target the size of a touch, and the count is a
+   pill 22px tall in the middle of it. The pill is as wide as what it
+   holds. */
 .is-mobile .orca-preview button.orca-preview-warnings {
   display: inline-flex;
   flex: none;
   align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   min-width: var(--touch-size-m);
   height: var(--touch-size-m);
   margin: 0 -8px;
-  padding: 0 9px;
-  border: 11px solid transparent;
-  border-radius: var(--touch-size-m);
+  padding: 0 11px;
+  border: none;
+  border-radius: 0;
   box-shadow: none;
-  background-color: rgba(233, 151, 63, 0.15);
-  background-clip: padding-box;
+  background: none;
   color: var(--color-orange);
   font-size: 12px;
   font-weight: var(--font-medium);
@@ -3734,7 +3746,17 @@ input.orca-panel-filter {
   white-space: nowrap;
 }
 
-.is-mobile .orca-preview button.orca-preview-warnings.is-on {
+.is-mobile .orca-preview button.orca-preview-warnings .orca-preview-pill {
+  flex: none;
+  box-sizing: border-box;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  background-color: rgba(233, 151, 63, 0.15);
+  line-height: 1;
+}
+
+.is-mobile .orca-preview button.orca-preview-warnings.is-on .orca-preview-pill {
   background-color: rgba(233, 151, 63, 0.28);
 }
 
@@ -3955,13 +3977,16 @@ input.orca-panel-filter {
 }
 
 /* Under the page the EPUB view's controls leave the count no room for
-   words. It is an icon and a number there, one touch wide, at the left
-   of the foot, and its label says the rest. */
+   words. It is an icon and a number there, at the left of the foot,
+   and its label says the rest. The button is one touch wide, and wider
+   for a count of more digits. */
 .is-mobile .orca-preview.is-reflow .orca-preview-foot > button.orca-preview-warnings {
-  justify-content: center;
   margin: 0;
-  padding: 0 6px;
-  border-width: 11px 0;
+  padding: 0;
+}
+
+.is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-pill {
+  padding: 0 8px;
 }
 
 .is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-said {
@@ -3974,11 +3999,8 @@ input.orca-panel-filter {
   gap: 3px;
 }
 
-.is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-alert::after {
-  content: attr(data-count);
-}
-
 .is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-alert .svg-icon {
+  flex: none;
   width: 14px;
   height: 14px;
 }
