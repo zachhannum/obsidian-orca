@@ -3973,13 +3973,20 @@ input.orca-panel-filter {
    warnings do. */
 .orca-preview-foot .orca-reflow-popover {
   right: 12px;
-  bottom: 100%;
+  bottom: calc(100% + 8px);
   left: 12px;
   width: auto;
   max-width: none;
-  margin-bottom: 4px;
+}
+
+/* On mobile the sheet is drawn as the warnings' sheet is, over the
+   device and its page. */
+.is-mobile .orca-reflow-popover {
+  border-radius: var(--touch-size-xxs);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 
 .is-mobile .orca-reflow-popover .orca-panel-label {
   width: 8em;
+  white-space: nowrap;
 }
