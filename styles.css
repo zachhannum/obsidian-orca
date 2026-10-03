@@ -950,8 +950,9 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 }
 
 /* Each book is a card, so one book ends where its border does. The
-   card's surface is a tint over the sidebar, so a sidebar the theme
-   makes translucent shows through the card too. */
+   card's surface is a black tint over the sidebar, so a sidebar the
+   theme makes translucent shows through the card too. A dark sidebar
+   takes more black before the card shows. */
 .orca-shelves {
   display: flex;
   flex-direction: column;
@@ -962,11 +963,19 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 .orca-shelf {
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
-  background: rgba(var(--mono-rgb-100), 0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .orca-shelf.is-open {
-  background: rgba(var(--mono-rgb-100), 0.06);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.theme-dark .orca-shelf {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.theme-dark .orca-shelf.is-open {
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .orca-shelf:focus-visible {

@@ -91,9 +91,10 @@ its editor around these files and returns a URL. The artboard list and
   this book`. The book note's page has `Open preview` in its header,
   beside `Open as markdown`.
 - Each book in the navigator is a card: a border, round corners and a
-  surface of its own. The surface is a tint over the sidebar, which
-  darkens a light sidebar and lightens a dark one. An open book has
-  the stronger tint. A book's row heads the card with the closed book
+  surface of its own. The surface is a black tint over the sidebar,
+  so the card is darker than the sidebar in a light theme and in a
+  dark one. An open book has the stronger tint. A book's row heads
+  the card with the closed book
   in the accent color and the name in semibold. An open book holds its
   sections and entries under a rule, and a folded book is a card as
   tall as its row.

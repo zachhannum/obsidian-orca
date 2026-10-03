@@ -68,15 +68,11 @@ test("each book is a card with a border, round corners and a tint over the sideb
     await expect(navigator.book(book)).toHaveCSS("border-top-style", "solid");
     await expect(navigator.book(book)).toHaveCSS("border-top-left-radius", "8px");
   }
-  // The tint is the theme's mono color at part strength, so the sidebar shows through it.
-  const tint = (book: string, strength: number) =>
-    navigator.book(book).evaluate((card, alpha) => {
-      const mono = getComputedStyle(card).getPropertyValue("--mono-rgb-100");
-      const channels = mono.split(",").map((channel) => channel.trim());
-      return `rgba(${channels.join(", ")}, ${alpha})`;
-    }, strength);
-  await expect(navigator.book(SECOND)).toHaveCSS("background-color", await tint(SECOND, 0.03));
-  await expect(navigator.book(BOOK)).toHaveCSS("background-color", await tint(BOOK, 0.06));
+  // The tint is black at part strength, so the sidebar shows through it, and a dark theme takes more.
+  const dark = await navigator.book(BOOK).evaluate((card) => card.doc.body.hasClass("theme-dark"));
+  const [folded, open] = dark ? [0.12, 0.22] : [0.03, 0.06];
+  await expect(navigator.book(SECOND)).toHaveCSS("background-color", `rgba(0, 0, 0, ${folded})`);
+  await expect(navigator.book(BOOK)).toHaveCSS("background-color", `rgba(0, 0, 0, ${open})`);
 
   const boxes = await Promise.all([BOOK, SECOND].map((book) => navigator.book(book).boundingBox()));
   const [first, second] = boxes.sort((a, b) => (a?.y ?? 0) - (b?.y ?? 0));
