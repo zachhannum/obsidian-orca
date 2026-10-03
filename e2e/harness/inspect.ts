@@ -157,7 +157,7 @@ export class Inspect {
   }
 
   /** A point just inside the start of a line, on the screen. */
-  private async startOf(line: Locator): Promise<{ x: number; y: number }> {
+  async startOf(line: Locator): Promise<{ x: number; y: number }> {
     const box = await this.rectOf(line);
     return { x: box.x + Math.min(12, box.width / 2), y: box.y + box.height / 2 };
   }
