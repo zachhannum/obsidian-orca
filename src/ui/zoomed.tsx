@@ -6,7 +6,6 @@
 
 import { createRoot } from "react-dom/client";
 import { useLayoutEffect, type JSX } from "react";
-import { ACTIONS } from "@/ui/actions";
 import { Icon } from "@/ui/icon";
 import { CLOSEST, FIT, percentOf } from "@/ui/zoom";
 
@@ -70,17 +69,17 @@ export function ZoomControl({
         type="button"
         className="clickable-icon"
         data-testid="orca-zoom-out"
-        aria-label={ACTIONS.zoomOut.label}
+        aria-label="Zoom out"
         disabled={zoom <= FIT}
         onClick={zooming.out}
       >
-        <Icon name={ACTIONS.zoomOut.icon} />
+        <Icon name="minus" />
       </button>
       <button
         type="button"
         className="orca-zoom-percent"
         data-testid="orca-zoom-percent"
-        aria-label={ACTIONS.zoomFit.label}
+        aria-label="Fit to pane"
         onClick={zooming.fit}
       >
         {`${String(percent)}%`}
@@ -89,11 +88,11 @@ export function ZoomControl({
         type="button"
         className="clickable-icon"
         data-testid="orca-zoom-in"
-        aria-label={ACTIONS.zoomIn.label}
+        aria-label="Zoom in"
         disabled={zoom >= CLOSEST}
         onClick={zooming.in}
       >
-        <Icon name={ACTIONS.zoomIn.icon} />
+        <Icon name="plus" />
       </button>
     </>
   );
