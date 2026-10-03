@@ -2,6 +2,9 @@ import { PREVIEW_CONTROLS } from "./harness/book";
 import { TOUCH } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
+/** The least a touch target measures, less what a scaled layout rounds away. */
+const LEAST = TOUCH - 0.5;
+
 /** The book note in the fixture vault. */
 const BOOK = "Pride and Prejudice.md";
 
@@ -35,7 +38,7 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(book.empty).toContainText("Empty book has no pages yet");
       await book.uncovered();
       const button = await book.newChapter.boundingBox();
-      expect(button?.height).toBeGreaterThanOrEqual(TOUCH);
+      expect(button?.height).toBeGreaterThanOrEqual(LEAST);
       // A phone's button is as wide as the column, and a tablet's
       // keeps its own width.
       if (device === "phone") expect(button?.width).toBeGreaterThan(COLUMN - 1);
@@ -73,7 +76,7 @@ for (const device of ["phone", "tablet"] as const) {
       const report = await book.report.boundingBox();
       const pane = await book.bar.boundingBox();
       expect(notice && report && pane).toBeTruthy();
-      expect(report?.height).toBeGreaterThanOrEqual(TOUCH);
+      expect(report?.height).toBeGreaterThanOrEqual(LEAST);
       const right = (notice?.x ?? 0) + (notice?.width ?? 0);
       const edge = (pane?.x ?? 0) + (pane?.width ?? 0);
       // A phone's notice runs the width of the pane. A tablet's sits
@@ -123,8 +126,8 @@ for (const device of ["phone", "tablet"] as const) {
       );
       if (keep === undefined || saved === undefined) throw new Error("no buttons");
       expect(saved.y).toBeGreaterThanOrEqual(keep.y + keep.height);
-      expect(keep.height).toBeGreaterThanOrEqual(TOUCH);
-      expect(saved.height).toBeGreaterThanOrEqual(TOUCH);
+      expect(keep.height).toBeGreaterThanOrEqual(LEAST);
+      expect(saved.height).toBeGreaterThanOrEqual(LEAST);
       // A phone's buttons are one width, which is the column's.
       if (device === "phone") expect(keep.width).toBe(saved.width);
 
