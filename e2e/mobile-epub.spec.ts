@@ -7,6 +7,10 @@ const BOOK = "Pride and Prejudice.md";
 /** The place each device draws the EPUB view's controls: the pane's foot or its bar. */
 const PLACE = { phone: "under", tablet: "bar" } as const;
 
+/** The note the last section is read from, and the image it embeds. */
+const LAST_NOTE = "Acknowledgements.md";
+const DEVICE = "![[device.png]]";
+
 /** Lists each pair of visible children of a node whose boxes overlap, and each that reaches past the node. */
 function overlapping(node: HTMLElement): string[] {
   const boxes = Array.from(node.children)
@@ -70,6 +74,60 @@ for (const device of ["phone", "tablet"] as const) {
       if (well === null || body === null || room === null) throw new Error("a box is missing");
       expect(Math.abs(body.x + body.width / 2 - (well.x + well.width / 2))).toBeLessThanOrEqual(1);
       expect(Math.abs(body.y + body.height / 2 - (room.y + room.height / 2))).toBeLessThanOrEqual(1);
+    } finally {
+      await book.close();
+      await obsidian.emulateMobile(false);
+    }
+  });
+}
+
+for (const device of ["phone", "tablet"] as const) {
+  test(`on a ${device} the EPUB view draws the count of warnings beside its controls, and a tap on it opens them`, async ({
+    obsidian,
+    book,
+    epub,
+    vault,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      await book.close();
+      vault.touch(LAST_NOTE);
+      await book.open();
+      const painted = await book.settled(BOOK);
+      await book.uncovered();
+      const note = await vault.read(LAST_NOTE);
+      await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
+      await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+      await epub.open();
+
+      const place = await book.footed(PLACE[device]);
+      const count = place.getByTestId("orca-warnings");
+      await expect(count).toBeVisible();
+      await expect(count).toHaveText(/\d+ warnings?/);
+      for (const id of CONTROLS) await expect(place.getByTestId(id)).toBeVisible();
+      // The count draws over none of the controls, and nothing reaches
+      // past the foot or the bar.
+      expect(await place.evaluate(overlapping)).toEqual([]);
+      expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
+
+      await count.click();
+      await expect(count).toHaveAttribute("aria-expanded", "true");
+      await expect(book.issues.first()).toBeVisible();
+      // The warnings are drawn over the EPUB view, not under it.
+      expect(
+        await book.issues.first().evaluate((issue) => {
+          const box = issue.getBoundingClientRect();
+          const top = issue.ownerDocument.elementFromPoint(
+            box.left + box.width / 2,
+            box.top + box.height / 2,
+          );
+          return top !== null && issue.contains(top);
+        }),
+      ).toBe(true);
+
+      await count.click();
+      await expect(count).toHaveAttribute("aria-expanded", "false");
+      await expect(book.issues.first()).toBeHidden();
     } finally {
       await book.close();
       await obsidian.emulateMobile(false);

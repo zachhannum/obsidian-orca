@@ -890,10 +890,10 @@ export class PreviewView extends ItemView {
     }
     foot.toggle(place === "under");
     // The EPUB view's controls go where the page's are: under the page
-    // when the bar has no room for them.
+    // when the bar has no room for them, right of the count of warnings.
     const controls = this.controls;
     if (controls !== undefined && place !== "status") {
-      if (place === "under") foot.prepend(controls);
+      if (place === "under") issues.after(controls);
       else {
         const exporting = bar.querySelector(".orca-preview-export");
         if (exporting === null) bar.append(controls);

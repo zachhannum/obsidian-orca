@@ -3934,12 +3934,6 @@ input.orca-panel-filter {
   flex: 0 1 260px;
 }
 
-/* The EPUB view has no warnings of its own to count. */
-.is-mobile .orca-preview.is-reflow .orca-preview-warnings,
-.is-mobile .orca-preview.is-reflow .orca-preview-issues {
-  display: none;
-}
-
 /* Under the page the settings open above their button, as the
    warnings do. */
 .orca-preview-foot .orca-reflow-popover {
