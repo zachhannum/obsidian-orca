@@ -2414,16 +2414,60 @@ button.orca-book-export {
   width: min(620px, calc(100vw - var(--size-4-8)));
 }
 
-.orca-export {
+/* The dialog is as tall as the screen allows, and the list of errors is
+   the one part of it that gives way and scrolls. */
+.orca-export-modal .modal-content {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.orca-export-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.orca-export {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: var(--size-4-4);
+  min-height: 0;
+}
+
+.orca-export > * {
+  flex: none;
 }
 
 .orca-export-group {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
+}
+
+.orca-export > .orca-export-preflight {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.orca-export-preflight > * {
+  flex: none;
+}
+
+.orca-export-preflight > .orca-export-list {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.orca-export-list > * {
+  flex: none;
 }
 
 .orca-export-row {

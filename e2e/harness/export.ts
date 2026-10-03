@@ -18,6 +18,22 @@ export const EXPORT_PDF = "orca:export-pdf";
  */
 export const DIALOG = ".orca-export-host";
 
+/** The dialog, measured with its list of errors scrolled to the end. */
+export interface Scrolled {
+  /** The height of the list that is out of sight until it scrolls. */
+  hidden: number;
+  /** The height of the modal that is out of sight, which is none. */
+  spill: number;
+  /** How far the row of formats moved as the list scrolled. */
+  moved: number;
+  /** The row of formats is inside the modal. */
+  formats: boolean;
+  /** Export and Cancel are inside the modal and the window. */
+  buttons: boolean;
+  /** The last error is in sight inside the list. */
+  last: boolean;
+}
+
 export class Export {
   readonly cancel: Locator;
   /** The button that shuts a written export. */
@@ -39,6 +55,12 @@ export class Export {
   readonly write: Locator;
   /** The red cards for the errors that stand. */
   readonly errors: Locator;
+  /** The box the red cards scroll in. */
+  readonly list: Locator;
+  /** The link on a red card that goes to where the error is fixed. */
+  readonly fixes: Locator;
+  /** The row of formats, over the path. */
+  readonly formatsRow: Locator;
   /** The line under the errors that says the rest is fine. */
   readonly fine: Locator;
   /** The footer line. */
@@ -56,6 +78,9 @@ export class Export {
     this.done = this.dialog.getByTestId("orca-export-done");
     this.label = this.dialog.getByTestId("orca-export-label");
     this.errors = this.dialog.getByTestId("orca-export-error");
+    this.list = this.dialog.getByTestId("orca-export-list");
+    this.fixes = this.dialog.getByTestId("orca-export-fix");
+    this.formatsRow = this.dialog.getByTestId("orca-export-formats");
     this.fine = this.dialog.getByTestId("orca-export-fine");
     this.said = this.dialog.getByTestId("orca-export-said");
     this.openPdf = this.dialog.getByTestId("orca-export-open");
@@ -87,6 +112,41 @@ export class Export {
   /** The row of the file a written export wrote in one format. */
   file(id: string): Locator {
     return this.files.and(this.dialog.locator(`[data-format="${id}"]`));
+  }
+
+  /**
+   * Scrolls the list of errors to its end and measures the dialog
+   * around it. Lengths are in CSS pixels.
+   */
+  async scrolled(): Promise<Scrolled> {
+    return this.dialog.evaluate((modal) => {
+      const part = (id: string): HTMLElement => {
+        const found = modal.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+        if (found === null) throw new Error(`the dialog has no ${id}`);
+        return found;
+      };
+      const inside = (inner: DOMRect, outer: DOMRect): boolean =>
+        inner.top >= outer.top - 1 && inner.bottom <= outer.bottom + 1;
+      const list = part("orca-export-list");
+      const formats = part("orca-export-formats");
+      const before = formats.getBoundingClientRect().top;
+      const hidden = list.scrollHeight - list.clientHeight;
+      list.scrollTop = list.scrollHeight;
+      const frame = modal.getBoundingClientRect();
+      const screen = new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+      const buttons = [part("orca-export-write"), part("orca-export-cancel")].map((button) =>
+        button.getBoundingClientRect(),
+      );
+      const last = list.lastElementChild?.getBoundingClientRect();
+      return {
+        hidden,
+        spill: modal.scrollHeight - modal.clientHeight,
+        moved: formats.getBoundingClientRect().top - before,
+        formats: inside(formats.getBoundingClientRect(), frame),
+        buttons: buttons.every((box) => inside(box, frame) && inside(box, screen)),
+        last: last !== undefined && inside(last, list.getBoundingClientRect()),
+      };
+    });
   }
 
   /** Waits for the dialog to reach a state. */
