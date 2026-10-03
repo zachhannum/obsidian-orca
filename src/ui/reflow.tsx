@@ -69,7 +69,7 @@ export interface ReflowSlots {
    * Opens the sheet a phone draws the reader settings in. Without it
    * the settings hang from their button.
    */
-  sheet?(closed: () => void): Sheet;
+  sheet?: (closed: () => void) => Sheet;
 }
 
 export interface MountedReflow {
