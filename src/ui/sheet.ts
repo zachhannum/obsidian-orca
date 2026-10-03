@@ -61,7 +61,10 @@ export interface Asked {
   cls: string;
   /** Leaves what is behind the sheet undimmed. */
   clear?: boolean;
-  /** Runs once, however the sheet was closed. */
+  /**
+   * Runs once, however the sheet was closed, and before `close`
+   * returns when the owner closed it.
+   */
   closed(): void;
 }
 
@@ -89,9 +92,14 @@ class SheetModal extends Modal {
     this.asked.closed();
   }
 
-  /** Closes the sheet once. Its owner may ask again from `closed`. */
+  /**
+   * Closes the sheet once. A phone slides a modal shut before it tells
+   * the modal, so the owner hears here, while the sheet is still drawn.
+   */
   shuts(): void {
     if (this.shut) return;
+    this.shut = true;
+    this.asked.closed();
     this.close();
   }
 }

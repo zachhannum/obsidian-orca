@@ -1,4 +1,5 @@
 import { PREVIEW, PREVIEW_CONTROLS } from "./harness/book";
+import { boxOf } from "./harness/box";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. */
@@ -209,7 +210,9 @@ for (const device of ["phone", "tablet"] as const) {
       await count.click();
       await expect(count).toHaveAttribute("aria-expanded", "true");
       await expect(book.issues.first()).toBeVisible();
-      // The warnings are drawn over the EPUB view, not under it.
+      // The warnings are drawn over the EPUB view, not under it. A
+      // phone slides them in, so they are read once they are in place.
+      await boxOf(book.issues.first());
       expect(
         await book.issues.first().evaluate((issue) => {
           const box = issue.getBoundingClientRect();
@@ -221,7 +224,11 @@ for (const device of ["phone", "tablet"] as const) {
         }),
       ).toBe(true);
 
-      await count.click();
+      // A phone's sheet covers the count, and a tap outside it closes it.
+      if (device === "phone") {
+        await boxOf(book.warnings);
+        await obsidian.backdrop("orca-warnings").click({ position: { x: 10, y: 10 } });
+      } else await count.click();
       await expect(count).toHaveAttribute("aria-expanded", "false");
       await expect(book.issues.first()).toBeHidden();
     } finally {

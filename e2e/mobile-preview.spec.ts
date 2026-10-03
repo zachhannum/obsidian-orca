@@ -1,4 +1,6 @@
 import { PREVIEW_CONTROLS } from "./harness/book";
+import { boxOf, NEAR } from "./harness/box";
+import { DEVICES } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault, and the pages it sets to. */
@@ -253,65 +255,121 @@ test("a phone's spread is as wide as the screen upright, and as tall as the pane
   }
 });
 
-for (const device of ["phone", "tablet"] as const) {
-  test(`on a ${device} the warnings open over the page from the count, a long place wraps inside its card, and a tap on the page shuts them`, async ({
-    obsidian,
-    book,
-    vault,
-  }) => {
-    await obsidian.mobile(device);
-    try {
-      await book.close();
-      vault.touch(LAST_NOTE);
-      await book.open();
-      const painted = await book.settled(BOOK);
-      await book.uncovered();
-      const foot = await book.footed(PLACE[device]);
+test("on a tablet the warnings open over the page from the count, a long place wraps inside its card, and a tap on the page shuts them", async ({
+  obsidian,
+  book,
+  vault,
+}) => {
+  await obsidian.mobile("tablet");
+  try {
+    await book.close();
+    vault.touch(LAST_NOTE);
+    await book.open();
+    const painted = await book.settled(BOOK);
+    await book.uncovered();
+    const foot = await book.footed(PLACE.tablet);
 
-      const note = await vault.read(LAST_NOTE);
-      await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
-      await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+    const note = await vault.read(LAST_NOTE);
+    await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
+    await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
-      const count = foot.getByTestId("orca-issues-count");
-      await expect(book.counted).toHaveText("1 warning");
-      await expect(book.issues.first()).toBeHidden();
+    const count = foot.getByTestId("orca-issues-count");
+    await expect(book.counted).toHaveText("1 warning");
+    await expect(book.issues.first()).toBeHidden();
 
-      await count.click();
-      await expect(book.issues.first()).toBeVisible();
-      await expect(count).toHaveAttribute("aria-expanded", "true");
-      // They are over the pages, above a phone's foot and under a
-      // tablet's bar, and the pages have not moved to make room.
-      const panel = await book.issues.first().boundingBox();
-      const held = await foot.boundingBox();
-      const well = await book.surface.boundingBox();
-      expect(panel && held && well).toBeTruthy();
-      if (device === "phone") {
-        expect((panel?.y ?? 0) + (panel?.height ?? 0)).toBeLessThanOrEqual(held?.y ?? 0);
-        expect(panel?.y).toBeGreaterThan(well?.y ?? 0);
-      } else {
-        expect(panel?.y).toBeGreaterThanOrEqual((held?.y ?? 0) + (held?.height ?? 0));
-        expect((panel?.y ?? 0) + (panel?.height ?? 0)).toBeLessThan(
-          (well?.y ?? 0) + (well?.height ?? 0),
-        );
-      }
-      // A place longer than the card wraps in it, and nothing scrolls
-      // sideways.
-      expect(await book.issuesSpill(LONG_PLACE)).toBe(0);
-      // The place a warning names is a control too.
-      expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
+    await count.click();
+    await expect(book.issues.first()).toBeVisible();
+    await expect(count).toHaveAttribute("aria-expanded", "true");
+    // A tablet has no sheet: the warnings are in the pane, under its
+    // bar and over the pages, and the pages have not moved to make room.
+    await expect(obsidian.sheet()).toHaveCount(0);
+    const panel = await book.issues.first().boundingBox();
+    const held = await foot.boundingBox();
+    const well = await book.surface.boundingBox();
+    expect(panel && held && well).toBeTruthy();
+    expect(panel?.y).toBeGreaterThanOrEqual((held?.y ?? 0) + (held?.height ?? 0));
+    expect((panel?.y ?? 0) + (panel?.height ?? 0)).toBeLessThan(
+      (well?.y ?? 0) + (well?.height ?? 0),
+    );
+    // A place longer than the card wraps in it, and nothing scrolls
+    // sideways.
+    expect(await book.issuesSpill(LONG_PLACE)).toBe(0);
+    // The place a warning names is a control too.
+    expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
 
-      await book.surface.click({ position: { x: 8, y: 8 } });
-      await expect(book.issues.first()).toBeHidden();
-      await expect(count).toHaveAttribute("aria-expanded", "false");
-    } finally {
-      await book.close();
-      await obsidian.emulateMobile(false);
-    }
-  });
-}
+    await book.surface.click({ position: { x: 8, y: 8 } });
+    await expect(book.issues.first()).toBeHidden();
+    await expect(count).toHaveAttribute("aria-expanded", "false");
+  } finally {
+    await book.close();
+    await obsidian.emulateMobile(false);
+  }
+});
+
+test("on a phone the count opens the warnings as a sheet, which closes from its grabber and from a tap outside it", async ({
+  obsidian,
+  book,
+  vault,
+}) => {
+  await obsidian.mobile("phone");
+  try {
+    await book.close();
+    vault.touch(LAST_NOTE);
+    await book.open();
+    const painted = await book.settled(BOOK);
+    await book.uncovered();
+    const foot = await book.footed(PLACE.phone);
+
+    const note = await vault.read(LAST_NOTE);
+    await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
+    await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+    const count = foot.getByTestId("orca-issues-count");
+    await expect(book.counted).toHaveText("1 warning");
+    await expect(book.issues.first()).toBeHidden();
+
+    await count.click();
+    await expect(count).toHaveAttribute("aria-expanded", "true");
+    await expect(book.issues.first()).toBeVisible();
+    // The sheet is Obsidian's docked modal: as wide as the screen, at
+    // its foot, with the count as its title and the screen dimmed
+    // behind it.
+    await expect(obsidian.sheet("orca-warnings")).toHaveCount(1);
+    await expect(book.warnings).toContainText("1 warning");
+    const sheet = await boxOf(book.warnings);
+    expect(Math.abs(sheet.width - DEVICES.phone.width)).toBeLessThanOrEqual(NEAR);
+    expect(Math.abs(sheet.y + sheet.height - DEVICES.phone.height)).toBeLessThanOrEqual(NEAR);
+    expect(sheet.y).toBeGreaterThan(0);
+    expect(
+      await obsidian
+        .backdrop("orca-warnings")
+        .evaluate((bg) => getComputedStyle(bg).backgroundColor),
+    ).not.toBe("rgba(0, 0, 0, 0)");
+    // A place longer than the card wraps in it, and nothing scrolls
+    // sideways. The grabber and the place are controls at touch size.
+    expect(await book.issuesSpill(LONG_PLACE)).toBe(0);
+    expect(await obsidian.cramped('[data-testid="orca-warnings"]')).toEqual([]);
+
+    await book.grabber.click();
+    await expect(book.warnings).toHaveCount(0);
+    await expect(count).toHaveAttribute("aria-expanded", "false");
+    await expect(book.issues.first()).toBeHidden();
+
+    await count.click();
+    await expect(book.issues.first()).toBeVisible();
+    await boxOf(book.warnings);
+    await obsidian.backdrop("orca-warnings").click({ position: { x: 10, y: 10 } });
+    await expect(book.warnings).toHaveCount(0);
+    await expect(count).toHaveAttribute("aria-expanded", "false");
+    await expect(book.issues.first()).toBeHidden();
+  } finally {
+    await book.close();
+    await obsidian.emulateMobile(false);
+  }
+});
 
 // What this suite does not cover: a swipe, a pinch and the share sheet,
 // which the preview does not answer yet; the insets a real phone's
 // notch and home bar take from the bar and the foot, which emulation
-// leaves at nothing; and the warnings opened from the bar of a phone
-// on its side, where they hang as they do on a tablet.
+// leaves at nothing; the warnings sheet on a phone on its side; and the
+// pull on the title that drags a sheet shut, which is Obsidian's own.

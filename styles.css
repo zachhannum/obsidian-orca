@@ -3154,6 +3154,27 @@ input.orca-panel-filter {
   background-color: transparent;
 }
 
+.is-phone .orca-warnings > .modal-content,
+.is-phone .orca-reader-sheet > .modal-content {
+  padding-bottom: calc(var(--size-4-4) + var(--safe-area-inset-bottom));
+}
+
+/* In a sheet the list is the sheet's content, and the sheet is what
+   scrolls. */
+.orca-warnings .orca-preview-issues {
+  position: static;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
 /* mobile: export */
 .is-phone .orca-export-modal {
   width: var(--dialog-width);
