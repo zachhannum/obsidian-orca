@@ -462,7 +462,17 @@ export function Shelf({
   }, [wanted, shelf, generation, located]);
 
   return (
-    <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
+    <div
+      className="orca-navigator"
+      data-testid="orca-navigator"
+      ref={pane}
+      // A mouse, a trackpad and a pen hover, on a tablet too, and a
+      // finger does not. The class is the pane's own and no render
+      // writes it.
+      onPointerOver={(event) => {
+        event.currentTarget.toggleClass("is-pointed", event.pointerType !== "touch");
+      }}
+    >
       <div className="nav-header">
         <div className="nav-buttons-container">
           <Tool
@@ -703,7 +713,7 @@ function Book({
   return (
     <div
       ref={shelf}
-      className="orca-shelf"
+      className={`orca-shelf${folded ? "" : " is-open"}`}
       data-testid="orca-shelf"
       data-book={book.path}
       data-holds={String(book.holds)}
@@ -730,6 +740,9 @@ function Book({
           }}
         >
           <Icon name={folded ? "chevron-right" : "chevron-down"} />
+        </span>
+        <span className="orca-shelf-icon">
+          <Icon name="book" />
         </span>
         <span className="orca-label">{book.name}</span>
         <span className="orca-nav-actions">

@@ -207,6 +207,9 @@ for (const device of ["phone", "tablet"] as const) {
         expect(at?.height).toBeGreaterThanOrEqual(TOUCH);
       }
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCSS("font-size", "16px");
+      // The book is a card on mobile too, with the corner Obsidian's mobile cards have.
+      await expect(navigator.book(BOOK)).toHaveCSS("border-top-width", "1px");
+      await expect(navigator.book(BOOK)).toHaveCSS("border-top-left-radius", "24px");
       await expect(navigator.pane.getByText("Books", { exact: true })).toBeHidden();
 
       // `New book` is in the row of buttons Obsidian gives a drawer,
@@ -220,11 +223,11 @@ for (const device of ["phone", "tablet"] as const) {
 
       expect(await obsidian.cramped(ROOT)).toEqual([]);
 
-      // The chevron and the two actions on a book's row are in the
-      // middle of its height, and the view scrolls no further than the
-      // list.
+      // The chevron, the book and the two actions on a book's row are in
+      // the middle of its height, and the view scrolls no further than
+      // the list.
       const off = await navigator.offMiddle(navigator.name(BOOK));
-      expect(off).toHaveLength(3);
+      expect(off).toHaveLength(4);
       for (const each of off) expect(each).toBeLessThan(1);
       expect(await navigator.slack()).toBeLessThanOrEqual(0);
 
@@ -316,6 +319,30 @@ for (const device of ["phone", "tablet"] as const) {
     }
   });
 }
+
+test("on a tablet a pointer that hovers lights the row under it, and a finger lights none", async ({
+  navigator,
+  obsidian,
+}) => {
+  await obsidian.mobile("tablet");
+  try {
+    await navigator.reveal();
+    await navigator.painted();
+    const row = navigator.entry(BOOK, CHAPTER);
+    const unlit = "rgba(0, 0, 0, 0)";
+    await expect(row).toHaveCSS("background-color", unlit);
+
+    // A trackpad beside the tablet moves a pointer that hovers.
+    await row.hover();
+    await expect(row).not.toHaveCSS("background-color", unlit);
+
+    // A finger comes down on the same row, as it does to scroll.
+    await row.dispatchEvent("pointerover", { pointerType: "touch", bubbles: true });
+    await expect(row).toHaveCSS("background-color", unlit);
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
 
 test("on a phone a touch drag on a row's handle moves it and the note agrees, and a touch drag on the rest of the row starts none", async ({
   navigator,

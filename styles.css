@@ -949,11 +949,22 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   font-size: var(--font-ui-small);
 }
 
-/* One book stands apart from the next. */
+/* Each book is a card, so one book ends where its border does. */
 .orca-shelves {
   display: flex;
   flex-direction: column;
-  gap: var(--size-4-4);
+  gap: var(--size-2-3);
+  padding: 0 var(--size-4-1);
+}
+
+.orca-shelf {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary-alt);
+}
+
+.orca-shelf.is-open {
+  background: var(--background-primary);
 }
 
 .orca-shelf:focus-visible {
@@ -974,7 +985,11 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   cursor: pointer;
 }
 
-.orca-nav-item:hover {
+/* A finger that scrolls the list is over a row and points at none, so a
+   row is lit only while the pointer over the list is one that hovers.
+   `:where` keeps the rule as light as it was, and a selected row keeps
+   its own fill. */
+:where(.orca-navigator.is-pointed) .orca-nav-item:hover {
   background: var(--background-modifier-hover);
 }
 
@@ -1033,7 +1048,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   font-size: var(--font-ui-smaller);
 }
 
-.orca-outline:hover {
+:where(.orca-navigator.is-pointed) .orca-outline:hover {
   color: var(--text-muted);
 }
 
@@ -1042,8 +1057,23 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 }
 
 .orca-shelf-name {
-  font-weight: var(--font-medium);
+  height: 32px;
+  border-radius: calc(var(--radius-m) - 1px);
   color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+/* An open book's row is the head of its card. */
+.orca-shelf.is-open > .orca-shelf-name {
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0;
+}
+
+.orca-shelf-icon {
+  display: flex;
+  flex: none;
+  color: var(--text-accent);
+  --icon-size: var(--icon-xs);
 }
 
 .orca-fold {
@@ -1059,9 +1089,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 }
 
 .orca-nav-children {
-  margin-left: var(--size-4-3);
-  padding-left: var(--size-4-1);
-  border-left: 1px solid var(--divider-color);
+  padding: 0 var(--size-4-1) var(--size-2-3);
 }
 
 /* A section reads as a divider, so it is never mistaken for a row. */
@@ -1176,11 +1204,12 @@ button.orca-nav-action {
 button.orca-nav-action > span,
 .orca-nav-host .nav-action-button > span,
 .orca-fold > span,
+.orca-shelf-icon > span,
 button.orca-panel-glyph > .orca-panel-icon {
   display: flex;
 }
 
-button.orca-nav-action:hover {
+:where(.orca-navigator.is-pointed) button.orca-nav-action:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
@@ -3184,27 +3213,30 @@ input.orca-panel-filter {
 /* Obsidian names the drawer's tab, and the file explorer's rules draw
    the bar: a pill on a tablet, and on a phone a bar over the foot of the
    list, which fades under it. */
-/* On a phone the list scrolls and the pill does not: the view holds
-   the two in a column, with the pill at its foot. */
-.is-phone .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
+/* The list scrolls and the pill does not: the view holds the two in a
+   column, with the pill at the foot on a phone. The list has the
+   card's corner, so a card the scroll cuts is still round. */
+.is-mobile .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
   overflow: hidden;
 }
 
-.is-phone .orca-nav-host {
+.is-mobile .orca-nav-host {
   height: 100%;
 }
 
-.is-phone .orca-navigator {
+.is-mobile .orca-navigator {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   height: 100%;
 }
 
-.is-phone .orca-shelves {
+.is-mobile .orca-shelves {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding: 0;
+  border-radius: var(--touch-size-xxs);
 }
 
 /* A row is as tall as a touch, and long words wrap. */
@@ -3225,8 +3257,18 @@ input.orca-panel-filter {
   overflow-wrap: anywhere;
 }
 
+/* The corner is the one Obsidian's mobile cards have. */
+.is-mobile .orca-shelf {
+  border-radius: var(--touch-size-xxs);
+}
+
 .is-mobile .orca-shelf-name {
   padding-left: var(--size-4-2);
+  border-radius: calc(var(--touch-size-xxs) - 1px);
+}
+
+.is-mobile .orca-shelf.is-open > .orca-shelf-name {
+  border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0;
 }
 
 .is-mobile .orca-outline {
@@ -3239,8 +3281,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-nav-children {
-  margin-left: var(--size-4-4);
-  padding-left: 0;
+  padding-bottom: var(--size-4-1);
 }
 
 .is-mobile .orca-nav-heading {
@@ -3263,6 +3304,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-fold,
+.is-mobile .orca-shelf-icon,
 .is-mobile .orca-entry-mark {
   --icon-size: var(--icon-s);
 }

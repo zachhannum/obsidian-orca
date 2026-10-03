@@ -53,6 +53,76 @@ test("the navigator's buttons are drawn as the file explorer's are, and sit in t
   expect(Math.abs((first.x + last.x + last.width) / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
 });
 
+test("each book is a card with a border, round corners and a surface of its own, 6px from the next", async ({
+  navigator,
+  vault,
+}) => {
+  await vault.write(SECOND, NOVELS);
+  await navigator.reveal();
+  await expect(navigator.book(SECOND)).toBeVisible();
+  await navigator.bookFold(SECOND).click();
+  await expect(navigator.entries(SECOND)).toHaveCount(0);
+
+  for (const book of [BOOK, SECOND]) {
+    await expect(navigator.book(book)).toHaveCSS("border-top-width", "1px");
+    await expect(navigator.book(book)).toHaveCSS("border-top-style", "solid");
+    await expect(navigator.book(book)).toHaveCSS("border-top-left-radius", "8px");
+  }
+  const surface = (book: string) =>
+    navigator.book(book).evaluate((card) => {
+      const own = getComputedStyle(card).backgroundColor;
+      const pane = card.closest(".workspace-leaf-content");
+      return { own, pane: pane === null ? own : getComputedStyle(pane).backgroundColor };
+    });
+  const open = await surface(BOOK);
+  const folded = await surface(SECOND);
+  expect(open.own).not.toEqual(open.pane);
+  expect(folded.own).not.toEqual(folded.pane);
+
+  const boxes = await Promise.all([BOOK, SECOND].map((book) => navigator.book(book).boundingBox()));
+  const [first, second] = boxes.sort((a, b) => (a?.y ?? 0) - (b?.y ?? 0));
+  if (first == null || second == null) throw new Error("nothing to measure");
+  expect(second.y - (first.y + first.height)).toBeCloseTo(6, 1);
+  await navigator.reset();
+});
+
+test("a book's row shows the closed book in the accent color and its name in semibold", async ({
+  navigator,
+}) => {
+  await navigator.reveal();
+  const row = navigator.name(BOOK);
+  const icon = row.locator(".orca-shelf-icon svg");
+  await expect(icon).toHaveClass(/lucide-book\b/);
+  const accent = await row.evaluate((element) => {
+    const probe = element.createSpan();
+    probe.setCssProps({ color: "var(--text-accent)" });
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  await expect(icon).toHaveCSS("color", accent);
+  await expect(row).toHaveCSS("font-weight", "600");
+});
+
+test("an open book holds its sections and entries under a rule, with no guide line beside them", async ({
+  navigator,
+}) => {
+  await navigator.reveal();
+  await expect(navigator.name(BOOK)).toHaveCSS("border-bottom-width", "1px");
+  const list = navigator.book(BOOK).locator(".orca-nav-children");
+  await expect(list).toHaveCSS("border-left-width", "0px");
+  const card = await navigator.book(BOOK).boundingBox();
+  const entry = await navigator.entry(BOOK, CHAPTER).boundingBox();
+  if (card === null || entry === null) throw new Error("nothing to measure");
+  expect(entry.x).toBeGreaterThan(card.x);
+  expect(entry.x + entry.width).toBeLessThan(card.x + card.width);
+  expect(entry.y + entry.height).toBeLessThan(card.y + card.height);
+
+  await navigator.bookFold(BOOK).click();
+  await expect(navigator.name(BOOK)).toHaveCSS("border-bottom-width", "0px");
+  await navigator.reset();
+});
+
 test("a folder of notes becomes a book in sorted order, and `New book` makes an empty one", async ({
   navigator,
   obsidian,
