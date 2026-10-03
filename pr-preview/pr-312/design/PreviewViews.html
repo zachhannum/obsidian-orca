@@ -98,6 +98,14 @@
     .nav-item.is-selected { background: hsla(258, 88%, 66%, 0.15); color: var(--text-normal); }
     .nav-item.is-muted { color: var(--text-faint); }
     .nav-children { margin-left: 12px; padding-left: 4px; border-left: 1px solid rgba(var(--mono-100), 0.12); }
+    /* A book is a card, and an open one holds its entries under a rule. */
+    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary-alt); }
+    .shelf + .shelf { margin-top: 6px; }
+    .shelf.is-open { background: var(--background-primary); }
+    .shelf > .nav-item { height: 32px; border-radius: calc(var(--radius-m) - 1px); color: var(--text-normal); font-weight: var(--font-semibold); }
+    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--background-modifier-border); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
+    .shelf > .nav-children { margin: 0; padding: 0 4px 6px; border-left: none; }
+    .book-icon { flex: none; color: var(--text-accent); }
     
     /* ---- tabs and panes ---- */
     .workspace { flex: 1; display: flex; min-width: 0; background: var(--background-secondary); }
@@ -385,6 +393,13 @@
     .is-mobile .nav-children { margin-left: 16px; padding-left: 0; }
     .is-mobile .nav-children .nav-item { padding-left: 14px; }
     .is-mobile .nav-children .nav-item.mod-heading { padding-left: 34px; }
+    /* The list has the card's corner, so a card the scroll cuts is still round. */
+    .is-mobile .drawer-body:has(> .shelf) { margin: 4px 16px 0; padding: 0; border-radius: var(--touch-size-xxs); }
+    .is-mobile .shelf { margin-right: 0; margin-left: 0; border-radius: var(--touch-size-xxs); }
+    .is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--touch-size-xxs) - 1px); }
+    .is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0; }
+    .is-mobile .shelf > .nav-children { margin: 0; padding: 0 4px 4px; }
+    .is-mobile .book-icon { width: var(--icon-s); height: var(--icon-s); }
     .is-mobile .nav-heading { height: var(--touch-size-m); margin-top: 0; padding: 0 8px 0 14px; font-size: 11px; }
     .is-mobile .chip { height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; }
     /* The handle a row is dragged by. Its touch target is the height of the row. */
@@ -406,11 +421,13 @@
     .is-tablet .menu { border: none; }
     .is-tablet .menu-item { height: auto; padding: 6px 10px; }
     .modal-bg { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--background-modifier-cover); }
-    .modal-bg.mod-sheet { align-items: flex-end; }
+    .modal-bg.mod-confirmation { align-items: flex-end; }
+    .modal-bg.mod-clear { background: none; }
     .modal { position: relative; display: flex; flex-direction: column; width: 560px; max-width: 80%; max-height: 85%; border-radius: var(--modal-radius); background: var(--modal-background); overflow: hidden; }
     .is-phone .modal { width: calc(100% - 24px); max-width: none; max-height: calc(100% - var(--safe-area-inset-top)); }
-    .is-phone .mod-sheet > .modal { width: 100%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
+    .is-phone .mod-confirmation > .modal { width: 100%; max-height: 80%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
     .modal-header { flex: none; display: flex; align-items: flex-end; justify-content: center; padding: 24px 20px 16px; }
+    .is-phone .mod-confirmation .modal-header { padding-top: 0; }
     .modal-title { font-size: var(--font-ui-large); font-weight: var(--font-semibold); }
     .is-phone .modal-title { font-size: var(--font-ui-medium); text-align: center; }
     .is-tablet .modal-header { justify-content: flex-start; }
@@ -685,7 +702,7 @@
     <div class="callout"><div><span class="k">Opened where you are reading.</span> The icon on a note swaps the pane to the book, turned to the page the pane is showing most of. The book pane keeps that page: a swap back to the manuscript, and a workspace reopened at startup, both come back to it. A reader who paged through the book comes back to the line that page opens at. <span style="color: var(--text-muted)">Open preview to the right</span>, on a chapter's own menu, splits instead, and the two panes follow each other paragraph by paragraph: scrolling the manuscript turns the book, and turning a page scrolls the manuscript.</div></div>
     <div class="callout"><div><span class="k">Turning by chapter.</span> The toolbar names the chapter the span is at, and turns the book to another. <span style="color: var(--text-muted)">Next chapter</span> and <span style="color: var(--text-muted)">Previous chapter</span> are commands, so a reader can bind a key to the turn. A page no section covers, such as a blank verso, is named for the chapter that opened before it.</div></div>
     <div class="callout"><div><span class="k">A click on a link.</span> A link to a place in the book turns the book to the page of that place, in every view, and a linked manuscript follows the turn. The back and forward arrows in the pane's header walk the turns links made. An entry in the contents is a link, and so is the page number it prints. A link to a website opens it in the browser and turns no page. The pointer over a link is a hand, and a drag over a link still selects its text. In inspect mode, a click on a link pins its box and follows nothing.</div></div>
-    <div class="callout"><div><span class="k">Zoom.</span> Single and spread zoom, from 100%, which is fit, to 800%. The stepper in the bar is a minus button, the percentage and a plus button, and a click on the percentage returns to fit. The Mod key with plus zooms in, with minus zooms out and with 0 returns to fit, while the preview has focus. A pinch on a trackpad zooms about the pointer, and so does the wheel with the Mod key held. A zoomed page is drawn at the zoomed size, so the type stays sharp, and a selection and a link work as they do at fit. The zoom stays when the page turns, and the page it turns to shows from its top. A book opens at fit, and a pane keeps its zoom while it is open. Grid and EPUB have no stepper and do not zoom.</div></div>
+    <div class="callout"><div><span class="k">Zoom.</span> Single and spread zoom, from 100%, which is fit, to 800%. The stepper in the bar is a minus button, the percentage and a plus button, and a click on the percentage returns to fit. The Mod key with plus zooms in, with minus zooms out and with 0 returns to fit, while the preview has focus. A pinch on a trackpad zooms about the pointer, and so does the wheel with the Mod key held. A drag with the Space key held moves a zoomed page, and with the key up a drag selects text. A zoomed page is drawn at the zoomed size, so the type stays sharp, and a selection and a link work as they do at fit. The zoom stays when the page turns, and the page it turns to shows from its top. A book opens at fit, and a pane keeps its zoom while it is open. Grid and EPUB have no stepper and do not zoom.</div></div>
     <div class="callout"><div><span class="k">Why a page-through.</span> Drawing one page costs about 18 KiB; drawing the whole book to show one page costs 5.94 MiB, on every keystroke. The saving is not DOM nodes, it is that.</div></div>
     <div class="callout"><div><span class="k">An embed and its warning.</span> Layout opens no file. Orca resolves the embed through the vault and sends the bytes under the url the manuscript names it by, and the page draws those same bytes. An embed with no file behind it is counted on the bar, and the page is set without the image. The count opens the warnings under it, grouped by note. Each one is the engine's own line, and the place it named is a link that opens the note there beside the book. A warning in the author's CSS opens the CSS view at its line instead. Nothing but the author opens the panel, and it floats over the pages, so opening it turns no page and moves nothing. Escape shuts it, and so does a click in the pane. A click in another pane does not: an author goes to the manuscript to fix the note a warning names and comes back to the panel as they left it. A warning against matter orca generated, or against the sheet orca generated, is orca's own defect and goes to the console.</div></div>
     <div class="callout"><div><span class="k">Never a stale page.</span> An edit throws away the pages from before it, so nothing on screen is ever from the book as it used to be. A book that gets shorter takes you to its last page rather than showing nothing.</div></div>
