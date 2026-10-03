@@ -99,9 +99,11 @@
     .nav-item.is-muted { color: var(--text-faint); }
     .nav-children { margin-left: 12px; padding-left: 4px; border-left: 1px solid rgba(var(--mono-100), 0.12); }
     /* A book is a card, and an open one holds its entries under a rule. */
-    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: rgba(var(--mono-100), 0.03); }
+    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: rgba(0, 0, 0, 0.12); }
     .shelf + .shelf { margin-top: 6px; }
-    .shelf.is-open { background: rgba(var(--mono-100), 0.06); }
+    .shelf.is-open { background: rgba(0, 0, 0, 0.22); }
+    .orca[data-theme="light"] .shelf { background: rgba(0, 0, 0, 0.03); }
+    .orca[data-theme="light"] .shelf.is-open { background: rgba(0, 0, 0, 0.06); }
     .shelf > .nav-item { height: 32px; border-radius: calc(var(--radius-m) - 1px); color: var(--text-normal); font-weight: var(--font-semibold); }
     .shelf.is-open > .nav-item { border-bottom: 1px solid var(--background-modifier-border); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
     .shelf > .nav-children { margin: 0; padding: 0 4px 6px; border-left: none; }
