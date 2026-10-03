@@ -82,13 +82,16 @@ for (const device of ["phone", "tablet"] as const) {
 }
 
 for (const device of ["phone", "tablet"] as const) {
-  test(`on a ${device} the EPUB view draws the count of warnings beside its controls, and a tap on it opens them`, async ({
+  test(`on a ${device} the EPUB view draws the count of warnings ${device === "phone" ? "as an icon and a number under the page" : "in words in the bar"}, and a tap on it opens them`, async ({
     obsidian,
     book,
     epub,
     vault,
   }) => {
     await obsidian.mobile(device);
+    // The narrowest phone orca is drawn for, so the foot is held to
+    // the least room it gets.
+    if (device === "phone") await obsidian.size(360, 780);
     try {
       await book.close();
       vault.touch(LAST_NOTE);
@@ -103,11 +106,37 @@ for (const device of ["phone", "tablet"] as const) {
       const place = await book.footed(PLACE[device]);
       const count = place.getByTestId("orca-warnings");
       await expect(count).toBeVisible();
-      await expect(count).toHaveText(/\d+ warnings?/);
+      const said = await count.getAttribute("aria-label");
+      expect(said).toMatch(/^(\d+ errors?, )?\d+ warnings?$/);
+      await expect(count).toHaveAttribute("title", said ?? "");
+      const words = count.locator(".orca-preview-said");
+      const alert = count.locator(".orca-preview-alert");
+      if (device === "phone") {
+        // Under the page the count is an icon and the total, one touch
+        // wide, and its label spells it out.
+        await expect(words).toBeHidden();
+        await expect(alert).toBeVisible();
+        await expect(alert.locator("svg")).toBeVisible();
+        const total = (said ?? "").match(/\d+/g)?.reduce((sum, n) => sum + Number(n), 0);
+        expect(
+          await alert.evaluate((node) => getComputedStyle(node, "::after").content),
+        ).toBe(`"${String(total)}"`);
+        const box = await count.boundingBox();
+        const touch = await count.evaluate((node) =>
+          Number.parseFloat(getComputedStyle(node).getPropertyValue("--touch-size-m")),
+        );
+        expect(Math.abs((box?.width ?? 0) - touch)).toBeLessThanOrEqual(0.5);
+      } else {
+        // In the bar the count keeps its words.
+        await expect(words).toBeVisible();
+        await expect(words).toHaveText(said ?? "");
+        await expect(alert).toBeHidden();
+      }
       for (const id of CONTROLS) await expect(place.getByTestId(id)).toBeVisible();
       // The count draws over none of the controls, and nothing reaches
       // past the foot or the bar.
       expect(await place.evaluate(overlapping)).toEqual([]);
+      expect(await place.locator(".orca-reflow-controls").evaluate(overlapping)).toEqual([]);
       expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
       // The count is at the left of the controls, and the last of them
       // is still inside the pane.
@@ -118,6 +147,7 @@ for (const device of ["phone", "tablet"] as const) {
       if (chip === null || settings === null || next === null || pane === null) {
         throw new Error("a box is missing");
       }
+      expect(chip.x).toBeGreaterThanOrEqual(pane.x - 0.5);
       expect(chip.x + chip.width).toBeLessThanOrEqual(settings.x + 1);
       expect(next.x + next.width).toBeLessThanOrEqual(pane.x + pane.width + 0.5);
 
@@ -139,6 +169,52 @@ for (const device of ["phone", "tablet"] as const) {
       await count.click();
       await expect(count).toHaveAttribute("aria-expanded", "false");
       await expect(book.issues.first()).toBeHidden();
+    } finally {
+      await book.close();
+      await obsidian.emulateMobile(false);
+    }
+  });
+}
+
+for (const device of ["phone", "tablet"] as const) {
+  test(`on a ${device} the reader settings are drawn over the device, opaque`, async ({
+    obsidian,
+    book,
+    epub,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      await book.close();
+      await book.open();
+      await book.settled(BOOK);
+      await book.uncovered();
+      await epub.open();
+      await book.footed(PLACE[device]);
+
+      await epub.settings.click();
+      const sheet = obsidian.view(PREVIEW).getByTestId("orca-reflow-popover");
+      await expect(sheet).toBeVisible();
+      await expect(sheet).not.toHaveAttribute("style", /visibility: hidden/);
+      // At the middle of each row is the sheet itself, not the device
+      // or the page inside it.
+      const missed = await sheet.evaluate((node) =>
+        Array.from(node.children)
+          .map((row) => row.getBoundingClientRect())
+          .filter((box) => box.width > 0 && box.height > 0)
+          .map((box) => node.ownerDocument.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
+          .filter((top) => top === null || !node.contains(top))
+          .map((top) => (top === null ? "nothing" : top.className || top.tagName)),
+      );
+      expect(missed).toEqual([]);
+      const painted = await sheet.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { background: style.backgroundColor, shadow: style.boxShadow };
+      });
+      expect(painted.background).toMatch(/^rgb\(/);
+      expect(painted.shadow).not.toBe("none");
+
+      await epub.settings.click();
+      await expect(sheet).toHaveCount(0);
     } finally {
       await book.close();
       await obsidian.emulateMobile(false);
