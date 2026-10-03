@@ -1107,7 +1107,12 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   font-size: var(--font-ui-small);
 }
 
-/* Each book is a card, so one book ends where its border does. */
+/* Each book is a card, so one book ends where its border does. The
+   card's surface is a tint over the sidebar, so a sidebar the theme
+   makes translucent shows through the card too. The tint moves the
+   card toward the editor's surface: white in a light theme and black
+   in a dark one. The border and the rules inside the card are a tint
+   too, so they keep their contrast over whatever shows through. */
 .orca-shelves {
   display: flex;
   flex-direction: column;
@@ -1116,13 +1121,22 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 }
 
 .orca-shelf {
-  border: 1px solid var(--background-modifier-border);
+  --orca-shelf-rule: rgba(var(--mono-rgb-100), 0.1);
+  border: 1px solid var(--orca-shelf-rule);
   border-radius: var(--radius-m);
-  background: var(--background-primary-alt);
+  background: rgba(var(--mono-rgb-0), 0.4);
 }
 
 .orca-shelf.is-open {
-  background: var(--background-primary);
+  background: rgba(var(--mono-rgb-0), 0.7);
+}
+
+.theme-dark .orca-shelf {
+  background: rgba(var(--mono-rgb-0), 0.12);
+}
+
+.theme-dark .orca-shelf.is-open {
+  background: rgba(var(--mono-rgb-0), 0.22);
 }
 
 .orca-shelf:focus-visible {
@@ -1223,7 +1237,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 
 /* An open book's row is the head of its card. */
 .orca-shelf.is-open > .orca-shelf-name {
-  border-bottom: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid var(--orca-shelf-rule);
   border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0;
 }
 
@@ -1250,7 +1264,8 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   padding: 0 var(--size-4-1) var(--size-2-3);
 }
 
-/* A section reads as a divider, so it is never mistaken for a row. */
+/* A section reads as a divider, so it is never mistaken for a row. Its
+   rule has the card's border color. */
 .orca-nav-heading {
   display: flex;
   align-items: center;
@@ -1270,7 +1285,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--divider-color);
+  background: var(--orca-shelf-rule);
 }
 
 .orca-heading-name {

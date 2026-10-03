@@ -53,7 +53,7 @@ test("the navigator's buttons are drawn as the file explorer's are, and sit in t
   expect(Math.abs((first.x + last.x + last.width) / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
 });
 
-test("each book is a card with a border, round corners and a surface of its own, 6px from the next", async ({
+test("each book is a card with a border, round corners and a tint over the sidebar, 6px from the next", async ({
   navigator,
   vault,
 }) => {
@@ -68,16 +68,13 @@ test("each book is a card with a border, round corners and a surface of its own,
     await expect(navigator.book(book)).toHaveCSS("border-top-style", "solid");
     await expect(navigator.book(book)).toHaveCSS("border-top-left-radius", "8px");
   }
-  const surface = (book: string) =>
-    navigator.book(book).evaluate((card) => {
-      const own = getComputedStyle(card).backgroundColor;
-      const pane = card.closest(".workspace-leaf-content");
-      return { own, pane: pane === null ? own : getComputedStyle(pane).backgroundColor };
-    });
-  const open = await surface(BOOK);
-  const folded = await surface(SECOND);
-  expect(open.own).not.toEqual(open.pane);
-  expect(folded.own).not.toEqual(folded.pane);
+  // The tint is white in a light theme and black in a dark one, at part strength, so the sidebar shows through it.
+  const dark = await navigator.book(BOOK).evaluate((card) => card.doc.body.hasClass("theme-dark"));
+  const [folded, open] = dark
+    ? ["rgba(0, 0, 0, 0.12)", "rgba(0, 0, 0, 0.22)"]
+    : ["rgba(255, 255, 255, 0.4)", "rgba(255, 255, 255, 0.7)"];
+  await expect(navigator.book(SECOND)).toHaveCSS("background-color", folded);
+  await expect(navigator.book(BOOK)).toHaveCSS("background-color", open);
 
   const boxes = await Promise.all([BOOK, SECOND].map((book) => navigator.book(book).boundingBox()));
   const [first, second] = boxes.sort((a, b) => (a?.y ?? 0) - (b?.y ?? 0));
@@ -111,6 +108,21 @@ test("an open book holds its sections and entries under a rule, with no guide li
   await expect(navigator.name(BOOK)).toHaveCSS("border-bottom-width", "1px");
   const list = navigator.book(BOOK).locator(".orca-nav-children");
   await expect(list).toHaveCSS("border-left-width", "0px");
+  // The border and a section's rule are one tint of the theme's mono color, in a translucent window too.
+  const section = navigator.book(BOOK).getByTestId("orca-group").first();
+  await expect(section).toBeVisible();
+  const rules = await section.evaluate((row) => {
+    const card = row.closest("[data-testid=orca-shelf]") ?? row;
+    row.doc.body.addClass("is-translucent");
+    const rule = getComputedStyle(row, "::after").backgroundColor;
+    const border = getComputedStyle(card).borderTopColor;
+    row.doc.body.removeClass("is-translucent");
+    const mono = getComputedStyle(card).getPropertyValue("--mono-rgb-100");
+    const channels = mono.split(",").map((channel) => channel.trim());
+    return { rule, border, tint: `rgba(${channels.join(", ")}, 0.1)` };
+  });
+  expect(rules.border).toEqual(rules.tint);
+  expect(rules.rule).toEqual(rules.tint);
   const card = await navigator.book(BOOK).boundingBox();
   const entry = await navigator.entry(BOOK, CHAPTER).boundingBox();
   if (card === null || entry === null) throw new Error("nothing to measure");
