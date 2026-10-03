@@ -16,10 +16,63 @@ const FIXTURE_FONT = "Alegreya";
 /** A count the fixture book sets, and the row that steps it. */
 const COUNT = "heading-1-space-above";
 
+/** A chapter of that book. */
+const CHAPTER = "Chapter Twelve.md";
+
+/** A view Obsidian keeps in the right drawer beside the panel. */
+const OUTLINE = "outline";
+
 /** The width at which the panel puts a label over its control. */
 const NARROW = 360;
 
 for (const device of ["phone", "tablet"] as const) {
+  test(`on a ${device} a book opens with both drawers shut, and the right drawer opens on the panel for that book`, async ({
+    obsidian,
+    book,
+    panel,
+    manuscript,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      await book.close();
+      await obsidian.put("left");
+      await obsidian.put("right");
+      // Another view is the drawer's tab, so the panel is not there
+      // only because it was left there.
+      await obsidian.fronts(OUTLINE);
+
+      // The panel names its book once orca has handed it the preview,
+      // so the drawers are read after that.
+      const shut = async (): Promise<void> => {
+        await expect(panel.bookName).toContainText("Pride and Prejudice");
+        expect(await obsidian.collapsed("right")).toBe(true);
+        expect(await obsidian.collapsed("left")).toBe(true);
+      };
+      await book.open();
+      await book.settled(BOOK);
+      await shut();
+
+      // The command on a book already open, and a chapter swapped for
+      // the book, hand the panel the preview by the same call.
+      await book.open();
+      await book.settled(BOOK);
+      await shut();
+      await book.close();
+      await obsidian.open(CHAPTER);
+      await manuscript.asBook.click();
+      await book.settled(BOOK);
+      await shut();
+
+      await obsidian.expand("right");
+      await expect(panel.panel).toBeVisible();
+      await expect(panel.bookName).toContainText("Pride and Prejudice");
+      await expect(panel.control("trim")).toBeVisible();
+    } finally {
+      await book.close();
+      await obsidian.emulateMobile(false);
+    }
+  });
+
   test(`on a ${device} the panel draws its header, its groups and its rows at the size of a touch, and the header switches the view`, async ({
     obsidian,
     book,

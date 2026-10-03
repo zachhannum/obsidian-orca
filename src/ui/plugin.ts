@@ -1002,7 +1002,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       } satisfies PreviewState,
       active: true,
     });
-    await this.openPanel();
+    await this.readyPanel();
   }
 
   /**
@@ -1024,7 +1024,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       } satisfies PreviewState,
       active: false,
     });
-    await this.openPanel();
+    await this.readyPanel();
   }
 
   /**
@@ -1481,6 +1481,30 @@ export default class OrcaPlugin extends Plugin implements Limited {
     if (leaf.view instanceof DesignPanelView) leaf.view.refresh();
   }
 
+  /**
+   * Gives the design panel the book a preview opened. On desktop the
+   * panel's tab comes forward. On mobile the sidebar is a drawer over
+   * the page the author asked for, so the panel becomes the drawer's
+   * tab and the drawer stays shut.
+   */
+  private async readyPanel(): Promise<void> {
+    if (device() === "desktop") {
+      await this.openPanel();
+      return;
+    }
+    const leaf = await this.app.workspace.ensureSideLeaf(PANEL_VIEW, "right", {
+      reveal: false,
+    });
+    // The API declares no way to pick a drawer's tab and leave the
+    // drawer shut. `revealLeaf` picks it with this call, then opens it.
+    const drawer = leaf.getRoot() as unknown as {
+      openLeaf?: (leaf: WorkspaceLeaf) => void;
+    };
+    drawer.openLeaf?.(leaf);
+    await leaf.loadIfDeferred();
+    if (leaf.view instanceof DesignPanelView) leaf.view.refresh();
+  }
+
   /** Opens the book the workspace is on, and reveals one already open. */
   private async reveal(): Promise<void> {
     const { workspace } = this.app;
@@ -1488,7 +1512,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       workspace.getLeavesOfType(PREVIEW_VIEW)[0];
     if (open !== undefined) {
       await workspace.revealLeaf(open);
-      await this.openPanel();
+      await this.readyPanel();
       return;
     }
     const on = this.onBook();
@@ -1597,7 +1621,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     }
     await workspace.revealLeaf(open);
     workspace.setActiveLeaf(open, { focus: true });
-    await this.openPanel();
+    await this.readyPanel();
   }
 
   /** The deepest heading level the navigator lists, or nothing when it lists none. */
@@ -1647,7 +1671,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const leaf = this.app.workspace.getLeaf(true);
     await leaf.setViewState({ type: PREVIEW_VIEW, state: { ...state }, active: true });
     await this.app.workspace.revealLeaf(leaf);
-    await this.openPanel();
+    await this.readyPanel();
   }
 
   /** The vault, as the engine and the asset registry read it. */
