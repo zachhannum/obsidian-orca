@@ -53,6 +53,18 @@ export class Note {
   readonly design: Locator;
   /** The header action that opens the preview of the book. */
   readonly preview: Locator;
+  /** The cover's well, which opens the picker and takes a dropped image. */
+  readonly cover: Locator;
+  /** The cover's image, drawn once the vault has it. */
+  readonly picture: Locator;
+  /** The name of the cover's image. */
+  readonly pictured: Locator;
+  /** The size of the cover's image in pixels. */
+  readonly measured: Locator;
+  /** The page's words for a cover that names no image. */
+  readonly missing: Locator;
+  /** The button that takes the cover off the note. */
+  readonly uncover: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.page = obsidian.view(BOOK).getByTestId("orca-book");
@@ -66,6 +78,53 @@ export class Note {
     this.exports = this.page.getByTestId("orca-book-export");
     this.entries = this.order.getByTestId("orca-order-entry");
     this.preview = obsidian.actionIn(BOOK, OPEN_PREVIEW);
+    this.cover = this.page.getByTestId("orca-cover-pick");
+    this.picture = this.page.getByTestId("orca-cover-picture");
+    this.pictured = this.page.getByTestId("orca-cover-name");
+    this.measured = this.page.getByTestId("orca-cover-size");
+    this.missing = this.page.getByTestId("orca-cover-missing");
+    this.uncover = this.page.getByTestId("orca-cover-clear");
+  }
+
+  /** Picks the cover from the vault's images, as the first match for what is typed. */
+  async choose(named: string): Promise<void> {
+    await this.cover.click();
+    const modal = this.obsidian.page.getByTestId("orca-pick");
+    await modal.locator("input").fill(named);
+    await this.obsidian.suggestion().first().click();
+  }
+
+  /**
+   * Names the cover as an edit to the book, with no check that the
+   * vault has the image. The page itself offers only images it has.
+   */
+  async covered(written: string): Promise<void> {
+    await this.obsidian.page.evaluate(
+      ({ cover, type }) => {
+        const view = window.app.workspace.getLeavesOfType(type)[0]?.view as unknown as
+          Editing | undefined;
+        if (view === undefined) throw new Error("no book view is open");
+        view.edit((model) => ({
+          ...model,
+          book: { ...model.book, metadata: { ...model.book.metadata, cover } },
+        }));
+      },
+      { cover: written, type: BOOK },
+    );
+  }
+
+  /** Drops a file dragged out of the file explorer on the cover's well. */
+  async drop(path: string): Promise<void> {
+    const carried = await this.obsidian.carried(path);
+    await this.cover.evaluate((well, text) => {
+      const data = new DataTransfer();
+      data.setData("text/plain", text);
+      for (const type of ["dragover", "drop"]) {
+        well.dispatchEvent(
+          new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
+        );
+      }
+    }, carried);
   }
 
   /** One line of the design, by its label. */

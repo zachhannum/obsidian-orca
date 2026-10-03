@@ -284,7 +284,7 @@ function Chosen({ path, src }: { path: string; src: string }): JSX.Element {
         <span className="orca-cover-where">
           {folder}
           {size === "" ? null : (
-            <span className="orca-cover-size">
+            <span className="orca-cover-size" data-testid="orca-cover-size">
               {folder === "" ? "" : " · "}
               {size}
             </span>

@@ -67,6 +67,35 @@ test("on a phone the book page is one column, with Export at the width of it", a
   }
 });
 
+test("on a phone a tap picks the cover, its controls are at touch size, and the size in pixels is left out", async ({
+  obsidian,
+  note,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await obsidian.mobile("phone");
+  try {
+    await note.open(BOOK);
+    await note.painted();
+    await obsidian.put("left");
+    await obsidian.put("right");
+
+    await note.choose("device");
+    await expect(note.pictured).toHaveText("device.png");
+    await expect(note.measured).toBeHidden();
+    expect((await boxOf(note.uncover)).width).toBeGreaterThanOrEqual(TOUCH - NEAR);
+    expect(await obsidian.cramped(PAGE)).toEqual([]);
+    await expect(note.page.locator("[title], [aria-label]")).toHaveCount(0);
+
+    await note.uncover.click();
+    await expect(note.picture).toHaveCount(0);
+  } finally {
+    await obsidian.emulateMobile(false);
+    await note.close();
+    await vault.restore();
+  }
+});
+
 test("on a tablet the book page is the desktop's column, with each control at touch size", async ({
   obsidian,
   note,
@@ -100,7 +129,8 @@ test("on a tablet the book page is the desktop's column, with each control at to
   }
 });
 
-// What this suite does not cover: the page against its artboard pixel
+// What this suite does not cover: a drag onto the cover, which a phone
+// does not have; the page against its artboard pixel
 // for pixel, which emulation cannot give; the keyboard a tap on a value
 // brings up, which a real device draws; the two cards for the CSS and
 // the book, which the page does not have on any platform; and the

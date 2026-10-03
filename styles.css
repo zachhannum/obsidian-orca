@@ -851,7 +851,7 @@ iframe.orca-reflow-frame {
 }
 
 /* The picture keeps the image's own proportions. */
-.orca-cover-picture {
+.orca-book img.orca-cover-picture {
   width: auto;
   max-width: 68px;
   object-fit: contain;

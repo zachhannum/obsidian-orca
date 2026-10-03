@@ -320,8 +320,10 @@ test("a cover that names no image in the vault shows in the Issues list once the
   vault.touch(BOOK);
   vault.touch(EPUB);
   await note.open(BOOK);
-  await note.metadata("cover").fill("nowhere.png");
+  // The page offers only images the vault has, so the name goes in as an edit to the book.
+  await note.covered("nowhere.png");
   await expect.poll(async () => vault.read(BOOK)).toContain("cover: nowhere.png");
+  await expect(note.missing).toHaveText("Not in the vault");
 
   await book.open();
   await book.settled(BOOK);
