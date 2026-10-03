@@ -98,6 +98,14 @@
     .nav-item.is-selected { background: hsla(258, 88%, 66%, 0.15); color: var(--text-normal); }
     .nav-item.is-muted { color: var(--text-faint); }
     .nav-children { margin-left: 12px; padding-left: 4px; border-left: 1px solid rgba(var(--mono-100), 0.12); }
+    /* A book is a card, and an open one holds its entries under a rule. */
+    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary-alt); }
+    .shelf + .shelf { margin-top: 6px; }
+    .shelf.is-open { background: var(--background-primary); }
+    .shelf > .nav-item { height: 32px; border-radius: calc(var(--radius-m) - 1px); color: var(--text-normal); font-weight: var(--font-semibold); }
+    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--background-modifier-border); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
+    .shelf > .nav-children { margin: 0; padding: 0 4px 6px; border-left: none; }
+    .book-icon { flex: none; color: var(--text-accent); }
     
     /* ---- tabs and panes ---- */
     .workspace { flex: 1; display: flex; min-width: 0; background: var(--background-secondary); }
@@ -131,6 +139,8 @@
     .seg { display: inline-flex; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); padding: 2px; gap: 2px; }
     .seg > div { display: flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 3px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
     .seg > div.is-on { background: var(--interactive-normal); color: var(--text-normal); }
+    /* In the reader settings a choice is drawn in one colour, and the one in force is marked by its raised pill alone. */
+    .seg.mod-reader > div.is-on { color: var(--text-muted); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); }
     .chip { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px; border-radius: 9px; font-size: 10.5px; font-weight: var(--font-medium); letter-spacing: 0.02em; background: hsla(258, 88%, 66%, 0.14); color: var(--text-accent); }
     .chip.mod-generated { background: rgba(var(--mono-100), 0.07); color: var(--text-faint); }
     .chip.mod-warn { background: rgba(233, 151, 63, 0.15); color: var(--color-orange); }
@@ -383,6 +393,13 @@
     .is-mobile .nav-children { margin-left: 16px; padding-left: 0; }
     .is-mobile .nav-children .nav-item { padding-left: 14px; }
     .is-mobile .nav-children .nav-item.mod-heading { padding-left: 34px; }
+    /* The list has the card's corner, so a card the scroll cuts is still round. */
+    .is-mobile .drawer-body:has(> .shelf) { margin: 4px 16px 0; padding: 0; border-radius: var(--touch-size-xxs); }
+    .is-mobile .shelf { margin-right: 0; margin-left: 0; border-radius: var(--touch-size-xxs); }
+    .is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--touch-size-xxs) - 1px); }
+    .is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0; }
+    .is-mobile .shelf > .nav-children { margin: 0; padding: 0 4px 4px; }
+    .is-mobile .book-icon { width: var(--icon-s); height: var(--icon-s); }
     .is-mobile .nav-heading { height: var(--touch-size-m); margin-top: 0; padding: 0 8px 0 14px; font-size: 11px; }
     .is-mobile .chip { height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; }
     /* The handle a row is dragged by. Its touch target is the height of the row. */
@@ -404,11 +421,13 @@
     .is-tablet .menu { border: none; }
     .is-tablet .menu-item { height: auto; padding: 6px 10px; }
     .modal-bg { position: absolute; z-index: 8; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--background-modifier-cover); }
-    .modal-bg.mod-sheet { align-items: flex-end; }
+    .modal-bg.mod-confirmation { align-items: flex-end; }
+    .modal-bg.mod-clear { background: none; }
     .modal { position: relative; display: flex; flex-direction: column; width: 560px; max-width: 80%; max-height: 85%; border-radius: var(--modal-radius); background: var(--modal-background); overflow: hidden; }
     .is-phone .modal { width: calc(100% - 24px); max-width: none; max-height: calc(100% - var(--safe-area-inset-top)); }
-    .is-phone .mod-sheet > .modal { width: 100%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
+    .is-phone .mod-confirmation > .modal { width: 100%; max-height: 80%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
     .modal-header { flex: none; display: flex; align-items: flex-end; justify-content: center; padding: 24px 20px 16px; }
+    .is-phone .mod-confirmation .modal-header { padding-top: 0; }
     .modal-title { font-size: var(--font-ui-large); font-weight: var(--font-semibold); }
     .is-phone .modal-title { font-size: var(--font-ui-medium); text-align: center; }
     .is-tablet .modal-header { justify-content: flex-start; }
@@ -509,11 +528,11 @@
       <div class="side-body">
         <div class="nav-header"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-faint)">BOOKS</span></div>
 
-        <div class="nav-item is-active" style="font-weight: 500">
-          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        <div class="shelf is-open"><div class="nav-item is-active">
+          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg><svg class="icon-xs icon book-icon" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
           <span class="label">Pride and Prejudice</span>
           <span style="margin-left: auto; display: flex; align-items: center; gap: 4px">
-            <span style="color: var(--text-faint); font-size: 11px">337&nbsp;pp</span>
+            <span style="color: var(--text-faint); font-size: 11px; font-weight: var(--font-normal)">337&nbsp;pp</span>
             <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint)" aria-label="Open preview"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="1"/><path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/></svg>
             <svg class="icon-xs icon" viewBox="0 0 24 24" style="color: var(--text-faint)" aria-label="Add to this book"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
           </span>
@@ -540,13 +559,13 @@
 
           <div class="nav-heading">Back matter</div>
           <div class="nav-item"><span class="label">A note on the text</span></div>
-        </div>
+        </div></div>
 
-        <div class="nav-item is-muted" style="margin-top: 10px">
-          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        <div class="shelf"><div class="nav-item">
+          <svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><svg class="icon-xs icon book-icon" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>
           <span class="label">The Voyage to Lilliput</span>
-          <span style="margin-left: auto; color: var(--text-faint); font-size: 11px">96&nbsp;pp</span>
-        </div>
+          <span style="margin-left: auto; color: var(--text-faint); font-size: 11px; font-weight: var(--font-normal)">96&nbsp;pp</span>
+        </div></div>
       </div>
     </div>
 
