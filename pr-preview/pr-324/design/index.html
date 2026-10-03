@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>orca design</title>
+<style>
+  :root { --bg: #f1efec; --dot: #d6d2cc; --card: #fff; --ink: #1f1d1b; --mute: #6f6a64; --line: #d9d5cf; --accent: #6d4ae8; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17161a; --dot: #2b2a30; --card: #222126; --ink: #ecebef; --mute: #9d9aa6; --line: #34333a; --accent: #9b83ff; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; overscroll-behavior: none; }
+  #view { position: fixed; inset: 0; touch-action: none; cursor: grab; background-image: radial-gradient(var(--dot) 1px, transparent 1px); }
+  #view.drag { cursor: grabbing; }
+  #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .board { position: absolute; }
+  .board .bar { position: absolute; left: 0; bottom: 100%; padding-bottom: 6px; display: flex; gap: 8px; white-space: nowrap; font-size: 12px; color: var(--mute); }
+  .board .bar b { color: var(--ink); font-weight: 600; }
+  .board .bar i { font-style: normal; background: var(--accent); color: #fff; border-radius: 9px; padding: 0 8px; }
+  .board .frame { position: absolute; inset: 0; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 6px 24px rgba(0,0,0,.12); overflow: hidden; }
+  .board.changed .frame { box-shadow: 0 0 0 2px var(--accent), 0 6px 24px rgba(0,0,0,.12); }
+  .board iframe { border: 0; width: 100%; height: 100%; pointer-events: none; background: transparent; }
+  .note { position: absolute; background: #fff6c8; color: #3b3510; padding: 16px 18px; font-size: 15px; line-height: 1.5; white-space: pre-wrap; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+  header { position: fixed; top: 0; left: 0; right: 0; z-index: 2; display: flex; gap: 6px; align-items: center; padding: 8px 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); overflow-x: auto; }
+  header h1 { font-size: 13px; margin: 0 8px 0 0; white-space: nowrap; }
+  header button { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; white-space: nowrap; cursor: pointer; }
+  header button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  header .gap { flex: 1; }
+  header .count { font-size: 11px; opacity: .85; margin-left: 4px; }
+  #base { color: var(--mute); white-space: nowrap; }
+</style>
+</head>
+<body>
+<header id="bar"><h1>The v1 design</h1></header>
+<div id="view"><div id="world"></div></div>
+<script>
+const CANVAS = {"pages":[{"id":"page-1","name":"Screens"},{"id":"page-2","name":"Flows"},{"id":"page-3","name":"Docs site"},{"id":"page-4","name":"Mobile"}],"artboards":[{"file":"Main.dc.html","title":"The whole workspace","page":"page-1","x":0,"y":0,"w":1440,"h":900},{"file":"Navigator.dc.html","title":"Navigator","page":"page-1","x":1560,"y":0,"w":760,"h":860},{"file":"DesignPanel.dc.html","title":"Design panel","page":"page-1","x":2440,"y":0,"w":300,"h":2320},{"file":"BookPage.dc.html","title":"The book note's page","page":"page-1","x":0,"y":1680,"w":900,"h":1350},{"file":"PreviewViews.dc.html","title":"Preview — single, spread, grid","page":"page-1","x":1020,"y":1680,"w":1180,"h":1000},{"file":"Issues.dc.html","title":"Issues pane","page":"page-1","x":2860,"y":1680,"w":380,"h":620},{"file":"Export.dc.html","title":"Export preflight","page":"page-1","x":3360,"y":1680,"w":720,"h":620},{"file":"Advanced.dc.html","title":"Design panel — the CSS view","page":"page-1","x":0,"y":3120,"w":1440,"h":900},{"file":"Manuscript.dc.html","title":"A chapter note — the marks Obsidian does not draw","page":"page-1","x":0,"y":4140,"w":1400,"h":1240},{"file":"States.dc.html","title":"Honest states","page":"page-1","x":1560,"y":3120,"w":2280,"h":470},{"file":"Inspect.dc.html","title":"Inspect mode","page":"page-1","x":1560,"y":3720,"w":1440,"h":2990},{"file":"FlowMakeABook.dc.html","title":"Flow 1 — make a book","page":"page-2","x":0,"y":0,"w":1900,"h":560},{"file":"FlowDraftLoop.dc.html","title":"Flow 2 — the drafting loop","page":"page-2","x":0,"y":700,"w":1900,"h":580},{"file":"FlowDesignExport.dc.html","title":"Flow 3 — design and export","page":"page-2","x":0,"y":1460,"w":1900,"h":580},{"file":"SiteLanding.dc.html","title":"Landing page, dark","page":"page-3","x":0,"y":0,"w":1440,"h":6160,"is_interactive":true},{"file":"SiteLandingLight.dc.html","title":"Landing page, light","page":"page-3","x":1560,"y":0,"w":1440,"h":1400},{"file":"SiteDocs.dc.html","title":"Docs page, dark","page":"page-3","x":1560,"y":1540,"w":1440,"h":1060},{"file":"SiteDocsLight.dc.html","title":"Docs page, light","page":"page-3","x":1560,"y":2740,"w":1440,"h":1060},{"file":"SiteLandingPhone.dc.html","title":"Landing page, phone","page":"page-3","x":3120,"y":0,"w":390,"h":900},{"file":"MainPhone.dc.html","title":"The whole workspace, phone","page":"page-4","x":0,"y":0,"w":1274,"h":1120},{"file":"MainTablet.dc.html","title":"The whole workspace, tablet","page":"page-4","x":2700,"y":0,"w":1228,"h":1040},{"file":"NavigatorPhone.dc.html","title":"Navigator, phone","page":"page-4","x":0,"y":1280,"w":1274,"h":1120},{"file":"NavigatorTablet.dc.html","title":"Navigator, tablet","page":"page-4","x":2700,"y":1280,"w":1228,"h":1040},{"file":"DesignPanelPhone.dc.html","title":"Design panel, phone","page":"page-4","x":0,"y":2560,"w":1692,"h":1200},{"file":"DesignPanelTablet.dc.html","title":"Design panel, tablet","page":"page-4","x":2700,"y":2560,"w":1228,"h":1040},{"file":"BookPagePhone.dc.html","title":"The book note's page, phone","page":"page-4","x":0,"y":3920,"w":856,"h":1230},{"file":"BookPageTablet.dc.html","title":"The book note's page, tablet","page":"page-4","x":2700,"y":3920,"w":1228,"h":1030},{"file":"PreviewViewsPhone.dc.html","title":"Preview, phone","page":"page-4","x":0,"y":5310,"w":1310,"h":2100},{"file":"PreviewViewsTablet.dc.html","title":"Preview, tablet","page":"page-4","x":2700,"y":5310,"w":1228,"h":1040},{"file":"ExportPhone.dc.html","title":"Export, phone","page":"page-4","x":0,"y":7570,"w":1274,"h":1130},{"file":"ExportTablet.dc.html","title":"Export, tablet","page":"page-4","x":2700,"y":7570,"w":1228,"h":1010},{"file":"StatesPhone.dc.html","title":"States, phone","page":"page-4","x":0,"y":8860,"w":2528,"h":1040},{"file":"StatesTablet.dc.html","title":"States, tablet","page":"page-4","x":2700,"y":8860,"w":1784,"h":1320},{"file":"AdvancedTablet.dc.html","title":"The author's CSS, tablet","page":"page-4","x":976,"y":10340,"w":1228,"h":1120},{"file":"InspectTablet.dc.html","title":"Inspect, tablet","page":"page-4","x":2324,"y":10340,"w":1228,"h":1120},{"file":"FlowMobileDraftLoop.dc.html","title":"Flow 4, the draft loop on a phone","page":"page-2","x":0,"y":2200,"w":1740,"h":1130},{"file":"AdvancedPhone.dc.html","title":"The author's CSS, phone","page":"page-4","x":0,"y":10340,"w":856,"h":1150},{"file":"InspectPhone.dc.html","title":"Inspect, phone","page":"page-4","x":3672,"y":10340,"w":1692,"h":1190}],"annotations":[{"id":"site","page":"page-3","x":3120,"y":1040,"w":760,"text":"The docs site, in the Deep water direction.\n\nDark is the default. On the landing page, the dark scheme has a light sky over a black sea, and the light scheme swaps the two.\n\nThe light and phone landing pages show the hero only. They get the sections below it before the landing page is built.\n\nThe tail mark is orca-tail.svg: the two lobes of the orca icon, in one flat color."},{"id":"invariants","page":"page-1","x":0,"y":-390,"w":700,"text":"The three invariants every screen here has to keep:\n\n1. The panel never writes the author's CSS. Settings are data; the CSS they imply is generated at render time and never lands in the vault.\n\n2. The engine is the only linter. Every squiggle comes from a fleuron warning.\n\n3. Preview and export come from one session. The PDF is drawn from the pages already on screen."},{"id":"blocked","page":"page-1","x":760,"y":-390,"w":700,"text":"Drawn as planned, waiting on the engine:\n\n- a page saying which section it came from — the toggle, the page ranges on the book page, the contents pass\n- letter-spacing, small caps, all caps, colour, a rule under a chapter title — greyed out in the design panel here\n- hyphenation reading the book's language\n- inspect mode: the box under a point, the rules that matched it and its computed values\n- the painter's selection overlay — selectable text on a page made of paths"},{"id":"how-to-read","page":"page-2","x":0,"y":-230,"w":900,"text":"Three flows, left to right. Every frame is the real surface at the moment that step happens, not a diagram of it — so the step notes carry the reasoning and the frames carry the design."},{"id":"open-questions","page":"page-1","x":1551,"y":-713,"w":700,"text":"Settled in this round:\n\n- Manuscript and book are one pane, swapped by a single icon action in the note's header — which is what the plugin API gives free. MarkdownView inherits addAction from ItemView, and the swap is leaf.setViewState. A segmented control would mean hand-built DOM in a view we do not own.\n\n- Your CSS is the design panel's other view, reached by an icon action in the panel header, to match. The editor gets the whole column, and the book stays in the pane either way.\n\n- A control your CSS has taken over goes grey where it sits, in the controls view, carrying the line that took it — which is also the way to that line. The CSS view itself is just the editor.\n\n- Export sits in the book preview's toolbar and on the book note's page.\n\nStill open:\n\n- Chapter openings default to the right-hand page, which is what leaves the odd blank verso. Next page and Same page are both there if that is the wrong default.\n\n- The status line no longer shows the per-stage counts; they stay as attributes for the tests, so the epic's issue wants amending.\n\nWorth knowing for the build: the header icon has to be applied on active-leaf-change rather than once at startup, because a background leaf holds a DeferredView; and returning to the manuscript where the writer left it means capturing the leaf's ephemeral state before the swap and putting it back after — nothing does that for us."},{"id":"mobile","page":"page-4","x":0,"y":-300,"w":900,"text":"Orca on a phone and on a tablet. Each screen has a phone board on the left and a tablet board on the right.\n\nThe chrome is Obsidian mobile's, measured from the .is-mobile, .is-phone and .is-tablet rules of app.css. A phone has one view, two drawers and a bar along the bottom. A tablet keeps the tab strip, and its drawers pin beside the view."}],"launch":{"view":"canvas","page":"page-1"}};
+const CHANGED = ["Main","Navigator","BookPage","PreviewViews","DesignPanel","Advanced","Manuscript","Issues","Export","States","Inspect","FlowMakeABook","FlowDraftLoop","FlowDesignExport","MainPhone","MainTablet","NavigatorPhone","NavigatorTablet","DesignPanelPhone","DesignPanelTablet","BookPagePhone","BookPageTablet","PreviewViewsPhone","PreviewViewsTablet","ExportPhone","ExportTablet","StatesPhone","StatesTablet","FlowMobileDraftLoop","AdvancedTablet","InspectTablet","AdvancedPhone","InspectPhone"];
+const AGAINST = "origin/main";
+const SHEETS = {"Main":"chrome.css","Navigator":"chrome.css","BookPage":"chrome.css","PreviewViews":"chrome.css","DesignPanel":"chrome.css","Advanced":"chrome.css","Manuscript":"chrome.css","Issues":"chrome.css","Export":"chrome.css","States":"chrome.css","Inspect":"chrome.css","FlowMakeABook":"chrome.css","FlowDraftLoop":"chrome.css","FlowDesignExport":"chrome.css","MainPhone":"chrome.css","MainTablet":"chrome.css","NavigatorPhone":"chrome.css","NavigatorTablet":"chrome.css","DesignPanelPhone":"chrome.css","DesignPanelTablet":"chrome.css","BookPagePhone":"chrome.css","BookPageTablet":"chrome.css","PreviewViewsPhone":"chrome.css","PreviewViewsTablet":"chrome.css","ExportPhone":"chrome.css","ExportTablet":"chrome.css","StatesPhone":"chrome.css","StatesTablet":"chrome.css","FlowMobileDraftLoop":"chrome.css","AdvancedTablet":"chrome.css","InspectTablet":"chrome.css","AdvancedPhone":"chrome.css","InspectPhone":"chrome.css","SiteLanding":"site.css","SiteLandingLight":"site.css","SiteLandingPhone":"site.css","SiteDocs":"site.css","SiteDocsLight":"site.css"};
+
+const $ = (id) => document.getElementById(id);
+const view = $('view'), world = $('world'), bar = $('bar');
+const view_ = { x: 0, y: 0, k: 1 };
+let theme = new URLSearchParams(location.search).get('theme') === 'light' ? 'light' : 'dark';
+let page = null;
+const key = (a) => a.file.replace('.dc.html', '');
+const isChanged = (a) => CHANGED.includes(key(a));
+
+function apply() { world.style.transform = `translate(${view_.x}px, ${view_.y}px) scale(${view_.k})`;
+  const s = 24 * view_.k; view.style.backgroundSize = `${s}px ${s}px`; view.style.backgroundPosition = `${view_.x}px ${view_.y}px`; }
+
+function zoomAt(cx, cy, k) {
+  k = Math.min(2, Math.max(0.03, k));
+  view_.x = cx - (cx - view_.x) * (k / view_.k); view_.y = cy - (cy - view_.y) * (k / view_.k); view_.k = k; apply();
+}
+
+function boxOf(items) {
+  const xs = items.flatMap((a) => [a.x, a.x + a.w]), ys = items.flatMap((a) => [a.y - 28, a.y + (a.h ?? 200)]);
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+function fit() {
+  const items = [...CANVAS.artboards, ...CANVAS.annotations].filter((a) => a.page === page);
+  if (!items.length) return;
+  const b = boxOf(items), top = 52, pad = 24;
+  const k = Math.min((innerWidth - pad * 2) / (b.x1 - b.x0), (innerHeight - top - pad) / (b.y1 - b.y0), 1);
+  view_.k = k; view_.x = (innerWidth - (b.x1 - b.x0) * k) / 2 - b.x0 * k; view_.y = top + (innerHeight - top - (b.y1 - b.y0) * k) / 2 - b.y0 * k; apply();
+}
+
+function draw() {
+  world.replaceChildren();
+  for (const a of CANVAS.artboards.filter((a) => a.page === page)) {
+    const el = document.createElement('div');
+    el.className = 'board' + (isChanged(a) ? ' changed' : '');
+    Object.assign(el.style, { left: a.x + 'px', top: a.y + 'px', width: a.w + 'px', height: a.h + 'px' });
+    el.dataset.href = key(a) + '.html' + (SHEETS[key(a)] === 'chrome.css' ? '?theme=' + theme : '');
+    const bar = document.createElement('div'); bar.className = 'bar';
+    bar.innerHTML = '<b></b><span></span>'; bar.firstChild.textContent = a.title; bar.lastChild.textContent = `${a.w}×${a.h}`;
+    if (isChanged(a)) { const i = document.createElement('i'); i.textContent = 'Changed'; bar.append(i); }
+    const frame = document.createElement('div'); frame.className = 'frame';
+    const f = document.createElement('iframe'); f.loading = 'lazy'; f.title = a.title; f.src = el.dataset.href;
+    frame.append(f); el.append(bar, frame); world.append(el);
+  }
+  for (const n of CANVAS.annotations.filter((n) => n.page === page)) {
+    const el = document.createElement('div'); el.className = 'note'; el.textContent = n.text;
+    Object.assign(el.style, { left: n.x + 'px', top: n.y + 'px', width: n.w + 'px' }); world.append(el);
+  }
+}
+
+function show(id) {
+  page = id; draw(); fit();
+  for (const b of bar.querySelectorAll('[data-page]')) b.setAttribute('aria-pressed', String(b.dataset.page === id));
+}
+
+function tools() {
+  for (const p of CANVAS.pages) {
+    const b = document.createElement('button'); b.dataset.page = p.id; b.textContent = p.name;
+    const n = CANVAS.artboards.filter((a) => a.page === p.id && isChanged(a)).length;
+    if (n) { const c = document.createElement('span'); c.className = 'count'; c.textContent = `· ${n} changed`; b.append(c); }
+    b.onclick = () => show(p.id); bar.append(b);
+  }
+  const gap = document.createElement('span'); gap.className = 'gap'; bar.append(gap);
+  const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; bar.append(b); return b; };
+  mk('Fit', fit);
+  mk('100%', () => zoomAt(innerWidth / 2, innerHeight / 2, 1));
+  const t = mk(theme === 'dark' ? 'Dark' : 'Light', () => { theme = theme === 'dark' ? 'light' : 'dark'; t.textContent = theme === 'dark' ? 'Dark' : 'Light'; draw(); });
+  t.title = 'The theme of the plugin artboards';
+  const base = document.createElement('span'); base.id = 'base'; base.textContent = AGAINST ? `Changed against ${AGAINST}` : ''; bar.append(base);
+}
+
+// Wheel pans, a pinch or ctrl+wheel zooms; a drag pans; a tap on an artboard opens it.
+view.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, view_.k * Math.exp(-e.deltaY * 0.01));
+  else { view_.x -= e.deltaX; view_.y -= e.deltaY; apply(); }
+}, { passive: false });
+
+const pointers = new Map(); let moved = 0, pinch = 0;
+view.addEventListener('pointerdown', (e) => { view.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; if (pointers.size === 2) pinch = 0; view.classList.add('drag'); });
+view.addEventListener('pointermove', (e) => {
+  const p = pointers.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p[0], dy = e.clientY - p[1]; moved += Math.abs(dx) + Math.abs(dy);
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()]; const before = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    const [c, d] = [...pointers.values()]; const after = Math.hypot(c[0] - d[0], c[1] - d[1]);
+    if (before > 0) zoomAt((c[0] + d[0]) / 2, (c[1] + d[1]) / 2, view_.k * (after / before));
+    return;
+  }
+  pointers.set(e.pointerId, [e.clientX, e.clientY]); view_.x += dx; view_.y += dy; apply();
+});
+const up = (e) => {
+  const tap = pointers.size === 1 && moved < 8 && e.type === 'pointerup';
+  pointers.delete(e.pointerId); if (!pointers.size) view.classList.remove('drag');
+  if (tap) { const board = document.elementsFromPoint(e.clientX, e.clientY).find((n) => n.classList?.contains('board')); if (board) location.href = board.dataset.href; }
+};
+view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+addEventListener('resize', fit);
+
+tools();
+const first = CANVAS.artboards.find(isChanged)?.page ?? CANVAS.launch.page ?? CANVAS.pages[0].id;
+show(first);
+</script>
+</body>
+</html>
