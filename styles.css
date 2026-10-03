@@ -3334,6 +3334,11 @@ input.orca-panel-filter {
 .is-mobile .orca-navigator {
   overflow: visible;
   --orca-row-pad: 8px;
+  --orca-row-inset: 14px;
+  /* How far a handle moves the mark after it into the row. */
+  --orca-handle-room: calc(
+    var(--touch-size-m) + (var(--touch-size-m) - var(--icon-s)) / 2 - var(--orca-row-inset)
+  );
 }
 
 .is-tablet .orca-navigator {
@@ -3374,7 +3379,7 @@ input.orca-panel-filter {
   gap: var(--size-4-2);
   height: auto;
   min-height: var(--touch-size-m);
-  padding: var(--orca-row-pad) var(--size-4-2) var(--orca-row-pad) 14px;
+  padding: var(--orca-row-pad) var(--size-4-2) var(--orca-row-pad) var(--orca-row-inset);
   border-radius: var(--nav-item-radius);
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
@@ -3417,7 +3422,7 @@ input.orca-panel-filter {
 .is-mobile .orca-nav-heading {
   height: var(--touch-size-m);
   margin-top: 0;
-  padding: 0 var(--size-4-2) 0 14px;
+  padding: 0 var(--size-4-2) 0 var(--orca-row-inset);
   font-size: 11px;
 }
 
@@ -3479,8 +3484,10 @@ input.orca-panel-filter {
   margin-left: calc(-1 * var(--size-4-2));
 }
 
-/* A row is dragged by its handle, as wide as a touch and as tall as the
-   row. The handle takes the touch, so the drawer does not scroll under it. */
+/* A row starts with the handle it is dragged by, as wide as a touch and
+   as tall as the row, clear of the thumb that scrolls the list. The handle
+   takes the touch, so the drawer does not scroll under it. The touch of
+   the chevron after it starts where the handle ends. */
 .orca-drag-handle {
   display: flex;
   flex: none;
@@ -3488,17 +3495,17 @@ input.orca-panel-filter {
   justify-content: center;
   align-self: stretch;
   width: var(--touch-size-m);
-  margin: calc(-1 * var(--orca-row-pad)) calc(-1 * var(--size-4-2))
-    calc(-1 * var(--orca-row-pad)) auto;
+  margin: calc(-1 * var(--orca-row-pad))
+    calc((var(--touch-size-m) - var(--icon-s)) / 2 - var(--size-4-2))
+    calc(-1 * var(--orca-row-pad)) calc(-1 * var(--orca-row-inset));
   color: var(--text-faint);
   touch-action: none;
   --icon-size: var(--icon-s);
 }
 
-/* A section's handle is at the end of its rule. */
+/* A section's handle is at the start of its rule. */
 .orca-nav-heading > .orca-drag-handle {
-  order: 2;
-  margin: 0 calc(-1 * var(--size-4-2)) 0 0;
+  margin-block: 0;
 }
 
 /* mobile: design panel */
