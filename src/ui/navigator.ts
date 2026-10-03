@@ -55,7 +55,8 @@ export interface Handoff {
    * by its place in the reading order, or to the heading on `line` of
    * its note. It answers false, and turns nothing, where that tab is
    * not a preview of the book, or where the book set that section to
-   * no page. A heading set on no page turns to the section.
+   * no page. A heading set on no page turns to the section. On mobile
+   * a turn shuts a drawer that is not pinned, as an opened note does.
    */
   turn(book: string, at: number, line?: number): Promise<boolean>;
   /** The deepest heading level the author lists inside each entry, or nothing when they list none. */

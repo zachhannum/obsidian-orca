@@ -47,6 +47,7 @@ import {
 } from "@/ui/frame";
 import { Icon } from "@/ui/icon";
 import { chapters, status, statusText, type Chapter, type Status } from "@/ui/progress";
+import type { Sheet } from "@/ui/sheet";
 
 /** A book's EPUB files, and what the render they were written from cost. */
 export interface Reflowed {
@@ -64,6 +65,11 @@ export interface ReflowSlots {
   stored: ReaderStored;
   /** Told the device and the settings after each change, so the plugin keeps them. */
   keeps(stored: ReaderStored): void;
+  /**
+   * Opens the sheet a phone draws the reader settings in. Without it
+   * the settings hang from their button.
+   */
+  sheet?: (closed: () => void) => Sheet;
 }
 
 export interface MountedReflow {
@@ -340,6 +346,7 @@ function Reflow({
         <>
           <Settings
             bar={slots.controls}
+            {...(slots.sheet === undefined ? {} : { sheet: slots.sheet })}
             settings={settings}
             settle={(next) => {
               setSettings(next);
@@ -422,20 +429,44 @@ function Settings({
   bar,
   settings,
   settle,
+  sheet,
 }: {
   bar: HTMLElement;
   settings: ReaderSettings;
   settle: (settings: ReaderSettings) => void;
+  sheet?: (closed: () => void) => Sheet;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [hung, setHung] = useState<{ top?: number; right?: number } | undefined>(undefined);
+  const [docked, setDocked] = useState<Sheet | undefined>(undefined);
   const opener = useRef<HTMLButtonElement>(null);
   const popover = useRef<HTMLDivElement>(null);
+
+  // A phone draws the settings in a sheet, which closes itself: from
+  // its grabber, from a tap outside it and on Escape.
+  useEffect(() => {
+    if (!open || sheet === undefined) return;
+    const made = sheet(() => {
+      setOpen(false);
+    });
+    setDocked(made);
+    return () => {
+      made.close();
+      setDocked(undefined);
+    };
+  }, [open, sheet]);
+
+  // The e2e suite waits on how the settings are drawn, so the bar says
+  // so once React has committed them.
+  useEffect(() => {
+    const drawn = sheet === undefined ? "popover" : docked === undefined ? "shut" : "sheet";
+    bar.dataset["settings"] = open ? drawn : "shut";
+  }, [bar, open, sheet, docked]);
 
   // The settings shut on Escape, and on a press in the window that is
   // neither on them nor on the button that opens them.
   useEffect(() => {
-    if (!open) return;
+    if (!open || sheet !== undefined) return;
     const page = bar.ownerDocument;
     const pressed = (event: PointerEvent): void => {
       const at = event.target;
@@ -454,17 +485,18 @@ function Settings({
       page.removeEventListener("pointerdown", pressed);
       page.removeEventListener("keydown", keyed);
     };
-  }, [open, bar]);
+  }, [open, bar, sheet]);
 
   // The settings hang under their button with their right edges in
   // line. A bar too narrow for that keeps them inside itself, so a
   // narrow pane cuts none of them off.
   useLayoutEffect(() => {
+    if (sheet !== undefined) return;
     const button = opener.current;
     const hanging = popover.current;
     const from = hanging?.offsetParent;
-    // Under the page the settings are a sheet above their button, which
-    // the stylesheet places, so nothing is measured onto them.
+    // Under the page the settings open above their button, where the
+    // stylesheet places them, so nothing is measured onto them.
     if (open && bar.closest(".orca-preview-foot") !== null) {
       setHung({});
       return;
@@ -479,34 +511,20 @@ function Settings({
       top: under.bottom - edge.top + 4,
       right: Math.min(Math.max(edge.right - under.right, GUTTER), room),
     });
-  }, [open, bar]);
+  }, [open, bar, sheet]);
 
   const set = (change: Partial<ReaderSettings>): void => {
     settle({ ...settings, ...change });
   };
   const spacing = settings.spacing === undefined ? PUBLISHER : String(settings.spacing);
   const sized = readerSizeStep(settings.size);
-  return (
-    <>
-      <button
-        ref={opener}
-        type="button"
-        className={classes("clickable-icon", open && "is-active")}
-        aria-label="Reader settings"
-        aria-expanded={open}
-        data-testid="orca-reflow-settings"
-        onClick={() => {
-          setOpen(!open);
-        }}
-      >
-        <Icon name="sliders-horizontal" className="orca-reflow-icon" />
-      </button>
-      {open ? (
+  const drawn = sheet === undefined ? open : docked !== undefined;
+  const rows = drawn ? (
         <div
           ref={popover}
           className="orca-reflow-popover"
           data-testid="orca-reflow-popover"
-          style={hung ?? { visibility: "hidden" }}
+          {...(sheet === undefined ? { style: hung ?? { visibility: "hidden" } } : {})}
         >
           <Line label={READER_LABELS.font}>
             <Select
@@ -601,7 +619,23 @@ function Settings({
             />
           </Line>
         </div>
-      ) : null}
+      ) : null;
+  return (
+    <>
+      <button
+        ref={opener}
+        type="button"
+        className={classes("clickable-icon", open && "is-active")}
+        aria-label="Reader settings"
+        aria-expanded={open}
+        data-testid="orca-reflow-settings"
+        onClick={() => {
+          setOpen(!open);
+        }}
+      >
+        <Icon name="sliders-horizontal" className="orca-reflow-icon" />
+      </button>
+      {docked === undefined ? rows : createPortal(rows, docked.el)}
     </>
   );
 }

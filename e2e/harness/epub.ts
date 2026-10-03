@@ -37,6 +37,17 @@ export class Epub {
   readonly settings: Locator;
   readonly previous: Locator;
   readonly next: Locator;
+  /**
+   * The slot the view's controls are in, which carries
+   * `data-settings`: `shut`, `popover` or `sheet`.
+   */
+  readonly controls: Locator;
+  /** The settings themselves, under their button or in a phone's sheet. */
+  readonly popover: Locator;
+  /** The sheet a phone opens the reader settings in. */
+  readonly sheet: Locator;
+  /** The grabber at the top of that sheet. A tap on it closes the sheet. */
+  readonly grabber: Locator;
 
   private readonly pane: Locator;
 
@@ -52,6 +63,13 @@ export class Epub {
     this.settings = pane.getByTestId("orca-reflow-settings");
     this.previous = pane.getByTestId("orca-reflow-previous");
     this.next = pane.getByTestId("orca-reflow-next");
+    this.controls = pane.getByTestId("orca-reflow-controls");
+    // A phone's sheet is outside the pane.
+    this.sheet = obsidian.page.getByTestId("orca-reader-sheet");
+    this.grabber = this.sheet.getByTestId("orca-sheet-grabber");
+    this.popover = pane
+      .getByTestId("orca-reflow-popover")
+      .or(this.sheet.getByTestId("orca-reflow-popover"));
   }
 
   /** Switches the pane to the EPUB view, and returns the generation its frame loaded. */
@@ -68,7 +86,7 @@ export class Epub {
 
   /** The control of one reader setting, or one choice of it. */
   setting(key: string): Locator {
-    return this.pane.getByTestId(`orca-reflow-setting-${key}`);
+    return this.popover.getByTestId(`orca-reflow-setting-${key}`);
   }
 
   async turned(): Promise<Turned> {

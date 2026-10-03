@@ -1,7 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { boxOf, NEAR, type Box } from "./harness/box";
 import { DIALOG, type Export } from "./harness/export";
-import { DEVICES, type Obsidian } from "./harness/obsidian";
+import { DEVICES, SHEET, TOUCH, type Obsidian } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. It sits at the top of the vault. */
@@ -14,8 +14,17 @@ const EPUB = "Pride and Prejudice.epub";
 /** The note an embed that will not read is written into. */
 const EMBEDS = "Acknowledgements.md";
 
-/** The space a phone leaves at each side of the dialog. */
-const SIDE = 12;
+/** The height Obsidian mobile reports for a phone's keyboard, about. */
+const KEYBOARD = 336;
+
+/** More errors than a dialog has room for on any screen. */
+const MANY = 24;
+
+/** One embed with no file behind it for each of those errors. */
+const MANY_EMBEDS = Array.from(
+  { length: MANY },
+  (_, at) => `![[nowhere-${String(at)}.png]]`,
+).join("\n\n");
 
 /** The dialog's width on a tablet, which is the desktop's. */
 const WIDE = 620;
@@ -49,7 +58,7 @@ async function touchable(obsidian: Obsidian, exporting: Export): Promise<void> {
 }
 
 for (const device of ["phone", "tablet"] as const) {
-  test(`on a ${device} the export dialog stacks its buttons and saves into the vault`, async ({
+  test(`on a ${device} the export dialog stacks its buttons and saves into the vault, as a sheet on a phone alone`, async ({
     obsidian,
     book,
     exporting,
@@ -66,8 +75,14 @@ for (const device of ["phone", "tablet"] as const) {
       await exporting.reaches("ready");
       const dialog = await boxOf(exporting.dialog);
       inside(dialog, device);
-      const wide = device === "phone" ? DEVICES.phone.width - 2 * SIDE : WIDE;
+      const wide = device === "phone" ? DEVICES.phone.width : WIDE;
       expect(Math.abs(dialog.width - wide)).toBeLessThanOrEqual(NEAR);
+      // A phone docks the dialog as a sheet, and a tablet centers it.
+      await expect(obsidian.sheet("orca-export")).toHaveCount(device === "phone" ? 1 : 0);
+      await expect(exporting.grabber).toHaveCount(device === "phone" ? 1 : 0);
+      const foot = DEVICES[device].height - (dialog.y + dialog.height);
+      if (device === "phone") expect(Math.abs(foot)).toBeLessThanOrEqual(NEAR);
+      else expect(Math.abs(foot - dialog.y)).toBeLessThanOrEqual(NEAR);
 
       await expect(exporting.label).toHaveText("Save to this vault");
       const label = await boxOf(exporting.label);
@@ -96,7 +111,7 @@ for (const device of ["phone", "tablet"] as const) {
     }
   });
 
-  test(`on a ${device} a refused export says why over its buttons, and its link is at touch size`, async ({
+  test(`on a ${device} a refused export says why over its buttons, and its fix is a link at touch size`, async ({
     obsidian,
     book,
     exporting,
@@ -117,6 +132,54 @@ for (const device of ["phone", "tablet"] as const) {
       inside(await boxOf(exporting.dialog), device);
       await stacked(exporting.said, exporting.write, exporting.cancel);
       await touchable(obsidian, exporting);
+      // Obsidian mobile fills a button and raises it, and a link has neither.
+      const fix = await exporting.fixes.first().evaluate((link) => {
+        const { backgroundColor, boxShadow } = getComputedStyle(link);
+        return { backgroundColor, boxShadow, height: link.getBoundingClientRect().height };
+      });
+      expect(fix.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+      expect(fix.boxShadow).toBe("none");
+      expect(fix.height).toBeGreaterThanOrEqual(TOUCH);
+
+      await exporting.close();
+      await vault.restore();
+      await book.settled(BOOK);
+    } finally {
+      await obsidian.emulateMobile(false);
+    }
+  });
+
+  test(`on a ${device}, with more errors than the dialog has room for, the list scrolls and Export and Cancel stay on the screen`, async ({
+    obsidian,
+    book,
+    exporting,
+    vault,
+  }) => {
+    await obsidian.mobile(device);
+    try {
+      await book.open();
+      await book.settled(BOOK);
+      const text = await vault.read(EMBEDS);
+      await vault.modify(EMBEDS, `${text.trimEnd()}\n\n${MANY_EMBEDS}\n`);
+
+      await exporting.open();
+      await exporting.reaches("refused");
+      await expect(exporting.dialog).toHaveAttribute("data-errors", String(MANY));
+      const dialog = await boxOf(exporting.dialog);
+      inside(dialog, device);
+      // A sheet with more than it has room for is still not the whole
+      // screen: the page is in sight over it.
+      if (device === "phone") {
+        expect(dialog.height).toBeLessThanOrEqual(DEVICES.phone.height * SHEET + NEAR);
+      }
+
+      const scrolled = await exporting.scrolled();
+      expect(scrolled.hidden).toBeGreaterThan(0);
+      expect(scrolled.spill).toBeLessThanOrEqual(0);
+      expect(scrolled.moved).toBe(0);
+      expect(scrolled.formats).toBe(true);
+      expect(scrolled.buttons).toBe(true);
+      expect(scrolled.last).toBe(true);
 
       await exporting.close();
       await vault.restore();
@@ -127,9 +190,46 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
+test("on a phone the export dialog ends above the keyboard, with the path and both buttons on the screen", async ({
+  obsidian,
+  book,
+  exporting,
+}) => {
+  await obsidian.mobile("phone");
+  try {
+    await book.open();
+    await book.settled(BOOK);
+    await exporting.open();
+    await exporting.reaches("ready");
+
+    await obsidian.keyboard(KEYBOARD);
+    await exporting.destination.focus();
+    const above = DEVICES.phone.height - KEYBOARD;
+    const dialog = await boxOf(exporting.dialog);
+    expect(dialog.height).toBeLessThanOrEqual(above * SHEET + NEAR);
+    expect(Math.abs(dialog.y + dialog.height - above)).toBeLessThanOrEqual(NEAR);
+    for (const part of [exporting.destination, exporting.write, exporting.cancel]) {
+      const box = await boxOf(part);
+      expect(box.y).toBeGreaterThanOrEqual(dialog.y);
+      expect(box.y + box.height).toBeLessThanOrEqual(above + NEAR);
+    }
+    await exporting.destination.fill("Drafts/Book");
+    await expect(exporting.destination).toHaveValue("Drafts/Book");
+    await expect(exporting.write).toBeEnabled();
+
+    await exporting.grabber.click();
+    await expect(exporting.dialog).toHaveCount(0);
+  } finally {
+    await obsidian.keyboard(undefined);
+    await obsidian.emulateMobile(false);
+  }
+});
+
 // What this suite does not cover: the dialog against its artboard pixel
 // for pixel, which emulation cannot give; `Share`, which the dialog
 // does not have yet; the writing state, which is gone before a spec
 // can measure it; a failed write, which nothing here can cause and
-// which draws the refused state's line; and the keyboard over the
-// dialog on a real phone.
+// which draws the refused state's line; the keyboard itself, which
+// emulation does not raise, so the spec sets the height Obsidian
+// reports for one; and the pull on the title that drags a sheet shut,
+// which is Obsidian's own.

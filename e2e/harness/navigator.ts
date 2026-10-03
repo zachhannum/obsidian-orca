@@ -444,8 +444,8 @@ export class Navigator {
 
   /**
    * The room the list scrolls past the end of what it draws, in pixels.
-   * A list shorter than its box leaves none. A phone scrolls the
-   * shelves and a tablet the view.
+   * A list shorter than its box leaves none. Mobile scrolls the
+   * shelves and desktop the view.
    */
   async slack(): Promise<number> {
     return this.pane.evaluate((pane) => {

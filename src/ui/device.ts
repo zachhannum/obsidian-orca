@@ -26,6 +26,19 @@ export function splits(device: Device): boolean {
   return device !== "phone";
 }
 
+/** Only a phone docks a dialog to the foot of the screen. */
+export function sheets(device: Device): boolean {
+  return device === "phone";
+}
+
+/**
+ * Measures how much of a pane a sheet at the foot of the screen covers.
+ * `bottom` is the pane's lower edge, from the top of the screen.
+ */
+export function sheetCover(screen: number, sheet: number, bottom: number): number {
+  return Math.max(0, bottom - Math.max(screen - sheet, 0));
+}
+
 /** The place the page number, the arrows and the count of issues are drawn. */
 export type Foot = "status" | "under" | "bar";
 

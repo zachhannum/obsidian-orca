@@ -12,6 +12,7 @@ import type { Composer, Typeset } from "@/ui/composer";
 import { chooseDiskFolder, desktopSink, onDesktop } from "@/ui/desktop";
 import { mountExport, type Exporter, type Mounted } from "@/ui/exporting";
 import { preflight } from "@/ui/preflight";
+import { docks } from "@/ui/sheet";
 
 /** The plugin, as much of it as an export reaches. */
 export interface Exports {
@@ -38,7 +39,7 @@ class ExportModal extends Modal {
   override onOpen(): void {
     this.modalEl.dataset["testid"] = "orca-export";
     this.modalEl.addClass("orca-export-modal");
-    this.setTitle("Export book");
+    docks(this, "Export book");
     const { composer, book } = this.exports;
     // The dialog holds the book, so its engine does not stop under an export.
     this.release = composer.hold(book);

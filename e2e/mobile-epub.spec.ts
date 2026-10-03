@@ -1,4 +1,6 @@
 import { PREVIEW, PREVIEW_CONTROLS } from "./harness/book";
+import { boxOf, NEAR } from "./harness/box";
+import { DEVICES, SHEET, TOUCH } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. */
@@ -209,7 +211,9 @@ for (const device of ["phone", "tablet"] as const) {
       await count.click();
       await expect(count).toHaveAttribute("aria-expanded", "true");
       await expect(book.issues.first()).toBeVisible();
-      // The warnings are drawn over the EPUB view, not under it.
+      // The warnings are drawn over the EPUB view, not under it. A
+      // phone slides them in, so they are read once they are in place.
+      await boxOf(book.issues.first());
       expect(
         await book.issues.first().evaluate((issue) => {
           const box = issue.getBoundingClientRect();
@@ -221,7 +225,11 @@ for (const device of ["phone", "tablet"] as const) {
         }),
       ).toBe(true);
 
-      await count.click();
+      // A phone's sheet covers the count, and a tap outside it closes it.
+      if (device === "phone") {
+        await boxOf(book.warnings);
+        await obsidian.backdrop("orca-warnings").click({ position: { x: 10, y: 10 } });
+      } else await count.click();
       await expect(count).toHaveAttribute("aria-expanded", "false");
       await expect(book.issues.first()).toBeHidden();
     } finally {
@@ -231,53 +239,54 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
-for (const device of ["phone", "tablet"] as const) {
-  test(`on a ${device} the reader settings are drawn over the device, opaque`, async ({
-    obsidian,
-    book,
-    epub,
-  }) => {
-    await obsidian.mobile(device);
-    try {
-      await book.close();
-      await book.open();
-      await book.settled(BOOK);
-      await book.uncovered();
-      await epub.open();
-      await book.footed(PLACE[device]);
+test("on a tablet the reader settings are drawn over the device, opaque, and in no sheet", async ({
+  obsidian,
+  book,
+  epub,
+}) => {
+  await obsidian.mobile("tablet");
+  try {
+    await book.close();
+    await book.open();
+    await book.settled(BOOK);
+    await book.uncovered();
+    await epub.open();
+    await book.footed(PLACE.tablet);
 
-      await epub.settings.click();
-      const sheet = obsidian.view(PREVIEW).getByTestId("orca-reflow-popover");
-      await expect(sheet).toBeVisible();
-      await expect(sheet).not.toHaveAttribute("style", /visibility: hidden/);
-      // At the middle of each row is the sheet itself, not the device
-      // or the page inside it.
-      const missed = await sheet.evaluate((node) =>
-        Array.from(node.children)
-          .map((row) => row.getBoundingClientRect())
-          .filter((box) => box.width > 0 && box.height > 0)
-          .map((box) => node.ownerDocument.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
-          .filter((top) => top === null || !node.contains(top))
-          .map((top) => (top === null ? "nothing" : top.className || top.tagName)),
-      );
-      expect(missed).toEqual([]);
-      const painted = await sheet.evaluate((node) => {
-        const style = getComputedStyle(node);
-        return { background: style.backgroundColor, shadow: style.boxShadow };
-      });
-      expect(painted.background).toMatch(/^rgb\(/);
-      expect(painted.shadow).not.toBe("none");
+    await epub.settings.click();
+    await expect(epub.controls).toHaveAttribute("data-settings", "popover");
+    const hung = obsidian.view(PREVIEW).getByTestId("orca-reflow-popover");
+    await expect(hung).toBeVisible();
+    await expect(hung).not.toHaveAttribute("style", /visibility: hidden/);
+    await expect(obsidian.sheet()).toHaveCount(0);
+    // At the middle of each row is the settings' own box, not the
+    // device or the page inside it.
+    const missed = await hung.evaluate((node) =>
+      Array.from(node.children)
+        .map((row) => row.getBoundingClientRect())
+        .filter((box) => box.width > 0 && box.height > 0)
+        .map((box) => node.ownerDocument.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
+        .filter((top) => top === null || !node.contains(top))
+        .map((top) => (top === null ? "nothing" : top.className || top.tagName)),
+    );
+    expect(missed).toEqual([]);
+    const painted = await hung.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { background: style.backgroundColor, shadow: style.boxShadow };
+    });
+    expect(painted.background).toMatch(/^rgb\(/);
+    expect(painted.shadow).not.toBe("none");
 
-      await epub.settings.click();
-      await expect(sheet).toHaveCount(0);
-    } finally {
-      await book.close();
-      await obsidian.emulateMobile(false);
-    }
-  });
-}
+    await epub.settings.click();
+    await expect(hung).toHaveCount(0);
+    await expect(epub.controls).toHaveAttribute("data-settings", "shut");
+  } finally {
+    await book.close();
+    await obsidian.emulateMobile(false);
+  }
+});
 
-test("on a phone the reader settings open above their button, inside the pane", async ({
+test("on a phone the reader settings open as a sheet with nothing dimmed, and the device is whole above it", async ({
   obsidian,
   book,
   epub,
@@ -290,29 +299,72 @@ test("on a phone the reader settings open above their button, inside the pane", 
     await book.uncovered();
     await epub.open();
     await book.footed("under");
+    const before = await boxOf(epub.body);
 
     await epub.settings.click();
-    const sheet = obsidian.view(PREVIEW).getByTestId("orca-reflow-popover");
-    await expect(sheet).toBeVisible();
-    const opened = await sheet.boundingBox();
-    const button = await epub.settings.boundingBox();
-    const pane = await obsidian.view(PREVIEW).boundingBox();
-    expect(opened).not.toBeNull();
-    expect((opened?.y ?? 0) + (opened?.height ?? 0)).toBeLessThanOrEqual(button?.y ?? 0);
-    expect(opened?.x ?? -1).toBeGreaterThanOrEqual(pane?.x ?? 0);
-    expect((opened?.x ?? 0) + (opened?.width ?? 0)).toBeLessThanOrEqual(
-      (pane?.x ?? 0) + (pane?.width ?? 0) + 0.5,
+    await expect(epub.controls).toHaveAttribute("data-settings", "sheet");
+    await expect(obsidian.sheet("orca-reader-sheet")).toHaveCount(1);
+    await expect(epub.sheet).toContainText("Reader settings");
+    const sheet = await boxOf(epub.sheet);
+    expect(Math.abs(sheet.width - DEVICES.phone.width)).toBeLessThanOrEqual(NEAR);
+    expect(Math.abs(sheet.y + sheet.height - DEVICES.phone.height)).toBeLessThanOrEqual(NEAR);
+    expect(
+      await obsidian
+        .backdrop("orca-reader-sheet")
+        .evaluate((bg) => getComputedStyle(bg).backgroundColor),
+    ).toBe("rgba(0, 0, 0, 0)");
+    // The grabber and each row of settings are as tall as a touch.
+    const short = await epub.sheet.evaluate(
+      (node, least) =>
+        Array.from(
+          node.querySelectorAll<HTMLElement>('[data-testid="orca-sheet-grabber"], .orca-panel-row'),
+        )
+          .map((row) => row.getBoundingClientRect().height)
+          .filter((height) => height < least - 0.5),
+      TOUCH,
     );
+    expect(short).toEqual([]);
+
+    // The device is drawn again, smaller, in the room the sheet leaves.
+    await expect
+      .poll(async () => {
+        const body = await epub.body.boundingBox();
+        return body === null ? Infinity : body.y + body.height;
+      })
+      .toBeLessThanOrEqual(sheet.y);
+    const above = await boxOf(epub.body);
+    expect(above.y).toBeGreaterThanOrEqual(0);
+    expect(above.height).toBeGreaterThan(0);
+    expect(above.height).toBeLessThan(before.height);
+    expect(Math.abs(above.width / above.height - before.width / before.height)).toBeLessThan(0.01);
+
+    // A setting takes effect on the device while the sheet is open.
+    await epub.setting("theme-dark").click();
+    await expect(epub.screen).toHaveClass(/mod-dark/);
+    await expect(epub.controls).toHaveAttribute("data-settings", "sheet");
+    await epub.setting("theme-light").click();
+    await expect(epub.screen).not.toHaveClass(/mod-dark/);
+
+    await obsidian.backdrop("orca-reader-sheet").click({ position: { x: 10, y: 10 } });
+    await expect(epub.controls).toHaveAttribute("data-settings", "shut");
+    await expect(epub.sheet).toHaveCount(0);
+    await expect
+      .poll(async () => (await epub.body.boundingBox())?.height ?? 0)
+      .toBeGreaterThanOrEqual(before.height - NEAR);
 
     await epub.settings.click();
-    await expect(sheet).toHaveCount(0);
+    await expect(epub.controls).toHaveAttribute("data-settings", "sheet");
+    await boxOf(epub.sheet);
+    await epub.grabber.click();
+    await expect(epub.controls).toHaveAttribute("data-settings", "shut");
+    await expect(epub.sheet).toHaveCount(0);
   } finally {
     await book.close();
     await obsidian.emulateMobile(false);
   }
 });
 
-test("a phone on its side has the EPUB view's controls in the bar", async ({
+test("a phone on its side has the EPUB view's controls in the bar, and the reader settings' sheet leaves the page in sight", async ({
   obsidian,
   book,
   epub,
@@ -335,6 +387,19 @@ test("a phone on its side has the EPUB view's controls in the bar", async ({
     const body = await epub.body.boundingBox();
     if (well === null || body === null) throw new Error("a box is missing");
     expect(Math.abs(body.x + body.width / 2 - (well.x + well.width / 2))).toBeLessThanOrEqual(1);
+
+    // The settings are taller than a phone on its side, so the sheet
+    // stops short of the top and its rows scroll inside it.
+    await epub.settings.click();
+    await expect(epub.controls).toHaveAttribute("data-settings", "sheet");
+    const sheet = await boxOf(epub.sheet);
+    const tall = DEVICES.phone.width;
+    expect(sheet.height).toBeLessThanOrEqual(tall * SHEET + NEAR);
+    expect(Math.abs(sheet.y + sheet.height - tall)).toBeLessThanOrEqual(NEAR);
+    await epub.setting("theme-dark").scrollIntoViewIfNeeded();
+    await expect(epub.setting("theme-dark")).toBeInViewport();
+    await epub.grabber.click();
+    await expect(epub.controls).toHaveAttribute("data-settings", "shut");
   } finally {
     await book.close();
     await obsidian.emulateMobile(false);
@@ -396,5 +461,6 @@ test("on a phone a long title is cut short on the status line, and the page and 
 
 // What this suite does not cover: a swipe, since the EPUB view has
 // none and its arrows and keys turn a screen; the camera and home bar
-// of a real phone, which emulation draws at nothing; and the EPUB view
-// in a tablet's pane under 700px.
+// of a real phone, which emulation draws at nothing; the EPUB view in a
+// tablet's pane under 700px; and the device above the reader settings'
+// sheet on a phone on its side, where little room is left for it.

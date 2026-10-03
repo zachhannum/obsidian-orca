@@ -90,6 +90,11 @@ its editor around these files and returns a URL. The artboard list and
 - Each book's row in the navigator has `Open preview` beside `Add to
   this book`. The book note's page has `Open preview` in its header,
   beside `Open as markdown`.
+- Each book in the navigator is a card: a border, round corners and a
+  surface of its own. A book's row heads the card with the closed book
+  in the accent color and the name in semibold. An open book holds its
+  sections and entries under a rule, and a folded book is a card as
+  tall as its row.
 - The preview's icon is an eye in a viewfinder. The book note's page
   keeps the closed book. The open book is Obsidian's reading view
   toggle, which sits beside `Open preview` on a note.
@@ -192,6 +197,8 @@ its editor around these files and returns a URL. The artboard list and
   when the dialog opens. One export writes one file for each ticked
   format. The files share one path, and each format adds its own
   extension. `Choose…` picks a folder, not a file.
+- The preflight list scrolls when it has more errors than the dialog
+  has room for. The formats, the path and the buttons stay in place.
 - EPUB is the preview's fourth view, beside the three page views in
   the bar's segmented control. It shows the engine's EPUB in a frame
   that ReadiumCSS pages, and no page is laid out for it. The reading is
@@ -416,10 +423,13 @@ replaces them.
   and the warnings it opens say the rest. In the bar it keeps its
   words, just before the controls. A tap on it opens the warnings, as
   it does in the page views.
-- The reader settings open above their button under the page, as the
-  warnings do, and hang under it in the bar. The sheet is opaque and
-  drawn over the device. The arrows turn a screen and then the
-  section. The EPUB view has no swipe.
+- On a phone the reader settings open as a sheet. The sheet dims
+  nothing behind it, and the device is drawn smaller above it, so a
+  change shows on the page as the author makes it. On a tablet the
+  settings open above their button under the page and hang under it
+  in the bar, opaque and drawn over the device.
+- The arrows turn a screen and then the section. The EPUB view has no
+  swipe.
 - The status line under the device is the desktop's: the chapter's
   title, the page in that chapter and the percentage through the book.
   On a phone a long title ends in an ellipsis, so the line stays on
@@ -428,8 +438,18 @@ replaces them.
   arrows and the count of issues are under the page, clear of
   Obsidian's own bar. On a phone on its side they are in the preview's
   bar. A tablet has them in the bar too, in a pane 700px wide or more,
-  and under the page in a narrower one. The warnings open over the
-  page from the count, and a tap on the page shuts them.
+  and under the page in a narrower one.
+- On a phone the count opens the warnings as a sheet, with the count
+  as its title. On a tablet the warnings open over the page from the
+  count, and a tap on the page shuts them.
+- A sheet is Obsidian's own dialog, docked to the foot of a phone's
+  screen under a grabber. Orca adds `mod-confirmation`, the class
+  Obsidian docks its confirmations with, and an Obsidian without that
+  class centers the dialog. A tap on the grabber, a pull on the title
+  or a tap outside the sheet closes it. A tablet has no sheet.
+- A sheet is never as tall as the screen. It stops at four fifths of
+  the height above the keyboard, so the page stays in sight over it,
+  and what does not fit scrolls inside it.
 - The navigator's buttons are Obsidian's own, drawn the way the file
   explorer draws its row on each device. They are `New book`, a search, a sort and `Collapse all`, which
   is last as in the file explorer. Each acts on the whole shelf.
@@ -444,6 +464,12 @@ replaces them.
   `Remove`. The fold chevrons in the CSS view are always drawn, and
   the card for a flagged declaration shows while the caret is in it.
   No control has a tooltip.
+- A book's card on mobile has the corner Obsidian's mobile cards have,
+  so a folded book is a pill and the rows of an open book follow its
+  edge. The list has the same corner, so a card the scroll cuts
+  is still round.
+- A navigator row lights under a mouse, a trackpad or a pen, on a
+  tablet too. A finger lights none, so a scroll leaves no row lit.
 - A long press on a navigator row opens its menu: a sheet on a phone,
   a menu beside the row on a tablet. `Open as markdown` in that menu
   takes the place of the Mod click.
@@ -463,6 +489,9 @@ replaces them.
   the vault and no `Choose…`. Once the file is written, `Share` hands
   it to the system share sheet, on a device that can share a file. The
   file stays in the vault whether or not it is shared.
+- On a phone the export dialog is a sheet, and with the keyboard up
+  it ends above the keyboard. The fix on an error is a link as tall
+  as a touch, with none of the fill a button has.
 - The Font control on mobile lists the fonts orca can read there: the
   system's on a device that lets orca read them, and the families in
   the vault's `fonts/`. Where orca can read no system fonts and
