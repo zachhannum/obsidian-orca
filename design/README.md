@@ -90,6 +90,11 @@ its editor around these files and returns a URL. The artboard list and
 - Each book's row in the navigator has `Open preview` beside `Add to
   this book`. The book note's page has `Open preview` in its header,
   beside `Open as markdown`.
+- Each book in the navigator is a card: a border, round corners and a
+  surface of its own. A book's row heads the card with the closed book
+  in the accent color and the name in semibold. An open book holds its
+  sections and entries under a rule, and a folded book is a card as
+  tall as its row.
 - The preview's icon is an eye in a viewfinder. The book note's page
   keeps the closed book. The open book is Obsidian's reading view
   toggle, which sits beside `Open preview` on a note.
