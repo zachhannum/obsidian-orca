@@ -258,6 +258,7 @@
   --orca-columns: 1;
   --orca-rows: 1;
   --orca-gap: 0px;
+  --orca-zoom: 1;
   display: grid;
   grid-template-columns: repeat(var(--orca-columns), auto);
   gap: var(--orca-gap);
@@ -276,15 +277,66 @@
    edge. */
 .orca-page {
   aspect-ratio: var(--orca-trim-w) / var(--orca-trim-h);
-  height: min(
-    calc(
-      (100cqh - (var(--orca-rows) - 1) * var(--orca-gap)) / var(--orca-rows)
-    ),
-    calc(
+  height: calc(
+    min(
+      (100cqh - (var(--orca-rows) - 1) * var(--orca-gap)) / var(--orca-rows),
       (100cqw - (var(--orca-columns) - 1) * var(--orca-gap)) /
       var(--orca-columns) * var(--orca-trim-h) / var(--orca-trim-w)
-    )
+    ) * var(--orca-zoom)
   );
+}
+
+/* A zoomed page is larger than the well, so the sheets scroll under
+   it. A page centered past the well's edge starts at the edge instead,
+   so the scroll reaches all of it. The scrollbars are hidden, since one
+   that took room from the well would change the size a page fits at. */
+.orca-preview-sheets.is-zoomed {
+  overflow: auto;
+  align-content: safe center;
+  justify-content: safe center;
+  scrollbar-width: none;
+}
+
+.orca-preview-sheets.is-zoomed::-webkit-scrollbar {
+  display: none;
+}
+
+/* The browser pans a zoomed page under one finger and leaves two
+   fingers to the preview, which zooms by them. */
+.orca-preview-well {
+  touch-action: pan-x pan-y;
+}
+
+/* The zoom's slot holds nothing where the view does not zoom, and an
+   empty slot adds no gap to the bar. */
+.orca-zoom {
+  display: inline-flex;
+  align-items: center;
+}
+
+.orca-zoom:empty {
+  display: none;
+}
+
+.orca-zoom button.orca-zoom-percent {
+  min-width: 4ch;
+  height: auto;
+  padding: var(--size-2-1) var(--size-2-2);
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  cursor: var(--cursor);
+}
+
+.orca-zoom button.orca-zoom-percent:hover {
+  color: var(--text-normal);
+}
+
+.orca-zoom button.clickable-icon:disabled {
+  opacity: 0.4;
 }
 
 .orca-page svg {

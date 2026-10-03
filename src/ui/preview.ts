@@ -7,7 +7,9 @@ import {
 } from "fleuron";
 import {
   ItemView,
+  Scope,
   setIcon,
+  type Modifier,
   type ViewStateResult,
   type WorkspaceLeaf,
 } from "obsidian";
@@ -55,6 +57,18 @@ import {
 } from "@/ui/page";
 import type { Composer, Progress, Typeset } from "@/ui/composer";
 import { headingOn, headingsOf, outline, type Showing } from "@/ui/outline";
+import {
+  FIT,
+  clampZoom,
+  pinchZoom,
+  scrollTo,
+  shareOf,
+  steppedIn,
+  steppedOut,
+  wheelZoom,
+  zooms,
+} from "@/ui/zoom";
+import { mountZoom, type MountedZoom } from "@/ui/zoomed";
 import {
   INSPECT_OFF,
   clicked,
@@ -233,6 +247,29 @@ const REFLOWING = "is-reflow";
 /** The class of the controls that page through the page views alone. */
 const PAGING = "orca-preview-paging";
 
+/** The class the surface carries while a page is drawn larger than fit. */
+const ZOOMED = "is-zoomed";
+
+/** A point in the window, in pixels. */
+interface Point {
+  x: number;
+  y: number;
+}
+
+/** A place on a sheet, as a share of its width and its height. */
+interface Held {
+  sheet: Element;
+  x: number;
+  y: number;
+}
+
+/** A pinch in progress: the zoom and the place it began from. */
+interface Pinch {
+  zoom: number;
+  apart: number;
+  held: Held | undefined;
+}
+
 /**
  * The book, and the chrome to page through it: a view to read it in,
  * previous, next, and a folio you can type. All three views are
@@ -364,6 +401,10 @@ export class PreviewView extends ItemView {
   private reflowing = false;
   /** The ask the next EPUB has to answer, so a slow one is dropped. */
   private asking = 0;
+  /** The size the pages are drawn at, as a multiple of the fitted size. */
+  private zoom = FIT;
+  private zoomer: MountedZoom | undefined;
+  private pinch: Pinch | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -375,6 +416,23 @@ export class PreviewView extends ItemView {
     super(leaf);
     this.mode = handoff.view();
     this.reflowing = handoff.epub();
+    // Obsidian binds these keys to the window's own zoom, and the pane's
+    // scope sees a key first. A view that does not zoom lets it through.
+    this.scope = new Scope(this.app.scope);
+    const keys: [Modifier[], string, () => void][] = [
+      [["Mod"], "=", () => this.zoomIn()],
+      [["Mod"], "+", () => this.zoomIn()],
+      [["Mod", "Shift"], "+", () => this.zoomIn()],
+      [["Mod"], "-", () => this.zoomOut()],
+      [["Mod"], "0", () => this.zoomFit()],
+    ];
+    for (const [modifiers, key, zoom] of keys) {
+      this.scope.register(modifiers, key, () => {
+        if (!this.zoomable) return undefined;
+        zoom();
+        return false;
+      });
+    }
   }
 
   override getViewType(): string {
@@ -506,6 +564,10 @@ export class PreviewView extends ItemView {
     this.overlay = undefined;
     this.reflow?.unmount();
     this.reflow = undefined;
+    this.zoomer?.unmount();
+    this.zoomer = undefined;
+    this.zoom = FIT;
+    this.pinch = undefined;
     this.reflowSwitch = undefined;
     this.asking += 1;
     this.contentEl.removeClass(REFLOWING);
@@ -711,6 +773,132 @@ export class PreviewView extends ItemView {
     return true;
   }
 
+  /** Whether the view on screen zooms: a page view that is not the grid. */
+  get zoomable(): boolean {
+    return this.surface !== undefined && !this.reflowing && zooms(this.mode);
+  }
+
+  zoomIn(): void {
+    this.zoomTo(steppedIn(this.zoom));
+  }
+
+  zoomOut(): void {
+    this.zoomTo(steppedOut(this.zoom));
+  }
+
+  zoomFit(): void {
+    this.zoomTo(FIT);
+  }
+
+  /**
+   * Draws the pages at `next`. The place on the sheet that `held` names
+   * ends under `point`, and with neither the middle of the well keeps
+   * what it shows. The sheet is laid out at the new size before the
+   * scroll is read, so the scroll is exact at any zoom.
+   */
+  private zoomTo(next: number, point?: Point, held?: Held): void {
+    const surface = this.surface;
+    if (surface === undefined) return;
+    const zoom = this.zoomable ? clampZoom(next) : FIT;
+    const box = surface.getBoundingClientRect();
+    const under = point ?? { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const place = held?.sheet.isConnected === true ? held : this.holds(under);
+    this.zoom = zoom;
+    surface.style.setProperty("--orca-zoom", String(zoom));
+    surface.toggleClass(ZOOMED, zoom > FIT);
+    if (zoom === FIT) {
+      surface.scrollLeft = 0;
+      surface.scrollTop = 0;
+    } else if (place !== undefined) {
+      const sheet = place.sheet.getBoundingClientRect();
+      surface.scrollLeft += scrollTo({ start: sheet.left, size: sheet.width }, place.x, under.x);
+      surface.scrollTop += scrollTo({ start: sheet.top, size: sheet.height }, place.y, under.y);
+    }
+    this.moved();
+  }
+
+  /** The sheet nearest `point`, and the place on it that `point` is over. */
+  private holds(point: Point): Held | undefined {
+    let nearest: { sheet: Element; rect: DOMRect; away: number } | undefined;
+    for (const sheet of this.surface?.querySelectorAll(".orca-page") ?? []) {
+      const rect = sheet.getBoundingClientRect();
+      const away = Math.max(rect.left - point.x, point.x - rect.right, 0);
+      if (nearest === undefined || away < nearest.away) nearest = { sheet, rect, away };
+    }
+    if (nearest === undefined) return undefined;
+    const { sheet, rect } = nearest;
+    return {
+      sheet,
+      x: shareOf({ start: rect.left, size: rect.width }, point.x),
+      y: shareOf({ start: rect.top, size: rect.height }, point.y),
+    };
+  }
+
+  /** Draws the zoom and the pan again, and the overlay where the pages moved to. */
+  private moved(): void {
+    this.drawsZoom();
+    if (!this.inspecting.on) return;
+    this.measured += 1;
+    this.drawsOverlay();
+  }
+
+  private drawsZoom(): void {
+    const surface = this.surface;
+    this.zoomer?.draw({
+      zoom: this.zoom,
+      zooms: this.zoomable,
+      pan: { x: surface?.scrollLeft ?? 0, y: surface?.scrollTop ?? 0 },
+    });
+  }
+
+  /**
+   * Listens for the gestures that zoom: a wheel with Ctrl or Cmd held,
+   * which is also how Chromium sends a trackpad pinch, and two fingers
+   * on a touch screen. One finger on a zoomed page scrolls it, which
+   * the browser does alone.
+   */
+  private zoomsBy(well: HTMLElement, surface: HTMLElement): void {
+    this.registerDomEvent(
+      well,
+      "wheel",
+      (event) => {
+        if (!(event.ctrlKey || event.metaKey) || !this.zoomable) return;
+        // Obsidian and Electron both zoom the window on the same wheel.
+        event.preventDefault();
+        event.stopPropagation();
+        this.zoomTo(wheelZoom(this.zoom, event.deltaY), { x: event.clientX, y: event.clientY });
+      },
+      { passive: false },
+    );
+    this.registerDomEvent(surface, "scroll", () => {
+      this.moved();
+    });
+    this.registerDomEvent(well, "touchstart", (event) => {
+      const pinched = pinchOf(event.touches);
+      if (pinched === undefined || !this.zoomable) return;
+      this.pinch = { zoom: this.zoom, apart: pinched.apart, held: this.holds(pinched.middle) };
+    });
+    this.registerDomEvent(
+      well,
+      "touchmove",
+      (event) => {
+        const pinch = this.pinch;
+        const pinched = pinchOf(event.touches);
+        if (pinch === undefined || pinched === undefined) return;
+        // Two fingers that move together would scroll the page under
+        // the zoom, and the zoom already follows the point between them.
+        if (event.cancelable) event.preventDefault();
+        this.zoomTo(pinchZoom(pinch.zoom, pinch.apart, pinched.apart), pinched.middle, pinch.held);
+      },
+      { passive: false },
+    );
+    const lifted = (event: TouchEvent): void => {
+      if (event.touches.length < 2) this.pinch = undefined;
+    };
+    this.registerDomEvent(well, "touchend", lifted);
+    this.registerDomEvent(well, "touchcancel", lifted);
+  }
+
   /** Draws the toolbar, the well the pages sit in, and the status line. */
   private chrome(pane: HTMLElement): void {
     const bar = pane.createDiv({ cls: "orca-preview-bar" });
@@ -729,6 +917,8 @@ export class PreviewView extends ItemView {
       this.showsEpub();
     });
     this.marksView();
+    const zoom = bar.createDiv({ cls: `orca-zoom ${PAGING}` });
+    zoom.dataset["testid"] = "orca-zoom";
     const spacer = bar.createDiv({ cls: "orca-preview-spacer" });
     this.spacer = spacer;
 
@@ -808,8 +998,22 @@ export class PreviewView extends ItemView {
         this.handoff.reads(reader);
       },
     });
+    this.zoomer = mountZoom(zoom, surface, {
+      control: device() === "desktop",
+      in: () => {
+        this.zoomIn();
+      },
+      out: () => {
+        this.zoomOut();
+      },
+      fit: () => {
+        this.zoomFit();
+      },
+    });
+    this.drawsZoom();
     this.inspects(surface);
     this.followsLinks(surface);
+    this.zoomsBy(well, surface);
 
     const foot = pane.createDiv({ cls: "orca-preview-foot" });
     foot.dataset["testid"] = "orca-preview-foot";
@@ -1313,6 +1517,8 @@ export class PreviewView extends ItemView {
     this.named = undefined;
     this.ledAt = undefined;
     this.showing = this.state.note;
+    // A book opens at fit, whatever the last one was read at.
+    this.zoomTo(FIT);
     // A pin names a box in the book being dropped.
     if (this.inspecting.pin !== undefined) {
       this.setInspecting({ on: this.inspecting.on, pin: undefined });
@@ -1463,6 +1669,8 @@ export class PreviewView extends ItemView {
     this.marksView();
     this.handoff.viewed(mode);
     this.app.workspace.requestSaveLayout();
+    // The grid does not zoom, so a zoomed page goes back to fit for it.
+    this.zoomTo(this.zoom);
     this.measure();
     await this.turn(this.at);
   }
@@ -1493,6 +1701,7 @@ export class PreviewView extends ItemView {
     }
     this.contentEl.toggleClass(REFLOWING, on);
     this.marksView();
+    this.zoomTo(this.zoom);
   }
 
   /**
@@ -1681,6 +1890,8 @@ export class PreviewView extends ItemView {
     // neither is one the manuscript asked for.
     if (this.ledAt === reading.at) return;
     this.ledAt = reading.at;
+    // A turn keeps the zoom and shows the page from its top.
+    surface.scrollTop = 0;
     if (led || !this.linked) return;
     surface.dataset["led"] = "";
     void this.leads();
@@ -2212,4 +2423,17 @@ function kept({ over, followed, ...state }: PreviewState): PreviewState {
 /** A message from a lower module, capitalized to stand as a sentence. */
 function sentence(said: string): string {
   return said.charAt(0).toUpperCase() + said.slice(1);
+}
+
+/** Two fingers on the screen: how far apart they are, and the point between them. */
+function pinchOf(touches: TouchList): { apart: number; middle: Point } | undefined {
+  const [first, second] = [touches[0], touches[1]];
+  if (touches.length !== 2 || first === undefined || second === undefined) return undefined;
+  return {
+    apart: Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY),
+    middle: {
+      x: (first.clientX + second.clientX) / 2,
+      y: (first.clientY + second.clientY) / 2,
+    },
+  };
 }
