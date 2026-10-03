@@ -250,6 +250,19 @@ const PAGING = "orca-preview-paging";
 /** The class the surface carries while a page is drawn larger than fit. */
 const ZOOMED = "is-zoomed";
 
+/** The classes the surface carries while Space is held, and while a drag moves the page. */
+const HAND = "is-hand";
+const GRIPPED = "is-gripped";
+
+/** A drag that moves the page: where the pointer and the scroll began. */
+interface Grip {
+  pointer: number;
+  x: number;
+  y: number;
+  left: number;
+  top: number;
+}
+
 /** A point in the window, in pixels. */
 interface Point {
   x: number;
@@ -405,6 +418,11 @@ export class PreviewView extends ItemView {
   private zoom = FIT;
   private zoomer: MountedZoom | undefined;
   private pinch: Pinch | undefined;
+  /** Whether Space is held over a zoomed page, so a drag moves it. */
+  private hand = false;
+  private grip: Grip | undefined;
+  /** Whether the drag that just ended moved the page, so its click is dropped. */
+  private gripped = false;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -568,6 +586,8 @@ export class PreviewView extends ItemView {
     this.zoomer = undefined;
     this.zoom = FIT;
     this.pinch = undefined;
+    this.hand = false;
+    this.grip = undefined;
     this.reflowSwitch = undefined;
     this.asking += 1;
     this.contentEl.removeClass(REFLOWING);
@@ -809,6 +829,7 @@ export class PreviewView extends ItemView {
     if (zoom === FIT) {
       surface.scrollLeft = 0;
       surface.scrollTop = 0;
+      this.setHand(false);
     } else if (place !== undefined) {
       const sheet = place.sheet.getBoundingClientRect();
       surface.scrollLeft += scrollTo({ start: sheet.left, size: sheet.width }, place.x, under.x);
@@ -897,6 +918,108 @@ export class PreviewView extends ItemView {
     };
     this.registerDomEvent(well, "touchend", lifted);
     this.registerDomEvent(well, "touchcancel", lifted);
+    this.grips(well, surface);
+  }
+
+  /**
+   * Whether a Space pressed now takes the hand: the page is zoomed, the
+   * key is not typed into a field, and the pointer or the focus is on
+   * the pages.
+   */
+  private handed(event: KeyboardEvent): boolean {
+    const well = this.well;
+    if (well === undefined || this.zoom <= FIT || !this.zoomable) return false;
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement) return false;
+    return well.matches(":hover") || (target instanceof Node && well.contains(target));
+  }
+
+  private setHand(on: boolean): void {
+    if (on === this.hand) return;
+    this.hand = on;
+    this.surface?.toggleClass(HAND, on);
+    if (!on) this.ungrips();
+  }
+
+  private ungrips(): void {
+    const grip = this.grip;
+    if (grip === undefined) return;
+    this.grip = undefined;
+    this.surface?.removeClass(GRIPPED);
+    if (this.well?.hasPointerCapture(grip.pointer) === true) {
+      this.well.releasePointerCapture(grip.pointer);
+    }
+  }
+
+  /**
+   * Moves a zoomed page under a drag while Space is held. The listeners
+   * are on the well and run first, so the drag selects no text, follows
+   * no link and pins no box.
+   */
+  private grips(well: HTMLElement, surface: HTMLElement): void {
+    this.registerDomEvent(this.containerEl.doc, "keyup", (event) => {
+      if (event.key === " ") this.setHand(false);
+    });
+    // A key let go in another window sends no keyup here.
+    this.registerDomEvent(this.containerEl.win, "blur", () => {
+      this.setHand(false);
+    });
+    const capture = { capture: true };
+    this.registerDomEvent(
+      well,
+      "pointerdown",
+      (event) => {
+        if (!this.hand || event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.gripped = false;
+        this.grip = {
+          pointer: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          left: surface.scrollLeft,
+          top: surface.scrollTop,
+        };
+        surface.addClass(GRIPPED);
+        well.setPointerCapture(event.pointerId);
+      },
+      capture,
+    );
+    this.registerDomEvent(
+      well,
+      "pointermove",
+      (event) => {
+        const grip = this.grip;
+        if (grip?.pointer !== event.pointerId) return;
+        event.stopPropagation();
+        this.gripped = true;
+        surface.scrollLeft = grip.left - (event.clientX - grip.x);
+        surface.scrollTop = grip.top - (event.clientY - grip.y);
+      },
+      capture,
+    );
+    const letGo = (event: PointerEvent): void => {
+      if (this.grip?.pointer !== event.pointerId) return;
+      event.stopPropagation();
+      this.ungrips();
+    };
+    this.registerDomEvent(well, "pointerup", letGo, capture);
+    this.registerDomEvent(well, "pointercancel", letGo, capture);
+    for (const type of ["mousedown", "click"] as const) {
+      this.registerDomEvent(
+        well,
+        type,
+        (event) => {
+          // The click that ends a drag comes after the key can be up.
+          const dropped = type === "click" && this.gripped;
+          if (type === "click") this.gripped = false;
+          if (!this.hand && !dropped) return;
+          event.preventDefault();
+          event.stopPropagation();
+        },
+        capture,
+      );
+    }
   }
 
   /** Draws the toolbar, the well the pages sit in, and the status line. */
@@ -1037,6 +1160,12 @@ export class PreviewView extends ItemView {
     this.registerDomEvent(this.containerEl, "keydown", (event) => {
       // The folio is a field, so Home and End belong to its caret.
       if (event.target === folio) return;
+      if (event.key === " " && (this.hand || this.handed(event))) {
+        // Space also scrolls a page and presses a button in focus.
+        event.preventDefault();
+        this.setHand(true);
+        return;
+      }
       if (this.reflowing) {
         // An arrow in a select picks an option, so it turns no screen.
         const step = event.target instanceof HTMLSelectElement ? undefined : stepOf(event.key);

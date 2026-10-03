@@ -179,6 +179,52 @@ test("a drag across a zoomed page selects the set lines, and copy returns them",
   await book.zoomed(100);
 });
 
+test("a drag with Space held moves a zoomed page, and selects no text", async ({ book, obsidian }) => {
+  await book.open();
+  await book.painted();
+  await book.turnTo(PROSE);
+  await book.zoomIn.click();
+  await book.zoomIn.click();
+  await book.zoomed(STEPS[1]);
+
+  const well = await book.surface.boundingBox();
+  if (well === null) throw new Error("no page is on screen");
+  const from = { x: well.x + well.width / 2, y: well.y + well.height / 2 };
+  const pan = async (): Promise<number[]> =>
+    ((await book.surface.getAttribute("data-pan")) ?? "").split(",").map(Number);
+  const [, top = 0] = await pan();
+
+  const { mouse, keyboard } = obsidian.page;
+  await mouse.move(from.x, from.y);
+  await keyboard.down("Space");
+  try {
+    await expect(book.surface).toHaveClass(/is-hand/);
+    await mouse.down();
+    await mouse.move(from.x, from.y - 60, { steps: 6 });
+    await mouse.up();
+    // The page follows the pointer, so a drag up scrolls it down.
+    await expect(book.surface).toHaveAttribute("data-pan", new RegExp(`,${String(top + 60)}$`));
+  } finally {
+    await keyboard.up("Space");
+  }
+  await expect(book.surface).not.toHaveClass(/is-hand/);
+  expect((await book.selected()).text).toBe("");
+
+  // With the key up, the same drag selects the lines it covers.
+  const lines = book.seat(0).locator("text[data-selection-line]");
+  await lines.nth(8).scrollIntoViewIfNeeded();
+  await book.drag(lines.nth(8), lines.nth(9));
+  expect((await book.selected()).onLines).toBe(true);
+
+  await book.zoomPercent.click();
+  await book.zoomed(100);
+  // Space at fit takes no hand.
+  await mouse.move(from.x, from.y);
+  await keyboard.down("Space");
+  await keyboard.up("Space");
+  await expect(book.surface).not.toHaveClass(/is-hand/);
+});
+
 // What this suite does not cover: a pinch on a real trackpad, which
 // Chromium sends as the wheel this suite sends. The window's own zoom
 // on the same keys, where the preview does not have the focus. How

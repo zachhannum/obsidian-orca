@@ -304,6 +304,19 @@
   display: none;
 }
 
+/* While Space is held the pointer is a hand, and a drag moves the page
+   in place of selecting its text. */
+.orca-preview-sheets.is-hand,
+.orca-preview-sheets.is-hand * {
+  cursor: grab;
+  user-select: none;
+}
+
+.orca-preview-sheets.is-hand.is-gripped,
+.orca-preview-sheets.is-hand.is-gripped * {
+  cursor: grabbing;
+}
+
 /* The browser pans a zoomed page under one finger and leaves two
    fingers to the preview, which zooms by them. */
 .orca-preview-well {
