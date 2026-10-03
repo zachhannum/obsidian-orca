@@ -3105,10 +3105,59 @@ input.orca-panel-filter {
   min-height: var(--touch-size-m);
 }
 
+/* mobile: sheets. A sheet is Obsidian's modal, docked to the foot of a
+   phone's screen. The keyboard does not shrink the modal's container,
+   so the sheet ends above it. */
+.is-phone .modal-container.orca-sheet {
+  bottom: var(--keyboard-height, 0px);
+}
+
+.is-phone .modal-container.orca-sheet .modal {
+  --dialog-max-height: calc(
+    100vh - var(--safe-area-inset-top) - var(--keyboard-height, 0px)
+  );
+}
+
+.is-phone .orca-sheet .modal-header {
+  padding-top: 0;
+}
+
+.is-phone .orca-sheet .modal-title {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* The grabber is as tall as a touch, and the title is drawn over its
+   lower part. */
+.orca-sheet-grabber {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: var(--touch-size-m);
+  margin-bottom: calc(var(--size-4-6) - var(--touch-size-m));
+  cursor: pointer;
+}
+
+.orca-sheet-grabber .menu-grabber {
+  flex: none;
+  width: 15%;
+  margin-bottom: 0;
+}
+
+.orca-sheet-title {
+  position: relative;
+  pointer-events: none;
+}
+
+.modal-container.orca-sheet-clear .modal-bg {
+  background-color: transparent;
+}
+
 /* mobile: export */
 .is-phone .orca-export-modal {
-  width: calc(100vw - var(--size-4-6));
-  max-width: none;
+  width: var(--dialog-width);
+  max-width: var(--dialog-max-width);
 }
 
 .is-mobile .orca-export-row {

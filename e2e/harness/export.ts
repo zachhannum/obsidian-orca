@@ -59,8 +59,8 @@ export class Export {
   readonly list: Locator;
   /** The link on a red card that goes to where the error is fixed. */
   readonly fixes: Locator;
-  /** The row of formats, over the path. */
-  readonly formatsRow: Locator;
+  /** The grabber a phone draws at the top of the dialog. A tap on it closes the dialog. */
+  readonly grabber: Locator;
   /** The line under the errors that says the rest is fine. */
   readonly fine: Locator;
   /** The footer line. */
@@ -80,7 +80,7 @@ export class Export {
     this.errors = this.dialog.getByTestId("orca-export-error");
     this.list = this.dialog.getByTestId("orca-export-list");
     this.fixes = this.dialog.getByTestId("orca-export-fix");
-    this.formatsRow = this.dialog.getByTestId("orca-export-formats");
+    this.grabber = this.dialog.getByTestId("orca-sheet-grabber");
     this.fine = this.dialog.getByTestId("orca-export-fine");
     this.said = this.dialog.getByTestId("orca-export-said");
     this.openPdf = this.dialog.getByTestId("orca-export-open");
