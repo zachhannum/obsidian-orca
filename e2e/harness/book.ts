@@ -273,13 +273,13 @@ export class Book {
     // takes every touch until it is gone.
     await expect
       .poll(async () =>
-        this.surface.evaluate((surface) => {
-          const box = surface.getBoundingClientRect();
+        this.pane.getByTestId(ROOT).evaluate((pane) => {
+          const box = pane.getBoundingClientRect();
           const over = document.elementFromPoint(
             box.left + box.width / 2,
             box.top + box.height / 2,
           );
-          return over !== null && surface.contains(over);
+          return over !== null && pane.contains(over);
         }),
       )
       .toBe(true);
