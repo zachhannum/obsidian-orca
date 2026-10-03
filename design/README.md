@@ -365,12 +365,16 @@ replaces them.
   tall as a touch. They go where the page's foot goes. Under the page
   they fill the foot, and in the bar they sit before Export.
 - The count of warnings is drawn in the EPUB view too, beside the EPUB
-  controls. Under the page it is at the left of the foot, and in the
-  bar it is just before the controls. A tap on it opens the warnings,
-  as it does in the page views.
+  controls. Under the page the controls leave no room for words, so
+  the count is an icon and a number at the left of the foot, one touch
+  wide. It is red if there is an error and orange if not, and its label
+  and the warnings it opens say the rest. In the bar it keeps its
+  words, just before the controls. A tap on it opens the warnings, as
+  it does in the page views.
 - The reader settings open above their button under the page, as the
-  warnings do, and hang under it in the bar. The arrows turn a screen
-  and then the section. The EPUB view has no swipe.
+  warnings do, and hang under it in the bar. The sheet is opaque and
+  drawn over the device. The arrows turn a screen and then the
+  section. The EPUB view has no swipe.
 - Mobile has no status bar. On an upright phone the page number, the
   arrows and the count of warnings are under the page, clear of
   Obsidian's own bar. On a phone on its side they are in the preview's
