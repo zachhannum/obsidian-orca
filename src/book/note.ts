@@ -21,6 +21,9 @@ export const BOOK_KEY = "orca-book";
 /** Frontmatter key that holds the fonts the book adds. Its value is a list of family names. */
 export const FONTS_KEY = "fonts";
 
+/** Frontmatter key that holds the book's identifier. */
+export const IDENTIFIER_KEY = "identifier";
+
 /** The format orca writes. A note above it does not open. */
 export const FORMAT = 1;
 
@@ -53,12 +56,20 @@ export interface BookMetadata {
   publisher?: string;
   series?: string;
   isbn?: string;
+  /** The image an EPUB shows as its cover, as a vault path or a wikilink. */
+  cover?: string;
 }
 
 export interface Book {
   /** The format the note is written in, which is below `FORMAT` for a note orca has migrated. */
   format: number;
   metadata: BookMetadata;
+  /**
+   * The name an EPUB is told apart by, as a `urn:uuid:` value. A book
+   * store reads a new identifier as a new book, so one that is written
+   * is never written again.
+   */
+  identifier?: string;
   /**
    * The fonts the book adds, in the order they were added. No design
    * key names one, and each registers a face, so the author's CSS can
@@ -93,6 +104,7 @@ const FIELDS: readonly Field[] = [
   { key: "publisher", kind: "text" },
   { key: "series", kind: "text" },
   { key: "isbn", kind: "text" },
+  { key: "cover", kind: "text" },
 ];
 
 /** Orca's own keys, in the order the format writes them. */
@@ -139,13 +151,42 @@ export function readBook(properties: Properties): Book {
   const metadata: BookMetadata = {};
   const own: Properties = {};
   for (const [key, value] of Object.entries(migrated)) {
-    if (key === BOOK_KEY || key === FONTS_KEY || DESIGN_KEYS.includes(key)) continue;
+    if (key === BOOK_KEY || key === FONTS_KEY || key === IDENTIFIER_KEY) continue;
+    if (DESIGN_KEYS.includes(key)) continue;
     const field = FIELDS.find((named) => named.key === key);
     if (field === undefined) own[key] = value;
     else if (value !== null) metadata[field.key] = readValue(value, field.kind);
   }
   const fonts = readFonts(migrated[FONTS_KEY]);
-  return { format, metadata, fonts, design: readDesign(migrated), own };
+  const book: Book = { format, metadata, fonts, design: readDesign(migrated), own };
+  const identifier = heldIdentifier(migrated);
+  if (identifier !== undefined) book.identifier = identifier;
+  return book;
+}
+
+/**
+ * The book with the identifier it is written with. The one the note
+ * already has comes first, so a model read before the note got one
+ * cannot replace it. A book with none anywhere gets a new one.
+ */
+export function identified(
+  book: Book,
+  properties: Properties,
+  mint: () => string = newIdentifier,
+): Book {
+  const identifier = heldIdentifier(properties) ?? book.identifier ?? mint();
+  return { ...book, identifier };
+}
+
+/** A new identifier, which no other book has. */
+export function newIdentifier(): string {
+  return `urn:uuid:${crypto.randomUUID()}`;
+}
+
+/** The identifier the properties hold. An empty one is none. */
+function heldIdentifier(properties: Properties): string | undefined {
+  const held = properties[IDENTIFIER_KEY];
+  return typeof held === "string" && held.trim() !== "" ? held : undefined;
 }
 
 /**
@@ -159,6 +200,7 @@ export function writeBook(book: Book): Properties {
     const value = book.metadata[key];
     if (value !== undefined) properties[key] = value;
   }
+  if (book.identifier !== undefined) properties[IDENTIFIER_KEY] = book.identifier;
   if (book.fonts.length > 0) properties[FONTS_KEY] = [...book.fonts];
   return { ...properties, ...writeDesign(book.design), ...book.own };
 }
@@ -166,7 +208,9 @@ export function writeBook(book: Book): Properties {
 /**
  * The book, written into properties a note already has. Orca's own
  * keys are set at `FORMAT` and the ones the book no longer has are
- * removed; every other property is the author's and is left as it is. `ui` hands this the object Obsidian's frontmatter API parsed.
+ * removed; every other property is the author's and is left as it is.
+ * An identifier is set and never removed. `ui` hands this the object
+ * Obsidian's frontmatter API parsed.
  */
 export function applyBook(properties: Properties, book: Book): void {
   properties[BOOK_KEY] = FORMAT;
@@ -175,6 +219,7 @@ export function applyBook(properties: Properties, book: Book): void {
     if (value === undefined) delete properties[key];
     else properties[key] = value;
   }
+  if (book.identifier !== undefined) properties[IDENTIFIER_KEY] = book.identifier;
   if (book.fonts.length > 0) properties[FONTS_KEY] = [...book.fonts];
   else delete properties[FONTS_KEY];
   const design = writeDesign(book.design);

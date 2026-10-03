@@ -964,6 +964,57 @@ export class Obsidian {
     return had;
   }
 
+  /**
+   * The text a drag of one file out of the file explorer carries, as
+   * the explorer's own drag start writes it. The explorer draws no row
+   * inside a folded folder or behind another tab, so it is shown and
+   * the file's folders are opened for the drag, and both are put back
+   * after it.
+   */
+  async carried(path: string): Promise<string> {
+    return this.page.evaluate(async (at) => {
+      interface Row {
+        selfEl: HTMLElement;
+        collapsed?: boolean;
+        setCollapsed?(collapsed: boolean): Promise<void> | void;
+      }
+      const [leaf] = window.app.workspace.getLeavesOfType("file-explorer");
+      const rows = (leaf?.view as unknown as { fileItems: Record<string, Row | undefined> } | undefined)
+        ?.fileItems;
+      if (leaf === undefined || rows === undefined) throw new Error("no file explorer");
+      const tabs = leaf.parent as unknown as {
+        currentTab: number;
+        selectTabIndex(tab: number): void;
+      };
+      const shown = tabs.currentTab;
+      await window.app.workspace.revealLeaf(leaf);
+      const folded: Row[] = [];
+      const parts = at.split("/").slice(0, -1);
+      for (let depth = 1; depth <= parts.length; depth += 1) {
+        const folder = rows[parts.slice(0, depth).join("/")];
+        if (folder?.collapsed !== true) continue;
+        await folder.setCollapsed?.(false);
+        folded.push(folder);
+      }
+      // The explorer draws an opened folder's rows on the next frame.
+      await new Promise((drawn) => {
+        window.requestAnimationFrame(() => window.requestAnimationFrame(drawn));
+      });
+      const row = rows[at]?.selfEl;
+      if (row === undefined) throw new Error(`the file explorer has no row for ${at}`);
+      const data = new DataTransfer();
+      row.dispatchEvent(
+        new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: data }),
+      );
+      const carried = data.getData("text/plain");
+      row.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: data }));
+      for (const folder of folded.reverse()) await folder.setCollapsed?.(true);
+      tabs.selectTabIndex(shown);
+      if (carried === "") throw new Error(`the file explorer started no drag for ${at}`);
+      return carried;
+    }, path);
+  }
+
   /** One row of a fuzzy pick's suggestions. */
   suggestion(): Locator {
     return this.page.locator(CHROME.suggestion);

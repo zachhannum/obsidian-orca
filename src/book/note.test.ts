@@ -10,9 +10,11 @@ import {
   FIELD_KEYS,
   FONTS_KEY,
   FORMAT,
+  IDENTIFIER_KEY,
   NewerBookError,
   applyBook,
   bookFormat,
+  identified,
   readBook,
   readValue,
   writeBook,
@@ -219,6 +221,53 @@ test("a note that adds fonts is written back byte for byte", () => {
   const { properties, body } = readFrontmatter(text);
 
   assert.equal(writeNote(readBook(properties), body), text);
+});
+
+test("a book note with no identifier gets one on its first write, and every write after keeps it", async () => {
+  const { properties: fixture, body } = await note();
+  const authors: Properties[] = [
+    fixture,
+    { [BOOK_KEY]: FORMAT },
+    { [BOOK_KEY]: FORMAT, title: "Emma", cover: "[[cover.png]]", status: "drafting" },
+    { [BOOK_KEY]: FORMAT, [IDENTIFIER_KEY]: null },
+    { [BOOK_KEY]: FORMAT, [IDENTIFIER_KEY]: "" },
+  ];
+
+  for (const properties of authors) {
+    const read = readBook(properties);
+    assert.equal(read.identifier, undefined);
+
+    // The first write: the view applies the book to the note's own properties.
+    const first = identified(read, properties);
+    assert.match(
+      first.identifier ?? "",
+      /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    const disk = structuredClone(properties);
+    applyBook(disk, first);
+    assert.equal(disk[IDENTIFIER_KEY], first.identifier);
+
+    // A model read before the note had one writes the note's, not a new one.
+    const never = (): string => assert.fail("a second identifier was made");
+    const stale = identified(read, disk, never);
+    assert.equal(stale.identifier, first.identifier);
+    const again = structuredClone(disk);
+    applyBook(again, { ...read, metadata: { ...read.metadata, title: "Another" } });
+    assert.equal(again[IDENTIFIER_KEY], first.identifier);
+
+    // Read and written back, it is the same note and the same identifier.
+    const text = writeNote(first, body);
+    const back = readBook(readFrontmatter(text).properties);
+    assert.equal(back.identifier, first.identifier);
+    assert.equal(identified(back, {}, never).identifier, first.identifier);
+    assert.equal(writeNote(back, body), text);
+  }
+});
+
+test("two books get two identifiers", () => {
+  const book = readBook({ [BOOK_KEY]: FORMAT });
+
+  assert.notEqual(identified(book, {}).identifier, identified(book, {}).identifier);
 });
 
 // What this tier does not cover: the view the note opens in and the way

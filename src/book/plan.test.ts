@@ -11,6 +11,7 @@ import {
   createEngine,
   styleOp,
   type Epub,
+  type EpubFiles,
   type LayoutOutput,
   type Op,
   type Page,
@@ -288,6 +289,72 @@ test("a url both a chapter and the CSS name crosses once", async () => {
     images.map((image) => image.url),
     [DEVICE],
   );
+});
+
+test("the cover names a vault image, which crosses once, and the metadata names it as the cover", async () => {
+  const model = await fixture();
+  const covered = (cover: string): Model => ({
+    ...model,
+    book: { ...model.book, metadata: { ...model.book.metadata, cover } },
+  });
+
+  // A cover no chapter embeds crosses as one more image, under the url the property names.
+  const own = await sending(covered("images/device.png"));
+  assert.deepEqual(
+    own.ops.filter((op) => op.op === "image").map((op) => op.url),
+    [DEVICE, "images/device.png"],
+  );
+  assert.deepEqual(
+    own.ops.filter((op) => op.op === "image").at(-1)?.bytes,
+    new Uint8Array(await vault.readBinary(`images/${DEVICE}`)),
+  );
+  assert.equal(only(own.ops, "metadata").metadata.extra?.["cover"], "images/device.png");
+
+  // A cover a chapter embeds is on the wire already, written as a path or as a link.
+  for (const written of [DEVICE, `[[${DEVICE}]]`, `![[${DEVICE}|The device]]`]) {
+    const { ops, images } = await sending(covered(written));
+    assert.deepEqual(
+      ops.filter((op) => op.op === "image").map((op) => op.url),
+      [DEVICE],
+      written,
+    );
+    assert.deepEqual(images.map((image) => image.url), [DEVICE]);
+    assert.equal(only(ops, "metadata").metadata.extra?.["cover"], DEVICE);
+  }
+
+  // The engine marks that image as the cover in the package document.
+  const { files, warnings } = await epubFiles(own.ops);
+  const manifest = new TextDecoder().decode(
+    files.find((file) => file.path.endsWith(".opf"))?.bytes,
+  );
+  assert.equal(manifest.match(/properties="cover-image"/g)?.length, 1);
+  assert.match(manifest, /<item [^>]*media-type="image\/png" properties="cover-image"\/>/);
+  assert.deepEqual(warnings.filter((warning) => /cover/i.test(warning.message)), []);
+});
+
+test("a cover that names no image in the vault sends no bytes, and the engine warns about it", async () => {
+  const model = await fixture();
+  const { ops } = await sending({
+    ...model,
+    book: { ...model.book, metadata: { ...model.book.metadata, cover: "nothing here.png" } },
+  });
+
+  assert.deepEqual(
+    ops.filter((op) => op.op === "image").map((op) => op.url),
+    [DEVICE],
+  );
+  const { files, warnings } = await epubFiles(ops);
+  const about = warnings.filter((warning) => /cover/i.test(warning.message));
+  assert.deepEqual(about, [
+    {
+      message: "Cover image nothing here.png did not load. It is left out of the EPUB.",
+      origin: null,
+    },
+  ]);
+  const manifest = new TextDecoder().decode(
+    files.find((file) => file.path.endsWith(".opf"))?.bytes,
+  );
+  assert.doesNotMatch(manifest, /cover-image/);
 });
 
 test("layout reads the header for the size and decodes nothing", async () => {
@@ -776,6 +843,18 @@ function connected(engine: Awaited<ReturnType<typeof createEngine>>): Client {
     },
   });
   return client;
+}
+
+/** The book's EPUB as its files, from an engine of its own. */
+async function epubFiles(ops: Op[]): Promise<EpubFiles> {
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const epub = await connected(engine).exportEpubFiles(ops);
+    assert.ok(epub, "the export was overtaken");
+    return epub;
+  } finally {
+    engine.free();
+  }
 }
 
 async function moduleBytes(): Promise<Buffer> {

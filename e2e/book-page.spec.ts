@@ -13,6 +13,9 @@ const CHAPTER_WORDS = 674;
 /** The words in every note the fixture book reads. */
 const BOOK_WORDS = 980;
 
+/** The image the fixture book can take as its cover. */
+const DEVICE = "images/device.png";
+
 test("the page's `Open preview` opens its book, under an icon of the preview's own", async ({
   book,
   note,
@@ -73,6 +76,73 @@ test("a metadata edit on the page is written to the note once, on settle", async
     "placeholder",
     "[YOUR SERIES]",
   );
+});
+
+test("the first write gives the note an identifier, and a later write keeps it", async ({
+  note,
+  vault,
+}) => {
+  const identifier = /^identifier: (urn:uuid:[0-9a-f-]{36})$/m;
+  await note.open(BOOK);
+  // Opening the book writes nothing, so the note has none yet.
+  expect(await vault.read(BOOK)).not.toMatch(identifier);
+
+  const writes = await vault.writes(BOOK, async () => {
+    await note.metadata("series").fill("The Bennet Novels, Book One");
+    await expect.poll(async () => vault.read(BOOK)).toContain("series: The Bennet Novels, Book One");
+  });
+  // The identifier goes out with the edit, in the same revision.
+  expect(writes).toEqual(1);
+  const first = identifier.exec(await vault.read(BOOK))?.[1];
+  expect(first).toBeDefined();
+
+  await note.metadata("series").fill("The Bennet Novels");
+  await expect.poll(async () => vault.read(BOOK)).toContain("series: The Bennet Novels\n");
+  expect(identifier.exec(await vault.read(BOOK))?.[1]).toEqual(first);
+});
+
+test("the cover is a picture: picked from the vault's images or dropped on the well, and cleared by its button", async ({
+  note,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await note.open(BOOK);
+  await note.painted();
+  // A book with no cover has no field to type one in, and nothing to clear.
+  await expect(note.metadata("cover")).toHaveCount(0);
+  await expect(note.cover).toHaveText("Choose an image");
+  await expect(note.uncover).toHaveCount(0);
+
+  await note.choose("device");
+  // The note keeps a link, which Obsidian follows when the image moves.
+  await expect.poll(async () => vault.read(BOOK)).toContain('cover: "[[device.png]]"');
+  await expect(note.pictured).toHaveText("device.png");
+  await expect(note.cover).toContainText("images");
+  await expect(note.measured).toContainText("×");
+  // The picture is the image itself, read from the vault.
+  await expect
+    .poll(async () => note.picture.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
+
+  await note.uncover.click();
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("cover:");
+  await expect(note.picture).toHaveCount(0);
+
+  // A drag from the file explorer names the same image, and a note dropped there names none.
+  await note.drop("Chapter Twelve.md");
+  await note.drop(DEVICE);
+  await expect.poll(async () => vault.read(BOOK)).toContain('cover: "[[device.png]]"');
+  await expect(note.pictured).toHaveText("device.png");
+
+  // A cover with no image behind it says so on the page.
+  const text = await vault.read(BOOK);
+  await vault.modify(BOOK, text.replace('cover: "[[device.png]]"', "cover: nowhere.png"));
+  await expect(note.missing).toHaveText("Not in the vault");
+  await expect(note.cover).toContainText("nowhere.png");
+  await expect(note.picture).toHaveCount(0);
+
+  await note.close();
+  await vault.restore();
 });
 
 test("a new title renames the book note, and a link to the book follows it", async ({

@@ -310,6 +310,36 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
   await book.settled(BOOK);
 });
 
+test("a cover that names no image in the vault shows in the Issues list once the EPUB is written", async ({
+  book,
+  exporting,
+  note,
+  vault,
+}) => {
+  const SAID = "Cover image nowhere.png did not load. It is left out of the EPUB.";
+  vault.touch(BOOK);
+  vault.touch(EPUB);
+  await note.open(BOOK);
+  // The page offers only images the vault has, so the name goes in as an edit to the book.
+  await note.covered("nowhere.png");
+  await expect.poll(async () => vault.read(BOOK)).toContain("cover: nowhere.png");
+  await expect(note.missing).toHaveText("Not in the vault");
+
+  await book.open();
+  await book.settled(BOOK);
+  // The cover belongs to the EPUB, so the pages say nothing about it.
+  expect(await book.issues.allTextContents()).not.toContain(SAID);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.formats("epub");
+  await exporting.write.click();
+  await exporting.reaches("written");
+  await exporting.close();
+
+  await expect(book.issues.filter({ hasText: SAID })).toHaveCount(1);
+});
+
 // What this suite does not cover: the write to a path on disk, which
 // stops at the native dialog; a face that would not embed, since every
 // face the fixture uses ships in the vault; and a failed write, which

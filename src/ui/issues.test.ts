@@ -81,6 +81,20 @@ test("an EPUB's warnings join the run's as the engine wrote them, each said once
   assert.deepEqual(withEpub([], epub), epub);
 });
 
+test("a cover the engine found no image for is listed under Other, in the engine's words", () => {
+  const cover = {
+    message: "Cover image nothing here.png did not load. It is left out of the EPUB.",
+    origin: null,
+  };
+
+  const groups = issueGroups(withEpub([], [cover]));
+
+  assert.deepEqual(groups, [
+    { route: "note", source: null, issues: [{ message: cover.message, place: undefined }] },
+  ]);
+  assert.deepEqual(groups.map(groupTitle), ["Other"]);
+});
+
 test("the fonts a book does not get are one group named Fonts, with no place to open, and none when there are none", () => {
   assert.deepEqual(fontGroup([]), []);
   const groups = fontGroup(["Missing font: Junicode", "Missing font: Alegreya"]);

@@ -102,6 +102,11 @@ its editor around these files and returns a URL. The artboard list and
   and `Open as book page`. `Open preview` opens the book's preview,
   from a chapter, the book note's page and the navigator.
 - Opening a preview reveals the design panel in the right sidebar.
+- The book page shows `cover` as a picture of the image, not as text.
+  A click on it opens the vault's images in a picker, an image dragged
+  from the file explorer drops on it, and the x clears it. The note
+  keeps a link to the image. A cover that names no image shows an
+  empty frame, marked as missing, before any export.
 - `Open as markdown` on a preview opens the note the page being read
   opens in, at the line that page opens at. A page of generated matter
   opens the note read last. If no note was read, it opens the nearest

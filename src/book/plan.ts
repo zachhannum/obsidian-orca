@@ -18,7 +18,7 @@
 import { styleOp, type Op, type Sheet, type Source } from "fleuron";
 import type { Hashed, Sent } from "@/assets/registry";
 import { contentsMarkdown, firstHeading, type Listed } from "@/book/contents";
-import { imagesIn, imagesInCss } from "@/book/images";
+import { coverUrl, imagesIn, imagesInCss } from "@/book/images";
 import type { Links } from "@/book/links";
 import { sectionNames } from "@/book/names";
 import { documentMetadata, imprint } from "@/book/metadata";
@@ -72,8 +72,8 @@ type Sendable = Exclude<Section, { kind: "missing" }>;
 
 /**
  * The book's reading order, as the ops that typeset it, with every
- * image its sources embed or its CSS names registered ahead of them.
- * An image both name crosses once.
+ * image its sources embed or its CSS names registered ahead of them,
+ * and the cover with them. An image two of them name crosses once.
  */
 export async function sendBook(
   book: Book,
@@ -90,7 +90,11 @@ export async function sendBook(
   const styled = (await cssImages(css, links, from, take)).filter(
     (image) => !named.has(image.url),
   );
-  const images = [...embedded.images, ...styled];
+  styled.forEach((image) => named.add(image.url));
+  const cover = (await coverImage(book, links, from, take)).filter(
+    (image) => !named.has(image.url),
+  );
+  const images = [...embedded.images, ...styled, ...cover];
   const unread = embedded.unread;
   return {
     unread,
@@ -192,6 +196,25 @@ export async function cssImages(
     }),
   );
   return read.flat();
+}
+
+/**
+ * The image the book's `cover` names, resolved through the vault from
+ * the book note. A cover with no image behind it sends nothing. The
+ * metadata still names it, so the engine warns about it.
+ */
+export async function coverImage(
+  book: Book,
+  links: Links,
+  from: string,
+  take: Take,
+): Promise<Image[]> {
+  const url = coverUrl(book);
+  if (url === undefined) return [];
+  const path = links.find(url, from);
+  if (path === undefined || path.endsWith(".md")) return [];
+  const bytes = await take(path).catch(() => undefined);
+  return bytes === undefined ? [] : [{ url, ...bytes }];
 }
 
 /**

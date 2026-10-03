@@ -10,7 +10,7 @@
 import { Notice, type App, type TFile } from "obsidian";
 import { readFrontmatter, type Properties } from "@/book/frontmatter";
 import { readModel, withOrder, type Model } from "@/book/model";
-import { BookError, applyBook } from "@/book/note";
+import { BookError, applyBook, identified } from "@/book/note";
 import { add, writeOrder } from "@/book/order";
 
 /** A book open in a view, which is the note's only writer while it is. */
@@ -132,8 +132,9 @@ export class Edits {
  * Writes the note in two halves. The properties go through
  * Obsidian's frontmatter API, which leaves the author's own alone, and
  * the body is replaced under them. The half an edit did not touch is
- * not written, so a settled edit is one revision. What comes back is
- * the note as it now is on disk.
+ * not written, so a settled edit is one revision. A note with no
+ * identifier gets one the first time its properties are written. What
+ * comes back is the note as it now is on disk.
  */
 export async function save(
   app: App,
@@ -143,10 +144,17 @@ export async function save(
 ): Promise<string> {
   const before = readFrontmatter(disk);
   const after = structuredClone(before.properties);
-  applyBook(after, model.book);
+  // An identifier the note lacks is no change of its own: it goes out
+  // with the first edit to the properties, so an edit to the body
+  // alone stays one revision.
+  const { identifier: _, ...edited } = model.book;
+  applyBook(after, edited);
   if (JSON.stringify(after) !== JSON.stringify(before.properties)) {
+    const book = identified(model.book, before.properties);
     await app.fileManager.processFrontMatter(file, (properties: Properties) => {
-      applyBook(properties, model.book);
+      // The note may have changed since `disk` was read, and an
+      // identifier it has by now is the one it keeps.
+      applyBook(properties, identified(book, properties));
     });
   }
   if (writeOrder(model.order) !== before.body) {
