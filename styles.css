@@ -3928,6 +3928,13 @@ input.orca-panel-filter {
 .is-mobile .orca-preview-foot select.orca-reflow-device {
   flex: 1;
   min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* The count is at the left of the foot, and the controls fill the
+   rest of it. */
+.is-mobile .orca-preview.is-reflow .orca-preview-foot > button.orca-preview-warnings {
+  margin-right: 0;
 }
 
 .is-mobile .orca-preview-bar > .orca-reflow-controls select.orca-reflow-device {

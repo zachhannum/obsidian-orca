@@ -109,6 +109,17 @@ for (const device of ["phone", "tablet"] as const) {
       // past the foot or the bar.
       expect(await place.evaluate(overlapping)).toEqual([]);
       expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
+      // The count is at the left of the controls, and the last of them
+      // is still inside the pane.
+      const chip = await count.boundingBox();
+      const settings = await place.getByTestId("orca-reflow-settings").boundingBox();
+      const next = await place.getByTestId("orca-reflow-next").boundingBox();
+      const pane = await obsidian.view(PREVIEW).boundingBox();
+      if (chip === null || settings === null || next === null || pane === null) {
+        throw new Error("a box is missing");
+      }
+      expect(chip.x + chip.width).toBeLessThanOrEqual(settings.x + 1);
+      expect(next.x + next.width).toBeLessThanOrEqual(pane.x + pane.width + 0.5);
 
       await count.click();
       await expect(count).toHaveAttribute("aria-expanded", "true");
