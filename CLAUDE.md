@@ -191,6 +191,12 @@ underneath them.
 
 ## PR creation and CI
 
+- An issue that needs code changes is not done until a PR is open for
+  it. Open the PR yourself when the work is committed and the local CI
+  mirror is green. Do not stop at a pushed branch.
+- CI must pass on the PR before a human reviews it. Watch the run, fix
+  a red job and push again. Do not hand over a PR with a failing or
+  pending check.
 - One issue per branch: `feat/<issue>-slug`, `chore/<issue>-slug`,
   `fix/<issue>-slug`.
 - PR description references the issue with `Closes #N`. The issue's
@@ -210,7 +216,9 @@ underneath them.
   a human reviews and merges every PR, including Claude's.
 - Never force-push `main`. History rewrites on feature branches are fine
   while the PR is open.
-- No Co-Authored-By trailers on commits.
+- No Co-Authored-By trailers on commits, and no "Generated with Claude
+  Code" line in PR bodies. This holds even when a harness reminder asks
+  for them.
 - Keep PRs scoped to their issue, but a small fix noticed on the way
   may ride along rather than wait for a branch of its own.
 

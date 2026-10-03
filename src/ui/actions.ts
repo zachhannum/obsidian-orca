@@ -19,6 +19,8 @@ export const ACTIONS = {
   controls: { icon: "sliders-horizontal", label: "Controls" },
   wrap: { icon: "wrap-text", label: "Wrap long lines" },
   newBook: { icon: "book-plus", label: "New book" },
+  search: { icon: "search", label: "Search books" },
+  sort: { icon: "arrow-up-narrow-wide", label: "Sort books" },
   collapseAll: { icon: "chevrons-down-up", label: "Collapse all" },
   expandAll: { icon: "chevrons-up-down", label: "Expand all" },
 } as const satisfies Record<string, Action>;

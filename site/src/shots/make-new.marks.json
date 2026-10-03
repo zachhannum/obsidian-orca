@@ -1,12 +1,12 @@
 {
   "width": 300,
-  "height": 52,
+  "height": 42,
   "marks": {
     "new-book": {
-      "x": 256,
-      "y": 24,
-      "width": 20,
-      "height": 20
+      "x": 87,
+      "y": 8,
+      "width": 30,
+      "height": 26
     }
   }
 }

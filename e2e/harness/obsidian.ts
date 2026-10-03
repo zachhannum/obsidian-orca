@@ -198,6 +198,17 @@ export class Obsidian {
     private readonly session: CDPSession,
   ) {}
 
+  /**
+   * Sends one touch event over CDP. A finger is a point that goes down,
+   * moves and lifts, and `points` is empty on the lift.
+   */
+  async touch(
+    type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel",
+    points: { x: number; y: number }[],
+  ): Promise<void> {
+    await this.session.send("Input.dispatchTouchEvent", { type, touchPoints: points });
+  }
+
   /** The size the renderer was last given. */
   private sized = { width: WINDOW.width, height: WINDOW.height };
 

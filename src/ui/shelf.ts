@@ -120,6 +120,65 @@ export function members(shelved: readonly Shelved[]): Set<string> {
   );
 }
 
+/** The orders a shelf sorts its books in. Vault order is the order the vault lists them. */
+export const SORT_ORDERS = ["vault", "name", "name-reverse"] as const;
+export type SortOrder = (typeof SORT_ORDERS)[number];
+
+export const SORT_LABELS: Record<SortOrder, string> = {
+  vault: "Vault order",
+  name: "Name (A to Z)",
+  "name-reverse": "Name (Z to A)",
+};
+
+/** A saved sort order, or the default when the value is not one. */
+export function readSort(saved: unknown): SortOrder {
+  return SORT_ORDERS.find((order) => order === saved) ?? "vault";
+}
+
+/** The books in the given order. Chapters keep the book's reading order. */
+export function sortShelf(
+  shelf: readonly Shelved[],
+  order: SortOrder,
+): Shelved[] {
+  if (order === "vault") return [...shelf];
+  const sign = order === "name" ? 1 : -1;
+  return [...shelf].sort(
+    (a, b) => sign * a.name.localeCompare(b.name, undefined, { numeric: true }),
+  );
+}
+
+/**
+ * The places of the rows a query shows in a book, or nothing when it
+ * shows every row. A book whose own name matches shows all its rows.
+ * The places are those of the whole book, which a filtered list must
+ * keep, since an edit and a preview name an entry by its place.
+ */
+export function visibleRows(
+  book: Shelved,
+  query: string,
+): ReadonlySet<number> | undefined {
+  const needle = query.trim().toLowerCase();
+  if (needle === "" || book.name.toLowerCase().includes(needle)) return undefined;
+  return new Set(
+    book.groups.flatMap((group) =>
+      group.rows.flatMap((row) =>
+        row.name.toLowerCase().includes(needle) ? [row.at] : [],
+      ),
+    ),
+  );
+}
+
+/** The books the query shows something of, each still whole. */
+export function filterShelf(
+  shelf: readonly Shelved[],
+  query: string,
+): Shelved[] {
+  return shelf.filter((book) => {
+    const shown = visibleRows(book, query);
+    return shown === undefined || shown.size > 0;
+  });
+}
+
 /**
  * A book holds the active note when the note is one of its sections or
  * the book note itself. A note in two books belongs to both.
