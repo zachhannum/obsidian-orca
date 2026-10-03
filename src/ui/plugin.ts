@@ -59,6 +59,7 @@ import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
 import { cacheLinks, noteIndex } from "@/ui/notes";
 import { phoneRoutes } from "@/ui/phone";
+import { showProbe } from "@/ui/probe";
 import { pick } from "@/ui/pick";
 import {
   PREVIEW_VIEW,
@@ -333,6 +334,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
         if (book === undefined) return false;
         if (!checking) this.exportBook(book);
         return true;
+      },
+    });
+    this.addCommand({
+      id: "probe-share",
+      name: "Probe share",
+      callback: () => {
+        void showProbe(this.app);
       },
     });
     this.addCommand({
