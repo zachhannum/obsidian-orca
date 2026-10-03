@@ -332,12 +332,13 @@ export class Navigator {
   }
 
   /**
-   * Swipes a finger up the list from a point on a row, and returns how
-   * far the list scrolled and whether a drag began.
+   * Swipes a finger up the list from the middle of a row, past the
+   * handle at its start, and returns how far the list scrolled and
+   * whether a drag began.
    */
   async swipe(from: Locator): Promise<{ scrolled: number; dragged: boolean }> {
     const at = await box(from);
-    const x = at.x + GRIP;
+    const x = at.x + at.width / 2;
     const y = at.y + at.height / 2;
     const before = await this.reach();
     await this.obsidian.touch("touchStart", [{ x, y }]);

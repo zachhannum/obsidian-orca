@@ -11,6 +11,8 @@ const BOOK = "Pride and Prejudice.md";
 /** A chapter of that book, and a section of it. */
 const CHAPTER = "Chapter Twelve";
 const SECTION = "Body";
+/** The fixture chapter with headings under its title. */
+const HEADED = "Chapter Fifteen";
 
 /** A second chapter, which the preview turns to from the first. */
 const OTHER = "Chapter Fifteen";
@@ -360,6 +362,15 @@ test("on a phone a touch drag on a row's handle moves it and the note agrees, an
       width: TOUCH,
     });
 
+    // The handle is at the start of the row, and a section's is in line with it.
+    const chapter = navigator.entry(BOOK, CHAPTER);
+    const handle = await chapter.getByTestId("orca-handle").boundingBox();
+    const row = await chapter.boundingBox();
+    const group = await navigator.group(BOOK, SECTION).getByTestId("orca-handle").boundingBox();
+    expect(handle?.x).toBe(row?.x);
+    expect(group?.x).toBe(handle?.x);
+    expect(group?.width).toBe(TOUCH);
+
     // A finger on the row's body scrolls the list and holds nothing.
     const swipe = await navigator.swipe(navigator.entry(BOOK, CHAPTER));
     expect(swipe.dragged).toBe(false);
@@ -376,6 +387,50 @@ test("on a phone a touch drag on a row's handle moves it and the note agrees, an
       .toContain("- [[Chapter Four]]\n- [[Volume the First]] `part`\n");
   } finally {
     await obsidian.emulateMobile(false);
+  }
+});
+
+test("on a phone the handle and the chevron after it each take their own touch, and a heading row starts past the chapter's label", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.outlines(true);
+  await obsidian.mobile("phone");
+  try {
+    await navigator.reveal();
+    await navigator.painted();
+    const chapter = navigator.entry(BOOK, HEADED);
+    await expect(navigator.fold(BOOK, HEADED)).toBeVisible();
+    const handle = await chapter.getByTestId("orca-handle").boundingBox();
+    if (handle === null) throw new Error("the row has no handle");
+    expect(handle.width).toBe(TOUCH);
+
+    // The pixel each side of the handle's end: the handle's, then the chevron's.
+    const under = await obsidian.page.evaluate(
+      ([x, y]) =>
+        [-1, 1].map(
+          (side) =>
+            document
+              .elementFromPoint(x + side, y)
+              ?.closest("[data-testid=orca-handle], [data-testid=orca-entry-fold]")
+              ?.getAttribute("data-testid") ?? null,
+        ),
+      [handle.x + handle.width, handle.y + handle.height / 2] as const,
+    );
+    expect(under).toEqual(["orca-handle", "orca-entry-fold"]);
+
+    const label = await chapter.locator(".orca-label").boundingBox();
+    const heading = await navigator
+      .heading(BOOK, "The Parsonage")
+      .locator(".orca-label")
+      .boundingBox();
+    if (label === null || heading === null) throw new Error("a row has no label");
+    expect(heading.x).toBeGreaterThan(label.x);
+  } finally {
+    await obsidian.emulateMobile(false);
+    await navigator.outlines(false);
   }
 });
 

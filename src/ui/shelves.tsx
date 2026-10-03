@@ -927,6 +927,7 @@ function Heading({
         rename(true);
       }}
     >
+      {renaming ? null : <Grip sortable={sortable} />}
       {renaming ? (
         <Rename
           name={heading}
@@ -945,7 +946,6 @@ function Heading({
           {carrying === 0 ? "empty" : `${carrying}`}
         </span>
       )}
-      {renaming ? null : <Grip sortable={sortable} />}
     </div>
   );
 }
@@ -1085,6 +1085,7 @@ function Entry({
           acting.entryMenu(event, book, row, after);
         }}
       >
+        <Grip sortable={sortable} />
         <span className="orca-entry-mark">
           {row.kind === "missing" ? <Icon name="triangle-alert" /> : null}
           {row.kind === "generated" ? <Icon name="wand-sparkles" /> : null}
@@ -1129,7 +1130,6 @@ function Entry({
             />
           </span>
         ) : null}
-        <Grip sortable={sortable} />
       </div>
       {!shown
         ? null
@@ -1145,9 +1145,9 @@ function Entry({
               role="button"
               aria-current={mark === heading.line ? "page" : undefined}
               // The mark sits one indent in per level, so each label starts
-              // that far past the entry's own label.
+              // that far past the entry's own label, which a handle moves in.
               style={{
-                paddingLeft: `calc(var(--size-4-2) + ${String(heading.depth + 1)} * var(--size-4-3))`,
+                paddingLeft: `calc(var(--size-4-2) + var(--orca-handle-room, 0px) + ${String(heading.depth + 1)} * var(--size-4-3))`,
               }}
               onClick={(event) => {
                 acting.openHeading(book, row, heading, event);
