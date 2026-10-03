@@ -120,6 +120,11 @@ function Exporting({
   const [written, setWritten] = useState<Written[]>([]);
   const [made, setMade] = useState<Made[]>([]);
   const [handing, setHanding] = useState(false);
+  // Counts the preflights, each of which follows a render of the book.
+  const [edition, setEdition] = useState(0);
+  const [held, setHeld] = useState<
+    { edition: number; files: ReadonlyMap<string, Made> } | undefined
+  >(undefined);
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const staged = useRef<Stage>(stage);
   staged.current = stage;
@@ -132,6 +137,7 @@ function Exporting({
       const now = staged.current;
       if (now === "writing" || now === "written" || now === "made") return;
       setChecked(found);
+      setEdition((at) => at + 1);
       if (now !== "failed") setStage(found.errors.length > 0 ? "refused" : "ready");
     };
     void (async () => {
@@ -189,6 +195,34 @@ function Exporting({
     }
   };
 
+  const sharing = exporter.share;
+  const clean = checked !== undefined && checked.errors.length === 0;
+
+  // The web view opens the share sheet from a tap alone, and a tap is
+  // spent by the time a book is made. So the files are made as soon as
+  // the book passes, and again after each render of it.
+  useEffect(() => {
+    if (sharing === undefined || !clean || name === "") return;
+    let live = true;
+    void (async () => {
+      const files = new Map<string, Made>();
+      try {
+        for (const format of exporter.formats) {
+          if (!sharing.takes(format)) continue;
+          const made = await sharing.make(name, format);
+          if (!live) return;
+          files.set(format.id, { format, ...made });
+        }
+      } catch {
+        // A tap on Share makes the rest, and says what failed.
+      }
+      if (live) setHeld({ edition, files });
+    })();
+    return () => {
+      live = false;
+    };
+  }, [exporter, sharing, clean, name, edition]);
+
   // The share sheet's answer, in either state Share is tapped from.
   // `before` is the state a cancelled share goes back to.
   const hand = async (files: readonly Made[], before: Stage): Promise<void> => {
@@ -212,9 +246,15 @@ function Exporting({
     }
   };
 
-  // Share makes the same files Export does, and writes none of them.
+  // Share hands over the same files Export writes, and writes none of
+  // them. Files made ahead go to the share sheet inside the tap.
   const share = async (): Promise<void> => {
     if (exporter.share === undefined) return;
+    const ahead = formats.flatMap((format) => held?.files.get(format.id) ?? []);
+    if (ahead.length === formats.length) {
+      await hand(ahead, stage);
+      return;
+    }
     setFailure(undefined);
     setStage("writing");
     const done: Made[] = [];
@@ -470,7 +510,12 @@ function Exporting({
             type="button"
             className="orca-export-share"
             data-testid="orca-export-share"
-            disabled={!exportable || !formats.every((format) => exporter.share?.takes(format))}
+            disabled={
+              !exportable ||
+              handing ||
+              held?.edition !== edition ||
+              !formats.every((format) => exporter.share?.takes(format))
+            }
             onClick={() => {
               void share();
             }}

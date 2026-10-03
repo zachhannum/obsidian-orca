@@ -140,19 +140,27 @@ for (const device of ["phone", "tablet"] as const) {
       inside(await boxOf(exporting.dialog), device);
       expect(await obsidian.cramped(DIALOG)).toEqual([]);
 
-      // A share the author cancels leaves the dialog as it was.
+      // The files are made before the tap, so the tap itself opens the
+      // share sheet. A share the author cancels leaves the dialog as it was.
       await exporting.ends("cancels");
       const said = await obsidian.notices(async () => {
         await exporting.share.click();
         await expect.poll(async () => (await exporting.handed()).length).toBe(1);
         await exporting.reaches("ready");
       });
+      await expect(exporting.dialog.getByTestId("orca-export-progress")).toHaveCount(0);
       expect(said).toEqual([]);
       await expect(exporting.said).toBeEmpty();
       await expect(exporting.share).toBeEnabled();
 
-      // A web view that wants a tap of its own keeps the files, and
-      // the next tap hands them over.
+      // Share hands over the ticked formats alone.
+      await exporting.formats("pdf");
+      await exporting.share.click();
+      await expect.poll(async () => (await exporting.handed()).length).toBe(2);
+      await exporting.formats("pdf", "epub");
+
+      // A web view that still refuses the tap keeps the files, and the
+      // next tap hands them over.
       await exporting.ends("refuses");
       await exporting.share.click();
       await exporting.reaches("made");
@@ -171,9 +179,12 @@ for (const device of ["phone", "tablet"] as const) {
       // Each share hands over both files under the book's file name,
       // and the PDF is the one the session draws.
       const handed = await exporting.handed();
-      expect(handed).toHaveLength(3);
+      expect(handed).toHaveLength(4);
       const drawn = await book.pdf(BOOK);
-      for (const files of handed) {
+      expect(handed[1]?.map(({ name }) => name)).toEqual([FILE]);
+      expect(handed[1]?.[0]?.bytes.equals(drawn)).toBe(true);
+      for (const files of [handed[0], handed[2], handed[3]]) {
+        if (files === undefined) throw new Error("a share handed nothing over");
         expect(files.map(({ name, type }) => ({ name, type }))).toEqual([
           { name: FILE, type: "application/pdf" },
           { name: EPUB, type: "application/epub+zip" },
@@ -183,7 +194,7 @@ for (const device of ["phone", "tablet"] as const) {
       const folder = mkdtempSync(join(tmpdir(), "orca-shared-"));
       try {
         const shared = join(folder, FILE);
-        writeFileSync(shared, handed[2]?.[0]?.bytes ?? Buffer.alloc(0));
+        writeFileSync(shared, handed[3]?.[0]?.bytes ?? Buffer.alloc(0));
         const check = spawnSync("qpdf", ["--check", shared], { encoding: "utf8" });
         expect(check.status, check.stdout + check.stderr).toBe(0);
       } finally {
@@ -315,6 +326,8 @@ test("on a phone the export dialog ends above the keyboard, with the path and bo
 // for pixel, which emulation cannot give; the share sheet, which is the
 // operating system's own window, so a stand-in for `navigator.share`
 // takes the files; how long a tap stays good for a share on a device;
+// a share after an edit with the dialog open, which makes the files
+// again;
 // a share that fails for a reason other than a cancel or a spent tap,
 // which draws the refused state's line; the writing state, which is gone before a spec
 // can measure it; a failed write, which nothing here can cause and
