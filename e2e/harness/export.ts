@@ -24,7 +24,7 @@ export interface Scrolled {
   hidden: number;
   /** The height of the modal that is out of sight, which is none. */
   spill: number;
-  /** How far the row of formats moved as the list scrolled. */
+  /** The distance the row of formats moved as the list scrolled. */
   moved: number;
   /** The row of formats is inside the modal. */
   formats: boolean;

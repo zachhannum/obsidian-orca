@@ -53,7 +53,7 @@ export interface Sheet {
   close(): void;
 }
 
-/** What a sheet is opened with. */
+/** The title, the names and the listener a sheet is opened with. */
 export interface Asked {
   title: string;
   testid: string;

@@ -127,7 +127,7 @@ const CHROME = {
   modal: ".modal",
   /** The container of a modal a phone docks to the foot of its screen. */
   docked: ".modal-container.mod-confirmation",
-  /** What a modal dims behind it. A tap on it closes the modal. */
+  /** The cover a modal dims the window with. A tap on it closes the modal. */
   backdrop: ".modal-bg",
   buttons: ".titlebar-button-container.mod-right",
   folder: (path: string) => `.nav-folder-title[data-path="${path}"]`,
@@ -877,7 +877,7 @@ export class Obsidian {
     return testid === undefined ? docked : docked.filter({ has: this.page.getByTestId(testid) });
   }
 
-  /** What is behind a sheet, which a tap on closes the sheet. */
+  /** The cover behind a sheet. A tap on it closes the sheet. */
   backdrop(testid: string): Locator {
     return this.sheet(testid).locator(CHROME.backdrop);
   }
