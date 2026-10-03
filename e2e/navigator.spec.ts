@@ -106,6 +106,17 @@ test("an open book holds its sections and entries under a rule, with no guide li
   await expect(navigator.name(BOOK)).toHaveCSS("border-bottom-width", "1px");
   const list = navigator.book(BOOK).locator(".orca-nav-children");
   await expect(list).toHaveCSS("border-left-width", "0px");
+  // A section's rule has the card's border color, in a translucent window too.
+  const section = navigator.book(BOOK).getByTestId("orca-group").first();
+  await expect(section).toBeVisible();
+  const rules = await section.evaluate((row) => {
+    const card = row.closest("[data-testid=orca-shelf]") ?? row;
+    row.doc.body.addClass("is-translucent");
+    const rule = getComputedStyle(row, "::after").backgroundColor;
+    row.doc.body.removeClass("is-translucent");
+    return { rule, border: getComputedStyle(card).borderTopColor };
+  });
+  expect(rules.rule).toEqual(rules.border);
   const card = await navigator.book(BOOK).boundingBox();
   const entry = await navigator.entry(BOOK, CHAPTER).boundingBox();
   if (card === null || entry === null) throw new Error("nothing to measure");

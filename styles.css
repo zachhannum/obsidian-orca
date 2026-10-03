@@ -1103,7 +1103,9 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   padding: 0 var(--size-4-1) var(--size-2-3);
 }
 
-/* A section reads as a divider, so it is never mistaken for a row. */
+/* A section reads as a divider, so it is never mistaken for a row. Its
+   rule has the card's border color: Obsidian's divider is a black tint
+   in a translucent window, which is too dark on the card's own tint. */
 .orca-nav-heading {
   display: flex;
   align-items: center;
@@ -1123,7 +1125,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--divider-color);
+  background: var(--background-modifier-border);
 }
 
 .orca-heading-name {
