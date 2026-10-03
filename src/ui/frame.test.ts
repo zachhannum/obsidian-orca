@@ -8,8 +8,6 @@ import {
   rewriteSheet,
   sheetOrder,
   stepOf,
-  SWIPE,
-  swipeOf,
   turnedBy,
   type BookFile,
   type Links,
@@ -178,13 +176,6 @@ test("revoke releases every URL that was made", () => {
   assert.equal(live.size, 0);
   // A second call has nothing left to release.
   result.revoke();
-});
-
-test("a swipe turns by a screen, and a short or a vertical touch turns none", () => {
-  assert.equal(swipeOf(-80, 5), 1);
-  assert.equal(swipeOf(80, -5), -1);
-  assert.equal(swipeOf(-SWIPE + 1, 0), undefined);
-  assert.equal(swipeOf(-60, 50), undefined);
 });
 
 // What this tier does not cover: `rewriteDocument`, which parses a

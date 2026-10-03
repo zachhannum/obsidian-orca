@@ -468,16 +468,6 @@ button.orca-panel-choice:disabled {
   overflow: hidden;
 }
 
-/* A swipe is read here, in this document, since a touch inside the
-   frame can be taken by the app before it ends. The frame keeps the
-   keys. */
-.orca-reflow-swipe {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  touch-action: none;
-}
-
 /* An e-ink panel has no colour. */
 .orca-reflow-body.mod-ink .orca-reflow-screen {
   filter: grayscale(1);

@@ -141,54 +141,7 @@ test("a phone on its side has the EPUB view's controls in the bar", async ({
   }
 });
 
-test("a touch swipe over the screen turns a screen", async ({ obsidian, book, epub }) => {
-  await obsidian.mobile("phone");
-  try {
-    await book.close();
-    await book.open();
-    await book.settled(BOOK);
-    await book.uncovered();
-    await epub.open();
-    const before = await epub.turned();
-
-    // The layer is what takes the touch, so the swipe starts on it.
-    await expect(epub.swipe).toHaveCount(1);
-    const box = await epub.swipe.boundingBox();
-    if (box === null) throw new Error("the swipe layer has no box");
-    const taken = await epub.swipe.evaluate((layer) => {
-      const at = layer.getBoundingClientRect();
-      return document.elementFromPoint(at.x + at.width / 2, at.y + at.height / 2) === layer;
-    });
-    expect(taken).toBe(true);
-    const y = box.y + box.height / 2;
-    const from = box.x + box.width * 0.8;
-    const to = box.x + box.width * 0.2;
-    const page = obsidian.view(PREVIEW).page();
-    const cdp = await page.context().newCDPSession(page);
-    const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number): Promise<unknown> =>
-      cdp.send("Input.dispatchTouchEvent", {
-        type,
-        touchPoints: type === "touchEnd" ? [] : [{ x, y }],
-      });
-    await touch("touchStart", from);
-    for (let step = 1; step <= 6; step++) {
-      await touch("touchMove", from + ((to - from) * step) / 6);
-    }
-    await touch("touchEnd", to);
-
-    // A section of one screen turns to the next section.
-    await expect
-      .poll(async () => {
-        const to = await epub.turned();
-        return to.section !== before.section || to.screen !== before.screen;
-      })
-      .toBe(true);
-  } finally {
-    await book.close();
-    await obsidian.emulateMobile(false);
-  }
-});
-
-// What this suite does not cover: a swipe on a real device, which
-// emulation stands in for with dispatched touches; the camera and home bar of a real phone, which emulation
-// draws at nothing; and the EPUB view in a tablet's pane under 700px.
+// What this suite does not cover: a swipe, since the EPUB view has
+// none and its arrows and keys turn a screen; the camera and home bar
+// of a real phone, which emulation draws at nothing; and the EPUB view
+// in a tablet's pane under 700px.
