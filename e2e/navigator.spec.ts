@@ -553,12 +553,12 @@ test("a chapter click turns the preview in the most recent tab, and a Mod click 
   await navigator.entry(BOOK, CHAPTER).click();
   await expect(book.chapterName).toHaveText(CHAPTER);
   // The desktop's sidebar is no drawer, and a turn leaves it open with
-  // the navigator still the active view.
+  // the focus still in the navigator.
   await expect(navigator.pane).toBeVisible();
   expect(await obsidian.collapsed("left")).toBe(false);
   expect(
-    await obsidian.page.evaluate(() => window.app.workspace.activeLeaf?.view.getViewType()),
-  ).toBe("orca-navigator");
+    await navigator.pane.evaluate((pane) => pane.contains(document.activeElement)),
+  ).toBe(true);
 
   await navigator.entry(BOOK, CHAPTER).click({ modifiers: ["ControlOrMeta"] });
   await expect
