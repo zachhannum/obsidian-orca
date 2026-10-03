@@ -91,7 +91,7 @@
     .nav-header .grow { flex: 1; }
     /* A section is drawn as a divider, an entry as a row. */
     .nav-heading { display: flex; align-items: center; gap: 8px; height: 24px; margin-top: 8px; padding: 0 8px; font-size: 10px; font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
-    .nav-heading::after { content: ""; flex: 1; height: 1px; background: var(--background-modifier-border); }
+    .nav-heading::after { content: ""; flex: 1; height: 1px; background: var(--shelf-rule, var(--divider-color)); }
     .nav-item { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius-s); color: var(--text-muted); font-size: var(--font-ui-small); white-space: nowrap; }
     .nav-item .label { overflow: hidden; text-overflow: ellipsis; }
     .nav-item.is-active { background: var(--background-modifier-hover); color: var(--text-normal); }
@@ -99,13 +99,13 @@
     .nav-item.is-muted { color: var(--text-faint); }
     .nav-children { margin-left: 12px; padding-left: 4px; border-left: 1px solid rgba(var(--mono-100), 0.12); }
     /* A book is a card, and an open one holds its entries under a rule. */
-    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: rgba(0, 0, 0, 0.12); }
+    .shelf { --shelf-rule: rgba(var(--mono-100), 0.1); margin: 0 4px; border: 1px solid var(--shelf-rule); border-radius: var(--radius-m); background: rgba(0, 0, 0, 0.12); }
     .shelf + .shelf { margin-top: 6px; }
     .shelf.is-open { background: rgba(0, 0, 0, 0.22); }
-    .orca[data-theme="light"] .shelf { background: rgba(0, 0, 0, 0.03); }
-    .orca[data-theme="light"] .shelf.is-open { background: rgba(0, 0, 0, 0.06); }
+    .orca[data-theme="light"] .shelf { background: rgba(255, 255, 255, 0.4); }
+    .orca[data-theme="light"] .shelf.is-open { background: rgba(255, 255, 255, 0.7); }
     .shelf > .nav-item { height: 32px; border-radius: calc(var(--radius-m) - 1px); color: var(--text-normal); font-weight: var(--font-semibold); }
-    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--background-modifier-border); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
+    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--shelf-rule); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
     .shelf > .nav-children { margin: 0; padding: 0 4px 6px; border-left: none; }
     .book-icon { flex: none; color: var(--text-accent); }
     
@@ -583,7 +583,21 @@
 </div></div>
   <div style="display: flex; gap: 28px; align-items: flex-start">
 <div class="device-label">
-<div class="step-n"><b>F</b> EPUB, upright: the controls are under the page</div>
+<div class="step-n"><b>F</b> Single, zoomed: a drag moves the page</div>
+<div class="device is-mobile is-phone">
+<div class="sysbar"><span>9:41</span><span class="batt"></span></div>
+<div class="view-header"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the left drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></div><div class="view-header-title">Chapter Twelve</div><div class="view-actions"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open as markdown"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Inspect the page"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="More options"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the right drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg></div></div></div>
+<div class="view-content">
+<div class="orca-bar"><div class="seg"><div class="is-on"><svg class="icon-s icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1"/></svg></div><div><svg class="icon-s icon" viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/></svg></div><div><svg class="icon-s icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="3" y="13" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/></svg></div></div><div class="field is-select" style="flex: 1; min-width: 0"><span>Chapter Twelve</span><svg class="icon-xs icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Export"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg></div></div>
+<div class="pages" style="overflow: hidden"><div class="paper" style="position: absolute; left: -80px; top: -230px; width: 725px; height: 1120px; padding: 148px 105px 125px"><div class="chaphead" style="margin-top: 110px"><div class="chapnum" style="font-size: 21.5px">Chapter Twelve</div></div><div class="body" style="margin-top: 82px; font-size: 24.25px"><p class="first"><span class="dropcap" style="font-size: 92px">I</span>n consequence of an agreement between the sisters, Elizabeth wrote the next morning to their mother, to beg that the carriage might be sent for them in the course of the day.</p><p>But Mrs. Bennet, who had calculated on her daughters remaining at Netherfield till the following Tuesday, which would exactly finish Jane's week, could not bring herself to receive them with pleasure before.</p><p>Her answer, therefore, was not propitious, at least not to Elizabeth's wishes, for she was impatient to get home. Mrs. Bennet sent them word that they could not possibly have the carriage before Tuesday.</p></div><div class="folio" style="font-size: 21.5px; bottom: 48px">147</div></div><div style="position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; border: 1px dashed var(--text-faint); background: var(--background-primary); color: var(--text-faint); font-size: var(--font-ui-smaller); white-space: nowrap">250%: a pinch zooms, a drag moves the page</div></div>
+<div class="orca-foot" style="position: relative"><span class="chip mod-warn" style="position: absolute; left: 12px">1 warning</span><div class="step"><svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="field" style="width: 64px; justify-content: center; padding: 0">147</div><span style="color: var(--text-faint); margin: 0 4px">of 337</span><div class="step"><svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div></div>
+</div>
+<div class="mobile-navbar"><div class="mobile-navbar-action"><svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div><div class="mobile-navbar-action is-off"><svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div><div class="mobile-navbar-action"><svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg></div><div class="mobile-navbar-action"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/></svg><span class="mobile-navbar-tabs-number">2</span></div><div class="mobile-navbar-action"><svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg></div></div>
+<div class="home-bar"></div>
+</div>
+</div>
+<div class="device-label">
+<div class="step-n"><b>G</b> EPUB, upright: the controls are under the page</div>
 <div class="device is-mobile is-phone">
 <div class="sysbar"><span>9:41</span><span class="batt"></span></div>
 <div class="view-header"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the left drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></div><div class="view-header-title">Chapter Twelve</div><div class="view-actions"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open as markdown"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Inspect the page"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="More options"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the right drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg></div></div></div>
@@ -595,7 +609,7 @@
 </div>
 </div>
 <div class="device-label">
-<div class="step-n"><b>G</b> The reader settings, in a sheet under the device</div>
+<div class="step-n"><b>H</b> The reader settings, in a sheet under the device</div>
 <div class="device is-mobile is-phone">
 <div class="sysbar"><span>9:41</span><span class="batt"></span></div>
 <div class="view-header"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the left drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></div><div class="view-header-title">Chapter Twelve</div><div class="view-actions"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open as markdown"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Inspect the page"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="More options"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the right drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg></div></div></div>
@@ -610,7 +624,7 @@
 </div>
 <div style="display: flex; gap: 28px; align-items: flex-start">
 <div class="device-label">
-<div class="step-n"><b>H</b> EPUB on its side: the controls are in the bar</div>
+<div class="step-n"><b>I</b> EPUB on its side: the controls are in the bar</div>
 <div class="device is-mobile is-phone is-landscape">
 <div class="sysbar"><span>9:41</span><span class="batt"></span></div>
 <div class="view-header"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the left drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></div><div class="view-header-title">Chapter Twelve</div><div class="view-actions"><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open as markdown"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Inspect the page"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="More options"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/></svg></div><div class="view-action"><svg class="icon" viewBox="0 0 24 24" aria-label="Open the right drawer"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg></div></div></div>
@@ -627,6 +641,7 @@
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
     <div class="callout"><div><span class="k">The spread fits the screen it is given.</span> On its side, a phone shows two facing pages at the height of the pane. Upright, the same spread is drawn at the width of the screen, and each page is small. The view is the author's choice either way.</div></div>
     <div class="callout"><div><span class="k">A swipe turns.</span> A swipe to the left turns to the next page, spread or screenful, and a swipe to the right turns back. The arrows do the same, and a tap on the number takes a page to go to.</div></div>
+    <div class="callout"><div><span class="k">A pinch zooms.</span> A pinch zooms single and spread about the point between the fingers, from fit to 800%, and the bar has no zoom control. On a zoomed page a drag with one finger moves the page. The page is drawn at the zoomed size, so the type stays sharp. The zoom stays when the page turns. Grid and EPUB do not zoom.</div></div>
     <div class="callout"><div><span class="k">A tap follows a link.</span> A link has no hand to show it. A tap on one turns the book to its place, and a long press selects text.</div></div>
     <div class="callout"><div><span class="k">The bar holds what fits.</span> Upright, the bar has the views, the chapter and Export, and the page number and the count of issues are under the page. On its side, the screen is short and wide, so they all sit in the bar.</div></div>
     <div class="callout"><div><span class="k">The warnings open as a sheet.</span> A tap on the count opens them in a sheet at the foot of the screen, with the count as its title. The place a warning names is a link that closes the sheet and opens the note there, in this pane. A tap on the grabber or outside the sheet closes it.</div></div>

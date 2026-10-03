@@ -91,7 +91,7 @@
     .nav-header .grow { flex: 1; }
     /* A section is drawn as a divider, an entry as a row. */
     .nav-heading { display: flex; align-items: center; gap: 8px; height: 24px; margin-top: 8px; padding: 0 8px; font-size: 10px; font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
-    .nav-heading::after { content: ""; flex: 1; height: 1px; background: var(--background-modifier-border); }
+    .nav-heading::after { content: ""; flex: 1; height: 1px; background: var(--shelf-rule, var(--divider-color)); }
     .nav-item { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius-s); color: var(--text-muted); font-size: var(--font-ui-small); white-space: nowrap; }
     .nav-item .label { overflow: hidden; text-overflow: ellipsis; }
     .nav-item.is-active { background: var(--background-modifier-hover); color: var(--text-normal); }
@@ -99,13 +99,13 @@
     .nav-item.is-muted { color: var(--text-faint); }
     .nav-children { margin-left: 12px; padding-left: 4px; border-left: 1px solid rgba(var(--mono-100), 0.12); }
     /* A book is a card, and an open one holds its entries under a rule. */
-    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: rgba(0, 0, 0, 0.12); }
+    .shelf { --shelf-rule: rgba(var(--mono-100), 0.1); margin: 0 4px; border: 1px solid var(--shelf-rule); border-radius: var(--radius-m); background: rgba(0, 0, 0, 0.12); }
     .shelf + .shelf { margin-top: 6px; }
     .shelf.is-open { background: rgba(0, 0, 0, 0.22); }
-    .orca[data-theme="light"] .shelf { background: rgba(0, 0, 0, 0.03); }
-    .orca[data-theme="light"] .shelf.is-open { background: rgba(0, 0, 0, 0.06); }
+    .orca[data-theme="light"] .shelf { background: rgba(255, 255, 255, 0.4); }
+    .orca[data-theme="light"] .shelf.is-open { background: rgba(255, 255, 255, 0.7); }
     .shelf > .nav-item { height: 32px; border-radius: calc(var(--radius-m) - 1px); color: var(--text-normal); font-weight: var(--font-semibold); }
-    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--background-modifier-border); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
+    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--shelf-rule); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
     .shelf > .nav-children { margin: 0; padding: 0 4px 6px; border-left: none; }
     .book-icon { flex: none; color: var(--text-accent); }
     
@@ -503,7 +503,7 @@
   </style>
 </head>
 <body>
-<div class="orca" data-theme="dark" style="width: 1180px; height: 2140px; overflow: hidden;">
+<div class="orca" data-theme="dark" style="width: 1180px; height: 2370px; overflow: hidden;">
 <div style="height: 100%; background: var(--background-secondary); padding: 20px; display: flex; flex-direction: column; gap: 14px">
 
   <div class="title-block">
@@ -518,6 +518,11 @@
         <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1"/></svg>Single</div>
         <div class="is-on"><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="2" y="4" width="9" height="16" rx="1"/><rect x="13" y="4" width="9" height="16" rx="1"/></svg>Spread</div>
         <div><svg class="icon-xs icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="3" y="13" width="7" height="8" rx="1"/><rect x="14" y="13" width="7" height="8" rx="1"/></svg>Grid</div>
+      </div>
+      <div class="seg" style="align-items: center">
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24" aria-label="Zoom out"><path d="M5 12h14"/></svg></div>
+        <span style="min-width: 40px; text-align: center; font-size: var(--font-ui-smaller); color: var(--text-muted)">100%</span>
+        <div><svg class="icon-xs icon" viewBox="0 0 24 24" aria-label="Zoom in"><path d="M5 12h14"/><path d="M12 5v14"/></svg></div>
       </div>
       <div style="flex: 1"></div>
       <span style="position: relative; display: inline-flex">
@@ -699,6 +704,7 @@
     <div class="callout"><div><span class="k">Opened where you are reading.</span> The icon on a note swaps the pane to the book, turned to the page the pane is showing most of. The book pane keeps that page: a swap back to the manuscript, and a workspace reopened at startup, both come back to it. A reader who paged through the book comes back to the line that page opens at. <span style="color: var(--text-muted)">Open preview to the right</span>, on a chapter's own menu, splits instead, and the two panes follow each other paragraph by paragraph: scrolling the manuscript turns the book, and turning a page scrolls the manuscript.</div></div>
     <div class="callout"><div><span class="k">Turning by chapter.</span> The toolbar names the chapter the span is at, and turns the book to another. <span style="color: var(--text-muted)">Next chapter</span> and <span style="color: var(--text-muted)">Previous chapter</span> are commands, so a reader can bind a key to the turn. A page no section covers, such as a blank verso, is named for the chapter that opened before it.</div></div>
     <div class="callout"><div><span class="k">A click on a link.</span> A link to a place in the book turns the book to the page of that place, in every view, and a linked manuscript follows the turn. The back and forward arrows in the pane's header walk the turns links made. An entry in the contents is a link, and so is the page number it prints. A link to a website opens it in the browser and turns no page. The pointer over a link is a hand, and a drag over a link still selects its text. In inspect mode, a click on a link pins its box and follows nothing.</div></div>
+    <div class="callout"><div><span class="k">Zoom.</span> Single and spread zoom, from 100%, which is fit, to 800%. The stepper in the bar is a minus button, the percentage and a plus button, and a click on the percentage returns to fit. The Mod key with plus zooms in, with minus zooms out and with 0 returns to fit, while the preview has focus. A pinch on a trackpad zooms about the pointer, and so does the wheel with the Mod key held. A drag with the Space key held moves a zoomed page, and with the key up a drag selects text. A zoomed page is drawn at the zoomed size, so the type stays sharp, and a selection and a link work as they do at fit. The zoom stays when the page turns, and the page it turns to shows from its top. A book opens at fit, and a pane keeps its zoom while it is open. Grid and EPUB have no stepper and do not zoom.</div></div>
     <div class="callout"><div><span class="k">Why a page-through.</span> Drawing one page costs about 18 KiB; drawing the whole book to show one page costs 5.94 MiB, on every keystroke. The saving is not DOM nodes, it is that.</div></div>
     <div class="callout"><div><span class="k">An embed and its warning.</span> Layout opens no file. Orca resolves the embed through the vault and sends the bytes under the url the manuscript names it by, and the page draws those same bytes. An embed with no file behind it is counted on the bar, and the page is set without the image. The count opens the warnings under it, grouped by note. Each one is the engine's own line, and the place it named is a link that opens the note there beside the book. A warning in the author's CSS opens the CSS view at its line instead. Nothing but the author opens the panel, and it floats over the pages, so opening it turns no page and moves nothing. Escape shuts it, and so does a click in the pane. A click in another pane does not: an author goes to the manuscript to fix the note a warning names and comes back to the panel as they left it. A warning against matter orca generated, or against the sheet orca generated, is orca's own defect and goes to the console.</div></div>
     <div class="callout"><div><span class="k">Never a stale page.</span> An edit throws away the pages from before it, so nothing on screen is ever from the book as it used to be. A book that gets shorter takes you to its last page rather than showing nothing.</div></div>
