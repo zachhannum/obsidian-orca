@@ -949,7 +949,9 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   font-size: var(--font-ui-small);
 }
 
-/* Each book is a card, so one book ends where its border does. */
+/* Each book is a card, so one book ends where its border does. The
+   card's surface is a tint over the sidebar, so a sidebar the theme
+   makes translucent shows through the card too. */
 .orca-shelves {
   display: flex;
   flex-direction: column;
@@ -960,11 +962,11 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 .orca-shelf {
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
-  background: var(--background-primary-alt);
+  background: rgba(var(--mono-rgb-100), 0.03);
 }
 
 .orca-shelf.is-open {
-  background: var(--background-primary);
+  background: rgba(var(--mono-rgb-100), 0.06);
 }
 
 .orca-shelf:focus-visible {

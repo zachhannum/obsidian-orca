@@ -53,7 +53,7 @@ test("the navigator's buttons are drawn as the file explorer's are, and sit in t
   expect(Math.abs((first.x + last.x + last.width) / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
 });
 
-test("each book is a card with a border, round corners and a surface of its own, 6px from the next", async ({
+test("each book is a card with a border, round corners and a tint over the sidebar, 6px from the next", async ({
   navigator,
   vault,
 }) => {
@@ -68,16 +68,17 @@ test("each book is a card with a border, round corners and a surface of its own,
     await expect(navigator.book(book)).toHaveCSS("border-top-style", "solid");
     await expect(navigator.book(book)).toHaveCSS("border-top-left-radius", "8px");
   }
-  const surface = (book: string) =>
-    navigator.book(book).evaluate((card) => {
-      const own = getComputedStyle(card).backgroundColor;
-      const pane = card.closest(".workspace-leaf-content");
-      return { own, pane: pane === null ? own : getComputedStyle(pane).backgroundColor };
-    });
-  const open = await surface(BOOK);
-  const folded = await surface(SECOND);
-  expect(open.own).not.toEqual(open.pane);
-  expect(folded.own).not.toEqual(folded.pane);
+  // The tint is the theme's mono color at part strength, so the sidebar shows through it.
+  const tint = (book: string, strength: number) =>
+    navigator.book(book).evaluate((card, alpha) => {
+      const probe = card.createSpan();
+      probe.setCssProps({ "background-color": `rgba(var(--mono-rgb-100), ${alpha})` });
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    }, strength);
+  await expect(navigator.book(SECOND)).toHaveCSS("background-color", await tint(SECOND, 0.03));
+  await expect(navigator.book(BOOK)).toHaveCSS("background-color", await tint(BOOK, 0.06));
 
   const boxes = await Promise.all([BOOK, SECOND].map((book) => navigator.book(book).boundingBox()));
   const [first, second] = boxes.sort((a, b) => (a?.y ?? 0) - (b?.y ?? 0));
