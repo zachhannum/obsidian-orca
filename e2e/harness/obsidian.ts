@@ -849,6 +849,21 @@ export class Obsidian {
     }, side);
   }
 
+  /**
+   * Pins a tablet's drawer beside the main area, or takes the pin off.
+   * A pinned drawer is open and nothing collapses it. The API declares
+   * no pin, and a phone has none.
+   */
+  async pin(on: boolean, side: Side = "left"): Promise<void> {
+    await this.page.evaluate((want) => {
+      const { leftSplit, rightSplit } = window.app.workspace;
+      const split = (want.side === "left" ? leftSplit : rightSplit) as unknown as {
+        setPinned(on: boolean): void;
+      };
+      split.setPinned(want.on);
+    }, { on, side });
+  }
+
   /** The top of the bar a phone floats over the foot of its screen. */
   async navbar(): Promise<number> {
     const box = await this.page.locator(CHROME.navbar).boundingBox();

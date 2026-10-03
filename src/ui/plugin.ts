@@ -1607,9 +1607,15 @@ export default class OrcaPlugin extends Plugin implements Limited {
 
   private async turnPreview(book: string, at: number, line?: number): Promise<boolean> {
     const { workspace } = this.app;
-    const view = workspace.getMostRecentLeaf(workspace.rootSplit)?.view;
-    if (!(view instanceof PreviewView) || view.book !== book) return false;
-    return await view.turnToSection(at, line);
+    const leaf = workspace.getMostRecentLeaf(workspace.rootSplit);
+    const view = leaf?.view;
+    if (leaf === null || !(view instanceof PreviewView) || view.book !== book) return false;
+    if (!(await view.turnToSection(at, line))) return false;
+    // Mobile shuts a drawer that is not pinned when a leaf in the main
+    // area takes the focus, which is what an opened note does. A turn
+    // opens no note, so the preview takes the focus here.
+    if (device() !== "desktop") workspace.setActiveLeaf(leaf, { focus: true });
+    return true;
   }
 
   /**
