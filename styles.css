@@ -73,6 +73,11 @@
   flex: none;
 }
 
+/* The icon form of the count is drawn only where its words do not fit. */
+.orca-preview-warnings .orca-preview-alert {
+  display: none;
+}
+
 /* The chevron turns over as the warnings open, the way a disclosure
    control does. */
 .orca-preview-warnings .orca-preview-opens {
@@ -3931,10 +3936,33 @@ input.orca-panel-filter {
   text-overflow: ellipsis;
 }
 
-/* The count is at the left of the foot, and the controls fill the
-   rest of it. */
+/* Under the page the EPUB view's controls leave the count no room for
+   words. It is an icon and a number there, one touch wide, at the left
+   of the foot, and its label says the rest. */
 .is-mobile .orca-preview.is-reflow .orca-preview-foot > button.orca-preview-warnings {
-  margin-right: 0;
+  justify-content: center;
+  margin: 0;
+  padding: 0 6px;
+  border-width: 11px 0;
+}
+
+.is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-said {
+  display: none;
+}
+
+.is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-alert::after {
+  content: attr(data-count);
+}
+
+.is-mobile .orca-preview.is-reflow .orca-preview-foot .orca-preview-alert .svg-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .is-mobile .orca-preview-bar > .orca-reflow-controls select.orca-reflow-device {
