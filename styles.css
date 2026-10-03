@@ -404,8 +404,6 @@ button.orca-panel-choice:disabled {
   color: var(--text-faint);
 }
 
-/* On a phone Obsidian's navigation floats over the foot of the view,
-   so the view keeps clear of it and the status line is not under it. */
 .orca-reflow {
   display: flex;
   flex-direction: column;
@@ -413,7 +411,6 @@ button.orca-panel-choice:disabled {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  padding-bottom: var(--view-bottom-spacing, 0);
 }
 
 .orca-reflow-room {
@@ -469,6 +466,16 @@ button.orca-panel-choice:disabled {
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+/* A swipe is read here, in this document, since a touch inside the
+   frame can be taken by the app before it ends. The frame keeps the
+   keys. */
+.orca-reflow-swipe {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  touch-action: none;
 }
 
 /* An e-ink panel has no colour. */
