@@ -243,14 +243,21 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: var(--size-4-5);
+  --orca-well-pad: var(--size-4-5);
+  padding: var(--orca-well-pad);
   overflow: hidden;
   container-type: size;
 }
 
+/* The ring is for a reader who came to the pages with the keyboard.
+   A key pressed after a click, as Space is to move a zoomed page, also
+   makes the focus visible, and draws no ring. */
 .orca-preview-well:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--color-accent);
   outline: none;
+}
+
+.orca-preview-well.is-tabbed:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 
 /* Every view lays its sheets out on one grid, so the well's room is
@@ -2889,6 +2896,13 @@ input.orca-panel-filter {
   pointer-events: none;
 }
 
+/* A zoomed page is cut at the edge of the sheets, inside the well's
+   padding, so the boxes drawn over it are cut at the same edge. */
+.orca-preview-sheets.is-zoomed + .orca-inspect-host {
+  inset: var(--orca-well-pad);
+  overflow: hidden;
+}
+
 .orca-inspect-frame,
 .orca-inspect {
   position: absolute;
@@ -4086,7 +4100,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
 
 /* Upright, a spread is as wide as the screen leaves it. */
 .is-phone .orca-preview-well {
-  padding: 14px;
+  --orca-well-pad: 14px;
 }
 
 /* mobile: states */

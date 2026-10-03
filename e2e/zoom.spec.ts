@@ -195,7 +195,8 @@ test("a drag with Space held moves a zoomed page, and selects no text", async ({
   const [, top = 0] = await pan();
 
   const { mouse, keyboard } = obsidian.page;
-  await mouse.move(from.x, from.y);
+  // A click puts the focus on the pages, as a reader's does.
+  await mouse.click(from.x, from.y);
   await keyboard.down("Space");
   try {
     await expect(book.surface).toHaveClass(/is-hand/);
@@ -209,6 +210,9 @@ test("a drag with Space held moves a zoomed page, and selects no text", async ({
   }
   await expect(book.surface).not.toHaveClass(/is-hand/);
   expect((await book.selected()).text).toBe("");
+  // The key made the focus visible, and the well draws no ring for it.
+  await expect(book.surface.locator("xpath=..")).toBeFocused();
+  await expect(book.surface.locator("xpath=..")).toHaveCSS("box-shadow", "none");
 
   // With the key up, the same drag selects the lines it covers.
   const lines = book.seat(0).locator("text[data-selection-line]");

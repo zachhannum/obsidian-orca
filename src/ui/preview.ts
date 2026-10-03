@@ -251,6 +251,9 @@ const PAGING = "orca-preview-paging";
 /** The class the surface carries while a page is drawn larger than fit. */
 const ZOOMED = "is-zoomed";
 
+/** The class the well carries while it holds a focus the keyboard gave it. */
+const TABBED = "is-tabbed";
+
 /** The classes the surface carries while Space is held, and while a drag moves the page. */
 const HAND = "is-hand";
 const GRIPPED = "is-gripped";
@@ -862,9 +865,10 @@ export class PreviewView extends ItemView {
   /** Draws the zoom and the pan again, and the overlay where the pages moved to. */
   private moved(): void {
     this.drawsZoom();
-    if (!this.inspecting.on) return;
+    // The overlay's own box moves with the zoom, so it measures again
+    // the next time it draws, even one it draws after inspect goes on.
     this.measured += 1;
-    this.drawsOverlay();
+    if (this.inspecting.on) this.drawsOverlay();
   }
 
   private drawsZoom(): void {
@@ -1111,6 +1115,12 @@ export class PreviewView extends ItemView {
     // sit in is what a Tab or a click on a page reaches.
     well.tabIndex = 0;
     this.well = well;
+    this.registerDomEvent(well, "focus", () => {
+      well.toggleClass(TABBED, well.matches(":focus-visible"));
+    });
+    this.registerDomEvent(well, "blur", () => {
+      well.removeClass(TABBED);
+    });
     this.report("Loading preview…");
     const surface = well.createDiv({ cls: "orca-preview-sheets" });
     surface.dataset["testid"] = "orca-sheets";
