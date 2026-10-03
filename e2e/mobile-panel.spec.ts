@@ -153,7 +153,7 @@ for (const device of ["phone", "tablet"] as const) {
       const missing = await panel.missing.count();
       const count = missing === 1 ? "1 error" : `${String(missing)} errors`;
       await expect(panel.warned).toHaveText(count);
-      await expect(book.warnings).toHaveText(count);
+      await expect(book.counted).toHaveText(count);
       await expect(panel.missing.first()).toHaveClass(/mod-error/);
       await expect(panel.missing.first()).toHaveText(/^Missing font: /);
       await expect(panel.fontGroup).toContainText("Fonts");

@@ -39,6 +39,12 @@ export const external = [
   ...builtinModules.map((name) => `node:${name}`),
 ];
 
+/**
+ * A stylesheet a module imports is text in the bundle. Obsidian loads
+ * `styles.css` itself, and no module imports that one.
+ */
+export const loader = { ".css": "text" };
+
 /** esbuild reads `@/` out of its `paths`. */
 export const tsconfig = path.join(root, "tsconfig.json");
 
@@ -146,6 +152,7 @@ export function options({ production, outdir }) {
     treeShaking: true,
     minify: production,
     plugins: [inlineWorker({ production }), inlineModule(), noScriptElements()],
+    loader,
     tsconfig,
     external,
   };

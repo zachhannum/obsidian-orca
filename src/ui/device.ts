@@ -26,7 +26,7 @@ export function splits(device: Device): boolean {
   return device !== "phone";
 }
 
-/** The place the page number, the arrows and the count of warnings are drawn. */
+/** The place the page number, the arrows and the count of issues are drawn. */
 export type Foot = "status" | "under" | "bar";
 
 /** The narrowest pane of a tablet whose bar holds the foot beside the chapter. */

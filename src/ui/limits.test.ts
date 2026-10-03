@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CEILING } from "@/engine/pool";
+import { READER_STORED } from "@/style/reader";
 import { LIMITS, MOST_SESSIONS, readLimits, sessionCount } from "@/ui/limits";
 
 test("the ceiling is a setting, saved and read back in whole sessions", () => {
@@ -63,6 +64,38 @@ test("the view the last switch chose is the view the next preview opens in", () 
   // A file something else wrote, and a view orca does not have.
   assert.equal(readLimits({}).view, "single");
   assert.equal(readLimits({ view: "facing" }).view, "single");
+});
+
+test("the EPUB view and its reader settings are kept beside the page view, and an older file reads without them", () => {
+  assert.equal(LIMITS.epub, false);
+  assert.deepEqual(LIMITS.reader, READER_STORED);
+  // A file saved before the EPUB view was kept.
+  assert.deepEqual(readLimits({ sessions: 2, view: "spread" }), {
+    ...LIMITS,
+    sessions: 2,
+    view: "spread",
+  });
+  // The page view stays what it was, so a pane that leaves the EPUB
+  // view has one to go back to.
+  assert.deepEqual(readLimits({ view: "grid", epub: true }), {
+    ...LIMITS,
+    view: "grid",
+    epub: true,
+  });
+  assert.equal(readLimits({ epub: "yes" }).epub, false);
+  assert.equal(readLimits({ view: "epub" }).view, "single");
+
+  const reader = {
+    device: "ipad",
+    settings: { ...READER_STORED.settings, size: 150, theme: "sepia" as const },
+  };
+  const saved: unknown = JSON.parse(JSON.stringify({ ...LIMITS, epub: true, reader }));
+  assert.deepEqual(readLimits(saved), { ...LIMITS, epub: true, reader });
+  // One field the lists do not offer falls back alone.
+  assert.deepEqual(readLimits({ reader: { device: "slate", settings: { size: 150 } } }).reader, {
+    device: READER_STORED.device,
+    settings: { ...READER_STORED.settings, size: 150 },
+  });
 });
 
 // What this tier does not cover: the tab the ceiling sits in, which is

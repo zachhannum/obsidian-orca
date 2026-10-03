@@ -91,6 +91,10 @@ class FakeClient implements EngineClient {
     return Promise.resolve(new Uint8Array());
   }
 
+  exportEpubFiles(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
   exportEpub(): Promise<Epub | null> {
     return Promise.resolve({ bytes: new Uint8Array(), warnings: [] });
   }

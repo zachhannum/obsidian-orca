@@ -214,8 +214,13 @@ underneath them.
   until `node scripts/mirror.mjs` has passed on HEAD. Add `--e2e` when
   the change touches a surface. A tool that will not run is fixed or
   reported to the user, never pushed around.
-- After opening the PR, watch it to green (`gh run watch`) before
-  handing it to review.
+- A change on a branch with an open PR is pushed as soon as it is
+  committed and the CI mirror is green. The author tests the PR's
+  build, so a commit left local is a change they cannot see.
+- After every push to a PR, watch every run it starts to green
+  (`gh run watch`), not only the first. A red run is fixed before
+  any other work, and the PR is not handed to review while one is
+  red.
 - **Claude does not merge.** CI green is the floor, not the finish line;
   a human reviews and merges every PR, including Claude's.
 - Never force-push `main`. History rewrites on feature branches are fine

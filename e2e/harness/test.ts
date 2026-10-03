@@ -6,6 +6,7 @@
 
 import { test as base } from "@playwright/test";
 import { Book } from "./book";
+import { Epub } from "./epub";
 import { Export } from "./export";
 import { CDP, FIXTURE } from "./launch";
 import { Inspect } from "./inspect";
@@ -19,6 +20,8 @@ import { Vault } from "./vault";
 
 interface Fixtures {
   book: Book;
+  /** The preview's EPUB view. The book fixture closes the pane it is in. */
+  epub: Epub;
   /** The export dialog, shut when the spec ends. */
   exporting: Export;
   /** Inspect mode on the book, and the overlay it draws. */
@@ -66,6 +69,10 @@ export const test = base.extend<Fixtures, Shared>({
     await use(book);
     await book.close();
     await book.reset();
+  },
+
+  epub: async ({ obsidian, book: _ }, use) => {
+    await use(new Epub(obsidian));
   },
 
   exporting: async ({ obsidian }, use) => {

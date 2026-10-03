@@ -243,7 +243,7 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
   await expect(book.surface).toHaveAttribute("data-first", "1");
   await expect(book.page.locator("image")).toHaveCount(1);
   await expect(book.page.locator("image")).toHaveAttribute("href", /^blob:/);
-  await expect(book.warnings).toBeHidden();
+  await expect(book.count).toBeHidden();
   await expect(book.status).toHaveText(/ of \d+$/);
   const pages = Number(/of (\d+)$/.exec((await book.status.textContent()) ?? "")?.[1]);
 

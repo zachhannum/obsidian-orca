@@ -53,7 +53,7 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(foot.getByTestId("orca-total")).toHaveText(`of ${String(PAGES)}`);
       await expect(foot.getByLabel("Previous page")).toHaveCount(1);
       await expect(foot.getByLabel("Next page")).toHaveCount(1);
-      await expect(foot.getByTestId("orca-warnings")).toHaveCount(1);
+      await expect(foot.getByTestId("orca-issues-count")).toHaveCount(1);
       // The bar keeps the views, the chapter and Export.
       const chapter = book.bar.getByTestId("orca-chapter");
       await expect(chapter).toBeVisible();
@@ -166,7 +166,7 @@ test("a phone on its side has the folio, the arrows and the count in the preview
     await expect(bar.getByTestId("orca-total")).toHaveText(`of ${String(PAGES)}`);
     await expect(bar.getByLabel("Previous page")).toBeVisible();
     await expect(bar.getByLabel("Next page")).toBeVisible();
-    await expect(bar.getByTestId("orca-warnings")).toHaveCount(1);
+    await expect(bar.getByTestId("orca-issues-count")).toHaveCount(1);
     await expect(book.exportIn).toBeVisible();
     await expect(book.status).toHaveCount(0);
 
@@ -272,8 +272,8 @@ for (const device of ["phone", "tablet"] as const) {
       await vault.modify(LAST_NOTE, note.replace(DEVICE, "![[nothing here.png]]"));
       await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
 
-      const count = foot.getByTestId("orca-warnings");
-      await expect(count).toHaveText("1 warning");
+      const count = foot.getByTestId("orca-issues-count");
+      await expect(book.counted).toHaveText("1 warning");
       await expect(book.issues.first()).toBeHidden();
 
       await count.click();

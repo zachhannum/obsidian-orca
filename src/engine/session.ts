@@ -2,6 +2,8 @@ import {
   faceFamily,
   type Asset,
   type Client,
+  type EpubFile,
+  type EpubFiles,
   type Epub,
   type FaceAttributes,
   type Folios,
@@ -35,6 +37,7 @@ export interface Stages {
 export interface EngineClient {
   preview(ops?: Op[], range?: Range): Promise<LayoutOutput | null>;
   exportPdf(ops?: Op[]): Promise<Uint8Array | null>;
+  exportEpubFiles(ops?: Op[]): Promise<EpubFiles | null>;
   exportEpub(ops?: Op[]): Promise<Epub | null>;
   fontBytes(font: number): Promise<Uint8Array>;
   nodeAt(source: string, byte: number): Promise<number | null>;
@@ -68,6 +71,7 @@ export function serialized(client: EngineClient): EngineClient {
   return {
     preview: (ops, range) => queued(() => client.preview(ops, range)),
     exportPdf: (ops) => queued(() => client.exportPdf(ops)),
+    exportEpubFiles: (ops) => queued(() => client.exportEpubFiles(ops)),
     exportEpub: (ops) => queued(() => client.exportEpub(ops)),
     fontBytes: (font) => client.fontBytes(font),
     // A question rather than a render: the engine answers it off the
@@ -162,6 +166,17 @@ export interface Reading {
   length: number;
   fonts: FontRefEntry[];
   assets: Asset[];
+}
+
+/** A book's EPUB as its files, for a frame that loads them one by one. */
+export interface Reflowable {
+  /** The generation of the session the files were written from. */
+  generation: number;
+  /** The paths of the documents, in reading order. */
+  spine: string[];
+  files: EpubFile[];
+  /** The EPUB's warnings, as the engine wrote them. */
+  warnings: Warning[];
 }
 
 /**
@@ -400,6 +415,24 @@ export class Session {
       );
     }
     return bytes;
+  }
+
+  /**
+   * The book as the files of a reflowable EPUB, from the session the
+   * pages were typeset in. It sends no op and runs no layout stage.
+   * Nothing when an edit overtook the ask, because the render that
+   * overtook it tells its watchers.
+   */
+  async epubFiles(): Promise<Reflowable | undefined> {
+    await this.opening;
+    const epub = await routed(() => this.client.exportEpubFiles());
+    if (epub === null) return undefined;
+    return {
+      generation: this.generation,
+      spine: epub.spine,
+      files: epub.files,
+      warnings: epub.warnings,
+    };
   }
 
   /**

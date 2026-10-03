@@ -13,7 +13,7 @@
  * names. Filling the list sends nothing to the engine.
  */
 
-import { tally } from "@/ui/warnings";
+import { tally } from "@/ui/issues";
 import { createRoot } from "react-dom/client";
 import {
   Fragment,

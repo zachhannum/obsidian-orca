@@ -363,9 +363,11 @@ export class Obsidian {
     }, on);
     await loaded;
     await this.page.waitForFunction(
+      // The window can still be loading, with an app that has no
+      // workspace or plugins yet.
       ({ mobile, id }) =>
-        window.app?.workspace.layoutReady === true &&
-        window.app.plugins.plugins[id] !== undefined &&
+        window.app?.workspace?.layoutReady === true &&
+        window.app.plugins?.plugins[id] !== undefined &&
         document.body.classList.contains("emulate-mobile") === mobile,
       { mobile: on, id: PLUGIN },
       { timeout: APPEARING },

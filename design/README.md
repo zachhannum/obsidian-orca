@@ -85,7 +85,7 @@ its editor around these files and returns a URL. The artboard list and
   the line that page opens at, with the caret on it. One who turned no
   page comes back to the line they were writing on.
 - One ribbon icon, the orca tail. A click on it shows the navigator.
-  The count of warnings is the one on the preview bar, and the icon
+  The count of issues is the one on the preview bar, and the icon
   carries none.
 - Each book's row in the navigator has `Open preview` beside `Add to
   this book`. The book note's page has `Open preview` in its header,
@@ -192,6 +192,55 @@ its editor around these files and returns a URL. The artboard list and
   when the dialog opens. One export writes one file for each ticked
   format. The files share one path, and each format adds its own
   extension. `Choose…` picks a folder, not a file.
+- EPUB is the preview's fourth view, beside the three page views in
+  the bar's segmented control. It shows the engine's EPUB in a frame
+  that ReadiumCSS pages, and no page is laid out for it. The reading is
+  ReadiumCSS's, not one reading app's.
+- A device in the EPUB view is a named one, in three groups. Phones
+  are iPhone at 393 × 852 and Android phone at 412 × 915. Tablets are
+  iPad at 820 × 1180, Android tablet at 800 × 1280 and Kindle Fire at
+  601 × 962. E-readers are Kindle Paperwhite at 632 × 840, Kobo Clara
+  at 536 × 724 and Nook GlowLight at 536 × 724. The pane opens on the
+  Kindle Paperwhite.
+- A device's size is its screen in CSS px. An e-reader has no browser
+  to measure, so its size is approximate: the panel's resolution
+  halved.
+- A device is drawn with its body. A phone has its camera and the bar
+  that goes home. A tablet has an even bezel with a camera in it. An
+  e-reader has a matte body with a thicker chin, and its screen has no
+  colour. A device larger than the pane scales down to fit, body
+  included.
+- The EPUB view has seven reader settings. Font is Publisher, Old
+  style, Modern, Sans or Humanist. Text size is a smaller letter and a
+  larger one, with the step between them. It has eight steps and
+  starts at the second, which is the publisher's. Line spacing is Publisher, 1.2, 1.5, 1.75
+  or 2. Side margins are Narrow, Normal or Wide. Top and bottom are
+  Narrow, Normal or Wide. Alignment is Publisher, Start or Justify.
+  Theme is Light, Sepia or Dark. Each starts at the publisher's, which
+  is the author's CSS. A setting moved off it overrides the CSS as a
+  reading app does.
+- A reader setting with a few choices draws them all in one colour.
+  The choice in force is marked by its raised pill alone, as in
+  Obsidian's own segmented control and the bar's view switch.
+- The top and bottom margins set the text inside the screen, as a
+  reading app sets its web view. On a phone they also clear the camera
+  and the bar that goes home.
+- The EPUB view turns a screen at a time, then to the next section. In
+  it the chapter select, the folio, the total and the page arrows give
+  way to the device select, a settings button that opens the settings
+  under it, and previous and next.
+- A status line is under the device, as a reading app has one, such as
+  "Chapter Twelve · page 2 of 14 · 41%". The title is the one the
+  book's own contents give the document on screen, and a document the
+  contents do not list shows no title. The page is the screen within
+  that document. The percentage is an estimate that weights each
+  document by its length, rounded down. It reads 100% only on the last
+  page of the book.
+- The EPUB view, the device and the reader settings are kept. The
+  plugin's data keeps all three, so the next preview opens as the last
+  one was left, and the pane's own state keeps the view, as it keeps a
+  page view. No note is written.
+- Inspect is off in the EPUB view.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.
 - Chapter openings default to the next page. The right-hand page and
@@ -331,8 +380,28 @@ replaces them.
   spread is drawn at the width of the screen.
 - A swipe turns a page, a spread or a screenful. The arrows that turn
   a page stay, beside the page number.
+- EPUB is the fourth view on a phone and on a tablet. Its controls are
+  the settings button, the device select and the two arrows, each as
+  tall as a touch. They go where the page's foot goes. Under the page
+  they fill the foot, and in the bar they sit before Export.
+- The count of issues is drawn in the EPUB view too, beside the EPUB
+  controls. Under the page the controls leave no room for words, so
+  the count is an icon and a number in a pill at the left of the foot.
+  The pill is as wide as what it holds, in the middle of a target the
+  size of a touch. It is red if there is an error and orange if not, and its label
+  and the warnings it opens say the rest. In the bar it keeps its
+  words, just before the controls. A tap on it opens the warnings, as
+  it does in the page views.
+- The reader settings open above their button under the page, as the
+  warnings do, and hang under it in the bar. The sheet is opaque and
+  drawn over the device. The arrows turn a screen and then the
+  section. The EPUB view has no swipe.
+- The status line under the device is the desktop's: the chapter's
+  title, the page in that chapter and the percentage through the book.
+  On a phone a long title ends in an ellipsis, so the line stays on
+  one line and the page and the percentage stay whole.
 - Mobile has no status bar. On an upright phone the page number, the
-  arrows and the count of warnings are under the page, clear of
+  arrows and the count of issues are under the page, clear of
   Obsidian's own bar. On a phone on its side they are in the preview's
   bar. A tablet has them in the bar too, in a pane 700px wide or more,
   and under the page in a narrower one. The warnings open over the

@@ -6,7 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import esbuild from "esbuild";
-import { external, inlineModule, inlineWorker, root, tsconfig } from "./bundle.mjs";
+import { external, inlineModule, inlineWorker, loader, root, tsconfig } from "./bundle.mjs";
 
 const outdir = path.join(root, "build/test");
 await rm(outdir, { recursive: true, force: true });
@@ -29,6 +29,7 @@ await esbuild.build({
   logLevel: "info",
   logOverride: { "empty-import-meta": "silent" },
   plugins: [inlineWorker(), inlineModule()],
+  loader,
   tsconfig,
   external,
 });

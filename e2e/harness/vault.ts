@@ -13,6 +13,8 @@ declare global {
   interface Window {
     /** The write counter a spec installs while `writes` runs. */
     orcaWrites?: { at: string; count: number; ref: EventRef | undefined };
+    /** The change recorder a spec installs while `changes` runs. */
+    orcaChanges?: { seen: string[]; refs: EventRef[] };
   }
 }
 
@@ -108,6 +110,46 @@ export class Vault {
       window.orcaWrites = undefined;
       return writes.count;
     });
+  }
+
+  /**
+   * Every change the vault reports while `during` runs, as the event
+   * and the path it named.
+   */
+  async changes(during: () => Promise<void>): Promise<string[]> {
+    await this.page.evaluate(() => {
+      const seen: string[] = [];
+      const refs = (["create", "modify", "delete", "rename"] as const).map((name) =>
+        // The four events share a first argument, and the union of
+        // their overloads has no signature that says so.
+        (window.app.vault.on as (name: string, heard: (file: { path: string }) => void) => EventRef)(
+          name,
+          (file) => {
+            seen.push(`${name} ${file.path}`);
+          },
+        ),
+      );
+      window.orcaChanges = { seen, refs };
+    });
+
+    await during();
+
+    return this.page.evaluate(() => {
+      const changes = window.orcaChanges;
+      if (changes === undefined) return [];
+      for (const ref of changes.refs) window.app.vault.offref(ref);
+      window.orcaChanges = undefined;
+      return changes.seen;
+    });
+  }
+
+  /** The plugin's own data file as text, or nothing where it has saved none. */
+  async data(plugin: string): Promise<string | undefined> {
+    return this.page.evaluate(async (id) => {
+      const { adapter, configDir } = window.app.vault;
+      const at = `${configDir}/plugins/${id}/data.json`;
+      return (await adapter.exists(at)) ? adapter.read(at) : undefined;
+    }, plugin);
   }
 
   /** Creates a folder for the spec. It is removed with its contents when the spec ends. */
