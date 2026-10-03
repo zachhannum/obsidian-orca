@@ -667,9 +667,19 @@ export class Obsidian {
     }, type);
   }
 
-  /** The tabs that show the placeholder for a plugin that is not active. */
-  ghosts(): Locator {
-    return this.page.locator(".workspace-leaf-content[data-type='deferred']");
+  /**
+   * The titles of the tabs of one view type. A tab Obsidian rebuilt as
+   * the "Plugin no longer active" placeholder is titled with the view
+   * type itself.
+   */
+  async titles(type: string): Promise<string[]> {
+    return this.page.evaluate((named) => {
+      const found: string[] = [];
+      window.app.workspace.iterateAllLeaves((leaf) => {
+        if (leaf.getViewState().type === named) found.push(leaf.getDisplayText());
+      });
+      return found;
+    }, type);
   }
 
   /** The workspace as it would be written to disk, for a spec that reopens it. */

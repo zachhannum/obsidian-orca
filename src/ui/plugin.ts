@@ -857,16 +857,21 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * their type. On a reload the layout is ready inside `onload`, while
    * Obsidian is still rebuilding the tabs it kept, so the leaves are
    * read by saved state after the rebuild has had a turn. A tab found
-   * that way is left alone.
+   * that way is loaded and left where it is.
    */
   private async sidebars(): Promise<void> {
     await new Promise<void>((done) => {
       window.setTimeout(done);
     });
     const kept = new Set<string>();
+    const deferred: WorkspaceLeaf[] = [];
     this.app.workspace.iterateAllLeaves((leaf) => {
-      kept.add(leaf.getViewState().type);
+      const type = leaf.getViewState().type;
+      kept.add(type);
+      if (type === NAVIGATOR_VIEW || type === PANEL_VIEW) deferred.push(leaf);
     });
+    // A kept tab is a placeholder until something asks for its view.
+    await Promise.all(deferred.map(async (leaf) => leaf.loadIfDeferred()));
     if (!kept.has(NAVIGATOR_VIEW)) {
       await this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
         reveal: false,
