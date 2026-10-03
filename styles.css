@@ -811,6 +811,89 @@ iframe.orca-reflow-frame {
   color: var(--text-faint);
 }
 
+/* The cover is a picture the author picks, with the image's name beside it. */
+.orca-cover {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-width: 0;
+}
+
+.orca-book button.orca-cover-pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--size-4-3);
+  min-width: 0;
+  height: auto;
+  padding: var(--size-2-3) var(--size-4-2);
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  text-align: left;
+  white-space: normal;
+}
+
+.orca-book button.orca-cover-pick:hover {
+  background: var(--background-modifier-form-field);
+}
+
+.orca-cover-picture,
+.orca-cover-frame {
+  flex: none;
+  height: 68px;
+  border-radius: var(--radius-s);
+}
+
+/* The picture keeps the image's own proportions. */
+.orca-cover-picture {
+  width: auto;
+  max-width: 68px;
+  object-fit: contain;
+  box-shadow: var(--shadow-s);
+}
+
+.orca-cover-frame {
+  width: 44px;
+  border: 1px dashed var(--background-modifier-border-hover);
+}
+
+.orca-cover-frame.is-missing {
+  border-color: var(--color-orange);
+}
+
+.orca-cover-named {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.orca-cover-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orca-cover-where,
+.orca-cover-none {
+  color: var(--text-faint);
+}
+
+.orca-cover-where,
+.orca-cover-missing {
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-cover-missing {
+  color: var(--color-orange);
+}
+
 .orca-order-head {
   display: flex;
   align-items: baseline;
@@ -3078,8 +3161,20 @@ input.orca-panel-filter {
 }
 
 /* A finger leaves a hover behind it, so a touch marks nothing. */
-.is-mobile .orca-book input.orca-book-value:hover:not(:focus) {
+.is-mobile .orca-book input.orca-book-value:hover:not(:focus),
+.is-mobile .orca-book button.orca-cover-pick:hover {
   background: none;
+}
+
+.is-mobile .orca-cover-clear {
+  flex: none;
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+}
+
+/* A phone's column has no room for the size beside the folder. */
+.is-phone .orca-cover-size {
+  display: none;
 }
 
 .is-mobile .orca-order {

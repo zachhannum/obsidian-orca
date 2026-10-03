@@ -17,7 +17,8 @@ import type { Composer, Typeset } from "@/ui/composer";
 import { save, type Edits } from "@/ui/edits";
 import { fileName, free } from "@/ui/naming";
 import { cacheLinks } from "@/ui/notes";
-import { report, setField } from "@/ui/report";
+import { pick } from "@/ui/pick";
+import { carriedPath, pictured, report, setField } from "@/ui/report";
 import { mountPage, type Mounted } from "@/ui/reports";
 import { summary } from "@/ui/summary";
 import { Writer } from "@/ui/writer";
@@ -108,6 +109,26 @@ export class BookView extends FileView {
     this.mounted = mountPage(this.contentEl, {
       set: (key, value) => {
         this.edit((model) => setField(model, key, value));
+      },
+      picture: (path) => {
+        const file = this.app.vault.getFileByPath(path);
+        return file === null ? "" : this.app.vault.getResourcePath(file);
+      },
+      chooseCover: () => {
+        pick(this.app, {
+          items: this.app.vault.getFiles().filter((file) => pictured(file.path)),
+          label: (file) => file.path,
+          placeholder: "Choose the cover image",
+          chose: (file) => {
+            this.cover(file);
+          },
+        });
+      },
+      dropCover: (carried) => {
+        const path = carriedPath(carried);
+        if (path === undefined || !pictured(path)) return;
+        const file = this.app.vault.getFileByPath(path);
+        if (file !== null) this.cover(file);
       },
       locate: (at) => {
         if (this.file !== null) this.handoff.locate(this.file.path, at);
@@ -351,6 +372,13 @@ export class BookView extends FileView {
   /** Paints the page again with the settings as they are now. */
   refresh(): void {
     this.repaint();
+  }
+
+  /** Names an image as the cover, with a link Obsidian keeps when the image moves. */
+  private cover(file: TFile): void {
+    if (this.file === null) return;
+    const link = this.app.metadataCache.fileToLinktext(file, this.file.path, false);
+    this.edit((model) => setField(model, "cover", `[[${link}]]`));
   }
 
   /** Paints the book page from a model at the generation it is at. */

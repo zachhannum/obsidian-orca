@@ -11,17 +11,23 @@
  */
 
 import { createRoot } from "react-dom/client";
-import { useEffect, useRef, type JSX, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type JSX, type KeyboardEvent } from "react";
 import { BOOK_KEY, type BookMetadata } from "@/book/note";
 import { ROLES } from "@/book/roles";
 import { Icon } from "@/ui/icon";
-import { foliate, type Line, type Report } from "@/ui/report";
+import { foliate, type Cover, type Line, type Report } from "@/ui/report";
 import type { Summed } from "@/ui/summary";
 
 /** The actions the page asks the view to perform. */
 export interface Acting {
   /** Sets one property. An empty value takes it off the note. */
   set(key: keyof BookMetadata, value: string): void;
+  /** The url a vault image is drawn from. */
+  picture(path: string): string;
+  /** Opens the vault's images for the author to pick the cover from. */
+  chooseCover(): void;
+  /** Takes what a drag from the file explorer carried as the cover, if it names an image. */
+  dropCover(carried: string): void;
   /** Focuses an entry in the navigator, by its place in the reading order. */
   locate(at: number): void;
   asMarkdown(): void;
@@ -150,6 +156,7 @@ function Book({
             />
           </label>
         ))}
+        <Well cover={report.cover} acting={acting} />
       </div>
 
       <div className="orca-book-design" data-testid="orca-book-design">
@@ -188,6 +195,103 @@ function Book({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The cover, as the picture it is. The well opens the picker and takes
+ * a dropped image, and the button beside it takes the cover off the
+ * note.
+ */
+function Well({ cover, acting }: { cover: Cover; acting: Acting }): JSX.Element {
+  return (
+    <div className="orca-book-row">
+      <span className="orca-book-label">cover</span>
+      <div className="orca-cover" data-testid="orca-cover">
+        <button
+          type="button"
+          className="orca-cover-pick"
+          data-testid="orca-cover-pick"
+          onClick={() => {
+            acting.chooseCover();
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            acting.dropCover(event.dataTransfer.getData("text/plain"));
+          }}
+        >
+          {cover.kind === "image" ? (
+            <Chosen key={cover.path} path={cover.path} src={acting.picture(cover.path)} />
+          ) : cover.kind === "missing" ? (
+            <>
+              <span className="orca-cover-frame is-missing" />
+              <span className="orca-cover-named">
+                <span className="orca-cover-name">{cover.written}</span>
+                <span className="orca-cover-missing" data-testid="orca-cover-missing">
+                  Not in the vault
+                </span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="orca-cover-frame" />
+              <span className="orca-cover-none">Choose an image</span>
+            </>
+          )}
+        </button>
+        {cover.kind === "none" ? null : (
+          <button
+            type="button"
+            className="clickable-icon orca-cover-clear"
+            data-testid="orca-cover-clear"
+            onClick={() => {
+              acting.set("cover", "");
+            }}
+          >
+            <Icon name="x" className="orca-book-icon" />
+            <span className="orca-visually-hidden">Remove the cover</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The image the cover names, with its name, its folder and its size in pixels. */
+function Chosen({ path, src }: { path: string; src: string }): JSX.Element {
+  const [size, setSize] = useState("");
+  const slash = path.lastIndexOf("/");
+  const folder = slash < 0 ? "" : path.slice(0, slash);
+  return (
+    <>
+      <img
+        className="orca-cover-picture"
+        data-testid="orca-cover-picture"
+        src={src}
+        alt=""
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget;
+          setSize(`${naturalWidth} × ${naturalHeight}`);
+        }}
+      />
+      <span className="orca-cover-named">
+        <span className="orca-cover-name" data-testid="orca-cover-name">
+          {path.slice(slash + 1)}
+        </span>
+        <span className="orca-cover-where">
+          {folder}
+          {size === "" ? null : (
+            <span className="orca-cover-size">
+              {folder === "" ? "" : " · "}
+              {size}
+            </span>
+          )}
+        </span>
+      </span>
+    </>
   );
 }
 

@@ -7,6 +7,7 @@
  * asked to focus.
  */
 
+import { coverUrl } from "@/book/images";
 import type { Links } from "@/book/links";
 import type { Model } from "@/book/model";
 import { FIELD_KEYS, type BookMetadata } from "@/book/note";
@@ -29,6 +30,16 @@ export interface Line extends Row {
   pages?: Range;
 }
 
+/**
+ * The book's cover as the page draws it. A cover that names no image in
+ * the vault keeps what the author wrote, so the page can say what is
+ * missing.
+ */
+export type Cover =
+  | { kind: "none" }
+  | { kind: "image"; path: string }
+  | { kind: "missing"; written: string };
+
 export interface Report {
   /** The book's title, or the note's name when it has none. */
   name: string;
@@ -37,7 +48,9 @@ export interface Report {
   chapters: number;
   /** The words in every note the book reads, summed. */
   words: number;
+  /** Every property the page edits as text, which leaves out the cover. */
   fields: Field[];
+  cover: Cover;
   lines: Line[];
 }
 
@@ -75,9 +88,45 @@ export function report(
     format: book.model.book.format,
     chapters: lines.filter((line) => line.role === DEFAULT_ROLE).length,
     words: lines.reduce((sum, line) => sum + (line.words ?? 0), 0),
-    fields: FIELD_KEYS.map((key) => ({ key, value: metadata[key] ?? "" })),
+    fields: FIELD_KEYS.filter((key) => key !== "cover").map((key) => ({
+      key,
+      value: metadata[key] ?? "",
+    })),
+    cover: coverOf(book, vault.links),
     lines,
   };
+}
+
+/** The cover a book names, resolved the way the engine's copy of it is. */
+export function coverOf(book: Opened, links: Links): Cover {
+  const written = coverUrl(book.model.book);
+  if (written === undefined) return { kind: "none" };
+  const path = links.find(written, book.path);
+  return path === undefined || path.endsWith(".md")
+    ? { kind: "missing", written }
+    : { kind: "image", path };
+}
+
+/** The extensions of the images the engine reads. */
+const PICTURES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
+
+/** A vault path the picker offers as a cover. */
+export function pictured(path: string): boolean {
+  const dot = path.lastIndexOf(".");
+  return dot >= 0 && PICTURES.has(path.slice(dot + 1).toLowerCase());
+}
+
+/**
+ * The vault path a drag from Obsidian's file explorer carries. The
+ * explorer writes an `obsidian://open` url, and the path is its `file`.
+ * A drag of several files gives the first.
+ */
+export function carriedPath(carried: string): string | undefined {
+  const [first = ""] = carried.trim().split(/\s+/);
+  if (!URL.canParse(first)) return undefined;
+  const url = new URL(first);
+  if (url.protocol !== "obsidian:") return undefined;
+  return url.searchParams.get("file") ?? undefined;
 }
 
 /**

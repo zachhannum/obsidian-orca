@@ -7,7 +7,15 @@ import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, writeModel, type Model } from "@/book/model";
 import { countWords } from "@/book/words";
-import { foliate, report, setField, type Counting } from "@/ui/report";
+import {
+  carriedPath,
+  coverOf,
+  foliate,
+  pictured,
+  report,
+  setField,
+  type Counting,
+} from "@/ui/report";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -65,7 +73,7 @@ test("word counts come from the notes, and an entry with no note has none", asyn
   assert.equal(uncounted.words, 0);
 });
 
-test("every property orca owns is a field, and an emptied one comes off the note", async () => {
+test("every property the author types is a field, and an emptied one comes off the note", async () => {
   const opened = await model();
   const vaulted = await counting();
 
@@ -80,7 +88,6 @@ test("every property orca owns is a field, and an emptied one comes off the note
       ["publisher", "Whitehall Press"],
       ["series", "The Bennet Novels"],
       ["isbn", "978-0-000-00000-0"],
-      ["cover", ""],
     ],
   );
 
@@ -96,7 +103,6 @@ test("every property orca owns is a field, and an emptied one comes off the note
       ["publisher", "Whitehall Press, London"],
       ["series", ""],
       ["isbn", "978-0-000-00000-0"],
-      ["cover", ""],
     ],
   );
   assert.equal(Object.hasOwn(edited.book.metadata, "series"), false);
@@ -153,6 +159,45 @@ test("an entry's page range is what the run placed it at, and one it missed has 
 test("a folio range is a single number for one page, and a span for more", () => {
   assert.equal(foliate({ first: 5, last: 5 }), "5");
   assert.equal(foliate({ first: 121, last: 134 }), "121–134");
+});
+
+test("the cover is the image its property names, as a path or a link, and a name with no image is missing", async () => {
+  const opened = await model();
+  const links = pathLinks([BOOK, "images/device.png", "Chapter One.md"]);
+  const covered = (written: string) =>
+    coverOf({ path: BOOK, name: "Pride and Prejudice", model: setField(opened, "cover", written) }, links);
+
+  assert.deepEqual(coverOf({ path: BOOK, name: "Pride and Prejudice", model: opened }, links), {
+    kind: "none",
+  });
+  assert.deepEqual(covered("images/device.png"), { kind: "image", path: "images/device.png" });
+  assert.deepEqual(covered("[[device.png]]"), { kind: "image", path: "images/device.png" });
+  assert.deepEqual(covered("nothing here.png"), { kind: "missing", written: "nothing here.png" });
+  // A note is no picture.
+  assert.deepEqual(covered("[[Chapter One]]"), { kind: "missing", written: "Chapter One" });
+  // The cover is not one of the fields the author types in.
+  const drawn = report({ path: BOOK, name: "Pride and Prejudice", model: opened }, await counting());
+  assert.equal(drawn.fields.some((field) => field.key === "cover"), false);
+  assert.deepEqual(drawn.cover, { kind: "none" });
+});
+
+test("a drag from the file explorer carries a vault path, and only an image is offered as a cover", () => {
+  assert.equal(
+    carriedPath("obsidian://open?vault=fixture&file=images%2Fdevice.png"),
+    "images/device.png",
+  );
+  assert.equal(
+    carriedPath("obsidian://open?vault=v&file=a.png\nobsidian://open?vault=v&file=b.png"),
+    "a.png",
+  );
+  assert.equal(carriedPath("https://example.com/?file=a.png"), undefined);
+  assert.equal(carriedPath("some dragged words"), undefined);
+  assert.equal(carriedPath(""), undefined);
+
+  assert.equal(pictured("images/device.png"), true);
+  assert.equal(pictured("Cover.JPG"), true);
+  assert.equal(pictured("Chapter One.md"), false);
+  assert.equal(pictured("png"), false);
 });
 
 // What this tier does not cover: the page drawn from the report, the
