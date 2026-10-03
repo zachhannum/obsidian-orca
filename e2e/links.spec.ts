@@ -34,8 +34,15 @@ declare global {
   }
 }
 
-/** The mark of a contents entry, and of the page number printed beside it. */
+/**
+ * The mark of a contents entry, and of the page number printed beside
+ * it. The chapter control names the contents before the turn to them
+ * paints, so this waits for the entry's line to be on screen.
+ */
 async function entryOf(book: Book, chapter: string): Promise<[LinkMark, LinkMark]> {
+  await expect
+    .poll(async () => (await book.links()).some((mark) => mark.line.includes(chapter)))
+    .toBe(true);
   const marks = await book.links();
   const label = marks.find((mark) => mark.line.includes(chapter));
   const folio = marks.find((mark) => label !== undefined && mark.link === label.link + 1);
@@ -43,8 +50,13 @@ async function entryOf(book: Book, chapter: string): Promise<[LinkMark, LinkMark
   return [label, folio];
 }
 
-/** The marks of each link on one page, by the link's index there. */
+/**
+ * The marks of each link on one page, by the link's index there. The
+ * chapter control names a chapter before the turn to it paints, so this
+ * waits for the page's sheet, which is painted with its marks.
+ */
 async function linksOn(book: Book, page: number): Promise<LinkMark[][]> {
+  await expect(book.surface.locator(`.orca-page[data-page="${String(page)}"]`)).toHaveCount(1);
   const byLink: LinkMark[][] = [];
   for (const mark of await book.links()) {
     if (mark.page === page) (byLink[mark.link] ??= []).push(mark);
