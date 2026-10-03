@@ -703,7 +703,7 @@ function Book({
   return (
     <div
       ref={shelf}
-      className="orca-shelf"
+      className={`orca-shelf${folded ? "" : " is-open"}`}
       data-testid="orca-shelf"
       data-book={book.path}
       data-holds={String(book.holds)}
@@ -730,6 +730,9 @@ function Book({
           }}
         >
           <Icon name={folded ? "chevron-right" : "chevron-down"} />
+        </span>
+        <span className="orca-shelf-icon">
+          <Icon name="book" />
         </span>
         <span className="orca-label">{book.name}</span>
         <span className="orca-nav-actions">

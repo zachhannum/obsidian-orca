@@ -162,6 +162,9 @@ for (const device of ["phone", "tablet"] as const) {
         expect(at?.height).toBeGreaterThanOrEqual(TOUCH);
       }
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCSS("font-size", "16px");
+      // The book is a card on mobile too, with the corner mobile draws.
+      await expect(navigator.book(BOOK)).toHaveCSS("border-top-width", "1px");
+      await expect(navigator.book(BOOK)).toHaveCSS("border-top-left-radius", "12px");
       await expect(navigator.pane.getByText("Books", { exact: true })).toBeHidden();
 
       // `New book` is in the row of buttons Obsidian gives a drawer,
@@ -175,11 +178,11 @@ for (const device of ["phone", "tablet"] as const) {
 
       expect(await obsidian.cramped(ROOT)).toEqual([]);
 
-      // The chevron and the two actions on a book's row are in the
-      // middle of its height, and the view scrolls no further than the
-      // list.
+      // The chevron, the book and the two actions on a book's row are in
+      // the middle of its height, and the view scrolls no further than
+      // the list.
       const off = await navigator.offMiddle(navigator.name(BOOK));
-      expect(off).toHaveLength(3);
+      expect(off).toHaveLength(4);
       for (const each of off) expect(each).toBeLessThan(1);
       expect(await navigator.slack()).toBeLessThanOrEqual(0);
 

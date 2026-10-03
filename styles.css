@@ -949,11 +949,22 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   font-size: var(--font-ui-small);
 }
 
-/* One book stands apart from the next. */
+/* Each book is a card, so one book ends where its border does. */
 .orca-shelves {
   display: flex;
   flex-direction: column;
-  gap: var(--size-4-4);
+  gap: var(--size-2-3);
+  padding: 0 var(--size-4-1);
+}
+
+.orca-shelf {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary-alt);
+}
+
+.orca-shelf.is-open {
+  background: var(--background-primary);
 }
 
 .orca-shelf:focus-visible {
@@ -1042,8 +1053,23 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 }
 
 .orca-shelf-name {
-  font-weight: var(--font-medium);
+  height: 32px;
+  border-radius: calc(var(--radius-m) - 1px);
   color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+/* An open book's row is the head of its card. */
+.orca-shelf.is-open > .orca-shelf-name {
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0;
+}
+
+.orca-shelf-icon {
+  display: flex;
+  flex: none;
+  color: var(--text-accent);
+  --icon-size: var(--icon-xs);
 }
 
 .orca-fold {
@@ -1059,9 +1085,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
 }
 
 .orca-nav-children {
-  margin-left: var(--size-4-3);
-  padding-left: var(--size-4-1);
-  border-left: 1px solid var(--divider-color);
+  padding: 0 var(--size-4-1) var(--size-2-3);
 }
 
 /* A section reads as a divider, so it is never mistaken for a row. */
@@ -1176,6 +1200,7 @@ button.orca-nav-action {
 button.orca-nav-action > span,
 .orca-nav-host .nav-action-button > span,
 .orca-fold > span,
+.orca-shelf-icon > span,
 button.orca-panel-glyph > .orca-panel-icon {
   display: flex;
 }
@@ -3225,8 +3250,17 @@ input.orca-panel-filter {
   overflow-wrap: anywhere;
 }
 
+.is-mobile .orca-shelf {
+  border-radius: var(--radius-l);
+}
+
 .is-mobile .orca-shelf-name {
   padding-left: var(--size-4-2);
+  border-radius: calc(var(--radius-l) - 1px);
+}
+
+.is-mobile .orca-shelf.is-open > .orca-shelf-name {
+  border-radius: calc(var(--radius-l) - 1px) calc(var(--radius-l) - 1px) 0 0;
 }
 
 .is-mobile .orca-outline {
@@ -3239,8 +3273,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-nav-children {
-  margin-left: var(--size-4-4);
-  padding-left: 0;
+  padding-bottom: var(--size-4-1);
 }
 
 .is-mobile .orca-nav-heading {
@@ -3263,6 +3296,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-fold,
+.is-mobile .orca-shelf-icon,
 .is-mobile .orca-entry-mark {
   --icon-size: var(--icon-s);
 }
