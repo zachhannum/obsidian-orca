@@ -254,7 +254,8 @@ export class Book {
 
   /**
    * Shuts the drawers of a mobile window and waits for the pane to be
-   * back on screen. An open drawer pushes a phone's one pane off it.
+   * back on screen and to take a touch. An open drawer pushes a phone's
+   * one pane off it.
    */
   async uncovered(): Promise<void> {
     await this.obsidian.page.evaluate(() => {
@@ -267,6 +268,20 @@ export class Book {
         const wide = await this.obsidian.page.evaluate(() => window.innerWidth);
         return box !== null && box.x >= 0 && box.x + box.width <= wide + 1;
       })
+      .toBe(true);
+    // The backdrop a drawer drew over the pane outlasts the drawer, and
+    // takes every touch until it is gone.
+    await expect
+      .poll(async () =>
+        this.surface.evaluate((surface) => {
+          const box = surface.getBoundingClientRect();
+          const over = document.elementFromPoint(
+            box.left + box.width / 2,
+            box.top + box.height / 2,
+          );
+          return over !== null && surface.contains(over);
+        }),
+      )
       .toBe(true);
   }
 
