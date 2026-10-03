@@ -11,8 +11,17 @@ import type { ExportResult, ExportTarget } from "@/engine/export";
 import { Icon } from "@/ui/icon";
 import { folderOf } from "@/ui/kept";
 import { standing, type Blocker, type Checked } from "@/ui/preflight";
+import type { Shareable, Shared } from "@/ui/share";
 
-export type Stage = "preflight" | "refused" | "ready" | "writing" | "written" | "failed";
+export type Stage =
+  | "preflight"
+  | "refused"
+  | "ready"
+  | "writing"
+  | "written"
+  /** The files are made and wait for a tap on Share. Nothing is written. */
+  | "made"
+  | "failed";
 
 export type Format = ExportTarget<Record<string, never>>;
 
@@ -37,12 +46,17 @@ export interface Exporter {
   choose?(): Promise<string | undefined>;
   write(destination: Destination, format: Format): Promise<ExportResult>;
   /**
-   * Reads a file the export wrote into the vault, and returns the call
-   * that hands it to the system share sheet. The read comes first, so
-   * the tap that shares waits on nothing. Absent on a device that
-   * cannot share a file, and the dialog then has no Share.
+   * The share sheet. Absent on a device that cannot share a PDF, and
+   * the dialog then has no Share.
    */
-  share?(path: string): Promise<() => Promise<void>>;
+  share?: {
+    /** True when the device shares this format's files. */
+    takes(format: Format): boolean;
+    /** Makes a format's file under the book's name. It is written nowhere. */
+    make(name: string, format: Format): Promise<{ file: Shareable; result: ExportResult }>;
+    /** Hands the files to the share sheet. Called inside a tap, it starts inside that tap. */
+    hand(files: readonly Shareable[]): Promise<Shared>;
+  };
   /** Opens a file the export wrote into the vault. */
   open(path: string): void;
   /** Goes to the place an error names. */
@@ -54,6 +68,13 @@ export interface Exporter {
 interface Written {
   format: Format;
   destination: Destination;
+  result: ExportResult;
+}
+
+/** One file made for the share sheet. */
+interface Made {
+  format: Format;
+  file: Shareable;
   result: ExportResult;
 }
 
@@ -97,9 +118,9 @@ function Exporting({
   const [checked, setChecked] = useState<Checked | undefined>(undefined);
   const [writing, setWriting] = useState<string | undefined>(undefined);
   const [written, setWritten] = useState<Written[]>([]);
+  const [made, setMade] = useState<Made[]>([]);
+  const [handing, setHanding] = useState(false);
   const [failure, setFailure] = useState<string | undefined>(undefined);
-  const [hand, setHand] = useState<(() => Promise<void>) | undefined>(undefined);
-  const [sharing, setSharing] = useState(false);
   const staged = useRef<Stage>(stage);
   staged.current = stage;
 
@@ -109,7 +130,7 @@ function Exporting({
       const found = await exporter.check();
       if (!live) return;
       const now = staged.current;
-      if (now === "writing" || now === "written") return;
+      if (now === "writing" || now === "written" || now === "made") return;
       setChecked(found);
       if (now !== "failed") setStage(found.errors.length > 0 ? "refused" : "ready");
     };
@@ -121,7 +142,7 @@ function Exporting({
       await check();
     })().catch((cause: unknown) => {
       if (!live) return;
-      setFailure(said(cause));
+      setFailure(said("Export", cause));
       setStage("failed");
     });
     // An author who fixes an error with the dialog open sees it go once
@@ -145,30 +166,6 @@ function Exporting({
     marked.dataset["errors"] = String(checked?.errors.length ?? 0);
   }, [marked, stage, ids, checked]);
 
-  const pdf =
-    stage === "written"
-      ? written.find(
-          ({ format, destination: file }) => file.kind === "vault" && format.id === "pdf",
-        )
-      : undefined;
-  const shared = pdf?.destination.path;
-
-  useEffect(() => {
-    if (shared === undefined || exporter.share === undefined) return;
-    let live = true;
-    // A file that will not read back leaves Share off, and the file is
-    // still in the vault to open.
-    void exporter.share(shared).then(
-      (handing) => {
-        if (live) setHand(() => handing);
-      },
-      () => undefined,
-    );
-    return () => {
-      live = false;
-    };
-  }, [exporter, shared]);
-
   // Each format writes in turn, because the engine holds one book and
   // answers one render at a time.
   const write = async (): Promise<void> => {
@@ -185,11 +182,55 @@ function Exporting({
       }
       setStage("written");
     } catch (cause) {
-      setFailure(said(cause));
+      setFailure(said("Export", cause));
       setStage("failed");
     } finally {
       setWriting(undefined);
     }
+  };
+
+  // The share sheet's answer, in either state Share is tapped from.
+  // `before` is the state a cancelled share goes back to.
+  const hand = async (files: readonly Made[], before: Stage): Promise<void> => {
+    if (exporter.share === undefined) return;
+    setHanding(true);
+    try {
+      const end = await exporter.share.hand(files.map(({ file }) => file));
+      if (end === "shared") exporter.close();
+      else if (end === "cancelled") setStage(before);
+      else {
+        // The tap was spent while the files were made, so they wait
+        // for one more.
+        setMade([...files]);
+        setStage("made");
+      }
+    } catch (cause) {
+      setFailure(said("Share", cause));
+      setStage("failed");
+    } finally {
+      setHanding(false);
+    }
+  };
+
+  // Share makes the same files Export does, and writes none of them.
+  const share = async (): Promise<void> => {
+    if (exporter.share === undefined) return;
+    setFailure(undefined);
+    setStage("writing");
+    const done: Made[] = [];
+    try {
+      for (const format of formats) {
+        setWriting(`${name}.${format.extension}`);
+        done.push({ format, ...(await exporter.share.make(name, format)) });
+      }
+    } catch (cause) {
+      setFailure(said("Share", cause));
+      setStage("failed");
+      return;
+    } finally {
+      setWriting(undefined);
+    }
+    await hand(done, "ready");
   };
 
   const choose = async (): Promise<void> => {
@@ -214,7 +255,52 @@ function Exporting({
   // the dialog says so.
   const vaulted = exporter.choose === undefined;
 
+  const exportable =
+    formats.length > 0 &&
+    (stage === "ready" || (stage === "failed" && errors.length === 0 && checked !== undefined));
+
+  if (stage === "made") {
+    return (
+      <div className="orca-export orca-export-written" data-testid="orca-export-made">
+        {made.map(({ format, file, result }) => (
+          <div
+            key={format.id}
+            className="orca-export-done"
+            data-testid="orca-export-file"
+            data-format={format.id}
+            data-bytes={String(result.bytes)}
+            data-leaves={result.leaves === undefined ? undefined : String(result.leaves)}
+          >
+            <Icon name="check" className="orca-export-done-icon" />
+            <div className="orca-export-done-name">{file.name}</div>
+            <div className="orca-export-done-size">{measure(result)}</div>
+          </div>
+        ))}
+        <div className="modal-button-container orca-export-footer">
+          <button
+            type="button"
+            className="mod-cta orca-export-share"
+            data-testid="orca-export-share"
+            disabled={handing}
+            onClick={() => {
+              void hand(made, "made");
+            }}
+          >
+            <Icon name="share" className="orca-export-share-icon" />
+            Share
+          </button>
+          <button type="button" data-testid="orca-export-done" onClick={() => exporter.close()}>
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (stage === "written") {
+    const pdf = written.find(
+      ({ format, destination: file }) => file.kind === "vault" && format.id === "pdf",
+    );
     return (
       <div className="orca-export orca-export-written" data-testid="orca-export-written">
         {written.map(({ format, destination: file, result }) => (
@@ -229,9 +315,7 @@ function Exporting({
             <Icon name="check" className="orca-export-done-icon" />
             <div className="orca-export-done-name">{fileName(file.path)}</div>
             <div className="orca-export-done-size">
-              {result.leaves === undefined
-                ? size(result.bytes)
-                : `${pages(result.leaves)} · ${size(result.bytes)}`}
+              {measure(result)}
               {vaulted ? <Kept path={file.path} /> : null}
             </div>
             {!vaulted && file.kind === "vault" && format.id === "pdf" ? (
@@ -250,24 +334,6 @@ function Exporting({
           </div>
         ))}
         <div className="modal-button-container orca-export-footer">
-          {pdf !== undefined && exporter.share !== undefined ? (
-            <button
-              type="button"
-              className="mod-cta orca-export-share"
-              data-testid="orca-export-share"
-              disabled={hand === undefined || sharing}
-              onClick={() => {
-                if (hand === undefined) return;
-                setSharing(true);
-                void hand().finally(() => {
-                  setSharing(false);
-                });
-              }}
-            >
-              <Icon name="share" className="orca-export-share-icon" />
-              Share
-            </button>
-          ) : null}
           {vaulted && pdf !== undefined ? (
             <button
               type="button"
@@ -399,6 +465,20 @@ function Exporting({
             "Pick a format to export"
           ) : null}
         </div>
+        {exporter.share === undefined ? null : (
+          <button
+            type="button"
+            className="orca-export-share"
+            data-testid="orca-export-share"
+            disabled={!exportable || !formats.every((format) => exporter.share?.takes(format))}
+            onClick={() => {
+              void share();
+            }}
+          >
+            <Icon name="share" className="orca-export-share-icon" />
+            Share
+          </button>
+        )}
         <button
           type="button"
           data-testid="orca-export-cancel"
@@ -411,10 +491,7 @@ function Exporting({
           type="button"
           className="mod-cta"
           data-testid="orca-export-write"
-          disabled={
-            formats.length === 0 ||
-            (stage !== "ready" && !(stage === "failed" && errors.length === 0 && checked !== undefined))
-          }
+          disabled={!exportable}
           onClick={() => {
             void write();
           }}
@@ -470,10 +547,17 @@ function Kept({ path }: { path: string }): JSX.Element {
   );
 }
 
-/** The line a failed export shows. A typed error carries words meant for the author. */
-function said(cause: unknown): string {
+/** The line a failed export or share shows. A typed error carries words meant for the author. */
+function said(what: "Export" | "Share", cause: unknown): string {
   const message = cause instanceof Error ? cause.message : String(cause);
-  return `Export failed: ${message}`;
+  return `${what} failed: ${message}`;
+}
+
+/** A file's pages, when its format has them, and its size. */
+function measure(result: ExportResult): string {
+  return result.leaves === undefined
+    ? size(result.bytes)
+    : `${pages(result.leaves)} · ${size(result.bytes)}`;
 }
 
 function fileName(path: string): string {

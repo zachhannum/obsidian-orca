@@ -7,17 +7,28 @@
 export interface Shareable {
   /** The name the receiving app sees. */
   name: string;
-  bytes: ArrayBuffer;
+  /** The file's media type. */
+  type: string;
+  bytes: Uint8Array;
 }
 
-/** The end of a share. A share the author cancels is no error. */
-export type Shared = "shared" | "cancelled";
-
 /**
- * Hands a file to the share sheet. It asks the web view before it
- * waits on anything, because a share only starts from a tap.
+ * The end of a share. A share the author cancels is no error. A web
+ * view refuses a share that does not start from a tap, and a tap is
+ * spent once the work after it runs long, so `refused` asks for a
+ * second tap.
  */
-export type Sharer = (file: Shareable) => Promise<Shared>;
+export type Shared = "shared" | "cancelled" | "refused";
+
+export interface Sharer {
+  /** True when the device shares a file of this media type. */
+  takes(type: string): boolean;
+  /**
+   * Hands the files to the share sheet. It asks the web view before it
+   * waits on anything, so a call made in a tap is inside that tap.
+   */
+  share(files: readonly Shareable[]): Promise<Shared>;
+}
 
 /** The part of `navigator` a share asks. */
 interface Host {
@@ -26,35 +37,40 @@ interface Host {
 }
 
 /**
- * The share call for files of one media type, read off the window's
- * `navigator`. Undefined on a device that cannot share such a file.
+ * The share calls of the window's `navigator`. Undefined on a device
+ * with no way to share a file.
  */
-export function sharer(host: unknown, type: string): Sharer | undefined {
+export function sharer(host: unknown): Sharer | undefined {
   if (typeof host !== "object" || host === null) return undefined;
   const { share, canShare } = host as Host;
   if (typeof share !== "function" || typeof canShare !== "function") return undefined;
-  const asked = (data: ShareData): unknown => canShare.call(host, data);
-  try {
-    if (asked({ files: [new File([], "file", { type })] }) !== true) return undefined;
-  } catch {
-    return undefined;
-  }
-  return async ({ name, bytes }) => {
-    try {
-      await share.call(host, { files: [new File([bytes], name, { type })] });
-      return "shared";
-    } catch (cause) {
-      if (cancelled(cause)) return "cancelled";
-      throw cause;
-    }
+  const file = ({ name, type, bytes }: Shareable): File =>
+    new File([bytes.slice().buffer], name, { type });
+  return {
+    takes(type) {
+      try {
+        const asked: ShareData = { files: [file({ name: "file", type, bytes: new Uint8Array() })] };
+        return canShare.call(host, asked) === true;
+      } catch {
+        return false;
+      }
+    },
+    async share(files) {
+      try {
+        await share.call(host, { files: files.map(file) });
+        return "shared";
+      } catch (cause) {
+        const name = named(cause);
+        if (name === "AbortError") return "cancelled";
+        if (name === "NotAllowedError") return "refused";
+        throw cause;
+      }
+    },
   };
 }
 
-/** True for the rejection a web view gives when the author shuts the share sheet. */
-function cancelled(cause: unknown): boolean {
-  return (
-    typeof cause === "object" &&
-    cause !== null &&
-    (cause as { name?: unknown }).name === "AbortError"
-  );
+function named(cause: unknown): unknown {
+  return typeof cause === "object" && cause !== null
+    ? (cause as { name?: unknown }).name
+    : undefined;
 }

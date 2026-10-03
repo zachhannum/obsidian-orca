@@ -3,12 +3,12 @@
  * and asks the session that drew the preview for the file.
  */
 
-import { Modal, Notice, type App } from "obsidian";
-import { vaultWritePath } from "@/assets/destination";
+import { Modal, type App } from "obsidian";
 import type { VaultAdapter } from "@/assets/vault";
 import { exportPath, exportName } from "@/book/export";
 import type { BookMetadata } from "@/book/note";
 import { TARGETS } from "@/engine/export";
+import { EngineError } from "@/engine/errors";
 import type { Composer, Typeset } from "@/ui/composer";
 import { chooseDiskFolder, desktopSink, onDesktop } from "@/ui/desktop";
 import { mountExport, type Exporter, type Mounted } from "@/ui/exporting";
@@ -25,6 +25,16 @@ export interface Exports {
   metadata(): Promise<BookMetadata | undefined>;
   /** Opens the design panel, where a face is picked. */
   openPanel(): void;
+}
+
+/** The media type the share sheet is told for each format, by the target's id. */
+const MEDIA: Record<string, string> = {
+  pdf: "application/pdf",
+  epub: "application/epub+zip",
+};
+
+function mediaOf(id: string): string {
+  return MEDIA[id] ?? "application/octet-stream";
 }
 
 class ExportModal extends Modal {
@@ -67,7 +77,7 @@ class ExportModal extends Modal {
     const { book, files } = this.exports;
     const { workspace } = this.app;
     // The desktop app has a path on disk to offer instead.
-    const share = onDesktop() ? undefined : sharer(navigator, "application/pdf");
+    const sheet = onDesktop() ? undefined : sharer(navigator);
     return {
       formats: TARGETS,
       prepare: async () => {
@@ -105,20 +115,23 @@ class ExportModal extends Modal {
         const sink = desktopSink(files);
         return format.run(typeset.session, (bytes) => sink.write(destination, bytes));
       },
-      ...(share === undefined
+      ...(sheet === undefined || !sheet.takes(mediaOf("pdf"))
         ? {}
         : {
-            share: async (path) => {
-              const name = path.slice(path.lastIndexOf("/") + 1);
-              const bytes = await files.readBinary(vaultWritePath(path));
-              return async () => {
-                try {
-                  await share({ name, bytes });
-                } catch (cause) {
-                  const message = cause instanceof Error ? cause.message : String(cause);
-                  new Notice(`Share failed: ${message}`);
-                }
-              };
+            share: {
+              takes: (format) => sheet.takes(mediaOf(format.id)),
+              make: async (name, format) => {
+                const typeset = await this.typeset();
+                let held: Uint8Array | undefined;
+                const result = await format.run(typeset.session, (bytes) => {
+                  held = bytes;
+                  return Promise.resolve();
+                });
+                if (held === undefined) throw new EngineError(`${format.label} made no file`);
+                const file = `${name}.${format.extension}`;
+                return { file: { name: file, type: mediaOf(format.id), bytes: held }, result };
+              },
+              hand: (files) => sheet.share(files),
             },
           }),
       open: (path) => {
