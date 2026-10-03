@@ -64,6 +64,12 @@ for (const device of ["phone", "tablet"] as const) {
       const pane = await obsidian.view(PREVIEW).boundingBox();
       const body = await epub.body.boundingBox();
       expect(body?.width).toBeLessThanOrEqual((pane?.width ?? 0) + 0.5);
+      // The device is centred across the well, and down the room the status line leaves.
+      const well = await obsidian.view(PREVIEW).locator(".orca-preview-well").boundingBox();
+      const room = await obsidian.view(PREVIEW).locator(".orca-reflow-room").boundingBox();
+      if (well === null || body === null || room === null) throw new Error("a box is missing");
+      expect(Math.abs(body.x + body.width / 2 - (well.x + well.width / 2))).toBeLessThanOrEqual(1);
+      expect(Math.abs(body.y + body.height / 2 - (room.y + room.height / 2))).toBeLessThanOrEqual(1);
     } finally {
       await book.close();
       await obsidian.emulateMobile(false);
@@ -124,13 +130,18 @@ test("a phone on its side has the EPUB view's controls in the bar", async ({
     const bar = await book.footed("bar");
     for (const id of CONTROLS) await expect(bar.getByTestId(id)).toBeVisible();
     await expect(book.exportIn).toBeVisible();
+    // On its side the device is still centred across the well.
+    const well = await obsidian.view(PREVIEW).locator(".orca-preview-well").boundingBox();
+    const body = await epub.body.boundingBox();
+    if (well === null || body === null) throw new Error("a box is missing");
+    expect(Math.abs(body.x + body.width / 2 - (well.x + well.width / 2))).toBeLessThanOrEqual(1);
   } finally {
     await book.close();
     await obsidian.emulateMobile(false);
   }
 });
 
-test("a touch swipe in the frame turns a screen", async ({ obsidian, book, epub }) => {
+test("a touch swipe over the screen turns a screen", async ({ obsidian, book, epub }) => {
   await obsidian.mobile("phone");
   try {
     await book.close();
@@ -140,8 +151,15 @@ test("a touch swipe in the frame turns a screen", async ({ obsidian, book, epub 
     await epub.open();
     const before = await epub.turned();
 
-    const box = await epub.frame.boundingBox();
-    if (box === null) throw new Error("the frame has no box");
+    // The layer is what takes the touch, so the swipe starts on it.
+    await expect(epub.swipe).toHaveCount(1);
+    const box = await epub.swipe.boundingBox();
+    if (box === null) throw new Error("the swipe layer has no box");
+    const taken = await epub.swipe.evaluate((layer) => {
+      const at = layer.getBoundingClientRect();
+      return document.elementFromPoint(at.x + at.width / 2, at.y + at.height / 2) === layer;
+    });
+    expect(taken).toBe(true);
     const y = box.y + box.height / 2;
     const from = box.x + box.width * 0.8;
     const to = box.x + box.width * 0.2;

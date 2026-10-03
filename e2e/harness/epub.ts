@@ -28,6 +28,8 @@ export class Epub {
   readonly frame: Locator;
   /** The device's screen, which the frame sits inside. */
   readonly screen: Locator;
+  /** The layer over the screen that reads a swipe in the app's own document. */
+  readonly swipe: Locator;
   /** The device with its body, which is what is scaled to the pane. */
   readonly body: Locator;
   /** The line under the device that says the section and the screen. */
@@ -46,6 +48,7 @@ export class Epub {
     this.view = pane.getByTestId("orca-reflow");
     this.frame = pane.getByTestId("orca-reflow-frame");
     this.screen = pane.getByTestId("orca-reflow-screen");
+    this.swipe = pane.getByTestId("orca-reflow-swipe");
     this.body = pane.getByTestId("orca-reflow-body");
     this.status = pane.getByTestId("orca-reflow-status");
     this.device = pane.getByTestId("orca-reflow-device");

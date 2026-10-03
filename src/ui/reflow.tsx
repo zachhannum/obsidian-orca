@@ -174,6 +174,22 @@ function Reflow({
   // The device fits the room the status line leaves it, so the room is
   // what is measured.
   const showing = shown !== undefined;
+  const swipe = useRef<HTMLDivElement>(null);
+  const from = useRef<{ x: number; y: number }>(undefined);
+  // Obsidian reads touches for its drawers, so a touch that lands on the
+  // overlay is kept from it.
+  useEffect(() => {
+    const element = swipe.current;
+    if (element === null) return;
+    const keep = (touched: Event): void => {
+      touched.stopPropagation();
+    };
+    const names = ["touchstart", "touchmove", "touchend", "touchcancel"] as const;
+    for (const name of names) element.addEventListener(name, keep);
+    return () => {
+      for (const name of names) element.removeEventListener(name, keep);
+    };
+  }, [showing, src]);
   useEffect(() => {
     const element = room.current;
     if (element === null) return;
@@ -305,43 +321,32 @@ function Reflow({
                         pressed.preventDefault();
                         turner.turn?.(step);
                       });
-                      // A swipe turns as a key does. The page under it never
-                      // pans, so a drag cannot move the frame off its screen.
-                      inside.addEventListener(
-                        "touchmove",
-                        (touched) => {
-                          touched.preventDefault();
-                        },
-                        { passive: false },
-                      );
-                      let from: { x: number; y: number } | undefined;
-                      inside.addEventListener("touchstart", (touched) => {
-                        const at = touched.touches[0];
-                        from = at === undefined ? undefined : { x: at.clientX, y: at.clientY };
-                      });
-                      inside.addEventListener("touchend", (touched) => {
-                        const at = touched.changedTouches[0];
-                        if (from === undefined || at === undefined) return;
-                        const step = swipeOf(at.clientX - from.x, at.clientY - from.y);
-                        from = undefined;
-                        if (step !== undefined) turner.turn?.(step);
-                      });
-                      // A mouse drag turns too, for a window that emulates a phone.
-                      inside.addEventListener("pointerdown", (pressed) => {
-                        if (pressed.pointerType === "mouse") {
-                          from = { x: pressed.clientX, y: pressed.clientY };
-                        }
-                      });
-                      inside.addEventListener("pointerup", (released) => {
-                        if (released.pointerType !== "mouse" || from === undefined) return;
-                        const step = swipeOf(released.clientX - from.x, released.clientY - from.y);
-                        from = undefined;
-                        if (step !== undefined) turner.turn?.(step);
-                      });
                       void inside.fonts.ready.then(() => {
                         setFaces((seen) => seen + 1);
                       });
                       setLoaded(inside.URL);
+                    }}
+                  />
+                  <div
+                    ref={swipe}
+                    className="orca-reflow-swipe"
+                    data-testid="orca-reflow-swipe"
+                    onPointerDown={(pressed) => {
+                      from.current = { x: pressed.clientX, y: pressed.clientY };
+                      pressed.currentTarget.setPointerCapture(pressed.pointerId);
+                      // The overlay takes the click, so the frame is given the
+                      // focus its keys need.
+                      frame.current?.contentWindow?.focus();
+                    }}
+                    onPointerUp={(released) => {
+                      const start = from.current;
+                      from.current = undefined;
+                      if (start === undefined) return;
+                      const step = swipeOf(released.clientX - start.x, released.clientY - start.y);
+                      if (step !== undefined) turner.turn?.(step);
+                    }}
+                    onPointerCancel={() => {
+                      from.current = undefined;
                     }}
                   />
                   {device.camera === "island" || device.camera === "hole" ? (
