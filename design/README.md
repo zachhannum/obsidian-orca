@@ -363,8 +363,11 @@ replaces them.
 - EPUB is the fourth view on a phone and on a tablet. Its controls are
   the settings button, the device select and the two arrows, each as
   tall as a touch. They go where the page's foot goes. Under the page
-  they fill the foot, and in the bar they sit before Export. The count
-  of warnings is not drawn in the EPUB view.
+  they fill the foot, and in the bar they sit before Export.
+- The count of warnings is drawn in the EPUB view too, beside the EPUB
+  controls. Under the page it is at the left of the foot, and in the
+  bar it is just before the controls. A tap on it opens the warnings,
+  as it does in the page views.
 - The reader settings open above their button under the page, as the
   warnings do, and hang under it in the bar. The arrows turn a screen
   and then the section. The EPUB view has no swipe.
