@@ -3058,6 +3058,28 @@ input.orca-panel-filter {
   margin-left: calc(-1 * var(--size-4-2));
 }
 
+/* A row is dragged by its handle, as wide as a touch and as tall as the
+   row. The handle takes the touch, so the drawer does not scroll under it. */
+.orca-drag-handle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: var(--touch-size-m);
+  margin: calc(-1 * var(--orca-row-pad)) calc(-1 * var(--size-4-2))
+    calc(-1 * var(--orca-row-pad)) auto;
+  color: var(--text-faint);
+  touch-action: none;
+  --icon-size: var(--icon-s);
+}
+
+/* A section's handle is at the end of its rule. */
+.orca-nav-heading > .orca-drag-handle {
+  order: 2;
+  margin: 0 calc(-1 * var(--size-4-2)) 0 0;
+}
+
 /* mobile: design panel */
 
 /* The line under a font list that holds the face orca carries. */

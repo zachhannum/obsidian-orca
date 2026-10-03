@@ -828,6 +828,40 @@ function Book({
   );
 }
 
+/**
+ * The handle a row is dragged by on mobile, where the drawer scrolls on
+ * the movement a drag would start with. Desktop draws none and drags
+ * from the row.
+ */
+function Grip({
+  sortable,
+}: {
+  sortable: ReturnType<typeof useSortable>;
+}): JSX.Element | null {
+  if (device() === "desktop") return null;
+  return (
+    <span
+      ref={sortable.setActivatorNodeRef}
+      className="orca-drag-handle"
+      data-testid="orca-handle"
+      aria-label="Drag to reorder"
+      {...sortable.listeners}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+    >
+      <Icon name="grip-vertical" />
+    </span>
+  );
+}
+
+/** The listeners a row drags from: its own on desktop, its handle's on mobile. */
+function dragFrom(
+  sortable: ReturnType<typeof useSortable>,
+): typeof sortable.listeners {
+  return device() === "desktop" ? sortable.listeners : undefined;
+}
+
 /** The place just after a row, which is where a new chapter goes. */
 function next(place: Place | undefined, heading: string): Place {
   return place === undefined
@@ -872,7 +906,7 @@ function Heading({
       data-heading={heading}
       data-walk=""
       {...sortable.attributes}
-      {...(renaming ? undefined : sortable.listeners)}
+      {...(renaming ? undefined : dragFrom(sortable))}
       onContextMenu={(event) => {
         acting.groupMenu(event, book, heading);
       }}
@@ -898,6 +932,7 @@ function Heading({
           {carrying === 0 ? "empty" : `${carrying}`}
         </span>
       )}
+      {renaming ? null : <Grip sortable={sortable} />}
     </div>
   );
 }
@@ -1020,7 +1055,7 @@ function Entry({
       }}
     >
       <div
-        ref={sortable.setActivatorNodeRef}
+        ref={device() === "desktop" ? sortable.setActivatorNodeRef : undefined}
         className={`orca-nav-item orca-entry${sortable.isDragging ? " is-dragged" : ""}${mark === "entry" ? " is-selected" : ""}`}
         data-testid="orca-entry"
         data-at={row.at}
@@ -1029,7 +1064,7 @@ function Entry({
         data-walk=""
         aria-current={mark === "entry" ? "page" : undefined}
         {...sortable.attributes}
-        {...sortable.listeners}
+        {...dragFrom(sortable)}
         onClick={(event) => {
           if (row.kind !== "missing") acting.openEntry(book, row, event);
         }}
@@ -1081,6 +1116,7 @@ function Entry({
             />
           </span>
         ) : null}
+        <Grip sortable={sortable} />
       </div>
       {!shown
         ? null
