@@ -429,6 +429,8 @@ replaces them.
   so a folded book is a pill and the rows of an open book follow its
   edge. The list has the same corner, so a card the scroll cuts
   is still round.
+- A navigator row lights under a mouse, a trackpad or a pen, on a
+  tablet too. A finger lights none, so a scroll leaves no row lit.
 - A long press on a navigator row opens its menu: a sheet on a phone,
   a menu beside the row on a tablet. `Open as markdown` in that menu
   takes the place of the Mod click.

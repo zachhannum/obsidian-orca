@@ -275,6 +275,30 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
+test("on a tablet a pointer that hovers lights the row under it, and a finger lights none", async ({
+  navigator,
+  obsidian,
+}) => {
+  await obsidian.mobile("tablet");
+  try {
+    await navigator.reveal();
+    await navigator.painted();
+    const row = navigator.entry(BOOK, CHAPTER);
+    const unlit = "rgba(0, 0, 0, 0)";
+    await expect(row).toHaveCSS("background-color", unlit);
+
+    // A trackpad beside the tablet moves a pointer that hovers.
+    await row.hover();
+    await expect(row).not.toHaveCSS("background-color", unlit);
+
+    // A finger comes down on the same row, as it does to scroll.
+    await row.dispatchEvent("pointerover", { pointerType: "touch", bubbles: true });
+    await expect(row).toHaveCSS("background-color", unlit);
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
 test("on a phone a touch drag on a row's handle moves it and the note agrees, and a touch drag on the rest of the row starts none", async ({
   navigator,
   obsidian,

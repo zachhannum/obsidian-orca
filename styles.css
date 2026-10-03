@@ -985,7 +985,11 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   cursor: pointer;
 }
 
-.orca-nav-item:hover {
+/* A finger that scrolls the list is over a row and points at none, so a
+   row is lit only while the pointer over the list is one that hovers.
+   `:where` keeps the rule as light as it was, and a selected row keeps
+   its own fill. */
+:where(.orca-navigator.is-pointed) .orca-nav-item:hover {
   background: var(--background-modifier-hover);
 }
 
@@ -1044,7 +1048,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   font-size: var(--font-ui-smaller);
 }
 
-.orca-outline:hover {
+:where(.orca-navigator.is-pointed) .orca-outline:hover {
   color: var(--text-muted);
 }
 
@@ -1205,7 +1209,7 @@ button.orca-panel-glyph > .orca-panel-icon {
   display: flex;
 }
 
-button.orca-nav-action:hover {
+:where(.orca-navigator.is-pointed) button.orca-nav-action:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }

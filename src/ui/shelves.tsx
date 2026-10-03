@@ -462,7 +462,17 @@ export function Shelf({
   }, [wanted, shelf, generation, located]);
 
   return (
-    <div className="orca-navigator" data-testid="orca-navigator" ref={pane}>
+    <div
+      className="orca-navigator"
+      data-testid="orca-navigator"
+      ref={pane}
+      // A mouse, a trackpad and a pen hover, on a tablet too, and a
+      // finger does not. The class is the pane's own and no render
+      // writes it.
+      onPointerOver={(event) => {
+        event.currentTarget.toggleClass("is-pointed", event.pointerType !== "touch");
+      }}
+    >
       <div className="nav-header">
         <div className="nav-buttons-container">
           <Tool
