@@ -37,7 +37,7 @@ import type { Reading, Session } from "@/engine/session";
 import { ACTIONS } from "@/ui/actions";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import { device } from "@/ui/desktop";
-import { footPlace, sheets, type Foot } from "@/ui/device";
+import { footPlace, sheetCover, sheets, type Foot } from "@/ui/device";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
@@ -775,6 +775,7 @@ export class PreviewView extends ItemView {
       nextPage(this.viewing()),
     );
     const controls = bar.createDiv({ cls: "orca-reflow-controls" });
+    controls.dataset["testid"] = "orca-reflow-controls";
     this.controls = controls;
 
     // The mobile artboards draw the chapter beside the views and
@@ -811,6 +812,7 @@ export class PreviewView extends ItemView {
       keeps: (reader) => {
         this.handoff.reads(reader);
       },
+      ...(sheets(device()) ? { sheet: (closed) => this.sheetsReader(well, closed) } : {}),
     });
     this.inspects(surface);
     this.followsLinks(surface);
@@ -906,8 +908,8 @@ export class PreviewView extends ItemView {
         else exporting.before(controls);
       }
     }
-    // The sheet places the warnings over the page from the foot, so
-    // what was measured for the bar comes off.
+    // The stylesheet places the warnings over the page from the foot,
+    // so what was measured for the bar comes off.
     issues.style.removeProperty("right");
     issues.style.removeProperty("max-width");
     pane.dataset["foot"] = place;
@@ -1827,6 +1829,38 @@ export class PreviewView extends ItemView {
     }
     this.issuesCount?.setAttribute("aria-expanded", String(open));
     this.issuesCount?.toggleClass("is-on", open);
+  }
+
+  /**
+   * Opens the sheet the reader settings are drawn in. Nothing is dimmed
+   * behind it, and the well gives up what the sheet covers, so the
+   * device is drawn whole above the sheet.
+   */
+  private sheetsReader(well: HTMLElement, closed: () => void): Sheet {
+    const covered = "--orca-sheet-cover";
+    const sheet = openSheet(this.app, {
+      title: "Reader settings",
+      testid: "orca-reader-sheet",
+      cls: "orca-reader-sheet",
+      clear: true,
+      closed: () => {
+        covering.disconnect();
+        well.style.removeProperty(covered);
+        closed();
+      },
+    });
+    // The height the sheet is laid out at, which the slide that opens
+    // it does not change.
+    const covering = new ResizeObserver(() => {
+      const cover = sheetCover(
+        well.win.innerHeight,
+        sheet.frame.offsetHeight,
+        well.getBoundingClientRect().bottom,
+      );
+      well.style.setProperty(covered, `${String(cover)}px`);
+    });
+    covering.observe(sheet.frame);
+    return sheet;
   }
 
   /**

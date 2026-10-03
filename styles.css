@@ -3159,6 +3159,23 @@ input.orca-panel-filter {
   padding-bottom: calc(var(--size-4-4) + var(--safe-area-inset-bottom));
 }
 
+.is-phone .orca-reader-sheet .orca-reflow-popover {
+  position: static;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* The well gives up what the reader's sheet covers, so the device is
+   drawn whole above the sheet. */
+.is-phone .orca-preview.is-reflow .orca-preview-well {
+  padding-bottom: calc(14px + var(--orca-sheet-cover, 0px));
+}
+
 /* In a sheet the list is the sheet's content, and the sheet is what
    scrolls. */
 .orca-warnings .orca-preview-issues {
@@ -4168,8 +4185,8 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   flex: 0 1 260px;
 }
 
-/* Under the page the settings open above their button, as the
-   warnings do. */
+/* Under the page of a tablet's narrow pane the settings open above
+   their button, as the warnings do. A phone draws them in a sheet. */
 .orca-preview-foot .orca-reflow-popover {
   right: 12px;
   bottom: calc(100% + 8px);
@@ -4178,7 +4195,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   max-width: none;
 }
 
-/* On mobile the sheet is drawn as the warnings' sheet is, over the
+/* On a tablet the settings are drawn as the warnings are, over the
    device and its page. */
 .is-mobile .orca-reflow-popover {
   border-radius: var(--touch-size-xxs);
@@ -4190,7 +4207,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   white-space: nowrap;
 }
 
-/* A shadow is drawn at the edge of the border, so in the sheet the room
+/* A shadow is drawn at the edge of the border, so on mobile the room
    around the pill is the segment's padding and the pill casts its
    shadow from its own edge. */
 .is-mobile .orca-reflow-popover .orca-panel-segment {
