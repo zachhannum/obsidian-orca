@@ -6,9 +6,12 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [workflow, shots, release, cut, spec, claude] = await Promise.all([
+const [pkg, shotsRunner, workflow, shots, setup, release, cut, spec, claude] = await Promise.all([
+  read("package.json"),
+  read("scripts/shots.mjs"),
   read(".github/workflows/ci.yml"),
   read(".github/workflows/shots.yml"),
+  read(".github/actions/obsidian-setup/action.yml"),
   read(".github/workflows/release.yml"),
   read(".github/workflows/cut-release.yml"),
   read("e2e/shots.spec.ts"),
@@ -55,8 +58,28 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
       assert.ok(block.includes(`"${at}"`), `${on} does not watch ${at}`);
     }
   }
-  assert.match(shots, /- run: xvfb-run -a npm run shots\n/);
-  assert.match(shots, /apt-get install -y xvfb poppler-utils ffmpeg\n/);
+  assert.match(shots, /- run: npm run shots\n/);
+  assert.match(setup, /apt-get install -y xvfb poppler-utils\n/);
+});
+
+test("the spec, the frames and the loop run as jobs that start together", () => {
+  const block = (name) => {
+    const from = shots.indexOf(`\n  ${name}:\n`);
+    assert.notEqual(from, -1, `no ${name} job`);
+    const next = /\n {2}\w[\w-]*:\n/.exec(shots.slice(from + 1));
+    return shots.slice(from, next === null ? undefined : from + 1 + next.index);
+  };
+  assert.doesNotMatch(block("spec"), /needs:/);
+  assert.doesNotMatch(block("frames"), /needs:/);
+  // The render reads the frames, so it waits for them and for nothing else.
+  assert.match(block("loop"), /needs: frames\n/);
+  assert.match(block("shots"), /needs: \[spec, loop\]\n/);
+});
+
+test("the screenshot spec runs in shards, each with an Obsidian and a display of its own", () => {
+  assert.match(pkg, /"shots": "node scripts\/shots\.mjs"/);
+  assert.match(shotsRunner, /--shard=\$\{at \+ 1\}\/\$\{shards\}/);
+  assert.match(shotsRunner, /\["-a", "npx", \.\.\.playwright\]/);
 });
 
 test("the shots job renders the landing page's loop from a pinned commit of orca-film", () => {

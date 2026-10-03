@@ -898,24 +898,19 @@ iframe.orca-reflow-frame {
 }
 
 .orca-navigator {
-  padding: var(--size-4-2) var(--size-4-1);
+  padding: 0 var(--size-4-1) var(--size-4-2);
   overflow: auto;
 }
 
-.orca-nav-header {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-1);
-  padding: var(--size-4-1) var(--size-4-2) var(--size-4-2);
+/* The file explorer's bar sits flush with the top of its pane, and so
+   does this one. */
+body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
+  padding-top: 0;
 }
 
-.orca-nav-title {
-  flex: 1;
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* The filter field sits under the bar, in Obsidian's own search box. */
+.orca-nav-search {
+  padding: 0 var(--size-4-2) var(--size-4-2);
 }
 
 .orca-nav-quiet {
@@ -1149,6 +1144,7 @@ button.orca-nav-action {
 /* The icon's own span is as tall as a line of text, which is taller
    than the icon and would set it above the middle. */
 button.orca-nav-action > span,
+.orca-nav-host .nav-action-button > span,
 .orca-fold > span,
 button.orca-panel-glyph > .orca-panel-icon {
   display: flex;
@@ -3155,22 +3151,9 @@ input.orca-panel-filter {
   --orca-row-pad: 6px;
 }
 
-/* Obsidian names the drawer's tab, and its buttons are one pill, as
-   Obsidian mobile draws a toolbar: over the list on a tablet, under it
-   on a phone. */
-.is-mobile .orca-nav-title {
-  display: none;
-}
-
-.is-mobile .orca-nav-header {
-  gap: 0;
-  width: fit-content;
-  margin: 0 auto var(--size-4-2);
-  padding: 0;
-  border-radius: var(--touch-size-m);
-  background: var(--interactive-normal);
-}
-
+/* Obsidian names the drawer's tab, and the file explorer's rules draw
+   the bar: a pill on a tablet, and on a phone a bar over the foot of the
+   list, which fades under it. */
 /* On a phone the list scrolls and the pill does not: the view holds
    the two in a column, with the pill at its foot. */
 .is-phone .workspace-leaf-content[data-type="orca-navigator"] > .view-content {
@@ -3192,12 +3175,6 @@ input.orca-panel-filter {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-}
-
-.is-phone .orca-nav-header {
-  flex: none;
-  order: 1;
-  margin: var(--size-4-2) auto 0;
 }
 
 /* A row is as tall as a touch, and long words wrap. */
@@ -3300,9 +3277,26 @@ input.orca-panel-filter {
   margin-left: calc(-1 * var(--size-4-2));
 }
 
-.is-mobile .orca-nav-header button.orca-nav-action {
-  color: var(--text-normal);
+/* A row is dragged by its handle, as wide as a touch and as tall as the
+   row. The handle takes the touch, so the drawer does not scroll under it. */
+.orca-drag-handle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: var(--touch-size-m);
+  margin: calc(-1 * var(--orca-row-pad)) calc(-1 * var(--size-4-2))
+    calc(-1 * var(--orca-row-pad)) auto;
+  color: var(--text-faint);
+  touch-action: none;
   --icon-size: var(--icon-s);
+}
+
+/* A section's handle is at the end of its rule. */
+.orca-nav-heading > .orca-drag-handle {
+  order: 2;
+  margin: 0 calc(-1 * var(--size-4-2)) 0 0;
 }
 
 /* mobile: design panel */

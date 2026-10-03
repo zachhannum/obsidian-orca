@@ -18,6 +18,41 @@ const FOLDER = "Manuscript";
 /** A second book over one of the fixture's chapters. */
 const NOVELS = "---\norca-book: 1\n---\n\n# Body\n\n- [[Chapter Twelve]]\n";
 
+test("the navigator's buttons are drawn as the file explorer's are, and sit in the middle of the pane", async ({
+  navigator,
+  obsidian,
+}) => {
+  const measure = (selector: string) =>
+    obsidian.page.locator(selector).first().evaluate((button) => {
+      const icon = button.querySelector("svg");
+      const row = button.parentElement;
+      if (icon === null || row === null) throw new Error("no icon");
+      const box = button.getBoundingClientRect();
+      return {
+        width: box.width,
+        height: box.height,
+        icon: icon.getBoundingClientRect().width,
+        color: getComputedStyle(icon).color,
+        gap: getComputedStyle(row).columnGap,
+        // How far the row is from the top of its pane.
+        top: box.top - (button.closest(".workspace-leaf-content")?.getBoundingClientRect().top ?? 0),
+      };
+    });
+  await obsidian.page.evaluate(async () => {
+    await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
+  });
+  const native = await measure('.workspace-leaf-content[data-type="file-explorer"] .nav-action-button');
+  await navigator.reveal();
+  const ours = await measure('.workspace-leaf-content[data-type="orca-navigator"] .nav-action-button');
+  expect(ours).toEqual(native);
+
+  const first = await navigator.button("New book").boundingBox();
+  const last = await navigator.toolbar.locator(".nav-action-button").last().boundingBox();
+  const pane = await navigator.pane.boundingBox();
+  if (first === null || last === null || pane === null) throw new Error("nothing to measure");
+  expect(Math.abs((first.x + last.x + last.width) / 2 - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
+});
+
 test("a folder of notes becomes a book in sorted order, and `New book` makes an empty one", async ({
   navigator,
   obsidian,
@@ -135,6 +170,8 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
     "Acknowledgements",
   ]);
 
+  // Desktop drags from the row and draws no handle.
+  await expect(navigator.pane.getByTestId("orca-handle")).toHaveCount(0);
   await navigator.drag(
     navigator.entry(BOOK, "Chapter Four"),
     navigator.entry(BOOK, "Volume the First"),
@@ -531,6 +568,23 @@ test("a chapter click turns the preview in the most recent tab, and a Mod click 
     )
     .toEqual({ shown: `markdown:${CHAPTER}.md`, previews: 1 });
   await obsidian.detach("markdown");
+});
+
+test("a chapter clicked in a filtered shelf turns the preview to that chapter", async ({
+  book,
+  navigator,
+}) => {
+  await book.open();
+  await book.painted();
+  await expect(book.chapterName).not.toHaveText(CHAPTER);
+  await navigator.reveal();
+
+  await navigator.button("Search books").click();
+  await navigator.pane.getByTestId("orca-nav-search").fill(CHAPTER);
+  await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
+  await navigator.entry(BOOK, CHAPTER).click();
+  await expect(book.chapterName).toHaveText(CHAPTER);
+  await navigator.button("Search books").click();
 });
 
 test("a click on a generated section turns the preview to it", async ({

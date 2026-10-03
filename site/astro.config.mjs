@@ -17,8 +17,13 @@ const fleuron = fileURLToPath(import.meta.resolve('fleuron'));
 // GitHub Pages serves the site at its own domain, which public/CNAME holds.
 const site = 'https://orca.typeworks.dev';
 
+// A pull request's preview is a folder of the Pages site, so its job sets
+// the folder as the base. The deploy on main leaves it unset.
+const base = process.env.SITE_BASE || '/';
+
 export default defineConfig({
   site,
+  base,
   trailingSlash: 'always',
   vite: { resolve: { alias: { '@': plugin, fleuron } } },
   markdown: {

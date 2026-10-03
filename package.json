@@ -11,7 +11,7 @@
     "lint": "node scripts/lint.mjs && eslint --max-warnings 0 . && stylelint --max-warnings 0 styles.css",
     "test": "node scripts/test.mjs",
     "e2e": "playwright test --project=orca",
-    "shots": "ORCA_E2E_DENSITY=2 playwright test --project=shots --update-snapshots=changed",
+    "shots": "node scripts/shots.mjs",
     "film": "ORCA_E2E_DENSITY=3 playwright test --project=film",
     "version": "node version-bump.mjs"
   },

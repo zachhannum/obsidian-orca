@@ -7,7 +7,16 @@ import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
 import type { Cached } from "@/ui/outline";
-import { members, shelve, type Shelving } from "@/ui/shelf";
+import {
+  filterShelf,
+  members,
+  readSort,
+  shelve,
+  sortShelf,
+  type Shelved,
+  type Shelving,
+  visibleRows,
+} from "@/ui/shelf";
 
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 const vault = directoryVault(path.join(root, "fixture"));
@@ -136,6 +145,56 @@ test("a heading renamed in a note the book reads changes the shelf the navigator
   assert.ok(!read.has("Unlisted.md"));
 });
 
+function shelved(name: string, ...chapters: string[]): Shelved {
+  return {
+    path: `${name}.md`,
+    name,
+    folder: "",
+    holds: false,
+    groups: [
+      {
+        heading: "",
+        rows: chapters.map((chapter, at) => ({
+          at,
+          name: chapter,
+          kind: "note" as const,
+          role: "chapter" as const,
+          named: false,
+        })),
+      },
+    ],
+  };
+}
+
+test("the sort orders books by name, either way, and keeps vault order by default", () => {
+  const shelf = [shelved("Zeta"), shelved("alpha"), shelved("Book 10"), shelved("Book 2")];
+  const names = (order: Parameters<typeof sortShelf>[1]) =>
+    sortShelf(shelf, order).map((book) => book.name);
+  assert.deepEqual(names("vault"), ["Zeta", "alpha", "Book 10", "Book 2"]);
+  assert.deepEqual(names("name"), ["alpha", "Book 2", "Book 10", "Zeta"]);
+  assert.deepEqual(names("name-reverse"), ["Zeta", "Book 10", "Book 2", "alpha"]);
+  assert.equal(readSort("name"), "name");
+  assert.equal(readSort("bogus"), "vault");
+});
+
+test("the filter shows the matching chapters of a book, with the places they have in the note", () => {
+  const shelf = [
+    shelved("Emma", "Volume One", "Volume Two"),
+    shelved("Persuasion", "Anne", "Captain Wentworth"),
+    shelved("Other", "Nothing"),
+  ];
+  assert.equal(filterShelf(shelf, "  ").length, 3);
+  assert.equal(visibleRows(shelf[0] as Shelved, "EMMA"), undefined);
+  assert.deepEqual(filterShelf(shelf, "emma").map((book) => book.name), ["Emma"]);
+  const went = filterShelf(shelf, "went");
+  assert.deepEqual(went.map((book) => book.name), ["Persuasion"]);
+  // The book is whole, and the row that shows is the second of the note.
+  assert.equal(went[0]?.groups[0]?.rows.length, 2);
+  assert.deepEqual([...(visibleRows(went[0], "went") ?? [])], [1]);
+  assert.deepEqual(filterShelf(shelf, "zzz"), []);
+});
+
 // What this tier does not cover: the markup the navigator draws from
 // this, the drag that moves a row, and a book from a newer orca, which
-// the shelf leaves out rather than listing unread.
+// the shelf leaves out rather than listing unread. The filter and sort
+// are tested on built shelves, not on the fixture vault's own books.

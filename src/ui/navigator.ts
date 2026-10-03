@@ -40,7 +40,7 @@ import { pick } from "@/ui/pick";
 import { readFolds, type Folds } from "@/ui/folds";
 import { headingsOf, type Headed, type Showing } from "@/ui/outline";
 import { entryItems, menuPlace, menuTitle, type EntryItem } from "@/ui/rowmenu";
-import { members, shelve, type Row, type Shelved } from "@/ui/shelf";
+import { members, readSort, SORT_LABELS, SORT_ORDERS, shelve, type Row, type Shelved, type SortOrder } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
 /** The type the navigator is registered under. */
@@ -80,6 +80,8 @@ export class NavigatorView extends ItemView {
   private mounted: Mounted | undefined;
   /** The folds on the shelf, which Obsidian keeps with the workspace and gives back on a reload. */
   private folds: Folds = {};
+  /** The order of the books, kept with the workspace like the folds. */
+  private sort: SortOrder = "vault";
   private queued: number | undefined;
   private generation = 0;
   private painting = 0;
@@ -107,13 +109,15 @@ export class NavigatorView extends ItemView {
   }
 
   override getState(): Record<string, unknown> {
-    return { ...super.getState(), folds: this.folds };
+    return { ...super.getState(), folds: this.folds, sort: this.sort };
   }
 
   override async setState(state: unknown, result: ViewStateResult): Promise<void> {
     await super.setState(state, result);
     this.folds = readFolds(state);
+    this.sort = readSort((state as { sort?: unknown } | null)?.sort);
     this.mounted?.fold(this.folds);
+    this.mounted?.order(this.sort);
   }
 
   override onOpen(): Promise<void> {
@@ -186,6 +190,24 @@ export class NavigatorView extends ItemView {
       newBook: () => {
         void this.newBook();
       },
+      sortMenu: (event, current, choose) => {
+        const menu = new Menu();
+        for (const order of SORT_ORDERS) {
+          menu.addItem((item) =>
+            item
+              .setTitle(SORT_LABELS[order])
+              .setChecked(order === current)
+              .onClick(() => {
+                choose(order);
+              }),
+          );
+        }
+        this.raise(menu, event);
+      },
+      sorted: (order) => {
+        this.sort = order;
+        this.app.workspace.requestSaveLayout();
+      },
       locate: (book, row) => {
         this.locate(book, row);
       },
@@ -218,6 +240,7 @@ export class NavigatorView extends ItemView {
       },
     });
     this.mounted.fold(this.folds);
+    this.mounted.order(this.sort);
 
     this.refresh();
     return Promise.resolve();

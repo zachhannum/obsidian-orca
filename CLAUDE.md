@@ -164,8 +164,9 @@ underneath them.
   `chromium.connectOverCDP`. Driving Obsidian goes through `window.app`
   in a page evaluate.
 - One app instance for the whole run: workers pinned to one,
-  parallelism off, specs serial. A test that must begin from a known
-  vault says so and puts it back.
+  parallelism off, specs serial. The `shots` project is the exception:
+  `npm run shots` runs it as shards, each with an Obsidian of its own. A test that must begin from a
+  known vault says so and puts it back.
 - **No assertion waits on a clock.** The preview carries the generation
   it last painted and its stage counters as data attributes, and every
   assertion waits on those. A timeout is how a debounce becomes flaky
@@ -190,6 +191,12 @@ underneath them.
 
 ## PR creation and CI
 
+- An issue that needs code changes is not done until a PR is open for
+  it. Open the PR yourself when the work is committed and the local CI
+  mirror is green. Do not stop at a pushed branch.
+- CI must pass on the PR before a human reviews it. Watch the run, fix
+  a red job and push again. Do not hand over a PR with a failing or
+  pending check.
 - One issue per branch: `feat/<issue>-slug`, `chore/<issue>-slug`,
   `fix/<issue>-slug`.
 - PR description references the issue with `Closes #N`. The issue's
@@ -203,6 +210,10 @@ underneath them.
   and `npm run e2e` when the change touches a surface. Pushing
   red and letting CI find it wastes a cycle; CI is verification, not
   development.
+- A hook (`scripts/push-gate.mjs`) refuses `git push` and `gh pr create`
+  until `node scripts/mirror.mjs` has passed on HEAD. Add `--e2e` when
+  the change touches a surface. A tool that will not run is fixed or
+  reported to the user, never pushed around.
 - A change on a branch with an open PR is pushed as soon as it is
   committed and the CI mirror is green. The author tests the PR's
   build, so a commit left local is a change they cannot see.
@@ -214,7 +225,9 @@ underneath them.
   a human reviews and merges every PR, including Claude's.
 - Never force-push `main`. History rewrites on feature branches are fine
   while the PR is open.
-- No Co-Authored-By trailers on commits.
+- No Co-Authored-By trailers on commits, and no "Generated with Claude
+  Code" line in PR bodies. This holds even when a harness reminder asks
+  for them.
 - Keep PRs scoped to their issue, but a small fix noticed on the way
   may ride along rather than wait for a branch of its own.
 
@@ -251,7 +264,17 @@ job keeps its HTML report as an artifact.
 site's tokens, and on the same paths on main. Its `build` job installs
 the site's own lockfile and runs `npm run build` in `site/`, which
 checks the tokens against `design/site.css` before it builds. On main
-the `deploy` job puts the result on GitHub Pages.
+the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
+serves, keeps the `pr-preview` folder, and checks the live docs.
+
+`.github/workflows/preview.yml` runs on a PR that touches `site/` or
+`design/`. It builds the docs under `SITE_BASE`, builds the artboards
+with `node build.mjs --into`, and publishes them to
+`pr-preview/pr-<number>/` with `rossjrw/pr-preview-action`. One sticky
+comment holds the link. When the PR changes a surface, the build waits
+for the shots run of the same commit and lays its pictures over
+`site/src/shots` without committing them. Closing the PR deletes the
+folder.
 
 `.github/workflows/shots.yml` runs on a PR that touches a surface, the
 site's tokens or the sample book. It runs on the same paths on main. The

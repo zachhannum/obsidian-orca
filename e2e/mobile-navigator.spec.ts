@@ -195,13 +195,66 @@ for (const device of ["phone", "tablet"] as const) {
       await navigator.button("Expand all").click();
       await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
 
-      // The two are one pill, as Obsidian mobile draws a toolbar.
-      const pill = await navigator.toolbar.boundingBox();
-      const other = await navigator.button("Collapse all").boundingBox();
-      if (pill === null || other === null) throw new Error("nothing to measure");
-      expect(pill.width).toBeLessThan(first.width);
-      expect(Math.round(pill.width)).toBe(Math.round(button.width + other.width));
-      await expect(navigator.toolbar).toHaveCSS("border-radius", `${String(TOUCH)}px`);
+      // The buttons are one row, centered in the pane as the file
+      // explorer's are, and none of them is left out.
+      const left = await navigator.button("New book").boundingBox();
+      const right = await navigator.toolbar.locator(".nav-action-button").last().boundingBox();
+      const pane = await navigator.pane.boundingBox();
+      if (left === null || right === null || pane === null) throw new Error("nothing to measure");
+      const middle = (left.x + right.x + right.width) / 2;
+      expect(Math.abs(middle - (pane.x + pane.width / 2))).toBeLessThanOrEqual(2);
+      for (const label of ["New book", "Search books", "Sort books"]) {
+        await expect(navigator.button(label)).toHaveCount(1);
+      }
+
+      if (device === "tablet") {
+        // The bar is as far from the top of the pane as the file
+        // explorer's is, and measured the same way.
+        const top = (type: string) =>
+          obsidian.page.evaluate((of) => {
+            const leaf = document.querySelector(`.workspace-leaf-content[data-type="${of}"]`);
+            const bar = leaf?.querySelector(".nav-action-button");
+            if (!leaf || !bar) throw new Error("no bar");
+            return bar.getBoundingClientRect().top - leaf.getBoundingClientRect().top;
+          }, type);
+        const ours = await top("orca-navigator");
+        await obsidian.page.evaluate(async () => {
+          await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
+        });
+        expect(ours).toBe(await top("file-explorer"));
+        await navigator.drawer();
+      }
+      if (device === "phone") {
+        // The bar is at the foot of the pane, above the pane picker, and
+        // the native fade is painted over the list above it.
+        const picker = await obsidian.page
+          .locator(".workspace-drawer-tab-options")
+          .first()
+          .boundingBox();
+        if (picker === null) throw new Error("no pane picker");
+        const bar = await navigator.toolbar.locator(".nav-action-button").last().boundingBox();
+        expect(bar?.y ?? 0).toBeLessThan(picker.y);
+        expect(picker.y - (bar?.y ?? 0) - (bar?.height ?? 0)).toBeLessThan(TOUCH);
+        const fade = await navigator.toolbar.evaluate(
+          (row) => getComputedStyle(row, "::after").backgroundImage,
+        );
+        expect(fade).toContain("gradient");
+      }
+
+      // Search filters the shelf by name, and sort orders the books.
+      await navigator.button("Search books").click();
+      await navigator.pane.getByTestId("orca-nav-search").fill("no such chapter");
+      await expect(navigator.pane.getByText("No matches")).toBeVisible();
+      await navigator.pane.getByTestId("orca-nav-search").fill(CHAPTER);
+      await expect(navigator.entry(BOOK, CHAPTER)).toHaveCount(1);
+      await navigator.button("Search books").click();
+      await navigator.button("Sort books").click();
+      await expect(obsidian.item("Name (Z to A)")).toHaveCount(1);
+      await obsidian.item("Name (A to Z)").click();
+      await expect(navigator.button("Sort books")).toHaveClass(/is-active/);
+      await navigator.button("Sort books").click();
+      await obsidian.item("Vault order").click();
+      await expect(navigator.button("Sort books")).not.toHaveClass(/is-active/);
 
       // No row cuts its words short, so none has words to put in a tooltip.
       const cut = await navigator.pane.locator(".orca-label").evaluateAll(
@@ -219,10 +272,46 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
+test("on a phone a touch drag on a row's handle moves it and the note agrees, and a touch drag on the rest of the row starts none", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await obsidian.mobile("phone");
+  try {
+    await navigator.reveal();
+    await navigator.painted();
+    await expect(navigator.entry(BOOK, CHAPTER).getByTestId("orca-handle")).toBeVisible();
+    await expect(navigator.group(BOOK, SECTION).getByTestId("orca-handle")).toBeVisible();
+    expect(await navigator.pane.getByTestId("orca-handle").first().boundingBox()).toMatchObject({
+      width: TOUCH,
+    });
+
+    // A finger on the row's body scrolls the list and holds nothing.
+    const swipe = await navigator.swipe(navigator.entry(BOOK, CHAPTER));
+    expect(swipe.dragged).toBe(false);
+    if ((await navigator.reach()).most > 0) expect(swipe.scrolled).toBeGreaterThan(0);
+    expect(await vault.read(BOOK)).not.toContain("- [[Chapter Four]]\n- [[Volume the First]]");
+
+    await navigator.touchDrag(
+      navigator.entry(BOOK, "Chapter Four"),
+      navigator.entry(BOOK, "Volume the First"),
+      "above",
+    );
+    await expect
+      .poll(async () => vault.read(BOOK))
+      .toContain("- [[Chapter Four]]\n- [[Volume the First]] `part`\n");
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
 // What this suite does not cover: the press itself. A finger held on a
 // row for the time the system asks is a wait on a clock, so the
 // `contextmenu` event the press ends in is sent in its place. Nor does
 // it cover a real touch screen, where no pointer hovers at all: the
 // tooltip check here reads the page straight after the pointer arrives,
-// and a tooltip raised later would pass it. The drag handles and a tap
-// on a chapter that closes the drawer are not built here.
+// and a tooltip raised later would pass it. A tap
+// on a chapter that closes the drawer is not built here. Nor is a
+// drag on a tablet with a mouse, which takes the desktop path.
