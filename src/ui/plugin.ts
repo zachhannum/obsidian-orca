@@ -347,16 +347,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
 
     this.app.workspace.onLayoutReady(() => {
       this.index();
-      void this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
-        reveal: false,
-      });
-      // The panel is a tab in the sidebar rather than a leaf a command
-      // makes, so it can be opened without the command. It reads the
-      // machine's faces only once it has a book, so a startup with no
-      // book open scans nothing.
-      void this.app.workspace.ensureSideLeaf(PANEL_VIEW, "right", {
-        reveal: false,
-      });
+      void this.sidebars();
     });
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
@@ -859,6 +850,42 @@ export default class OrcaPlugin extends Plugin implements Limited {
 
   private async opening(book: TFile): Promise<void> {
     await this.app.workspace.getLeaf(false).openFile(book);
+  }
+
+  /**
+   * Opens the navigator and the panel when the layout holds no tab of
+   * their type. On a reload the layout is ready inside `onload`, while
+   * Obsidian is still rebuilding the tabs it kept, so the leaves are
+   * read by saved state after the rebuild has had a turn. A tab found
+   * that way is loaded and left where it is.
+   */
+  private async sidebars(): Promise<void> {
+    await new Promise<void>((done) => {
+      window.setTimeout(done);
+    });
+    const kept = new Set<string>();
+    const deferred: WorkspaceLeaf[] = [];
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      const type = leaf.getViewState().type;
+      kept.add(type);
+      if (type === NAVIGATOR_VIEW || type === PANEL_VIEW) deferred.push(leaf);
+    });
+    // A kept tab is a placeholder until something asks for its view.
+    await Promise.all(deferred.map(async (leaf) => leaf.loadIfDeferred()));
+    if (!kept.has(NAVIGATOR_VIEW)) {
+      await this.app.workspace.ensureSideLeaf(NAVIGATOR_VIEW, "left", {
+        reveal: false,
+      });
+    }
+    // The panel is a tab in the sidebar rather than a leaf a command
+    // makes, so it can be opened without the command. It reads the
+    // machine's faces only once it has a book, so a startup with no
+    // book open scans nothing.
+    if (!kept.has(PANEL_VIEW)) {
+      await this.app.workspace.ensureSideLeaf(PANEL_VIEW, "right", {
+        reveal: false,
+      });
+    }
   }
 
   /** Reveals the navigator in its sidebar. */
