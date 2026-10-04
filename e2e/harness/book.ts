@@ -458,7 +458,12 @@ export class Book {
     return killed;
   }
 
-  /** Waits for orca to start a worker on this book other than the one that died. */
+  /**
+   * Waits for orca to set this book again on a worker other than the
+   * one that died. A worker killed while it starts is a start that
+   * failed, which the pool does not count as a death, so the wait ends
+   * once the new worker has painted the book.
+   */
   async restarted(book: string, killed: Worker): Promise<void> {
     await expect
       .poll(async () => {
@@ -466,6 +471,7 @@ export class Book {
         return engine !== undefined && engine !== killed;
       })
       .toBe(true);
+    await this.settled(book);
   }
 
   /** The workers orca has running on this book. */
