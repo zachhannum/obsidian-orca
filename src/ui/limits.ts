@@ -5,6 +5,7 @@
  * belong to the machine.
  */
 
+import { DEEPEST_LEVEL } from "@/book/note";
 import { CEILING } from "@/engine/pool";
 import { PAGE_UNITS, type PageUnit } from "@/style/design";
 import { READER_STORED, readerStored, type ReaderStored } from "@/style/reader";
@@ -33,9 +34,6 @@ export interface Limits {
   /** The deepest heading level the navigator lists, from 1 to 6. */
   deepest: number;
 }
-
-/** The deepest heading level Markdown writes. */
-export const DEEPEST_LEVEL = 6;
 
 export const LIMITS: Limits = {
   sessions: CEILING,

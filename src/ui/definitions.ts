@@ -1,5 +1,6 @@
 import type { Setting } from "obsidian";
-import { DEEPEST_LEVEL, MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
+import { DEEPEST_LEVEL } from "@/book/note";
+import { MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
 
 /** The plugin, narrowed to the settings orca's tab writes. */
 export interface Limited {
