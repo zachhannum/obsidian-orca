@@ -4,6 +4,7 @@ import {
   type Client,
   type EpubFile,
   type EpubFiles,
+  type EpubSpineEntry,
   type Epub,
   type FaceAttributes,
   type Folios,
@@ -172,8 +173,8 @@ export interface Reading {
 export interface Reflowable {
   /** The generation of the session the files were written from. */
   generation: number;
-  /** The paths of the documents, in reading order. */
-  spine: string[];
+  /** The documents in reading order, each with the node of the section it holds. */
+  spine: EpubSpineEntry[];
   files: EpubFile[];
   /** The EPUB's warnings, as the engine wrote them. */
   warnings: Warning[];
@@ -318,6 +319,19 @@ export class Session {
   async inspect(node: number): Promise<Inspection | undefined> {
     const inspection = await routed(() => this.client.inspect(node));
     return inspection ?? undefined;
+  }
+
+  /**
+   * The element a node is in and the elements around that one, the
+   * nearest first and the node's section last. A text node has no
+   * element of its own in an EPUB, so a host that looks a place up in a
+   * document asks with these. Nothing for a node the book does not hold.
+   */
+  async elementsOf(node: number): Promise<number[] | undefined> {
+    const inspection = await this.inspect(node);
+    if (inspection === undefined) return undefined;
+    const around = inspection.ancestors.map((ancestor) => ancestor.node).reverse();
+    return [inspection.elementNode, ...around].filter((each) => each !== null);
   }
 
   /**

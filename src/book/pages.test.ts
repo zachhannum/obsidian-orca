@@ -9,6 +9,7 @@ import {
   sectionRanges,
   sectionsOn,
   sourceNamed,
+  spinePlaces,
   stepChapter,
   type Placing,
 } from "@/book/pages";
@@ -173,6 +174,30 @@ test("a chapter turn steps along the reading order and stops at either end", () 
   assert.equal(stepChapter(offered, 2, 1), undefined);
   assert.equal(stepChapter(offered, 0, -1), undefined);
   assert.equal(stepChapter(offered, undefined, 1), undefined);
+});
+
+test("a spine document is placed by the source the engine names, generated matter included, and never by its place in the spine", async () => {
+  const sections = [generated(), note("a.md"), missing(), note("c.md"), generated()];
+  const sources = new Map([
+    [1, "orca-generated:0"],
+    [10, "a.md"],
+    [30, "c.md"],
+    [44, "orca-generated:3"],
+    [50, "gone.md"],
+  ]);
+  const engine = {
+    sourceOf: (node: number) => {
+      const source = sources.get(node);
+      return Promise.resolve(source === undefined ? null : { source, start: 0, end: 1 });
+    },
+  };
+  const spine = [1, 10, 30, 44, 50, 60, null].map((section) => ({ section }));
+
+  const places = await spinePlaces(sections, spine, engine);
+
+  // The third document is the fourth section, because the book set
+  // nothing from the third.
+  assert.deepEqual([...places], [[1, 0], [10, 1], [30, 3], [44, 4]]);
 });
 
 // What this tier does not cover: the chapter control itself, which the

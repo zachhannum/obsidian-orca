@@ -21,16 +21,22 @@ import {
   sectionOf,
   sectionOn,
   sectionsOn,
+  sourceNamed,
+  spinePlaces,
   stepChapter,
   type Chapter,
 } from "@/book/pages";
 import {
   anchorOf,
   heldOn,
+  lineByte,
   opensOn,
   pagesOf,
+  showsAny,
+  topShown,
   type Landed,
   type Shown,
+  type Span,
   type Written,
 } from "@/book/place";
 import { isGenerated } from "@/book/plan";
@@ -83,10 +89,10 @@ import {
   type Pin,
   type Target,
 } from "@/ui/inspect";
-import { stepOf } from "@/ui/frame";
+import { stepOf, type Anchor } from "@/ui/frame";
 import { followAt, type Follow } from "@/ui/links";
 import { mountOverlay, type MountedOverlay } from "@/ui/overlay";
-import { mountReflow, type MountedReflow } from "@/ui/reflow";
+import { mountReflow, type MountedReflow, type Screen } from "@/ui/reflow";
 import { openSheet, type Sheet } from "@/ui/sheet";
 import type { PageUnit } from "@/style/design";
 import type { ReaderStored } from "@/style/reader";
@@ -117,6 +123,22 @@ const NARROW = 240;
  */
 const BOOK_TURNS = [0, -0.6, -1.2];
 
+/**
+ * A place to turn to, as each view finds it. The page views ask the
+ * engine for a page. The EPUB view asks for the node a byte of a source
+ * was read into, because a byte outlives an edit and a node does not.
+ */
+interface Spot {
+  /** The section's place in the reading order, which is where the frame turns when the byte was read into no node. */
+  at?: number;
+  /** A byte of a source the place is at. */
+  from?: { source: string; byte: number };
+  /** The page the place is on, counting from 0, or nothing where the page views have nowhere to turn. */
+  page(): Promise<number | undefined>;
+  /** Run once the place is found, before the view turns to it. */
+  found?(): void;
+}
+
 /** The place in the manuscript a page opens at. */
 export interface Opens {
   note: string;
@@ -146,6 +168,13 @@ export interface PreviewState {
    * restored at startup opens at the folio instead.
    */
   over?: Shown[];
+  /**
+   * The byte of the note the pane was left at when it was last swapped
+   * for the manuscript. The EPUB view opens there while the manuscript
+   * still shows the block, as the page left stands for a page view.
+   * The workspace never keeps it.
+   */
+  left?: number;
   /**
    * Set when a click on a link asks for the folio. The turn goes into
    * the leaf's history, so Obsidian's back and forward return across it.
@@ -430,6 +459,30 @@ export class PreviewView extends ItemView {
   private grip: Grip | undefined;
   /** Whether the drag that just ended moved the page, so its click is dropped. */
   private gripped = false;
+  /** The node the EPUB view sits in, which carries what the surface carries for the pages. */
+  private host: HTMLElement | undefined;
+  /** The generation the spine below was read from. */
+  private spineOf: number | undefined;
+  /** The place in the reading order of each document of the EPUB, by the node of its section. */
+  private spine = new Map<number, number>();
+  /** The same the other way, for a chapter the engine read no byte of into a node. */
+  private sectionNodes = new Map<number, number>();
+  /** The screen the frame last laid out. */
+  private screen: Screen | undefined;
+  /** The bytes of its source that screen holds. */
+  private span: ({ source: string } & Span) | undefined;
+  /** A turn the frame could not take yet, because it held another generation. */
+  private wanted: { spot: Spot; led: boolean } | undefined;
+  /** The same turn counter the page views keep, for a turn of the frame. */
+  private seeking = 0;
+  /** Whether the manuscript asked for the turn the frame is making, which then leads it nowhere. */
+  private seekLed = false;
+  /** Whether the reader turned the frame since the book opened here. */
+  private strayed = false;
+  /** The blocks a manuscript showed when it was swapped for this pane, until the frame has opened on them. */
+  private arriving: Shown[] | undefined;
+  /** The byte of the note the pane was left at before that swap. */
+  private leftAt: number | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -492,6 +545,8 @@ export class PreviewView extends ItemView {
     const reflowed = wanted.view !== undefined && (wanted.epub === true) !== this.reflowing;
     if (reflowed) this.setReflowing(wanted.epub === true);
     this.over = wanted.over;
+    this.arriving = wanted.over;
+    this.leftAt = wanted.left;
     this.state = kept(wanted);
     this.attach();
     if (reviewed) this.marksView();
@@ -499,7 +554,11 @@ export class PreviewView extends ItemView {
     else if (wanted.folio !== undefined) await this.turn(wanted.folio - 1);
     else if (wanted.note !== undefined) await this.turnTo(wanted.note, wanted.over);
     else if (reviewed || reflowed) await this.turn(this.at);
-    if (reflowed && !changed) void this.reflows();
+    // The frame opens again on the place the state named.
+    if (this.reflowing && !changed) {
+      this.span = undefined;
+      void this.reflows();
+    }
   }
 
   /** The page this preview is turned to, counting from 1, once it has one. */
@@ -509,7 +568,7 @@ export class PreviewView extends ItemView {
 
   /** Whether the reader has paged away from where the book opened here. */
   get paged(): boolean {
-    return this.openedAt !== undefined && this.state.folio !== this.openedAt;
+    return this.strayed || (this.openedAt !== undefined && this.state.folio !== this.openedAt);
   }
 
   /**
@@ -518,9 +577,16 @@ export class PreviewView extends ItemView {
    * read from. A paragraph carried over from the page before begins on
    * the page before, so a sliver of one at the top of a page leads
    * nowhere. Nothing for a page orca wrote itself.
+   *
+   * In the EPUB view the place is the one the screen opens at.
    */
   async opensIn(): Promise<Opens | undefined> {
     const session = this.session;
+    if (this.reflowing) {
+      const span = this.span;
+      if (span === undefined || isGenerated(span.source)) return undefined;
+      return { note: span.source, at: span.start };
+    }
     const node = opensOn(this.blocks);
     if (session === undefined || node === undefined) return undefined;
     const source = await session.sourceOf(node);
@@ -656,20 +722,111 @@ export class PreviewView extends ItemView {
     if (typeset === undefined) return;
     const section = sectionOf(typeset.sections, note);
     if (section === undefined) return;
+    // The screen being read already holds a block the pane shows. This
+    // is what keeps a manuscript the frame scrolled from turning it
+    // back.
+    const span = this.span;
+    if (this.reflowing && over !== undefined && span?.source === note && showsAny(over, span)) {
+      return;
+    }
+    // A pane shows more than a screen holds, so the frame goes to the
+    // block at the top of the pane.
+    const top = over === undefined ? undefined : topShown(over);
     const following = (this.following += 1);
-    // A note showing nothing orca set turns to where its section opens,
-    // and so does one whose blocks the engine read into no node.
-    const page =
-      (over === undefined ? undefined : await this.pageOver(note, over)) ??
-      (await this.opensSection(section));
-    if (following !== this.following) return;
-    // The span being read is already that page, so the reader is looking
-    // at it and the pane has nowhere to turn. This is also what keeps a
-    // manuscript the book itself scrolled from turning it back.
-    if (page === undefined || this.shows(page)) return;
-    this.showing = note;
-    this.state = { ...this.state, note };
-    await this.turn(page, true);
+    await this.goes(
+      {
+        at: section,
+        ...(top === undefined ? {} : { from: { source: note, byte: top } }),
+        page: async () => {
+          // A note showing nothing orca set turns to where its section
+          // opens, and so does one whose blocks the engine read into no
+          // node.
+          const page =
+            (over === undefined ? undefined : await this.pageOver(note, over)) ??
+            (await this.opensSection(section));
+          if (following !== this.following) return undefined;
+          // The span being read is already that page, so the reader is
+          // looking at it and the pane has nowhere to turn. This is
+          // also what keeps a manuscript the book itself scrolled from
+          // turning it back.
+          return page === undefined || this.shows(page) ? undefined : page;
+        },
+        found: () => {
+          if (this.reflowing) return;
+          this.showing = note;
+          this.state = { ...this.state, note };
+        },
+      },
+      true,
+    );
+  }
+
+  /**
+   * Turns the view that is on to a place, and answers whether it had
+   * somewhere to turn: the frame in the EPUB view, and the pages in
+   * any other. Every turn to a place ends here.
+   */
+  private async goes(spot: Spot, led = false): Promise<boolean> {
+    if (this.reflowing) return await this.seeks(spot, led);
+    const page = await spot.page();
+    if (page === undefined) return false;
+    spot.found?.();
+    await this.turn(page, led);
+    return true;
+  }
+
+  /**
+   * Turns the frame to the screen that holds a place. A frame that
+   * holds another generation than the session is on cannot find the
+   * place yet, so the turn is kept for the screen it lays out next.
+   */
+  private async seeks(spot: Spot, led: boolean): Promise<boolean> {
+    const session = this.session;
+    const reflow = this.reflow;
+    if (session === undefined || reflow === undefined) return false;
+    const seeking = (this.seeking += 1);
+    this.wanted = undefined;
+    if (this.spineOf !== session.generation) {
+      this.wanted = { spot, led };
+      spot.found?.();
+      return true;
+    }
+    const anchor = await this.anchorAt(session, spot);
+    if (seeking !== this.seeking || !this.reflowing) return false;
+    if (anchor === undefined) return false;
+    spot.found?.();
+    const sought = reflow.seek(anchor);
+    if (sought === "missing") return false;
+    if (sought === "early") this.wanted = { spot, led };
+    else this.seekLed = led;
+    return true;
+  }
+
+  /**
+   * The section and the elements a place is in. The engine reads a
+   * byte into a text node, which no document has an element for, so
+   * the elements around the node are asked for. A section the engine
+   * read the byte into no node of is found by its place in the reading
+   * order.
+   */
+  private async anchorAt(session: Session, spot: Spot): Promise<Anchor | undefined> {
+    const generation = this.spineOf;
+    if (generation === undefined) return undefined;
+    let nodes: number[] | undefined;
+    try {
+      const node =
+        spot.from === undefined
+          ? undefined
+          : await session.nodeAt(spot.from.source, spot.from.byte);
+      nodes = node === undefined ? undefined : await session.elementsOf(node);
+    } catch {
+      nodes = undefined;
+    }
+    const section =
+      nodes?.find((node) => this.spine.has(node)) ??
+      (spot.at === undefined ? undefined : this.sectionNodes.get(spot.at));
+    if (section === undefined) return undefined;
+    return { generation, section, nodes: nodes ?? [] };
   }
 
   /**
@@ -770,13 +927,7 @@ export class PreviewView extends ItemView {
   async turnToSection(at: number, line?: number): Promise<boolean> {
     const chapter = this.turns.find((turn) => turn.at === at);
     if (chapter === undefined) return false;
-    const page = line === undefined ? undefined : await this.opensLine(at, line);
-    if (line === undefined || page === undefined) return await this.turnToPlace(chapter);
-    this.turnedTo = at;
-    this.askedLine = line;
-    this.namesAt(at);
-    await this.turn(page);
-    return true;
+    return await this.turnToPlace(chapter, line);
   }
 
   /** The page a line of a section's note opens on, or nothing where the engine set it on none. */
@@ -788,17 +939,33 @@ export class PreviewView extends ItemView {
     }
   }
 
-  private async turnToPlace(chapter: Chapter): Promise<boolean> {
-    const at = await this.opensSection(chapter.at);
-    if (at === undefined) return false;
-    // The chapter is kept from the turn, so a spread or a screenful
-    // that also carries the one before it is still named for the one
-    // the reader asked for, and the next turn command steps from it.
-    this.turnedTo = chapter.at;
-    this.askedLine = undefined;
-    this.namesAt(chapter.at);
-    await this.turn(at);
-    return true;
+  private async turnToPlace(chapter: Chapter, line?: number): Promise<boolean> {
+    const typeset = this.composed;
+    const source = typeset === undefined ? undefined : sourceNamed(typeset.sections, chapter.at);
+    const text = source === undefined ? undefined : typeset?.textOf(source);
+    // The frame finds a line by its byte. The pages find it by asking
+    // which page it opens on, and a line set on none opens the chapter.
+    let asked = this.reflowing ? line : undefined;
+    return await this.goes({
+      at: chapter.at,
+      ...(line !== undefined && source !== undefined && text !== undefined
+        ? { from: { source, byte: lineByte(text, line) } }
+        : {}),
+      page: async () => {
+        const page = line === undefined ? undefined : await this.opensLine(chapter.at, line);
+        if (page !== undefined) asked = line;
+        return page ?? (await this.opensSection(chapter.at));
+      },
+      found: () => {
+        // The chapter is kept from the turn, so a spread or a screenful
+        // that also carries the one before it is still named for the
+        // one the reader asked for, and the next turn command steps
+        // from it.
+        this.turnedTo = chapter.at;
+        this.askedLine = asked;
+        this.namesAt(chapter.at);
+      },
+    });
   }
 
   /** Whether the view on screen zooms: a page view that is not the grid. */
@@ -1071,7 +1238,7 @@ export class PreviewView extends ItemView {
     this.shuts(pane, count, issues);
 
     const chapter = bar.createEl("select", {
-      cls: `dropdown orca-preview-chapter ${PAGING}`,
+      cls: "dropdown orca-preview-chapter",
     });
     chapter.setAttribute("aria-label", "Chapter");
     chapter.dataset["testid"] = "orca-chapter";
@@ -1127,8 +1294,14 @@ export class PreviewView extends ItemView {
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
     this.overlay = mountOverlay(surface);
-    this.reflow = mountReflow(well.createDiv({ cls: "orca-reflow-host" }), {
+    const host = well.createDiv({ cls: "orca-reflow-host" });
+    host.dataset["testid"] = "orca-reflow-host";
+    this.host = host;
+    this.reflow = mountReflow(host, {
       controls,
+      shows: (screen) => {
+        void this.shown(screen);
+      },
       reading: (text) => {
         if (this.reflowing) this.reading(text);
       },
@@ -1664,6 +1837,8 @@ export class PreviewView extends ItemView {
     this.composed = undefined;
     this.named = undefined;
     this.ledAt = undefined;
+    this.strayed = false;
+    this.forgets();
     this.showing = this.state.note;
     // A book opens at fit, whatever the last one was read at.
     this.zoomTo(FIT);
@@ -1811,6 +1986,9 @@ export class PreviewView extends ItemView {
    */
   private async show(mode: ViewMode): Promise<void> {
     const left = this.reflowing;
+    // The page that holds what the screen opens with is asked for while
+    // the frame still holds the screen.
+    const page = left ? await this.pageOfScreen() : undefined;
     if (left) this.setReflowing(false);
     if (mode === this.mode && !left) return;
     this.mode = mode;
@@ -1820,7 +1998,27 @@ export class PreviewView extends ItemView {
     // The grid does not zoom, so a zoomed page goes back to fit for it.
     this.zoomTo(this.zoom);
     this.measure();
-    await this.turn(this.at);
+    await this.turn(page ?? this.at);
+  }
+
+  /**
+   * The page that holds what the screen being read opens with, counting
+   * from 0. Nothing for a reader who turned no screen, because the page
+   * they left stands.
+   */
+  private async pageOfScreen(): Promise<number | undefined> {
+    const session = this.session;
+    const screen = this.screen;
+    if (!this.strayed || session === undefined || screen?.generation !== session.generation) {
+      return undefined;
+    }
+    const node = screen.opens ?? screen.section;
+    if (node === undefined) return undefined;
+    try {
+      return (await session.foliosOf([node]))[0]?.at;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
@@ -1839,6 +2037,7 @@ export class PreviewView extends ItemView {
   private setReflowing(on: boolean): void {
     this.reflowing = on;
     this.asking += 1;
+    this.forgets();
     if (on) {
       this.setInspecting(INSPECT_OFF);
       this.inspectAction?.setAttribute("aria-disabled", "true");
@@ -1850,6 +2049,16 @@ export class PreviewView extends ItemView {
     this.contentEl.toggleClass(REFLOWING, on);
     this.marksView();
     this.zoomTo(this.zoom);
+  }
+
+  /** Drops what the pane knew of the frame's place, which the next EPUB drawn tells it again. */
+  private forgets(): void {
+    this.seeking += 1;
+    this.screen = undefined;
+    this.span = undefined;
+    this.wanted = undefined;
+    this.seekLed = false;
+    this.spineOf = undefined;
   }
 
   /**
@@ -1864,12 +2073,23 @@ export class PreviewView extends ItemView {
       return;
     }
     const session = this.session;
-    if (session === undefined) return;
+    const typeset = this.composed;
+    if (session === undefined || typeset === undefined) return;
     const asking = (this.asking += 1);
     try {
       const book = await session.epubFiles();
       if (asking !== this.asking || book === undefined) return;
-      this.reflow?.draw({ book, stages: session.stages });
+      const spine = await spinePlaces(typeset.sections, book.spine, session);
+      if (asking !== this.asking) return;
+      this.spine = spine;
+      this.sectionNodes = new Map();
+      for (const [node, at] of spine) {
+        if (!this.sectionNodes.has(at)) this.sectionNodes.set(at, node);
+      }
+      this.spineOf = book.generation;
+      const landing = await this.landing(session);
+      if (asking !== this.asking) return;
+      this.reflow?.draw({ book, stages: session.stages, ...landing });
     } catch (cause) {
       if (asking !== this.asking) return;
       // The engine stopped under the ask. The screen already drawn
@@ -1879,6 +2099,163 @@ export class PreviewView extends ItemView {
         cause instanceof EngineError ? sentence(cause.message) : "The preview could not load",
       );
     }
+  }
+
+  /**
+   * The place the next EPUB opens at. A turn the frame could not take
+   * comes first. Then the place the last screen opened at, which an
+   * edit moves the words of and not the reader. Then the block at the
+   * top of the manuscript the pane was swapped for, and last the block
+   * the page opens with.
+   */
+  private async landing(session: Session): Promise<{ at?: Anchor; sought?: boolean }> {
+    const wanted = this.wanted;
+    this.wanted = undefined;
+    if (wanted !== undefined) {
+      const at = await this.anchorAt(session, wanted.spot);
+      if (at !== undefined) {
+        this.seekLed = wanted.led;
+        return { at, sought: true };
+      }
+    }
+    const none = (): Promise<undefined> => Promise.resolve(undefined);
+    const span = this.span;
+    if (span !== undefined) {
+      const at = await this.anchorAt(session, {
+        from: { source: span.source, byte: span.start },
+        page: none,
+      });
+      if (at !== undefined) return { at };
+    }
+    const note = this.state.note;
+    const arriving = this.arriving;
+    const left = this.leftAt;
+    this.arriving = undefined;
+    this.leftAt = undefined;
+    // The place the pane was left at stands while the manuscript still
+    // shows it. Obsidian settles a pane it hands back a line or two off
+    // the line asked for, and the top of the pane is then a block of
+    // the screen before.
+    const stands =
+      arriving !== undefined &&
+      left !== undefined &&
+      showsAny(arriving, { start: left, end: left + 1 });
+    const top = stands ? left : arriving === undefined ? undefined : topShown(arriving);
+    if (note !== undefined && top !== undefined) {
+      const at = await this.anchorAt(session, { from: { source: note, byte: top }, page: none });
+      if (at !== undefined) return { at };
+    }
+    const generation = this.spineOf;
+    const node = opensOn(this.blocks);
+    if (generation === undefined || node === undefined) return {};
+    const nodes = await session.elementsOf(node).catch(() => undefined);
+    const section = nodes?.find((each) => this.spine.has(each));
+    return nodes === undefined || section === undefined ? {} : { at: { generation, section, nodes } };
+  }
+
+  /**
+   * Takes a screen the frame laid out: names its chapter, tells the
+   * navigator, keeps the bytes it holds, and puts a linked manuscript
+   * on the line it opens at. A screen the reader did not turn to leads
+   * the manuscript nowhere, and neither does one the manuscript asked
+   * for.
+   */
+  private async shown(screen: Screen): Promise<void> {
+    const typeset = this.composed;
+    const session = this.session;
+    const host = this.host;
+    if (!this.reflowing || typeset === undefined || session === undefined) return;
+    if (screen.generation !== this.spineOf || screen.generation !== session.generation) return;
+    this.screen = screen;
+    const turned = screen.cause !== "laid";
+    const led = screen.cause === "seek" && this.seekLed;
+    if (screen.cause !== "laid") this.seekLed = false;
+    if (turned) this.strayed = true;
+    if (screen.cause === "turn") this.askedLine = undefined;
+    const at = screen.section === undefined ? undefined : this.spine.get(screen.section);
+    if (at !== undefined) {
+      this.namesAt(at);
+      this.reads(typeset.sections[at]);
+    }
+    const wanted = this.wanted;
+    if (wanted !== undefined) {
+      this.wanted = undefined;
+      void this.seeks(wanted.spot, wanted.led);
+    }
+    const opening = screen.opens ?? screen.section;
+    if (opening === undefined) return;
+    const leading = (this.leading += 1);
+    const leads = this.linked && turned && !led;
+    if (leads && host !== undefined) host.dataset["led"] = "";
+    let opens: NodeSource | undefined;
+    let closes: NodeSource | undefined;
+    let page: number | undefined;
+    try {
+      [opens, closes] = await Promise.all([
+        session.sourceOf(opening),
+        session.sourceOf(screen.closes ?? opening),
+      ]);
+      if (turned) page = (await session.foliosOf([opening]))[0]?.at;
+    } catch {
+      return;
+    }
+    if (leading !== this.leading || !this.reflowing) return;
+    if (opens !== undefined) {
+      this.span = {
+        source: opens.source,
+        start: opens.start,
+        end: closes?.source === opens.source ? Math.max(closes.end, opens.end) : opens.end,
+      };
+    }
+    // The page that holds what the screen opens with is the leaf's, so
+    // a workspace restored at startup opens the book there.
+    if (page !== undefined) {
+      this.state = { ...this.state, folio: page + 1 };
+      this.app.workspace.requestSaveLayout();
+    }
+    if (at !== undefined) this.marksScreen(typeset, at, screen);
+    // The e2e suite waits here for the pane to have taken the screen.
+    if (host !== undefined && screen.section !== undefined) {
+      host.dataset["taken"] = `${String(screen.section)}:${String(screen.screen + 1)}`;
+    }
+    if (!leads) return;
+    if (opens === undefined || isGenerated(opens.source)) {
+      this.ledTo(NOWHERE);
+      return;
+    }
+    this.handoff.follows(this, opens.source, opens.start);
+    this.ledTo(opens.source);
+  }
+
+  /**
+   * Tells the navigator the entry the screen is in, and the heading in
+   * it the screen falls under. A heading is placed by the byte its line
+   * opens at, against the bytes the screen holds.
+   */
+  private marksScreen(typeset: Typeset, at: number, screen: Screen): void {
+    const book = this.book;
+    const span = this.span;
+    if (book === undefined) return;
+    const section = typeset.sections[at];
+    const deepest = this.handoff.outlined();
+    const text = section?.kind === "note" ? typeset.textOf(section.path) : undefined;
+    const lines =
+      deepest !== undefined && section?.kind === "note" && text !== undefined && span !== undefined
+        ? outline(headingsOf(this.app, section.path, deepest), entryName(section.entry)).map(
+            (heading) => heading.line,
+          )
+        : [];
+    const line =
+      text === undefined || span === undefined
+        ? undefined
+        : headingOn(
+            lines.map((each) => lineByte(text, each)),
+            lines,
+            { first: span.start, last: span.end - 1 },
+            this.askedLine,
+            screen.screen === 0 ? span.start : undefined,
+          );
+    this.handoff.showing(this, { book, at, line });
   }
 
   /** Marks the switch of the view the book is being read in. */
@@ -2033,6 +2410,9 @@ export class PreviewView extends ItemView {
     void this.refinds(session);
     this.settle(reading.at, reading.length, leaves.length);
     this.warns(session);
+    // The EPUB view is over the pages, and the frame names the chapter
+    // and leads the manuscript there.
+    if (this.reflowing) return;
     void this.namesSpan(reading);
     // A repaint of the span already being read is not a page turn, and
     // neither is one the manuscript asked for.
@@ -2273,7 +2653,8 @@ export class PreviewView extends ItemView {
    * wrote.
    */
   private ledTo(note: string): void {
-    if (this.surface !== undefined) this.surface.dataset["led"] = note;
+    const marked = this.reflowing ? this.host : this.surface;
+    if (marked !== undefined) marked.dataset["led"] = note;
   }
 
   /**
@@ -2416,7 +2797,9 @@ export class PreviewView extends ItemView {
    */
   private reads(section: Section | undefined): void {
     const note = section?.kind === "note" ? section.path : undefined;
-    if (note === undefined || note === this.showing) return;
+    if (note === undefined) return;
+    if (this.host !== undefined) this.host.dataset["note"] = note;
+    if (note === this.showing) return;
     this.showing = note;
     this.state = { ...this.state, note };
     if (this.surface !== undefined) this.surface.dataset["note"] = note;
@@ -2626,12 +3009,13 @@ function readState(state: unknown): PreviewState {
   if (raw["epub"] === true) made.epub = true;
   const over = raw["over"];
   if (Array.isArray(over)) made.over = over as Shown[];
+  if (typeof raw["left"] === "number") made.left = raw["left"];
   if (raw["followed"] === true) made.followed = true;
   return made;
 }
 
 /** The state the workspace keeps: where a book opens is not part of it. */
-function kept({ over, followed, ...state }: PreviewState): PreviewState {
+function kept({ over, left, followed, ...state }: PreviewState): PreviewState {
   return state;
 }
 

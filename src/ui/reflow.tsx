@@ -38,11 +38,18 @@ import { READIUM } from "@/style/readium";
 import { Segment, Select, classes } from "@/ui/controls";
 import {
   bindFiles,
+  documentOf,
   fitted,
+  leftOf,
+  openingOf,
   rewriteDocument,
+  screenOf,
   stepOf,
   turnedBy,
+  type Anchor,
   type Box,
+  type Document,
+  type Laid,
   type Place,
 } from "@/ui/frame";
 import { Icon } from "@/ui/icon";
@@ -53,6 +60,39 @@ import type { Sheet } from "@/ui/sheet";
 export interface Reflowed {
   book: Reflowable;
   stages: Stages;
+  /**
+   * The place the frame opens the book at. Without one the frame keeps
+   * the document and the screen it was on, which an edit can leave
+   * holding other words.
+   */
+  at?: Anchor;
+  /** Whether a reader asked for that place, which a place kept across an edit was not. */
+  sought?: boolean;
+}
+
+/**
+ * The end a turn to a place came to: the frame turned, or it holds
+ * another generation than the place is of, or no document of it holds
+ * the section.
+ */
+export type Sought = "turned" | "early" | "missing";
+
+/** The reason a screen came up: a turn by screens, a turn to a place, or a layout of the place already held. */
+export type Cause = "turn" | "seek" | "laid";
+
+/** The screen the frame shows, by the engine's nodes. A node names a place only in its own generation. */
+export interface Screen {
+  generation: number;
+  /** The node of the section the document holds. */
+  section: number | undefined;
+  /** The first block that begins on the screen, or the block the screen opens inside. */
+  opens: number | undefined;
+  /** The last block that begins on the screen, or the one it opens inside. */
+  closes: number | undefined;
+  /** The screen within the document, counting from 0. */
+  screen: number;
+  screens: number;
+  cause: Cause;
 }
 
 /** The parts of the preview the EPUB view draws into besides its own host. */
@@ -65,6 +105,8 @@ export interface ReflowSlots {
   stored: ReaderStored;
   /** Told the device and the settings after each change, so the plugin keeps them. */
   keeps(stored: ReaderStored): void;
+  /** Told each screen once the frame has laid it out. */
+  shows(screen: Screen): void;
   /**
    * Opens the sheet a phone draws the reader settings in. Without it
    * the settings hang from their button.
@@ -77,12 +119,15 @@ export interface MountedReflow {
   draw(shown: Reflowed | undefined): void;
   /** Turns by `step` screens. */
   turn(step: number): void;
+  /** Turns to the screen that holds a place. */
+  seek(anchor: Anchor): Sought;
   unmount(): void;
 }
 
-/** The turn the mounted view answers, which the component sets once it has a place. */
+/** The turns the mounted view answers, which the component sets once it has a place. */
 interface Turner {
   turn: ((step: number) => void) | undefined;
+  seek: ((anchor: Anchor) => Sought) | undefined;
 }
 
 /** The value the lists give a setting left to the publisher. */
@@ -94,7 +139,7 @@ const GUTTER = 12;
 /** Mounts the EPUB view in `host`, with its controls in the bar's slot. */
 export function mountReflow(host: HTMLElement, slots: ReflowSlots): MountedReflow {
   const root = createRoot(host);
-  const turner: Turner = { turn: undefined };
+  const turner: Turner = { turn: undefined, seek: undefined };
   const draw = (shown: Reflowed | undefined): void => {
     root.render(<Reflow shown={shown} slots={slots} turner={turner} />);
   };
@@ -102,6 +147,7 @@ export function mountReflow(host: HTMLElement, slots: ReflowSlots): MountedReflo
   return {
     draw,
     turn: (step) => turner.turn?.(step),
+    seek: (anchor) => turner.seek?.(anchor) ?? "early",
     unmount: () => {
       root.unmount();
     },
@@ -112,7 +158,7 @@ export function mountReflow(host: HTMLElement, slots: ReflowSlots): MountedReflo
 interface Bound {
   generation: number;
   stages: Stages;
-  documents: string[];
+  documents: Document[];
   /** The title and length of each document, in the order of `documents`. */
   chapters: Chapter[];
 }
@@ -139,10 +185,16 @@ function Reflow({
   const pane = useRef<HTMLDivElement>(null);
   const room = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
+  /** The reason the place came up, held until the frame has laid it out and said so. */
+  const cause = useRef<Cause>("laid");
+  /** The place last laid out, and the block a new layout of it finds its screen by. */
+  const drawn = useRef<{ place: Place; generation: number; by: number | undefined } | undefined>(
+    undefined,
+  );
 
   const device = DEVICES.find((each) => each.id === deviceId);
   const sections = bound?.documents.length ?? 0;
-  const src = bound?.documents[place.section];
+  const src = bound?.documents[place.section]?.url;
   const ready = src !== undefined && loaded === src;
 
   // A blob URL holds its bytes until it is released, so the URLs of one
@@ -170,13 +222,19 @@ function Reflow({
       documents: made.documents,
       chapters: chapters(shown.book),
     });
+    const to = shown.at?.generation === shown.book.generation ? shown.at : undefined;
+    const document = to === undefined ? undefined : documentOf(made.documents, to.section);
+    cause.current = document !== undefined && shown.sought === true ? "seek" : "laid";
     // An edit can leave the book with fewer sections than the reader
     // was into.
-    setPlace((at) =>
-      at.section < made.documents.length
+    setPlace((at) => {
+      if (to !== undefined && document !== undefined) {
+        return { section: document, screen: 0, by: to.nodes };
+      }
+      return at.section < made.documents.length
         ? at
-        : { section: Math.max(made.documents.length - 1, 0), screen: 0 },
-    );
+        : { section: Math.max(made.documents.length - 1, 0), screen: 0 };
+    });
     return made.revoke;
   }, [shown]);
 
@@ -211,10 +269,48 @@ function Reflow({
     }
     const scroller = root.ownerDocument.scrollingElement ?? root;
     const count = Math.max(Math.round(scroller.scrollWidth / device.width), 1);
-    const screen = place.screen === "last" ? count - 1 : Math.min(place.screen, count - 1);
+    const laid: Laid[] = [];
+    for (const block of root.querySelectorAll("section[data-node] [data-node]")) {
+      const box = block.getClientRects()[0];
+      const node = Number(block.getAttribute("data-node"));
+      if (box === undefined || !Number.isInteger(node)) continue;
+      laid.push({ node, left: box.left + scroller.scrollLeft });
+    }
+    // A place asked for by its elements is found by them. A place laid
+    // out before is found by the block its screen opened with, so a
+    // device, a setting or a late face that moves the columns keeps the
+    // words. Any other place is a screen by its number.
+    const before = drawn.current;
+    const again = before?.place === place && before.generation === bound.generation;
+    const by = place.by ?? (again && before.by !== undefined ? [before.by] : undefined);
+    const left = by === undefined ? undefined : leftOf(laid, by);
+    const screen =
+      left !== undefined
+        ? screenOf(left, device.width, count)
+        : place.screen === "last"
+          ? count - 1
+          : Math.min(place.screen, count - 1);
     scroller.scrollLeft = screen * device.width;
     setScreens(count);
-    if (screen !== place.screen) setPlace({ section: place.section, screen });
+    const opening = openingOf(laid, screen, device.width);
+    if (screen !== place.screen) {
+      // The next run lays the same screen out under the place that
+      // names it, and reports it.
+      const settled = { ...place, screen };
+      drawn.current = {
+        place: settled,
+        generation: bound.generation,
+        by: opening.begun ? opening.opens : undefined,
+      };
+      setPlace(settled);
+      return;
+    }
+    drawn.current = {
+      place,
+      generation: bound.generation,
+      by: opening.begun ? opening.opens : undefined,
+    };
+    const section = bound.documents[place.section]?.section ?? undefined;
 
     const data = element.dataset;
     data["generation"] = String(bound.generation);
@@ -227,13 +323,38 @@ function Reflow({
     data["sections"] = String(bound.documents.length);
     data["screen"] = String(screen + 1);
     data["screens"] = String(count);
+    if (section === undefined) delete data["sectionNode"];
+    else data["sectionNode"] = String(section);
+    if (opening.opens === undefined) delete data["opens"];
+    else data["opens"] = String(opening.opens);
+    const brought = cause.current;
+    cause.current = "laid";
+    slots.shows({
+      generation: bound.generation,
+      section,
+      opens: opening.opens,
+      closes: opening.closes,
+      screen,
+      screens: count,
+      cause: brought,
+    });
     slots.reading(statusText(status(bound.chapters, place.section, screen + 1, count)));
   }, [ready, bound, settings, device, place, faces, slots]);
 
   const turn = (step: number): void => {
     if (!ready || place.screen === "last") return;
     const to = turnedBy({ section: place.section, screen: place.screen }, step, screens, sections);
-    if (to !== undefined) setPlace(to);
+    if (to === undefined) return;
+    cause.current = "turn";
+    setPlace(to);
+  };
+  const seek = (anchor: Anchor): Sought => {
+    if (bound?.generation !== anchor.generation) return "early";
+    const document = documentOf(bound.documents, anchor.section);
+    if (document === undefined) return "missing";
+    cause.current = "seek";
+    setPlace({ section: document, screen: 0, by: anchor.nodes });
+    return "turned";
   };
   const turns = (step: number): boolean =>
     ready &&
@@ -243,8 +364,10 @@ function Reflow({
 
   useEffect(() => {
     turner.turn = turn;
+    turner.seek = seek;
     return () => {
       turner.turn = undefined;
+      turner.seek = undefined;
     };
   });
 

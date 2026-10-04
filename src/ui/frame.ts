@@ -12,9 +12,16 @@ export interface BookFile {
   bytes: Uint8Array;
 }
 
-/** The files a frame reads, and the paths of its documents in reading order. */
+/** One document of the spine. */
+export interface SpineEntry {
+  path: string;
+  /** The node of the section the document holds, or nothing for the one document of an empty book. */
+  section: number | null;
+}
+
+/** The files a frame reads, and its documents in reading order. */
 export interface Bindable {
-  spine: readonly string[];
+  spine: readonly SpineEntry[];
   files: readonly BookFile[];
 }
 
@@ -48,6 +55,84 @@ export interface Place {
   section: number;
   /** `last` is the last screen of a document nobody has counted yet. */
   screen: number | "last";
+  /**
+   * The elements the place was asked for by, the nearest first. The
+   * screen is the one that holds the first of them the document has,
+   * which is not known until the document is laid out.
+   */
+  by?: readonly number[];
+}
+
+/**
+ * A place by the engine's nodes: a section, and the elements around a
+ * node inside it, the nearest first. A node names a place only until
+ * the next edit.
+ */
+export interface Anchor {
+  /** The generation the nodes are of. */
+  generation: number;
+  section: number;
+  nodes: readonly number[];
+}
+
+/** A block of a laid out document: its node, and the left edge of its first box, in pixels from the start of the document. */
+export interface Laid {
+  node: number;
+  left: number;
+}
+
+/** The blocks a screen begins and ends on. */
+export interface Opening {
+  /** The first block that begins on the screen, or the block the screen opens inside. */
+  opens: number | undefined;
+  /** The last block that begins on the screen, or the one it opens inside. */
+  closes: number | undefined;
+  /** Whether a block begins on the screen, which makes `opens` a place a new layout can find the screen by. */
+  begun: boolean;
+}
+
+/**
+ * The document that holds a section, found by the section's node. A
+ * count down the spine finds the wrong one where the book set nothing
+ * from a section, or where a document has no file.
+ */
+export function documentOf(documents: readonly Document[], section: number): number | undefined {
+  const at = documents.findIndex((document) => document.section === section);
+  return at < 0 ? undefined : at;
+}
+
+/** The screen a left edge is on, counting from 0, in a document of `screens` screens. */
+export function screenOf(left: number, width: number, screens: number): number {
+  if (width <= 0) return 0;
+  return Math.min(Math.max(Math.floor(left / width), 0), Math.max(screens - 1, 0));
+}
+
+/** The left edge of the first of these nodes the document has a box for. */
+export function leftOf(laid: readonly Laid[], nodes: readonly number[]): number | undefined {
+  for (const node of nodes) {
+    const found = laid.find((block) => block.node === node);
+    if (found !== undefined) return found.left;
+  }
+  return undefined;
+}
+
+/**
+ * The blocks one screen opens and closes with. The blocks are in the
+ * order the document holds them. A screen no block begins on is inside
+ * one long block, and it opens and closes with that block.
+ */
+export function openingOf(laid: readonly Laid[], screen: number, width: number): Opening {
+  let before: number | undefined;
+  let opens: number | undefined;
+  let closes: number | undefined;
+  for (const block of laid) {
+    const on = width <= 0 ? 0 : Math.floor(block.left / width);
+    if (on < screen) before = block.node;
+    if (on !== screen) continue;
+    opens ??= block.node;
+    closes = block.node;
+  }
+  return { opens: opens ?? before, closes: closes ?? before, begun: opens !== undefined };
 }
 
 export interface Box {
@@ -151,9 +236,15 @@ export function fitted(device: Box, well: Box): number {
   return Math.min(1, well.width / device.width, well.height / device.height);
 }
 
-/** The URLs of the spine's documents, and the call that releases every URL made for them. */
+/** A document a frame can load, and the node of the section it holds. */
+export interface Document {
+  url: string;
+  section: number | null;
+}
+
+/** The spine's documents, and the call that releases every URL made for them. */
 export interface Bound {
-  documents: string[];
+  documents: Document[];
   revoke: () => void;
 }
 
@@ -190,11 +281,11 @@ export function bindFiles(
     written.set(file.path, rewriteSheet(file.path, text.decode(file.bytes), url));
   }
   const links: Links = { url, sheet: (path) => written.get(path), sheets };
-  const documents: string[] = [];
-  for (const path of book.spine) {
+  const documents: Document[] = [];
+  for (const { path, section } of book.spine) {
     const file = book.files.find((candidate) => candidate.path === path);
     if (file === undefined) continue;
-    documents.push(bind(rewrite(path, text.decode(file.bytes), links), XHTML));
+    documents.push({ url: bind(rewrite(path, text.decode(file.bytes), links), XHTML), section });
   }
   return {
     documents,

@@ -29,7 +29,7 @@ const documents = [
   file("EPUB/text/one.xhtml", XHTML, "x".repeat(300)),
   file("EPUB/text/two.xhtml", XHTML, "x".repeat(600)),
 ];
-const spine = documents.map((each) => each.path);
+const spine = documents.map((each, at) => ({ path: each.path, section: at + 1 }));
 
 test("a document takes the title of the first nav entry that points at it, and one with no entry takes none", () => {
   const nav = file(
@@ -76,7 +76,7 @@ test("a book with no nav document reads its titles from toc.ncx", () => {
 });
 
 test("a spine path with no file is skipped, as the view binds none for it", () => {
-  const book = { spine: ["EPUB/missing.xhtml", ...spine], files: documents };
+  const book = { spine: [{ path: "EPUB/missing.xhtml", section: 9 }, ...spine], files: documents };
   assert.equal(chapters(book).length, 3);
 });
 

@@ -9,6 +9,9 @@ const BOOK = "Pride and Prejudice.md";
 /** The place each device draws the EPUB view's controls: the pane's foot or its bar. */
 const PLACE = { phone: "under", tablet: "bar" } as const;
 
+/** The chapter the fixture has a note for, as the chapter select names it. */
+const CHAPTER_NAME = "Chapter Twelve";
+
 /** The note the last section is read from, and the image it embeds. */
 const LAST_NOTE = "Acknowledgements.md";
 const DEVICE = "![[device.png]]";
@@ -108,8 +111,20 @@ for (const device of ["phone", "tablet"] as const) {
       expect(await obsidian.cramped(PREVIEW_CONTROLS)).toEqual([]);
       // The page views' folio and arrows give way to the view's own.
       await expect(obsidian.view(PREVIEW).locator(".orca-preview-paging:visible")).toHaveCount(0);
+      // The chapter select stays in the bar beside the views, and a
+      // choice turns the frame.
+      await expect(book.chapter).toBeVisible();
+      expect(
+        await book.chapter.evaluate((chapter) => chapter.closest(".orca-preview-bar") !== null),
+      ).toBe(true);
+      await book.choose(CHAPTER_NAME);
+      await expect.poll(async () => epub.heading()).toBe(CHAPTER_NAME);
+      await expect(book.chapterName).toHaveText(CHAPTER_NAME);
       // Nothing in the foot or the bar draws over its neighbour.
       expect(await place.evaluate(overlapping)).toEqual([]);
+      expect(await obsidian.view(PREVIEW).locator(".orca-preview-bar").evaluate(overlapping)).toEqual(
+        [],
+      );
       // The device is scaled into the pane, never wider than it.
       const pane = await obsidian.view(PREVIEW).boundingBox();
       const body = await epub.body.boundingBox();

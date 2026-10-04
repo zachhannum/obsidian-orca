@@ -27,7 +27,7 @@ const NCX = "application/x-dtbncx+xml";
 export function chapters(book: Bindable): Chapter[] {
   const titles = contents(book);
   const found: Chapter[] = [];
-  for (const path of book.spine) {
+  for (const { path } of book.spine) {
     const file = book.files.find((candidate) => candidate.path === path);
     if (file === undefined) continue;
     found.push({ title: titles.get(path), length: file.bytes.length });

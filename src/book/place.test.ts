@@ -11,6 +11,8 @@ import {
   opensOn,
   pagesOf,
   shownOver,
+  showsAny,
+  topShown,
   writtenAt,
   writtenBytes,
   type Landed,
@@ -333,6 +335,32 @@ test("a line opens on the byte after the newline before it", () => {
   assert.equal(lineByte(text, 3), 18);
   assert.equal(lineByte(text, 4), 24);
   assert.equal(lineByte(text, 9), 24);
+});
+
+test("the top of a pane is the block that begins earliest, and an empty pane has none", () => {
+  const over = [
+    { at: 420, pixels: 300 },
+    { at: 96, pixels: 12 },
+    { at: 250, pixels: 80 },
+  ];
+
+  assert.equal(topShown(over), 96);
+  assert.equal(topShown([]), undefined);
+});
+
+test("a pane that shows a block from inside a stretch is at that stretch, and one past its end is not", () => {
+  const over = [
+    { at: 96, pixels: 12 },
+    { at: 250, pixels: 80 },
+  ];
+
+  assert.equal(showsAny(over, { start: 250, end: 400 }), true);
+  assert.equal(showsAny(over, { start: 0, end: 97 }), true);
+  assert.equal(showsAny(over, { start: 251, end: 400 }), false);
+  // The end is the byte after the last, so a block that begins there is
+  // the next stretch's.
+  assert.equal(showsAny(over, { start: 0, end: 96 }), false);
+  assert.equal(showsAny([], { start: 0, end: 400 }), false);
 });
 
 // What this tier does not cover: the node a byte was read into, the

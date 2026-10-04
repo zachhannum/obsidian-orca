@@ -316,6 +316,33 @@ export interface Shown {
   pixels: number;
 }
 
+/** The bytes of a note a stretch of the book was read from. */
+export interface Span {
+  /** The first byte, counting from 0. */
+  start: number;
+  /** The byte after the last. */
+  end: number;
+}
+
+/** The byte the topmost block a pane shows begins at, or nothing for a pane that shows none. */
+export function topShown(over: readonly Shown[]): number | undefined {
+  let top: number | undefined;
+  for (const block of over) {
+    if (top === undefined || block.at < top) top = block.at;
+  }
+  return top;
+}
+
+/**
+ * Whether a block a pane shows begins inside a stretch of its note. A
+ * pane that shows part of what a screen holds is already at the
+ * screen's place, so a screen that led the pane there is not turned by
+ * the scroll that answers it.
+ */
+export function showsAny(over: readonly Shown[], span: Span): boolean {
+  return over.some((block) => block.at >= span.start && block.at < span.end);
+}
+
 /**
  * The blocks these lines are in, each with the pixels of it on screen.
  * A blank line ends a block, so a heading and the paragraph under it are

@@ -48,6 +48,12 @@ export class Epub {
   readonly sheet: Locator;
   /** The grabber at the top of that sheet. A tap on it closes the sheet. */
   readonly grabber: Locator;
+  /**
+   * The node the view sits in. It carries `data-note` and `data-led` as
+   * the page surface does, and `data-taken`, which names the screen the
+   * pane last took the place of.
+   */
+  readonly host: Locator;
 
   private readonly pane: Locator;
 
@@ -55,6 +61,7 @@ export class Epub {
     const pane = obsidian.view(PREVIEW);
     this.pane = pane;
     this.view = pane.getByTestId("orca-reflow");
+    this.host = pane.getByTestId("orca-reflow-host");
     this.frame = pane.getByTestId("orca-reflow-frame");
     this.screen = pane.getByTestId("orca-reflow-screen");
     this.body = pane.getByTestId("orca-reflow-body");
@@ -111,6 +118,55 @@ export class Epub {
       })
       .toBe(true);
     return this.turned();
+  }
+
+  /**
+   * Waits until the pane has taken the place of the screen the frame
+   * shows, which is when a swap out of the view opens at that screen.
+   */
+  async taken(): Promise<void> {
+    await expect
+      .poll(async () => {
+        const node = await this.view.getAttribute("data-section-node");
+        const screen = await this.view.getAttribute("data-screen");
+        const taken = await this.host.getAttribute("data-taken");
+        return node !== null && taken === `${node}:${String(screen)}`;
+      })
+      .toBe(true);
+  }
+
+  /**
+   * The words each block that begins on the screen opens with, in the
+   * order the document holds them. A block carried over from the
+   * screen before begins there, and is not one of these.
+   */
+  async begins(): Promise<string[]> {
+    return this.frame.evaluate((frame: HTMLIFrameElement) => {
+      const inside = frame.contentDocument;
+      if (inside === null) return [];
+      const width = frame.clientWidth;
+      return Array.from(inside.querySelectorAll("section[data-node] [data-node]")).flatMap(
+        (block) => {
+          const box = block.getClientRects()[0];
+          if (box === undefined || box.left < 0 || box.left >= width) return [];
+          return [(block.textContent ?? "").trim().slice(0, 40)];
+        },
+      );
+    });
+  }
+
+  /** The words the block the screen opens with opens on, which the view names by its node. */
+  async opening(): Promise<string> {
+    const node = await this.view.getAttribute("data-opens");
+    return this.frame.evaluate(
+      (frame: HTMLIFrameElement, id) =>
+        (
+          frame.contentDocument?.querySelector(`[data-node="${String(id)}"]`)?.textContent ?? ""
+        )
+          .trim()
+          .slice(0, 40),
+      node,
+    );
   }
 
   /** The `sandbox` attribute of the frame, as it is written. */
