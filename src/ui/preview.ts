@@ -477,7 +477,7 @@ export class PreviewView extends ItemView {
   /** Whether the manuscript asked for the turn the frame is making, which then leads it nowhere. */
   private seekLed = false;
   /** Whether the reader turned the frame since the book opened here. */
-  private moved = false;
+  private strayed = false;
   /** The blocks a manuscript showed when it was swapped for this pane, until the frame has opened on them. */
   private arriving: Shown[] | undefined;
   /** The byte of the note the pane was left at before that swap. */
@@ -567,7 +567,7 @@ export class PreviewView extends ItemView {
 
   /** Whether the reader has paged away from where the book opened here. */
   get paged(): boolean {
-    return this.moved || (this.openedAt !== undefined && this.state.folio !== this.openedAt);
+    return this.strayed || (this.openedAt !== undefined && this.state.folio !== this.openedAt);
   }
 
   /**
@@ -1836,7 +1836,7 @@ export class PreviewView extends ItemView {
     this.composed = undefined;
     this.named = undefined;
     this.ledAt = undefined;
-    this.moved = false;
+    this.strayed = false;
     this.forgets();
     this.showing = this.state.note;
     // A book opens at fit, whatever the last one was read at.
@@ -2008,7 +2008,7 @@ export class PreviewView extends ItemView {
   private async pageOfScreen(): Promise<number | undefined> {
     const session = this.session;
     const screen = this.screen;
-    if (!this.moved || session === undefined || screen?.generation !== session.generation) {
+    if (!this.strayed || session === undefined || screen?.generation !== session.generation) {
       return undefined;
     }
     const node = screen.opens ?? screen.section;
@@ -2169,7 +2169,7 @@ export class PreviewView extends ItemView {
     const turned = screen.cause !== "laid";
     const led = screen.cause === "seek" && this.seekLed;
     if (screen.cause !== "laid") this.seekLed = false;
-    if (turned) this.moved = true;
+    if (turned) this.strayed = true;
     if (screen.cause === "turn") this.askedLine = undefined;
     const at = screen.section === undefined ? undefined : this.spine.get(screen.section);
     if (at !== undefined) {
