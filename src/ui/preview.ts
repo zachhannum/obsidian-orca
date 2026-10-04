@@ -2213,7 +2213,10 @@ export class PreviewView extends ItemView {
       this.state = { ...this.state, folio: page + 1 };
       this.app.workspace.requestSaveLayout();
     }
-    if (at !== undefined) this.marksScreen(typeset, at, screen);
+    if (at !== undefined) {
+      await this.marksScreen(typeset, at, screen);
+      if (leading !== this.leading || !this.reflowing) return;
+    }
     // The e2e suite waits here for the pane to have taken the screen.
     if (host !== undefined && screen.section !== undefined) {
       host.dataset["taken"] = `${String(screen.section)}:${String(screen.screen + 1)}`;
@@ -2232,12 +2235,14 @@ export class PreviewView extends ItemView {
    * it the screen falls under. A heading is placed by the byte its line
    * opens at, against the bytes the screen holds.
    */
-  private marksScreen(typeset: Typeset, at: number, screen: Screen): void {
+  private async marksScreen(typeset: Typeset, at: number, screen: Screen): Promise<void> {
     const book = this.book;
     const span = this.span;
     if (book === undefined) return;
     const section = typeset.sections[at];
-    const deepest = this.handoff.outlined();
+    const leading = this.leading;
+    const deepest = await this.handoff.outlined(book);
+    if (leading !== this.leading || !this.reflowing) return;
     const text = section?.kind === "note" ? typeset.textOf(section.path) : undefined;
     const lines =
       deepest !== undefined && section?.kind === "note" && text !== undefined && span !== undefined
