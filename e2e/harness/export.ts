@@ -34,6 +34,13 @@ export interface Scrolled {
   last: boolean;
 }
 
+/** A file the stand-in for the share sheet was handed. */
+export interface Handed {
+  name: string;
+  type: string;
+  bytes: Buffer;
+}
+
 export class Export {
   readonly cancel: Locator;
   /** The button that shuts a written export. */
@@ -67,6 +74,8 @@ export class Export {
   readonly said: Locator;
   /** The button a written PDF's row offers, which opens it in the vault. */
   readonly openPdf: Locator;
+  /** The Share button, which a device that can share a file has. */
+  readonly share: Locator;
 
   constructor(private readonly obsidian: Obsidian) {
     this.dialog = obsidian.page.getByTestId("orca-export");
@@ -84,6 +93,7 @@ export class Export {
     this.fine = this.dialog.getByTestId("orca-export-fine");
     this.said = this.dialog.getByTestId("orca-export-said");
     this.openPdf = this.dialog.getByTestId("orca-export-open");
+    this.share = this.dialog.getByTestId("orca-export-share");
   }
 
   /**
@@ -147,6 +157,62 @@ export class Export {
         last: last !== undefined && inside(last, list.getBoundingClientRect()),
       };
     });
+  }
+
+  /**
+   * Stands in for the system share sheet, which CDP cannot reach. The
+   * dialog reads `navigator` as it opens, so this comes before `open`.
+   * Mobile emulation reloads the window, which takes the stand-in away.
+   */
+  async sharing(): Promise<void> {
+    await this.obsidian.page.evaluate(() => {
+      const sheet: NonNullable<Window["orcaShare"]> = { ends: "shares", handed: [] };
+      window.orcaShare = sheet;
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (data: ShareData) => (data.files?.length ?? 0) > 0,
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (data: ShareData) => {
+          const files: { name: string; type: string; bytes: string }[] = [];
+          for (const file of data.files ?? []) {
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            let said = "";
+            for (let from = 0; from < bytes.length; from += 0x8000) {
+              said += String.fromCharCode(...bytes.subarray(from, from + 0x8000));
+            }
+            files.push({ name: file.name, type: file.type, bytes: btoa(said) });
+          }
+          sheet.handed.push(files);
+          if (sheet.ends === "cancels") {
+            throw new DOMException("Abort due to cancellation of share.", "AbortError");
+          }
+          if (sheet.ends === "refuses") {
+            throw new DOMException("The request is not allowed.", "NotAllowedError");
+          }
+        },
+      });
+    });
+  }
+
+  /**
+   * Sets how the stand-in share sheet ends the next share: it takes
+   * the files, the author shuts it, or the web view refuses a share
+   * that is not inside a tap.
+   */
+  async ends(how: "shares" | "cancels" | "refuses"): Promise<void> {
+    await this.obsidian.page.evaluate((ends) => {
+      if (window.orcaShare !== undefined) window.orcaShare.ends = ends;
+    }, how);
+  }
+
+  /** The files the stand-in share sheet was handed, one list for each share. */
+  async handed(): Promise<Handed[][]> {
+    const handed = await this.obsidian.page.evaluate(() => window.orcaShare?.handed ?? []);
+    return handed.map((files) =>
+      files.map((file) => ({ ...file, bytes: Buffer.from(file.bytes, "base64") })),
+    );
   }
 
   /** Waits for the dialog to reach a state. */

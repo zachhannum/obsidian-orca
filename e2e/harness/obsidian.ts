@@ -91,6 +91,11 @@ declare global {
     require(id: string): unknown;
     /** The recorder a spec installs while `notices` runs. */
     orcaNotices?: { said: string[]; watch: MutationObserver } | undefined;
+    /** The share sheet a spec stands in for, with the files it was handed. */
+    orcaShare?: {
+      ends: "shares" | "cancels" | "refuses";
+      handed: { name: string; type: string; bytes: string }[][];
+    };
     /** The sheets the harness has adopted, by the name it gave each. */
     orcaSheets?: Record<string, CSSStyleSheet> | undefined;
   }
