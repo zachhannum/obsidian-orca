@@ -276,7 +276,11 @@ test("on a phone a tap on a rule's line, on the control that wrote a rule, and o
   try {
     await inspecting(book, inspect);
     await obsidian.put("right");
+    // The pin is taken on the pages the new rule set, so the wait is
+    // for a paint after the write.
+    const before = await book.painted();
     await vault.modify(BOOK, own.replace(FENCE_END, `${FENCE_END}\n${TITLE_CSS}`));
+    await expect.poll(async () => book.painted()).toBeGreaterThan(before);
     await book.settled(BOOK);
 
     // The line of a rule in the author's CSS.
