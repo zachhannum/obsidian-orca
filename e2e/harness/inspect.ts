@@ -96,6 +96,13 @@ export class Inspect {
     }, by);
   }
 
+  /** The distance a phone has moved the page up so the sheet clears the pinned box, in pixels. */
+  async lift(): Promise<number> {
+    return this.surface.evaluate(
+      (surface) => -new DOMMatrix(getComputedStyle(surface).transform).f,
+    );
+  }
+
   /** The place the well's upper edge is on the screen, which no page is drawn above. */
   async wellTop(): Promise<number> {
     const well = await this.rectOf(this.surface.locator(".."));

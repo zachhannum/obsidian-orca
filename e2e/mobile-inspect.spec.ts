@@ -204,11 +204,7 @@ test("on a phone a tap pins a box and the pane rises as a sheet over the foot of
     await expect(inspect.risen).toHaveCount(0);
     await expect(inspect.surface).toHaveAttribute("data-inspect", "on");
     // The page is back where it was.
-    await expect
-      .poll(async () =>
-        inspect.surface.evaluate((surface) => new DOMMatrix(getComputedStyle(surface).transform).f),
-      )
-      .toBe(0);
+    await expect.poll(async () => inspect.lift()).toBe(0);
   } finally {
     await book.close();
     await obsidian.emulateMobile(false);
@@ -308,6 +304,9 @@ test("on a phone a tap on a rule's line, on the control that wrote a rule, and o
     // over the paragraph, so the sheet comes down for the tap.
     await inspect.grabber.click();
     await expect(inspect.risen).toHaveAttribute("data-pull", "peek");
+    // The page comes back down under the shorter sheet, and the tap
+    // waits for it, so it lands on the paragraph.
+    await expect.poll(async () => inspect.lift()).toBe(0);
     const second = await inspect.pinAt(
       await middleOf(inspect, inspect.line(OPENING, SECOND_PARAGRAPH)),
       title,
