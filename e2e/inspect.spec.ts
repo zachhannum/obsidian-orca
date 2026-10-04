@@ -731,11 +731,14 @@ const BEFORE_RULE = `\n${SECTION} h1::before { content: "${GENERATED}"; }`;
  * for the element is the way to the paragraph under it.
  */
 async function pinParagraph(book: Book, inspect: Inspect, panel: Panel): Promise<string> {
-  await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
+  const line = await inspect.pinLine(inspect.line(OPENING, FIRST_PARAGRAPH));
   await caughtUp(book, inspect, panel);
   const element = panel.crumbs.nth(-2);
   await expect(element).toHaveText("p");
   await element.click();
+  // The line's own pin is still there until the click lands, so the
+  // wait is for the pin to leave it.
+  await expect(inspect.surface).not.toHaveAttribute("data-inspected", line);
   await expect(inspect.surface).toHaveAttribute("data-inspected", /\d+/);
   await caughtUp(book, inspect, panel);
   const pinned = await inspect.surface.getAttribute("data-inspected");
