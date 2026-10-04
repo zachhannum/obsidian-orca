@@ -98,8 +98,9 @@ export class Inspect {
 
   /** The distance a phone has moved the page up so the sheet clears the pinned box, in pixels. */
   async lift(): Promise<number> {
+    // A page that has not moved reads as 0 and never as -0.
     return this.surface.evaluate(
-      (surface) => -new DOMMatrix(getComputedStyle(surface).transform).f,
+      (surface) => Math.abs(new DOMMatrix(getComputedStyle(surface).transform).f),
     );
   }
 
