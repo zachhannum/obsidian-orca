@@ -336,7 +336,7 @@ for (const device of ["phone", "tablet"] as const) {
 
 // What this suite does not cover: a card with more than one place, a
 // tap by a real finger, which emulation gives as a mouse; the CSS view
-// by touch, which is not built here; a drawer pinned on a tablet, which
-// the harness cannot
+// by touch, which has a suite of its own; a drawer pinned on a tablet,
+// which the harness cannot
 // pin; the row of the carried face drawn in that face, whose bytes are
 // the engine's; and a device where Obsidian reads the system's fonts.

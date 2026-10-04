@@ -147,8 +147,12 @@ export class Controls {
   readonly warned: Locator;
   /** The book's name in the header, after the name of the view. */
   readonly bookName: Locator;
-  /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
+  /** The card a hover over a squiggle opens, or the caret in one on mobile. CodeMirror draws it on the body, outside the panel. */
   readonly card: Locator;
+  /** The toolbar over the keyboard on mobile. The editor draws it on the body, outside the panel. */
+  readonly toolbar: Locator;
+  /** The marks in the toolbar, in the order it draws them. */
+  readonly marks: Locator;
   /** The card a hover over a row's lock opens, or a tap off desktop. The panel draws it on the body, outside the panel. */
   readonly overriddenCard: Locator;
   /** The places in a card a tap opened. Each is a button that goes to its line. */
@@ -212,6 +216,8 @@ export class Controls {
     this.warned = root.getByTestId("orca-panel-warned");
     this.bookName = root.getByTestId("orca-panel-book");
     this.card = root.page().getByTestId("orca-editor-card");
+    this.toolbar = root.page().getByTestId("orca-toolbar");
+    this.marks = this.toolbar.getByTestId("orca-toolbar-mark");
     this.overriddenCard = root.page().getByTestId("orca-panel-card");
     this.cardLines = this.overriddenCard.getByTestId("orca-panel-card-line");
     this.pane = root.getByTestId("orca-inspect-pane");
@@ -301,6 +307,11 @@ export class Controls {
   async cssText(): Promise<string> {
     const lines = await this.editor.locator(CODEMIRROR_LINE).allInnerTexts();
     return lines.join("\n");
+  }
+
+  /** A button of the toolbar over the keyboard: `undo`, `redo`, `search` or `hide`. */
+  tool(name: "undo" | "redo" | "search" | "hide"): Locator {
+    return this.toolbar.getByTestId(`orca-toolbar-${name}`);
   }
 
   /** The point on the page before a column of a line, both counted from 1, where a click puts the caret. */

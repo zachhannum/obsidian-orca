@@ -4019,7 +4019,14 @@ button.orca-card-at::after {
   max-width: min(320px, calc(100vw - 2 * var(--size-4-6)));
 }
 
+/* A drawer too narrow for the field beside its buttons puts the
+   buttons under it. */
+.is-mobile .orca-search-row {
+  flex-wrap: wrap;
+}
+
 .is-mobile .orca-search .orca-search-field {
+  flex-basis: 140px;
   height: var(--touch-size-m);
   font-size: var(--font-ui-small);
 }

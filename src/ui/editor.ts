@@ -942,7 +942,14 @@ export function mountEditor(
         }),
         // The host clips its overflow, so a card near its edge is drawn
         // on the body instead.
-        tooltips({ parent: parent.ownerDocument.body }),
+        tooltips({
+          parent: parent.ownerDocument.body,
+          // The card at the caret stays inside the sheet, so it goes
+          // over its line when the toolbar is close under it.
+          ...(device === "desktop"
+            ? {}
+            : { tooltipSpace: (view) => view.scrollDOM.getBoundingClientRect() }),
+        }),
       ],
     }),
   });
