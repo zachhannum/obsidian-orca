@@ -91,7 +91,7 @@
     .nav-header .grow { flex: 1; }
     /* A section is drawn as a divider, an entry as a row. */
     .nav-heading { display: flex; align-items: center; gap: 8px; height: 24px; margin-top: 8px; padding: 0 8px; font-size: 10px; font-weight: var(--font-semibold); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
-    .nav-heading::after { content: ""; flex: 1; height: 1px; background: var(--divider-color); }
+    .nav-heading::after { content: ""; flex: 1; height: 1px; background: var(--shelf-rule, var(--divider-color)); }
     .nav-item { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: var(--radius-s); color: var(--text-muted); font-size: var(--font-ui-small); white-space: nowrap; }
     .nav-item .label { overflow: hidden; text-overflow: ellipsis; }
     .nav-item.is-active { background: var(--background-modifier-hover); color: var(--text-normal); }
@@ -99,11 +99,13 @@
     .nav-item.is-muted { color: var(--text-faint); }
     .nav-children { margin-left: 12px; padding-left: 4px; border-left: 1px solid rgba(var(--mono-100), 0.12); }
     /* A book is a card, and an open one holds its entries under a rule. */
-    .shelf { margin: 0 4px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary-alt); }
+    .shelf { --shelf-rule: rgba(var(--mono-100), 0.1); margin: 0 4px; border: 1px solid var(--shelf-rule); border-radius: var(--radius-m); background: rgba(0, 0, 0, 0.12); }
     .shelf + .shelf { margin-top: 6px; }
-    .shelf.is-open { background: var(--background-primary); }
+    .shelf.is-open { background: rgba(0, 0, 0, 0.22); }
+    .orca[data-theme="light"] .shelf { background: rgba(255, 255, 255, 0.4); }
+    .orca[data-theme="light"] .shelf.is-open { background: rgba(255, 255, 255, 0.7); }
     .shelf > .nav-item { height: 32px; border-radius: calc(var(--radius-m) - 1px); color: var(--text-normal); font-weight: var(--font-semibold); }
-    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--background-modifier-border); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
+    .shelf.is-open > .nav-item { border-bottom: 1px solid var(--shelf-rule); border-radius: calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0 0; }
     .shelf > .nav-children { margin: 0; padding: 0 4px 6px; border-left: none; }
     .book-icon { flex: none; color: var(--text-accent); }
     
@@ -557,7 +559,7 @@
   <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
     <div class="callout"><div><span class="k">A path in the vault.</span> The field holds a path in the vault, and the author can change it. There is no <em>Choose…</em>, because a phone has no save dialog to open.</div></div>
     <div class="callout"><div><span class="k">Export or Share.</span> <em>Export</em> writes the ticked formats into the vault. <em>Share</em> makes the same files and hands them to the system share sheet under the book's file name, and writes none of them. A device that cannot share a file shows no <em>Share</em>.</div></div>
-    <div class="callout"><div><span class="k">A share the author cancels</span> leaves the dialog as it was, with no error. A share that goes through closes the dialog. The system opens the share sheet from a tap alone, so the dialog makes the files once preflight passes, and <em>Share</em> is off until they are made. Where the system still refuses the tap, the dialog lists the files it made, as C does without the vault, over <em>Share</em> and <em>Done</em>.</div></div>
+    <div class="callout"><div><span class="k">A share the author cancels</span> leaves the dialog as it was, with no error. A share that goes through closes the dialog. The system opens the share sheet from a tap alone, so the dialog makes the files once preflight passes. Until they are made, <em>Export</em> and <em>Share</em> are off, and the dialog draws B's bar over a line that names the file it is preparing. <em>Export</em> writes those same files. Where the system still refuses the tap, the dialog lists the files it made, as C does without the vault, over <em>Share</em> and <em>Done</em>.</div></div>
     <div class="callout"><div><span class="k">Preflight and length</span> are the desktop's. The list of errors scrolls when the sheet has no room for all of it, and the formats, the path and the buttons stay in place. The fix in a preflight row is a link. It closes the dialog and goes to the control or the line.</div></div>
     <div class="callout"><div><span class="k">A sheet, as Obsidian draws its own.</span> The dialog is docked to the foot of the screen under a grabber. A tap on the grabber, a pull on the title or a tap outside the sheet closes it. With the keyboard up, the sheet ends above the keyboard. A sheet is never as tall as the screen, so the page stays in sight over it.</div></div>
   </div>
