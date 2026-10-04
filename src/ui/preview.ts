@@ -169,6 +169,13 @@ export interface PreviewState {
    */
   over?: Shown[];
   /**
+   * The byte of the note the pane was left at when it was last swapped
+   * for the manuscript. The EPUB view opens there while the manuscript
+   * still shows the block, as the page left stands for a page view.
+   * The workspace never keeps it.
+   */
+  left?: number;
+  /**
    * Set when a click on a link asks for the folio. The turn goes into
    * the leaf's history, so Obsidian's back and forward return across it.
    * The workspace never keeps it.
@@ -473,6 +480,8 @@ export class PreviewView extends ItemView {
   private moved = false;
   /** The blocks a manuscript showed when it was swapped for this pane, until the frame has opened on them. */
   private arriving: Shown[] | undefined;
+  /** The byte of the note the pane was left at before that swap. */
+  private leftAt: number | undefined;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -536,6 +545,7 @@ export class PreviewView extends ItemView {
     if (reflowed) this.setReflowing(wanted.epub === true);
     this.over = wanted.over;
     this.arriving = wanted.over;
+    this.leftAt = wanted.left;
     this.state = kept(wanted);
     this.attach();
     if (reviewed) this.marksView();
@@ -2117,8 +2127,19 @@ export class PreviewView extends ItemView {
       if (at !== undefined) return { at };
     }
     const note = this.state.note;
-    const top = this.arriving === undefined ? undefined : topShown(this.arriving);
+    const arriving = this.arriving;
+    const left = this.leftAt;
     this.arriving = undefined;
+    this.leftAt = undefined;
+    // The place the pane was left at stands while the manuscript still
+    // shows it. Obsidian settles a pane it hands back a line or two off
+    // the line asked for, and the top of the pane is then a block of
+    // the screen before.
+    const stands =
+      arriving !== undefined &&
+      left !== undefined &&
+      showsAny(arriving, { start: left, end: left + 1 });
+    const top = stands ? left : arriving === undefined ? undefined : topShown(arriving);
     if (note !== undefined && top !== undefined) {
       const at = await this.anchorAt(session, { from: { source: note, byte: top }, page: none });
       if (at !== undefined) return { at };
@@ -2986,12 +3007,13 @@ function readState(state: unknown): PreviewState {
   if (raw["epub"] === true) made.epub = true;
   const over = raw["over"];
   if (Array.isArray(over)) made.over = over as Shown[];
+  if (typeof raw["left"] === "number") made.left = raw["left"];
   if (raw["followed"] === true) made.followed = true;
   return made;
 }
 
 /** The state the workspace keeps: where a book opens is not part of it. */
-function kept({ over, followed, ...state }: PreviewState): PreviewState {
+function kept({ over, left, followed, ...state }: PreviewState): PreviewState {
   return state;
 }
 

@@ -102,6 +102,8 @@ interface Place {
   line?: number | undefined;
   /** The page the book was left turned to, counting from 1. */
   folio?: number | undefined;
+  /** The byte of the note the book was left at. */
+  opened?: number | undefined;
 }
 
 /**
@@ -976,6 +978,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       state: leaf.getEphemeralState(),
       line: shown instanceof MarkdownView ? scrolledLine(shown) : undefined,
       folio,
+      opened: opens?.note === path ? opens.at : left?.at === path ? left.opened : undefined,
     });
     this.swap();
   }
@@ -1005,11 +1008,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
     // The book decides whether that page still stands: it is the side
     // that knows whether the pane is scrolled inside it.
     const folio = left?.at === file.path ? left.folio : undefined;
+    const opened = left?.at === file.path ? left.opened : undefined;
     this.manuscript.set(leaf, {
       at: file.path,
       state: leaf.getEphemeralState(),
       line: view instanceof MarkdownView ? scrolledLine(view) : undefined,
       folio,
+      opened,
     });
     await leaf.setViewState({
       type: PREVIEW_VIEW,
@@ -1018,6 +1023,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
         note: file.path,
         folio,
         over,
+        ...(opened === undefined ? {} : { left: opened }),
       } satisfies PreviewState,
       active: true,
     });
