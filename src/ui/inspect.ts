@@ -506,3 +506,54 @@ export function pointOn(
   if (across < 0 || across > 1 || down < 0 || down > 1) return undefined;
   return { x: across * trim.width, y: down * trim.height };
 }
+
+/** A painted page's box, in pixels from the corner of the overlay. */
+export interface Frame {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** True when each page is where it was last measured, so the overlay keeps what it drew. */
+export function sameFrames(
+  was: ReadonlyMap<number, Frame>,
+  now: ReadonlyMap<number, Frame>,
+): boolean {
+  if (was.size !== now.size) return false;
+  for (const [page, frame] of now) {
+    const old = was.get(page);
+    if (old === undefined) return false;
+    if (
+      old.left !== frame.left ||
+      old.top !== frame.top ||
+      old.width !== frame.width ||
+      old.height !== frame.height
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The two heights of a phone's sheet. `peek` shows the crumbs and the
+ * first rule that matched, and `full` shows the whole pane.
+ */
+export type Pull = "peek" | "full";
+
+/** The shortest drag of the grabber that counts as a pull, in pixels. */
+export const PULL = 24;
+
+/**
+ * The sheet after a drag of its grabber, where `by` is the distance
+ * down in pixels. A pull up opens the whole pane. A pull down takes
+ * the whole pane back to its first rule, and takes a sheet already
+ * there off the screen, which is `closed`. A shorter drag is a tap,
+ * and a tap switches between the two.
+ */
+export function pulled(pull: Pull, by: number): Pull | "closed" {
+  if (Math.abs(by) < PULL) return pull === "peek" ? "full" : "peek";
+  if (by < 0) return "full";
+  return pull === "full" ? "peek" : "closed";
+}
