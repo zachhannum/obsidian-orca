@@ -4,12 +4,14 @@ import process from "node:process";
 import { test } from "node:test";
 import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
-import { readFrontmatter, type Properties } from "@/book/frontmatter";
+import { readFrontmatter, type Properties, type Value } from "@/book/frontmatter";
 import {
   BOOK_KEY,
+  DEEPEST_LEVEL,
   FIELD_KEYS,
   FONTS_KEY,
   FORMAT,
+  HEADINGS_KEY,
   IDENTIFIER_KEY,
   NewerBookError,
   applyBook,
@@ -268,6 +270,58 @@ test("two books get two identifiers", () => {
   const book = readBook({ [BOOK_KEY]: FORMAT });
 
   assert.notEqual(identified(book, {}).identifier, identified(book, {}).identifier);
+});
+
+test("the note holds the heading level the navigator lists for the book", () => {
+  const properties = { [BOOK_KEY]: FORMAT, [HEADINGS_KEY]: 2 };
+  const book = readBook(properties);
+
+  assert.equal(book.headings, 2);
+  assert.deepEqual(book.own, {});
+
+  const text = writeNote({ ...book, headings: 0 }, "\n");
+  assert.match(text, /^---\norca-book: 1\nnavigator-headings: 0\n---\n$/);
+  assert.equal(readBook(readFrontmatter(text).properties).headings, 0);
+
+  // A note without the key follows the setting.
+  assert.equal(readBook({ [BOOK_KEY]: FORMAT }).headings, undefined);
+});
+
+test("a note that sets its heading level is written back byte for byte", () => {
+  for (let level = 0; level <= DEEPEST_LEVEL; level += 1) {
+    const text = `---\norca-book: 1\ntitle: Emma\nfonts:\n  - Junicode\nnavigator-headings: ${level}\nbody-size: 11pt\nstatus: drafting\n---\n\n# Body\n`;
+    const { properties, body } = readFrontmatter(text);
+
+    assert.equal(writeNote(readBook(properties), body), text);
+  }
+});
+
+test("a heading level the note cannot mean reads as the default", () => {
+  const read = (value: Value): number | undefined =>
+    readBook({ [BOOK_KEY]: FORMAT, [HEADINGS_KEY]: value }).headings;
+
+  for (const value of ["3", "deep", true, false, null, [2], Number.NaN]) {
+    assert.equal(read(value), undefined);
+  }
+  assert.equal(read(9), DEEPEST_LEVEL);
+  assert.equal(read(-1), 0);
+  assert.equal(read(2.5), 2);
+});
+
+test("a book that follows the default has no heading key on the note", () => {
+  const properties = { [BOOK_KEY]: FORMAT, [HEADINGS_KEY]: 3, status: "drafting" };
+  const { headings, ...book } = readBook(properties);
+  assert.equal(headings, 3);
+
+  applyBook(properties, book);
+  assert.deepEqual(properties, { [BOOK_KEY]: FORMAT, status: "drafting" });
+
+  applyBook(properties, { ...book, headings: 4 });
+  assert.deepEqual(properties, {
+    [BOOK_KEY]: FORMAT,
+    status: "drafting",
+    [HEADINGS_KEY]: 4,
+  });
 });
 
 // What this tier does not cover: the view the note opens in and the way

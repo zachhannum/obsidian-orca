@@ -24,6 +24,15 @@ export const FONTS_KEY = "fonts";
 /** Frontmatter key that holds the book's identifier. */
 export const IDENTIFIER_KEY = "identifier";
 
+/**
+ * Frontmatter key that holds the deepest heading level the navigator
+ * lists for the book. Its value is a whole number, and 0 lists none.
+ */
+export const HEADINGS_KEY = "navigator-headings";
+
+/** The deepest heading level Markdown writes. */
+export const DEEPEST_LEVEL = 6;
+
 /** The format orca writes. A note above it does not open. */
 export const FORMAT = 1;
 
@@ -76,6 +85,11 @@ export interface Book {
    * name it. A name is listed once, however it is capitalized.
    */
   fonts: string[];
+  /**
+   * The deepest heading level the navigator lists for this book, from 0
+   * for none to `DEEPEST_LEVEL`. A book without it follows the setting.
+   */
+  headings?: number | undefined;
   /** The design, which is this note's own frontmatter. */
   design: Design;
   /** The author's own properties, which orca keeps and does not read. */
@@ -117,6 +131,14 @@ export const QUOTED: ReadonlySet<string> = new Set(
   FIELDS.filter((field) => field.kind === "tag").map((field) => field.key),
 );
 
+/** The keys orca owns that are neither metadata nor design. */
+const OWNED: ReadonlySet<string> = new Set([
+  BOOK_KEY,
+  FONTS_KEY,
+  IDENTIFIER_KEY,
+  HEADINGS_KEY,
+]);
+
 /** The unit a length is written in when the note has a bare number. */
 const UNIT = "pt";
 
@@ -151,14 +173,15 @@ export function readBook(properties: Properties): Book {
   const metadata: BookMetadata = {};
   const own: Properties = {};
   for (const [key, value] of Object.entries(migrated)) {
-    if (key === BOOK_KEY || key === FONTS_KEY || key === IDENTIFIER_KEY) continue;
-    if (DESIGN_KEYS.includes(key)) continue;
+    if (OWNED.has(key) || DESIGN_KEYS.includes(key)) continue;
     const field = FIELDS.find((named) => named.key === key);
     if (field === undefined) own[key] = value;
     else if (value !== null) metadata[field.key] = readValue(value, field.kind);
   }
   const fonts = readFonts(migrated[FONTS_KEY]);
   const book: Book = { format, metadata, fonts, design: readDesign(migrated), own };
+  const headings = readHeadings(migrated[HEADINGS_KEY]);
+  if (headings !== undefined) book.headings = headings;
   const identifier = heldIdentifier(migrated);
   if (identifier !== undefined) book.identifier = identifier;
   return book;
@@ -202,6 +225,7 @@ export function writeBook(book: Book): Properties {
   }
   if (book.identifier !== undefined) properties[IDENTIFIER_KEY] = book.identifier;
   if (book.fonts.length > 0) properties[FONTS_KEY] = [...book.fonts];
+  if (book.headings !== undefined) properties[HEADINGS_KEY] = book.headings;
   return { ...properties, ...writeDesign(book.design), ...book.own };
 }
 
@@ -222,6 +246,8 @@ export function applyBook(properties: Properties, book: Book): void {
   if (book.identifier !== undefined) properties[IDENTIFIER_KEY] = book.identifier;
   if (book.fonts.length > 0) properties[FONTS_KEY] = [...book.fonts];
   else delete properties[FONTS_KEY];
+  if (book.headings === undefined) delete properties[HEADINGS_KEY];
+  else properties[HEADINGS_KEY] = book.headings;
   const design = writeDesign(book.design);
   for (const key of DESIGN_KEYS) {
     const value = design[key];
@@ -252,6 +278,15 @@ function readFonts(value: Value | undefined): string[] {
     fonts.push(name);
   }
   return fonts;
+}
+
+/**
+ * The heading level a note sets. A number outside the levels reads as
+ * the nearest one, and a value that is no number reads as none set.
+ */
+function readHeadings(value: Value | undefined): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.min(Math.max(Math.floor(value), 0), DEEPEST_LEVEL);
 }
 
 /**

@@ -5,6 +5,7 @@
  * belong to the machine.
  */
 
+import { DEEPEST_LEVEL } from "@/book/note";
 import { CEILING } from "@/engine/pool";
 import { PAGE_UNITS, type PageUnit } from "@/style/design";
 import { READER_STORED, readerStored, type ReaderStored } from "@/style/reader";
@@ -33,9 +34,6 @@ export interface Limits {
   /** The deepest heading level the navigator lists, from 1 to 6. */
   deepest: number;
 }
-
-/** The deepest heading level Markdown writes. */
-export const DEEPEST_LEVEL = 6;
 
 export const LIMITS: Limits = {
   sessions: CEILING,
@@ -87,6 +85,19 @@ export function sessionCount(sessions: number): number {
 export function headingLevel(level: number): number {
   if (!Number.isFinite(level)) return LIMITS.deepest;
   return Math.min(Math.max(Math.floor(level), 1), DEEPEST_LEVEL);
+}
+
+/**
+ * The deepest heading level the navigator lists for a book, or nothing
+ * when it lists none. `own` is the level the book note holds, and a
+ * book that holds none follows the settings.
+ */
+export function listedFor(
+  limits: Pick<Limits, "headings" | "deepest">,
+  own: number | undefined,
+): number | undefined {
+  if (own === undefined) return limits.headings ? limits.deepest : undefined;
+  return own === 0 ? undefined : own;
 }
 
 export function isPageUnit(value: unknown): value is PageUnit {

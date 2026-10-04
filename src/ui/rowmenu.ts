@@ -4,6 +4,7 @@
  * menu is put.
  */
 
+import { DEEPEST_LEVEL } from "@/book/note";
 import type { Device } from "@/ui/device";
 
 /** One item on an entry's menu. */
@@ -36,6 +37,43 @@ export function entryItems(device: Device, row: Offering): EntryItem[][] {
   if (row.kind === "missing") edits.push("locate");
   else if (row.path !== undefined) edits.push("reveal");
   return [opens, edits, ["remove" as const]].filter((group) => group.length > 0);
+}
+
+/** One choice on a book's headings menu. */
+export interface HeadingItem {
+  title: string;
+  /** The level the book note is given. No level takes the key out of it. */
+  value: number | undefined;
+  checked: boolean;
+}
+
+/**
+ * Lists the choices on a book's headings menu. `own` is the level the
+ * book note holds, and `fallback` is the level the settings list, which
+ * the first choice names.
+ */
+export function headingItems(
+  own: number | undefined,
+  fallback: number | undefined,
+): HeadingItem[] {
+  const followed =
+    fallback === undefined ? "hidden" : levelTitle(fallback).toLowerCase();
+  const levels = Array.from({ length: DEEPEST_LEVEL }, (_, at) => at + 1);
+  return [
+    { title: `Use the default (${followed})`, value: undefined, checked: own === undefined },
+    { title: "Hidden", value: 0, checked: own === 0 },
+    ...levels.map((level) => ({
+      title: levelTitle(level),
+      value: level,
+      checked: own === level,
+    })),
+  ];
+}
+
+/** The count of heading levels a level lists, from the top one down. */
+function levelTitle(level: number): string {
+  if (level >= DEEPEST_LEVEL) return "All levels";
+  return level === 1 ? "1 level" : `${String(level)} levels`;
 }
 
 /** The title over a row's menu. Only a phone's sheet has one. */

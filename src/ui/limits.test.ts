@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CEILING } from "@/engine/pool";
 import { READER_STORED } from "@/style/reader";
-import { LIMITS, MOST_SESSIONS, readLimits, sessionCount } from "@/ui/limits";
+import { LIMITS, MOST_SESSIONS, listedFor, readLimits, sessionCount } from "@/ui/limits";
 
 test("the ceiling is a setting, saved and read back in whole sessions", () => {
   assert.equal(LIMITS.sessions, CEILING);
@@ -34,6 +34,18 @@ test("the navigator lists every heading level until the author picks a shallower
   assert.equal(readLimits({ deepest: 0 }).deepest, 1);
   assert.equal(readLimits({ deepest: 9.5 }).deepest, 6);
   assert.equal(readLimits({ deepest: "2" }).deepest, 6);
+});
+
+test("a book lists its own heading level, and follows the settings when it has none", () => {
+  const off = { headings: false, deepest: 3 };
+  const on = { headings: true, deepest: 3 };
+  assert.equal(listedFor(off, undefined), undefined);
+  assert.equal(listedFor(on, undefined), 3);
+  // The book's own level holds whichever way the setting is.
+  assert.equal(listedFor(off, 2), 2);
+  assert.equal(listedFor(on, 5), 5);
+  // A book set to none lists none where the settings list some.
+  assert.equal(listedFor(on, 0), undefined);
 });
 
 test("a ceiling saved under the old name reads back as the same number", () => {

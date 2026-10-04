@@ -1,5 +1,6 @@
 import type { Setting } from "obsidian";
-import { DEEPEST_LEVEL, MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
+import { DEEPEST_LEVEL } from "@/book/note";
+import { MOST_SESSIONS, isPageUnit, type Limits } from "@/ui/limits";
 
 /** The plugin, narrowed to the settings orca's tab writes. */
 export interface Limited {
@@ -40,7 +41,7 @@ export function settingDefinitions(orca: Limited): SettingDefinition[] {
     },
     {
       name: "Headings in the navigator",
-      desc: "Show each note's headings in the navigator.",
+      desc: "Show each note's headings in the navigator. A book can set its own from its menu in the navigator.",
       render: (setting) => {
         setting.addToggle((toggle) =>
           toggle.setValue(orca.limits.headings).onChange((headings) => {
@@ -52,7 +53,7 @@ export function settingDefinitions(orca: Limited): SettingDefinition[] {
     },
     {
       name: "Heading levels in the navigator",
-      desc: "List the headings down to this level.",
+      desc: "List the headings down to this level, in a book that sets none of its own.",
       render: (setting) => {
         levels = setting
           .addSlider((slider) =>

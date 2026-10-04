@@ -46,6 +46,11 @@ export interface Shelved {
   folder: string;
   /** Whether the note the workspace is on is one of this book's. */
   holds: boolean;
+  /**
+   * The deepest heading level the book note holds, 0 for none. A book
+   * that holds none follows the settings.
+   */
+  headings?: number | undefined;
 }
 
 /** A book note, read. */
@@ -73,7 +78,9 @@ export function bookName(book: Opened): string {
 /** One book on the shelf, resolved against the vault. */
 export function shelve(book: Opened, vault: Shelving): Shelved {
   const { sections } = resolve(book.model.order, vault.links, book.path);
+  const own = book.model.book.headings;
   return {
+    ...(own === undefined ? {} : { headings: own }),
     path: book.path,
     name: bookName(book),
     groups: groups(book.model.order).map((group) => ({
@@ -111,11 +118,15 @@ export function row(
   return made;
 }
 
-/** The note paths a shelf's rows read. */
+/** The notes whose headings a shelf's rows list. A book that lists none adds no note. */
 export function members(shelved: readonly Shelved[]): Set<string> {
   return new Set(
     shelved.flatMap((book) =>
-      book.groups.flatMap((group) => group.rows.flatMap((row) => row.path ?? [])),
+      book.groups.flatMap((group) =>
+        group.rows.flatMap((row) =>
+          row.path !== undefined && row.headings !== undefined ? [row.path] : [],
+        ),
+      ),
     ),
   );
 }

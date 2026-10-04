@@ -132,7 +132,11 @@ its editor around these files and returns a URL. The artboard list and
   heading's fold follows its words under the headings above it, so
   text written elsewhere in the note keeps it. A setting
   lists them, and it is off until the author turns it on. A second setting sets the deepest heading
-  level the navigator lists, and a heading below it has no row. A heading row turns a preview of the book to
+  level the navigator lists, and a heading below it has no row. The
+  two are the default for every book. `Show headings…` on a book's own
+  menu sets the level for that book or hides its headings, and the
+  book note holds the choice. A book that sets none follows the
+  default. A heading row turns a preview of the book to
   the page the heading opens on, and a Mod click opens the note at its
   line. A heading row never drags, and a dragged entry folds its
   headings until it is dropped. The row for the page the preview

@@ -39,7 +39,15 @@ import { cacheLinks, noteIndex } from "@/ui/notes";
 import { pick } from "@/ui/pick";
 import { readFolds, type Folds } from "@/ui/folds";
 import { headingsOf, type Headed, type Showing } from "@/ui/outline";
-import { entryItems, menuPlace, menuTitle, type EntryItem } from "@/ui/rowmenu";
+import {
+  entryItems,
+  headingItems,
+  menuPlace,
+  menuTitle,
+  type EntryItem,
+  type HeadingItem,
+  type Point,
+} from "@/ui/rowmenu";
 import { members, readSort, SORT_LABELS, SORT_ORDERS, shelve, type Row, type Shelved, type SortOrder } from "@/ui/shelf";
 import { mountShelf, type Mounted } from "@/ui/shelves";
 
@@ -59,8 +67,16 @@ export interface Handoff {
    * a turn shuts a drawer that is not pinned, as an opened note does.
    */
   turn(book: string, at: number, line?: number): Promise<boolean>;
-  /** The deepest heading level the author lists inside each entry, or nothing when they list none. */
-  headings(): number | undefined;
+  /**
+   * The deepest heading level the navigator lists inside each entry of
+   * a book, or nothing when it lists none. `own` is the level the book
+   * note holds.
+   */
+  headings(own: number | undefined): number | undefined;
+  /** Writes the level a book lists into its note. No level takes the key out. */
+  lists(book: string, headings: number | undefined): void;
+  /** The level a book lists when its note holds none. */
+  fallback(): number | undefined;
 }
 
 /**
@@ -144,8 +160,7 @@ export class NavigatorView extends ItemView {
         const properties = cache.frontmatter;
         const isBookNote =
           properties !== undefined && bookFormat(properties) !== undefined;
-        const outlined =
-          this.handoff.headings() !== undefined && this.members.has(file.path);
+        const outlined = this.members.has(file.path);
         if (isBookNote || outlined || this.shelved.has(file.path)) again();
       }),
     );
@@ -303,14 +318,9 @@ export class NavigatorView extends ItemView {
   private async read(): Promise<Shelved[]> {
     const notes = this.app.vault.getMarkdownFiles();
     const index = noteIndex(this.app);
-    const deepest = this.handoff.headings();
     const vault = {
       links: cacheLinks(this.app),
       active: this.app.workspace.getActiveFile()?.path,
-      headings:
-        deepest === undefined
-          ? undefined
-          : (path: string) => headingsOf(this.app, path, deepest),
     };
 
     const shelf: Shelved[] = [];
@@ -331,8 +341,13 @@ export class NavigatorView extends ItemView {
           return undefined;
         });
       if (model === undefined) continue;
+      const deepest = this.handoff.headings(model.book.headings);
+      const headings =
+        deepest === undefined
+          ? undefined
+          : (path: string) => headingsOf(this.app, path, deepest);
       shelf.push(
-        shelve({ path: note.path, name: note.basename, model }, vault),
+        shelve({ path: note.path, name: note.basename, model }, { ...vault, headings }),
       );
     }
     this.shelved = new Set(shelf.map((book) => book.path));
@@ -357,26 +372,56 @@ export class NavigatorView extends ItemView {
 
   /** Shows a row's menu where the device puts one. */
   private raise(menu: Menu, event: Pointed): void {
-    const on = device();
-    const pointer = event.nativeEvent;
-    if (on !== "tablet") {
-      menu.showAtMouseEvent(pointer);
+    if (device() !== "tablet") {
+      menu.showAtMouseEvent(event.nativeEvent);
       return;
     }
     // The browser's own menu would open over this one.
     event.preventDefault();
+    const { point, doc } = this.placed(event);
+    menu.showAtPosition(point, doc);
+  }
+
+  /**
+   * The place the device puts a row's menu, and the document the row
+   * is in. React clears the event's row once the handler returns, so a
+   * menu shown later is placed from this.
+   */
+  private placed(event: Pointed): { point: Point; doc: Document } {
+    const pointer = event.nativeEvent;
     const row = event.currentTarget;
-    menu.showAtPosition(
-      menuPlace(on, row.getBoundingClientRect(), {
+    return {
+      point: menuPlace(device(), row.getBoundingClientRect(), {
         x: pointer.clientX,
         y: pointer.clientY,
       }),
-      row.ownerDocument,
-    );
+      doc: row.ownerDocument,
+    };
+  }
+
+  /** Opens the menu that sets the heading level a book lists. */
+  private headingsMenu(book: Shelved, place: { point: Point; doc: Document }): void {
+    const menu = this.rowMenu(book.name);
+    const [follows, ...levels] = headingItems(book.headings, this.handoff.fallback());
+    const offer = (choice: HeadingItem): void => {
+      menu.addItem((item) =>
+        item
+          .setTitle(choice.title)
+          .setChecked(choice.checked)
+          .onClick(() => {
+            this.handoff.lists(book.path, choice.value);
+          }),
+      );
+    };
+    if (follows !== undefined) offer(follows);
+    menu.addSeparator();
+    levels.forEach(offer);
+    menu.showAtPosition(place.point, place.doc);
   }
 
   private bookMenu(event: Pointed, book: Shelved): void {
     const menu = this.rowMenu(book.name);
+    const place = this.placed(event);
     menu.addItem((item) =>
       item
         .setTitle("Open the book note")
@@ -386,6 +431,15 @@ export class NavigatorView extends ItemView {
         }),
     );
     this.offerAdding(menu, book, undefined);
+    menu.addSeparator();
+    menu.addItem((item) =>
+      item
+        .setTitle("Show headings…")
+        .setIcon("list-tree")
+        .onClick(() => {
+          this.headingsMenu(book, place);
+        }),
+    );
     menu.addSeparator();
     // The book note is orca's own. Every note it lists is borrowed, so
     // this is the one delete the navigator offers.
