@@ -494,10 +494,11 @@ replaces them.
 - Every control on mobile is at least 44px on its short side, which is
   the size of Obsidian mobile's own buttons. A number field steps from
   a button at each end.
-- The export dialog on mobile saves into the vault. It has a path in
-  the vault and no `Choose…`. Once the file is written, `Share` hands
-  it to the system share sheet, on a device that can share a file. The
-  file stays in the vault whether or not it is shared.
+- The export dialog on mobile has a path in the vault and no
+  `Choose…`. `Export` saves the files into the vault. On a device that
+  can share a file, `Share` is beside it. `Share` makes the same files
+  and hands them to the system share sheet, and writes none of them
+  into the vault.
 - On a phone the export dialog is a sheet, and with the keyboard up
   it ends above the keyboard. The fix on an error is a link as tall
   as a touch, with none of the fill a button has.
