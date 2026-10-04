@@ -325,10 +325,12 @@ function Exporting({
   // the dialog says so.
   const vaulted = exporter.choose === undefined;
 
-  // Export and Share both wait for the files a device that shares makes ahead.
+  // Export and Share both wait for the files a device that shares makes
+  // ahead, and for the line that says so to go.
   const waiting = sharing !== undefined && clean && held?.edition !== edition;
   const exportable =
     !waiting &&
+    !readying &&
     formats.length > 0 &&
     (shown === "ready" || (stage === "failed" && errors.length === 0 && checked !== undefined));
 
