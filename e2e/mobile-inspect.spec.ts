@@ -1,6 +1,8 @@
 import type { Locator } from "@playwright/test";
 import type { Book } from "./harness/book";
 import type { Inspect, Rect } from "./harness/inspect";
+import type { Obsidian } from "./harness/obsidian";
+import type { Panel } from "./harness/panel";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. */
@@ -18,9 +20,8 @@ const INDENT_KEY = "body-first-line-indent";
 
 /**
  * A rule of the author's own for every chapter title. The fixture's
- * fence is three lines, so a rule after them starts on line 4.
+ * fence is three lines, so a rule typed at its end starts on line 4.
  */
-const FENCE_END = "letter-spacing: 0.02em;\n}";
 const TITLE_CSS = "h1 { color: #111111; }";
 const TITLE_RULE = 4;
 
@@ -270,18 +271,18 @@ test("on a phone a tap on a rule's line, on the control that wrote a rule, and o
   vault,
 }) => {
   const own = await vault.read(BOOK);
-  expect(own).toContain(FENCE_END);
   vault.touch(BOOK);
   await obsidian.mobile("phone");
   try {
     await inspecting(book, inspect);
-    await obsidian.put("right");
-    // The pin is taken on the pages the new rule set, so the wait is
-    // for a paint after the write.
-    const before = await book.painted();
-    await vault.modify(BOOK, own.replace(FENCE_END, `${FENCE_END}\n${TITLE_CSS}`));
-    await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+    // The rule is typed in the drawer's editor, as an author writes it.
+    await obsidian.expand("right");
+    await panel.toCss.click();
+    await expect(panel.editor).toBeVisible();
+    await panel.typeCss(`\n${TITLE_CSS}`);
+    await expect.poll(async () => vault.read(BOOK)).toContain(TITLE_CSS);
     await book.settled(BOOK);
+    await shut(obsidian, panel);
 
     // The line of a rule in the author's CSS.
     const title = await inspect.pinLine(inspect.line(OPENING, CHAPTER_TITLE));
@@ -299,7 +300,7 @@ test("on a phone a tap on a rule's line, on the control that wrote a rule, and o
     // The drawer is over the sheet, and the sheet is there when it shuts.
     const drawer = await panel.box(panel.editor);
     expect(drawer.width).toBeGreaterThan(0);
-    await obsidian.put("right");
+    await shut(obsidian, panel);
     await expect(inspect.risen).toBeVisible();
     await expect(inspect.risen).toHaveAttribute("data-pull", "full");
 
@@ -322,7 +323,7 @@ test("on a phone a tap on a rule's line, on the control that wrote a rule, and o
     await expect(panel.panel).toHaveAttribute("data-viewing", "controls");
     await expect(panel.row(INDENT_KEY)).toBeInViewport();
     expect((await inspect.pinned()).key).toBe(second);
-    await obsidian.put("right");
+    await shut(obsidian, panel);
 
     // `Add a rule` writes the rule at the caret of the author's CSS.
     await expect(inspect.risenAdd).toBeVisible();
@@ -397,6 +398,15 @@ test("on a phone the command turns inspect mode on and off, as the target in the
     await obsidian.emulateMobile(false);
   }
 });
+
+/**
+ * Shuts the right drawer, and waits for it to slide off the screen, so
+ * the next tap lands on the page.
+ */
+async function shut(obsidian: Obsidian, panel: Panel): Promise<void> {
+  await obsidian.put("right");
+  await expect(panel.panel).not.toBeInViewport();
+}
 
 /** The middle of a line on the screen, which a tap pins the box of. */
 async function middleOf(inspect: Inspect, line: Locator): Promise<{ x: number; y: number }> {
