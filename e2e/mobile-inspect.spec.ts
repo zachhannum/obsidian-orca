@@ -189,8 +189,8 @@ test("on a phone a tap pins a box and the pane rises as a sheet over the foot of
     await obsidian.slide(0);
     await expect.poll(async () => (await inspect.rectOf(inspect.risen)).x).toBeCloseTo(rested.x, 0);
 
-    // Pulled up, it is the whole pane.
-    await inspect.pull(-A_PULL);
+    // Pulled up, it is the whole pane, and its edge goes up with the pointer.
+    expect(await inspect.pull(-A_PULL)).toBeCloseTo(-A_PULL, 0);
     await expect(inspect.risen).toHaveAttribute("data-pull", "full");
     expect(await inspect.risenRules.filter({ visible: true }).count()).toBeGreaterThan(1);
     await expect(inspect.risenComputed).toBeVisible();
@@ -210,7 +210,12 @@ test("on a phone a tap pins a box and the pane rises as a sheet over the foot of
     await inspect.grabber.click();
     await expect(inspect.risen).toHaveAttribute("data-pull", "peek");
     expect(await inspect.pinned()).toMatchObject({ key });
-    await inspect.pull(A_PULL);
+    // The edge goes down with the pointer too, from either height.
+    await inspect.grabber.click();
+    await expect(inspect.risen).toHaveAttribute("data-pull", "full");
+    expect(await inspect.pull(A_PULL)).toBeCloseTo(A_PULL, 0);
+    await expect(inspect.risen).toHaveAttribute("data-pull", "peek");
+    expect(await inspect.pull(A_PULL)).toBeCloseTo(A_PULL, 0);
     await inspect.unpinned();
     await expect(inspect.risen).toHaveCount(0);
     await expect(inspect.surface).toHaveAttribute("data-inspect", "on");

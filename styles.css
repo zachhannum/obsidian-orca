@@ -4532,8 +4532,8 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
 
 /* Until the sheet is pulled up, the sheet shows the crumbs and the
    first rule that matched. */
-.orca-inspect-sheet[data-pull="peek"] .orca-inspect-group ~ *,
-.orca-inspect-sheet[data-pull="peek"] .orca-inspect-rule ~ .orca-inspect-rule {
+.orca-inspect-sheet[data-layout="peek"] .orca-inspect-group ~ *,
+.orca-inspect-sheet[data-layout="peek"] .orca-inspect-rule ~ .orca-inspect-rule {
   display: none;
 }
 

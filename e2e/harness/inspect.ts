@@ -73,9 +73,10 @@ export class Inspect {
 
   /**
    * Drags the sheet's grabber up or down by a distance in pixels, and
-   * lets go. A distance down is positive.
+   * lets go. A distance down is positive. It answers the distance the
+   * sheet's upper edge had gone under the pointer before it let go.
    */
-  async pull(by: number): Promise<void> {
+  async pull(by: number): Promise<number> {
     // The sheet slides up to its place, and the grabber is read there.
     await this.risen.evaluate(async (sheet) => {
       await Promise.all(sheet.getAnimations().map((sliding) => sliding.finished));
@@ -86,8 +87,11 @@ export class Inspect {
     const { mouse } = this.obsidian.page;
     await mouse.move(x, y);
     await mouse.down();
+    const rested = (await this.rectOf(this.risen)).y;
     await mouse.move(x, y + by, { steps: 4 });
+    const held = (await this.rectOf(this.risen)).y;
     await mouse.up();
+    return held - rested;
   }
 
   /**

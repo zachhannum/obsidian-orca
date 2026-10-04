@@ -545,8 +545,9 @@ replaces them.
   over the foot of the page instead. It rises when a box is pinned,
   with the crumbs and the first rule that matched. Pulled up, it has
   every rule, the computed values and `Add a rule`. Pulled down past
-  its foot, it closes and removes the pin. A tap on its grabber
-  switches between the two heights. The page moves up when the sheet
+  its foot, it closes and removes the pin. The sheet follows the
+  finger both ways. A tap on its grabber switches between the two
+  heights. The page moves up when the sheet
   would cover the pinned box.
 - On a phone a tap on a rule's line, on the control that wrote a rule,
   or on `Add a rule` opens the right drawer at that place. The pin is
