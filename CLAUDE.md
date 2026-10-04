@@ -192,8 +192,8 @@ underneath them.
 ## PR creation and CI
 
 - An issue that needs code changes is not done until a PR is open for
-  it. Open the PR yourself when the work is committed and the local CI
-  mirror is green. Do not stop at a pushed branch.
+  it. Open the PR yourself when the work is committed and the
+  preflight is green. Do not stop at a pushed branch.
 - CI must pass on the PR before a human reviews it. Watch the run, fix
   a red job and push again. Do not hand over a PR with a failing or
   pending check.
@@ -205,17 +205,17 @@ underneath them.
   list item, blank lines between them. GitHub renders a single newline
   as a line break, so prose wrapped to the width used for code comes
   out as a ragged column.
-- Before pushing, run the CI mirror locally and make it green:
-  `npm run build` (type check, then bundle), `npm run lint`, `npm test`,
+- Before pushing, run the preflight and make it green. It is CI's
+  checks, run locally: `npm run build` (type check, then bundle), `npm run lint`, `npm test`,
   and `npm run e2e` when the change touches a surface. Pushing
   red and letting CI find it wastes a cycle; CI is verification, not
   development.
 - A hook (`scripts/push-gate.mjs`) refuses `git push` and `gh pr create`
-  until `node scripts/mirror.mjs` has passed on HEAD. Add `--e2e` when
+  until `node scripts/preflight.mjs` has passed on HEAD. Add `--e2e` when
   the change touches a surface. A tool that will not run is fixed or
   reported to the user, never pushed around.
 - A change on a branch with an open PR is pushed as soon as it is
-  committed and the CI mirror is green. The author tests the PR's
+  committed and the preflight is green. The author tests the PR's
   build, so a commit left local is a change they cannot see.
 - After every push to a PR, watch every run it starts to green
   (`gh run watch`), not only the first. A red run is fixed before
