@@ -117,6 +117,7 @@ const CHROME = {
   content: (type: string) =>
     `.workspace-leaf-content[data-type="${type}"] > .view-content`,
   action: (label: string) => `.view-action[aria-label="${label}"]`,
+  header: ".view-header",
   /** The arrows a view header draws for its leaf's history. */
   back: '.view-header-nav-buttons [aria-label="Navigate back"]',
   forward: '.view-header-nav-buttons [aria-label="Navigate forward"]',
@@ -168,6 +169,9 @@ const HOVERED = CHROME.tooltip;
 
 /** The id of the style tag that holds a window still for a picture. */
 const STILL = "orca-still";
+
+/** The name the sheet that hides the view headers is held under. */
+const HEADLESS = "orca-headless";
 
 /**
  * The size every page is typeset and photographed at. Obsidian opens
@@ -853,6 +857,31 @@ export class Obsidian {
         sheets[what.id] = sheet;
       },
       { id: STILL, css },
+    );
+  }
+
+  /**
+   * Hides every view's header, or shows it again. A phone hides the
+   * header as a page scrolls, and the view under it moves up.
+   */
+  async headers(shown: boolean): Promise<void> {
+    await this.page.evaluate(
+      (what) => {
+        const sheets = (window.orcaSheets ??= {});
+        const held = sheets[what.id];
+        if (held !== undefined) {
+          document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+            (adopted) => adopted !== held,
+          );
+          delete sheets[what.id];
+        }
+        if (what.shown) return;
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(`${what.header} { display: none !important }`);
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+        sheets[what.id] = sheet;
+      },
+      { id: HEADLESS, header: CHROME.header, shown },
     );
   }
 

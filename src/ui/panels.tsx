@@ -295,6 +295,9 @@ export function Panel({
             }}
           />,
           shown.sheet,
+          // The two views draw the sheet at different places among
+          // their children, and the key keeps it as it was pulled.
+          "sheet",
         );
   const header = (
     <div className="orca-panel-header">
