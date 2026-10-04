@@ -4103,17 +4103,15 @@ button.orca-card-at::after {
   background: var(--interactive-normal);
 }
 
-/* The sheet ends above the toolbar and the keyboard under it. The
-   drawer may end above the foot of the screen, and that room is not
-   taken twice. */
+/* Obsidian ends the whole app above the keyboard, which sets the page
+   again at a new size. While the CSS view has the caret the app keeps
+   its height, and only the sheet ends above the toolbar. */
+body.is-mobile.orca-typing .app-container {
+  max-height: 100vh;
+}
+
 .is-mobile .orca-editor-host.is-typing {
-  margin-bottom: max(
-    var(--size-4-3),
-    calc(
-      var(--keyboard-height, 0px) + var(--mobile-toolbar-height, 52px) -
-        var(--orca-editor-foot, 0px)
-    )
-  );
+  margin-bottom: max(var(--size-4-3), var(--orca-editor-cover, 0px));
 }
 
 /* mobile: preview */

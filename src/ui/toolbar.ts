@@ -42,10 +42,10 @@ function bound(key: string): Command | undefined {
 
 /**
  * Draws the toolbar on the body while the focus is inside the editor,
- * which the search panel is part of. The editor's host carries
- * `is-typing` for as long, and `--orca-editor-foot`, the room between
- * the foot of the drawer and the foot of the screen, so the sheet can
- * end above the toolbar.
+ * which the search panel is part of. For as long, the body carries
+ * `orca-typing`, which keeps the app at its full height, and the
+ * editor's host carries `is-typing` and `--orca-editor-cover`, the room
+ * the toolbar and the keyboard take from the foot of the drawer.
  */
 export function toolbar(device: Device, icon: DrawIcon): Extension {
   return ViewPlugin.define((view) => {
@@ -85,16 +85,20 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
       "keyboard",
     );
 
+    // The room the toolbar and the keyboard take from the foot of the
+    // drawer, as the page lays them out now.
     const measure = (): void => {
       view.requestMeasure({
         key: bar,
         read: () => {
           const drawer = host?.parentElement;
-          if (drawer === null || drawer === undefined) return 0;
-          return Math.max(0, document.win.innerHeight - drawer.getBoundingClientRect().bottom);
+          if (bar.hidden || drawer === null || drawer === undefined) return 0;
+          const padding = parseFloat(document.win.getComputedStyle(drawer).paddingBottom) || 0;
+          const foot = drawer.getBoundingClientRect().bottom - padding;
+          return Math.max(0, foot - bar.getBoundingClientRect().top);
         },
-        write: (foot) => {
-          host?.setCssProps({ "--orca-editor-foot": `${String(foot)}px` });
+        write: (cover) => {
+          host?.setCssProps({ "--orca-editor-cover": `${String(cover)}px` });
         },
       });
     };
@@ -103,7 +107,8 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
       if (bar.hidden === !on) return;
       bar.hidden = !on;
       host?.toggleClass("is-typing", on);
-      if (on) measure();
+      document.body.toggleClass("orca-typing", on);
+      measure();
     };
     const entered = (): void => {
       show(true);
@@ -113,7 +118,15 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
     };
     view.dom.addEventListener("focusin", entered);
     view.dom.addEventListener("focusout", left);
-    document.win.addEventListener("resize", measure);
+
+    // Obsidian reports the keyboard's height in a style of the page,
+    // and the drawer's own foot moves with it.
+    const restyled = new MutationObserver(measure);
+    for (const styled of [document.documentElement, document.body]) {
+      restyled.observe(styled, { attributes: true, attributeFilter: ["style", "class"] });
+    }
+    const moved = new ResizeObserver(measure);
+    if (host?.parentElement) moved.observe(host.parentElement);
 
     // The keyboard takes the foot of the sheet when it rises, and the
     // caret may be on a line it took.
@@ -130,10 +143,12 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
     return {
       destroy() {
         resized.disconnect();
+        moved.disconnect();
+        restyled.disconnect();
         view.dom.removeEventListener("focusin", entered);
         view.dom.removeEventListener("focusout", left);
-        document.win.removeEventListener("resize", measure);
         host?.removeClass("is-typing");
+        document.body.removeClass("orca-typing");
         bar.remove();
       },
     };

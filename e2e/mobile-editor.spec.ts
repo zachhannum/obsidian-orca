@@ -99,6 +99,9 @@ for (const device of ["phone", "tablet"] as const) {
         .toBe(above);
       const bar = await panel.box(panel.toolbar);
       expect(bar.height).toBe(TOOLBAR);
+      // The app keeps its height, so the page beside the drawer is
+      // not set again at a smaller size.
+      expect(await obsidian.appHeight()).toBe(DEVICES[device].height);
       expect(bar.width).toBe(DEVICES[device].width);
       await expect
         .poll(async () => {
@@ -130,6 +133,8 @@ for (const device of ["phone", "tablet"] as const) {
       await panel.code.click();
       await panel.tool("hide").click();
       await expect(panel.toolbar).toBeHidden();
+      // With the caret gone, the app ends above the keyboard again.
+      await expect.poll(() => obsidian.appHeight()).toBe(above);
     } finally {
       await obsidian.keyboard(undefined);
       vault.touch(BOOK);
@@ -178,7 +183,8 @@ test("on desktop the CSS view keeps the hover card and the gutter, and draws no 
 
 // What this suite does not cover: a system keyboard, which emulation
 // does not raise, so the height is one the suite sets and the toolbar
-// is never drawn beside Obsidian's own; a finger, because emulation
+// is never drawn beside Obsidian's own; a drawer that Obsidian itself
+// ends above the keyboard, which the emulated drawer does not do; a finger, because emulation
 // sends a mouse; a drawer pinned on a tablet, which the harness cannot
 // pin; completion by touch; and the view against its artboard pixel for
 // pixel, which emulation cannot give.

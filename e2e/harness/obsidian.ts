@@ -112,6 +112,7 @@ interface Offered {
 }
 
 const CHROME = {
+  app: ".app-container",
   ribbon: (label: string) => `.side-dock-ribbon-action[aria-label="${label}"]`,
   leaf: (type: string) => `.workspace-leaf-content[data-type="${type}"]`,
   content: (type: string) =>
@@ -1005,6 +1006,13 @@ export class Obsidian {
       const drawer = leaf.getRoot() as unknown as { openLeaf(leaf: unknown): void };
       drawer.openLeaf(leaf);
     }, type);
+  }
+
+  /** The height of the app, which Obsidian mobile ends above the keyboard. */
+  async appHeight(): Promise<number> {
+    const box = await this.page.locator(CHROME.app).boundingBox();
+    if (box === null) throw new Error("the window draws no app");
+    return box.height;
   }
 
   /** The top of the bar a phone floats over the foot of its screen. */
