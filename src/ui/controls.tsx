@@ -71,9 +71,12 @@ export interface Overridden {
 const CARD_GAP = 6;
 
 /**
- * Draws the lock on an overridden row. A hover or focus opens a card with
- * each overriding declaration and its place. The card is drawn on the
- * body because the panel clips overflow. It sits above the lock, or below
+ * Draws the lock on an overridden row, and the card with each overriding
+ * declaration and its place. On desktop a hover or focus opens the card
+ * and a click goes to the first place. A touch screen has no hover, so
+ * off desktop a tap opens the card, a tap on a place in it goes to that
+ * place, and a tap anywhere else shuts it. The card is drawn on the body
+ * because the panel clips overflow. It sits above the lock, or below
  * when the window has no room above.
  */
 function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
@@ -82,6 +85,7 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
   const [body, setBody] = useState<HTMLElement | undefined>(undefined);
   const id = useId();
   const first = overridden.overrides[0];
+  const touch = device() !== "desktop";
 
   useLayoutEffect(() => {
     const button = lock.current;
@@ -100,12 +104,30 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
     drawn.style.left = `${String(Math.max(left, CARD_GAP))}px`;
   }, [body, overridden.overrides]);
 
+  useEffect(() => {
+    if (!touch || body === undefined) return;
+    const outside = (event: PointerEvent): void => {
+      const target = event.target as Node | null;
+      if (lock.current?.contains(target) === true) return;
+      if (card.current?.contains(target) === true) return;
+      setBody(undefined);
+    };
+    // The capture phase, since a control under the tap may stop the event.
+    body.addEventListener("pointerdown", outside, true);
+    return () => {
+      body.removeEventListener("pointerdown", outside, true);
+    };
+  }, [touch, body]);
+
   const show = (): void => {
     setBody(lock.current?.ownerDocument.body);
   };
   const hide = (): void => {
     setBody(undefined);
   };
+  const hover = touch
+    ? {}
+    : { onPointerEnter: show, onPointerLeave: hide, onFocus: show, onBlur: hide };
   return (
     <>
       <button
@@ -113,17 +135,21 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
         type="button"
         className="orca-panel-overridden"
         data-testid={overridden.testid}
-        aria-describedby={body === undefined ? undefined : id}
-        onPointerEnter={show}
-        onPointerLeave={hide}
-        onFocus={show}
-        onBlur={hide}
+        aria-describedby={touch || body === undefined ? undefined : id}
+        aria-expanded={touch ? body !== undefined : undefined}
+        aria-controls={touch && body !== undefined ? id : undefined}
+        {...hover}
         onKeyDown={(event) => {
           if (event.key !== "Escape" || body === undefined) return;
           event.stopPropagation();
           hide();
         }}
         onClick={() => {
+          if (touch) {
+            if (body === undefined) show();
+            else hide();
+            return;
+          }
           hide();
           if (first !== undefined) overridden.open(first);
         }}
@@ -140,36 +166,51 @@ function Lock({ overridden }: { overridden: Overridden }): JSX.Element {
             <div
               ref={card}
               id={id}
-              role="tooltip"
-              className="orca-card mod-floating"
+              role={touch ? "group" : "tooltip"}
+              className={`orca-card mod-floating${touch ? " mod-tappable" : ""}`}
               data-testid="orca-panel-card"
             >
-              {overridden.overrides.map((override) => (
-                <div
-                  key={`${override.sheet}:${String(override.line)}:${String(override.column)}:${override.property}`}
-                  className="orca-card-row mod-overridden"
-                >
-                  <Icon name="lock" className="orca-card-icon" />
-                  <div className="orca-card-body">
-                    <div className="orca-card-said">
-                      <code>{override.property}</code> is overridden with value{" "}
-                      <code>
-                        {override.value}
-                        {override.important ? " !important" : ""}
-                      </code>
-                      {override.declared === override.property ? null : (
-                        <>
-                          {" "}
-                          from <code>{override.declared}</code>
-                        </>
+              {overridden.overrides.map((override) => {
+                const at = `${override.sheet}:${String(override.line)}:${String(override.column)}`;
+                return (
+                  <div
+                    key={`${at}:${override.property}`}
+                    className="orca-card-row mod-overridden"
+                  >
+                    <Icon name="lock" className="orca-card-icon" />
+                    <div className="orca-card-body">
+                      <div className="orca-card-said">
+                        <code>{override.property}</code> is overridden with value{" "}
+                        <code>
+                          {override.value}
+                          {override.important ? " !important" : ""}
+                        </code>
+                        {override.declared === override.property ? null : (
+                          <>
+                            {" "}
+                            from <code>{override.declared}</code>
+                          </>
+                        )}
+                      </div>
+                      {touch ? (
+                        <button
+                          type="button"
+                          className="orca-card-at"
+                          data-testid="orca-panel-card-line"
+                          onClick={() => {
+                            hide();
+                            overridden.open(override);
+                          }}
+                        >
+                          {at}
+                        </button>
+                      ) : (
+                        <div className="orca-card-at">{at}</div>
                       )}
                     </div>
-                    <div className="orca-card-at">
-                      {`${override.sheet}:${String(override.line)}:${String(override.column)}`}
-                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>,
             body,
           )}

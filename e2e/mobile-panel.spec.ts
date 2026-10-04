@@ -22,6 +22,12 @@ const CHAPTER = "Chapter Twelve.md";
 /** A view Obsidian keeps in the right drawer beside the panel. */
 const OUTLINE = "outline";
 
+/** A row the author's CSS can override, by its key. */
+const LOCKED = "body-first-line-indent";
+
+/** A rule that overrides that row, typed at the end of the book's CSS. */
+const OVERRIDE = "\np + p { text-indent: 0; }";
+
 /** The width at which the panel puts a label over its control. */
 const NARROW = 360;
 
@@ -266,10 +272,71 @@ for (const device of ["phone", "tablet"] as const) {
       await obsidian.emulateMobile(false);
     }
   });
+
+  test(`on a ${device} a tap on a lock opens its card, a tap elsewhere shuts it, and a tap on its line opens the CSS view at that line`, async ({
+    obsidian,
+    book,
+    panel,
+    vault,
+  }) => {
+    const own = await vault.read(BOOK);
+    await obsidian.mobile(device);
+    try {
+      await book.open();
+      await book.settled(BOOK);
+      await panel.open();
+      const row = panel.row(LOCKED);
+      await expect(row).not.toHaveAttribute("data-overridden");
+
+      vault.touch(BOOK);
+      const before = await book.painted();
+      await panel.toCss.click();
+      await panel.typeCss(OVERRIDE);
+      await expect.poll(async () => vault.read(BOOK)).toContain(OVERRIDE);
+      await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+      const line = (await panel.lineNumbers.last().textContent()) ?? "";
+      await panel.toControls.click();
+      await expect(row).toHaveAttribute("data-overridden", line);
+      const lock = panel.overridden(LOCKED);
+      const box = await panel.box(lock);
+      expect(box.width).toBeGreaterThanOrEqual(TOUCH);
+      expect(box.height).toBeGreaterThanOrEqual(TOUCH);
+
+      // The first tap opens the card and goes nowhere.
+      await expect(panel.overriddenCard).toBeHidden();
+      await lock.click();
+      await expect(panel.overriddenCard).toBeVisible();
+      await expect(panel.overriddenCard).toContainText("text-indent");
+      await expect(panel.cardLines).toHaveText(new RegExp(`^book\\.css:${line}:\\d+$`));
+      await expect(panel.panel).toHaveAttribute("data-viewing", "controls");
+
+      // A tap anywhere else shuts it, and so does a second tap on the lock.
+      await panel.title.click();
+      await expect(panel.overriddenCard).toBeHidden();
+      await expect(panel.panel).toHaveAttribute("data-viewing", "controls");
+      await lock.click();
+      await expect(panel.overriddenCard).toBeVisible();
+      await lock.click();
+      await expect(panel.overriddenCard).toBeHidden();
+
+      // The line in the card is the way to the line.
+      await lock.click();
+      await panel.cardLines.click();
+      await expect(panel.overriddenCard).toBeHidden();
+      await expect(panel.panel).toHaveAttribute("data-viewing", "css");
+      await expect(panel.caretLine).toHaveText(line);
+      await panel.toControls.click();
+    } finally {
+      vault.touch(BOOK);
+      await vault.modify(BOOK, own);
+      await obsidian.emulateMobile(false);
+    }
+  });
 }
 
-// What this suite does not cover: a lock answering a tap and the card
-// it opens, the CSS view by touch and the inspect pane, which are not
+// What this suite does not cover: a card with more than one place, a
+// tap by a real finger, which emulation gives as a mouse; the CSS view
+// by touch and the inspect pane, which are not
 // built here; a drawer pinned on a tablet, which the harness cannot
 // pin; the row of the carried face drawn in that face, whose bytes are
 // the engine's; and a device where Obsidian reads the system's fonts.
