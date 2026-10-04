@@ -4,6 +4,9 @@
  * the rules the engine matched by layer, and some computed values. Orca
  * computes none of these. A warning from the engine keeps the engine's
  * words.
+ *
+ * On a phone the panel's drawer covers the page, so the same pane is
+ * drawn as a sheet over the foot of the page.
  */
 
 import { Fragment, useEffect, useRef, useState, type JSX } from "react";
@@ -15,13 +18,16 @@ import type { Skipped } from "@/ui/editor";
 import { ownerSaid, type Owner } from "@/ui/groups";
 import { Icon } from "@/ui/icon";
 import {
+  boxKey,
   computedRows,
   crumbsOf,
+  pulled,
   ruleFor,
   selectorFor,
   specificPicks,
   targetKey,
   type Pin,
+  type Pull,
 } from "@/ui/inspect";
 
 /** One matched rule as the pane draws it. */
@@ -201,6 +207,75 @@ export function InspectPane({
           <span className="orca-inspect-note">Line {caret}</span>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Draws the pane as a phone's sheet. The grabber pulls it up to the
+ * whole pane and down to the first rule, and a pull down from there
+ * takes the pin off. The sheet stays as it was pulled when another box
+ * is pinned.
+ */
+export function InspectSheet({
+  inspecting,
+  unit,
+  acting,
+}: {
+  inspecting: Inspecting;
+  unit: PageUnit;
+  acting: PaneActing;
+}): JSX.Element {
+  const [pull, setPull] = useState<Pull>("peek");
+  // The distance down the finger has taken the sheet, which follows it.
+  const [dragged, drag] = useState(0);
+  const from = useRef<number | undefined>(undefined);
+  const release = (by: number): void => {
+    const next = pulled(pull, by);
+    if (next === "closed") acting.unpin();
+    else setPull(next);
+  };
+  return (
+    <div
+      className="orca-inspect-sheet"
+      data-testid="orca-inspect-sheet"
+      data-pull={pull}
+      style={dragged > 0 ? { transform: `translateY(${String(dragged)}px)` } : undefined}
+    >
+      <div
+        className="orca-inspect-grabber"
+        data-testid="orca-inspect-grabber"
+        role="button"
+        tabIndex={0}
+        aria-expanded={pull === "full"}
+        aria-label={pull === "full" ? "Show the first rule" : "Show every rule"}
+        onPointerDown={(event) => {
+          from.current = event.clientY;
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (from.current !== undefined) drag(Math.max(0, event.clientY - from.current));
+        }}
+        onPointerUp={(event) => {
+          const start = from.current;
+          if (start === undefined) return;
+          from.current = undefined;
+          drag(0);
+          release(event.clientY - start);
+        }}
+        onPointerCancel={() => {
+          from.current = undefined;
+          drag(0);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          release(0);
+        }}
+      >
+        <div className="menu-grabber" />
+      </div>
+      <InspectPane key={boxKey(inspecting.pin)} inspecting={inspecting} unit={unit} acting={acting} />
     </div>
   );
 }

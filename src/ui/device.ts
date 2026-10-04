@@ -39,6 +39,27 @@ export function sheetCover(screen: number, sheet: number, bottom: number): numbe
   return Math.max(0, bottom - Math.max(screen - sheet, 0));
 }
 
+/** The room a pinned box keeps over it for its tag, and under it before the sheet, in pixels. */
+export const TAG_ROOM = 28;
+export const SHEET_GAP = 12;
+
+/**
+ * Measures how far the page moves up so a sheet at the foot of the
+ * screen clears a pinned box. `box` is the box's upper and lower edges
+ * before any move, `well` is the upper edge of what the page is drawn
+ * in, and `sheet` is the sheet's upper edge. The box stops under the
+ * top of the well, so a box taller than the room keeps its tag.
+ */
+export function liftFor(
+  box: { top: number; bottom: number },
+  well: number,
+  sheet: number,
+): number {
+  const covered = box.bottom + SHEET_GAP - sheet;
+  const room = box.top - TAG_ROOM - well;
+  return Math.max(0, Math.round(Math.min(covered, room)));
+}
+
 /** The place the page number, the arrows and the count of issues are drawn. */
 export type Foot = "status" | "under" | "bar";
 

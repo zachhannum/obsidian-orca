@@ -14,6 +14,7 @@
  */
 
 import { tally } from "@/ui/issues";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import {
   Fragment,
@@ -73,7 +74,7 @@ import { ACTIONS } from "@/ui/actions";
 import { device } from "@/ui/desktop";
 import { boxKey } from "@/ui/inspect";
 import { hyphenating } from "@/ui/language";
-import { InspectPane, type Inspecting } from "@/ui/pane";
+import { InspectPane, InspectSheet, type Inspecting, type PaneActing } from "@/ui/pane";
 import { browsedFamily } from "@/ui/glyphs";
 import { CARRIED, offeredVariants, picking, previewFamily, sourced } from "@/ui/picker";
 import { Icon } from "@/ui/icon";
@@ -108,6 +109,8 @@ export interface Acting {
   pin(node: number): void;
   /** Opens the author's CSS with the caret at a place in it. */
   reveal(place: Place): void;
+  /** Opens the drawer the panel is in, and answers once it is open. */
+  shows(): Promise<void>;
 }
 
 /** The panel's two views. In the CSS view the panel draws its header, and the editor under it is not React's. */
@@ -137,6 +140,12 @@ export type Shown =
       warned: number;
       /** The box pinned in the preview, which the CSS view draws the inspect pane for. */
       inspecting: Inspecting | undefined;
+      /**
+       * The element over a phone's page that the inspect pane is drawn
+       * in as a sheet. A tablet and the desktop have none, and the CSS
+       * view draws the pane.
+       */
+      sheet: HTMLElement | undefined;
       /** The design keys overridden by the author's CSS, each with the declaration that beats it. */
       overridden: ReadonlyMap<string, Override>;
     }
@@ -234,6 +243,59 @@ export function Panel({
   }
   const css = shown.viewing === "css";
   const warned = css ? shown.warned : shown.missing;
+  const inPanel: PaneActing = {
+    cursor: (line, column) => {
+      acting.cursor(line, column);
+    },
+    add: (text) => {
+      acting.add(text);
+    },
+    unpin: () => {
+      acting.unpin();
+    },
+    pin: (node) => {
+      acting.pin(node);
+    },
+    open: (owner) => {
+      if (owner.level !== undefined) choose(owner.level);
+      setOpening(owner);
+      acting.view("controls");
+    },
+  };
+  // The drawer is shut under the sheet, so a tap that leads into the
+  // panel opens the drawer first. A row is scrolled to only once it is
+  // on screen.
+  const shows = (then: () => void): void => {
+    void acting.shows().then(then);
+  };
+  const sheet =
+    shown.sheet === undefined || shown.inspecting === undefined
+      ? null
+      : createPortal(
+          <InspectSheet
+            inspecting={shown.inspecting}
+            unit={shown.unit}
+            acting={{
+              ...inPanel,
+              cursor: (line, column) => {
+                shows(() => {
+                  inPanel.cursor(line, column);
+                });
+              },
+              add: (text) => {
+                shows(() => {
+                  inPanel.add(text);
+                });
+              },
+              open: (owner) => {
+                shows(() => {
+                  inPanel.open(owner);
+                });
+              },
+            }}
+          />,
+          shown.sheet,
+        );
   const header = (
     <div className="orca-panel-header">
       <span className="orca-panel-title" data-testid="orca-panel-title">{css ? "CSS" : "Design"}</span>
@@ -292,32 +354,15 @@ export function Panel({
         data-viewing="css"
       >
         {header}
-        {shown.inspecting === undefined ? null : (
+        {shown.inspecting === undefined || shown.sheet !== undefined ? null : (
           <InspectPane
             key={boxKey(shown.inspecting.pin)}
             inspecting={shown.inspecting}
             unit={shown.unit}
-            acting={{
-              cursor: (line, column) => {
-                acting.cursor(line, column);
-              },
-              add: (text) => {
-                acting.add(text);
-              },
-              unpin: () => {
-                acting.unpin();
-              },
-              pin: (node) => {
-                acting.pin(node);
-              },
-              open: (owner) => {
-                if (owner.level !== undefined) choose(owner.level);
-                setOpening(owner);
-                acting.view("controls");
-              },
-            }}
+            acting={inPanel}
           />
         )}
+        {sheet}
       </div>
     );
   }
@@ -337,6 +382,7 @@ export function Panel({
       data-viewing="controls"
     >
       {header}
+      {sheet}
       {GROUPS.map((group) => (
         <Fragment key={group.name}>
           <div
