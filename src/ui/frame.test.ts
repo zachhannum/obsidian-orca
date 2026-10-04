@@ -3,9 +3,13 @@ import { test } from "node:test";
 import { DEVICES, deviceBox } from "@/style/reader";
 import {
   bindFiles,
+  documentOf,
   fitted,
+  leftOf,
+  openingOf,
   resolvePath,
   rewriteSheet,
+  screenOf,
   sheetOrder,
   stepOf,
   turnedBy,
@@ -128,6 +132,7 @@ function bound(): {
   const result = bindFiles(
     {
       spine: [
+        { path: "EPUB/missing.xhtml", section: 1 },
         { path: "EPUB/section-001.xhtml", section: 4 },
         { path: "EPUB/section-002.xhtml", section: 9 },
       ],
@@ -171,7 +176,10 @@ test("images and fonts are bound before the sheets and documents that name them,
   assert.equal(seen[0]?.links.sheet("EPUB/missing.css"), undefined);
   assert.equal(seen[0]?.links.url("EPUB/media/image-1.png"), "blob:1");
   assert.equal(seen[0]?.links.url("EPUB/missing.png"), undefined);
-  assert.deepEqual(result.documents, ["blob:2", "blob:3"]);
+  assert.deepEqual(result.documents, [
+    { url: "blob:2", section: 4 },
+    { url: "blob:3", section: 9 },
+  ]);
   assert.equal(made[2]?.body, '<one/><!-- a { src: url("blob:0") } -->');
 });
 
@@ -184,7 +192,56 @@ test("revoke releases every URL that was made", () => {
   result.revoke();
 });
 
+test("a document is found by the node of its section, not by its place in the spine", () => {
+  const { result } = bound();
+
+  // The spine's first entry has no file, so the second document of the
+  // spine is the first the frame can load.
+  assert.equal(documentOf(result.documents, 4), 0);
+  assert.equal(documentOf(result.documents, 9), 1);
+  assert.equal(documentOf(result.documents, 1), undefined);
+});
+
+const WIDTH = 400;
+/** A chapter over four screens: a heading, two paragraphs, a list of two items on the third screen, and none on the fourth. */
+const LAID = [
+  { node: 39, left: 20 },
+  { node: 41, left: 20 },
+  { node: 53, left: 420 },
+  { node: 60, left: 820 },
+  { node: 61, left: 820 },
+  { node: 64, left: 820 },
+];
+
+test("a block in a later column is on a later screen, and no screen is past the last", () => {
+  assert.equal(screenOf(20, WIDTH, 4), 0);
+  assert.equal(screenOf(420, WIDTH, 4), 1);
+  assert.equal(screenOf(799, WIDTH, 4), 1);
+  assert.equal(screenOf(2020, WIDTH, 4), 3);
+  assert.equal(screenOf(-4, WIDTH, 4), 0);
+  assert.equal(screenOf(20, 0, 4), 0);
+});
+
+test("a place is found at the nearest element the document has a box for", () => {
+  // A text node has no element, so its paragraph answers for it.
+  assert.equal(leftOf(LAID, [53, 38]), 420);
+  // An item of a list answers before the list.
+  assert.equal(leftOf(LAID, [64, 60, 38]), 820);
+  // An image that did not load has no box, and neither has its section.
+  assert.equal(leftOf(LAID, [70, 38]), undefined);
+  assert.equal(leftOf(LAID, []), undefined);
+});
+
+test("a screen opens with the first block that begins on it and closes with the last, and one inside a long block opens with that block", () => {
+  assert.deepEqual(openingOf(LAID, 0, WIDTH), { opens: 39, closes: 41, begun: true });
+  assert.deepEqual(openingOf(LAID, 1, WIDTH), { opens: 53, closes: 53, begun: true });
+  assert.deepEqual(openingOf(LAID, 2, WIDTH), { opens: 60, closes: 64, begun: true });
+  assert.deepEqual(openingOf(LAID, 3, WIDTH), { opens: 64, closes: 64, begun: false });
+  assert.deepEqual(openingOf([], 0, WIDTH), { opens: undefined, closes: undefined, begun: false });
+});
+
 // What this tier does not cover: `rewriteDocument`, which parses a
 // document and needs a browser, and a frame loading what is bound. The
-// e2e suite reads both off the frame. A sheet's `@import` of another
+// e2e suite reads both off the frame, and the left edges a real
+// document's blocks have under ReadiumCSS's columns. A sheet's `@import` of another
 // sheet is not rewritten, and the engine writes none.
