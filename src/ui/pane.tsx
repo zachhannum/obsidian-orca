@@ -9,7 +9,7 @@
  * drawn as a sheet over the foot of the page.
  */
 
-import { Fragment, useEffect, useRef, useState, type JSX } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type JSX } from "react";
 import type { InspectedDeclaration, MatchedRule } from "fleuron";
 import type { PageUnit } from "@/style/design";
 import type { Layer } from "@/style/layers";
@@ -211,6 +211,9 @@ export function InspectPane({
   );
 }
 
+/** The time a sheet takes to rise, in milliseconds. The page moves up over the same time. */
+const RISE = 200;
+
 /**
  * Draws the pane as a phone's sheet. The grabber pulls it up to the
  * whole pane and down to the first rule, and a pull down from there
@@ -230,6 +233,25 @@ export function InspectSheet({
   // The distance down the finger has taken the sheet, which follows it.
   const [dragged, drag] = useState(0);
   const from = useRef<number | undefined>(undefined);
+  const sheet = useRef<HTMLDivElement>(null);
+  // The height the sheet was last drawn at, which a taller one rises from.
+  const drawn = useRef(0);
+  // A sheet that grows is first drawn where it was and then slides up
+  // to its place, so it rises when a box is pinned and when it is
+  // pulled up. One that shrinks has followed the finger down already.
+  useLayoutEffect(() => {
+    const element = sheet.current;
+    if (element === null) return;
+    const rise = element.offsetHeight - drawn.current;
+    if (rise <= 0 || element.win.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    element.animate(
+      [{ transform: `translateY(${String(rise)}px)` }, { transform: "translateY(0)" }],
+      { duration: RISE, easing: "ease-out" },
+    );
+  }, [pull]);
+  useLayoutEffect(() => {
+    drawn.current = sheet.current?.offsetHeight ?? 0;
+  });
   const release = (by: number): void => {
     const next = pulled(pull, by);
     if (next === "closed") acting.unpin();
@@ -237,6 +259,7 @@ export function InspectSheet({
   };
   return (
     <div
+      ref={sheet}
       className="orca-inspect-sheet"
       data-testid="orca-inspect-sheet"
       data-pull={pull}

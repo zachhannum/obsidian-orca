@@ -427,6 +427,7 @@ export class PreviewView extends ItemView {
    */
   private sheetHost: HTMLElement | undefined;
   private lifting: ResizeObserver | undefined;
+  private sliding: MutationObserver | undefined;
   /** The distance the page is moved up so the sheet clears the pinned box, in pixels. */
   private lifted = 0;
   private exportAction: HTMLElement | undefined;
@@ -664,6 +665,8 @@ export class PreviewView extends ItemView {
     this.overlay = undefined;
     this.lifting?.disconnect();
     this.lifting = undefined;
+    this.sliding?.disconnect();
+    this.sliding = undefined;
     this.sheetHost?.remove();
     this.sheetHost = undefined;
     this.reflow?.unmount();
@@ -1314,6 +1317,21 @@ export class PreviewView extends ItemView {
         this.lifts();
       });
       this.lifting.observe(rising);
+      // A swipe that opens a drawer slides the main area aside. The
+      // sheet is on the body and not under that area, so the sheet
+      // takes each move the area makes. The API declares no element
+      // for the area.
+      const root = (this.app.workspace.rootSplit as unknown as { containerEl?: HTMLElement })
+        .containerEl;
+      if (root !== undefined) {
+        const slides = (): void => {
+          rising.style.setProperty("transform", root.style.transform);
+          rising.style.setProperty("transition", root.style.transition);
+        };
+        slides();
+        this.sliding = new MutationObserver(slides);
+        this.sliding.observe(root, { attributes: true, attributeFilter: ["style"] });
+      }
     }
     const host = well.createDiv({ cls: "orca-reflow-host" });
     host.dataset["testid"] = "orca-reflow-host";
@@ -1571,8 +1589,9 @@ export class PreviewView extends ItemView {
         if (trim === undefined || trim.height === 0 || page === null) continue;
         const rect = page.getBoundingClientRect();
         const scale = rect.height / trim.height;
-        // The page is read where it is drawn, which is moved up already.
-        const from = rect.top + this.lifted;
+        // The page is read where it is drawn, which can be part of the
+        // way through a move up or down.
+        const from = rect.top - new DOMMatrix(getComputedStyle(surface).transform).f;
         top = Math.min(top, from + box.y * scale);
         bottom = Math.max(bottom, from + (box.y + box.height) * scale);
       }

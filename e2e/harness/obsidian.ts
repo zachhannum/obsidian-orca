@@ -885,6 +885,19 @@ export class Obsidian {
     );
   }
 
+  /**
+   * Slides the main area sideways by a distance in pixels, as a swipe
+   * that opens a drawer does on a phone. Zero puts the area back. The
+   * API declares no element for the area.
+   */
+  async slide(by: number): Promise<void> {
+    await this.page.evaluate((px) => {
+      const root = (window.app.workspace.rootSplit as unknown as { containerEl: HTMLElement })
+        .containerEl;
+      root.style.transform = px === 0 ? "" : `translateX(${String(px)}px)`;
+    }, by);
+  }
+
   /** Puts that chrome back. */
   async moving(): Promise<void> {
     await this.page.evaluate((id) => {

@@ -4543,3 +4543,11 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
 .is-phone .orca-preview-well > .orca-inspect-host {
   transform: translateY(calc(-1 * var(--orca-inspect-lift, 0px)));
 }
+
+/* The page moves over the time the sheet takes to rise. */
+@media (prefers-reduced-motion: no-preference) {
+  .is-phone .orca-preview-well > .orca-preview-sheets,
+  .is-phone .orca-preview-well > .orca-inspect-host {
+    transition: transform 200ms ease-out;
+  }
+}

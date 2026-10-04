@@ -76,6 +76,10 @@ export class Inspect {
    * lets go. A distance down is positive.
    */
   async pull(by: number): Promise<void> {
+    // The sheet slides up to its place, and the grabber is read there.
+    await this.risen.evaluate(async (sheet) => {
+      await Promise.all(sheet.getAnimations().map((sliding) => sliding.finished));
+    });
     const box = await this.rectOf(this.grabber);
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;

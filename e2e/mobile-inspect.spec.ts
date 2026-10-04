@@ -165,9 +165,12 @@ test("on a phone a tap pins a box and the pane rises as a sheet over the foot of
 
     // The sheet is at the foot of the screen, over Obsidian's own bar.
     const screen = await obsidian.page.evaluate(() => window.innerHeight);
-    const sheet = await inspect.rectOf(inspect.risen);
-    expect(sheet.y + sheet.height).toBeCloseTo(screen, 0);
-    expect(sheet.y).toBeLessThan(await obsidian.navbar());
+    // The sheet slides up to its place, so the place is read once it is there.
+    await expect(async () => {
+      const sheet = await inspect.rectOf(inspect.risen);
+      expect(sheet.y + sheet.height).toBeCloseTo(screen, 0);
+      expect(sheet.y).toBeLessThan(await obsidian.navbar());
+    }).toPass();
     await expect(inspect.grabber).toBeVisible();
 
     // The box is on screen with the sheet under it.
@@ -177,6 +180,14 @@ test("on a phone a tap pins a box and the pane rises as a sheet over the foot of
       expect(edge.y + edge.height).toBeLessThanOrEqual(top);
       expect(edge.y).toBeGreaterThanOrEqual(await inspect.wellTop());
     }).toPass();
+
+    // A swipe that opens a drawer slides the main area aside, and the
+    // sheet goes with it.
+    const rested = await inspect.rectOf(inspect.risen);
+    await obsidian.slide(-120);
+    await expect.poll(async () => (await inspect.rectOf(inspect.risen)).x).toBeCloseTo(rested.x - 120, 0);
+    await obsidian.slide(0);
+    await expect.poll(async () => (await inspect.rectOf(inspect.risen)).x).toBeCloseTo(rested.x, 0);
 
     // Pulled up, it is the whole pane.
     await inspect.pull(-A_PULL);
@@ -206,6 +217,7 @@ test("on a phone a tap pins a box and the pane rises as a sheet over the foot of
     // The page is back where it was.
     await expect.poll(async () => inspect.lift()).toBe(0);
   } finally {
+    await obsidian.slide(0);
     await book.close();
     await obsidian.emulateMobile(false);
   }
@@ -243,7 +255,7 @@ test("on a phone the page moves up when the sheet would cover the pinned box, an
     await inspect.pinAt({ x: low.x + low.width / 2, y: low.y + low.height / 2 }, second);
     await inspect.pull(-A_PULL);
     await expect(inspect.risen).toHaveAttribute("data-pull", "full");
-    expect((await inspect.rectOf(inspect.risen)).y).toBeLessThan(low.y);
+    await expect.poll(async () => (await inspect.rectOf(inspect.risen)).y).toBeLessThan(low.y);
 
     await expect(async () => {
       const edge = await inspect.rectOf(pinnedEdge(inspect));
@@ -414,7 +426,8 @@ async function middleOf(inspect: Inspect, line: Locator): Promise<{ x: number; y
 }
 
 // What this spec does not cover: a touch, since emulation sends the
-// mouse's pointer and a tap is its click. A box outlined under a finger
+// mouse's pointer and a tap is its click. A swipe that opens a drawer is
+// not made, so the main area is slid the way the swipe slides it. A box outlined under a finger
 // that has not lifted is #274's. The header hides here by a rule that
 // takes it out, where a real phone slides it away as the page scrolls,
 // and the keyboard a phone raises over the drawer's editor is not
