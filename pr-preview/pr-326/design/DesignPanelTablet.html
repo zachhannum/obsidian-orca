@@ -394,7 +394,7 @@
     .is-mobile .nav-item.mod-heading { font-size: var(--font-ui-small); color: var(--text-muted); }
     .is-mobile .nav-children { margin-left: 16px; padding-left: 0; }
     .is-mobile .nav-children .nav-item { padding-left: 14px; }
-    .is-mobile .nav-children .nav-item.mod-heading { padding-left: 34px; }
+    .is-mobile .nav-children .nav-item.mod-heading { padding-left: 58px; }
     /* The list has the card's corner, so a card the scroll cuts is still round. */
     .is-mobile .drawer-body:has(> .shelf) { margin: 4px 16px 0; padding: 0; border-radius: var(--touch-size-xxs); }
     .is-mobile .shelf { margin-right: 0; margin-left: 0; border-radius: var(--touch-size-xxs); }
@@ -405,10 +405,10 @@
     .is-mobile .nav-heading { height: var(--touch-size-m); margin-top: 0; padding: 0 8px 0 14px; font-size: 11px; }
     .is-mobile .chip { height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; }
     /* The handle a row is dragged by. Its touch target is the height of the row. */
-    .drag-handle { flex: none; display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); align-self: stretch; margin: -8px -8px -8px 0; color: var(--text-faint); }
-    .is-tablet .drag-handle { margin: -6px -8px -6px 0; }
+    .drag-handle { flex: none; display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); align-self: stretch; margin: -8px 0 -8px -14px; color: var(--text-faint); }
+    .is-tablet .drag-handle { margin: -6px 0 -6px -14px; }
     .row-action { flex: none; display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); align-self: stretch; margin: -8px 0; color: var(--text-muted); }
-    .row-action + .row-action, .row-action + .drag-handle { margin-left: -8px; }
+    .row-action + .row-action { margin-left: -8px; }
     .is-phone .menu { position: absolute; z-index: 8; left: 0; right: 0; bottom: 0; min-width: 0; padding: 0 16px var(--safe-area-inset-bottom); border: none; border-radius: var(--menu-radius) var(--menu-radius) 0 0; background: var(--background-secondary); box-shadow: none; }
     .menu-grabber { width: 15%; height: 4px; margin: 8px auto 12px; border-radius: 18px; background: var(--text-faint); }
     .menu-title { padding: 0 16px 10px; font-size: var(--font-ui-small); color: var(--text-muted); }
@@ -498,7 +498,7 @@
     .insp-sheet .computed { font-size: var(--font-ui-smaller); }
     .insp-sheet .crumbs { font-size: 12.5px; }
     .is-mobile .view-action.is-active { color: var(--text-accent); }
-    .is-mobile .nav-heading > .drag-handle { order: 2; align-self: auto; height: var(--touch-size-m); margin: 0 -8px 0 0; }
+    .is-mobile .nav-heading > .drag-handle { margin-block: 0; }
     
   </style>
 </head>
@@ -541,7 +541,7 @@
 </div>
 </div></div>
 </div>
-<div class="card" style="position: absolute; z-index: 8; right: 24px; top: 326px; width: 302px; box-shadow: 0 8px 30px rgba(0,0,0,0.5)"><div class="card-row is-overridden"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div><div class="card-said">Your CSS sets <code>margin</code> to <code>0.9in 0.7in 1in</code></div><div class="card-at" style="color: var(--text-accent)">@page, line 3</div></div></div></div>
+<div class="card" style="position: absolute; z-index: 8; right: 24px; top: 326px; width: 302px; box-shadow: 0 8px 30px rgba(0,0,0,0.5)"><div class="card-row is-overridden"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div><div class="card-said"><code>margin-top</code> is overridden with value <code>0.9in</code> from <code>margin</code></div><div class="card-at" style="color: var(--text-accent)">book.css:3:3</div></div></div></div>
 <div class="home-bar"></div>
 </div>
 </div>
