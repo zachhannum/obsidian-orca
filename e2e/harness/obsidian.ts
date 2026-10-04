@@ -253,7 +253,7 @@ export class Obsidian {
       await page.reload();
     }
     await page.waitForFunction(
-      () => window.app?.workspace.layoutReady === true,
+      () => window.app?.workspace?.layoutReady === true,
       undefined,
       { timeout: APPEARING },
     );
@@ -335,8 +335,8 @@ export class Obsidian {
     await this.page.reload();
     await this.page.waitForFunction(
       (id) =>
-        window.app?.workspace.layoutReady === true &&
-        window.app.plugins.plugins[id] !== undefined,
+        window.app?.workspace?.layoutReady === true &&
+        window.app.plugins?.plugins[id] !== undefined,
       plugin,
       { timeout: APPEARING },
     );
@@ -345,12 +345,24 @@ export class Obsidian {
   /**
    * Reloads the window, as Obsidian does when it starts again. Every
    * engine stops, and orca loads again and sets each book from its note.
+   *
+   * Obsidian saves the layout some time after a leaf opens or closes,
+   * so the one on disk can still hold a pane an earlier spec closed.
+   * The layout is saved first, and the window comes back with the
+   * panes it had.
    */
   async reload(): Promise<void> {
+    await this.page.evaluate(async () => {
+      await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
+    });
     await this.page.reload();
     await this.page.waitForFunction(
-      () => window.app?.workspace.layoutReady === true,
-      undefined,
+      // The window can still be loading, with an app that has no
+      // workspace or plugins yet.
+      (id) =>
+        window.app?.workspace?.layoutReady === true &&
+        window.app.plugins?.plugins[id] !== undefined,
+      PLUGIN,
       { timeout: APPEARING },
     );
   }
@@ -404,7 +416,7 @@ export class Obsidian {
     await this.page.waitForFunction(
       ({ kind, id }) =>
         document.body.classList.contains(`is-${kind}`) &&
-        window.app.plugins.plugins[id] !== undefined,
+        window.app?.plugins?.plugins[id] !== undefined,
       { kind: device, id: PLUGIN },
       { timeout: APPEARING },
     );

@@ -1,4 +1,4 @@
-// Runs the CI mirror and records the commit it passed on, so the push
+// Runs the checks CI runs and records the commit they passed on, so the push
 // gate can tell a green commit from an unchecked one.
 import { execFileSync, spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 const git = (...args) =>
   execFileSync("git", args, { encoding: "utf8" }).trim();
 
-const say = (stream, line) => stream.write(`mirror: ${line}\n`);
+const say = (stream, line) => stream.write(`preflight: ${line}\n`);
 
 const withE2e = process.argv.includes("--e2e");
 const steps = [
@@ -17,7 +17,7 @@ const steps = [
 ];
 
 if (git("status", "--porcelain") !== "") {
-  say(process.stderr, "commit your changes first, the mirror records a commit.");
+  say(process.stderr, "commit your changes first, the preflight records a commit.");
   process.exit(1);
 }
 
@@ -31,7 +31,7 @@ for (const [command, args] of steps) {
 }
 
 writeFileSync(
-  git("rev-parse", "--git-path", "orca-mirror"),
+  git("rev-parse", "--git-path", "orca-preflight"),
   JSON.stringify({ head: git("rev-parse", "HEAD"), e2e: withE2e }),
 );
 say(process.stdout, "green.");

@@ -149,16 +149,6 @@ export class Navigator {
     }, NAVIGATOR);
   }
 
-  /**
-   * Writes the workspace now. Obsidian saves it a moment after a view's
-   * state changes, and a reload before then would lose the change.
-   */
-  async saveLayout(): Promise<void> {
-    await this.obsidian.page.evaluate(async () => {
-      await (window.app.workspace as unknown as { saveLayout(): Promise<void> }).saveLayout();
-    });
-  }
-
   /** Sets the deepest heading level the navigator lists. */
   async levels(deepest: number): Promise<void> {
     await this.obsidian.page.evaluate(

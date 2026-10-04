@@ -8,6 +8,7 @@
  */
 
 import { expect, type Locator } from "@playwright/test";
+import { still } from "./box";
 import type { Obsidian } from "./obsidian";
 
 /** The command that opens the panel. */
@@ -457,6 +458,7 @@ export class Controls {
 
   /** The width of the panel's content, which the pane around it sets. */
   async width(): Promise<number> {
+    await still(this.panel);
     return this.panel.evaluate((panel) => panel.clientWidth);
   }
 
@@ -509,8 +511,9 @@ export class Controls {
     return this.root.locator(`[data-keys~="${key}"]`).getByTestId("orca-panel-label");
   }
 
-  /** An element's box in the window. */
+  /** An element's box in the window, once the drawer the panel is in has stopped moving. */
   async box(element: Locator): Promise<Placed> {
+    await still(element);
     return element.evaluate((drawn) => {
       const { x, y, width, height } = drawn.getBoundingClientRect();
       return { x, y, width, height };

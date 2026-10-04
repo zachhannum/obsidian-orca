@@ -838,7 +838,6 @@ test("the folds on the shelf are still folded after Obsidian reloads, and after 
   await navigator.reveal();
   await navigator.headingFold(BOOK, "The Parsonage").click();
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
-  await navigator.saveLayout();
 
   await obsidian.reload();
   await navigator.reveal();
@@ -851,7 +850,6 @@ test("the folds on the shelf are still folded after Obsidian reloads, and after 
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
 
   await navigator.button("Collapse all").click();
-  await navigator.saveLayout();
   await obsidian.reload();
   await navigator.reveal();
   await expect(navigator.button("Expand all")).toBeVisible();

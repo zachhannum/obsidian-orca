@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Locator } from "@playwright/test";
-import { boxOf, NEAR, type Box } from "./harness/box";
+import { boxOf, boxesOf, NEAR, type Box } from "./harness/box";
 import { DIALOG, type Export } from "./harness/export";
 import { DEVICES, SHEET, TOUCH, type Obsidian } from "./harness/obsidian";
 import { expect, test } from "./harness/test";
@@ -44,7 +44,7 @@ function inside(dialog: Box, device: "phone" | "tablet"): void {
 
 /** Checks that the buttons are one over the next, each at the same width. */
 async function stacked(...buttons: Locator[]): Promise<void> {
-  const boxes = await Promise.all(buttons.map(boxOf));
+  const boxes = await boxesOf(...buttons);
   for (const [at, box] of boxes.entries()) {
     const above = boxes[at - 1];
     if (above === undefined) continue;
