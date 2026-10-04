@@ -56,6 +56,29 @@ export interface Placing {
 }
 
 /**
+ * The place in the reading order of each document of an EPUB, by the
+ * node of the section the document holds. The engine names the source
+ * behind each section, so matter the book generates is placed as a
+ * note is, and a section the book set nothing from shifts none.
+ */
+export async function spinePlaces(
+  sections: Section[],
+  spine: readonly { section: number | null }[],
+  engine: Pick<Placing, "sourceOf">,
+): Promise<Map<number, number>> {
+  const nodes = spine.flatMap((entry) => (entry.section === null ? [] : [entry.section]));
+  const sources = await Promise.all(nodes.map((node) => engine.sourceOf(node)));
+  const places = new Map<number, number>();
+  for (const [index, node] of nodes.entries()) {
+    const source = sources[index];
+    if (source === null || source === undefined) continue;
+    const at = placeOf(sections, source.source);
+    if (at !== undefined) places.set(node, at);
+  }
+  return places;
+}
+
+/**
  * Every section's folio range, by its place in the reading order. The
  * engine answers which entry a run belongs to and where the entry
  * landed; neither is worked out by pairing ids with entries by ordinal.

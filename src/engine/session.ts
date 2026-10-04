@@ -322,6 +322,19 @@ export class Session {
   }
 
   /**
+   * The element a node is in and the elements around that one, the
+   * nearest first and the node's section last. A text node has no
+   * element of its own in an EPUB, so a host that looks a place up in a
+   * document asks with these. Nothing for a node the book does not hold.
+   */
+  async elementsOf(node: number): Promise<number[] | undefined> {
+    const inspection = await this.inspect(node);
+    if (inspection === undefined) return undefined;
+    const around = inspection.ancestors.map((ancestor) => ancestor.node).reverse();
+    return [inspection.elementNode, ...around].filter((each) => each !== null);
+  }
+
+  /**
    * The rules that styled one margin box on one page. Pages count from 0.
    * Nothing for a blank page, or for a box that no rule for that page
    * names.

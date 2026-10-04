@@ -1009,6 +1009,25 @@ test("a note in the fixture vault sets to the files of an EPUB, and no stage run
     const types = epub.files.map((file) => file.mediaType);
     assert.ok(types.includes("application/xhtml+xml"));
     assert.ok(types.includes("text/css"));
+
+    // The byte of a paragraph is read into a text node, which no
+    // document has an element for. The elements around it end at the
+    // section the spine names, and the document holds the nearest.
+    const text = await readText(vault, name);
+    const node = await session.nodeAt(name, text.indexOf("In consequence"));
+    assert.ok(node !== undefined);
+    const elements = await session.elementsOf(node);
+    assert.ok(elements !== undefined);
+    const section = elements.at(-1);
+    const entry = epub.spine.find((each) => each.section === section);
+    assert.ok(entry !== undefined);
+    const file = epub.files.find((each) => each.path === entry.path);
+    assert.ok(file !== undefined);
+    const xhtml = new TextDecoder().decode(file.bytes);
+    assert.ok(xhtml.includes(`<section id="n${String(section)}" data-node="${String(section)}">`));
+    assert.ok(xhtml.includes(`data-node="${String(elements[0])}">In consequence`));
+    assert.ok(!xhtml.includes(`data-node="${String(node)}"`));
+    assert.equal((await session.sourceOf(entry.section ?? -1))?.source, name);
   } finally {
     engine.stop();
   }
