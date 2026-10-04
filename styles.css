@@ -3610,6 +3610,32 @@ input.orca-panel-filter {
   min-height: var(--touch-size-m);
 }
 
+/* A card a tap opened takes a tap. The line is the button, and it
+   answers a tap anywhere on its row. */
+.orca-card.mod-tappable {
+  pointer-events: auto;
+}
+
+.orca-card.mod-tappable .orca-card-row {
+  position: relative;
+}
+
+button.orca-card-at {
+  display: block;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-accent);
+  text-align: left;
+}
+
+button.orca-card-at::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
 .is-mobile button.orca-panel-tab {
   height: var(--touch-size-m);
 }

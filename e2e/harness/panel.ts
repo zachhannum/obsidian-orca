@@ -148,8 +148,10 @@ export class Controls {
   readonly bookName: Locator;
   /** The card a hover over a squiggle opens. CodeMirror draws it on the body, outside the panel. */
   readonly card: Locator;
-  /** The card a hover over a row's lock opens. The panel draws it on the body, outside the panel. */
+  /** The card a hover over a row's lock opens, or a tap off desktop. The panel draws it on the body, outside the panel. */
   readonly overriddenCard: Locator;
+  /** The places in a card a tap opened. Each is a button that goes to its line. */
+  readonly cardLines: Locator;
   /** The inspect pane over the editor, there only while a box is pinned. */
   readonly pane: Locator;
   /** The pane's crumbs, the book first and the box last. Each one an author can pick carries `data-picked`. */
@@ -210,6 +212,7 @@ export class Controls {
     this.bookName = root.getByTestId("orca-panel-book");
     this.card = root.page().getByTestId("orca-editor-card");
     this.overriddenCard = root.page().getByTestId("orca-panel-card");
+    this.cardLines = this.overriddenCard.getByTestId("orca-panel-card-line");
     this.pane = root.getByTestId("orca-inspect-pane");
     this.crumbs = this.pane.getByTestId("orca-inspect-crumb");
     this.selector = this.pane.getByTestId("orca-inspect-selector");
