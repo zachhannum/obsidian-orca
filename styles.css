@@ -2676,9 +2676,29 @@ button.orca-book-export {
   color: var(--text-faint);
 }
 
-.orca-export-checking {
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
+/* The waiting row is the row the preflight's answer takes, at one line. */
+.orca-export-waiting .orca-export-fine-icon {
+  color: var(--text-faint);
+  animation: orca-export-turning 1.2s linear infinite;
+}
+
+.orca-export-waiting > span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes orca-export-turning {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orca-export-waiting .orca-export-fine-icon {
+    animation: none;
+  }
 }
 
 .orca-preview-issue.orca-export-error {
@@ -2726,8 +2746,12 @@ button.orca-book-export {
   color: var(--color-green);
 }
 
+/* The bar lies in the gap over the footer and takes no room of its
+   own, so nothing moves when it comes or goes. */
 .orca-export-progress {
-  height: 2px;
+  --orca-export-bar: 2px;
+  height: var(--orca-export-bar);
+  margin-block: calc((var(--size-4-4) + var(--orca-export-bar)) / -2);
   overflow: hidden;
   background: var(--background-modifier-border);
 }
@@ -3448,7 +3472,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-export-progress {
-  height: 4px;
+  --orca-export-bar: 4px;
   border-radius: 2px;
 }
 

@@ -325,6 +325,14 @@ function Exporting({
   // the dialog says so.
   const vaulted = exporter.choose === undefined;
 
+  // One row says what the dialog waits for and then what the preflight
+  // found, so the rows under it do not move when a wait ends.
+  const waited = checking
+    ? "Checking…"
+    : readying && shown === "ready" && prepared.current !== undefined
+      ? `Preparing ${prepared.current}…`
+      : undefined;
+
   // Export and Share both wait for the files a device that shares makes
   // ahead, and for the line that says so to go.
   const waiting = sharing !== undefined && clean && held?.edition !== edition;
@@ -495,9 +503,12 @@ function Exporting({
         data-testid="orca-export-preflight"
       >
         <div className="orca-export-heading">Preflight</div>
-        {checking ? (
-          <div className="orca-export-checking">Checking…</div>
-        ) : null}
+        {waited === undefined ? null : (
+          <div className="orca-export-fine orca-export-waiting" data-testid="orca-export-waiting">
+            <Icon name="loader" className="orca-export-fine-icon" />
+            <span>{waited}</span>
+          </div>
+        )}
         {checking || errors.length === 0 ? null : (
           <div className="orca-export-list" data-testid="orca-export-list">
             {errors.map((blocker, at) => (
@@ -505,7 +516,7 @@ function Exporting({
             ))}
           </div>
         )}
-        {checking || checked?.fine === undefined ? null : (
+        {waited !== undefined || checked?.fine === undefined ? null : (
           <div className="orca-export-fine" data-testid="orca-export-fine">
             <Icon name="check" className="orca-export-fine-icon" />
             <span>{checked.fine}</span>
@@ -535,10 +546,6 @@ function Exporting({
           ) : writing !== undefined ? (
             <>
               Exporting <span className="orca-export-mono">{writing}</span>…
-            </>
-          ) : readying && shown === "ready" ? (
-            <>
-              Preparing <span className="orca-export-mono">{prepared.current}</span>…
             </>
           ) : formats.length === 0 ? (
             "Pick a format to export"
