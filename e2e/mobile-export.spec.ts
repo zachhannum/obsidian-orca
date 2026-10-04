@@ -342,8 +342,7 @@ test("on a phone the export dialog ends above the keyboard, with the path and bo
 // takes the files; how long a tap stays good for a share on a device;
 // a share after an edit with the dialog open, which makes the files
 // again; the line and the bar that say the files are being made, which
-// are gone before a spec can measure them; an export tapped while the
-// files are still being made, which waits for them;
+// are gone before a spec can measure them;
 // a share that fails for a reason other than a cancel or a spent tap,
 // which draws the refused state's line; the writing state, which is gone before a spec
 // can measure it; a failed write, which nothing here can cause and

@@ -317,7 +317,10 @@ function Exporting({
   // the dialog says so.
   const vaulted = exporter.choose === undefined;
 
+  // Export and Share both wait for the files a device that shares makes ahead.
+  const waiting = sharing !== undefined && clean && held?.edition !== edition;
   const exportable =
+    !waiting &&
     formats.length > 0 &&
     (stage === "ready" || (stage === "failed" && errors.length === 0 && checked !== undefined));
 
@@ -539,7 +542,6 @@ function Exporting({
             disabled={
               !exportable ||
               handing ||
-              held?.edition !== edition ||
               !formats.every((format) => exporter.share?.takes(format))
             }
             onClick={() => {
