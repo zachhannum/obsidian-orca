@@ -20,7 +20,7 @@ export const NAVIGATOR = "orca-navigator";
 const GRIP = 40;
 
 /** The item on a book's menu that opens the menu of heading levels. */
-const HEADINGS = "Headings…";
+const HEADINGS = "Show headings…";
 
 /** An item only the menu of heading levels holds. */
 const HIDDEN = "Hidden";

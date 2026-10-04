@@ -56,17 +56,24 @@ export function headingItems(
   own: number | undefined,
   fallback: number | undefined,
 ): HeadingItem[] {
-  const followed = fallback === undefined ? "hidden" : `level ${String(fallback)}`;
+  const followed =
+    fallback === undefined ? "hidden" : levelTitle(fallback).toLowerCase();
   const levels = Array.from({ length: DEEPEST_LEVEL }, (_, at) => at + 1);
   return [
     { title: `Use the default (${followed})`, value: undefined, checked: own === undefined },
     { title: "Hidden", value: 0, checked: own === 0 },
     ...levels.map((level) => ({
-      title: `Down to level ${String(level)}`,
+      title: levelTitle(level),
       value: level,
       checked: own === level,
     })),
   ];
+}
+
+/** The count of heading levels a level lists, from the top one down. */
+function levelTitle(level: number): string {
+  if (level >= DEEPEST_LEVEL) return "All levels";
+  return level === 1 ? "1 level" : `${String(level)} levels`;
 }
 
 /** The title over a row's menu. Only a phone's sheet has one. */

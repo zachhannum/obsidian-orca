@@ -857,18 +857,18 @@ test("a book's menu sets its own heading level, the note holds it, and the defau
     "Add an existing note…",
     "New generated section…",
     "New section",
-    "Headings…",
+    "Show headings…",
     "Delete book…",
   ]);
   // The second menu offers the default by what it is, and ticks what the book has.
   await navigator.headings();
-  await expect(obsidian.exactly("Use the default (level 6)")).toHaveCount(1);
-  for (const level of [1, 2, 3, 4, 5, 6]) {
-    await expect(obsidian.exactly(`Down to level ${String(level)}`)).toHaveCount(1);
+  await expect(obsidian.exactly("Use the default (all levels)")).toHaveCount(1);
+  for (const title of ["1 level", "2 levels", "3 levels", "4 levels", "5 levels", "All levels"]) {
+    await expect(obsidian.exactly(title)).toHaveCount(1);
   }
-  expect(await obsidian.checked()).toEqual(["Use the default (level 6)"]);
+  expect(await obsidian.checked()).toEqual(["Use the default (all levels)"]);
 
-  await navigator.level("Down to level 1");
+  await navigator.level("1 level");
   await expect.poll(async () => vault.read(BOOK)).toContain("\nnavigator-headings: 1\n");
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
   // The other book follows the setting still.
@@ -877,7 +877,7 @@ test("a book's menu sets its own heading level, the note holds it, and the defau
 
   await navigator.menuOn(navigator.name(BOOK));
   await navigator.headings();
-  expect(await obsidian.checked()).toEqual(["Down to level 1"]);
+  expect(await obsidian.checked()).toEqual(["1 level"]);
   await navigator.level("Hidden");
   await expect.poll(async () => vault.read(BOOK)).toContain("\nnavigator-headings: 0\n");
   await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
@@ -894,7 +894,7 @@ test("a book's menu sets its own heading level, the note holds it, and the defau
   await expect(obsidian.menu()).toHaveCount(0);
   await navigator.outlines(true);
 
-  await navigator.listHeadings(BOOK, "Use the default (level 6)");
+  await navigator.listHeadings(BOOK, "Use the default (all levels)");
   await expect.poll(async () => vault.read(BOOK)).not.toContain("navigator-headings");
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 

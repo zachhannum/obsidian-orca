@@ -434,7 +434,7 @@ export class NavigatorView extends ItemView {
     menu.addSeparator();
     menu.addItem((item) =>
       item
-        .setTitle("Headings…")
+        .setTitle("Show headings…")
         .setIcon("list-tree")
         .onClick(() => {
           this.headingsMenu(book, place);
