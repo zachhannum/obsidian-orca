@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { entryItems, menuPlace, menuTitle } from "@/ui/rowmenu";
+import { entryItems, headingItems, menuPlace, menuTitle } from "@/ui/rowmenu";
 
 const NOTE = { kind: "note", path: "Chapter Twelve.md" } as const;
 
@@ -43,6 +43,33 @@ test("a tablet's menu is at the end of the row, and the desktop's is at the poin
   assert.deepEqual(menuPlace("tablet", row, pointer), { x: 450, y: 300 });
   assert.deepEqual(menuPlace("desktop", row, pointer), pointer);
   assert.deepEqual(menuPlace("phone", row, pointer), pointer);
+});
+
+test("a book's headings menu names the default and checks the book's own choice", () => {
+  const checked = (own: number | undefined) =>
+    headingItems(own, 3)
+      .filter((item) => item.checked)
+      .map((item) => item.title);
+
+  assert.deepEqual(
+    headingItems(undefined, 3).map((item) => [item.title, item.value]),
+    [
+      ["Use the default (level 3)", undefined],
+      ["Hidden", 0],
+      ["Down to level 1", 1],
+      ["Down to level 2", 2],
+      ["Down to level 3", 3],
+      ["Down to level 4", 4],
+      ["Down to level 5", 5],
+      ["Down to level 6", 6],
+    ],
+  );
+  assert.equal(headingItems(undefined, undefined)[0]?.title, "Use the default (hidden)");
+
+  assert.deepEqual(checked(undefined), ["Use the default (level 3)"]);
+  assert.deepEqual(checked(0), ["Hidden"]);
+  // A book set to the level the settings list still checks its own.
+  assert.deepEqual(checked(3), ["Down to level 3"]);
 });
 
 // What this tier does not cover: the menu itself, which is Obsidian's

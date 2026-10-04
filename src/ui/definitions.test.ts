@@ -62,6 +62,18 @@ test("each of orca's settings has a definition settings search can find", () => 
   for (const definition of definitions) assert.notEqual(definition.desc, "");
 });
 
+test("the heading rows say they are the default for books", () => {
+  const [, headings, levels] = settingDefinitions(plugin());
+  assert.equal(
+    headings?.desc,
+    "Show each note's headings in the navigator. A book can set its own from its menu in the navigator.",
+  );
+  assert.equal(
+    levels?.desc,
+    "List the headings down to this level, in a book that sets none of its own.",
+  );
+});
+
 test("each definition's row writes the limit it names", () => {
   const orca = plugin();
   const [unit, headings, levels, sessions] = settingDefinitions(orca).map((definition) => {

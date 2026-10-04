@@ -87,6 +87,19 @@ export function headingLevel(level: number): number {
   return Math.min(Math.max(Math.floor(level), 1), DEEPEST_LEVEL);
 }
 
+/**
+ * The deepest heading level the navigator lists for a book, or nothing
+ * when it lists none. `own` is the level the book note holds, and a
+ * book that holds none follows the settings.
+ */
+export function listedFor(
+  limits: Pick<Limits, "headings" | "deepest">,
+  own: number | undefined,
+): number | undefined {
+  if (own === undefined) return limits.headings ? limits.deepest : undefined;
+  return own === 0 ? undefined : own;
+}
+
 export function isPageUnit(value: unknown): value is PageUnit {
   return (PAGE_UNITS as readonly unknown[]).includes(value);
 }

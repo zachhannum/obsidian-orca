@@ -53,7 +53,7 @@ import {
   type ResolvedUse,
 } from "@/ui/fonts";
 import type { Pin } from "@/ui/inspect";
-import { LIMITS, readLimits, type Limits } from "@/ui/limits";
+import { LIMITS, listedFor, readLimits, type Limits } from "@/ui/limits";
 import { NAVIGATOR_VIEW, NavigatorView } from "@/ui/navigator";
 import type { Showing } from "@/ui/outline";
 import { PANEL_VIEW, DesignPanelView, type Designing } from "@/ui/panel";
@@ -215,9 +215,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
             adds: (book) => {
               void this.addChapter(book);
             },
-            outlined: () =>
+            outlined: async (book) =>
               this.app.workspace.getLeavesOfType(NAVIGATOR_VIEW).length > 0
-                ? this.listed()
+                ? this.listed((await this.edits.model(book))?.book.headings)
                 : undefined,
             showing: (view, showing) => {
               this.showing(view, showing);
@@ -258,7 +258,11 @@ export default class OrcaPlugin extends Plugin implements Limited {
             void this.previewBook(book);
           },
           turn: (book, at, line) => this.turnPreview(book, at, line),
-          headings: () => this.listed(),
+          headings: (own) => this.listed(own),
+          lists: (book, headings) => {
+            void this.setHeadings(book, headings);
+          },
+          fallback: () => this.listed(undefined),
         }),
     );
     this.registerView(
@@ -1592,6 +1596,23 @@ export default class OrcaPlugin extends Plugin implements Limited {
   }
 
   /**
+   * Writes the heading level the navigator lists for the book into its
+   * own frontmatter, and takes the key out when the book follows the
+   * settings. The engine sets nothing from it.
+   */
+  private async setHeadings(book: string, headings: number | undefined): Promise<void> {
+    const model = await this.edits.model(book);
+    // It skips a level the book already has, so no write waits to be
+    // let through.
+    if (model === undefined || model.book.headings === headings) return;
+    this.designWrites.add(book);
+    await this.edits.edit(book, (current) => ({
+      ...current,
+      book: { ...current.book, headings },
+    }));
+  }
+
+  /**
    * Writes the author's own CSS into the book note's fence. The engine
    * already has the sheet, and the write settles like any other edit.
    */
@@ -1643,9 +1664,8 @@ export default class OrcaPlugin extends Plugin implements Limited {
     await this.readyPanel();
   }
 
-  /** The deepest heading level the navigator lists, or nothing when it lists none. */
-  private listed(): number | undefined {
-    return this.limits.headings ? this.limits.deepest : undefined;
+  private listed(own: number | undefined): number | undefined {
+    return listedFor(this.limits, own);
   }
 
   private async turnPreview(book: string, at: number, line?: number): Promise<boolean> {

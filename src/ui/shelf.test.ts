@@ -6,7 +6,9 @@ import { directoryVault } from "@/assets/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
-import type { Cached } from "@/ui/outline";
+import { HEADINGS_KEY } from "@/book/note";
+import { listedFor } from "@/ui/limits";
+import { levelsTo, type Cached } from "@/ui/outline";
 import {
   filterShelf,
   members,
@@ -143,6 +145,52 @@ test("a heading renamed in a note the book reads changes the shelf the navigator
   const read = members([before]);
   assert.ok(read.has("Chapter Fifteen.md"));
   assert.ok(!read.has("Unlisted.md"));
+
+  // A book that hides its headings draws none, so the same change in
+  // its notes is not one the navigator hears.
+  const hidden = shelve(book, vault);
+  assert.ok(hidden.groups.some((group) => group.rows.some((row) => row.path === "Chapter Fifteen.md")));
+  assert.equal(members([hidden]).size, 0);
+  assert.ok(members([hidden, before]).has("Chapter Fifteen.md"));
+});
+
+test("each book lists its headings down to its own level", async () => {
+  const cache: Cached[] = [
+    { heading: "Chapter Twelve", level: 1, position: { start: { line: 0 } } },
+    { heading: "Netherfield", level: 2, position: { start: { line: 4 } } },
+    { heading: "The Letter", level: 3, position: { start: { line: 9 } } },
+  ];
+  // The navigator hands each book a reader cut at the book's own level.
+  const down = (deepest: number) => () => levelsTo(cache, deepest);
+  const text = (own: number): string =>
+    `---\norca-book: 1\n${HEADINGS_KEY}: ${String(own)}\n---\n\n# Body\n\n- [[Chapter Twelve]]\n`;
+  const vault = await shelving(undefined);
+  const shelf = [
+    { path: BOOK, name: "Pride and Prejudice", own: 2 },
+    { path: SECOND, name: "The Bennet Novels", own: 3 },
+  ].map(({ path, name, own }) => {
+    const model = readModel(text(own));
+    const deepest = listedFor({ headings: false, deepest: 6 }, model.book.headings);
+    assert.equal(deepest, own);
+    return shelve(
+      { path, name, model },
+      { ...vault, headings: deepest === undefined ? undefined : down(deepest) },
+    );
+  });
+
+  // Each book keeps the level its note holds, which its menu checks.
+  assert.deepEqual(shelf.map((book) => book.headings), [2, 3]);
+  // The same note is one row in each book, and each lists its own depth.
+  assert.deepEqual(
+    shelf.map((book) =>
+      book.groups.flatMap((group) =>
+        group.rows.flatMap((row) => (row.headings ?? []).map((heading) => heading.words)),
+      ),
+    ),
+    [["Netherfield"], ["Netherfield", "The Letter"]],
+  );
+  // A book whose note holds no level carries none.
+  assert.equal(shelve({ path: BOOK, name: "", model: await model() }, vault).headings, undefined);
 });
 
 function shelved(name: string, ...chapters: string[]): Shelved {

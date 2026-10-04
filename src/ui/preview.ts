@@ -193,10 +193,11 @@ export interface PreviewHandoff {
   /** Adds a new chapter at the end of the book's body. */
   adds(book: string): void;
   /**
-   * The deepest heading level a navigator lists, or nothing when none
-   * lists headings, which is the only reason to ask where they are.
+   * The deepest heading level a navigator lists for the book, or
+   * nothing when none lists its headings, which is the only reason to
+   * ask where they are.
    */
-  outlined(): number | undefined;
+  outlined(book: string): Promise<number | undefined>;
   /**
    * Told the entry and the heading the painted span falls under, and
    * nothing when the view closes.
@@ -2359,7 +2360,8 @@ export class PreviewView extends ItemView {
     const at = this.named;
     if (book === undefined || at === undefined) return;
     const section = typeset.sections[at];
-    const deepest = this.handoff.outlined();
+    const deepest = await this.handoff.outlined(book);
+    if (naming !== this.naming) return;
     const cached =
       deepest !== undefined && section?.kind === "note"
         ? outline(headingsOf(this.app, section.path, deepest), entryName(section.entry))
