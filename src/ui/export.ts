@@ -115,6 +115,7 @@ class ExportModal extends Modal {
         const sink = desktopSink(files);
         return format.run(typeset.session, (bytes) => sink.write(destination, bytes));
       },
+      keep: (destination, bytes) => desktopSink(files).write(destination, bytes),
       ...(sheet === undefined || !sheet.takes(mediaOf("pdf"))
         ? {}
         : {

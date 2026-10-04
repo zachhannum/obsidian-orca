@@ -45,6 +45,8 @@ export interface Exporter {
    */
   choose?(): Promise<string | undefined>;
   write(destination: Destination, format: Format): Promise<ExportResult>;
+  /** Writes a file the dialog already made for the share sheet. */
+  keep(destination: Destination, bytes: Uint8Array): Promise<void>;
   /**
    * The share sheet. Absent on a device that cannot share a PDF, and
    * the dialog then has no Share.
@@ -125,6 +127,9 @@ function Exporting({
   const [held, setHeld] = useState<
     { edition: number; files: ReadonlyMap<string, Made> } | undefined
   >(undefined);
+  // The file being made ahead of a tap, which the footer names.
+  const [preparing, setPreparing] = useState<string | undefined>(undefined);
+  const making = useRef<Promise<ReadonlyMap<string, Made>> | undefined>(undefined);
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const staged = useRef<Stage>(stage);
   staged.current = stage;
@@ -180,10 +185,19 @@ function Exporting({
     setStage("writing");
     const done: Written[] = [];
     try {
+      // A file made for the share sheet is the file export would make,
+      // so it is written as it is.
+      const ahead = await making.current;
       for (const format of formats) {
         const file = { ...destination, path: `${destination.path}.${format.extension}` };
         setWriting(fileName(file.path));
-        done.push({ format, destination: file, result: await exporter.write(file, format) });
+        const made = ahead?.get(format.id);
+        if (made === undefined) {
+          done.push({ format, destination: file, result: await exporter.write(file, format) });
+        } else {
+          await exporter.keep(file, made.file.bytes);
+          done.push({ format, destination: file, result: made.result });
+        }
         setWritten([...done]);
       }
       setStage("written");
@@ -202,24 +216,32 @@ function Exporting({
   // spent by the time a book is made. So the files are made as soon as
   // the book passes, and again after each render of it.
   useEffect(() => {
+    making.current = undefined;
     if (sharing === undefined || !clean || name === "") return;
     let live = true;
-    void (async () => {
+    const done = (async () => {
       const files = new Map<string, Made>();
       try {
         for (const format of exporter.formats) {
+          if (!live) break;
           if (!sharing.takes(format)) continue;
-          const made = await sharing.make(name, format);
-          if (!live) return;
-          files.set(format.id, { format, ...made });
+          setPreparing(`${name}.${format.extension}`);
+          files.set(format.id, { format, ...(await sharing.make(name, format)) });
         }
       } catch {
-        // A tap on Share makes the rest, and says what failed.
+        // A tap on Share or Export makes the rest, and says what failed.
       }
-      if (live) setHeld({ edition, files });
+      return files;
     })();
+    making.current = done;
+    void done.then((files) => {
+      if (!live) return;
+      setHeld({ edition, files });
+      setPreparing(undefined);
+    });
     return () => {
       live = false;
+      setPreparing(undefined);
     };
   }, [exporter, sharing, clean, name, edition]);
 
@@ -478,7 +500,7 @@ function Exporting({
         )}
       </div>
 
-      {busy ? (
+      {busy || preparing !== undefined ? (
         <div className="orca-export-progress" data-testid="orca-export-progress">
           <div className="orca-export-progress-bar" />
         </div>
@@ -500,6 +522,10 @@ function Exporting({
           ) : writing !== undefined ? (
             <>
               Exporting <span className="orca-export-mono">{writing}</span>…
+            </>
+          ) : preparing !== undefined && stage === "ready" ? (
+            <>
+              Preparing <span className="orca-export-mono">{preparing}</span>…
             </>
           ) : formats.length === 0 ? (
             "Pick a format to export"

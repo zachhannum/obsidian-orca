@@ -133,6 +133,20 @@ for (const device of ["phone", "tablet"] as const) {
       vault.touch(EPUB);
       await exporting.sharing();
 
+      // Export writes the files the dialog made for the share sheet.
+      await exporting.open();
+      await exporting.reaches("ready");
+      await expect(exporting.share).toBeEnabled();
+      await exporting.write.click();
+      await exporting.reaches("written");
+      await expect(exporting.files).toHaveCount(2);
+      const written = await vault.bytes(FILE);
+      expect(written.equals(await book.pdf(BOOK))).toBe(true);
+      await expect(exporting.file("pdf")).toHaveAttribute("data-bytes", String(written.length));
+      await exporting.close();
+      await vault.remove(FILE);
+      await vault.remove(EPUB);
+
       await exporting.open();
       await exporting.reaches("ready");
       await expect(exporting.share).toHaveText("Share");
@@ -327,7 +341,9 @@ test("on a phone the export dialog ends above the keyboard, with the path and bo
 // operating system's own window, so a stand-in for `navigator.share`
 // takes the files; how long a tap stays good for a share on a device;
 // a share after an edit with the dialog open, which makes the files
-// again;
+// again; the line and the bar that say the files are being made, which
+// are gone before a spec can measure them; an export tapped while the
+// files are still being made, which waits for them;
 // a share that fails for a reason other than a cancel or a spent tap,
 // which draws the refused state's line; the writing state, which is gone before a spec
 // can measure it; a failed write, which nothing here can cause and
