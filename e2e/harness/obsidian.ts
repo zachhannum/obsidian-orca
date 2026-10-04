@@ -123,6 +123,8 @@ const CHROME = {
   tab: (label: string) => `.workspace-tab-header[aria-label="${label}"]`,
   menu: ".menu",
   item: ".menu-item",
+  /** A menu item that is checked. */
+  checked: ".menu-item.mod-checked",
   suggestion: ".suggestion-item",
   notice: ".notice",
   status: ".status-bar",
@@ -536,6 +538,28 @@ export class Obsidian {
 
   item(title: string): Locator {
     return this.menu().locator(CHROME.item).filter({ hasText: title });
+  }
+
+  /**
+   * The item whose title is these words and no more. `item` also finds
+   * an item that holds the words inside a longer title.
+   */
+  exactly(title: string): Locator {
+    return this.menu()
+      .locator(CHROME.item)
+      .filter({ has: this.page.getByText(title, { exact: true }) });
+  }
+
+  /** The titles of the open menu's items, in the order it lists them. */
+  async items(): Promise<string[]> {
+    const said = await this.menu().locator(CHROME.item).allInnerTexts();
+    return said.map((title) => title.trim());
+  }
+
+  /** The titles of the items the open menu shows as checked. */
+  async checked(): Promise<string[]> {
+    const said = await this.menu().locator(CHROME.checked).allInnerTexts();
+    return said.map((title) => title.trim());
   }
 
   /**

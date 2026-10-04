@@ -829,6 +829,111 @@ test("an entry lists the headings inside its note as a tree, down to a level, an
   await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
 });
 
+/** A second book over the chapter with headings, and the same book with a heading level of its own. */
+const LISTED = `---\norca-book: 1\n---\n\n# Body\n\n- [[${FIFTEEN}]]\n`;
+const SHALLOW = LISTED.replace("orca-book: 1\n", "orca-book: 1\nnavigator-headings: 1\n");
+
+test("a book's menu sets its own heading level, the note holds it, and the default takes it back", async ({
+  book,
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  vault.touch(BOOK);
+  // The command opens the one book there is, so the second comes after.
+  await book.open();
+  await vault.write(SECOND, LISTED);
+  await navigator.reveal();
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveCount(2);
+  const set = await book.settled(BOOK);
+
+  // The book's menu holds the item between the adding items and the delete.
+  await navigator.menuOn(navigator.name(BOOK));
+  expect(await obsidian.items()).toEqual([
+    "Open the book note",
+    "New chapter",
+    "Add an existing note…",
+    "New generated section…",
+    "New section",
+    "Headings…",
+    "Delete book…",
+  ]);
+  // The second menu offers the default by what it is, and ticks what the book has.
+  await navigator.headings();
+  await expect(obsidian.exactly("Use the default (level 6)")).toHaveCount(1);
+  for (const level of [1, 2, 3, 4, 5, 6]) {
+    await expect(obsidian.exactly(`Down to level ${String(level)}`)).toHaveCount(1);
+  }
+  expect(await obsidian.checked()).toEqual(["Use the default (level 6)"]);
+
+  await navigator.level("Down to level 1");
+  await expect.poll(async () => vault.read(BOOK)).toContain("\nnavigator-headings: 1\n");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  // The other book follows the setting still.
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveCount(2);
+  expect(await vault.read(SECOND)).toBe(LISTED);
+
+  await navigator.menuOn(navigator.name(BOOK));
+  await navigator.headings();
+  expect(await obsidian.checked()).toEqual(["Down to level 1"]);
+  await navigator.level("Hidden");
+  await expect.poll(async () => vault.read(BOOK)).toContain("\nnavigator-headings: 0\n");
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveCount(2);
+
+  // The setting turned off is the default the menu names.
+  await navigator.outlines(false);
+  await expect(navigator.book(SECOND).getByTestId("orca-outline")).toHaveCount(0);
+  await navigator.menuOn(navigator.name(BOOK));
+  await navigator.headings();
+  await expect(obsidian.exactly("Use the default (hidden)")).toHaveCount(1);
+  expect(await obsidian.checked()).toEqual(["Hidden"]);
+  await obsidian.page.keyboard.press("Escape");
+  await expect(obsidian.menu()).toHaveCount(0);
+  await navigator.outlines(true);
+
+  await navigator.listHeadings(BOOK, "Use the default (level 6)");
+  await expect.poll(async () => vault.read(BOOK)).not.toContain("navigator-headings");
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // Three writes to the book note, and the engine set the book for none of them.
+  expect(await book.settled(BOOK)).toBe(set);
+});
+
+test("a book with its own heading level keeps it when the setting changes", async ({
+  navigator,
+  vault,
+}) => {
+  await navigator.outlines(true);
+  await vault.write(SECOND, SHALLOW);
+  await navigator.reveal();
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage", "The Entail"]);
+
+  // The setting turned off hides the headings of the book that follows it.
+  await navigator.outlines(false);
+  await expect(navigator.book(BOOK).getByTestId("orca-outline")).toHaveCount(0);
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveText(["The Parsonage"]);
+
+  await navigator.outlines(true);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveText(["The Parsonage"]);
+
+  // A book that hides its headings stays so under a setting that lists them.
+  await vault.modify(SECOND, SHALLOW.replace("navigator-headings: 1", "navigator-headings: 0"));
+  await expect(navigator.book(SECOND).getByTestId("orca-outline")).toHaveCount(0);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveCount(2);
+
+  // A deeper level of its own outlasts a shallower setting.
+  await vault.modify(SECOND, SHALLOW.replace("navigator-headings: 1", "navigator-headings: 2"));
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveCount(2);
+  await navigator.levels(1);
+  await expect(navigator.outline(BOOK, FIFTEEN)).toHaveText(["The Parsonage"]);
+  await expect(navigator.outline(SECOND, FIFTEEN)).toHaveText(["The Parsonage", "The Entail"]);
+});
+
 test("the folds on the shelf are still folded after Obsidian reloads, and after text moves them", async ({
   navigator,
   obsidian,
@@ -1040,3 +1145,9 @@ test("a missing note keeps its entry, which renders in place with `Locate` and `
     "note",
   );
 });
+
+// What this suite does not cover: the mark on a heading row straight
+// after a book's headings are turned on. The preview marks no heading
+// row until the next page turn, so the spec that sets a book's level
+// reads no mark. Nor is a book's level set from a second window, where
+// the menu opens in a document of its own.

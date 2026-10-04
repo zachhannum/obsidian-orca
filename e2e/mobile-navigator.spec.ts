@@ -434,6 +434,67 @@ test("on a phone the handle and the chevron after it each take their own touch, 
   }
 });
 
+test("a long press on a book sets its headings from a sheet on a phone and a menu on a tablet", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  const name = BOOK.replace(/\.md$/, "");
+  try {
+    for (const device of ["phone", "tablet"] as const) {
+      await obsidian.mobile(device);
+      await navigator.outlines(true);
+      await navigator.drawer();
+      await expect(navigator.outline(BOOK, OTHER)).toHaveCount(2);
+      const row = navigator.name(BOOK);
+
+      await navigator.press(row);
+      await expect(obsidian.exactly("Headings…")).toHaveCount(1);
+      // Only a phone's sheet is under the book's name.
+      await expect(obsidian.exactly(name)).toHaveCount(device === "phone" ? 1 : 0);
+
+      await navigator.headings();
+      const menu = await navigator.menuBox();
+      const at = await row.boundingBox();
+      if (at === null) throw new Error("the row has no box");
+      await expect(obsidian.exactly("Use the default (level 6)")).toHaveCount(1);
+      expect(await obsidian.checked()).toEqual(["Use the default (level 6)"]);
+      if (device === "phone") {
+        // The sheet is the width of the screen and stands on its foot.
+        expect(menu.x).toBe(0);
+        expect(menu.width).toBe(DEVICES.phone.width);
+        expect(Math.round(menu.y + menu.height)).toBe(DEVICES.phone.height);
+        // The book's name is over the first item.
+        const title = await obsidian.exactly(name).boundingBox();
+        const first = await obsidian.exactly("Use the default (level 6)").boundingBox();
+        expect(title?.y).toBeLessThan(first?.y ?? 0);
+      } else {
+        // The menu starts where the row ends, level with it.
+        expect(Math.abs(menu.x - (at.x + at.width))).toBeLessThanOrEqual(4);
+        expect(menu.y).toBeGreaterThanOrEqual(at.y);
+        expect(menu.y).toBeLessThan(at.y + at.height);
+        await expect(obsidian.exactly(name)).toHaveCount(0);
+      }
+
+      await navigator.level("Down to level 1");
+      await expect.poll(async () => vault.read(BOOK)).toContain("\nnavigator-headings: 1\n");
+      await navigator.drawer();
+      await expect(navigator.outline(BOOK, OTHER)).toHaveText(["The Parsonage"]);
+
+      await navigator.press(row);
+      await navigator.headings();
+      expect(await obsidian.checked()).toEqual(["Down to level 1"]);
+      await navigator.level("Use the default (level 6)");
+      await expect.poll(async () => vault.read(BOOK)).not.toContain("navigator-headings");
+      await navigator.drawer();
+      await expect(navigator.outline(BOOK, OTHER)).toHaveCount(2);
+    }
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
 // What this suite does not cover: the press itself. A finger held on a
 // row for the time the system asks is a wait on a clock, so the
 // `contextmenu` event the press ends in is sent in its place. Nor does

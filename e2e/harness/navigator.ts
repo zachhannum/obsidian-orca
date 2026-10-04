@@ -19,6 +19,15 @@ export const NAVIGATOR = "orca-navigator";
  */
 const GRIP = 40;
 
+/** The item on a book's menu that opens the menu of heading levels. */
+const HEADINGS = "Headings…";
+
+/** An item only the menu of heading levels holds. */
+const HIDDEN = "Hidden";
+
+/** The frontmatter key a book note holds its own heading level under. */
+const HEADINGS_KEY = "navigator-headings";
+
 /** The side of the target row a dragged entry is dropped on. */
 export type Onto = "above" | "below";
 
@@ -138,10 +147,22 @@ export class Navigator {
     );
   }
 
-  /** Puts the heading settings back to their defaults, which list no headings, and opens every fold. */
+  /**
+   * Puts the heading settings back to their defaults, which list no
+   * headings, takes every book's own heading level off its note, and
+   * opens every fold.
+   */
   async reset(): Promise<void> {
     await this.outlines(false);
     await this.levels(6);
+    await this.obsidian.page.evaluate(async (key) => {
+      const { vault, metadataCache } = window.app;
+      const line = new RegExp(`^${key}:.*\n`, "m");
+      for (const note of vault.getMarkdownFiles()) {
+        if (metadataCache.getFileCache(note)?.frontmatter?.[key] === undefined) continue;
+        await vault.process(note, (text) => text.replace(line, ""));
+      }
+    }, HEADINGS_KEY);
     await this.obsidian.page.evaluate(async (type) => {
       for (const leaf of window.app.workspace.getLeavesOfType(type)) {
         await leaf.view.setState({ folds: {} }, { history: false });
@@ -221,6 +242,46 @@ export class Navigator {
    */
   async menuOn(row: Locator): Promise<void> {
     await this.opening(row, { button: "right" });
+  }
+
+  /**
+   * Opens the menu of heading levels from a book's menu, which is
+   * already open. The second menu opens as the first one closes, so a
+   * menu on the page says nothing here: the wait is on an item only
+   * the second menu holds.
+   */
+  async headings(): Promise<void> {
+    const second = this.obsidian.exactly(HIDDEN);
+    await expect(async () => {
+      if ((await second.count()) === 0) {
+        await this.obsidian.exactly(HEADINGS).click({ timeout: 1000 });
+      }
+      await expect(second).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+    // A phone's first sheet is still on the page while it slides away.
+    await expect(this.obsidian.menu()).toHaveCount(1);
+  }
+
+  /**
+   * Chooses an item on the menu of heading levels by its whole title.
+   * `Hidden` is inside the title of the item that follows the default,
+   * so a match on part of a title finds two.
+   */
+  async level(title: string): Promise<void> {
+    const item = this.obsidian.exactly(title);
+    await expect(item).toBeVisible();
+    await expect(async () => {
+      if ((await this.obsidian.menu().count()) === 0) return;
+      await item.click({ timeout: 1000 });
+      await expect(this.obsidian.menu()).toHaveCount(0, { timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  }
+
+  /** Sets the heading level a book lists from the book's own menu. */
+  async listHeadings(book: string, title: string): Promise<void> {
+    await this.menuOn(this.name(book));
+    await this.headings();
+    await this.level(title);
   }
 
   /** The actions at the end of a row, which fade as one. */
