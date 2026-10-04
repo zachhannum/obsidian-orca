@@ -89,8 +89,9 @@ export default async function launch(): Promise<() => Promise<void>> {
 
   return async () => {
     await stop(proc);
-    await rm(vault, { recursive: true, force: true });
-    await rm(sample, { recursive: true, force: true });
+    // Each copy sits in a directory of its own, which goes with it.
+    await rm(path.dirname(vault), { recursive: true, force: true });
+    await rm(path.dirname(sample), { recursive: true, force: true });
     await rm(configDir, { recursive: true, force: true });
   };
 }
