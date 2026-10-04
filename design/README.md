@@ -242,9 +242,28 @@ its editor around these files and returns a URL. The artboard list and
   reading app sets its web view. On a phone they also clear the camera
   and the bar that goes home.
 - The EPUB view turns a screen at a time, then to the next section. In
-  it the chapter select, the folio, the total and the page arrows give
-  way to the device select, a settings button that opens the settings
-  under it, and previous and next.
+  it the folio, the total and the page arrows give way to the device
+  select, a settings button that opens the settings under it, and
+  previous and next. The chapter select stays, and it follows the
+  section being read.
+- Every turn to a place turns the EPUB view as it turns a page view:
+  the chapter select, the chapter commands, a click in the navigator
+  and a linked manuscript. The frame goes to the screen that holds the
+  place. A chapter opens at its first screen, front matter and
+  generated matter included.
+- In the EPUB view the place kept is a screen, and a screen is known by
+  the block it opens with. A swap from the manuscript lands on the
+  screen that holds the line at the top of the pane, and a swap back
+  opens the note at the line the screen opens at. A switch from a page
+  view lands on the screen that holds the block the page opens with,
+  and a switch back lands on the page that holds the block the screen
+  opens with. A reader who turned no screen goes back to the line or
+  the page they left. A screen inside one long paragraph opens with
+  that paragraph.
+- The EPUB view finds a document by the node of the section its spine
+  entry names, and an element by its node. An edit, a device and a
+  reader setting each lay the frame out again on the block the screen
+  opened with.
 - A status line is under the device, as a reading app has one, such as
   "Chapter Twelve · page 2 of 14 · 41%". The title is the one the
   book's own contents give the document on screen, and a document the
@@ -423,7 +442,8 @@ replaces them.
 - EPUB is the fourth view on a phone and on a tablet. Its controls are
   the settings button, the device select and the two arrows, each as
   tall as a touch. They go where the page's foot goes. Under the page
-  they fill the foot, and in the bar they sit before Export.
+  they fill the foot, and in the bar they sit before Export. The
+  chapter select stays in the bar beside the views.
 - The count of issues is drawn in the EPUB view too, beside the EPUB
   controls. Under the page the controls leave no room for words, so
   the count is an icon and a number in a pill at the left of the foot.
