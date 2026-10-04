@@ -126,7 +126,13 @@ function bound(): {
   const live = new Set<string>();
   const seen: { path: string; links: Links }[] = [];
   const result = bindFiles(
-    { spine: ["EPUB/section-001.xhtml", "EPUB/section-002.xhtml"], files },
+    {
+      spine: [
+        { path: "EPUB/section-001.xhtml", section: 4 },
+        { path: "EPUB/section-002.xhtml", section: 9 },
+      ],
+      files,
+    },
     { before: "/* before */", fallback: "/* default */", after: "/* after */" },
     (body, mediaType) => {
       const url = `blob:${String(made.length)}`;

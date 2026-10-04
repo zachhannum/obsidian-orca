@@ -4,6 +4,7 @@ import {
   type Client,
   type EpubFile,
   type EpubFiles,
+  type EpubSpineEntry,
   type Epub,
   type FaceAttributes,
   type Folios,
@@ -172,8 +173,8 @@ export interface Reading {
 export interface Reflowable {
   /** The generation of the session the files were written from. */
   generation: number;
-  /** The paths of the documents, in reading order. */
-  spine: string[];
+  /** The documents in reading order, each with the node of the section it holds. */
+  spine: EpubSpineEntry[];
   files: EpubFile[];
   /** The EPUB's warnings, as the engine wrote them. */
   warnings: Warning[];

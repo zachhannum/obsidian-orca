@@ -12,9 +12,16 @@ export interface BookFile {
   bytes: Uint8Array;
 }
 
-/** The files a frame reads, and the paths of its documents in reading order. */
+/** One document of the spine. */
+export interface SpineEntry {
+  path: string;
+  /** The node of the section the document holds, or nothing for the one document of an empty book. */
+  section: number | null;
+}
+
+/** The files a frame reads, and its documents in reading order. */
 export interface Bindable {
-  spine: readonly string[];
+  spine: readonly SpineEntry[];
   files: readonly BookFile[];
 }
 
@@ -191,7 +198,7 @@ export function bindFiles(
   }
   const links: Links = { url, sheet: (path) => written.get(path), sheets };
   const documents: string[] = [];
-  for (const path of book.spine) {
+  for (const { path } of book.spine) {
     const file = book.files.find((candidate) => candidate.path === path);
     if (file === undefined) continue;
     documents.push(bind(rewrite(path, text.decode(file.bytes), links), XHTML));

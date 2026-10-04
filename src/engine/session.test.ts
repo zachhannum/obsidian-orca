@@ -1002,7 +1002,10 @@ test("a note in the fixture vault sets to the files of an EPUB, and no stage run
     assert.deepEqual({ ...session.stages }, stages);
     const paths = new Set(epub.files.map((file) => file.path));
     assert.ok(epub.spine.length > 0);
-    for (const document of epub.spine) assert.ok(paths.has(document), document);
+    for (const document of epub.spine) {
+      assert.ok(paths.has(document.path), document.path);
+      assert.ok(document.section !== null, document.path);
+    }
     const types = epub.files.map((file) => file.mediaType);
     assert.ok(types.includes("application/xhtml+xml"));
     assert.ok(types.includes("text/css"));
