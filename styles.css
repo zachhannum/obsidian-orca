@@ -1718,7 +1718,8 @@ button.orca-panel-glyph > .orca-panel-icon {
 
 /* CodeMirror wraps the editor's card in its own tooltip box. The card
    draws the box itself. */
-.cm-tooltip.cm-tooltip-hover.orca-card-host {
+.cm-tooltip.cm-tooltip-hover.orca-card-host,
+.cm-tooltip.orca-card-host {
   padding: 0;
   border: none;
   background: transparent;
@@ -3985,7 +3986,127 @@ button.orca-card-at::after {
 /* A touch that drags the sheet past its end stops there, and neither
    stretches the sheet nor moves the drawer around it. */
 .is-mobile .orca-editor-host .cm-scroller {
+  padding-block: 10px;
+  font-size: 13px;
+  line-height: 2;
   overscroll-behavior: none;
+}
+
+.is-mobile .orca-editor-host .cm-lineNumbers .cm-gutterElement {
+  min-width: 30px;
+  padding-right: 4px;
+}
+
+.is-mobile .orca-editor-host .cm-foldGutter .cm-gutterElement {
+  justify-content: center;
+  width: 24px;
+}
+
+.is-mobile .orca-editor-fold svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* No pointer is over the gutter on a touch screen, so a rule that can
+   fold always shows its chevron. */
+.is-mobile .orca-editor-host .cm-gutters [data-testid="orca-editor-fold"] {
+  visibility: visible;
+}
+
+/* The card at the caret starts at the text and stops short of the
+   sheet's right edge. */
+.is-mobile .cm-tooltip.orca-card-host .orca-card {
+  max-width: min(320px, calc(100vw - 2 * var(--size-4-6)));
+}
+
+.is-mobile .orca-search .orca-search-field {
+  height: var(--touch-size-m);
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .orca-search .orca-search-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-size-m);
+  height: var(--touch-size-m);
+}
+
+.is-mobile .orca-search .orca-search-button svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+/* The toolbar over the keyboard, drawn on the body while the CSS view
+   has the caret. Its sizes are those of Obsidian's own toolbar. */
+.orca-toolbar {
+  position: fixed;
+  right: 0;
+  bottom: var(--keyboard-height, 0px);
+  left: 0;
+  z-index: var(--layer-menu);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--mobile-toolbar-height, 52px);
+  padding: 4px 8px;
+  background: var(--background-primary);
+}
+
+.orca-toolbar[hidden] {
+  display: none;
+}
+
+.orca-toolbar-list {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: var(--touch-size-m);
+  padding: 0 4px;
+  border-radius: var(--touch-size-m);
+  background: var(--interactive-normal);
+  overflow-x: auto;
+}
+
+.orca-toolbar-option {
+  --icon-size: var(--icon-l);
+
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 100%;
+  color: var(--text-normal);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-medium);
+}
+
+.is-tablet .orca-toolbar-option {
+  min-width: 50px;
+}
+
+.orca-toolbar > .orca-toolbar-option {
+  width: var(--touch-size-m);
+  min-width: var(--touch-size-m);
+  height: var(--touch-size-m);
+  border-radius: var(--touch-size-m);
+  background: var(--interactive-normal);
+}
+
+/* The sheet ends above the toolbar and the keyboard under it. The
+   drawer may end above the foot of the screen, and that room is not
+   taken twice. */
+.is-mobile .orca-editor-host.is-typing {
+  margin-bottom: max(
+    var(--size-4-3),
+    calc(
+      var(--keyboard-height, 0px) + var(--mobile-toolbar-height, 52px) -
+        var(--orca-editor-foot, 0px)
+    )
+  );
 }
 
 /* mobile: preview */

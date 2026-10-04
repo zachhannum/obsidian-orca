@@ -15,7 +15,7 @@ import {
 } from "@codemirror/commands";
 import { selectNextOccurrence } from "@codemirror/search";
 import { EditorState, type Transaction } from "@codemirror/state";
-import { keymap } from "@codemirror/view";
+import { keymap, showTooltip } from "@codemirror/view";
 import { SUBSET, type Names } from "fleuron";
 import { OWN_SHEET } from "@/style/sheet";
 import {
@@ -24,6 +24,7 @@ import {
   fontCompletion,
   fonted,
   flagsAt,
+  flagsAtCaret,
   flagsIn,
   inserted,
   revealed,
@@ -268,6 +269,40 @@ test("the card over a squiggle carries the engine's message and the sheet it nam
   assert.deepEqual(flagsAt(state, state.doc.line(2).from + 4), []);
 });
 
+test("on mobile the card shows while the caret is in a flagged declaration, and goes when the caret leaves it", () => {
+  for (const device of ["phone", "tablet"] as const) {
+    const state = flag(
+      EditorState.create({ doc: CSS, extensions: cssExtensions(() => undefined, undefined, device) }),
+      [WARNED],
+      CSS,
+    );
+    const cards = (at: EditorState): number =>
+      at.facet(showTooltip).filter((tooltip) => tooltip !== null).length;
+    assert.equal(cards(state), 0);
+
+    const inside = state.update({ selection: { anchor: state.doc.line(3).from + 4 } }).state;
+    assert.deepEqual(
+      flagsAtCaret(inside).map(({ message }) => message),
+      [WARNED.message],
+    );
+    assert.equal(cards(inside), 1);
+
+    // The card is not drawn again while the caret stays in the declaration.
+    const further = inside.update({ selection: { anchor: state.doc.line(3).from + 6 } }).state;
+    assert.deepEqual(further.facet(showTooltip), inside.facet(showTooltip));
+
+    const left = further.update({ selection: { anchor: state.doc.line(2).from + 4 } }).state;
+    assert.deepEqual(flagsAtCaret(left), []);
+    assert.equal(cards(left), 0);
+  }
+});
+
+test("on desktop the caret in a flagged declaration shows no card, which a hover shows", () => {
+  const state = flag(editing(), [WARNED], CSS);
+  const inside = state.update({ selection: { anchor: state.doc.line(3).from + 4 } }).state;
+  assert.equal(inside.facet(showTooltip).filter((tooltip) => tooltip !== null).length, 0);
+});
+
 test("a render's warnings wait for the text it set, and the flags on the text move with the typing", () => {
   const flaggedState = flag(editing(), [WARNED], CSS);
   const typed = flaggedState.update({ changes: { from: 0, insert: "/* mine */\n" } }).state;
@@ -407,7 +442,7 @@ test("Mod-/ wraps the selected lines in a comment, and takes it out of lines alr
 });
 
 // What this tier does not cover: the editor on a page, which has no
-// DOM here, and the card a hover draws. The e2e suite types into it in
+// DOM here, and the card a hover or the caret draws. The e2e suite types into it in
 // Obsidian and waits on the write, the render, the squiggle and its
 // card. Nor the font the engine carries, which no face registers and
 // the completion does not offer. The editing keys run here as commands
