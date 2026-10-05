@@ -42,10 +42,9 @@ function bound(key: string): Command | undefined {
 
 /**
  * Draws the toolbar on the body while the focus is inside the editor,
- * which the search panel is part of. For as long, the body carries
- * `orca-typing`, which keeps the app at its full height, and the
- * editor's host carries `is-typing` and `--orca-editor-cover`, the room
- * the toolbar and the keyboard take from the foot of the drawer.
+ * which the search panel is part of. For as long, the editor's host
+ * carries `is-typing` and `--orca-editor-cover`, the room the toolbar
+ * and the keyboard take from the foot of the drawer.
  */
 export function toolbar(device: Device, icon: DrawIcon): Extension {
   return ViewPlugin.define((view) => {
@@ -107,7 +106,6 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
       if (bar.hidden === !on) return;
       bar.hidden = !on;
       host?.toggleClass("is-typing", on);
-      document.body.toggleClass("orca-typing", on);
       measure();
     };
     const entered = (): void => {
@@ -119,12 +117,7 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
     view.dom.addEventListener("focusin", entered);
     view.dom.addEventListener("focusout", left);
 
-    // Obsidian reports the keyboard's height in a style of the page,
-    // and the drawer's own foot moves with it.
-    const restyled = new MutationObserver(measure);
-    for (const styled of [document.documentElement, document.body]) {
-      restyled.observe(styled, { attributes: true, attributeFilter: ["style", "class"] });
-    }
+    // The drawer ends higher when the keyboard rises.
     const moved = new ResizeObserver(measure);
     if (host?.parentElement) moved.observe(host.parentElement);
 
@@ -144,11 +137,9 @@ export function toolbar(device: Device, icon: DrawIcon): Extension {
       destroy() {
         resized.disconnect();
         moved.disconnect();
-        restyled.disconnect();
         view.dom.removeEventListener("focusin", entered);
         view.dom.removeEventListener("focusout", left);
         host?.removeClass("is-typing");
-        document.body.removeClass("orca-typing");
         bar.remove();
       },
     };

@@ -4103,13 +4103,7 @@ button.orca-card-at::after {
   background: var(--interactive-normal);
 }
 
-/* Obsidian ends the whole app above the keyboard, which sets the page
-   again at a new size. While the CSS view has the caret the app keeps
-   its height, and only the sheet ends above the toolbar. */
-body.is-mobile.orca-typing .app-container {
-  max-height: 100vh;
-}
-
+/* The sheet ends above the toolbar, by the room the editor measures. */
 .is-mobile .orca-editor-host.is-typing {
   margin-bottom: max(var(--size-4-3), var(--orca-editor-cover, 0px));
 }
