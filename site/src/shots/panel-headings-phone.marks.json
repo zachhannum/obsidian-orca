@@ -1,0 +1,78 @@
+{
+  "width": 280,
+  "height": 745,
+  "marks": {
+    "heading-1-align": {
+      "x": 0,
+      "y": 526,
+      "width": 228,
+      "height": 44
+    },
+    "heading-1-caps": {
+      "x": 0,
+      "y": 367,
+      "width": 228,
+      "height": 44
+    },
+    "heading-1-font": {
+      "x": 0,
+      "y": 128,
+      "width": 228,
+      "height": 44
+    },
+    "heading-1-letter-spacing": {
+      "x": 0,
+      "y": 446,
+      "width": 228,
+      "height": 44
+    },
+    "heading-1-size": {
+      "x": 44,
+      "y": 287,
+      "width": 64,
+      "height": 44
+    },
+    "heading-1-space-above": {
+      "x": 44,
+      "y": 605,
+      "width": 64,
+      "height": 44
+    },
+    "heading-1-space-below": {
+      "x": 44,
+      "y": 685,
+      "width": 64,
+      "height": 44
+    },
+    "heading-1-style": {
+      "x": 0,
+      "y": 208,
+      "width": 228,
+      "height": 44
+    },
+    "heading-level": {
+      "x": 0,
+      "y": 49,
+      "width": 280,
+      "height": 44
+    },
+    "reset-heading-1-align": {
+      "x": 236,
+      "y": 526,
+      "width": 44,
+      "height": 44
+    },
+    "reset-heading-1-font": {
+      "x": 236,
+      "y": 128,
+      "width": 44,
+      "height": 44
+    },
+    "reset-heading-1-size": {
+      "x": 236,
+      "y": 287,
+      "width": 44,
+      "height": 44
+    }
+  }
+}

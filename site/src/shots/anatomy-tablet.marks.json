@@ -1,0 +1,30 @@
+{
+  "width": 1180,
+  "height": 820,
+  "marks": {
+    "navigator": {
+      "x": 60,
+      "y": 111,
+      "width": 290,
+      "height": 617
+    },
+    "open-orca": {
+      "x": 10,
+      "y": 403,
+      "width": 40,
+      "height": 40
+    },
+    "panel": {
+      "x": 830,
+      "y": 111,
+      "width": 350,
+      "height": 619
+    },
+    "preview": {
+      "x": 350,
+      "y": 99,
+      "width": 480,
+      "height": 721
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "width": 1180,
+  "height": 721,
+  "marks": {
+    "as-markdown": {
+      "x": 1094,
+      "y": 10,
+      "width": 36,
+      "height": 32
+    },
+    "open-preview": {
+      "x": 1056,
+      "y": 10,
+      "width": 36,
+      "height": 32
+    }
+  }
+}

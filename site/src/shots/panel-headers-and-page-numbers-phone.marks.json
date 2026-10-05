@@ -1,0 +1,126 @@
+{
+  "width": 280,
+  "height": 1069,
+  "marks": {
+    "chapter-title-from": {
+      "x": 0,
+      "y": 231,
+      "width": 228,
+      "height": 44
+    },
+    "folio-font": {
+      "x": 0,
+      "y": 629,
+      "width": 228,
+      "height": 44
+    },
+    "folio-style": {
+      "x": 0,
+      "y": 788,
+      "width": 228,
+      "height": 44
+    },
+    "header-caps": {
+      "x": 0,
+      "y": 867,
+      "width": 228,
+      "height": 44
+    },
+    "header-font": {
+      "x": 0,
+      "y": 549,
+      "width": 228,
+      "height": 44
+    },
+    "header-left-page": {
+      "x": 0,
+      "y": 72,
+      "width": 228,
+      "height": 44
+    },
+    "header-letter-spacing": {
+      "x": 0,
+      "y": 947,
+      "width": 228,
+      "height": 44
+    },
+    "header-position": {
+      "x": 0,
+      "y": 311,
+      "width": 228,
+      "height": 44
+    },
+    "header-right-page": {
+      "x": 0,
+      "y": 152,
+      "width": 228,
+      "height": 44
+    },
+    "header-style": {
+      "x": 0,
+      "y": 708,
+      "width": 228,
+      "height": 44
+    },
+    "page-number-format": {
+      "x": 0,
+      "y": 470,
+      "width": 228,
+      "height": 44
+    },
+    "page-number-position": {
+      "x": 0,
+      "y": 390,
+      "width": 228,
+      "height": 44
+    },
+    "reset-chapter-title-from": {
+      "x": 236,
+      "y": 231,
+      "width": 44,
+      "height": 44
+    },
+    "reset-header-caps": {
+      "x": 236,
+      "y": 867,
+      "width": 44,
+      "height": 44
+    },
+    "reset-header-left-page": {
+      "x": 236,
+      "y": 72,
+      "width": 44,
+      "height": 44
+    },
+    "reset-header-letter-spacing": {
+      "x": 236,
+      "y": 947,
+      "width": 44,
+      "height": 44
+    },
+    "reset-header-right-page": {
+      "x": 236,
+      "y": 152,
+      "width": 44,
+      "height": 44
+    },
+    "reset-page-number-position": {
+      "x": 236,
+      "y": 390,
+      "width": 44,
+      "height": 44
+    },
+    "reset-suppress-head-on-openings": {
+      "x": 236,
+      "y": 1006,
+      "width": 44,
+      "height": 44
+    },
+    "suppress-head-on-openings": {
+      "x": 0,
+      "y": 1018,
+      "width": 34,
+      "height": 19
+    }
+  }
+}

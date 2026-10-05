@@ -1,0 +1,18 @@
+{
+  "width": 433,
+  "height": 247,
+  "marks": {
+    "place": {
+      "x": 42,
+      "y": 165,
+      "width": 110,
+      "height": 44
+    },
+    "warnings": {
+      "x": 322,
+      "y": 16,
+      "width": 94,
+      "height": 44
+    }
+  }
+}

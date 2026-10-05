@@ -1,0 +1,66 @@
+{
+  "width": 402,
+  "height": 352,
+  "marks": {
+    "chapter-begins": {
+      "x": 128,
+      "y": 49,
+      "width": 222,
+      "height": 44
+    },
+    "chapter-drop-cap": {
+      "x": 128,
+      "y": 105,
+      "width": 222,
+      "height": 44
+    },
+    "chapter-drop-cap-font": {
+      "x": 128,
+      "y": 161,
+      "width": 222,
+      "height": 44
+    },
+    "chapter-drop-cap-style": {
+      "x": 128,
+      "y": 217,
+      "width": 222,
+      "height": 44
+    },
+    "chapter-first-line-caps": {
+      "x": 128,
+      "y": 273,
+      "width": 107,
+      "height": 44
+    },
+    "chapter-first-line-letter-spacing": {
+      "x": 243,
+      "y": 273,
+      "width": 107,
+      "height": 44
+    },
+    "reset-chapter-begins": {
+      "x": 358,
+      "y": 49,
+      "width": 44,
+      "height": 44
+    },
+    "reset-chapter-drop-cap": {
+      "x": 358,
+      "y": 105,
+      "width": 44,
+      "height": 44
+    },
+    "reset-chapter-drop-cap-font": {
+      "x": 358,
+      "y": 161,
+      "width": 44,
+      "height": 44
+    },
+    "reset-chapter-first-line-caps": {
+      "x": 358,
+      "y": 273,
+      "width": 44,
+      "height": 44
+    }
+  }
+}

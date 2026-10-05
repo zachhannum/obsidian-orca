@@ -1,0 +1,48 @@
+{
+  "width": 402,
+  "height": 252,
+  "marks": {
+    "margin-bottom": {
+      "x": 243,
+      "y": 173,
+      "width": 107,
+      "height": 44
+    },
+    "margin-inside": {
+      "x": 128,
+      "y": 104,
+      "width": 107,
+      "height": 44
+    },
+    "margin-outside": {
+      "x": 243,
+      "y": 104,
+      "width": 107,
+      "height": 44
+    },
+    "margin-top": {
+      "x": 128,
+      "y": 173,
+      "width": 107,
+      "height": 44
+    },
+    "reset-margin-inside": {
+      "x": 358,
+      "y": 104,
+      "width": 44,
+      "height": 44
+    },
+    "reset-trim": {
+      "x": 358,
+      "y": 48,
+      "width": 44,
+      "height": 44
+    },
+    "trim": {
+      "x": 128,
+      "y": 48,
+      "width": 222,
+      "height": 44
+    }
+  }
+}

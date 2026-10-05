@@ -1,0 +1,24 @@
+{
+  "width": 402,
+  "height": 222,
+  "marks": {
+    "body-orphans": {
+      "x": 172,
+      "y": 49,
+      "width": 64,
+      "height": 44
+    },
+    "body-widows": {
+      "x": 172,
+      "y": 105,
+      "width": 64,
+      "height": 44
+    },
+    "keep-heading-with-text": {
+      "x": 128,
+      "y": 174,
+      "width": 34,
+      "height": 19
+    }
+  }
+}

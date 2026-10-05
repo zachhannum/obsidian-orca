@@ -1,0 +1,48 @@
+{
+  "width": 402,
+  "height": 494,
+  "marks": {
+    "scene-break-font": {
+      "x": 128,
+      "y": 209,
+      "width": 222,
+      "height": 44
+    },
+    "scene-break-mark": {
+      "x": 128,
+      "y": 49,
+      "width": 222,
+      "height": 44
+    },
+    "scene-break-ornament": {
+      "x": 128,
+      "y": 105,
+      "width": 222,
+      "height": 92
+    },
+    "scene-break-size": {
+      "x": 172,
+      "y": 321,
+      "width": 64,
+      "height": 44
+    },
+    "scene-break-space-above": {
+      "x": 172,
+      "y": 377,
+      "width": 64,
+      "height": 44
+    },
+    "scene-break-space-below": {
+      "x": 172,
+      "y": 433,
+      "width": 64,
+      "height": 44
+    },
+    "scene-break-style": {
+      "x": 128,
+      "y": 265,
+      "width": 222,
+      "height": 44
+    }
+  }
+}

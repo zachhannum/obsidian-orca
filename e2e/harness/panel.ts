@@ -376,6 +376,26 @@ export class Controls {
     );
   }
 
+  /**
+   * Scrolls the editor to the foot of its text, and waits for the last
+   * line to rest there. The editor measures a wrapped line once it is
+   * drawn, so the foot moves until every line above it has been.
+   */
+  async toFoot(): Promise<void> {
+    await expect
+      .poll(async () =>
+        this.editor.evaluate((editor, selector) => {
+          const scroller = editor.querySelector(selector);
+          if (scroller === null) return false;
+          const was = scroller.scrollTop;
+          scroller.scrollTop = scroller.scrollHeight;
+          return scroller.scrollTop === was;
+        }, CODEMIRROR_SCROLLER),
+      )
+      .toBe(true);
+    await still(this.editor.locator(CODEMIRROR_LINE).last());
+  }
+
   /** Resolves a theme variable to the color the browser computes for it. */
   async resolves(variable: string): Promise<string> {
     return this.editor.evaluate((editor, name) => {

@@ -503,6 +503,11 @@ async function pictured(site: Site, name: string): Promise<void> {
 /** Waits for every slide to end, with the pointer off the controls. */
 async function ended(site: Site): Promise<void> {
   await site.obsidian.unhovered();
+  await slid(site);
+}
+
+/** Waits for every slide to end, and leaves what the picture holds still as it is. */
+async function slid(site: Site): Promise<void> {
   await site.obsidian.page.evaluate(async () => {
     const ending = document
       .getAnimations()
@@ -1557,6 +1562,775 @@ test("the Markdown pictures are each example set on its own page", async ({ site
   }, MARKED);
 });
 
+/**
+ * Emulates a device for one test's pictures, and puts the desktop
+ * window back after them, whether or not they were taken.
+ */
+async function onDevice(
+  site: Site,
+  device: Device,
+  during: () => Promise<void>,
+): Promise<void> {
+  const { obsidian, book } = site;
+  await obsidian.mobile(device, DENSITY);
+  try {
+    await obsidian.page.waitForFunction(
+      (size) => window.innerWidth === size.width && window.devicePixelRatio === size.density,
+      { width: DEVICES[device].width, density: DENSITY },
+    );
+    await during();
+  } finally {
+    await book.close();
+    await obsidian.detach(BOOK_PAGE);
+    await obsidian.moving();
+    await obsidian.emulateMobile(false);
+  }
+}
+
+/** Opens the sample book on a device, on the chapter every picture opens on. */
+async function reading(site: Site): Promise<void> {
+  const { obsidian, book } = site;
+  // Mobile keeps the tabs the last picture opened.
+  await book.close();
+  await obsidian.detach(BOOK_PAGE);
+  await book.open();
+  // The book opens in the view the desktop pictures left it in, on a
+  // page whose first seat may be empty.
+  await expect(book.surface).toHaveAttribute("data-generation", /[1-9]\d*/);
+  await book.uncovered();
+  await book.show("Single page", "single");
+  await book.choose(CHAPTER);
+  await settled(book);
+}
+
+/**
+ * Measures the controls a cropped picture marks, once every slide has
+ * ended. Each one is on the picture, and the middle of its mark is on
+ * the control itself. Without `every`, a control that is not drawn is
+ * left out, as a row with no reset leaves its reset out. With `cut`, a
+ * mark ends where that pane does, for a control a narrow pane cuts
+ * short.
+ */
+async function held(
+  site: Site,
+  crop: Locator | Box,
+  controls: Record<string, Locator>,
+  how: { every?: boolean; cut?: Locator } = {},
+): Promise<Marks> {
+  await slid(site);
+  const taken = await site.marks(crop, controls);
+  if (how.every !== false) {
+    expect(Object.keys(taken.marks).sort()).toEqual(Object.keys(controls).sort());
+  }
+  const from = "boundingBox" in crop ? await measured(crop) : crop;
+  const pane = how.cut === undefined ? undefined : await measured(how.cut);
+  for (const [id, box] of Object.entries(taken.marks)) {
+    if (pane !== undefined) {
+      const right = Math.floor(pane.x + pane.width) - Math.floor(from.x);
+      box.width = Math.min(box.width, right - box.x);
+    }
+    expect(box.x, `the mark ${id} is left of the picture`).toBeGreaterThanOrEqual(0);
+    expect(box.y, `the mark ${id} is above the picture`).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, `the mark ${id} is right of the picture`).toBeLessThanOrEqual(
+      taken.width,
+    );
+    expect(box.y + box.height, `the mark ${id} is below the picture`).toBeLessThanOrEqual(
+      taken.height,
+    );
+    const hit = await controls[id]?.evaluate(
+      (control, at) => control.contains(document.elementFromPoint(at.x, at.y)),
+      {
+        x: Math.floor(from.x) + box.x + box.width / 2,
+        y: Math.floor(from.y) + box.y + box.height / 2,
+      },
+    );
+    expect(hit, `the mark ${id} is not on its control`).toEqual(true);
+  }
+  return taken;
+}
+
+/**
+ * Makes the emulated window as tall as the design panel's rows, so a
+ * group taller than the device is one picture. The layout is the
+ * device's own, since Obsidian reads the device as the window loads.
+ */
+async function unrolled(site: Site, device: Device): Promise<void> {
+  const more = await site.panel.scroller.evaluate(
+    (scroller) => scroller.scrollHeight - scroller.clientHeight,
+  );
+  if (more <= 0) return;
+  const { width, height } = DEVICES[device];
+  await site.obsidian.size(width, height + more, DENSITY);
+  await expect
+    .poll(async () =>
+      site.panel.scroller.evaluate((scroller) => scroller.scrollHeight - scroller.clientHeight),
+    )
+    .toBeLessThanOrEqual(0);
+}
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`on a ${device} a docs picture crops to each group of the design panel`, async ({
+    site,
+  }) => {
+    const { obsidian, panel } = site;
+    const taken = new Map<string, Marks[]>();
+    await onDevice(site, device, async () => {
+      await obsidian.still();
+      await reading(site);
+      await panel.open();
+      expect(await panel.grouped()).toEqual(GROUPS);
+      await unrolled(site, device);
+      for (const scheme of SCHEMES) {
+        await site.paint(scheme);
+        for (const name of GROUPS) {
+          const group = panel.leaf.locator(`[data-group="${name}"]`);
+          const shot = `panel-${slug(name)}-${device}`;
+          await expect(group).toBeVisible();
+          const marks = await held(site, group, targets(site, name), { every: false });
+          // A device marks every control the desktop picture marks.
+          const desktop = JSON.parse(
+            await readFile(path.join(SHOTS, `panel-${slug(name)}.marks.json`), "utf8"),
+          ) as Marks;
+          expect(Object.keys(marks.marks)).toEqual(Object.keys(desktop.marks));
+          taken.set(shot, [...(taken.get(shot) ?? []), marks]);
+          await expect(group).toHaveScreenshot(`${shot}-${scheme}.png`);
+        }
+      }
+    });
+    for (const [shot, marks] of taken) await sidecar(shot, marks);
+  });
+}
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`on a ${device} the CSS pictures are the sample book's own CSS, a warning on a rule, and the control that rule overrides`, async ({
+    site,
+  }) => {
+    const { obsidian, book, panel } = site;
+    const own = await noteText(site);
+    const css: Marks[] = [];
+    const warning: Marks[] = [];
+    const bar: Marks[] = [];
+    const header: Marks[] = [];
+    const locked: Marks[] = [];
+    try {
+      await onDevice(site, device, async () => {
+        await reading(site);
+        try {
+          // A tablet has room for the page beside the CSS, so its drawer
+          // is pinned there. A phone's drawer covers the page.
+          if (device === "tablet") await obsidian.pin(true, "right");
+          await panel.open();
+          await panel.toCss.click();
+          // The rules are wider than the drawer, so the picture wraps them.
+          await panel.wrap.click();
+          await expect(panel.wrap).toHaveAttribute("aria-pressed", "true");
+          await expect(panel.flags).toHaveCount(0);
+          for (const scheme of SCHEMES) {
+            await site.paint(scheme);
+            await expect(panel.editor).toBeVisible();
+            css.push(await onControls(site, { controls: panel.toControls, wrap: panel.wrap }));
+            await pictured(site, `css-${device}-${scheme}.png`);
+          }
+
+          await typed(site, own, OVERRIDING);
+          await expect(panel.flags).toHaveCount(1);
+          await expect(panel.warned).toBeVisible();
+          // A finger has no hover, so a device raises no card over the
+          // mark. The picture is the count and the marked line.
+          await obsidian.still();
+          for (const scheme of SCHEMES) {
+            await site.paint(scheme);
+            await panel.toFoot();
+            const clip = await around(
+              site,
+              [await measured(panel.warned), await measured(panel.editor)],
+              PAD,
+            );
+            warning.push(
+              await held(site, clip, { flag: panel.flags.first(), warned: panel.warned }),
+            );
+            await expect(obsidian.page).toHaveScreenshot(`css-warning-${device}-${scheme}.png`, {
+              clip,
+            });
+          }
+
+          // A phone's drawer covers the page, so it shuts for the count.
+          await book.uncovered();
+          await expect(book.counted).toHaveText("1 warning");
+          await book.count.click();
+          await expect(book.issueOpens.first()).toBeVisible();
+          for (const scheme of SCHEMES) {
+            await site.paint(scheme);
+            await slid(site);
+            // A phone lists the warnings in a sheet over the count, and a
+            // tablet lists them under it.
+            const clip =
+              device === "phone"
+                ? await obsidian.unframed(book.warnings)
+                : await around(site, [await measured(book.count), await measured(book.list)], PAD);
+            const place = { place: book.issueOpens.first() };
+            bar.push(
+              await held(
+                site,
+                clip,
+                device === "phone" ? place : { ...place, warnings: book.count },
+              ),
+            );
+            await expect(obsidian.page).toHaveScreenshot(
+              `preview-warnings-${device}-${scheme}.png`,
+              { clip },
+            );
+          }
+          if (device === "phone") {
+            await obsidian.page.keyboard.press("Escape");
+            await expect(book.warnings).toHaveCount(0);
+          } else {
+            await book.count.click();
+            await expect(book.list).toBeHidden();
+          }
+
+          await obsidian.moving();
+          await panel.open();
+          await panel.wrap.click();
+          await panel.toControls.click();
+          await expect(panel.overridden(OVERRIDDEN)).toBeVisible();
+          for (const scheme of SCHEMES) {
+            await site.paint(scheme);
+            await obsidian.still();
+            // The switch to the CSS view, cropped to the panel's header
+            // across the drawer.
+            await panel.leaf.locator(`[data-group="${GROUPS[0]}"]`).scrollIntoViewIfNeeded();
+            const leaf = await measured(panel.leaf);
+            const button = await measured(panel.toCss);
+            const top = {
+              x: Math.ceil(leaf.x),
+              y: Math.floor(button.y - PAD),
+              width: Math.floor(leaf.width),
+              height: Math.ceil(button.height + PAD * 2),
+            };
+            header.push(await held(site, top, { css: panel.toCss }));
+            await expect(obsidian.page).toHaveScreenshot(`css-switch-${device}-${scheme}.png`, {
+              clip: top,
+            });
+
+            const row = panel.row(OVERRIDDEN);
+            await row.scrollIntoViewIfNeeded();
+            const clip = await around(site, [await measured(row)], PAD / 2);
+            locked.push(await held(site, clip, { lock: panel.overridden(OVERRIDDEN) }));
+            await expect(obsidian.page).toHaveScreenshot(
+              `css-overridden-${device}-${scheme}.png`,
+              { clip },
+            );
+          }
+
+          await obsidian.moving();
+          await panel.toCss.click();
+          await untyped(site, own);
+          await panel.toControls.click();
+        } finally {
+          if (device === "tablet") await obsidian.pin(false, "right");
+        }
+      });
+    } finally {
+      // The window has loaded again, so the editor holds the note's own
+      // text and a note written here is not written over.
+      if ((await noteText(site)) !== own) await putBack(site, own);
+    }
+    await sidecar(`css-${device}`, css);
+    await sidecar(`css-warning-${device}`, warning);
+    await sidecar(`preview-warnings-${device}`, bar);
+    await sidecar(`css-switch-${device}`, header);
+    await sidecar(`css-overridden-${device}`, locked);
+  });
+}
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`on a ${device} the glyph picture is the browser open over the ornamental face`, async ({
+    site,
+  }) => {
+    const { obsidian, panel } = site;
+    const own = await noteText(site);
+    const taken: Marks[] = [];
+    try {
+      await onDevice(site, device, async () => {
+        await reading(site);
+        await panel.open();
+        await panel.chooseFont(GLYPH_FONT, ORNAMENTAL);
+        await expect.poll(async () => noteText(site)).toContain(`${GLYPH_FONT}: ${ORNAMENTAL}`);
+        const group = panel.leaf.locator(`[data-group="${SCENE_BREAKS}"]`);
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await obsidian.still();
+          // The browser hangs under its row and the drawer clips what
+          // hangs past its foot, so the group goes to the top first.
+          await group.evaluate((el) => {
+            el.scrollIntoView({ block: "start" });
+          });
+          await panel.browseGlyphs();
+          await slid(site);
+
+          const browser = await measured(panel.glyphBrowser);
+          const drawer = await measured(panel.scroller);
+          expect(browser.y + browser.height).toBeLessThanOrEqual(drawer.y + drawer.height);
+          const box = await around(site, [await measured(group), browser], PAD / 2);
+          // The rows under the glyph stand at the browser's foot, so the
+          // crop ends where the browser does.
+          const clip = { ...box, height: Math.ceil(browser.y + browser.height) - box.y };
+          taken.push(await site.marks(clip, {}));
+          await expect(obsidian.page).toHaveScreenshot(`panel-glyphs-${device}-${scheme}.png`, {
+            clip,
+          });
+
+          await panel.glyphFilter.press("Escape");
+          await expect(panel.glyphBrowser).toHaveCount(0);
+        }
+        await obsidian.moving();
+        await panel.reset(GLYPH_FONT).click();
+        await expect.poll(async () => noteText(site)).not.toContain(GLYPH_FONT);
+      });
+    } finally {
+      // Orca writes the front matter it owns in its own hand, so the
+      // reset leaves the note set the way orca sets it. The note itself
+      // goes back for the pictures after this one.
+      if ((await noteText(site)) !== own) await putBack(site, own);
+    }
+    await sidecar(`panel-glyphs-${device}`, taken);
+  });
+}
+
+/** A drag of the sheet's grabber long enough to pull the sheet up. */
+const A_PULL = 90;
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`on a ${device} the inspect picture is a pinned paragraph and the rules that set it`, async ({
+    site,
+  }) => {
+    const { obsidian, panel } = site;
+    const inspect = new Inspect(obsidian);
+    const own = await noteText(site);
+    const taken: Marks[] = [];
+    const adding: Marks[] = [];
+    const phone = device === "phone";
+    // A phone draws the pane as a sheet over the foot of the page, and a
+    // tablet draws it in the drawer, over the CSS.
+    const shown = phone ? inspect.risen : panel.pane;
+    const add = phone ? inspect.risenAdd : panel.addRule;
+    const pin = async (): Promise<void> => {
+      await inspect.on();
+      await inspect.pinLine(inspect.line(OPENING_PAGE, SECOND_PARAGRAPH));
+      await expect(shown).toBeVisible();
+      if (!phone) return;
+      // The sheet rises with the first rule alone, and a pull shows the rest.
+      await inspect.pull(-A_PULL);
+      await expect(inspect.risen).toHaveAttribute("data-pull", "full");
+    };
+    try {
+      await onDevice(site, device, async () => {
+        await reading(site);
+        try {
+          // A tablet has room for the page beside the pane, so its drawer
+          // is pinned there.
+          if (!phone) await obsidian.pin(true, "right");
+          await pin();
+          // The chapter's crumb names its section, with the role beside
+          // the name in an element of its own.
+          const crumb = shown.getByTestId("orca-inspect-crumb").filter({ hasText: /^section#/ });
+          await expect(crumb).toHaveCount(1);
+          const section = await crumb.evaluate((named) => named.firstChild?.textContent ?? "");
+          expect(section).toMatch(/^section#/);
+
+          // The pane stands over most of the editor while a box is
+          // pinned, so the rule is typed with inspect mode off.
+          await inspect.off();
+          await expect(shown).toHaveCount(0);
+          await obsidian.expand("right");
+          if ((await panel.panel.getAttribute("data-viewing")) !== "css") await panel.toCss.click();
+          await expect(panel.editor).toBeVisible();
+          await typed(site, own, `\n${section} p + p {\ntext-indent: ${OWN_INDENT};`);
+          if (phone) {
+            await obsidian.put("right");
+            await expect(panel.panel).not.toBeInViewport();
+          }
+          await pin();
+          const rule = '[data-testid="orca-inspect-rule"]';
+          await expect(shown.locator(`${rule}[data-layer="own"]`).first()).toContainText(
+            OWN_INDENT,
+          );
+          await expect(shown.getByTestId("orca-inspect-group")).toHaveCount(3);
+
+          for (const scheme of SCHEMES) {
+            await site.paint(scheme);
+            await expect(inspect.outline("pinned").getByTestId("orca-inspect-edge")).toBeVisible();
+            await shown.getByTestId("orca-inspect-crumb").first().scrollIntoViewIfNeeded();
+            // The drawer's editor is a few lines tall under the pane, so
+            // it shows the rule the picture is of.
+            if (!phone) await panel.toFoot();
+            taken.push(await onControls(site, { inspect: inspect.action }));
+            await pictured(site, `inspect-${device}-${scheme}.png`);
+
+            // "Add a rule" is under the rules, so the pane scrolls to it.
+            await obsidian.moving();
+            await add.scrollIntoViewIfNeeded();
+            await obsidian.still();
+            const clip = phone
+              ? await around(site, [await measured(inspect.risen)], 0)
+              : await around(
+                  site,
+                  [await measured(panel.pane), await measured(panel.editor)],
+                  PAD,
+                );
+            // The button names the whole selector, which is wider than
+            // the pane on a device.
+            const cut = phone ? inspect.risen.getByTestId("orca-inspect-pane") : panel.pane;
+            adding.push(await held(site, clip, { "add-rule": add }, { cut }));
+            await expect(obsidian.page).toHaveScreenshot(`inspect-add-${device}-${scheme}.png`, {
+              clip,
+            });
+          }
+
+          await obsidian.moving();
+          await inspect.off();
+          await expect(shown).toHaveCount(0);
+          await obsidian.expand("right");
+          await expect(panel.editor).toBeVisible();
+          await untyped(site, own);
+          await panel.toControls.click();
+        } finally {
+          if (!phone) await obsidian.pin(false, "right");
+        }
+      });
+    } finally {
+      // The window has loaded again, so the editor holds the note's own
+      // text and a note written here is not written over.
+      if ((await noteText(site)) !== own) await putBack(site, own);
+    }
+    await sidecar(`inspect-${device}`, taken);
+    await sidecar(`inspect-add-${device}`, adding);
+  });
+}
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`on a ${device} the written picture is the export dialog once the files are in the vault`, async ({
+    site,
+  }) => {
+    const { obsidian } = site;
+    const exporting = new Export(obsidian);
+    const done: Marks[] = [];
+    const files = async (): Promise<string[]> =>
+      obsidian.page.evaluate(() =>
+        window.app.vault
+          .getFiles()
+          .filter((file) => file.extension === "pdf" || file.extension === "epub")
+          .map((file) => file.path),
+      );
+    const had = await files();
+    await onDevice(site, device, async () => {
+      await reading(site);
+      try {
+        await exporting.open();
+        await exporting.reaches("ready");
+        await exporting.write.click();
+        await exporting.reaches("written");
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await expect(exporting.openPdf).toBeVisible();
+          await slid(site);
+          const clip = await obsidian.unframed(exporting.dialog);
+          done.push(await held(site, clip, { open: exporting.openPdf }));
+          await expect(obsidian.page).toHaveScreenshot(`export-written-${device}-${scheme}.png`, {
+            clip,
+          });
+        }
+        await obsidian.moving();
+        await exporting.close();
+      } finally {
+        // The checked-in sample vault has no PDF or EPUB, so the export
+        // comes back out.
+        await obsidian.page.evaluate(async (kept) => {
+          for (const file of window.app.vault.getFiles()) {
+            const written = file.extension === "pdf" || file.extension === "epub";
+            if (written && !kept.includes(file.path)) await window.app.vault.delete(file);
+          }
+        }, had);
+      }
+    });
+    expect(await files()).toEqual(had);
+    await sidecar(`export-written-${device}`, done);
+  });
+
+  test(`on a ${device} the install picture is orca's row in the community plugins settings`, async ({
+    site,
+  }) => {
+    const { obsidian } = site;
+    const taken: Marks[] = [];
+    await onDevice(site, device, async () => {
+      const had = await obsidian.openSettings(PLUGINS_TAB);
+      try {
+        const toggle = obsidian.enabled(ORCA);
+        await expect(obsidian.installed(ORCA)).toBeVisible();
+        // A phone floats the tab's name over what scrolls under it, so
+        // the window is made as tall as the tab and nothing scrolls.
+        const spill = await obsidian.settingsSpill();
+        const { width, height } = DEVICES[device];
+        if (spill > 0) await obsidian.size(width, height + spill, DENSITY);
+        await expect.poll(async () => obsidian.settingsSpill()).toBeLessThanOrEqual(0);
+        await obsidian.page.evaluate(() => {
+          (document.activeElement as HTMLElement | null)?.blur();
+        });
+        await expect(obsidian.page.locator(":focus")).toHaveCount(0);
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await expect(toggle).toBeVisible();
+          await slid(site);
+          const clip = await obsidian.unframed(obsidian.settings());
+          taken.push(await held(site, clip, { orca: toggle }));
+          await expect(obsidian.page).toHaveScreenshot(`install-${device}-${scheme}.png`, {
+            clip,
+          });
+        }
+        await obsidian.moving();
+      } finally {
+        await obsidian.closeSettings(had);
+      }
+    });
+    await sidecar(`install-${device}`, taken);
+  });
+}
+
+/**
+ * Waits for a pane to be whole on the screen and to take a touch. A
+ * drawer pushes a phone's pane off it, and the cover a drawer drew
+ * over the pane outlasts the drawer.
+ */
+async function clear(pane: Locator): Promise<void> {
+  await expect(pane).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(async () =>
+      pane.evaluate((drawn) => {
+        const box = drawn.getBoundingClientRect();
+        const over = document.elementFromPoint(
+          box.left + box.width / 2,
+          box.top + box.height / 2,
+        );
+        return over !== null && drawn.contains(over);
+      }),
+    )
+    .toBe(true);
+}
+
+/** The whole window on a phone, and one pane of it on a tablet, as a crop. */
+async function paneBox(site: Site, device: Device, pane: Locator): Promise<Box> {
+  if (device === "phone") return windowBox(site);
+  return around(site, [await measured(pane)], 0);
+}
+
+for (const device of ["phone", "tablet"] as Device[]) {
+  test(`on a ${device} the write picture is a chapter in the editor`, async ({ site }) => {
+    const { obsidian } = site;
+    const write: Marks[] = [];
+    await onDevice(site, device, async () => {
+      // The note is read the way a vault is read by default, whatever an
+      // earlier picture left behind.
+      await obsidian.asRendered();
+      await reading(site);
+      const editor = obsidian.view(EDITOR);
+      // The one tab, handed to the editor by the action in the preview's
+      // header. It lands on the note behind the page on screen, so the
+      // chapter is opened in it.
+      await obsidian.actionIn(PREVIEW, AS_MARKDOWN).click();
+      await expect(editor).toBeVisible();
+      await obsidian.open(WRITING);
+      await expect(editor).toContainText(CHAPTER);
+      await clear(editor);
+      for (const scheme of SCHEMES) {
+        await site.paint(scheme);
+        await ended(site);
+        const clip = await paneBox(site, device, editor);
+        write.push(
+          await held(site, clip, { "open-preview": obsidian.actionIn(EDITOR, OPEN_PREVIEW) }),
+        );
+        await expect(obsidian.page).toHaveScreenshot(`write-${device}-${scheme}.png`, { clip });
+      }
+      await obsidian.detach(EDITOR);
+    });
+    await sidecar(`write-${device}`, write);
+  });
+
+  test(`on a ${device} the make pictures are a folder of notes made into a book`, async ({
+    site,
+  }) => {
+    const { obsidian, navigator } = site;
+    const menu: Marks[] = [];
+    const header: Marks[] = [];
+    const opened: Marks[] = [];
+    await onDevice(site, device, async () => {
+      await reading(site);
+      try {
+        await obsidian.page.evaluate(
+          async ({ folder, notes }) => {
+            await window.app.vault.createFolder(folder);
+            for (const [name, text] of notes) {
+              await window.app.vault.create(`${folder}/${name}.md`, text);
+            }
+          },
+          { folder: DRAFT, notes: Object.entries(DRAFTED) },
+        );
+        await obsidian.page.evaluate(async () => {
+          await window.app.workspace.ensureSideLeaf("file-explorer", "left", { reveal: true });
+        });
+        const tree = obsidian.view(EXPLORER);
+        const row = obsidian.treeItem(DRAFT);
+        const create = obsidian.item(CREATE);
+        await expect(row).toBeVisible();
+        await ended(site);
+        // A long press reaches the row as the event a right-click sends,
+        // and the menu opens where the finger is. A phone opens it as a
+        // sheet, which scrolls to the item.
+        await obsidian.contextMenu(row);
+        await create.scrollIntoViewIfNeeded();
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await expect(create).toBeVisible();
+          await ended(site);
+          let clip = await windowBox(site);
+          if (device === "tablet") {
+            const folder = await measured(row);
+            const box = await around(
+              site,
+              [{ ...folder, height: folder.height * 4 }, await measured(obsidian.menu())],
+              PAD,
+            );
+            const left = Math.floor((await measured(tree)).x);
+            clip = { ...box, x: left, width: box.x + box.width - left };
+          }
+          menu.push(await held(site, clip, { create }));
+          await expect(obsidian.page).toHaveScreenshot(`make-menu-${device}-${scheme}.png`, {
+            clip,
+          });
+        }
+
+        await obsidian.choose(CREATE);
+        await expect
+          .poll(async () =>
+            obsidian.page.evaluate((at) => window.app.vault.getFileByPath(at) !== null, MADE),
+          )
+          .toBe(true);
+        const note = new Note(obsidian);
+        await note.painted();
+
+        // The navigator's own buttons, with the one that makes a book
+        // with no notes. A phone draws them at the foot of the drawer.
+        await obsidian.detach("file-explorer");
+        await navigator.drawer();
+        await expect(navigator.book(MADE)).toHaveCount(1);
+        const newBook = navigator.button(NEW_BOOK);
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await expect(newBook).toBeVisible();
+          await ended(site);
+          const pane = await measured(obsidian.view(NAVIGATOR));
+          const buttons = await measured(navigator.toolbar);
+          // The crop runs from the buttons to the edge of the pane they
+          // are at, which is its foot on a phone and its top on a tablet.
+          const top = device === "phone" ? buttons.y - PAD / 2 : pane.y;
+          const foot =
+            device === "phone" ? pane.y + pane.height : buttons.y + buttons.height + PAD / 2;
+          const clip = {
+            x: Math.floor(pane.x),
+            y: Math.floor(top),
+            width: Math.floor(pane.width),
+            height: Math.ceil(foot - top),
+          };
+          header.push(await held(site, clip, { "new-book": newBook }));
+          await expect(obsidian.page).toHaveScreenshot(`make-new-${device}-${scheme}.png`, {
+            clip,
+          });
+        }
+
+        // The book note open as its page, with the drawers shut.
+        const page = obsidian.view(BOOK_PAGE);
+        await obsidian.put("left");
+        await obsidian.put("right");
+        await clear(page);
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await expect(note.page).toBeVisible();
+          await ended(site);
+          const clip = await paneBox(site, device, page);
+          opened.push(
+            await held(site, clip, {
+              "as-markdown": obsidian.actionIn(BOOK_PAGE, AS_MARKDOWN),
+              "open-preview": obsidian.actionIn(BOOK_PAGE, OPEN_PREVIEW),
+            }),
+          );
+          await expect(obsidian.page).toHaveScreenshot(`make-page-${device}-${scheme}.png`, {
+            clip,
+          });
+        }
+      } finally {
+        // One app takes every picture, so the book and its folder go again.
+        await obsidian.detach("file-explorer");
+        await obsidian.page.evaluate(
+          async (paths) => {
+            for (const at of paths) {
+              const found = window.app.vault.getAbstractFileByPath(at);
+              if (found !== null) await window.app.fileManager.trashFile(found);
+            }
+          },
+          [MADE, DRAFT],
+        );
+      }
+    });
+    await expect(navigator.book(MADE)).toHaveCount(0);
+    await sidecar(`make-menu-${device}`, menu);
+    await sidecar(`make-new-${device}`, header);
+    await sidecar(`make-page-${device}`, opened);
+  });
+
+  test(`on a ${device} the anatomy picture is the whole window, with what it has room for marked`, async ({
+    site,
+  }) => {
+    const { obsidian, book, navigator, panel } = site;
+    const taken: Marks[] = [];
+    await onDevice(site, device, async () => {
+      await reading(site);
+      try {
+        // A tablet has room for both drawers beside the page once they
+        // are pinned. A phone has one pane, and its drawer covers it.
+        if (device === "tablet") {
+          await obsidian.pin(true, "left");
+          await obsidian.pin(true, "right");
+          await panel.open();
+        }
+        await navigator.drawer();
+        await expect(navigator.book(BOOK)).toHaveCount(1);
+        await settled(book);
+        const controls: Record<string, Locator> =
+          device === "tablet"
+            ? {
+                "open-orca": obsidian.ribbon(OPEN_ORCA),
+                navigator: obsidian.view(NAVIGATOR),
+                preview: book.panes,
+                panel: panel.leaf,
+              }
+            : { navigator: obsidian.view(NAVIGATOR) };
+        for (const scheme of SCHEMES) {
+          await site.paint(scheme);
+          await settled(book);
+          taken.push(await onControls(site, controls));
+          await pictured(site, `anatomy-${device}-${scheme}.png`);
+        }
+      } finally {
+        if (device === "tablet") {
+          await obsidian.pin(false, "left");
+          await obsidian.pin(false, "right");
+        }
+      }
+    });
+    await sidecar(`anatomy-${device}`, taken);
+  });
+}
+
 // What this spec does not cover: the pictures on any platform but the
 // one CI takes them on, since a run elsewhere sets the same pages and
 // rasterizes them differently; whether the site uses the pictures and
@@ -1569,5 +2343,12 @@ test("the Markdown pictures are each example set on its own page", async ({ site
 // alone; and a mark written wrongly, which the Markdown page describes
 // and no picture shows; and the mobile pictures on a device, since they
 // are of desktop Obsidian emulating one, with no safe area and no
-// keyboard; and a mark on a mobile surface the docs do not mark, which
-// is every one but the preview and the navigator.
+// keyboard; and a mark on a `mobile-` picture the docs do not mark,
+// which is every one but the preview and the navigator; and the card
+// over a warning's mark on a device, since a finger has no hover and a
+// tap raises none; and a long press, which is sent as the event a
+// right-click sends, so a device's folder menu keeps the desktop's own
+// items; and the preview, the design panel and the ribbon on a phone's
+// anatomy picture, since a phone shows one of them at a time; and a
+// group of the design panel scrolled on a device, since the window is
+// made as tall as the panel for those pictures.

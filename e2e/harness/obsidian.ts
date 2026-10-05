@@ -140,6 +140,8 @@ const CHROME = {
   buttons: ".titlebar-button-container.mod-right",
   folder: (path: string) => `.nav-folder-title[data-path="${path}"]`,
   settings: ".modal.mod-settings",
+  /** The box a settings tab scrolls in. */
+  settingsTab: ".modal.mod-settings .vertical-tab-content",
   installed: ".setting-item",
   installedName: ".setting-item-name",
   toggle: ".checkbox-container",
@@ -639,6 +641,16 @@ export class Obsidian {
     }, tab);
     await expect(this.settings()).toBeVisible();
     return had;
+  }
+
+  /**
+   * The height of the open settings tab that is scrolled out of sight,
+   * in pixels. A window that much taller shows the whole tab.
+   */
+  async settingsSpill(): Promise<number> {
+    return this.page
+      .locator(CHROME.settingsTab)
+      .evaluate((tab) => tab.scrollHeight - tab.clientHeight);
   }
 
   /** Closes settings and puts back the value `openSettings` returned. */
