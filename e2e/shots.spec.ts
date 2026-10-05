@@ -2049,7 +2049,7 @@ for (const device of ["phone", "tablet"] as Device[]) {
         await obsidian.page.evaluate(async (kept) => {
           for (const file of window.app.vault.getFiles()) {
             const written = file.extension === "pdf" || file.extension === "epub";
-            if (written && !kept.includes(file.path)) await window.app.vault.delete(file);
+            if (written && !kept.includes(file.path)) await window.app.fileManager.trashFile(file);
           }
         }, had);
       }
