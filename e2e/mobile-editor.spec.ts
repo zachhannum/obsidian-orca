@@ -159,6 +159,8 @@ test("on desktop the CSS view keeps the hover card and the gutter, and draws no 
     await expect(panel.editor).toBeVisible();
 
     await panel.typeCss(TYPED);
+    // The write settles before the note is put back, or it lands after.
+    await expect.poll(async () => vault.read(BOOK)).toContain(TYPED);
     await expect(panel.flags).toHaveCount(1);
     await expect(panel.toolbar).toHaveCount(0);
 
