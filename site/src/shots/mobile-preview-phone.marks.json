@@ -1,0 +1,24 @@
+{
+  "width": 390,
+  "height": 844,
+  "marks": {
+    "as-markdown": {
+      "x": 288,
+      "y": 59,
+      "width": 44,
+      "height": 44
+    },
+    "export": {
+      "x": 334,
+      "y": 115,
+      "width": 44,
+      "height": 44
+    },
+    "inspect": {
+      "x": 242,
+      "y": 59,
+      "width": 44,
+      "height": 44
+    }
+  }
+}

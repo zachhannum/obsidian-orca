@@ -464,6 +464,30 @@ test("at phone width the picture is the preview pane alone", async ({
   await site.obsidian.moving();
 });
 
+/**
+ * Measures the controls a picture of the whole window marks, once
+ * every slide has ended. Each one is on the picture, and the middle of
+ * its mark is on the control itself rather than on something drawn over
+ * it.
+ */
+async function onControls(site: Site, controls: Record<string, Locator>): Promise<Marks> {
+  await ended(site);
+  const taken = await site.marks(await windowBox(site), controls);
+  expect(Object.keys(taken.marks).sort()).toEqual(Object.keys(controls).sort());
+  for (const [id, box] of Object.entries(taken.marks)) {
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(taken.width);
+    expect(box.y + box.height).toBeLessThanOrEqual(taken.height);
+    const hit = await controls[id]?.evaluate(
+      (control, at) => control.contains(document.elementFromPoint(at.x, at.y)),
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    );
+    expect(hit, `the mark ${id} is not on its control`).toEqual(true);
+  }
+  return taken;
+}
+
 /** A book note that lists nothing, for the picture of a book with no pages. */
 const EMPTY = "Empty book.md";
 
@@ -472,6 +496,12 @@ const EMPTY = "Empty book.md";
  * a dialog makes has ended.
  */
 async function pictured(site: Site, name: string): Promise<void> {
+  await ended(site);
+  await expect(site.obsidian.page).toHaveScreenshot(name);
+}
+
+/** Waits for every slide to end, with the pointer off the controls. */
+async function ended(site: Site): Promise<void> {
   await site.obsidian.unhovered();
   await site.obsidian.page.evaluate(async () => {
     const ending = document
@@ -479,7 +509,6 @@ async function pictured(site: Site, name: string): Promise<void> {
       .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity);
     await Promise.allSettled(ending.map((animation) => animation.finished));
   });
-  await expect(site.obsidian.page).toHaveScreenshot(name);
 }
 
 for (const device of ["phone", "tablet"] as Device[]) {
@@ -489,6 +518,8 @@ for (const device of ["phone", "tablet"] as Device[]) {
     const { obsidian, book, navigator, panel } = site;
     const exporting = new Export(obsidian);
     const note = new Note(obsidian);
+    const previewed: Marks[] = [];
+    const shelved: Marks[] = [];
     await obsidian.mobile(device, DENSITY);
     try {
       await obsidian.page.waitForFunction(
@@ -511,10 +542,25 @@ for (const device of ["phone", "tablet"] as Device[]) {
         await book.choose(CHAPTER);
         await settled(book);
         await book.footed(device === "phone" ? "under" : "bar");
+        // The header keeps two of the preview's actions on a device, and
+        // the toolbar has the export.
+        previewed.push(
+          await onControls(site, {
+            inspect: obsidian.actionIn(PREVIEW, INSPECT_PAGE),
+            "as-markdown": obsidian.actionIn(PREVIEW, AS_MARKDOWN),
+            export: book.exportIn,
+          }),
+        );
         await pictured(site, `mobile-preview-${device}-${scheme}.png`);
 
         await navigator.drawer();
         await expect(navigator.book(BOOK)).toHaveCount(1);
+        shelved.push(
+          await onControls(site, {
+            book: navigator.name(BOOK),
+            note: navigator.entry(BOOK, CHAPTER),
+          }),
+        );
         await pictured(site, `mobile-navigator-${device}-${scheme}.png`);
 
         await obsidian.page.evaluate(async () => {
@@ -566,6 +612,8 @@ for (const device of ["phone", "tablet"] as Device[]) {
       await obsidian.moving();
       await obsidian.emulateMobile(false);
     }
+    await sidecar(`mobile-preview-${device}`, previewed);
+    await sidecar(`mobile-navigator-${device}`, shelved);
   });
 }
 
@@ -1521,4 +1569,5 @@ test("the Markdown pictures are each example set on its own page", async ({ site
 // alone; and a mark written wrongly, which the Markdown page describes
 // and no picture shows; and the mobile pictures on a device, since they
 // are of desktop Obsidian emulating one, with no safe area and no
-// keyboard.
+// keyboard; and a mark on a mobile surface the docs do not mark, which
+// is every one but the preview and the navigator.

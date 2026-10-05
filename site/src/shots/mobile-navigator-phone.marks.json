@@ -1,0 +1,18 @@
+{
+  "width": 390,
+  "height": 844,
+  "marks": {
+    "book": {
+      "x": 17,
+      "y": 76,
+      "width": 282,
+      "height": 79
+    },
+    "note": {
+      "x": 21,
+      "y": 477,
+      "width": 274,
+      "height": 44
+    }
+  }
+}
