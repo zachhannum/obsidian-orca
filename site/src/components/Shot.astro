@@ -44,25 +44,16 @@ const drawn = await Promise.all(
         SCHEMES.map(async (scheme) => (await getImage({ src: view.pictures[scheme], format: 'webp' })).src),
       );
       const whole = view.measured ?? { width, height };
-      const crop = view.crop;
-      const sizes = [`--w: ${String(width)}`, `--h: ${String(height)}`];
-      if (crop !== undefined) {
-        sizes.push(
-          `--cx: ${String(crop.x)}`,
-          `--cy: ${String(crop.y)}`,
-          `--cw: ${String(crop.width)}`,
-          `--ch: ${String(crop.height)}`,
-        );
-      }
       return {
         ...view,
         width,
         height,
         dark,
         light,
-        style: sizes.join('; '),
+        style: `--w: ${String(width)}; --h: ${String(height)}`,
         boxes: view.marks.map((box) => ({
           crowded: box.crowded,
+          step: box.step,
           style: `left: ${percent(box.x, whole.width)}; top: ${percent(box.y, whole.height)}; width: ${percent(box.width, whole.width)}; height: ${percent(box.height, whole.height)}`,
         })),
       };
@@ -71,26 +62,24 @@ const drawn = await Promise.all(
 );
 ---
 
-<figure class="shot-figure not-content" data-phone={drawn.some((view) => view.device === 'phone') ? '' : undefined}>
+<figure
+  class="shot-figure not-content"
+  data-phone={drawn.some((view) => view.device === 'phone') ? '' : undefined}
+  data-tablet={drawn.some((view) => view.device === 'tablet') ? '' : undefined}
+>
   <div class="shot-desk">
     {
       drawn.map((view) => {
         const frame = (
-          <div
-            class={view.crop === undefined ? 'shot-frame' : 'shot-frame cropped'}
-            style={view.style}
-            data-width={view.width}
-            data-crop-x={view.crop?.x}
-            data-crop-y={view.crop?.y}
-          >
+          <div class="shot-frame" style={view.style} data-width={view.width}>
             <div class="shot-canvas">
               <img class="on-dark" src={view.dark} width={view.width} height={view.height} alt={view.alt} loading="lazy" decoding="async" />
               <img class="on-light" src={view.light} width={view.width} height={view.height} alt={view.alt} loading="lazy" decoding="async" />
               {view.boxes.length > 0 && (
                 <div class="shot-marks" aria-hidden="true">
-                  {view.boxes.map((box, at) => (
+                  {view.boxes.map((box) => (
                     <span class={box.crowded ? 'shot-mark crowded' : 'shot-mark'} style={box.style}>
-                      {numbered && <span class="shot-number">{at + 1}</span>}
+                      {numbered && <span class="shot-number">{box.step}</span>}
                     </span>
                   ))}
                 </div>
@@ -133,16 +122,17 @@ const drawn = await Promise.all(
 </figure>
 
 <script>
-  /** The width under which a shot opens on its phone picture, as theme.css has it. */
+  /** The screens a shot opens on its phone and its tablet picture for, as theme.css has them. */
   const PHONE = '(max-width: 30rem)';
+  const TABLET = '(pointer: coarse) and (min-width: 30.0625rem)';
 
   for (const figure of document.querySelectorAll<HTMLElement>('.shot-figure')) {
     // The stylesheet shows the right picture before this runs. Picking it
     // here gives the switch a selection for the keyboard to move.
     const picks = [...figure.querySelectorAll<HTMLInputElement>('.shot-pick')];
     if (picks.length > 0 && !picks.some((pick) => pick.checked)) {
-      const opens = matchMedia(PHONE).matches && figure.dataset['phone'] !== undefined ? 'phone' : 'desktop';
-      const pick = picks.find((each) => each.value === opens);
+      const opens = matchMedia(PHONE).matches ? 'phone' : matchMedia(TABLET).matches ? 'tablet' : 'desktop';
+      const pick = picks.find((each) => each.value === opens) ?? picks[0];
       if (pick !== undefined) pick.checked = true;
     }
 
@@ -172,7 +162,6 @@ const drawn = await Promise.all(
         held.style.width = `${String(full)}px`;
         held.replaceChildren(copy);
         whole.showModal();
-        whole.scrollTo(Number(frame.dataset['cropX'] ?? 0), Number(frame.dataset['cropY'] ?? 0));
       });
     }
   }

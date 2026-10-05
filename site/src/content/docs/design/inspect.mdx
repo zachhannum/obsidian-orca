@@ -14,6 +14,14 @@ The inspector shows the CSS rules that style an element of a page. Use it to fin
   alt="A paragraph pinned on a page of the preview, beside the pane that shows the rules that style it, grouped as Book CSS, Design panel and Orca's theme."
   caption="The inspector, with a paragraph pinned."
   marks={['inspect']}
+  tablet={{
+    name: 'inspect-tablet',
+    alt: 'A paragraph pinned on a page of the preview on a tablet, beside the pane that shows the rules that style it.',
+  }}
+  phone={{
+    name: 'inspect-phone',
+    alt: 'A paragraph pinned on a page of the preview on a phone, under the sheet that shows the rules that style it.',
+  }}
 />
 
 ## Turn on inspect mode
@@ -68,6 +76,11 @@ Orca writes some rules for a role, and no control sets them. An example is the l
   alt="The foot of the inspector pane with Add a rule for and its selector, above the CSS view with the cursor on its last line."
   caption="Add a rule for, with the cursor at the end of your CSS."
   marks={['add-rule']}
+  tablet={{ name: 'inspect-add-tablet' }}
+  phone={{
+    name: 'inspect-add-phone',
+    alt: 'The inspector sheet on a phone, with Add a rule for and its selector at its foot.',
+  }}
 />
 
 `Add a rule for` puts an empty rule with that selector in your CSS, at the cursor in the CSS view.

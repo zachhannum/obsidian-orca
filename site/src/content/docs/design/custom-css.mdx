@@ -14,6 +14,11 @@ The controls of the design panel are limited in what they can style. To further 
   alt="The CSS view of the design panel, with the rules that put a shell behind each chapter heading, beside the opening page of a chapter."
   caption="The CSS view, with the rules that put a shell behind each chapter heading."
   marks={['controls', 'wrap']}
+  tablet={{ name: 'css-tablet' }}
+  phone={{
+    name: 'css-phone',
+    alt: 'The CSS view of the design panel on a phone, with the rules that put a shell behind each chapter heading.',
+  }}
 />
 
 ## Write CSS
@@ -23,6 +28,8 @@ The controls of the design panel are limited in what they can style. To further 
   alt="The header of the design panel, with the CSS icon."
   caption="The CSS icon in the header of the design panel."
   marks={['css']}
+  tablet={{ name: 'css-switch-tablet' }}
+  phone={{ name: 'css-switch-phone' }}
 />
 
 1. In the header of the design panel, select <Action name="css" />. The CSS view opens.
@@ -47,6 +54,14 @@ If fleuron cannot use a declaration, it skips that declaration. The CSS view sho
   caption="A warning on a declaration that fleuron skips."
   marks={['flag', 'warned']}
   numbered
+  tablet={{
+    name: 'css-warning-tablet',
+    alt: 'A declaration in the CSS view with a wavy line under it, and the count of warnings in the header.',
+  }}
+  phone={{
+    name: 'css-warning-phone',
+    alt: 'A declaration in the CSS view with a wavy line under it, and the count of warnings in the header.',
+  }}
 />
 
 1. A wavy line marks the declaration that fleuron skipped, and its line number changes color. Hover over the mark to read the warning and its place, for example `book.css:4:3`.
@@ -76,6 +91,8 @@ Most controls use plain selectors, for example `p + p` for the first-line indent
   alt="The First-line indent row of the Text group, dimmed, with a lock beside it."
   caption="A control that your CSS overrides."
   marks={['lock']}
+  tablet={{ name: 'css-overridden-tablet' }}
+  phone={{ name: 'css-overridden-phone' }}
 />
 
 If your CSS sets a property that a control also sets, with the same selector, the control dims and shows a lock. You cannot change the control until you remove that property from your CSS. Hover over the lock to see the property, the value that overrides it and its place in your CSS. Select the lock to open the CSS view with the cursor on that line.

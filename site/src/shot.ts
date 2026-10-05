@@ -23,18 +23,22 @@ export interface Sidecar {
 export interface Pictured {
   name: string;
   alt?: string;
+  /** The marks of the shot that this device has no control for. The other marks keep their numbers. */
+  without?: string[];
 }
 
 export interface Asked {
   name: string;
   alt: string;
-  /** Mark ids, in the order the page's steps number them. Every device takes the same ids. */
+  /** Mark ids, in the order the page's steps number them. A device takes the same ids, less the ones it is `without`. */
   marks: string[];
   tablet?: Pictured | undefined;
   phone?: Pictured | undefined;
 }
 
 export interface Mark extends Box {
+  /** The number of the step the mark belongs to, which is its place in the shot's marks. */
+  step: number;
   /** A mark with a neighbor on the same line. Its ring sits inside its box. */
   crowded: boolean;
 }
@@ -47,18 +51,10 @@ export interface View<Picture> {
   /** The size the marks are measured against, when the view has marks. */
   measured: { width: number; height: number } | undefined;
   marks: Mark[];
-  /** The part of the picture a narrow screen shows, when that is less than all of it. */
-  crop: Box | undefined;
 }
 
 /** The pixels between two marks under which their rings would touch. */
 const CROWD = 12;
-
-/** The room a crop leaves around its marks, which holds a ring and its number. */
-const ROOM = 28;
-
-/** The least of a picture a crop shows, so one small mark is not blown up past its own size. */
-const LEAST = { width: 360, height: 240 };
 
 const crowded = (box: Box, boxes: Box[]): boolean =>
   boxes.some(
@@ -69,35 +65,6 @@ const crowded = (box: Box, boxes: Box[]): boolean =>
       other.x < box.x + box.width + CROWD &&
       box.x < other.x + other.width + CROWD,
   );
-
-/** One axis of a crop: the marks' extent with room, no shorter than `least`, kept inside `limit`. */
-function span(from: number, to: number, least: number, limit: number): [number, number] {
-  const size = Math.min(limit, Math.max(to - from + 2 * ROOM, least));
-  const start = Math.round((from + to) / 2 - size / 2);
-  return [Math.max(0, Math.min(start, limit - size)), size];
-}
-
-/**
- * The region of a picture that holds every mark. A picture with no marks,
- * or one whose marks reach across all of it, has no crop.
- */
-export function crop(size: { width: number; height: number }, boxes: Box[]): Box | undefined {
-  if (boxes.length === 0) return undefined;
-  const [x, width] = span(
-    Math.min(...boxes.map((box) => box.x)),
-    Math.max(...boxes.map((box) => box.x + box.width)),
-    LEAST.width,
-    size.width,
-  );
-  const [y, height] = span(
-    Math.min(...boxes.map((box) => box.y)),
-    Math.max(...boxes.map((box) => box.y + box.height)),
-    LEAST.height,
-    size.height,
-  );
-  if (width === size.width && height === size.height) return undefined;
-  return { x, y, width, height };
-}
 
 /**
  * The views of one shot, one per device it names. It throws when a picture
@@ -125,14 +92,19 @@ export function views<Picture>(
       }
       return file;
     };
-    const sidecar = asked.marks.length === 0 ? undefined : sidecars[name];
-    if (asked.marks.length > 0 && sidecar === undefined) {
+    const without = pictured.without ?? [];
+    for (const id of without) {
+      if (!asked.marks.includes(id)) throw new Error(`${name} is without the mark ${id}, which the page does not ask for`);
+    }
+    const ids = asked.marks.filter((id) => !without.includes(id));
+    const sidecar = ids.length === 0 ? undefined : sidecars[name];
+    if (ids.length > 0 && sidecar === undefined) {
       throw new Error(`no ${name}.marks.json in site/src/shots, and the page asks for marks`);
     }
-    const boxes = asked.marks.map((id) => {
+    const boxes = ids.map((id) => {
       const box = sidecar?.marks[id];
       if (box === undefined) throw new Error(`${name} has no mark ${id}`);
-      return box;
+      return { ...box, step: asked.marks.indexOf(id) + 1 };
     });
     found.push({
       device,
@@ -141,8 +113,6 @@ export function views<Picture>(
       pictures: { dark: picture('dark'), light: picture('light') },
       measured: sidecar && { width: sidecar.width, height: sidecar.height },
       marks: boxes.map((box) => ({ ...box, crowded: crowded(box, boxes) })),
-      // A phone picture is already the width of a narrow screen.
-      crop: sidecar === undefined || device === 'phone' ? undefined : crop(sidecar, boxes),
     });
   }
   return found;

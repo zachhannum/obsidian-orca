@@ -19,9 +19,17 @@ The quickest way to create a book with Orca is from the notes inside a folder.
   alt="The file tree with the menu for a folder open, and Create book from these notes in the menu."
   caption="The menu for a folder in the file tree."
   marks={['create']}
+  tablet={{
+    name: 'make-menu-tablet',
+    alt: 'The file tree on a tablet, with the menu for a folder open, and Create book from these notes in the menu.',
+  }}
+  phone={{
+    name: 'make-menu-phone',
+    alt: 'The file tree on a phone, with the menu for a folder open as a sheet, and Create book from these notes in the menu.',
+  }}
 />
 
-1. In the file tree, right-click the folder that holds the chapters.
+1. In the file tree, right-click the folder that holds the chapters. On a phone or a tablet, press and hold it.
 2. Select `Create book from these notes`.
 
 Orca creates the book note beside the folder, in the parent folder. The name of the note and its `title` are the name of the folder. Under the heading `# Body`, the note links to every note in the folder, sorted by name. The headings `# Front matter` and `# Back matter` are empty.
@@ -35,6 +43,14 @@ By default, the navigator pane opens in the left sidebar. It shows each book in 
   alt="The header of Orca's navigator, with the New book button."
   caption="The header of the navigator."
   marks={['new-book']}
+  tablet={{
+    name: 'make-new-tablet',
+    alt: "The buttons of Orca's navigator on a tablet, with the New book button.",
+  }}
+  phone={{
+    name: 'make-new-phone',
+    alt: "The buttons of Orca's navigator on a phone, with the New book button.",
+  }}
 />
 
 To create a blank book, select <Action name="newBook" /> in the header of the navigator. You can also run the command `New book`. Orca writes a book note with the name `Untitled book` and opens it.
@@ -94,6 +110,8 @@ The arrow keys move through sections, entries and headings as one list. On a row
   caption="The book note, open as a book page."
   marks={['open-preview', 'as-markdown']}
   numbered
+  tablet={{ name: 'make-page-tablet' }}
+  phone={{ name: 'make-page-phone' }}
 />
 
 The book note opens as a book page. Book metadata such as title, author, language, and more, can be edited. The book page has two actions in its header:

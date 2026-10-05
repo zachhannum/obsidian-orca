@@ -16,6 +16,8 @@ The preview shows the book as typeset pages.
   alt="A chapter open in the Obsidian editor, with Open preview in the header."
   caption="A chapter in the editor."
   marks={['open-preview']}
+  tablet={{ name: 'write-tablet' }}
+  phone={{ name: 'write-phone' }}
 />
 
 1. Open a note that is in a book.
@@ -55,6 +57,12 @@ The preview has three actions. On a phone or a tablet, the third is in the toolb
   caption="The warnings, open from their count."
   marks={['warnings', 'place']}
   numbered
+  tablet={{ name: 'preview-warnings-tablet' }}
+  phone={{
+    name: 'preview-warnings-phone',
+    alt: "The list of warnings on a phone, open as a sheet, with the warning for the book's CSS and its place.",
+    without: ['warnings'],
+  }}
 />
 
 If fleuron gives a warning when it sets the book, the preview shows the count of warnings.

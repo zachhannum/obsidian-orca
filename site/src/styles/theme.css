@@ -387,12 +387,12 @@ body {
   outline-offset: 1px;
 }
 
-/* The device a phone or a tablet picture is drawn in, on a screen with
-   room for it. The radii are the ones Obsidian mobile's artboards use. */
+/* The device a phone or a tablet picture is drawn in, for a reader at a
+   desktop. A reader who holds a device sees the picture alone. */
 .device-frame {
   display: contents;
 }
-@media (min-width: 30.0625rem) {
+@media (min-width: 30.0625rem) and (pointer: fine) {
   .device-frame {
     display: block;
     width: 100%;
@@ -414,6 +414,30 @@ body {
   }
   .device-frame.tablet :is(img, .shot-open) {
     border-radius: 16px;
+  }
+}
+
+/* A tablet opens on the tablet picture, which takes the whole column. */
+@media (pointer: coarse) and (min-width: 30.0625rem) {
+  .shot-figure[data-tablet]:not(:has(.shot-pick:checked)) .shot-view[data-device='desktop'] {
+    display: none;
+  }
+  .shot-figure[data-tablet]:not(:has(.shot-pick:checked)) .shot-view[data-device='tablet'] {
+    display: flex;
+  }
+  .shot-figure[data-tablet]:not(:has(.shot-pick:checked)) .shot-pick[value='desktop'] + label {
+    background: none;
+    color: var(--muted);
+  }
+  .shot-figure[data-tablet]:not(:has(.shot-pick:checked)) .shot-pick[value='tablet'] + label {
+    background: var(--o-seg-on);
+    color: var(--text);
+  }
+  .shot-view:not([data-device='desktop']) {
+    padding: 0;
+  }
+  .shot-view:not([data-device='desktop']) img {
+    border-radius: 0;
   }
 }
 
@@ -524,23 +548,6 @@ body {
     padding: 0;
   }
   .shot-view[data-device='phone'] img {
-    border-radius: 0;
-  }
-  /* A wide picture shows the part its marks cover. The canvas keeps the
-     picture's own shape, and the frame is the window onto it. */
-  .shot-frame.cropped {
-    max-width: calc(var(--cw) * 1px);
-    aspect-ratio: var(--cw) / var(--ch);
-    overflow: hidden;
-    border-radius: 6px;
-  }
-  .shot-frame.cropped > .shot-canvas {
-    position: absolute;
-    width: calc(var(--w) / var(--cw) * 100%);
-    left: calc(var(--cx) / var(--cw) * -100%);
-    top: calc(var(--cy) / var(--ch) * -100%);
-  }
-  .shot-frame.cropped img {
     border-radius: 0;
   }
 }
