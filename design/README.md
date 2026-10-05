@@ -253,8 +253,15 @@ its editor around these files and returns a URL. The artboard list and
 - Every turn to a place turns the EPUB view as it turns a page view:
   the chapter select, the chapter commands, a click in the navigator
   and a linked manuscript. The frame goes to the screen that holds the
-  place. A chapter opens at its first screen, front matter and
-  generated matter included.
+  place. A chapter opens at its first screen, front matter and the
+  title page included.
+- An EPUB carries the title page and not the contents. The title page
+  is set by its own rules, less the page rules the EPUB writer removes.
+  Each section is a document, so it opens on a screen of its own. The
+  reading system shows the engine's navigation document as the book's
+  contents, and the generated contents are set on pages only. In the
+  EPUB view the chapter select does not offer the contents, and a click
+  on them in the navigator turns no screen.
 - In the EPUB view the place kept is a screen, and a screen is known by
   the block it opens with. A swap from the manuscript lands on the
   screen that holds the line at the top of the pane, and a swap back

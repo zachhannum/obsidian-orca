@@ -176,6 +176,20 @@ test("a title page is set from the book's properties each time the book is sent"
   );
 });
 
+test("an EPUB of the fixture book opens with the title page, as a document of its own", async () => {
+  const { spine, files } = await epubFiles(await planned(await fixture()));
+  const first = new TextDecoder().decode(
+    files.find((file) => file.path === spine[0]?.path)?.bytes,
+  );
+
+  assert.match(first, /<section [^>]*id="title-page"/);
+  assert.equal(first.match(/<section /g)?.length, 1);
+  const words = first.replace(/<[^>]+>/g, " ");
+  for (const block of ["The Bennet Novels", "Pride and Prejudice", "Jane Austen", "Whitehall Press"]) {
+    assert.ok(words.includes(block), block);
+  }
+});
+
 test("a title page with no metadata falls back to its role's own name", async () => {
   const book: Book = {
     format: FORMAT,
@@ -1056,7 +1070,9 @@ test("in the exported fixture book, each contents entry prints the page its chap
   }
 });
 
-// What this tier does not cover: the face bytes of a `font` op reaching
-// the engine, which the session tier tests, the cuts a family is made
-// of, which belong to the font index, and what the sample's pages look
-// like, which the PDF shows and no assertion here reads.
+// What this tier does not cover: an EPUB with no contents, which waits
+// on a source the engine sets on pages only, the face bytes of a `font`
+// op reaching the engine, which the session tier tests, the cuts a
+// family is made of, which belong to the font index, and what the
+// sample's pages look like, which the PDF shows and no assertion here
+// reads.
