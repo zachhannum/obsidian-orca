@@ -4458,3 +4458,96 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   height: calc(var(--touch-size-m) - 6px);
   border: none;
 }
+
+/* mobile: inspect. A phone's drawer covers the page, so the pane is a
+   sheet over the foot of the page. The sheet is under the drawers and
+   their cover, so a drawer the sheet opens is drawn over the sheet. */
+.orca-inspect-sheet-host {
+  position: fixed;
+  z-index: calc(var(--layer-cover) - 1);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* The sheet stops at four fifths of the screen, so the pinned box
+   stays in sight over the sheet, and the pane scrolls inside. */
+.orca-inspect-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  padding: 0 16px var(--safe-area-inset-bottom);
+  overflow: hidden;
+  border-radius: var(--menu-radius) var(--menu-radius) 0 0;
+  background: var(--background-secondary);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+/* The grabber is as tall as a touch. A drag on the grabber pulls the
+   sheet and scrolls nothing. */
+.orca-inspect-grabber {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: center;
+  height: var(--touch-size-xs);
+  cursor: grab;
+  touch-action: none;
+}
+
+.orca-inspect-grabber .menu-grabber {
+  flex: none;
+  width: 15%;
+  margin-bottom: 0;
+}
+
+.orca-inspect-sheet .orca-inspect-pane {
+  gap: 8px;
+  min-height: 0;
+  max-height: none;
+  margin-bottom: 0;
+  padding: 0 0 12px;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+.orca-inspect-sheet .orca-inspect-crumbs,
+.orca-inspect-sheet .orca-inspect-rule {
+  font-size: 12.5px;
+}
+
+.orca-inspect-sheet .orca-inspect-src {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-inspect-sheet .orca-inspect-computed {
+  font-size: var(--font-ui-smaller);
+}
+
+/* Until the sheet is pulled up, the sheet shows the crumbs and the
+   first rule that matched. */
+.orca-inspect-sheet[data-layout="peek"] .orca-inspect-group ~ *,
+.orca-inspect-sheet[data-layout="peek"] .orca-inspect-rule ~ .orca-inspect-rule {
+  display: none;
+}
+
+/* The page and the boxes drawn over the page move up together, so the
+   sheet clears the pinned box. */
+.is-phone .orca-preview-well > .orca-preview-sheets,
+.is-phone .orca-preview-well > .orca-inspect-host {
+  transform: translateY(calc(-1 * var(--orca-inspect-lift, 0px)));
+}
+
+/* The page moves over the time the sheet takes to rise. */
+@media (prefers-reduced-motion: no-preference) {
+  .is-phone .orca-preview-well > .orca-preview-sheets,
+  .is-phone .orca-preview-well > .orca-inspect-host {
+    transition: transform 200ms ease-out;
+  }
+}

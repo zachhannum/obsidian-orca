@@ -12,8 +12,10 @@ import {
   layersOf,
   mapAnchor,
   pointOn,
+  pulled,
   ruleFor,
   sameBox,
+  sameFrames,
   selectorFor,
   specificPicks,
   stillPinned,
@@ -358,6 +360,31 @@ test("a refreshed pin on the same box keeps its key, and another box does not", 
   assert.equal(boxKey(again), boxKey(pin));
   const other: Pin = { ...pin, target: { kind: "node", node: 13 } };
   assert.notEqual(boxKey(other), boxKey(pin));
+});
+
+test("the overlay keeps its frames until a page moves or changes size", () => {
+  const frame = { left: 10, top: 20, width: 300, height: 450 };
+  const was = new Map([[4, frame]]);
+  assert.equal(sameFrames(was, new Map([[4, { ...frame }]])), true);
+  assert.equal(sameFrames(was, new Map([[4, { ...frame, top: 120 }]])), false);
+  assert.equal(sameFrames(was, new Map([[4, { ...frame, left: 0 }]])), false);
+  assert.equal(sameFrames(was, new Map([[4, { ...frame, height: 400 }]])), false);
+  assert.equal(sameFrames(was, new Map([[5, frame]])), false);
+  assert.equal(sameFrames(was, new Map()), false);
+  assert.equal(sameFrames(new Map(), new Map()), true);
+});
+
+test("a pull up opens the whole sheet, and a pull down past its foot closes it", () => {
+  assert.equal(pulled("peek", -80), "full");
+  assert.equal(pulled("full", -80), "full");
+  assert.equal(pulled("full", 80), "peek");
+  assert.equal(pulled("peek", 80), "closed");
+});
+
+test("a tap on the grabber switches the sheet between its first rule and the whole pane", () => {
+  assert.equal(pulled("peek", 0), "full");
+  assert.equal(pulled("full", 3), "peek");
+  assert.equal(pulled("peek", -5), "full");
 });
 
 // A pinned pseudo-element has no anchor, because no source holds one.

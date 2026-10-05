@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deviceOf, footPlace, sheetCover, sheets, splits } from "@/ui/device";
+import { deviceOf, footPlace, liftFor, sheetCover, sheets, splits } from "@/ui/device";
 
 const DESKTOP = { isMobile: false, isPhone: false, isTablet: false };
 const PHONE = { isMobile: true, isPhone: true, isTablet: false };
@@ -47,7 +47,18 @@ test("a sheet covers the part of a pane below the sheet's top", () => {
   assert.equal(sheetCover(390, 500, 300), 300);
 });
 
+test("the page moves up until the sheet clears the pinned box", () => {
+  // The box ends above the sheet, so the page stays.
+  assert.equal(liftFor({ top: 200, bottom: 260 }, 100, 554), 0);
+  // The sheet covers the box, so the page moves up by what is covered and a gap.
+  assert.equal(liftFor({ top: 500, bottom: 560 }, 100, 554), 18);
+  // The whole pane leaves little room, and the box stops under the top of the well.
+  assert.equal(liftFor({ top: 300, bottom: 360 }, 100, 169), 172);
+  // A box that is at the top already does not move down.
+  assert.equal(liftFor({ top: 110, bottom: 700 }, 100, 554), 0);
+});
+
 // What this tier does not cover: the flags themselves, which Obsidian
-// sets from the window's size as it loads, the height of a sheet, which
-// the browser lays out, and the surfaces that read the device, which
+// sets from the window's size as it loads, the height of a sheet and the
+// place of a pinned box, which the browser lays out, and the surfaces that read the device, which
 // the e2e suite opens at a phone's size and a tablet's.

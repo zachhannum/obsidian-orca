@@ -40,6 +40,16 @@ export class Inspect {
   /** Every outlined piece of a box, each with the side a page cut in `data-cut`. */
   readonly edges: Locator;
   readonly tags: Locator;
+  /** The sheet a phone draws the pane in, with how far it is pulled up in `data-pull`. */
+  readonly risen: Locator;
+  /** The grabber at the top of that sheet, which pulls it. */
+  readonly grabber: Locator;
+  /** The rules the sheet shows, each with `data-layer`, and `data-line` or `data-keys` by its layer. */
+  readonly risenRules: Locator;
+  /** The sheet's `Add a rule`, which only a sheet pulled up shows. */
+  readonly risenAdd: Locator;
+  readonly risenComputed: Locator;
+  readonly risenCrumbs: Locator;
 
   private readonly pane: Locator;
 
@@ -52,6 +62,60 @@ export class Inspect {
     this.contents = this.pane.getByTestId("orca-inspect-content");
     this.edges = this.pane.getByTestId("orca-inspect-edge");
     this.tags = this.pane.getByTestId("orca-inspect-tag");
+    // The sheet is on the body, over Obsidian's own bar.
+    this.risen = obsidian.page.getByTestId("orca-inspect-sheet");
+    this.grabber = this.risen.getByTestId("orca-inspect-grabber");
+    this.risenRules = this.risen.getByTestId("orca-inspect-rule");
+    this.risenAdd = this.risen.getByTestId("orca-inspect-add");
+    this.risenComputed = this.risen.getByTestId("orca-inspect-computed");
+    this.risenCrumbs = this.risen.getByTestId("orca-inspect-crumb");
+  }
+
+  /**
+   * Drags the sheet's grabber up or down by a distance in pixels, and
+   * lets go. A distance down is positive. It answers the distance the
+   * sheet's upper edge had gone under the pointer before it let go.
+   */
+  async pull(by: number): Promise<number> {
+    // The sheet slides up to its place, and the grabber is read there.
+    await this.risen.evaluate(async (sheet) => {
+      await Promise.all(sheet.getAnimations().map((sliding) => sliding.finished));
+    });
+    const box = await this.rectOf(this.grabber);
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    const { mouse } = this.obsidian.page;
+    await mouse.move(x, y);
+    await mouse.down();
+    const rested = (await this.rectOf(this.risen)).y;
+    await mouse.move(x, y + by, { steps: 4 });
+    const held = (await this.rectOf(this.risen)).y;
+    await mouse.up();
+    return held - rested;
+  }
+
+  /**
+   * Moves the pages down by a distance in pixels and resizes nothing,
+   * as a scroll does. Zero puts them back.
+   */
+  async shift(by: number): Promise<void> {
+    await this.surface.evaluate((surface, px) => {
+      surface.style.translate = px === 0 ? "" : `0 ${String(px)}px`;
+    }, by);
+  }
+
+  /** The distance a phone has moved the page up so the sheet clears the pinned box, in pixels. */
+  async lift(): Promise<number> {
+    // A page that has not moved reads as 0 and never as -0.
+    return this.surface.evaluate(
+      (surface) => Math.abs(new DOMMatrix(getComputedStyle(surface).transform).f),
+    );
+  }
+
+  /** The place the well's upper edge is on the screen, which no page is drawn above. */
+  async wellTop(): Promise<number> {
+    const well = await this.rectOf(this.surface.locator(".."));
+    return well.y;
   }
 
   /** The overlay pieces of the pinned box, or of the hovered one. */

@@ -24,7 +24,7 @@ import { documentFaces, serialized } from "@/engine/session";
 import { BOOK_VIEW, BookView } from "@/ui/book";
 import { books, isBook, type NoteIndex } from "@/ui/books";
 import { device, node, onDesktop } from "@/ui/desktop";
-import { splits } from "@/ui/device";
+import { sheets, splits } from "@/ui/device";
 import { Edits } from "@/ui/edits";
 import { openExport } from "@/ui/export";
 import { PREVIEW_ICON } from "@/ui/icon";
@@ -1355,6 +1355,14 @@ export default class OrcaPlugin extends Plugin implements Limited {
           if (leaf.view instanceof PreviewView) void leaf.view.pinNode(node);
         }
       },
+      sheet: () => {
+        for (const leaf of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
+          const sheet = leaf.view instanceof PreviewView ? leaf.view.sheet : undefined;
+          if (sheet !== undefined) return sheet;
+        }
+        return undefined;
+      },
+      opens: () => this.openPanel(),
       watch: (again) => {
         // The panel outlives the books it designs, so it follows the
         // workspace rather than any one of them. A leaf change is the
@@ -1487,9 +1495,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * Hands a pin in the preview to the design panel. A pin the author set
    * opens the panel; one a paint found again only updates a panel that
    * is open, so an author who turned the sidebar elsewhere stays there.
+   * A phone's drawer covers the page, so it stays shut there and the
+   * panel draws the pane over the page.
    */
   private async inspected(pin: Pin | undefined, refreshed: boolean): Promise<void> {
-    if (pin !== undefined && !refreshed) await this.openPanel();
+    if (pin !== undefined && !refreshed) {
+      await (sheets(device()) ? this.readyPanel() : this.openPanel());
+    }
     const panel = this.app.workspace.getLeavesOfType(PANEL_VIEW)[0]?.view;
     if (panel instanceof DesignPanelView) panel.inspect(pin);
   }

@@ -45,7 +45,7 @@ import type { Reading, Session } from "@/engine/session";
 import { ACTIONS } from "@/ui/actions";
 import { copiedText, type SelectionLine } from "@/ui/copy";
 import { device } from "@/ui/desktop";
-import { footPlace, sheetCover, sheets, type Foot } from "@/ui/device";
+import { footPlace, liftFor, sheetCover, sheets, type Foot } from "@/ui/device";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
   fits,
@@ -421,6 +421,15 @@ export class PreviewView extends ItemView {
   private overlay: MountedOverlay | undefined;
   /** The header action that turns inspect mode on and off. */
   private inspectAction: HTMLElement | undefined;
+  /**
+   * The element a phone keeps over the foot of the screen, which the
+   * design panel draws the inspect pane in as a sheet.
+   */
+  private sheetHost: HTMLElement | undefined;
+  private lifting: ResizeObserver | undefined;
+  private sliding: MutationObserver | undefined;
+  /** The distance the page is moved up so the sheet clears the pinned box, in pixels. */
+  private lifted = 0;
   private exportAction: HTMLElement | undefined;
   private inspecting: InspectState = INSPECT_OFF;
   /** The box under the pointer. */
@@ -654,6 +663,12 @@ export class PreviewView extends ItemView {
     this.setInspecting(INSPECT_OFF);
     this.overlay?.unmount();
     this.overlay = undefined;
+    this.lifting?.disconnect();
+    this.lifting = undefined;
+    this.sliding?.disconnect();
+    this.sliding = undefined;
+    this.sheetHost?.remove();
+    this.sheetHost = undefined;
     this.reflow?.unmount();
     this.reflow = undefined;
     this.zoomer?.unmount();
@@ -1294,6 +1309,30 @@ export class PreviewView extends ItemView {
     surface.dataset["testid"] = "orca-sheets";
     this.surface = surface;
     this.overlay = mountOverlay(surface);
+    if (sheets(device())) {
+      // The sheet is over Obsidian's own bar, which no view reaches.
+      const rising = well.doc.body.createDiv({ cls: "orca-inspect-sheet-host" });
+      this.sheetHost = rising;
+      this.lifting = new ResizeObserver(() => {
+        this.lifts();
+      });
+      this.lifting.observe(rising);
+      // A swipe that opens a drawer slides the main area aside. The
+      // sheet is on the body and not under that area, so the sheet
+      // takes each move the area makes. The API declares no element
+      // for the area.
+      const root = (this.app.workspace.rootSplit as unknown as { containerEl?: HTMLElement })
+        .containerEl;
+      if (root !== undefined) {
+        const slides = (): void => {
+          rising.style.setProperty("transform", root.style.transform);
+          rising.style.setProperty("transition", root.style.transition);
+        };
+        slides();
+        this.sliding = new MutationObserver(slides);
+        this.sliding.observe(root, { attributes: true, attributeFilter: ["style"] });
+      }
+    }
     const host = well.createDiv({ cls: "orca-reflow-host" });
     host.dataset["testid"] = "orca-reflow-host";
     this.host = host;
@@ -1526,6 +1565,45 @@ export class PreviewView extends ItemView {
     return this.inspecting.on;
   }
 
+  /** The element a phone draws the inspect pane in, while this view holds a pin. */
+  get sheet(): HTMLElement | undefined {
+    return this.inspecting.pin === undefined ? undefined : this.sheetHost;
+  }
+
+  /**
+   * Moves the page up when the sheet would cover the pinned box, and
+   * back when the sheet or the pin goes.
+   */
+  private lifts(): void {
+    const { well, surface, sheetHost } = this;
+    if (well === undefined || surface === undefined || sheetHost === undefined) return;
+    const sheet = sheetHost.getBoundingClientRect();
+    const pin = this.inspecting.pin;
+    let lift = 0;
+    if (pin !== undefined && sheet.height > 0) {
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const box of pin.inspection.boxes) {
+        const trim = this.painted.get(box.page);
+        const page = surface.querySelector(`.orca-page[data-page="${String(box.page + 1)}"]`);
+        if (trim === undefined || trim.height === 0 || page === null) continue;
+        const rect = page.getBoundingClientRect();
+        const scale = rect.height / trim.height;
+        // The page is read where it is drawn, which can be part of the
+        // way through a move up or down.
+        const from = rect.top - new DOMMatrix(getComputedStyle(surface).transform).f;
+        top = Math.min(top, from + box.y * scale);
+        bottom = Math.max(bottom, from + (box.y + box.height) * scale);
+      }
+      if (top < bottom) {
+        lift = liftFor({ top, bottom }, well.getBoundingClientRect().top, sheet.top);
+      }
+    }
+    if (lift === this.lifted) return;
+    this.lifted = lift;
+    well.style.setProperty("--orca-inspect-lift", `${String(lift)}px`);
+  }
+
   private setInspecting(next: InspectState): void {
     const unpinned = this.inspecting.pin !== undefined && next.pin === undefined;
     this.inspecting = next;
@@ -1567,6 +1645,7 @@ export class PreviewView extends ItemView {
       trims: this.painted,
       measured: this.measured,
     });
+    this.lifts();
   }
 
   /**

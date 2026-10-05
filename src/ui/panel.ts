@@ -47,6 +47,13 @@ export interface Designing {
   unpin(): void;
   /** Pins the box one node names, in the preview the pin came from. */
   pin(node: number): void;
+  /**
+   * The element a phone's preview keeps over the foot of its page while
+   * it holds a pin, which the inspect pane is drawn in as a sheet.
+   */
+  sheet(): HTMLElement | undefined;
+  /** Opens the sidebar or the drawer the panel is in. */
+  opens(): Promise<void>;
   /** Told when the book being designed changes. */
   watch(again: () => void): () => void;
 }
@@ -136,10 +143,10 @@ export class DesignPanelView extends ItemView {
         this.refresh();
       },
       cursor: (line, column) => {
-        this.editor?.reveal(line, column);
+        void this.turned().then(() => this.editor?.reveal(line, column));
       },
       add: (text) => {
-        this.editor?.insert(text);
+        void this.turned().then(() => this.editor?.insert(text));
       },
       unpin: () => {
         this.designing.unpin();
@@ -150,6 +157,7 @@ export class DesignPanelView extends ItemView {
       reveal: (place) => {
         void this.reveal(place);
       },
+      shows: () => this.designing.opens(),
     });
     this.contentEl.addClass("orca-design");
     this.editorHost = this.contentEl.createDiv({
@@ -337,6 +345,17 @@ export class DesignPanelView extends ItemView {
     this.refresh();
   }
 
+  /**
+   * Turns the panel to the author's CSS, where the editor is. A phone's
+   * sheet stays up over either view, so a rule's line can be asked for
+   * from the controls.
+   */
+  private async turned(): Promise<void> {
+    if (this.viewing === "css" && this.editor !== undefined) return;
+    this.viewing = "css";
+    await this.repaint();
+  }
+
   /** Opens the author's CSS with the caret at the place a warning named. */
   async reveal(place: Place): Promise<void> {
     this.viewing = "css";
@@ -421,6 +440,7 @@ export class DesignPanelView extends ItemView {
       missing: typeset.unfonted.length,
       warned: flags.length,
       inspecting: this.inspecting(typeset),
+      sheet: this.designing.sheet(),
       overridden: typeset.overridden(refused),
     };
   }

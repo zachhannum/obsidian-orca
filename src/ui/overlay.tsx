@@ -11,7 +11,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect, useLayoutEffect, useState, type CSSProperties, type JSX } from "react";
 import type { Inspection } from "fleuron";
 import type { PageUnit } from "@/style/design";
-import { fragments, layersOf, tagOf, type Rect } from "@/ui/inspect";
+import { fragments, layersOf, sameFrames, tagOf, type Frame, type Rect } from "@/ui/inspect";
 
 /** A box the overlay draws, under the key the surface names it by. */
 export interface Marked {
@@ -33,7 +33,7 @@ export interface Overlaid {
   unit: PageUnit;
   /** The painted pages, counting from 0, and each one's trim. */
   trims: ReadonlyMap<number, Trim>;
-  /** Raised on each paint and resize, so the pages are measured again. */
+  /** Raised on each paint and resize, so the pages are measured before the next frame. */
   measured: number;
 }
 
@@ -69,9 +69,6 @@ export function mountOverlay(surface: HTMLElement): MountedOverlay {
   };
 }
 
-/** A painted page's box, in pixels from the host's corner. */
-type Frame = Pick<DOMRect, "left" | "top" | "width" | "height">;
-
 export function InspectOverlay({
   surface,
   host,
@@ -84,22 +81,38 @@ export function InspectOverlay({
   const { on, hovered, pinned, unit, trims, measured } = overlaid;
   const [frames, place] = useState<ReadonlyMap<number, Frame>>(new Map());
 
+  // A header that hides, a drawer and a scroll each move the pages and
+  // resize nothing, so no observer hears of them. While inspect mode is
+  // on, the pages are measured on every frame and placed again only
+  // when one moved.
   useLayoutEffect(() => {
-    const corner = host.getBoundingClientRect();
-    const found = new Map<number, Frame>();
-    for (const page of trims.keys()) {
-      const sheet = surface.querySelector(`.orca-page[data-page="${String(page + 1)}"]`);
-      if (sheet === null) continue;
-      const rect = sheet.getBoundingClientRect();
-      found.set(page, {
-        left: rect.left - corner.left,
-        top: rect.top - corner.top,
-        width: rect.width,
-        height: rect.height,
-      });
-    }
-    place(found);
-  }, [surface, host, trims, measured]);
+    const measure = (): void => {
+      const corner = host.getBoundingClientRect();
+      const found = new Map<number, Frame>();
+      for (const page of trims.keys()) {
+        const sheet = surface.querySelector(`.orca-page[data-page="${String(page + 1)}"]`);
+        if (sheet === null) continue;
+        const rect = sheet.getBoundingClientRect();
+        found.set(page, {
+          left: rect.left - corner.left,
+          top: rect.top - corner.top,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+      place((was) => (sameFrames(was, found) ? was : found));
+    };
+    measure();
+    if (!on) return;
+    const view = host.win;
+    let frame = view.requestAnimationFrame(function again() {
+      measure();
+      frame = view.requestAnimationFrame(again);
+    });
+    return () => {
+      view.cancelAnimationFrame(frame);
+    };
+  }, [surface, host, trims, measured, on]);
 
   // The e2e suite waits on these, so they are written once React has
   // committed what they report.
