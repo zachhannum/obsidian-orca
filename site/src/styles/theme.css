@@ -305,26 +305,153 @@ body {
 }
 
 .shot-desk {
-  padding: 26px;
   background: var(--desk);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  display: flex;
-  justify-content: center;
+  overflow: hidden;
 }
-/* Both pictures sit in one cell, so the frame the marks are placed in is
+/* One view per device, and the switch picks one. Before a pick, the
+   width does: a narrow screen opens on the phone picture. */
+.shot-view {
+  display: none;
+  justify-content: center;
+  padding: 26px;
+}
+.shot-figure:not(:has(.shot-pick:checked)) .shot-view[data-device='desktop'],
+.shot-figure:has(.shot-pick[value='desktop']:checked) .shot-view[data-device='desktop'],
+.shot-figure:has(.shot-pick[value='tablet']:checked) .shot-view[data-device='tablet'],
+.shot-figure:has(.shot-pick[value='phone']:checked) .shot-view[data-device='phone'] {
+  display: flex;
+}
+/* Both pictures sit in one cell, so the canvas the marks are placed in is
    one picture tall. The img rule sets no display, which the scheme rules
    above own. */
 .shot-frame {
   position: relative;
+  width: 100%;
+  max-width: calc(var(--w) * 1px);
+  aspect-ratio: var(--w) / var(--h);
+}
+.shot-canvas {
+  position: relative;
   display: grid;
   width: 100%;
 }
-.shot-frame img {
+.shot-canvas img {
   grid-area: 1 / 1;
   width: 100%;
   height: auto;
   border-radius: 6px;
+}
+.shot-open {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: zoom-in;
+}
+.shot-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The switch under a shot that has more than one device. */
+.shot-switch {
+  align-self: center;
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  font-family: var(--ui);
+  font-size: 12.5px;
+}
+.shot-switch label {
+  padding: 4px 12px;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.shot-figure:not(:has(.shot-pick:checked)) .shot-pick[value='desktop'] + label,
+.shot-pick:checked + label {
+  background: var(--o-seg-on);
+  color: var(--text);
+}
+.shot-pick:focus-visible + label {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The device a phone or a tablet picture is drawn in, on a screen with
+   room for it. The radii are the ones Obsidian mobile's artboards use. */
+.device-frame {
+  display: contents;
+}
+@media (min-width: 30.0625rem) {
+  .device-frame {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: var(--o-ribbon);
+    border: 1px solid var(--o-border);
+    box-shadow: var(--o-page-shadow);
+  }
+  .device-frame.phone {
+    max-width: 342px;
+    border-radius: 46px;
+  }
+  .device-frame.phone :is(img, .shot-open) {
+    border-radius: 36px;
+  }
+  .device-frame.tablet {
+    max-width: 1202px;
+    border-radius: 26px;
+  }
+  .device-frame.tablet :is(img, .shot-open) {
+    border-radius: 16px;
+  }
+}
+
+/* The whole picture at its own size, over the page, for the reader to scroll. */
+.shot-whole {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 56px 16px 16px;
+  border: 0;
+  background: var(--desk);
+  overflow: auto;
+  overscroll-behavior: contain;
+  cursor: zoom-out;
+}
+.shot-whole-picture {
+  position: relative;
+  margin: 0 auto;
+}
+.shot-close {
+  position: fixed;
+  z-index: 1;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
 }
 .shot-page img {
   border-radius: 0;
@@ -374,8 +501,47 @@ body {
   font-weight: 600;
 }
 @media (max-width: 30rem) {
-  .shot-desk {
+  .shot-view {
     padding: 16px;
+  }
+  .shot-figure[data-phone]:not(:has(.shot-pick:checked)) .shot-view[data-device='desktop'] {
+    display: none;
+  }
+  .shot-figure[data-phone]:not(:has(.shot-pick:checked)) .shot-view[data-device='phone'] {
+    display: flex;
+  }
+  .shot-figure[data-phone]:not(:has(.shot-pick:checked)) .shot-pick[value='desktop'] + label {
+    background: none;
+    color: var(--muted);
+  }
+  .shot-figure[data-phone]:not(:has(.shot-pick:checked)) .shot-pick[value='phone'] + label {
+    background: var(--o-seg-on);
+    color: var(--text);
+  }
+  /* A phone picture is as wide as the screen it is read on, so it takes
+     the whole column and its text stays the size it was taken at. */
+  .shot-view[data-device='phone'] {
+    padding: 0;
+  }
+  .shot-view[data-device='phone'] img {
+    border-radius: 0;
+  }
+  /* A wide picture shows the part its marks cover. The canvas keeps the
+     picture's own shape, and the frame is the window onto it. */
+  .shot-frame.cropped {
+    max-width: calc(var(--cw) * 1px);
+    aspect-ratio: var(--cw) / var(--ch);
+    overflow: hidden;
+    border-radius: 6px;
+  }
+  .shot-frame.cropped > .shot-canvas {
+    position: absolute;
+    width: calc(var(--w) / var(--cw) * 100%);
+    left: calc(var(--cx) / var(--cw) * -100%);
+    top: calc(var(--cy) / var(--ch) * -100%);
+  }
+  .shot-frame.cropped img {
+    border-radius: 0;
   }
 }
 

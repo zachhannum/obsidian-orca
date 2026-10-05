@@ -1,23 +1,12 @@
 ---
 /** A picture the screenshot spec took of Obsidian, in both schemes, with
-    rings over the parts a page names. A missing picture or mark stops the
-    build. */
+    rings over the parts a page names. A shot can name a tablet and a phone
+    picture of the same surface, and a switch under it changes the device.
+    A missing picture or mark stops the build. */
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
-
-interface Box {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-/** The marks the spec measured, in CSS pixels of a picture `width` wide. */
-interface Sidecar {
-  width: number;
-  height: number;
-  marks: Record<string, Box>;
-}
+import DeviceFrame from './DeviceFrame.astro';
+import { SCHEMES, views, type Pictured, type Sidecar } from '../shot';
 
 interface Props {
   name: string;
@@ -26,85 +15,165 @@ interface Props {
   /** Mark ids, in the order the page's steps number them. */
   marks?: string[];
   numbered?: boolean;
+  tablet?: Pictured;
+  phone?: Pictured;
 }
 
-const { name, alt, caption, marks = [], numbered = false } = Astro.props;
+const { name, alt, caption, marks = [], numbered = false, tablet, phone } = Astro.props;
 
 /** The device pixels the spec takes each picture at for one CSS pixel. */
 const DENSITY = 2;
 
+const LABELS = { desktop: 'Desktop', tablet: 'Tablet', phone: 'Phone' };
+
 const pictures = import.meta.glob<{ default: ImageMetadata }>('../shots/*.png', { eager: true });
 const sidecars = import.meta.glob<{ default: Sidecar }>('../shots/*.marks.json', { eager: true });
-
-const picture = (scheme: 'dark' | 'light'): ImageMetadata => {
-  const found = pictures[`../shots/${name}-${scheme}.png`];
-  if (found === undefined) throw new Error(`no picture ${name}-${scheme}.png in site/src/shots`);
-  return found.default;
-};
-const dark = picture('dark');
-const light = picture('light');
-
-const sidecar = marks.length === 0 ? undefined : sidecars[`../shots/${name}.marks.json`]?.default;
-if (marks.length > 0 && sidecar === undefined) {
-  throw new Error(`no ${name}.marks.json in site/src/shots, and the page asks for marks`);
-}
-
-/** The pixels between two marks under which their rings would touch. */
-const CROWD = 12;
+const keyed = <T,>(found: Record<string, { default: T }>, ending: string): Record<string, T> =>
+  Object.fromEntries(
+    Object.entries(found).map(([file, module]) => [file.slice('../shots/'.length, -ending.length), module.default]),
+  );
 
 const percent = (part: number, whole: number): string => `${String((part / whole) * 100)}%`;
-const measuredBoxes = marks.map((id) => {
-  const box = sidecar?.marks[id];
-  if (sidecar === undefined || box === undefined) throw new Error(`${name} has no mark ${id}`);
-  return box;
-});
-/** A mark with a neighbor on the same line, such as one of a row of header
-    actions. Its ring sits inside its box and its number sits above it, so
-    neither lands on the neighbor. */
-const crowded = (box: Box): boolean =>
-  measuredBoxes.some(
-    (other) =>
-      other !== box &&
-      other.y < box.y + box.height &&
-      box.y < other.y + other.height &&
-      other.x < box.x + box.width + CROWD &&
-      box.x < other.x + other.width + CROWD,
-  );
-const boxes = measuredBoxes.map((box) => ({
-  left: percent(box.x, sidecar?.width ?? 1),
-  top: percent(box.y, sidecar?.height ?? 1),
-  width: percent(box.width, sidecar?.width ?? 1),
-  height: percent(box.height, sidecar?.height ?? 1),
-  crowded: crowded(box),
-}));
 
-const width = Math.round(dark.width / DENSITY);
-const height = Math.round(dark.height / DENSITY);
-const [darkSrc, lightSrc] = await Promise.all(
-  [dark, light].map(async (src) => (await getImage({ src, format: 'webp' })).src),
+const drawn = await Promise.all(
+  views({ name, alt, marks, tablet, phone }, keyed(pictures, '.png'), keyed(sidecars, '.marks.json')).map(
+    async (view) => {
+      const width = Math.round(view.pictures.dark.width / DENSITY);
+      const height = Math.round(view.pictures.dark.height / DENSITY);
+      const [dark, light] = await Promise.all(
+        SCHEMES.map(async (scheme) => (await getImage({ src: view.pictures[scheme], format: 'webp' })).src),
+      );
+      const whole = view.measured ?? { width, height };
+      const crop = view.crop;
+      const sizes = [`--w: ${String(width)}`, `--h: ${String(height)}`];
+      if (crop !== undefined) {
+        sizes.push(
+          `--cx: ${String(crop.x)}`,
+          `--cy: ${String(crop.y)}`,
+          `--cw: ${String(crop.width)}`,
+          `--ch: ${String(crop.height)}`,
+        );
+      }
+      return {
+        ...view,
+        width,
+        height,
+        dark,
+        light,
+        style: sizes.join('; '),
+        boxes: view.marks.map((box) => ({
+          crowded: box.crowded,
+          style: `left: ${percent(box.x, whole.width)}; top: ${percent(box.y, whole.height)}; width: ${percent(box.width, whole.width)}; height: ${percent(box.height, whole.height)}`,
+        })),
+      };
+    },
+  ),
 );
 ---
 
-<figure class="shot-figure not-content">
+<figure class="shot-figure not-content" data-phone={drawn.some((view) => view.device === 'phone') ? '' : undefined}>
   <div class="shot-desk">
-    <div class="shot-frame" style={`max-width: ${String(width)}px; aspect-ratio: ${String(width)} / ${String(height)}`}>
-      <img class="on-dark" src={darkSrc} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
-      <img class="on-light" src={lightSrc} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
-      {
-        boxes.length > 0 && (
-          <div class="shot-marks" aria-hidden="true">
-            {boxes.map((box, at) => (
-              <span
-                class={box.crowded ? 'shot-mark crowded' : 'shot-mark'}
-                style={`left: ${box.left}; top: ${box.top}; width: ${box.width}; height: ${box.height}`}
-              >
-                {numbered && <span class="shot-number">{at + 1}</span>}
-              </span>
-            ))}
+    {
+      drawn.map((view) => {
+        const frame = (
+          <div
+            class={view.crop === undefined ? 'shot-frame' : 'shot-frame cropped'}
+            style={view.style}
+            data-width={view.width}
+            data-crop-x={view.crop?.x}
+            data-crop-y={view.crop?.y}
+          >
+            <div class="shot-canvas">
+              <img class="on-dark" src={view.dark} width={view.width} height={view.height} alt={view.alt} loading="lazy" decoding="async" />
+              <img class="on-light" src={view.light} width={view.width} height={view.height} alt={view.alt} loading="lazy" decoding="async" />
+              {view.boxes.length > 0 && (
+                <div class="shot-marks" aria-hidden="true">
+                  {view.boxes.map((box, at) => (
+                    <span class={box.crowded ? 'shot-mark crowded' : 'shot-mark'} style={box.style}>
+                      {numbered && <span class="shot-number">{at + 1}</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button class="shot-open" type="button" aria-label="Open the whole picture" hidden />
           </div>
-        )
-      }
-    </div>
+        );
+        return (
+          <div class="shot-view" data-device={view.device}>
+            {view.device === 'desktop' ? frame : <DeviceFrame device={view.device}>{frame}</DeviceFrame>}
+          </div>
+        );
+      })
+    }
   </div>
+  {
+    drawn.length > 1 && (
+      <fieldset class="shot-switch">
+        <legend class="sr-only">Device</legend>
+        {drawn.map((view) => (
+          <>
+            <input class="shot-pick sr-only" type="radio" name={`shot-${name}`} id={`shot-${name}-${view.device}`} value={view.device} />
+            <label for={`shot-${name}-${view.device}`}>{LABELS[view.device]}</label>
+          </>
+        ))}
+      </fieldset>
+    )
+  }
   {caption && <figcaption>{caption}</figcaption>}
+  <dialog class="shot-whole" aria-label={alt}>
+    <button class="shot-close" type="button" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M18 6 6 18"></path>
+        <path d="m6 6 12 12"></path>
+      </svg>
+    </button>
+    <div class="shot-whole-picture"></div>
+  </dialog>
 </figure>
+
+<script>
+  /** The width under which a shot opens on its phone picture, as theme.css has it. */
+  const PHONE = '(max-width: 30rem)';
+
+  for (const figure of document.querySelectorAll<HTMLElement>('.shot-figure')) {
+    // The stylesheet shows the right picture before this runs. Picking it
+    // here gives the switch a selection for the keyboard to move.
+    const picks = [...figure.querySelectorAll<HTMLInputElement>('.shot-pick')];
+    if (picks.length > 0 && !picks.some((pick) => pick.checked)) {
+      const opens = matchMedia(PHONE).matches && figure.dataset['phone'] !== undefined ? 'phone' : 'desktop';
+      const pick = picks.find((each) => each.value === opens);
+      if (pick !== undefined) pick.checked = true;
+    }
+
+    const whole = figure.querySelector<HTMLDialogElement>('.shot-whole');
+    const held = whole?.querySelector<HTMLElement>('.shot-whole-picture');
+    if (whole === null || whole === undefined || held === null || held === undefined) continue;
+    // A tap anywhere closes it, the button included. Escape is the dialog's own.
+    whole.addEventListener('click', () => {
+      whole.close();
+    });
+    whole.addEventListener('close', () => {
+      held.replaceChildren();
+    });
+
+    for (const frame of figure.querySelectorAll<HTMLElement>('.shot-frame')) {
+      const open = frame.querySelector<HTMLButtonElement>('.shot-open');
+      const canvas = frame.querySelector<HTMLElement>('.shot-canvas');
+      if (open === null || canvas === null) continue;
+      const full = Number(frame.dataset['width']);
+      // A picture drawn at its own size has nothing more to open.
+      new ResizeObserver(() => {
+        open.hidden = frame.clientWidth >= full - 1;
+      }).observe(frame);
+      open.addEventListener('click', () => {
+        const copy = canvas.cloneNode(true) as HTMLElement;
+        for (const img of copy.querySelectorAll('img')) img.loading = 'eager';
+        held.style.width = `${String(full)}px`;
+        held.replaceChildren(copy);
+        whole.showModal();
+        whole.scrollTo(Number(frame.dataset['cropX'] ?? 0), Number(frame.dataset['cropY'] ?? 0));
+      });
+    }
+  }
+</script>

@@ -1,0 +1,10 @@
+---
+/** The body of a phone or a tablet, around a picture of its screen. A
+    narrow screen draws the picture alone, since the reader holds the device. */
+interface Props {
+  device: 'phone' | 'tablet';
+}
+const { device } = Astro.props;
+---
+
+<div class={`device-frame ${device}`} data-testid="device-frame"><slot /></div>

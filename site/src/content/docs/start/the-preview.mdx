@@ -31,9 +31,17 @@ The preview of the book opens in the pane, at the chapter that you were editing.
   caption="The preview, with its actions in the header."
   marks={['inspect', 'as-markdown', 'export']}
   numbered
+  tablet={{
+    name: 'mobile-preview-tablet',
+    alt: 'The preview of a chapter on a tablet, with Inspect the page and Open as markdown in the header and Export book in the toolbar.',
+  }}
+  phone={{
+    name: 'mobile-preview-phone',
+    alt: 'The preview of a chapter on a phone, with Inspect the page and Open as markdown in the header and Export book in the toolbar.',
+  }}
 />
 
-The preview has three actions in its header:
+The preview has three actions. On a phone or a tablet, the third is in the toolbar under the header.
 
 1. <Action name="inspect" /> toggles inspect mode. [The inspector](/design/inspect/) shows how to use it.
 2. <Action name="markdown" /> shows the chapter markdown in the editor.

@@ -42,9 +42,17 @@ To create a blank book, select <Action name="newBook" /> in the header of the na
 <Shot
   name="make-navigator"
   alt="The new book in the navigator, with its chapters under it in reading order."
-  caption="The new book in the navigator."
+  caption="A book in the navigator."
   marks={['book', 'note']}
   numbered
+  tablet={{
+    name: 'mobile-navigator-tablet',
+    alt: 'The navigator in the left drawer of a tablet, with the notes of a book under it in reading order.',
+  }}
+  phone={{
+    name: 'mobile-navigator-phone',
+    alt: 'The navigator in the left drawer of a phone, with the notes of a book under it in reading order.',
+  }}
 />
 
 The navigator shows the notes of each book in reading order, divided by section.
