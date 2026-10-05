@@ -20,8 +20,9 @@ export default defineConfig([
     },
   },
   {
-    // The build's own scripts run in Node and never reach a reader.
-    files: ["*.mjs", "scripts/*.mjs"],
+    // The build's own scripts and the browser suite run in Node and
+    // never reach a reader.
+    files: ["*.mjs", "scripts/*.mjs", "playwright.config.ts", "tests/*.ts"],
     languageOptions: { globals: { process: "readonly" } },
     rules: { "obsidianmd/no-nodejs-modules": "off" },
   },

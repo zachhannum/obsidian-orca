@@ -1074,13 +1074,22 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
       for (const scheme of ["dark", "light"]) {
         assert.ok(await exists(`site/src/shots/${name}-${scheme}.png`), `${file} shows ${name}-${scheme}, which the spec has not taken`);
       }
+      // A picture of another device takes the shot's own marks.
+      const devices = [...props.matchAll(/\b(?:tablet|phone)=\{\{\s*name: '([^']+)'/g)].map((found) => found[1]);
+      for (const device of devices) {
+        for (const scheme of ["dark", "light"]) {
+          assert.ok(await exists(`site/src/shots/${device}-${scheme}.png`), `${file} shows ${device}-${scheme}, which the spec has not taken`);
+        }
+      }
       const marks = /marks=\{\[([^\]]*)\]\}/.exec(props);
       if (marks === null) continue;
-      const sidecar = `site/src/shots/${name}.marks.json`;
-      assert.ok(await exists(sidecar), `${file} marks ${name}, which has no marks`);
-      const measured = JSON.parse(await read(sidecar)).marks;
-      for (const [, id] of marks[1].matchAll(/'([^']+)'/g)) {
-        assert.ok(id in measured, `${file} marks ${id} on ${name}, which the spec did not measure`);
+      for (const pictured of [name, ...devices]) {
+        const sidecar = `site/src/shots/${pictured}.marks.json`;
+        assert.ok(await exists(sidecar), `${file} marks ${pictured}, which has no marks`);
+        const measured = JSON.parse(await read(sidecar)).marks;
+        for (const [, id] of marks[1].matchAll(/'([^']+)'/g)) {
+          assert.ok(id in measured, `${file} marks ${id} on ${pictured}, which the spec did not measure`);
+        }
       }
     }
     for (const [, n] of page.matchAll(/<Page n=\{(\d+)\}/g)) {
@@ -1096,6 +1105,105 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
     assert.ok(globbed.length > 0, `${component} reads no picture`);
     for (const pattern of globbed) assert.match(pattern, /^\.\.\/shots\//);
   }
+});
+
+/** The surfaces the spec takes on a phone and a tablet, each with the page that shows it. */
+const ON_DEVICES = {
+  "start/the-preview.mdx": "mobile-preview",
+  "start/make-a-book.mdx": "mobile-navigator",
+  "design/overview.mdx": "mobile-panel",
+  "export/export-to-pdf.mdx": "mobile-export",
+  "reference/the-book-note.mdx": "mobile-book-page",
+};
+
+test("the pages for the preview, the navigator, the panel, export and the book note show the phone and tablet pictures", async () => {
+  for (const [file, surface] of Object.entries(ON_DEVICES)) {
+    const page = await read(`${DOCS}/${file}`);
+    for (const device of ["tablet", "phone"]) {
+      assert.match(
+        page,
+        new RegExp(`\\b${device}=\\{\\{\\s*name: '${surface}-${device}'`),
+        `${file} does not show ${surface} on a ${device}`,
+      );
+    }
+  }
+});
+
+test("the build fails when a page names a device whose picture is missing", async () => {
+  const { views } = await moduleOf("site/src/shot.ts");
+  const pictures = { "read-dark": 1, "read-light": 1, "small-dark": 1, "small-light": 1 };
+  const sidecar = { width: 390, height: 844, marks: { export: { x: 300, y: 100, width: 44, height: 44 } } };
+  const asked = { name: "read", alt: "The preview.", marks: [] };
+
+  assert.equal(views(asked, pictures, {}).length, 1);
+  assert.equal(
+    views({ ...asked, phone: { name: "small" } }, pictures, {})
+      .map((view) => view.device)
+      .join(" "),
+    "desktop phone",
+  );
+  // A device with no picture, with one scheme of the two, and with no
+  // measure of a mark the page asks for.
+  assert.throws(() => views({ ...asked, phone: { name: "gone" } }, pictures, {}), /no picture gone-dark\.png/);
+  assert.throws(
+    () => views({ ...asked, tablet: { name: "half" } }, { ...pictures, "half-dark": 1 }, {}),
+    /no picture half-light\.png/,
+  );
+  assert.throws(
+    () => views({ ...asked, marks: ["export"], phone: { name: "small" } }, pictures, { read: sidecar }),
+    /no small\.marks\.json/,
+  );
+  assert.throws(
+    () =>
+      views({ ...asked, marks: ["export"], phone: { name: "small" } }, pictures, {
+        read: sidecar,
+        small: { ...sidecar, marks: {} },
+      }),
+    /small has no mark export/,
+  );
+
+  // The component draws what the lookup returns, so its throw is the build's.
+  const component = await read("site/src/components/Shot.astro");
+  assert.match(component, /views\(\{ name, alt, marks, tablet, phone \}/);
+});
+
+test("a crop holds every mark of every picture, with room for its ring", async () => {
+  const { crop } = await moduleOf("site/src/shot.ts");
+  let cropped = 0;
+  for await (const file of glob("site/src/shots/*.marks.json", { cwd: root })) {
+    const { width, height, marks } = JSON.parse(await read(file));
+    const boxes = Object.values(marks);
+    if (boxes.length === 0) continue;
+    const found = crop({ width, height }, boxes);
+    if (found === undefined) continue;
+    cropped += 1;
+    assert.ok(found.x >= 0 && found.y >= 0, `${file} crops outside its picture`);
+    assert.ok(found.x + found.width <= width && found.y + found.height <= height, `${file} crops outside its picture`);
+    for (const box of boxes) {
+      // A crop that stops at the picture's own edge cuts nothing off.
+      const room = (near, edge) => near >= 3 || edge;
+      assert.ok(room(box.x - found.x, found.x === 0), `${file} cuts a mark at the left`);
+      assert.ok(room(box.y - found.y, found.y === 0), `${file} cuts a mark at the top`);
+      assert.ok(
+        room(found.x + found.width - box.x - box.width, found.x + found.width === width),
+        `${file} cuts a mark at the right`,
+      );
+      assert.ok(
+        room(found.y + found.height - box.y - box.height, found.y + found.height === height),
+        `${file} cuts a mark at the foot`,
+      );
+    }
+  }
+  assert.ok(cropped > 0, "no picture is cropped");
+  assert.equal(crop({ width: 1280, height: 800 }, []), undefined);
+});
+
+test("the docs workflow runs the site's browser suite on the built pages", () => {
+  const build = workflow.indexOf("- run: npm run build\n");
+  const suite = workflow.indexOf("- run: npm test\n");
+  assert.ok(build !== -1 && suite > build, "the suite does not run after the build");
+  assert.match(workflow, /playwright install --with-deps chromium/);
+  assert.equal(JSON.parse(sitePackage).scripts.test, "playwright test");
 });
 
 test("a button a docs page names is orca's own button, drawn with orca's icon", async () => {
@@ -1141,6 +1249,8 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
 // Lucide build of its own; whether a control the demo leaves
 // out would change the page, since a book with a scene break or a facing
 // page would answer differently; whether a mark sits over the control it
-// names, which the spec measures; the default of a font variant, which
+// names, which the spec measures; how a shot draws its devices, its
+// crop and its whole picture, which the site's browser suite reads off
+// the built pages; the default of a font variant, which
 // the faces on the machine decide; and whether the prose of a docs page
 // is plain, which the simple-english pass reads.

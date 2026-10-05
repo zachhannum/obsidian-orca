@@ -263,7 +263,9 @@ job keeps its HTML report as an artifact.
 `.github/workflows/docs.yml` runs on a PR that touches `site/` or the
 site's tokens, and on the same paths on main. Its `build` job installs
 the site's own lockfile and runs `npm run build` in `site/`, which
-checks the tokens against `design/site.css` before it builds. On main
+checks the tokens against `design/site.css` before it builds. It then
+runs `npm test`, which reads the built pages in a browser at a phone's
+width and at a desktop's. On main
 the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
 serves, keeps the `pr-preview` folder, and checks the live docs.
 
