@@ -167,15 +167,19 @@ function Exporting({
     };
   }, [exporter]);
 
+  const checking = useHeld(checked === undefined);
+  // The preflight is not over until the dialog stops saying it checks.
+  const shown: Stage = checking && (stage === "ready" || stage === "refused") ? "preflight" : stage;
+
   const formats = exporter.formats.filter((format) => ticked.has(format.id));
   const ids = formats.map((format) => format.id).join(" ");
 
   // The suite waits on these, so they are written after the commit.
   useEffect(() => {
-    marked.dataset["state"] = stage;
+    marked.dataset["state"] = shown;
     marked.dataset["formats"] = ids;
     marked.dataset["errors"] = String(checked?.errors.length ?? 0);
-  }, [marked, stage, ids, checked]);
+  }, [marked, shown, ids, checked]);
 
   // Each format writes in turn, because the engine holds one book and
   // answers one render at a time.
@@ -311,18 +315,32 @@ function Exporting({
   };
 
   const busy = stage === "writing";
+  const readying = useHeld(preparing !== undefined);
+  // The name outlasts the file, because the line that says it is held.
+  const prepared = useRef(preparing);
+  if (preparing !== undefined) prepared.current = preparing;
   const errors = checked?.errors ?? [];
   const stem = fileName(destination.path);
   // An app with no disk to choose keeps every file in the vault, and
   // the dialog says so.
   const vaulted = exporter.choose === undefined;
 
-  // Export and Share both wait for the files a device that shares makes ahead.
+  // One row says what the dialog waits for and then what the preflight
+  // found, so the rows under it do not move when a wait ends.
+  const waited = checking
+    ? "Checking…"
+    : readying && shown === "ready" && prepared.current !== undefined
+      ? `Preparing ${prepared.current}…`
+      : undefined;
+
+  // Export and Share both wait for the files a device that shares makes
+  // ahead, and for the line that says so to go.
   const waiting = sharing !== undefined && clean && held?.edition !== edition;
   const exportable =
     !waiting &&
+    !readying &&
     formats.length > 0 &&
-    (stage === "ready" || (stage === "failed" && errors.length === 0 && checked !== undefined));
+    (shown === "ready" || (stage === "failed" && errors.length === 0 && checked !== undefined));
 
   if (stage === "made") {
     return (
@@ -485,17 +503,20 @@ function Exporting({
         data-testid="orca-export-preflight"
       >
         <div className="orca-export-heading">Preflight</div>
-        {checked === undefined ? (
-          <div className="orca-export-checking">Checking…</div>
-        ) : null}
-        {errors.length === 0 ? null : (
+        {waited === undefined ? null : (
+          <div className="orca-export-fine orca-export-waiting" data-testid="orca-export-waiting">
+            <Icon name="loader" className="orca-export-fine-icon" />
+            <span>{waited}</span>
+          </div>
+        )}
+        {checking || errors.length === 0 ? null : (
           <div className="orca-export-list" data-testid="orca-export-list">
             {errors.map((blocker, at) => (
               <Card key={at} blocker={blocker} exporter={exporter} />
             ))}
           </div>
         )}
-        {checked?.fine === undefined ? null : (
+        {waited !== undefined || checked?.fine === undefined ? null : (
           <div className="orca-export-fine" data-testid="orca-export-fine">
             <Icon name="check" className="orca-export-fine-icon" />
             <span>{checked.fine}</span>
@@ -503,7 +524,7 @@ function Exporting({
         )}
       </div>
 
-      {busy || preparing !== undefined ? (
+      {busy || readying ? (
         <div className="orca-export-progress" data-testid="orca-export-progress">
           <div className="orca-export-progress-bar" />
         </div>
@@ -512,23 +533,19 @@ function Exporting({
       <div className="modal-button-container orca-export-footer">
         <div
           className={
-            stage === "refused" || stage === "failed"
+            shown === "refused" || stage === "failed"
               ? "orca-export-said mod-error"
               : "orca-export-said"
           }
           data-testid="orca-export-said"
         >
-          {stage === "refused" ? (
+          {shown === "refused" ? (
             standing(errors.length)
           ) : stage === "failed" ? (
             failure
           ) : writing !== undefined ? (
             <>
               Exporting <span className="orca-export-mono">{writing}</span>…
-            </>
-          ) : preparing !== undefined && stage === "ready" ? (
-            <>
-              Preparing <span className="orca-export-mono">{preparing}</span>…
             </>
           ) : formats.length === 0 ? (
             "Pick a format to export"
@@ -574,6 +591,35 @@ function Exporting({
       </div>
     </div>
   );
+}
+
+/** The least time the dialog says what it is waiting for. */
+const HELD = 500;
+
+/**
+ * True while `pending` is, and for no less than `HELD` each time. A
+ * wait that ends at once is still read rather than flashed.
+ */
+function useHeld(pending: boolean): boolean {
+  const [held, setHeld] = useState(pending);
+  const since = useRef(0);
+  useEffect(() => {
+    if (pending) {
+      since.current = performance.now();
+      setHeld(true);
+      return;
+    }
+    const timer = window.setTimeout(
+      () => {
+        setHeld(false);
+      },
+      Math.max(0, since.current + HELD - performance.now()),
+    );
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [pending]);
+  return pending || held;
 }
 
 function Card({ blocker, exporter }: { blocker: Blocker; exporter: Exporter }): JSX.Element {
