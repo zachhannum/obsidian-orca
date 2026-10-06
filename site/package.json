@@ -8,6 +8,7 @@
     "dev": "astro dev",
     "build": "node scripts/check-tokens.mjs && astro check && astro build && node scripts/rebase.mjs",
     "preview": "astro preview",
+    "test": "playwright test",
     "lint": "astro sync && eslint --max-warnings 0 ."
   },
   "license": "MIT",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@eslint/json": "^0.14.0",
+    "@playwright/test": "1.62.1",
     "eslint": "^9.39.5",
     "eslint-plugin-obsidianmd": "^0.4.2",
     "typescript-eslint": "^8.70.1"
