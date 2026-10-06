@@ -60,7 +60,7 @@ export default defineConfig({
     },
     {
       // The film's frames are pictures of the window it plays, written
-      // to the folder ORCA_FILM_OUT names in the film's own repo.
+      // to the folder ORCA_FILM_OUT names. The loop reads `loop/assets`.
       // Nothing compares them to an earlier run.
       name: "film",
       testMatch: "**/film.spec.ts",

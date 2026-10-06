@@ -10,6 +10,7 @@ on:
       - "src/**"
       - "styles.css"
       - "e2e/**"
+      - "loop/**"
       - "site/sample/**"
       - "site/src/marks/**"
       - "site/src/styles/tokens.css"
@@ -20,15 +21,11 @@ on:
       - "src/**"
       - "styles.css"
       - "e2e/**"
+      - "loop/**"
       - "site/sample/**"
       - "site/src/marks/**"
       - "site/src/styles/tokens.css"
       - ".github/workflows/shots.yml"
-
-# The commit of orca-film that draws the loop. A change there reaches
-# the site when this moves.
-env:
-  ORCA_FILM_REF: fbf33766b11a478a1b6e5d20166dae4fb5c003fa
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -77,20 +74,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/checkout@v5
-        with:
-          repository: zachhannum/orca-film
-          ref: ${{ env.ORCA_FILM_REF }}
-          path: film
-
       - uses: actions/download-artifact@v5
         with:
           name: shots-frames
-          path: film/assets
+          path: loop/assets
 
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
+          cache: npm
 
       - name: system libraries
         run: |
@@ -101,14 +93,13 @@ jobs:
       # alone. The frames are where a change to a surface breaks the film
       # spec, and they run either way.
       - name: render the loop
-        working-directory: film
         run: |
           npm ci --prefer-offline --no-audit --no-fund
           npx playwright install --with-deps chromium
           if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" = push ]; then
-            node loop.mjs --into ../site/src/shots
+            npm run loop -- --into site/src/shots
           else
-            node loop.mjs --posters --into ../site/src/shots
+            npm run loop -- --posters --into site/src/shots
           fi
 
       - name: keep the pictures that changed

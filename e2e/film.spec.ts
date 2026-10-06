@@ -17,8 +17,9 @@ const WRITING = `${FOLDER}/${CHAPTER}.md`;
 const EXPORTED = `${FOLDER}/Twenty Thousand Leagues Under the Sea.pdf`;
 
 /**
- * The film's assets folder, in its own repo, which the film reads its
- * frames and its pages from. The spec writes nowhere else.
+ * The assets folder the frames and the pages go in: `loop/assets` for
+ * the loop on the site, and the film's own in its own repo. The spec
+ * writes nowhere else.
  */
 const OUT = process.env["ORCA_FILM_OUT"];
 const PAGES = path.join(OUT ?? "", "pages");

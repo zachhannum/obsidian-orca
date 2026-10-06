@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 import { root } from "./bundle.mjs";
@@ -82,10 +82,29 @@ test("the screenshot spec runs in shards, each with an Obsidian and a display of
   assert.match(shotsRunner, /\["-a", "npx", \.\.\.playwright\]/);
 });
 
-test("the shots job renders the landing page's loop from a pinned commit of orca-film", () => {
-  assert.match(shots, /ORCA_FILM_REF: [0-9a-f]{40}\n/);
-  assert.match(shots, /repository: zachhannum\/orca-film\n\s+ref: \$\{\{ env\.ORCA_FILM_REF \}\}/);
+test("the shots job renders the landing page's loop from the frames it took", () => {
   assert.match(shots, /run: xvfb-run -a npm run film\n/);
+  assert.match(shots, /ORCA_FILM_OUT: \$\{\{ github\.workspace \}\}\/frames\n/);
+  assert.match(shots, /name: shots-frames\n\s+path: frames\/\n/);
+  assert.match(shots, /name: shots-frames\n\s+path: loop\/assets\n/);
+  assert.match(pkg, /"loop": "node loop\/render\.mjs"/);
+  // The renderer encodes with the runner's ffmpeg.
+  assert.match(shots, /apt-get install -y ffmpeg\n/);
+});
+
+test("a change to the loop's page renders the loop again", () => {
+  for (const on of ["pull_request", "push"]) {
+    const block = shots.slice(shots.indexOf(`  ${on}:`), shots.indexOf("\nconcurrency:"));
+    assert.ok(block.includes('"loop/**"'), `${on} does not watch loop/**`);
+  }
+});
+
+test("no workflow reads another repository for the loop", async () => {
+  const folder = path.join(root, ".github/workflows");
+  for (const file of await readdir(folder)) {
+    const text = await readFile(path.join(folder, file), "utf8");
+    assert.doesNotMatch(text, /orca-film|ORCA_FILM_REF/, `${file} names orca-film`);
+  }
 });
 
 test("only a push to main renders the loop, and a pull request takes its posters", () => {
@@ -94,7 +113,7 @@ test("only a push to main renders the loop, and a pull request takes its posters
   const step = shots.slice(from, shots.indexOf("\n      - ", from + 1));
   assert.match(
     step,
-    /if \[ "\$GITHUB_REF" = refs\/heads\/main \] && \[ "\$GITHUB_EVENT_NAME" = push \]; then\n\s+node loop\.mjs --into \.\.\/site\/src\/shots\n\s+else\n\s+node loop\.mjs --posters --into \.\.\/site\/src\/shots\n/,
+    /if \[ "\$GITHUB_REF" = refs\/heads\/main \] && \[ "\$GITHUB_EVENT_NAME" = push \]; then\n\s+npm run loop -- --into site\/src\/shots\n\s+else\n\s+npm run loop -- --posters --into site\/src\/shots\n/,
   );
 });
 

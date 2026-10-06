@@ -7,3 +7,5 @@ main.js.map
 test-results/
 playwright-report/
 build/
+# Taken by `npm run film`, never kept.
+loop/assets/

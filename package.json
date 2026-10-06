@@ -13,6 +13,7 @@
     "e2e": "playwright test --project=orca",
     "shots": "node scripts/shots.mjs",
     "film": "ORCA_E2E_DENSITY=3 playwright test --project=film",
+    "loop": "node loop/render.mjs",
     "version": "node version-bump.mjs"
   },
   "license": "MIT",

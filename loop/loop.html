@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orca loop</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage"></div>
+<script src="js/core.js"></script>
+<script src="js/loop.js"></script>
+<script>
+  // The scenes read their frames as they load, so the frames come first.
+  document.write(`<script src="${O.UI}/frames.js"><\/script>`);
+</script>
+<script src="js/cursor.js"></script>
+<script src="js/window.js"></script>
+<script src="js/desk.js"></script>
+<script src="js/scenes/notes.js"></script>
+<script src="js/scenes/write.js"></script>
+<script src="js/scenes/design.js"></script>
+<script src="js/scenes/css.js"></script>
+<script src="js/scenes/export.js"></script>
+</body>
+</html>

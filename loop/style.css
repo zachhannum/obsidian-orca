@@ -1,0 +1,17 @@
+/* The window's size and the two colors come from the frames. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+
+#stage { position: relative; width: var(--width); height: var(--height); overflow: hidden; }
+
+/* The window, from frames of real Obsidian. */
+.ow { position: absolute; left: 0; top: 0; width: var(--width); height: var(--height); overflow: hidden; background: var(--cover); }
+.ol { position: absolute; left: 0; top: 0; width: var(--width); height: var(--height); display: block; }
+.strip { position: absolute; overflow: hidden; }
+.cover { position: absolute; background: var(--cover); }
+.caret { position: absolute; width: 1.5px; background: var(--caret); }
+
+/* The pointer, and the ring a click leaves. */
+#cursor { position: absolute; left: 0; top: 0; width: 40px; height: 40px; pointer-events: none; will-change: transform; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)); }
+#cursor svg { position: absolute; left: 0; top: 0; }
+.ring { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 2px solid rgba(165, 167, 251, 0.9); pointer-events: none; }
