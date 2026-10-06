@@ -15,8 +15,16 @@ import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md
 import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
 import loopDarkMp4 from '../shots/loop-dark.mp4?url';
 import loopLightMp4 from '../shots/loop-light.mp4?url';
+import loopTabletDarkMp4 from '../shots/loop-tablet-dark.mp4?url';
+import loopTabletLightMp4 from '../shots/loop-tablet-light.mp4?url';
+import loopPhoneDarkMp4 from '../shots/loop-phone-dark.mp4?url';
+import loopPhoneLightMp4 from '../shots/loop-phone-light.mp4?url';
 import loopDarkPoster from '../shots/loop-dark.png';
 import loopLightPoster from '../shots/loop-light.png';
+import loopTabletDarkPoster from '../shots/loop-tablet-dark.png';
+import loopTabletLightPoster from '../shots/loop-tablet-light.png';
+import loopPhoneDarkPoster from '../shots/loop-phone-dark.png';
+import loopPhoneLightPoster from '../shots/loop-phone-light.png';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 import '../styles/panel.css';
@@ -36,8 +44,6 @@ import landingDark960 from '../shots/landing-dark-960.png';
 import landingLight1440 from '../shots/landing-light-1440.png';
 import landingLight1200 from '../shots/landing-light-1200.png';
 import landingLight960 from '../shots/landing-light-960.png';
-import phoneDark from '../shots/phone-dark.png';
-import phoneLight from '../shots/phone-light.png';
 import treeDark from '../shots/vault-tree-dark.png';
 import treeLight from '../shots/vault-tree-light.png';
 import noteDark from '../shots/vault-note-dark.png';
@@ -98,22 +104,58 @@ const leaves = pages
   .slice(0, -1)
   .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 1] as Shot }] : []));
 
-/** The window picture, at the width the page is being read at. */
-/** Each scheme's loop, and its first frame, which shows until it plays. */
+/** The devices the hero has a loop for, with the word the switch has for each. */
+const DEVICES = [
+  { id: 'desktop', label: 'Desktop', width: 1200 },
+  { id: 'tablet', label: 'Tablet', width: 1180 },
+  { id: 'phone', label: 'Phone', width: 390 },
+] as const;
+const SCHEMES = ['dark', 'light'] as const;
+
+/**
+ * A loop's first frame at the size the page draws it, which shows until
+ * the clip plays and in its place under reduced motion.
+ */
+const still = async (source: ImageMetadata, width: number): Promise<Shot> => ({
+  src: (await getImage({ src: source, format: 'webp' })).src,
+  width,
+  height: Math.round((source.height / source.width) * width),
+});
+
+/** Each device's loop in each scheme, and its first frame. */
 const loops = {
-  dark: { clip: loopDarkMp4, poster: (await getImage({ src: loopDarkPoster, format: 'webp' })).src },
-  light: { clip: loopLightMp4, poster: (await getImage({ src: loopLightPoster, format: 'webp' })).src },
+  desktop: {
+    dark: { clip: loopDarkMp4, still: await still(loopDarkPoster, 1200) },
+    light: { clip: loopLightMp4, still: await still(loopLightPoster, 1200) },
+  },
+  tablet: {
+    dark: { clip: loopTabletDarkMp4, still: await still(loopTabletDarkPoster, 1180) },
+    light: { clip: loopTabletLightMp4, still: await still(loopTabletLightPoster, 1180) },
+  },
+  phone: {
+    dark: { clip: loopPhoneDarkMp4, still: await still(loopPhoneDarkPoster, 390) },
+    light: { clip: loopPhoneLightMp4, still: await still(loopPhoneLightPoster, 390) },
+  },
 };
 
+/** What each loop shows, for a reader who cannot see it. */
+const SAID = {
+  desktop:
+    'Orca in Obsidian: a chapter is written, set as a book, styled in the design panel and in CSS, then exported to PDF.',
+  tablet:
+    'Orca in Obsidian on a tablet: a chapter is written, set as a book, styled in the design panel, then exported.',
+  phone:
+    'Orca in Obsidian on a phone: a chapter is written, set as a book, styled in the design panel, then exported.',
+};
+
+/** The window picture a desktop is shown under reduced motion, at the width the page is read at. */
 const window_ = {
   dark: {
-    phone: await shot(phoneDark),
     w960: await shot(landingDark960),
     w1200: await shot(landingDark1200),
     w1440: await shot(landingDark1440),
   },
   light: {
-    phone: await shot(phoneLight),
     w960: await shot(landingLight960),
     w1200: await shot(landingLight1200),
     w1440: await shot(landingLight1440),
@@ -345,42 +387,66 @@ const swap = {
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
-            <span class="aside">Desktop only</span>
+            <span class="aside">Desktop, tablet and phone</span>
           </div>
 
-          <figure class="window">
+          <figure class="window" data-hero>
             {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`frame on-${scheme}`}>
-                  <picture class="shot">
-                    <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
-                    <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
-                    <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
-                    <img
-                      loading="lazy"
-                      src={window_[scheme].w1440.src}
-                      width={window_[scheme].w1440.width}
-                      height={window_[scheme].w1440.height}
-                      alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
-                    />
-                  </picture>
-                  <video
-                    class="loop"
-                    width="1200"
-                    height="750"
-                    poster={loops[scheme].poster}
-                    muted
-                    loop
-                    playsinline
-                    preload="none"
-                    aria-label="Orca in Obsidian: a chapter is written, set as a book, styled in the design panel and in CSS, then exported to PDF."
-                    data-loop
-                  >
-                    <source src={loops[scheme].clip} type="video/mp4" />
-                  </video>
+              DEVICES.map((device) => (
+                <div class={`device is-${device.id}`} data-device={device.id}>
+                  {SCHEMES.map((scheme) => (
+                    <div
+                      class={`frame on-${scheme}`}
+                      style={`max-width: ${String(device.width)}px; aspect-ratio: ${String(loops[device.id][scheme].still.width)} / ${String(loops[device.id][scheme].still.height)}`}
+                    >
+                      {device.id === 'desktop' ? (
+                        <picture class="shot">
+                          <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
+                          <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
+                          <img
+                            loading="lazy"
+                            src={window_[scheme].w1440.src}
+                            width={window_[scheme].w1440.width}
+                            height={window_[scheme].w1440.height}
+                            alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
+                          />
+                        </picture>
+                      ) : null}
+                      <img
+                        class="still"
+                        loading="lazy"
+                        src={loops[device.id][scheme].still.src}
+                        width={loops[device.id][scheme].still.width}
+                        height={loops[device.id][scheme].still.height}
+                        alt={SAID[device.id]}
+                      />
+                      <video
+                        class="loop"
+                        width={loops[device.id][scheme].still.width}
+                        height={loops[device.id][scheme].still.height}
+                        muted
+                        loop
+                        playsinline
+                        preload="none"
+                        aria-label={SAID[device.id]}
+                        data-loop
+                      >
+                        <source src={loops[device.id][scheme].clip} type="video/mp4" />
+                      </video>
+                    </div>
+                  ))}
                 </div>
               ))
             }
+            <fieldset class="devices">
+              <legend>Device</legend>
+              {DEVICES.map((device) => (
+                <>
+                  <input type="radio" name="hero-device" id={`hero-${device.id}`} value={device.id} data-pick />
+                  <label for={`hero-${device.id}`}>{device.label}</label>
+                </>
+              ))}
+            </fieldset>
             <figcaption>
               Jules Verne, Twenty Thousand Leagues Under the Sea. Chapter I, A Shifting Reef.
             </figcaption>
@@ -598,7 +664,7 @@ const swap = {
             <a class="install" href={docs}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
           </div>
-          <span class="aside">Desktop only</span>
+          <span class="aside">Desktop, tablet and phone</span>
         </section>
       </main>
 
@@ -632,7 +698,8 @@ const swap = {
       if (panel !== null && said !== null) {
         startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
       }
-      startLoop([...document.querySelectorAll<HTMLVideoElement>('[data-loop]')]);
+      const hero = document.querySelector<HTMLElement>('[data-hero]');
+      if (hero !== null) startLoop(hero);
     </script>
   </body>
 </html>
@@ -883,39 +950,136 @@ const swap = {
     align-items: center;
     gap: 30px;
   }
-  .frame {
-    position: relative;
+  /* One box per device, and the switch picks one. Before a pick, the
+     screen does: a phone and a tablet open on their own loop. */
+  .device {
+    display: none;
     width: 100%;
+    justify-content: center;
   }
-  .shot img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: var(--o-win-shadow);
+  .window:not(:has([data-pick]:checked)) .is-desktop,
+  .window:has([data-pick][value='desktop']:checked) .is-desktop,
+  .window:has([data-pick][value='tablet']:checked) .is-tablet,
+  .window:has([data-pick][value='phone']:checked) .is-phone {
+    display: flex;
+  }
+  @media (pointer: coarse) and (min-width: 640px) {
+    .window:not(:has([data-pick]:checked)) .is-desktop {
+      display: none;
+    }
+    .window:not(:has([data-pick]:checked)) .is-tablet {
+      display: flex;
+    }
+  }
+  @media (max-width: 639px) {
+    .window:not(:has([data-pick]:checked)) .is-desktop {
+      display: none;
+    }
+    .window:not(:has([data-pick]:checked)) .is-phone {
+      display: flex;
+    }
   }
   /*
-   * The loop shows its first frame until it plays. Where it does not
-   * play, the picture of the preview and the panel stands in for it, and
-   * a lazy picture that is not shown is not fetched.
+   * The still and the clip share one cell. The clip has no picture of
+   * its own until it plays, so the still shows through it, and a lazy
+   * still in a box the page hides is not fetched.
    */
+  .frame {
+    position: relative;
+    display: grid;
+    width: 100%;
+  }
+  .frame > * {
+    grid-area: 1 / 1;
+  }
+  .shot img,
+  .still,
   .loop {
     display: block;
     width: 100%;
     height: auto;
+    border-radius: 12px;
+  }
+  /* The clip fills the cell the still gives its shape to. */
+  .loop {
+    height: 100%;
+    object-fit: cover;
+  }
+  .frame {
     border-radius: 12px;
     box-shadow: var(--o-win-shadow);
   }
   .frame .shot {
     display: none;
   }
-  @media (prefers-reduced-motion: reduce), (max-width: 639px) {
+  @media (prefers-reduced-motion: reduce) {
     .loop {
       display: none;
     }
-    .frame .shot {
+    /* A desktop keeps the picture of the whole window at its width. */
+    .is-desktop .shot {
       display: block;
     }
+    .is-desktop .still {
+      display: none;
+    }
+  }
+  /* A device loop on a desktop sits in the body of the device. */
+  @media (pointer: fine) and (min-width: 640px) {
+    .is-tablet .frame,
+    .is-phone .frame {
+      box-sizing: content-box;
+      padding: 10px;
+      background: var(--o-ribbon);
+      border: 1px solid var(--o-border);
+    }
+    .is-tablet .frame {
+      border-radius: 26px;
+    }
+    .is-tablet .frame > * {
+      border-radius: 16px;
+    }
+    .is-phone .frame {
+      max-width: 340px !important;
+      border-radius: 46px;
+    }
+    .is-phone .frame > * {
+      border-radius: 36px;
+    }
+  }
+  .devices {
+    display: inline-flex;
+    gap: 2px;
+    margin: 0;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface);
+    font-family: var(--ui);
+    font-size: 13px;
+  }
+  .devices legend,
+  .devices input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .devices label {
+    padding: 5px 14px;
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .devices input:checked + label {
+    background: var(--o-seg-on);
+    color: var(--text);
+  }
+  .devices input:focus-visible + label {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
   }
   .on-light {
     display: none;
