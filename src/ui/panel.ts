@@ -10,6 +10,7 @@ import {
 } from "@/style/design";
 import type { Place } from "@/style/origin";
 import type { Typeset } from "@/ui/composer";
+import { device } from "@/ui/desktop";
 import { mountEditor, type CssEditor } from "@/ui/editor";
 import type { Pin } from "@/ui/inspect";
 import { Settled } from "@/ui/settled";
@@ -226,6 +227,7 @@ export class DesignPanelView extends ItemView {
         () => {
           this.moved();
         },
+        device(),
       );
       editor.wrap(this.wrapping);
       this.editor = editor;

@@ -805,9 +805,12 @@ test("the outline around a pinned drop cap is the letter, not the paragraph", as
   const paragraph = await inspect.rectOf(edge.first());
 
   await inspect.pinAt(await onTheCap(inspect), pinned);
+  // The pin lands before the outline is drawn around it.
+  await expect
+    .poll(async () => (await inspect.rectOf(edge.first())).width)
+    .toBeLessThan(paragraph.width);
   const letter = await inspect.rectOf(edge.first());
 
-  expect(letter.width).toBeLessThan(paragraph.width);
   expect(letter.height).toBeLessThan(paragraph.height);
   // The letter sits at the corner the paragraph starts at.
   expect(Math.abs(letter.x - paragraph.x)).toBeLessThan(paragraph.width / 4);

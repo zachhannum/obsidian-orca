@@ -73,9 +73,6 @@ export function unreached(css) {
   );
 }
 
-/** The fold chevrons, which the CSS view's touch work draws. */
-const OWED = ['.orca-editor-host .cm-gutters [data-testid="orca-editor-fold"]'];
-
 test("a rule that hides a control until the pointer is over it is found", () => {
   const css = `
     .row .act { opacity: 0; }
@@ -93,7 +90,7 @@ test("a rule that hides a control until the pointer is over it is found", () => 
 });
 
 test("nothing orca draws on mobile is hidden until a pointer is over it", () => {
-  assert.deepEqual(unreached(sheet), OWED);
+  assert.deepEqual(unreached(sheet), []);
 });
 
 test("no rule for mobile asks the device whether it can hover", () => {
@@ -102,5 +99,4 @@ test("no rule for mobile asks the device whether it can hover", () => {
 
 // What this tier does not cover: a control found only through a tooltip
 // or a card that opens under the pointer, which the script that draws it
-// decides and the e2e suite opens on a phone and a tablet, and the
-// editor's fold chevrons, which the CSS view's touch work draws.
+// decides and the e2e suite opens on a phone and a tablet.

@@ -52,9 +52,11 @@ import {
   runScopeHandlers,
   lineNumbers,
   rectangularSelection,
+  showTooltip,
   tooltips,
   type DecorationSet,
   type MouseSelectionStyle,
+  type Tooltip,
 } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { SUBSET, type Names } from "fleuron";
@@ -62,7 +64,9 @@ import { classHighlighter } from "@lezer/highlight";
 import type { Named } from "@/book/names";
 import type { Place } from "@/style/origin";
 import { quoted } from "@/style/quoted";
+import type { Device } from "@/ui/device";
 import { searchPanel } from "@/ui/search";
+import { toolbar } from "@/ui/toolbar";
 
 /** The editor over the fence, held by the panel view. */
 export interface CssEditor {
@@ -504,16 +508,14 @@ const flaggedLines = gutterLineClass.compute([flags], (state) => {
   return RangeSet.of(lines, true);
 });
 
-/** The card over a squiggle, which carries the engine's own words. */
-const flagHover = hoverTooltip((view, pos) => {
-  const here = flagsAt(view.state, pos);
-  if (here.length === 0) return null;
+/** The card for some flags, over them under a pointer and under them at the caret. */
+function flagTooltip(here: readonly Flagged[], touch: boolean): Tooltip {
   return {
     pos: Math.min(...here.map((found) => found.from)),
     end: Math.max(...here.map((found) => found.to)),
-    above: true,
-    create: () => {
-      const dom = flagCard(view, here);
+    above: !touch,
+    create: (view) => {
+      const dom = flagCard(view, here, touch);
       // The card draws its own box, so CodeMirror's box around it
       // draws none while it holds the card.
       let host: HTMLElement | null = null;
@@ -529,6 +531,52 @@ const flagHover = hoverTooltip((view, pos) => {
       };
     },
   };
+}
+
+/** The card over a squiggle, which carries the engine's own words. */
+const flagHover = hoverTooltip((view, pos) => {
+  const here = flagsAt(view.state, pos);
+  return here.length === 0 ? null : flagTooltip(here, false);
+});
+
+/** The flags the caret is in, and the card that shows them. */
+interface AtCaret {
+  here: readonly Flagged[];
+  card: Tooltip | null;
+}
+
+function atCaret(state: EditorState, before?: AtCaret): AtCaret {
+  const here = flagsAtCaret(state);
+  // CodeMirror draws a tooltip again when its object changes, so the
+  // card is kept while the caret moves inside the same flags.
+  if (before !== undefined && sameFlags(before.here, here)) return { here, card: before.card };
+  return { here, card: here.length === 0 ? null : flagTooltip(here, true) };
+}
+
+function sameFlags(one: readonly Flagged[], other: readonly Flagged[]): boolean {
+  return (
+    one.length === other.length &&
+    one.every((flag, at) => {
+      const against = other[at];
+      return (
+        against !== undefined &&
+        flag.from === against.from &&
+        flag.to === against.to &&
+        flag.sheet === against.sheet &&
+        flag.message === against.message
+      );
+    })
+  );
+}
+
+/**
+ * The card at the caret, for a screen with no pointer to hover a
+ * squiggle. It shows while the caret is in a flagged declaration.
+ */
+const flagCaret = StateField.define<AtCaret>({
+  create: (state) => atCaret(state),
+  update: (before, tr) => atCaret(tr.state, before),
+  provide: (field) => showTooltip.from(field, (at) => at.card),
 });
 
 /** Draws an Obsidian icon into an element. */
@@ -571,7 +619,11 @@ function completionIcons(draw: DrawIcon): Parameters<typeof autocompletion>[0] {
  * lints. Every flag comes from a render, because the engine is the only
  * linter.
  */
-export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): Extension[] {
+export function cssExtensions(
+  changed: (css: string) => void,
+  icon?: DrawIcon,
+  device: Device = "desktop",
+): Extension[] {
   return [
     cssLanguage,
     families,
@@ -617,7 +669,7 @@ export function cssExtensions(changed: (css: string) => void, icon?: DrawIcon): 
     wrapping.of([]),
     flags,
     flaggedLines,
-    flagHover,
+    device === "desktop" ? flagHover : flagCaret,
     EditorView.updateListener.of((update) => {
       if (!update.docChanged) return;
       if (update.transactions.some((tr) => tr.annotation(shown) === true)) return;
@@ -690,6 +742,11 @@ export function flagsIn(state: EditorState): Flagged[] {
 /** The flags a pointer at this position is over, which one card shows. */
 export function flagsAt(state: EditorState, pos: number): Flagged[] {
   return flagsIn(state).filter((found) => found.from <= pos && pos <= found.to);
+}
+
+/** The flags the caret is in, which one card shows where nothing hovers. */
+export function flagsAtCaret(state: EditorState): Flagged[] {
+  return flagsAt(state, state.selection.main.head);
 }
 
 /**
@@ -834,11 +891,12 @@ const WARNING_PATHS = [
 ];
 
 /**
- * One card for every flag under the pointer. Each row is the engine's
- * message as it sent it, and the place it names now, which moves with
- * the typing.
+ * One card for every flag under the pointer or at the caret. Each row
+ * is the engine's message as it sent it, and the place it names now,
+ * which moves with the typing. A card at the caret names the line
+ * alone, because the caret is already in the sheet at that column.
  */
-function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
+function flagCard(view: EditorView, here: readonly Flagged[], touch: boolean): HTMLElement {
   const card = view.dom.ownerDocument.win.createDiv({ cls: "orca-card" });
   card.dataset["testid"] = "orca-editor-card";
   for (const found of here) {
@@ -852,32 +910,46 @@ function flagCard(view: EditorView, here: readonly Flagged[]): HTMLElement {
     const line = view.state.doc.lineAt(found.from);
     body.createDiv({
       cls: "orca-card-at",
-      text: `${found.sheet}:${String(line.number)}:${String(found.from - line.from + 1)}`,
+      text: touch
+        ? `line ${String(line.number)}`
+        : `${found.sheet}:${String(line.number)}:${String(found.from - line.from + 1)}`,
     });
   }
   return card;
 }
 
-/** Mounts the editor under an element the view owns. */
+/**
+ * Mounts the editor under an element the view owns. On a phone and a
+ * tablet it also draws the toolbar over the keyboard, on the body.
+ */
 export function mountEditor(
   parent: HTMLElement,
   css: string,
   icon: DrawIcon,
   changed: (css: string) => void,
   moved: () => void = () => undefined,
+  device: Device = "desktop",
 ): CssEditor {
   const view = new EditorView({
     parent,
     state: EditorState.create({
       doc: css,
       extensions: [
-        ...cssExtensions(changed, icon),
+        ...cssExtensions(changed, icon, device),
+        device === "desktop" ? [] : toolbar(device, icon),
         EditorView.updateListener.of((update) => {
           if (update.selectionSet) moved();
         }),
         // The host clips its overflow, so a card near its edge is drawn
         // on the body instead.
-        tooltips({ parent: parent.ownerDocument.body }),
+        tooltips({
+          parent: parent.ownerDocument.body,
+          // The card at the caret stays inside the sheet, so it goes
+          // over its line when the toolbar is close under it.
+          ...(device === "desktop"
+            ? {}
+            : { tooltipSpace: (view) => view.scrollDOM.getBoundingClientRect() }),
+        }),
       ],
     }),
   });
