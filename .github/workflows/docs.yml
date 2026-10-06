@@ -25,7 +25,7 @@ jobs:
   build:
     name: build the site
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -40,6 +40,10 @@ jobs:
       - run: npm run lint
 
       - run: npm run build
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm test
 
       - uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'

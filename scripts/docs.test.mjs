@@ -1098,6 +1098,14 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
   }
 });
 
+test("the docs workflow runs the site's browser suite on the built pages", () => {
+  const build = workflow.indexOf("- run: npm run build\n");
+  const suite = workflow.indexOf("- run: npm test\n");
+  assert.ok(build !== -1 && suite > build, "the suite does not run after the build");
+  assert.match(workflow, /playwright install --with-deps chromium/);
+  assert.equal(JSON.parse(sitePackage).scripts.test, "playwright test");
+});
+
 test("a button a docs page names is orca's own button, drawn with orca's icon", async () => {
   const actions = await read("src/ui/actions.ts");
   const component = await read("site/src/components/Action.astro");
@@ -1141,6 +1149,8 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
 // Lucide build of its own; whether a control the demo leaves
 // out would change the page, since a book with a scene break or a facing
 // page would answer differently; whether a mark sits over the control it
-// names, which the spec measures; the default of a font variant, which
+// names, which the spec measures; the whole picture a tap opens, which
+// the site's browser suite reads off the built pages; the default of a
+// font variant, which
 // the faces on the machine decide; and whether the prose of a docs page
 // is plain, which the simple-english pass reads.
