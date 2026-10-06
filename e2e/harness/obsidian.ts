@@ -133,6 +133,8 @@ const CHROME = {
   navbar: ".mobile-navbar",
   tooltip: ".tooltip",
   modal: ".modal",
+  /** The drawer mobile slides a sidebar in as. */
+  drawer: (side: string) => `.workspace-drawer.mod-${side}`,
   /** The container of a modal a phone docks to the foot of its screen. */
   docked: ".modal-container.mod-confirmation",
   /** The cover a modal dims the window with. A tap on it closes the modal. */
@@ -953,6 +955,11 @@ export class Obsidian {
       };
       split.setPinned(want.on);
     }, { on, side });
+  }
+
+  /** The drawer a sidebar is on mobile, which slides in over the main area. */
+  drawer(side: Side): Locator {
+    return this.page.locator(CHROME.drawer(side));
   }
 
   /**

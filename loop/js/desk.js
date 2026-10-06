@@ -10,7 +10,7 @@
     win = O.win(stage, names);
     O.sections.forEach((s) => s.init && s.init(win));
     // The loop ends on the frame it starts on, over everything else.
-    seam = O.h(`<img class="ol" src="${O.UI}/notes.jpg" alt="">`);
+    seam = O.h(`<img class="ol" src="${O.UI}/${O.FIRST}.jpg" alt="">`);
     win.el.appendChild(seam);
   };
 

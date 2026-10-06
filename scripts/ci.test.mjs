@@ -92,6 +92,23 @@ test("the shots job renders the landing page's loop from the frames it took", ()
   assert.match(shots, /apt-get install -y ffmpeg\n/);
 });
 
+test("the loop job renders a loop for each device from one run of the film spec", async () => {
+  const render = await read("loop/render.mjs");
+  const film = await read("e2e/film.spec.ts");
+  // The whole folder of frames is handed on, so a device's folders go with the desktop's.
+  for (const folder of ["ui", "ui-light", "ui-tablet", "ui-tablet-light", "ui-phone", "ui-phone-light"]) {
+    assert.ok(film.includes(`"${folder}"`), `the film spec writes no ${folder}`);
+    assert.ok(render.includes(`"${folder}"`), `the renderer reads no ${folder}`);
+  }
+  for (const name of ["loop", "loop-tablet", "loop-phone"]) {
+    assert.ok(render.includes(`name: "${name}",`), `the renderer makes no ${name}`);
+  }
+  // The film spec takes every device at the density the app is launched at.
+  assert.match(pkg, /"film": "ORCA_E2E_DENSITY=3 playwright test --project=film"/);
+  assert.match(film, /const DENSITY = 3;/);
+  assert.match(film, /obsidian\.mobile\(device, DENSITY\)/);
+});
+
 test("a change to the loop's page renders the loop again", () => {
   for (const on of ["pull_request", "push"]) {
     const block = shots.slice(shots.indexOf(`  ${on}:`), shots.indexOf("\nconcurrency:"));

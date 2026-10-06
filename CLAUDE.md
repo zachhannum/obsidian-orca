@@ -282,9 +282,10 @@ job runs `npm run shots`, which photographs real Obsidian on the sample
 vault and writes the pictures to `site/src/shots`. A picture is
 rasterized by the machine that took it, so this job is the one that
 takes them. It also takes the frames of the landing page's loop with
-`npm run film` and puts them in `loop/assets`. `npm run loop` plays
-`loop/loop.html` over them: a pull request takes the loop's posters,
-and main renders the loop itself. On main it opens a PR with the
+`npm run film` and puts them in `loop/assets`: the desktop's, and a
+tablet's and a phone's in Obsidian's mobile layout. `npm run loop`
+plays `loop/loop.html` over them, once for each device and scheme: a
+pull request takes the six posters, and main renders the six clips. On main it opens a PR with the
 pictures that changed.
 
 `.github/workflows/release.yml` runs on a version tag. It builds and

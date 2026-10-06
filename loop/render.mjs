@@ -1,16 +1,18 @@
 /**
- * The loop on the site's landing page, rendered once per scheme from
- * the frames in `loop/assets`. Each clip is an H.264 MP4, which every
- * browser plays, and beside it goes its poster: the loop's first
- * moment, which the page shows until the clip plays.
+ * The loop on the site's landing page, rendered once per device and
+ * scheme from the frames in `loop/assets`. Each clip is an H.264 MP4,
+ * which every browser plays, and beside it goes its poster: the loop's
+ * first moment, which the page shows until the clip plays.
  *
- *   node loop/render.mjs [--into site/src/shots] [--posters]
+ *   node loop/render.mjs [--into site/src/shots] [--posters] [--device phone]
  *
  * `--into` copies the files there, and leaves in place a file that
  * looks the same as the new one, so a run on another machine does not
  * rewrite a clip nobody could tell apart.
  *
- * `--posters` takes the posters alone, which takes seconds, not minutes.
+ * `--posters` takes the posters alone, and renders no clip.
+ *
+ * `--device` renders one of `desktop`, `tablet` and `phone`.
  */
 
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -27,18 +29,40 @@ const OUT = path.join(HERE, "..", "build", "loop");
 const SEGMENTS = path.join(OUT, "segments");
 
 /**
- * The loop's files are named after `name`, and `frames` is the folder
- * under `loop/assets` each scheme plays. The window is the size the
- * frames were taken at. The hero is 1200 CSS pixels at its widest, and
- * at 1.6 times that the text stays sharp and a clip stays near 3 MB.
+ * One loop per device. Its files are named after `name`, and `frames`
+ * is the folder under `loop/assets` each scheme plays. The window is
+ * the size the frames were taken at, and the page shows a clip no wider
+ * than that. The desktop's hero is 1200 CSS pixels at its widest, and
+ * at 1.6 times that the text stays sharp and a clip stays near 3 MB. A
+ * phone's clip is twice its CSS size: at three times, the encoder
+ * labels it H.264 level 6, which few phones decode.
  */
-const LOOP = {
-  name: "loop",
-  frames: { dark: "ui", light: "ui-light" },
-  width: 1200,
-  height: 750,
-  scale: 1.6,
-};
+const LOOPS = [
+  {
+    device: "desktop",
+    name: "loop",
+    frames: { dark: "ui", light: "ui-light" },
+    width: 1200,
+    height: 750,
+    scale: 1.6,
+  },
+  {
+    device: "tablet",
+    name: "loop-tablet",
+    frames: { dark: "ui-tablet", light: "ui-tablet-light" },
+    width: 1180,
+    height: 820,
+    scale: 1.6,
+  },
+  {
+    device: "phone",
+    name: "loop-phone",
+    frames: { dark: "ui-phone", light: "ui-phone-light" },
+    width: 390,
+    height: 844,
+    scale: 2,
+  },
+];
 const FPS = 30;
 /** A clip over this size is a mistake in the encode, not a bigger window. */
 const MOST = 4 * 1024 * 1024;
@@ -48,8 +72,13 @@ const SAME = 0.995;
 const CHROMIUM = { args: ["--font-render-hinting=none", "--force-color-profile=srgb"] };
 const WORKERS = Math.max(2, Math.min(8, os.cpus().length - 2));
 
-const at = process.argv.indexOf("--into");
-const into = at > 0 ? process.argv[at + 1] : undefined;
+/** The value that follows a flag, when the flag is there. */
+function flag(name) {
+  const at = process.argv.indexOf(name);
+  return at > 0 ? process.argv[at + 1] : undefined;
+}
+const into = flag("--into");
+const only = flag("--device");
 const postersOnly = process.argv.includes("--posters");
 
 const say = (line) => process.stdout.write(`${line}\n`);
@@ -106,7 +135,7 @@ async function open(browser, loop, scheme) {
   });
   const threw = [];
   page.on("pageerror", (error) => threw.push(error.message));
-  await page.goto(`${PAGE}?render=1&ui=${folder}&fps=${FPS}`);
+  await page.goto(`${PAGE}?render=1&device=${loop.device}&ui=${folder}&fps=${FPS}`);
   await page.evaluate("O.ready");
   if (threw.length > 0) throw new Error(`the loop's page threw: ${threw.join("; ")}`);
   return page;
@@ -191,13 +220,19 @@ async function clip(loop, scheme, length) {
   keep(mp4, (a, b) => likeness(a, b) >= SAME);
 }
 
+const loops = LOOPS.filter((loop) => only === undefined || loop.device === only);
+if (loops.length === 0) throw new Error(`no device ${only}: ${LOOPS.map((loop) => loop.device).join(", ")}`);
+
 mkdirSync(OUT, { recursive: true });
-const schemes = Object.keys(LOOP.frames);
 const browser = await chromium.launch(CHROMIUM);
-const lengths = [];
-for (const scheme of schemes) lengths.push(await poster(browser, LOOP, scheme));
+const clips = [];
+for (const loop of loops) {
+  for (const scheme of Object.keys(loop.frames)) {
+    clips.push({ loop, scheme, length: await poster(browser, loop, scheme) });
+  }
+}
 await browser.close();
 
 if (!postersOnly) {
-  for (const [index, scheme] of schemes.entries()) await clip(LOOP, scheme, lengths[index]);
+  for (const { loop, scheme, length } of clips) await clip(loop, scheme, length);
 }

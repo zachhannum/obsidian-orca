@@ -1,20 +1,59 @@
-// The clock and the page. The scenes are timed on one clock that runs
-// from 12.5 to 42 seconds, and the loop plays the spans of it where
+// The clock and the page. Each device plays scenes of its own, timed on
+// a clock of its own, and the loop plays the spans of that clock where
 // something in the window moves.
 (function () {
   const O = window.O;
   const q = new URLSearchParams(location.search);
-  // The folder the frames are in, one per scheme.
-  O.UI = 'assets/' + (q.get('ui') || 'ui');
+
+  // For each device: the folder its dark frames are in, the scripts
+  // that hold its scenes, the spans of scene time the loop keeps, the
+  // scene time each scene ends at, the frame the loop starts and ends
+  // on, and whether the pointer is a finger. The desktop's scenes are
+  // timed from 12.5 to 42 seconds, and a device's from 0.
+  const DEVICES = {
+    desktop: {
+      ui: 'ui',
+      scenes: ['scenes/notes', 'scenes/write', 'scenes/design', 'scenes/css', 'scenes/export'],
+      keep: [[12.5, 21.0], [22.2, 36.0], [37.2, 42.0]],
+      ends: { notes: 15, write: 22.5, design: 30, css: 37.5, export: 41.25 },
+      seam: 'notes',
+      touch: false,
+    },
+    tablet: {
+      ui: 'ui-tablet',
+      scenes: ['device', 'tablet'],
+      keep: [[0, 24.4]],
+      ends: { notes: 2.2, write: 6.8, design: 14.9, css: 20.2, export: 24.4 },
+      seam: 'notes',
+      touch: true,
+    },
+    phone: {
+      ui: 'ui-phone',
+      scenes: ['device', 'phone'],
+      keep: [[0, 18.4]],
+      ends: { notes: 2.3, write: 7.1, design: 14.2, export: 18.4 },
+      seam: 'notes',
+      touch: true,
+    },
+  };
+  const device = DEVICES[q.get('device') || 'desktop'];
+  if (!device) throw new Error('no device ' + q.get('device'));
+
+  // The folder the frames are in, one per device and scheme.
+  O.UI = 'assets/' + (q.get('ui') || device.ui);
   O.FPS = +(q.get('fps') || 30);
   // The seconds the last frame takes to fade into the first.
   O.SEAM = 0.8;
+  O.SCENES = device.scenes;
+  O.FIRST = device.seam;
+  O.TOUCH = device.touch;
 
-  const KEEP = [[12.5, 21.0], [22.2, 36.0], [37.2, 42.0]];
+  const KEEP = device.keep;
+  O.T_FIRST = KEEP[0][0];
   O.LAST = KEEP[KEEP.length - 1][1];
   O.LENGTH = KEEP.reduce((n, [a, b]) => n + b - a, 0);
   // The scene time each scene ends at.
-  O.T = { notes: 15, write: 22.5, design: 30, css: 37.5, export: 41.25 };
+  O.T = device.ends;
   O.sections = [];
   O.cursorTracks = [];
 

@@ -16,10 +16,9 @@
 <script src="js/cursor.js"></script>
 <script src="js/window.js"></script>
 <script src="js/desk.js"></script>
-<script src="js/scenes/notes.js"></script>
-<script src="js/scenes/write.js"></script>
-<script src="js/scenes/design.js"></script>
-<script src="js/scenes/css.js"></script>
-<script src="js/scenes/export.js"></script>
+<script>
+  // Each device plays scenes of its own.
+  for (const scene of O.SCENES) document.write(`<script src="js/${scene}.js"><\/script>`);
+</script>
 </body>
 </html>

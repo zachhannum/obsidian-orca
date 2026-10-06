@@ -5,7 +5,7 @@ import path from "node:path";
 import type { Locator } from "@playwright/test";
 import { PREVIEW, type Book } from "./harness/book";
 import { Export } from "./harness/export";
-import { Obsidian, type Scheme } from "./harness/obsidian";
+import { DEVICES, Obsidian, type Device, type Scheme } from "./harness/obsidian";
 import type { Box, Site } from "./harness/site";
 import { expect, test } from "./harness/test";
 
@@ -138,10 +138,18 @@ async function frame(
   }
   // Obsidian flashes the tab of a sidebar it has just revealed.
   await expect(site.obsidian.page.locator(".workspace-tab-header.is-flashing")).toHaveCount(0);
-  const marks = await site.marks(
-    { x: 0, y: 0, width: WINDOW.width, height: WINDOW.height },
-    targets,
-  );
+  await kept(site, name, WINDOW, targets, rows);
+}
+
+/** Writes the picture of a window of this size, and keeps its boxes. */
+async function kept(
+  site: Site,
+  name: string,
+  window: { width: number; height: number },
+  targets: Record<string, Locator>,
+  rows?: Box[],
+): Promise<void> {
+  const marks = await site.marks({ x: 0, y: 0, width: window.width, height: window.height }, targets);
   await site.obsidian.page.screenshot({
     path: path.join(into, `${name}.jpg`),
     type: "jpeg",
@@ -272,8 +280,11 @@ async function editorHolds(site: Site, text: string): Promise<void> {
  * The colors the loop draws over a frame with: the CSS editor's ground,
  * which hides the rows not yet typed, and the text, which is the caret.
  */
-async function paintOf(site: Site): Promise<{ cover: string; caret: string }> {
-  return site.panel.editor.evaluate((editor) => {
+async function paintOf(
+  site: Site,
+  from: Locator = site.panel.editor,
+): Promise<{ cover: string; caret: string }> {
+  return from.evaluate((editor) => {
     let ground = "";
     for (let at: Element | null = editor; at !== null && ground === ""; at = at.parentElement) {
       const color = getComputedStyle(at).backgroundColor;
@@ -472,6 +483,363 @@ for (const scheme of ["dark", "light"] as const) {
     take(site, scheme));
 }
 
+/**
+ * The folders a device's frames go in, one per scheme. A device loads
+ * Obsidian's mobile layout at the size `DEVICES` gives it.
+ */
+const ON: Record<Device, Record<Scheme, string>> = {
+  tablet: { dark: "ui-tablet", light: "ui-tablet-light" },
+  phone: { dark: "ui-phone", light: "ui-phone-light" },
+};
+
+/**
+ * The frames each device's loop is made of, in the order they are
+ * taken. The scenes under `loop/js/scenes` ask for these by name.
+ */
+const TAKES: Record<Device, string[]> = {
+  tablet: [
+    "notes", "read",
+    "design-1", "design-2", "design-3", "scroll-a", "design-4", "design-5", "design-6", "design-7", "design-8",
+    "scroll-b-1", "scroll-b-2", "design-9", "design-10", "design-11", "design-12",
+    "scroll-c-1", "scroll-c-2", "scroll-c-3", "design-13", "css-0", "css-1", "css-2", "export-0", "export-1", "write-empty", "write",
+  ],
+  phone: [
+    "notes", "read",
+    "design-0", "design-1", "design-2", "design-3", "scroll-a", "design-4", "design-5", "design-6", "design-7",
+    "design-8", "set", "export-0", "export-1", "write-empty", "write",
+  ],
+};
+
+/** The files an export on a device writes into the vault, beside the book note. */
+const WRITTEN = [EXPORTED, EXPORTED.replace(/\.pdf$/, ".epub")];
+
+/** The command that opens the design panel, which a pinned drawer holds with no book open. */
+const OPEN_DESIGN = "orca:open-design";
+
+/** The frames each device took in each scheme, which must point at the same boxes. */
+const tookOn = new Map<string, Frame[]>();
+
+/**
+ * Takes a picture of a device's whole screen once every slide a drawer
+ * or a sheet makes has ended, and keeps the boxes of the targets.
+ */
+async function shot(
+  site: Site,
+  device: Device,
+  name: string,
+  targets: Record<string, Locator> = {},
+  rows?: Box[],
+  // A frame of an open menu keeps the focus, since the menu closes without it.
+  focused = false,
+): Promise<void> {
+  await site.obsidian.unhovered();
+  await site.obsidian.page.evaluate(async (keep) => {
+    if (!keep) (document.activeElement as HTMLElement | null)?.blur();
+    const ending = document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity);
+    await Promise.allSettled(ending.map((animation) => animation.finished));
+  }, focused);
+  await kept(site, name, DEVICES[device], targets, rows);
+}
+
+/**
+ * Scrolls the design panel to a control, and takes the named frames at
+ * even steps on the way. The loop tiles the frames either side with
+ * them, so each step is shorter than the panel is tall.
+ */
+async function scrolledOn(site: Site, device: Device, names: string[], to: Locator | 0): Promise<void> {
+  const { panel } = site;
+  const from = await panel.scrolled();
+  const top = to === 0 ? 0 : await panel.scrollTo(to);
+  const tall = (await panel.scroller.boundingBox())?.height ?? 0;
+  const steps = names.length + 1;
+  expect(Math.abs(top - from) / steps).toBeLessThan(tall);
+  for (const [at, name] of names.entries()) {
+    await panel.scroller.evaluate((scroller, here) => {
+      scroller.scrollTop = here;
+    }, Math.round(from + ((top - from) * (at + 1)) / steps));
+    await shot(site, device, name, { scroller: panel.scroller });
+  }
+  await panel.scroller.evaluate((scroller, here) => {
+    scroller.scrollTop = here;
+  }, top);
+}
+
+/** Takes away the files an export wrote, so the next export finds none. */
+async function unwritten(site: Site): Promise<void> {
+  await site.obsidian.page.evaluate(async (files) => {
+    for (const at of files) {
+      const file = window.app.vault.getFileByPath(at);
+      if (file !== null) await window.app.fileManager.trashFile(file);
+    }
+  }, WRITTEN);
+}
+
+/**
+ * Takes every frame of one device's loop in one scheme, from the book
+ * note as the loop starts it. The caller puts the app back.
+ */
+async function takeOn(site: Site, device: Device, scheme: Scheme, bare: string): Promise<void> {
+  if (OUT === undefined) throw new Error("ORCA_FILM_OUT names no folder to write the frames to");
+  into = path.join(OUT, ON[device][scheme]);
+  taken = [];
+  await rm(into, { recursive: true, force: true });
+  await mkdir(into, { recursive: true });
+  const { obsidian, book, navigator, panel } = site;
+  const chapter = await noteText(site, WRITING);
+  const picture = async (
+    name: string,
+    targets: Record<string, Locator> = {},
+    rows?: Box[],
+    focused = false,
+  ): Promise<void> => shot(site, device, name, targets, rows, focused);
+  /** Does one thing in the panel, waits for the pages it sets, and takes the frame after it. */
+  const step = async (name: string, act: () => Promise<void>, marks: Record<string, Locator>): Promise<void> => {
+    const before = await book.painted();
+    await act();
+    await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+    await settled(book);
+    await picture(name, marks);
+  };
+
+  await site.paint(scheme);
+  await obsidian.asRendered();
+  // Mobile keeps the tabs the last scheme opened.
+  await book.close();
+  await obsidian.detach(EDITOR);
+  await obsidian.detach("orca-book");
+  await navigator.reveal();
+  await expect(navigator.book(BOOK)).toHaveCount(1);
+  if (device === "tablet") {
+    // A tablet holds the navigator and the design panel beside the page.
+    await obsidian.pin(true, "left");
+    await obsidian.command(OPEN_DESIGN);
+    await expect(panel.leaf).toBeVisible();
+    await obsidian.pin(true, "right");
+  }
+
+  const editor = obsidian.view(EDITOR);
+  /**
+   * Opens the book note's own page with the navigator beside it, or
+   * over it on a phone, and taps the chapter there. The frame named is
+   * taken before the tap.
+   */
+  const tapped = async (name?: string): Promise<void> => {
+    await obsidian.open(BOOK);
+    await expect(obsidian.view("orca-book").getByTestId("orca-book")).toBeVisible();
+    if (device === "phone") await navigator.drawer();
+    if (name !== undefined) {
+      await picture(name, {
+        chapter: navigator.entry(BOOK, CHAPTER),
+        drawer: obsidian.drawer("left"),
+      });
+    }
+    await navigator.entry(BOOK, CHAPTER).locator(".orca-label").click();
+    await expect(editor).toContainText("The year 1866");
+    if (device === "phone") {
+      // A phone shuts the drawer some time after the note opens.
+      await expect.poll(async () => obsidian.collapsed("left")).toBe(true);
+      await expect(navigator.pane).toBeHidden();
+    }
+  };
+
+  // Chapters stay notes, and a tap opens one. Write, then format.
+  await tapped("notes");
+  const ground = await paintOf(site, editor);
+  await obsidian.actionIn(EDITOR, OPEN_PREVIEW).click();
+  await expect(book.surface).toBeVisible();
+  await book.show("Single page", "single");
+  await book.choose(CHAPTER);
+  await settled(book);
+  // Between two pinned drawers a tablet's pane is as narrow as a phone's.
+  await book.footed("under");
+
+  // Design in the panel: each tap sets the book again.
+  const controls = {
+    "size-up": panel.up("body-size"),
+    "spacing-up": panel.up("body-line-spacing"),
+    scroller: panel.scroller,
+  };
+  /** The panel from its top, where the other scheme left it scrolled. */
+  const fromTop = async (): Promise<void> => {
+    await expect(panel.panel).toBeVisible();
+    await panel.scroller.evaluate((scroller) => {
+      scroller.scrollTop = 0;
+    });
+  };
+  if (device === "tablet") {
+    await fromTop();
+    await picture("read", controls);
+  } else {
+    await picture("read");
+    // The panel is a drawer over the page, and the pages are set under it.
+    await panel.open();
+    await fromTop();
+    await settled(book);
+    await picture("design-0", { ...controls, drawer: obsidian.drawer("right") });
+  }
+  for (const name of ["design-1", "design-2", "design-3"]) {
+    await step(name, async () => panel.up("body-size").click(), controls);
+  }
+  // The spacing and the alignment are further down the panel.
+  const lower = {
+    "spacing-up": panel.up("body-line-spacing"),
+    justify: panel.choice("body-align", "justify"),
+    scroller: panel.scroller,
+    drawer: obsidian.drawer("right"),
+  };
+  await scrolledOn(site, device, ["scroll-a"], panel.choice("body-align", "justify"));
+  await picture("design-4", lower);
+  for (const name of ["design-5", "design-6", "design-7"]) {
+    await step(name, async () => panel.up("body-line-spacing").click(), lower);
+  }
+  await step("design-8", async () => panel.choice("body-align", "justify").click(), lower);
+
+  let paint = ground;
+  if (device === "tablet") {
+    // The drop cap rows are further down the panel.
+    const cap = {
+      "drop-cap": panel.control("chapter-drop-cap"),
+      "cap-font": panel.control("chapter-drop-cap-font"),
+      scroller: panel.scroller,
+    };
+    await scrolledOn(site, device, ["scroll-b-1", "scroll-b-2"], panel.control("chapter-drop-cap-font"));
+    await picture("design-9", cap);
+    await step("design-10", async () => {
+      await panel.control("chapter-drop-cap").selectOption({ label: "3 lines" });
+    }, cap);
+    // The picker lists every face the book has, so a tap chooses one.
+    await panel.control("chapter-drop-cap-font").click();
+    await expect(panel.option(CAP_FONT)).toBeVisible();
+    await picture("design-11", { ...cap, option: panel.option(CAP_FONT) }, undefined, true);
+    await step("design-12", async () => {
+      await panel.option(CAP_FONT).click();
+      await expect(panel.control("chapter-drop-cap-font")).toContainText(CAP_FONT);
+    }, cap);
+    // Back up to the switch to the book's CSS.
+    await scrolledOn(site, device, ["scroll-c-1", "scroll-c-2", "scroll-c-3"], 0);
+    await picture("design-13", { css: panel.toCss, scroller: panel.scroller });
+
+    // Go further in CSS: the book's own CSS, and a rule typed at its end.
+    await panel.toCss.click();
+    await expect(panel.editor).toBeVisible();
+    await panel.wrap.click();
+    await expect(panel.wrap).toHaveAttribute("aria-pressed", "true");
+    await picture("css-0", { code: panel.editor });
+    await panel.code.click();
+    await panel.code.press("ControlOrMeta+End");
+    await panel.code.press("Enter");
+    await picture("css-1", { code: panel.editor });
+    paint = await paintOf(site);
+    const typedFrom = await book.painted();
+    await panel.code.pressSequentially(RULE.slice(1));
+    await expect.poll(async () => noteText(site, BOOK)).toMatch(/p\.part \{\s*color: #1d4e5b;/);
+    await expect.poll(async () => book.painted()).toBeGreaterThan(typedFrom);
+    await settled(book);
+    await panel.editor.evaluate((css) => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      const scroller = css.querySelector(".cm-scroller");
+      if (scroller !== null) scroller.scrollTop = scroller.scrollHeight;
+    });
+    await expect(panel.editor.locator(".cm-line").last()).toBeInViewport();
+    await picture(
+      "css-2",
+      { code: panel.editor, export: book.exportIn },
+      await rowsIn(panel.editor, RULE_LINES),
+    );
+  } else {
+    // The drawer goes, and the page under it is the book as it is now set.
+    await book.uncovered();
+    await picture("set", { export: book.exportIn });
+  }
+
+  // Export the book, from the action in the preview's own bar.
+  const exporting = new Export(obsidian);
+  await book.exportIn.click();
+  await exporting.reaches("ready");
+  await picture("export-0", { write: exporting.write, dialog: exporting.dialog });
+  await exporting.write.click();
+  await exporting.reaches("written");
+  await picture("export-1", { dialog: exporting.dialog });
+  await exporting.close();
+  // The navigator counts the vault's files, so the two just written go.
+  await unwritten(site);
+  if (device === "tablet") {
+    await panel.wrap.click();
+    await panel.toControls.click();
+  }
+
+  // The chapter empty and then written, taken last: a session that saw
+  // the chapter empty sets it after the back matter from then on, and
+  // the pages above would be numbered from there.
+  await putBack(site, BOOK, bare);
+  await settled(book);
+  await book.close();
+  await tapped();
+  await editorHolds(site, "");
+  await expect(editor.locator(".cm-line").first()).toHaveText("");
+  await picture("write-empty");
+  await editorHolds(site, chapter);
+  await expect(editor).toContainText("The year 1866");
+  await expect.poll(async () => noteText(site, WRITING)).toEqual(chapter);
+  await picture(
+    "write",
+    { preview: obsidian.actionIn(EDITOR, OPEN_PREVIEW) },
+    await rowsIn(editor.locator(".cm-content")),
+  );
+
+  expect(taken.map((each) => each.name)).toEqual(TAKES[device]);
+  const listed = JSON.stringify({ window: DEVICES[device], density: DENSITY, scheme, paint, frames: taken });
+  await writeFile(path.join(into, "frames.js"), `window.FRAMES = ${listed};\n`);
+  // The loop draws its touches from one set of boxes for both schemes.
+  const other = tookOn.get(device);
+  if (other !== undefined) expect(taken).toEqual(other);
+  tookOn.set(device, taken);
+
+}
+
+for (const device of ["tablet", "phone"] as const) {
+  test(`the loop's frames are real Obsidian's mobile layout on a ${device}, in both schemes`, async ({
+    site,
+  }) => {
+    const { obsidian } = site;
+    const book = await noteText(site, BOOK);
+    const chapter = await noteText(site, WRITING);
+    await obsidian.mobile(device, DENSITY);
+    try {
+      await obsidian.page.waitForFunction(
+        (size) => window.innerWidth === size.width && window.devicePixelRatio === size.density,
+        { width: DEVICES[device].width, density: DENSITY },
+      );
+      for (const scheme of ["dark", "light"] as const) {
+        await putBack(site, BOOK, bare(book));
+        await takeOn(site, device, scheme, bare(book));
+        await putBack(site, BOOK, book);
+        await putBack(site, WRITING, chapter);
+        // The next scheme sets the book in a session of its own.
+        await obsidian.reload();
+      }
+    } finally {
+      // One app runs the whole run, so it goes back to the desktop with
+      // the notes as they were and no exported file left behind.
+      await new Export(obsidian).close();
+      await putBack(site, BOOK, book);
+      await putBack(site, WRITING, chapter);
+      await unwritten(site);
+      if (device === "tablet") {
+        await obsidian.pin(false, "left");
+        await obsidian.pin(false, "right");
+      }
+      await site.book.close();
+      await obsidian.detach(EDITOR);
+      await obsidian.detach("orca-book");
+      await obsidian.moving();
+      await obsidian.emulateMobile(false);
+    }
+  });
+}
+
 /** Writes the first pages of the exported book, which the film closes on, and takes the file away. */
 async function wall(): Promise<void> {
 
@@ -499,5 +867,11 @@ async function wall(): Promise<void> {
 // What this spec does not cover: whether the film shows each frame
 // where its marks put it, which a look at the film answers; the frames
 // on any platform but the one they were taken on; the marks of one
-// scheme when the other did not run first; and the pointer, which the
-// film draws itself because a picture of the window holds none.
+// scheme when the other did not run first; the pointer, which the
+// film draws itself because a picture of the window holds none; and
+// the keyboard a device raises under a chapter being typed, which
+// emulation does not draw.
+
+
+
+
