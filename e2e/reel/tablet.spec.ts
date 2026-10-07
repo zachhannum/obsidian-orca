@@ -21,24 +21,23 @@ const OPENS = 1;
 const TURNS = 9;
 
 /** The book the take starts from: the text flush left, which one tap in the panel justifies. */
-const SET = "body-align: justify";
-const RAGGED = "body-align: left";
+const ALIGN = "body-align";
+const SET = `${ALIGN}: justify`;
+const RAGGED = `${ALIGN}: left`;
 
 test("the tablet's frames are Obsidian's tablet layout on the sample book", async ({ reel }) => {
   const { site, vault } = reel;
   const { obsidian, book, panel, navigator } = site;
   await reel.begin({ book: BOOK, chapter: START, folio: OPENS, device: "tablet" });
-  // The book is opened before its note is written. For a moment after
-  // the write the note parses as no book, and the command opens nothing.
+  const sample = await vault.read(BOOK);
+  expect(sample).toContain(SET);
+  await vault.modify(BOOK, sample.replace(SET, RAGGED));
+  // For a moment after the write the note parses as no book, and the
+  // command that opens the book opens nothing.
+  await reel.indexed(BOOK, ALIGN, "left");
   await obsidian.open(BOOK);
   await book.open();
   await expect(book.surface).toBeVisible();
-  await reel.settled();
-  const sample = await vault.read(BOOK);
-  expect(sample).toContain(SET);
-  const opened = await book.painted();
-  await vault.modify(BOOK, sample.replace(SET, RAGGED));
-  await expect.poll(async () => book.painted()).toBeGreaterThan(opened);
   // The panel writes the book note and the export writes the book.
   for (const written of EXPORTED) vault.touch(written);
 
@@ -59,6 +58,7 @@ test("the tablet's frames are Obsidian's tablet layout on the sample book", asyn
   const justify = panel.choice("body-align", "justify");
   await expect(chapter).toBeInViewport({ ratio: 1 });
   await panel.scrollTo(justify);
+  await expect(justify).toHaveAttribute("aria-pressed", "false");
   const drawn = {
     navigator: obsidian.drawer("left"),
     panel: obsidian.drawer("right"),
@@ -81,6 +81,7 @@ test("the tablet's frames are Obsidian's tablet layout on the sample book", asyn
   // One tap justifies the text, and the page beside the panel is set again.
   const before = await book.painted();
   await justify.click();
+  await expect(justify).toHaveAttribute("aria-pressed", "true");
   await expect.poll(async () => book.painted()).toBeGreaterThan(before);
   await reel.settled();
   await reel.frame("justified", drawn);

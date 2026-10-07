@@ -334,6 +334,23 @@ export class Recorder {
     }, text);
   }
 
+  /**
+   * Waits for Obsidian to have read a property of a note the take
+   * wrote. Orca finds a book by its properties, and they are read some
+   * time after the write.
+   */
+  async indexed(note: string, property: string, value: string): Promise<void> {
+    await this.site.obsidian.page.waitForFunction(
+      (want) => {
+        const file = window.app.vault.getFileByPath(want.note);
+        if (file === null) return false;
+        const read: unknown = window.app.metadataCache.getFileCache(file)?.frontmatter?.[want.property];
+        return read === want.value;
+      },
+      { note, property, value },
+    );
+  }
+
   /** Writes the take's JSON, then puts the vault and the window back. */
   async end(): Promise<void> {
     const listed = {
