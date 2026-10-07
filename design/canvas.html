@@ -73,7 +73,7 @@ function draw() {
     const el = document.createElement('div');
     el.className = 'board' + (isChanged(a) ? ' changed' : '');
     Object.assign(el.style, { left: a.x + 'px', top: a.y + 'px', width: a.w + 'px', height: a.h + 'px' });
-    el.dataset.href = key(a) + '.html' + (SHEETS[key(a)] === 'chrome.css' ? '?theme=' + theme : '');
+    el.dataset.href = key(a) + '.html' + (SHEETS[key(a)] === 'chrome.spec.css' ? '?theme=' + theme : '');
     const bar = document.createElement('div'); bar.className = 'bar';
     bar.innerHTML = '<b></b><span></span>'; bar.firstChild.textContent = a.title; bar.lastChild.textContent = `${a.w}×${a.h}`;
     if (isChanged(a)) { const i = document.createElement('i'); i.textContent = 'Changed'; bar.append(i); }

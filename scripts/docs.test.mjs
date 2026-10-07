@@ -167,7 +167,7 @@ test("a deploy on main keeps the open previews, and checks the live docs", () =>
   assert.match(workflow, /group: pages-branch\n\s+cancel-in-progress: false\n/);
 });
 
-test("the docs build checks the tokens against design/site.css", () => {
+test("the docs build checks the tokens against design/site.spec.css", () => {
   assert.match(sitePackage, /"build": "node scripts\/check-tokens\.mjs && /);
 });
 

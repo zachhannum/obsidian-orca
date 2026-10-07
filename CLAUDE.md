@@ -43,7 +43,7 @@ wins and the quick fix waits for its own PR.
 - `site/` holds the docs site: Astro and Starlight, its own npm package
   with its own lockfile, so the plugin's build and CI do not install it.
   `site/src/styles/tokens.css` is the site's tokens, and the build stops
-  when it and `design/site.css` disagree. `site/sample/` is the vault
+  when it and `design/site.spec.css` disagree. `site/sample/` is the vault
   the site's pages are set from, and it shares no file with `fixture/`.
   Orca's UI on the site is a shot that `npm run shots` takes of real
   Obsidian, never markup drawn to look like it. The exception is a
@@ -71,9 +71,9 @@ one, and UI work starts by opening the one it belongs to.
   "What the screens settle on mobile". A build implements those answers
   rather than reopening them.
 - Mobile measurements come from the `.is-mobile`, `.is-phone` and
-  `.is-tablet` tokens in `chrome.css`, which are Obsidian mobile's
+  `.is-tablet` tokens in `chrome.spec.css`, which are Obsidian mobile's
   own.
-- Measurements, colour and type come from `chrome.css`, which is
+- Measurements, colour and type come from `chrome.spec.css`, which is
   Obsidian's own ramp, header, ribbon and radii lifted from `app.css`.
   A surface the design does not draw extends that vocabulary rather
   than inventing one.
@@ -271,7 +271,7 @@ e2e shard keeps its HTML report as an artifact.
 `.github/workflows/docs.yml` runs on a PR that touches `site/` or the
 site's tokens, and on the same paths on main. Its `build` job installs
 the site's own lockfile and runs `npm run build` in `site/`, which
-checks the tokens against `design/site.css` before it builds. On main
+checks the tokens against `design/site.spec.css` before it builds. On main
 the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
 serves, keeps the `pr-preview` folder, and checks the live docs.
 

@@ -4,13 +4,13 @@ on:
   pull_request:
     paths:
       - "site/**"
-      - "design/site.css"
+      - "design/site.spec.css"
       - ".github/workflows/docs.yml"
   push:
     branches: [main]
     paths:
       - "site/**"
-      - "design/site.css"
+      - "design/site.spec.css"
       - ".github/workflows/docs.yml"
 
 concurrency:

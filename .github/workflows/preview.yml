@@ -46,7 +46,7 @@ jobs:
           docs=false
           design=false
           surface=false
-          grep -qE '^(site/|design/site\.css$)' <<<"$changed" && docs=true
+          grep -qE '^(site/|design/site\.spec\.css$)' <<<"$changed" && docs=true
           grep -qE '^design/' <<<"$changed" && design=true
           # The paths that start the shots workflow.
           grep -qE '^(src/|styles\.css$|e2e/|site/sample/|site/src/marks/|site/src/styles/tokens\.css$|\.github/workflows/shots\.yml$)' <<<"$changed" && surface=true

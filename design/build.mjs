@@ -7,8 +7,8 @@ const sheet = (file) => (sheets[file] ??= readFileSync(file, 'utf8'));
 
 // The Google Fonts families each stylesheet's parts are set in.
 const FONTS = {
-  'chrome.css': ['EB+Garamond:ital,wght@0,400;0,500;1,400'],
-  'site.css': [
+  'chrome.spec.css': ['EB+Garamond:ital,wght@0,400;0,500;1,400'],
+  'site.spec.css': [
     'Archivo:wdth,wght@62..125,100..900',
     'Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700',
     'Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900',
@@ -41,8 +41,8 @@ const changedFiles = () => {
 };
 
 const standalone = (name, s) => {
-  const css = s.sheet ?? 'chrome.css';
-  const site = css !== 'chrome.css';
+  const css = s.sheet ?? 'chrome.spec.css';
+  const site = css !== 'chrome.spec.css';
   const fonts = FONTS[css].map((f) => `family=${f}`).join('&');
   const body = readFileSync(`parts/${name}.html`, 'utf8').trimEnd();
   const script = s.script ? `<script>\n${readFileSync(`parts/${s.script}`, 'utf8')}\n</script>` : '';
@@ -79,13 +79,13 @@ const buildInto = (dir) => {
   const changed = changedFiles();
   const rows = Object.entries(sizes).map(([name, s]) => {
     writeFileSync(`${dir}/${name}.html`, standalone(name, s));
-    const touched = [`parts/${name}.html`, s.script && `parts/${s.script}`, s.sheet ?? 'chrome.css'];
+    const touched = [`parts/${name}.html`, s.script && `parts/${s.script}`, s.sheet ?? 'chrome.spec.css'];
     const mark = touched.some((f) => f && changed.has(f));
     return { name, mark };
   });
   const canvas = JSON.parse(readFileSync('canvas.json', 'utf8'));
   const data = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
-  const sheets = Object.fromEntries(Object.entries(sizes).map(([n, s]) => [n, s.sheet ?? 'chrome.css']));
+  const sheets = Object.fromEntries(Object.entries(sizes).map(([n, s]) => [n, s.sheet ?? 'chrome.spec.css']));
   const marked = rows.filter((r) => r.mark).map((r) => r.name);
   const index = readFileSync('canvas.html', 'utf8')
     .replace('/*CANVAS*/', () => data(canvas))
@@ -102,13 +102,13 @@ if (into) {
 }
 
 for (const [name, s] of Object.entries(sizes)) {
-  const css = s.sheet ?? 'chrome.css';
+  const css = s.sheet ?? 'chrome.spec.css';
   const body = readFileSync(`parts/${name}.html`, 'utf8').trimEnd();
   const fonts = FONTS[css].map((f) => `family=${f}`).join('&');
   const preview = { width: s.w, height: s.h };
   // A plugin part takes the theme tweak. A site part sets its scheme in its
   // own markup, and can bring a script and tweaks of its own.
-  const site = css !== 'chrome.css';
+  const site = css !== 'chrome.spec.css';
   const props = JSON.stringify(site
     ? { ...s.props, $preview: preview }
     : { theme: { editor: 'enum', options: ['dark', 'light'], default: 'dark' }, $preview: preview });
