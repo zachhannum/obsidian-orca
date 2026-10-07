@@ -199,11 +199,13 @@ for (const scene of P.SCENES) {
   test(`at every click of the ${scene.id} reel, the narrowest stage shows the pointer's target`, async () => {
     const take = await takeOf(scene.take);
     const timeline = P.compile(scene, take);
-    // A stage 320 pixels wide, in the narrow view's shape.
-    const stage = { w: 320, h: 400 };
+    // A stage 320 pixels wide, in the narrow view's shape. A phone's
+    // window is whole there, in its own shape.
+    const view = P.viewOf(timeline.window, 320);
+    const stage = { w: 320, h: view === "narrow" ? 400 : (320 * timeline.window.h) / timeline.window.w };
     assert.ok(timeline.clicks.length > 0);
     for (const t of timeline.clicks) {
-      const { camera, pointer } = P.sample(timeline, t, "narrow");
+      const { camera, pointer } = P.sample(timeline, t, view);
       const { scale, x, y } = P.place(camera, timeline.window, stage);
       const at = [pointer.x * scale + x, pointer.y * scale + y];
       assert.ok(at[0] >= 0 && at[0] <= stage.w && at[1] >= 0 && at[1] <= stage.h, `the click at ${t} is at ${at}`);
@@ -509,6 +511,87 @@ test("a finger taps and drags as a dot, and a drawer and a sheet slide by their 
   assert.ok(up.layers[1].opacity > 0 && up.layers[1].opacity < 1);
   assert.equal(up.layers[1].crop, "inset(0px 0px 344px 0px)");
   assert.ok(up.layers[2].move[1] > 0 && up.layers[2].move[1] < 344);
+});
+
+test("a section plays a phone reel and a tablet reel from frames of Obsidian's mobile layout, with a touch dot for each tap and swipe", async () => {
+  for (const device of ["phone", "tablet"]) {
+    const scene = P.SCENES.find((held) => held.id === device);
+    const take = await takeOf(scene.take);
+    assert.equal(take.device, device);
+    const timeline = P.compile(scene, take);
+
+    // Every pointer is a finger: a dot at each tap, and a dot that moves for a swipe.
+    assert.ok(timeline.tracks.length > 0);
+    for (const track of timeline.tracks) assert.equal(track.touch, true);
+    for (const beat of scene.beats) assert.notEqual(beat.kind, "click");
+    for (const t of timeline.clicks) {
+      const { pointer, ring } = P.sample(timeline, t + 0.01, "wide");
+      assert.ok(pointer !== null && pointer.touch && pointer.opacity > 0.9 && ring !== null, `no dot at the tap at ${t}`);
+    }
+    assert.equal(P.sample(timeline, timeline.clicks[0] + 0.7, "wide").pointer, null);
+  }
+
+  // A phone's window shows whole at every width, and a tablet's through the camera on a narrow stage.
+  const phoneTake = await takeOf("phone");
+  const tabletTake = await takeOf("tablet");
+  for (const width of [320, 350, 390, 1200]) assert.equal(P.viewOf(phoneTake.window, width), "wide");
+  assert.equal(P.viewOf(tabletTake.window, 350), "narrow");
+  assert.equal(P.viewOf(tabletTake.window, 800), "wide");
+  assert.equal(P.viewOf(heroTake.window, 350), "narrow");
+
+  const phone = P.compile(P.SCENES.find((held) => held.id === "phone"), phoneTake);
+  const tablet = P.compile(P.SCENES.find((held) => held.id === "tablet"), tabletTake);
+  const drawer = phoneTake.frames.find((frame) => frame.name === "drawer").marks.drawer;
+  const sheet = phoneTake.frames.find((frame) => frame.name === "sheet").marks.sheet;
+  const [coming, going, rising] = phone.overs;
+  assert.deepEqual(phone.overs.map((over) => over.kind), ["slide", "slide", "slide"]);
+
+  // The drawer comes in from the right over a swipe, and the page it pushes meets its edge all the way.
+  assert.deepEqual([coming.frame, coming.out, coming.push, coming.by], ["drawer", false, true, [drawer.w, 0]]);
+  for (const k of [0.2, 0.5, 0.8]) {
+    const t = coming.a + (coming.b - coming.a) * k;
+    const { layers, pointer } = P.sample(phone, t, "wide");
+    assert.deepEqual(layers.map((layer) => layer.frame), ["page", "drawer"]);
+    const edge = drawer.x + layers[1].move[0];
+    assert.ok(near(phoneTake.window.w + layers[0].move[0], edge), `the page and the drawer part at ${t}`);
+    // The drawer's edge stays under the finger.
+    assert.ok(pointer !== null && pointer.touch, `no finger on the swipe at ${t}`);
+    assert.ok(pointer.x <= edge && edge - pointer.x <= 6.01, `the finger is at ${pointer.x} and the drawer at ${edge}`);
+  }
+  // The strip of the page the drawer leaves in sight is shaded once the drawer is in: the
+  // frame fades in over the slide, which stays drawn at its end for as long.
+  const settling = P.sample(phone, coming.b + coming.held / 2, "wide").layers;
+  assert.deepEqual(settling.map((layer) => layer.frame), ["page", "drawer", "drawer"]);
+  assert.ok(near(settling[0].move[0], -drawer.w) && near(settling[1].move[0], 0));
+  assert.ok(settling[2].opacity > 0 && settling[2].opacity < 1 && settling[2].crop === undefined);
+  assert.deepEqual(frames(phone, coming.b + coming.held + 0.01), ["drawer"]);
+
+  // It leaves the same way, and the page left behind is the justified one.
+  assert.deepEqual([going.frame, going.out, going.push], ["justified", true, true]);
+  const leaving = P.sample(phone, (going.a + going.b) / 2, "wide");
+  assert.deepEqual(leaving.layers.map((layer) => layer.frame), ["set", "justified"]);
+  assert.ok(near(phoneTake.window.w + leaving.layers[0].move[0], drawer.x + leaving.layers[1].move[0]));
+  assert.ok(leaving.pointer !== null && leaving.pointer.touch);
+  assert.deepEqual(frames(phone, going.b + 0.01), ["set"]);
+  assert.equal(going.held, 0);
+
+  // The sheet rises by its own height over the page, which dims.
+  assert.deepEqual([rising.frame, rising.by, rising.dim], ["sheet", [0, sheet.h], { x: 0, y: 0, w: 390, h: sheet.y }]);
+  const risen = P.sample(phone, (rising.a + rising.b) / 2, "wide");
+  const up = risen.layers;
+  assert.deepEqual(up.map((layer) => layer.frame), ["set", "sheet", "sheet"]);
+  assert.ok(up[1].opacity > 0 && up[1].opacity < 1 && up[2].move[1] > 0 && up[2].move[1] < sheet.h);
+  // The page between the shaded part and the sheet's top is shaded as much, in the take's own shade.
+  assert.deepEqual(risen.shades, [{ x: 0, y: sheet.y, w: sheet.w, h: up[2].move[1], opacity: up[1].opacity }]);
+  for (const scheme of ["dark", "light"]) assert.match(phoneTake.shade[scheme], /^rgb\(\d+ \d+ \d+ \/ 0\.\d+\)$/);
+  assert.deepEqual(P.sample(phone, rising.b + 0.01, "wide").shades, []);
+
+  // Each tap brings up the frame the take took after it.
+  const after = (timeline, at) => frames(timeline, timeline.clicks[at] + 0.6);
+  assert.deepEqual([0, 2].map((at) => after(phone, at)), [["justified"], ["written"]]);
+  assert.deepEqual([0, 1, 2, 3].map((at) => after(tablet, at)), [["turned"], ["justified"], ["dialog"], ["written"]]);
+  assert.equal(phone.stillFrame, "set");
+  assert.equal(tablet.stillFrame, "justified");
 });
 
 test("no committed frame weighs over 300 KB", async () => {
