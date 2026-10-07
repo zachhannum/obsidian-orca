@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { VAULT_FONTS, familyNamed, type Face, type Family, type FontIndex } from "@/assets/fonts";
 import { familyVariants } from "@/assets/variants";
 import { emptyDesign } from "@/style/design";

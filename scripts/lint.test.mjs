@@ -173,7 +173,7 @@ test("the repository answers the lint pass", async () => {
 test("the source that reads Node modules is typed without @types/node, as the plugin review types it", async () => {
   const eslint = new ESLint({ cwd: root });
   const results = await eslint.lintFiles([
-    "src/assets/directory.ts",
+    "src/assets/testUtils/directory.ts",
     "src/assets/node.ts",
     "src/ui/desktop.ts",
     "src/ui/fonts.ts",

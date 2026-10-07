@@ -57,7 +57,7 @@ export default defineConfig([
       "e2e/**",
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
-      "src/assets/directory.ts",
+      "src/assets/testUtils/directory.ts",
     ],
     languageOptions: { globals: globals.node },
     rules: { "obsidianmd/no-nodejs-modules": "off" },

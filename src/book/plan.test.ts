@@ -17,7 +17,7 @@ import {
   type Page,
   type Sheet,
 } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { VAULT_FONTS, familyNamed, fontIndex, scanFonts } from "@/assets/fonts";
 import { Registry, SENT_NOTHING, fontUrl, type Sent } from "@/assets/registry";
 import { usedVariant, variantFamily } from "@/assets/variants";

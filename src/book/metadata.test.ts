@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { Client, createEngine, type Op } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { readText } from "@/assets/vault";
 import { readFrontmatter } from "@/book/frontmatter";
 import { documentMetadata, imprint } from "@/book/metadata";
