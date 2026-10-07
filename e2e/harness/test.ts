@@ -54,12 +54,12 @@ interface Shared {
   site: Site;
 }
 
-/** The files of a vault and what each holds, without Obsidian's own folder. */
+/** The files of a vault and what each holds, without the folders Obsidian keeps for itself. */
 async function notesIn(vault: string): Promise<Record<string, string>> {
   const files = (await readdir(vault, { recursive: true, withFileTypes: true }))
     .filter((entry) => entry.isFile())
     .map((entry) => path.relative(vault, path.join(entry.parentPath, entry.name)))
-    .filter((file) => file.split(path.sep)[0] !== ".obsidian")
+    .filter((file) => !file.startsWith("."))
     .sort();
   const held: Record<string, string> = {};
   for (const file of files) held[file] = (await readFile(path.join(vault, file))).toString("base64");
