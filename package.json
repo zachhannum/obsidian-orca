@@ -1,6 +1,6 @@
 {
   "name": "obsidian-orca",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A book designer that runs inside Obsidian, setting pages with fleuron.",
   "private": true,
   "type": "module",
