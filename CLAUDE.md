@@ -166,7 +166,7 @@ underneath them.
 - One app instance for the whole run: workers pinned to one,
   parallelism off, specs serial. A shard is a run of its own with an
   Obsidian of its own: `npm run shots` runs the `shots` project as
-  shards, and CI runs the suite as four shards on each platform. A
+  shards, and CI runs the suite as four shards on a platform. A
   spec file passes without the files before it. A test that must begin
   from a known vault says so and puts it back.
 - **No assertion waits on a clock.** The preview carries the generation
@@ -237,8 +237,8 @@ underneath them.
 
 `.github/workflows/ci.yml` runs on every PR and push to main. The
 `checks` job runs the type check, the lint pass, the Node tier and the
-production bundle, and the `e2e` job runs the suite on both platforms,
-in four shards on each.
+production bundle, and the `e2e` job runs the suite in four shards: on
+Linux for a PR, and on Linux and macOS for a push to main.
 
 1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier, which
    exports the sample book and needs `qpdf` on the runner. The
@@ -255,11 +255,12 @@ in four shards on each.
 3. e2e job: build the plugin into the fixture vault, launch the pinned
    Obsidian version, run the suite on Linux under a virtual display and
    on macOS, two retries, a trace on the first and a picture of the
-   window, both kept on failure. Each platform runs four shards, and
-   each shard is a runner. The `e2e-all` job reports `e2e on
+   window, both kept on failure. A platform runs four shards, and
+   each shard is a runner. An account runs five macOS jobs at a time,
+   so a PR runs no macOS shard. The `e2e-all` job reports `e2e on
    ubuntu-latest` and `e2e on macos-latest`, the names main's ruleset
-   requires, and each passes only when every shard of its platform
-   passed
+   requires. Each passes only when every shard of its platform
+   passed, and on a PR the macOS one passes with none
 4. PDF validation inside the e2e job: `qpdf --check` for structure and
    a `pdftotext` round trip for the words, against the exported book
 5. advisories check — no merged dependency with an open advisory
