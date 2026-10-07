@@ -34,11 +34,5 @@
 .snow{position:absolute;border-radius:50%;background:var(--speck);animation:drift ease-in-out infinite alternate;pointer-events:none}
 @keyframes drift{from{transform:translate(0,0)}to{transform:translate(6px,-48px)}}
 
-.sw-ms{animation:show-ms 10s infinite}
-.sw-bk{animation:show-bk 10s infinite}
-@keyframes show-ms{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
-@keyframes show-bk{0%,42%{opacity:0}50%,92%{opacity:1}100%{opacity:0}}
-
 @media (prefers-reduced-motion:reduce){.snow{animation:none}}
 
-@media (prefers-reduced-motion:reduce){.sw-ms{animation:none;opacity:0}.sw-bk{animation:none;opacity:1}}

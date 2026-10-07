@@ -590,12 +590,10 @@ test("the sea never lightens from the surface to the end of the page", () => {
   }
 });
 
-test("with reduced motion on, the sea, the specks and the pane swap hold still", async () => {
+test("with reduced motion on, the sea and the specks hold still", async () => {
   const still = "@media (prefers-reduced-motion:reduce)";
   const rules = landingCss.split(still).slice(1).join(" ");
   assert.match(rules, /\.snow\{animation:none\}/);
-  assert.match(rules, /\.sw-ms\{animation:none/);
-  assert.match(rules, /\.sw-bk\{animation:none/);
 
   const drawn = [];
   let frames = 0;
@@ -657,13 +655,13 @@ test("the working design demo is gone, and the site does not depend on fleuron",
 test("the sections that show orca's own surfaces show photographs of them", async () => {
   // A hand-built copy of a surface goes stale the moment the surface
   // moves, so every one the page shows is a picture the spec took.
-  for (const section of ["vault-shots", "sw-win"]) {
-    assert.match(landing, new RegExp(`<div class="${section}">`), `the page has no ${section}`);
-  }
+  assert.match(landing, /<div class="vault-shots">/, "the page has no vault-shots");
+  // The pane that is written in and then set is a reel of frames.
+  assert.match(landing, /<Reel\s+scene="write"/, "the page has no write reel");
   for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc", "ex-dlg"]) {
     assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
   }
-  for (const shot of ["vault-tree", "vault-note", "write", "read", "inspect", "export"]) {
+  for (const shot of ["vault-tree", "vault-note", "inspect", "export"]) {
     for (const scheme of ["dark", "light"]) {
       assert.ok(
         landing.includes(`../shots/${shot}-${scheme}.png`),
