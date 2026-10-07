@@ -116,9 +116,8 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # Main's ruleset requires a check with this name on each platform,
-  # and a shard's name carries its number. This job is that check. A
-  # PR runs no macOS shard, so its macOS check passes with none.
+  # Main's ruleset requires a check with this name on Linux,
+  # and a shard's name carries its number. This job is that check.
   e2e-all:
     name: e2e on ${{ matrix.os }}
     needs: e2e
@@ -130,7 +129,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest", "macos-latest"]' || '["ubuntu-latest"]') }}
     steps:
       # `needs.e2e.result` is one answer for both platforms, so the
       # shards of this platform are counted from the run's own jobs.
@@ -139,8 +138,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           JOBS: repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/jobs
           SHARD: "e2e on ${{ matrix.os }} ("
-          SHARDS: ${{ (matrix.os == 'ubuntu-latest' || github.event_name == 'push') && 4 || 0 }}
         run: |
           passed=$(gh api "$JOBS?per_page=100" --jq '[.jobs[] | select(.name | startswith(env.SHARD)) | select(.conclusion == "success")] | length')
-          echo "$passed of $SHARDS shards passed"
-          [ "$passed" = "$SHARDS" ]
+          echo "$passed of 4 shards passed"
+          [ "$passed" = 4 ]
