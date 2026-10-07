@@ -4096,7 +4096,7 @@ button.orca-card-at::after {
   min-width: 0;
   height: var(--touch-size-m);
   padding: 0 4px;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--touch-radius-m);
   background: var(--interactive-normal);
   overflow-x: auto;
 }
@@ -4123,7 +4123,7 @@ button.orca-card-at::after {
   width: var(--touch-size-m);
   min-width: var(--touch-size-m);
   height: var(--touch-size-m);
-  border-radius: var(--touch-size-m);
+  border-radius: var(--touch-radius-m);
   background: var(--interactive-normal);
 }
 
