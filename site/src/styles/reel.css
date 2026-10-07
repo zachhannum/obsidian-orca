@@ -1,0 +1,136 @@
+/*
+ * A reel's stage. The stage measures itself: a container query gives a
+ * stage under 640 pixels the taller box and puts its picture where the
+ * player's camera will, so the picture is right with no script.
+ */
+.reel {
+  container-type: inline-size;
+  width: 100%;
+}
+.reel-view {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--reel-w) / var(--reel-h);
+  border-radius: 12px;
+  box-shadow: var(--o-win-shadow);
+}
+.reel-still {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.reel-still[data-scheme='light'] {
+  display: none;
+}
+:root[data-theme='light'] .reel-still[data-scheme='dark'] {
+  display: none;
+}
+:root[data-theme='light'] .reel-still[data-scheme='light'] {
+  display: block;
+}
+
+@container (width < 640px) {
+  .reel-view {
+    aspect-ratio: 4 / 5;
+    max-height: calc(var(--reel-h) * var(--reel-zoom) * 1px);
+  }
+  .reel-still {
+    width: calc(var(--reel-w) * var(--reel-zoom) * 1px);
+    height: calc(var(--reel-h) * var(--reel-zoom) * 1px);
+    left: clamp(
+      100% - var(--reel-w) * var(--reel-zoom) * 1px,
+      50% - var(--reel-cx) * var(--reel-zoom) * 1px,
+      0px
+    );
+    top: clamp(
+      100% - var(--reel-h) * var(--reel-zoom) * 1px,
+      50% - var(--reel-cy) * var(--reel-zoom) * 1px,
+      0px
+    );
+  }
+}
+
+/* The window the player draws, in the window's own pixels. */
+.reel-win {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--reel-w) * 1px);
+  height: calc(var(--reel-h) * 1px);
+  overflow: hidden;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.reel-layer {
+  position: absolute;
+  inset: 0;
+}
+.reel-layer img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.reel-cover {
+  position: absolute;
+  z-index: 100;
+  background: var(--reel-cover);
+}
+.reel-caret {
+  position: absolute;
+  z-index: 101;
+  width: 1.5px;
+  background: var(--reel-caret);
+}
+
+/* The pointer, the finger, and the ring a click leaves. */
+.reel-ring {
+  position: absolute;
+  z-index: 102;
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  border: 2px solid rgba(165, 167, 251, 0.9);
+}
+.reel-arrow,
+.reel-dot {
+  position: absolute;
+  z-index: 103;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.reel-arrow {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+.reel-arrow svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+.reel-arrow path {
+  fill: #fff;
+  stroke: #0a0c0f;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.reel-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(128, 132, 142, 0.5);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}

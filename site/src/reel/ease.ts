@@ -37,8 +37,8 @@ export function keys(t: number, track: readonly Key[]): Point {
   if (first === undefined || last === undefined) throw new Error('a track has no key');
   if (t <= first[0]) return first[1];
   for (let i = 0; i < track.length - 1; i++) {
-    const [t0, v0] = track[i] as Key;
-    const [t1, v1] = track[i + 1] as Key;
+    const [t0, v0] = track[i] ?? first;
+    const [t1, v1] = track[i + 1] ?? last;
     if (t <= t1) {
       const k = EASE.inOutCubic(prog(t, t0, t1));
       return [lerp(v0[0], v1[0], k), lerp(v0[1], v1[1], k)];

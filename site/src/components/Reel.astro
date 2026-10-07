@@ -1,0 +1,95 @@
+---
+/** A reel of frames of real Obsidian. The scene is compiled here, so a
+    frame or a mark its take does not have stops the build. With no
+    script, and under reduced motion, the stage is one picture. */
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { compile } from '../reel/compile';
+import { NARROW, sample } from '../reel/sample';
+import type { Scene } from '../reel/scene';
+import type { ReelData } from '../reel/stage';
+import type { Scheme, Take } from '../reel/take';
+import '../styles/reel.css';
+
+interface Props {
+  /** The name of a file under `reel/scenes`. */
+  scene: string;
+  alt: string;
+  /** The stage is on screen when the page opens, so its picture is fetched first. */
+  eager?: boolean;
+  /** The width the stage is drawn at, as an image's `sizes`. */
+  sizes?: string;
+}
+
+const { scene: id, alt, eager = false, sizes = '(min-width: 1280px) 1200px, 100vw' } = Astro.props;
+
+const SCHEMES: Scheme[] = ['dark', 'light'];
+const scenes = import.meta.glob<{ scene: Scene }>('../reel/scenes/*.ts', { eager: true });
+const takes = import.meta.glob<Take>('../shots/reel/*.json', { eager: true, import: 'default' });
+const pictures = import.meta.glob<{ default: ImageMetadata }>('../shots/reel/*/*.webp', { eager: true });
+
+const scene = scenes[`../reel/scenes/${id}.ts`]?.scene;
+if (scene === undefined) throw new Error(`no scene ${id}`);
+const take = takes[`../shots/reel/${scene.take}.json`];
+if (take === undefined) throw new Error(`scene ${id}: no take ${scene.take}`);
+const timeline = compile(scene, take);
+const { w, h } = timeline.window;
+
+/** Serves a frame at the window's own width, and as it was packed. */
+const served = async (frame: string, scheme: Scheme): Promise<[string, string]> => {
+  const picture = pictures[`../shots/reel/${scene.take}/${frame}-${scheme}.webp`]?.default;
+  if (picture === undefined) throw new Error(`scene ${id}: no picture ${frame}-${scheme}.webp`);
+  if (picture.width !== w * take.density) throw new Error(`scene ${id}: ${frame}-${scheme}.webp is ${String(picture.width)} wide`);
+  const small = await getImage({ src: picture, width: w, format: 'webp' });
+  return [small.src, picture.src];
+};
+
+const frames = { dark: {}, light: {} } as ReelData['frames'];
+for (const scheme of SCHEMES) {
+  for (const frame of timeline.frames) frames[scheme][frame] = await served(frame, scheme);
+}
+const data: ReelData = { timeline, paint: take.paint, frames };
+
+const stills = SCHEMES.map((scheme) => {
+  const [small, full] = frames[scheme][timeline.stillFrame] as [string, string];
+  return { scheme, small, srcset: `${small} ${String(w)}w, ${full} ${String(w * take.density)}w` };
+});
+
+/** The point the narrow view centres on at the still time, which the stylesheet places the picture by. */
+const camera = sample(timeline, timeline.still, 'narrow').camera ?? { x: w / 2, y: h / 2 };
+const shape = [
+  `--reel-w:${String(w)}`,
+  `--reel-h:${String(h)}`,
+  `--reel-cx:${camera.x.toFixed(1)}`,
+  `--reel-cy:${camera.y.toFixed(1)}`,
+  `--reel-zoom:${String(NARROW)}`,
+].join(';');
+---
+
+<div class="reel" data-reel={id} data-reel-state="still" style={shape}>
+  <div class="reel-view">
+    {
+      stills.map((still) => (
+        <img
+          class="reel-still"
+          data-scheme={still.scheme}
+          src={still.small}
+          srcset={still.srcset}
+          sizes={sizes}
+          width={w}
+          height={h}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          fetchpriority={eager ? 'high' : 'auto'}
+        />
+      ))
+    }
+  </div>
+  <script
+    is:inline
+    type="application/json"
+    data-reel-data
+    set:html={JSON.stringify(data).replaceAll('<', '\\u003c')}
+  />
+</div>

@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
+import vm from "node:vm";
 import esbuild from "esbuild";
 import { root } from "./bundle.mjs";
 
 const reel = path.join(root, "site/src/reel");
 const shots = path.join(root, "site/src/shots/reel");
 
-/** The most bytes one packed frame may weigh, which the packer holds too. */
+/** The byte limit of one packed frame, which the packer holds too. */
 const LIMIT = 300 * 1024;
 
 /** The player's modules and every scene, built and run with no browser. */
@@ -26,12 +27,15 @@ async function player() {
     },
     bundle: true,
     write: false,
-    format: "esm",
+    format: "cjs",
     platform: "node",
     target: "node22",
   });
-  const text = Buffer.from(built.outputFiles[0].text).toString("base64");
-  return { ...(await import(`data:text/javascript;base64,${text}`)), files: scenes };
+  // The bundle runs in this realm, so what it returns compares equal to a literal.
+  const holder = { exports: {} };
+  const run = new vm.Script(`(function (module, exports) {${built.outputFiles[0].text}\n})`);
+  run.runInThisContext()(holder, holder.exports);
+  return { ...holder.exports, files: scenes };
 }
 
 const P = await player();

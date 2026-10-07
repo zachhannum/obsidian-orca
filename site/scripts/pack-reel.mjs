@@ -8,7 +8,7 @@ import sharp from "sharp";
 
 const repo = fileURLToPath(new URL("../..", import.meta.url));
 
-/** The most bytes one packed frame may weigh. */
+/** The byte limit of one packed frame. */
 export const LIMIT = 300 * 1024;
 
 /** The WebP quality a frame is packed at. */
@@ -20,13 +20,17 @@ const SCHEMES = ["dark", "light"];
 const BLOCK = 8;
 
 /**
- * The most the mean of one square may differ by, of 255, between the
+ * The most the mean of one square can differ by, of 255, between the
  * file a frame has and the file its new picture packs to. Two takes of
  * one screen stay under it, and a control that moved does not.
  */
 const TOLERANCE = 4;
 
-/** The mean of each colour over each square of a picture. */
+/**
+ * The mean of each colour over each square of a picture.
+ *
+ * @param {string | Buffer} source
+ */
 async function means(source) {
   const { data, info } = await sharp(source).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const across = Math.ceil(info.width / BLOCK);
@@ -50,7 +54,13 @@ async function means(source) {
   return { width: info.width, height: info.height, sums };
 }
 
-/** The largest difference between two pictures, over the means of their squares. */
+/**
+ * The largest difference between two pictures, over the means of their squares.
+ *
+ * @param {string | Buffer} one
+ * @param {string | Buffer} other
+ * @returns {Promise<number>}
+ */
 export async function apart(one, other) {
   const [a, b] = await Promise.all([means(one), means(other)]);
   if (a.width !== b.width || a.height !== b.height) return Infinity;
@@ -59,12 +69,16 @@ export async function apart(one, other) {
   return most;
 }
 
+/** @param {string} file */
 const exists = (file) => stat(file).then(() => true, () => false);
 
 /**
  * Packs every take under `from` into `into`. Returns the files it
  * wrote, the files it kept and the files it removed. Throws when a
  * frame's picture is missing, and when a packed frame is over the limit.
+ *
+ * @param {{ from: string, into: string, quality?: number }} folders
+ * @returns {Promise<{ written: string[], kept: string[], removed: string[] }>}
  */
 export async function pack({ from, into, quality = QUALITY }) {
   const written = [];

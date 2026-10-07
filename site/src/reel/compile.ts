@@ -1,6 +1,6 @@
 import { keys, type Ease, type Key, type Point } from './ease';
 import { sample } from './sample';
-import type { At, Beat, Scene, Side } from './scene';
+import type { At, Scene, Side } from './scene';
 import { frameOf, markOf, mid, type Box, type Take } from './take';
 
 /** A frame that comes up at `t` and fades in over the frames before it. */
@@ -87,7 +87,7 @@ export interface Timeline {
 }
 
 /**
- * The farthest a click may be from the centre of the narrow view, across
+ * The farthest a click can be from the centre of the narrow view, across
  * and down. It is inside half of what a stage 320 pixels wide shows.
  */
 const REACH: Point = [170, 215];
@@ -160,7 +160,7 @@ export function compile(scene: Scene, take: Take): Timeline {
       return;
     }
     const here = keys(from, camera);
-    while (camera.length > 0 && (camera[camera.length - 1] as Key)[0] >= from) camera.pop();
+    while (camera.length > 0 && (camera[camera.length - 1]?.[0] ?? -1) >= from) camera.pop();
     camera.push([from, here], [Math.max(to, from + 0.01), target]);
   };
 
@@ -292,7 +292,7 @@ export function compile(scene: Scene, take: Take): Timeline {
 
   const length = t;
   cuts.sort((p, q) => p.t - q.t);
-  const lastCut = cuts[cuts.length - 1] as Cut;
+  const lastCut = cuts[cuts.length - 1] ?? { t: 0, fade: 0 };
   if (length - SEAM < lastCut.t + lastCut.fade) fail(`the reel is ${length.toFixed(2)} seconds, too short to fade back after its last frame`);
   cuts.push({ t: length - SEAM, frame: scene.first, fade: SEAM - 1 / 30, ease: 'inOutQuad' });
 
@@ -314,7 +314,7 @@ export function compile(scene: Scene, take: Take): Timeline {
 
   if (camera.length === 0) camera.push([0, [w / 2, h / 2]]);
   // The view is back where it starts by the time the first frame is.
-  turn(length - SEAM, length, (camera[0] as Key)[1]);
+  turn(length - SEAM, length, camera[0]?.[1] ?? [w / 2, h / 2]);
 
   // A frame is on screen from its cut until a later cut has faded in whole.
   const uses: [string, number, number][] = cuts.map((cut, i) => {

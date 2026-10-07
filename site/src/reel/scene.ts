@@ -66,7 +66,8 @@ export interface Sliding {
 }
 
 export type Beat =
-  | ({ kind: 'click' | 'tap'; frame: string; at: At } & Press)
+  | ({ kind: 'click'; frame: string; at: At } & Press)
+  | ({ kind: 'tap'; frame: string; at: At } & Press)
   | { kind: 'leave'; by: Point; over: number }
   | { kind: 'drag'; from: Point; to: Point; over: number }
   | ({ kind: 'type'; frame: string; runs: readonly Run[] } & Typing)
