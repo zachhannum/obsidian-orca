@@ -322,6 +322,25 @@ for (const device of ["phone", "tablet"] as const) {
   });
 }
 
+test("under the default theme a book's card and its actions keep the corners Obsidian's mobile tokens give", async ({
+  navigator,
+  obsidian,
+}) => {
+  await obsidian.mobile("phone");
+  try {
+    await navigator.reveal();
+    await navigator.painted();
+    const card = navigator.book(BOOK);
+    await expect(card).toHaveCSS("border-top-left-radius", "24px");
+    await expect(card.locator("button.orca-nav-action").first()).toHaveCSS(
+      "border-top-left-radius",
+      "44px",
+    );
+  } finally {
+    await obsidian.emulateMobile(false);
+  }
+});
+
 test("on a tablet a pointer that hovers lights the row under it, and a finger lights none", async ({
   navigator,
   obsidian,
