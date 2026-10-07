@@ -66,5 +66,5 @@ test("the design's chrome carries the touch radius tokens and uses them", () => 
 });
 
 // What this tier does not cover: the value a token holds in Obsidian,
-// which the e2e suite's pictures of the mobile surfaces hold under the
-// default theme, and a theme's own sheet, which no test loads.
+// which the e2e suite reads off a book's card and its actions and off
+// nothing else, and a theme's own sheet, which no test loads.
