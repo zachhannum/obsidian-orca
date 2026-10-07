@@ -655,19 +655,13 @@ test("the working design demo is gone, and the site does not depend on fleuron",
 test("the sections that show orca's own surfaces show photographs of them", async () => {
   // A hand-built copy of a surface goes stale the moment the surface
   // moves, so every one the page shows is a picture the spec took.
-  assert.match(landing, /<div class="vault-shots">/, "the page has no vault-shots");
-  // The pane that is written in and then set is a reel of frames.
-  assert.match(landing, /<Reel\s+scene="write"/, "the page has no write reel");
+  // The book note, the pane that is written in and then set, and the
+  // export are reels of frames.
+  for (const scene of ["chapters", "write", "export"]) {
+    assert.match(landing, new RegExp(`<Reel\\s+scene="${scene}"`), `the page has no ${scene} reel`);
+  }
   for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc", "ex-dlg"]) {
     assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
-  }
-  for (const shot of ["vault-tree", "vault-note", "export"]) {
-    for (const scheme of ["dark", "light"]) {
-      assert.ok(
-        landing.includes(`../shots/${shot}-${scheme}.png`),
-        `the page does not show ${shot}-${scheme}`,
-      );
-    }
   }
 });
 
