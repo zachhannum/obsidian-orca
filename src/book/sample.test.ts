@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { styleOp } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
 import { THEME_SHEET } from "@/style/theme";

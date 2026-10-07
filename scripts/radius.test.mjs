@@ -6,7 +6,7 @@ import { root } from "./bundle.mjs";
 import { rules } from "./hover.test.mjs";
 
 const sheet = await readFile(path.join(root, "styles.css"), "utf8");
-const chrome = await readFile(path.join(root, "design/chrome.css"), "utf8");
+const chrome = await readFile(path.join(root, "design/chrome.spec.css"), "utf8");
 
 /** The rules of a sheet that take a corner from a size a theme leaves alone. */
 function sized(css) {

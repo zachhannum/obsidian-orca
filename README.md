@@ -4,7 +4,7 @@ Orca is a book designer inside Obsidian. Each chapter is a Markdown note, and on
 
 Visit [orca.typeworks.dev](https://orca.typeworks.dev) for more info and docs.
 
-![Orca in Obsidian, with a chapter note, the design panel and the typeset page](https://raw.githubusercontent.com/zachhannum/obsidian-orca/main/site/src/shots/landing-dark-1440.png)
+![Orca in Obsidian, with a chapter note, the design panel and the typeset page](https://raw.githubusercontent.com/zachhannum/obsidian-orca/main/docs/src/shots/landing-dark-1440.png)
 
 ## What orca does
 

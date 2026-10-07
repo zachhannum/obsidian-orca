@@ -351,7 +351,7 @@ export type Written = string | number | boolean;
 
 interface Field {
   key: string;
-  /** The CSS properties this field sets, each declared in `subset.css`. */
+  /** The CSS properties this field sets, each declared in `subset.test.css`. */
   property: string | readonly string[];
   read(design: Design): Written | undefined;
   write(design: Design, value: unknown): void;
@@ -737,7 +737,7 @@ const FIELDS: readonly Field[] = [
 /** The design's frontmatter keys, in the order the format writes them. */
 export const DESIGN_KEYS: readonly string[] = FIELDS.map((field) => field.key);
 
-/** The CSS properties a design sets, each declared in `subset.css`. */
+/** The CSS properties a design sets, each declared in `subset.test.css`. */
 export const DESIGN_PROPERTIES: readonly string[] = [
   ...new Set(FIELDS.flatMap((field) => field.property)),
 ];

@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { Client, createEngine, styleOp, type Link, type Page, type PageBox } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { Registry } from "@/assets/registry";
 import { readText, type VaultAdapter } from "@/assets/vault";
 import { pathLinks } from "@/book/links";

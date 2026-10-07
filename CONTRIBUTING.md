@@ -20,4 +20,4 @@ npm run e2e
 
 The build writes `main.js` beside `manifest.json`, with the engine inside it. To run it, symlink the repo into a vault's `.obsidian/plugins/orca/`.
 
-The docs site in `site/` is its own npm package. Run `npm install` and `npm run dev` in that folder.
+The docs site in `docs/` is its own npm package. Run `npm install` and `npm run dev` in that folder.

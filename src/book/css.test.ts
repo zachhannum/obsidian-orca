@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { readText } from "@/assets/vault";
 import { bookCss, withCss } from "@/book/css";
 import { readModel, withOrder } from "@/book/model";

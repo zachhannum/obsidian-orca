@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { vaultWritePath } from "@/assets/destination";
-import { directorySink } from "@/assets/directory";
+import { directorySink } from "@/assets/testUtils/directory";
 import { AssetError } from "@/assets/errors";
 
 async function scratch(): Promise<string> {

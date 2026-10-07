@@ -40,7 +40,7 @@ test("the schema sets only properties the pinned engine reads", async () => {
     assert.match(
       css,
       new RegExp(`(^|[;{\\s])${property}\\s*:`, "m"),
-      `\`subset.css\` declares no \`${property}\``,
+      `\`subset.test.css\` declares no \`${property}\``,
     );
   }
 
@@ -55,7 +55,7 @@ test("the schema sets only properties the pinned engine reads", async () => {
     });
     const output = await client.preview([
       { op: "dialect", dialect: "obsidian" },
-      styleOp([{ name: "subset.css", css }]),
+      styleOp([{ name: "subset.test.css", css }]),
       {
         op: "markdown",
         name: "chapter.md",
@@ -405,7 +405,7 @@ function len(value: number, unit: "in" | "pt" | "em" | "mm") {
 }
 
 async function subset(): Promise<string> {
-  return readFile(path.join(root, "src/style/subset.css"), "utf8");
+  return readFile(path.join(root, "src/style/subset.test.css"), "utf8");
 }
 
 async function moduleBytes(): Promise<Buffer> {

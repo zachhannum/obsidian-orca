@@ -7,8 +7,8 @@ const ci = process.env["CI"] !== undefined;
  * worker. The timeouts here bound a hang rather than pace an assertion.
  */
 export default defineConfig({
-  testDir: "./e2e",
-  globalSetup: "./e2e/harness/launch.ts",
+  testDir: "./e2e-tests",
+  globalSetup: "./e2e-tests/harness/launch.ts",
   workers: 1,
   fullyParallel: false,
   forbidOnly: ci,
@@ -33,7 +33,7 @@ export default defineConfig({
     {
       name: "shots",
       testMatch: "**/shots.spec.ts",
-      snapshotPathTemplate: "site/src/shots/{arg}{ext}",
+      snapshotPathTemplate: "docs/src/shots/{arg}{ext}",
       // Each test sets its own window, so the run can be sharded; the
       // shards are scripts/shots.mjs's.
       fullyParallel: true,
@@ -71,6 +71,6 @@ export default defineConfig({
   reporter: [
     ci ? ["github"] : ["list"],
     ["html", { open: "never" }],
-    ["./e2e/harness/report.ts"],
+    ["./e2e-tests/harness/report.ts"],
   ] satisfies ReporterDescription[],
 });

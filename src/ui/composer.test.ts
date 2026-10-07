@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import type { Epub, Folios, LayoutOutput, NodeSource, Op, Page, Sheet } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { VAULT_FONTS, familyNamed, type FontIndex } from "@/assets/fonts";
 import { contentKey, fontUrl } from "@/assets/registry";
 import { faceBytes } from "@/assets/sfnt";
