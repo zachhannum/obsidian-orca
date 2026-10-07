@@ -12,7 +12,7 @@
     "test": "node scripts/test.mjs",
     "e2e": "playwright test --project=orca",
     "shots": "node scripts/shots.mjs",
-    "film": "ORCA_E2E_DENSITY=3 playwright test --project=film",
+    "reel": "node scripts/shots.mjs reel && node site/scripts/pack-reel.mjs",
     "version": "node version-bump.mjs"
   },
   "license": "MIT",
