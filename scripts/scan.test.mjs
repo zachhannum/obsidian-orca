@@ -67,6 +67,12 @@ test("the push gate asks for the e2e run when a change touches the suite's folde
   assert.ok(new RegExp(source).test("e2e-tests/harness/launch.ts"));
 });
 
+test("Playwright looks for its specs in the suite's folder", async () => {
+  const config = await readFile(path.join(root, "playwright.config.ts"), "utf8");
+  assert.match(config, /testDir: "\.\/e2e-tests"/);
+  assert.ok(stdout.includes("e2e-tests/shots.spec.ts\n"));
+});
+
 // What this tier does not cover: the scanner's own matching, which its
 // FAQ gives as a list of names and no rule. A preview scan on the
 // developer dashboard is what shows a nested folder is skipped.

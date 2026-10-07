@@ -7,7 +7,7 @@ const ci = process.env["CI"] !== undefined;
  * worker. The timeouts here bound a hang rather than pace an assertion.
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./e2e-tests",
   globalSetup: "./e2e-tests/harness/launch.ts",
   workers: 1,
   fullyParallel: false,
