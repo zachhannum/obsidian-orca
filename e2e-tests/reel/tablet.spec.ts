@@ -88,9 +88,13 @@ test("the tablet's frames are Obsidian's tablet layout on the sample book", asyn
 
   // Export, from the action in the preview's own bar.
   const exporting = new Export(obsidian);
+  // A real device can share a file, so its dialog has Share. The
+  // emulation cannot, so the take stands in for the share sheet.
+  await exporting.sharing();
   await book.exportIn.click();
   await exporting.reaches("ready");
-  await reel.frame("dialog", { dialog: exporting.dialog, write: exporting.write });
+  await expect(exporting.share).toBeEnabled();
+  await reel.frame("dialog", { dialog: exporting.dialog, write: exporting.write, share: exporting.share });
   await exporting.write.click();
   await exporting.reaches("written");
   await reel.frame("written", { dialog: exporting.dialog, done: exporting.done });

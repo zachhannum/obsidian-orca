@@ -64,11 +64,15 @@ test("the phone's frames are Obsidian's phone layout on the sample book", async 
 
   // Export is a sheet that rises from the foot of the screen.
   const exporting = new Export(obsidian);
+  // A real device can share a file, so its dialog has Share. The
+  // emulation cannot, so the take stands in for the share sheet.
+  await exporting.sharing();
   await book.exportIn.click();
   await exporting.reaches("ready");
+  await expect(exporting.share).toBeEnabled();
   await reel.frame(
     "sheet",
-    { sheet: exporting.dialog, write: exporting.write },
+    { sheet: exporting.dialog, write: exporting.write, share: exporting.share },
     { shade: obsidian.backdrop("orca-export") },
   );
   await exporting.write.click();
