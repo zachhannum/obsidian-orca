@@ -75,6 +75,8 @@ export interface Taking {
   scroll?: Locator;
   /** The editor the take's colors are read from, once in each scheme. */
   paint?: Locator;
+  /** The cover behind a sheet, whose color the take's shade is read from, once in each scheme. */
+  shade?: Locator;
   /** Boxes the take measured itself, kept as marks: a word in a line is no element to point a locator at. */
   measured?: Record<string, Box>;
 }
@@ -147,6 +149,24 @@ async function paintOf(editor: Locator): Promise<Paint> {
 }
 
 /**
+ * The color a cover lays over what is behind it, with its opacity in
+ * the alpha. A canvas paints the color, so any way of writing one reads
+ * the same.
+ */
+async function shadeOf(cover: Locator): Promise<string> {
+  return cover.evaluate((drawn) => {
+    const style = getComputedStyle(drawn);
+    const context = createEl("canvas").getContext("2d");
+    if (context === null) throw new Error("no canvas to read the cover's color with");
+    context.fillStyle = style.backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    const [red = 0, green = 0, blue = 0, alpha = 0] = context.getImageData(0, 0, 1, 1).data;
+    const strength = Math.round((alpha / 255) * Number(style.opacity) * 1000) / 1000;
+    return `rgb(${String(red)} ${String(green)} ${String(blue)} / ${String(strength)})`;
+  });
+}
+
+/**
  * One take of a reel on the sample vault. `begin` starts it from a
  * sound session, `frame` takes each state in both schemes, and `end`
  * writes the take's JSON and puts the vault back.
@@ -161,6 +181,7 @@ export class Recorder {
   private readonly into: string;
   private frames: Frame[] = [];
   private paints: Partial<Record<Scheme, Paint>> = {};
+  private shades: Partial<Record<Scheme, string>> = {};
   private book = "";
   private device: Device | undefined;
   private window = WINDOW;
@@ -189,6 +210,7 @@ export class Recorder {
     this.window = expected.device === undefined ? WINDOW : DEVICES[expected.device];
     this.frames = [];
     this.paints = {};
+    this.shades = {};
     await rm(this.into, { recursive: true, force: true });
     await rm(`${this.into}.json`, { force: true });
     await mkdir(this.into, { recursive: true });
@@ -262,7 +284,7 @@ export class Recorder {
   async frame(
     name: string,
     targets: Record<string, Locator> = {},
-    { rows, focused = false, hovered = false, scroll, paint, measured = {} }: Taking = {},
+    { rows, focused = false, hovered = false, scroll, paint, shade, measured = {} }: Taking = {},
   ): Promise<void> {
     const { obsidian } = this.site;
     await obsidian.unhovered(hovered);
@@ -294,6 +316,7 @@ export class Recorder {
       expect(measured, `${name} holds its marks in ${scheme}`).toEqual(marks ?? measured);
       marks = measured;
       if (paint !== undefined) this.paints[scheme] = await paintOf(paint);
+      if (shade !== undefined) this.shades[scheme] = await shadeOf(shade);
       await obsidian.page.screenshot({
         path: path.join(this.into, `${name}-${scheme}.png`),
         scale: "device",
@@ -359,6 +382,7 @@ export class Recorder {
       window: { w: this.window.width, h: this.window.height },
       density: SHARP,
       paint: this.paints,
+      ...(Object.keys(this.shades).length === 0 ? {} : { shade: this.shades }),
       frames: this.frames,
     };
     await writeFile(`${this.into}.json`, `${JSON.stringify(listed, null, 2)}\n`);

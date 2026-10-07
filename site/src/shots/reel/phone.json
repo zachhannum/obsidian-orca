@@ -7,6 +7,10 @@
   },
   "density": 2,
   "paint": {},
+  "shade": {
+    "dark": "rgb(23 17 20 / 0.297)",
+    "light": "rgb(0 0 0 / 0.127)"
+  },
   "frames": [
     {
       "name": "page",

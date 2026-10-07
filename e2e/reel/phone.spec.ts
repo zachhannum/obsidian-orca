@@ -66,7 +66,11 @@ test("the phone's frames are Obsidian's phone layout on the sample book", async 
   const exporting = new Export(obsidian);
   await book.exportIn.click();
   await exporting.reaches("ready");
-  await reel.frame("sheet", { sheet: exporting.dialog, write: exporting.write });
+  await reel.frame(
+    "sheet",
+    { sheet: exporting.dialog, write: exporting.write },
+    { shade: obsidian.backdrop("orca-export") },
+  );
   await exporting.write.click();
   await exporting.reaches("written");
   await reel.frame("written", { sheet: exporting.dialog, done: exporting.done });
