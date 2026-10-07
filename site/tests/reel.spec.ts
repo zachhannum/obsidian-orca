@@ -139,8 +139,11 @@ test.describe('under reduced motion', () => {
     const stages = await page.locator('[data-reel]').all();
     expect(stages.length).toBeGreaterThanOrEqual(2);
     const stills: string[] = [];
+    const frames = new Set<string>();
     for (const stage of stages) {
-      stills.push((await dataOf(stage)).timeline.stillFrame);
+      const data = await dataOf(stage);
+      stills.push(data.timeline.stillFrame);
+      for (const frame of Object.keys(data.frames.dark)) frames.add(frame);
       await stage.scrollIntoViewIfNeeded();
       await expect(stage).toHaveAttribute('data-reel-state', 'still');
       const still = stage.locator('.reel-still:visible');
@@ -148,7 +151,8 @@ test.describe('under reduced motion', () => {
       await expect.poll(() => still.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
       await expect(stage.locator('.reel-win')).toHaveCount(0);
     }
-    expect([...asked].sort()).toEqual([...stills].sort());
+    // The page shows other pictures, so only the names a reel plays count.
+    expect(asked.filter((frame) => frames.has(frame)).sort()).toEqual([...stills].sort());
   });
 });
 
