@@ -14,6 +14,7 @@ import process from "node:process";
 import { test } from "node:test";
 import { Script } from "node:vm";
 import { Worker } from "node:worker_threads";
+import { brotliDecompressSync } from "node:zlib";
 import { VERSION, WIRE_VERSION } from "fleuron";
 import workerSource from "virtual:worker";
 import {
@@ -126,7 +127,10 @@ test("the release is the plugin folder, with one JavaScript file in it", async (
     assert.ok(bundle.includes("createObjectURL"));
     const require = createRequire(import.meta.url);
     const module = await readFile(require.resolve("fleuron/fleuron_bg.wasm"));
-    assert.ok(bundle.includes(module.subarray(0, 3072).toString("base64")));
+    // The module is the longest string in the bundle. A regular
+    // expression overflows the stack on a match this long.
+    const packed = bundle.split('"').reduce((a, b) => (b.length > a.length ? b : a));
+    assert.ok(brotliDecompressSync(Buffer.from(packed, "base64")).equals(module));
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }
