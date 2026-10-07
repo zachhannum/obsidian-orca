@@ -258,9 +258,9 @@ Linux for a PR, and on Linux and macOS for a push to main.
    window, both kept on failure. A platform runs four shards, and
    each shard is a runner. An account runs five macOS jobs at a time,
    so a PR runs no macOS shard. The `e2e-all` job reports `e2e on
-   ubuntu-latest` and `e2e on macos-latest`, the names main's ruleset
-   requires. Each passes only when every shard of its platform
-   passed, and on a PR the macOS one passes with none
+   ubuntu-latest`, the name main's ruleset requires, and on main `e2e
+   on macos-latest` beside it. Each passes only when every shard of
+   its platform passed
 4. PDF validation inside the e2e job: `qpdf --check` for structure and
    a `pdftotext` round trip for the words, against the exported book
 5. advisories check — no merged dependency with an open advisory
