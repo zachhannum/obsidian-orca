@@ -234,6 +234,7 @@ export class Recorder {
       await this.shut();
     }
     await obsidian.asRendered();
+    await obsidian.focused();
 
     await obsidian.open(expected.book);
     await book.open();
@@ -287,6 +288,8 @@ export class Recorder {
     { rows, focused = false, hovered = false, scroll, paint, shade, measured = {} }: Taking = {},
   ): Promise<void> {
     const { obsidian } = this.site;
+    // A device take loads the window again, which drops the hold.
+    await obsidian.focused();
     await obsidian.unhovered(hovered);
     // A sidebar whose leaf is active draws its tab in the accent, so the
     // pane in the middle is made the active one, without the focus.

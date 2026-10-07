@@ -98,6 +98,7 @@ declare global {
     };
     /** The sheets the harness has adopted, by the name it gave each. */
     orcaSheets?: Record<string, CSSStyleSheet> | undefined;
+    orcaFocused?: MutationObserver | undefined;
   }
 }
 
@@ -168,6 +169,9 @@ export const SCROLLER = {
 
 /** The chrome that appears under the pointer, which a picture drops too. */
 const HOVERED = CHROME.tooltip;
+
+/** The class Obsidian puts on the body of the window that has the focus. */
+const FOCUSED = "is-focused";
 
 /** The id of the style tag that holds a window still for a picture. */
 const STILL = "orca-still";
@@ -911,6 +915,31 @@ export class Obsidian {
       );
       delete window.orcaSheets?.[id];
     }, STILL);
+  }
+
+  /**
+   * Draws this window as the one with the focus, whichever window the
+   * display gives it to. Windows that share a display share the focus,
+   * and Obsidian dims the tab and the title of a window without it.
+   *
+   * The hold lasts until the window loads again.
+   */
+  async focused(): Promise<void> {
+    // The renderer is told too, so a caret and a selection are drawn
+    // the same.
+    await this.session.send("Emulation.setFocusEmulationEnabled", { enabled: true });
+    await this.page.evaluate((mark) => {
+      const hold = (): void => {
+        if (!document.body.classList.contains(mark)) document.body.classList.add(mark);
+      };
+      hold();
+      if (window.orcaFocused !== undefined) return;
+      // Obsidian takes the class off when the display says the focus
+      // went. An observer runs before the next paint, so no picture
+      // holds the window without it.
+      window.orcaFocused = new MutationObserver(hold);
+      window.orcaFocused.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }, FOCUSED);
   }
 
   /** Puts the editor back the way a vault is read by default. */
