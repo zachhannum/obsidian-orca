@@ -204,7 +204,7 @@
 @font-face {
   font-family: 'Roboto Flex';
   font-style: normal;
-  font-display: swap;
+  font-display: block;
   font-weight: 100 1000;
   font-stretch: 25% 151%;
   src: url('@fontsource-variable/roboto-flex/files/roboto-flex-latin-standard-normal.woff2')

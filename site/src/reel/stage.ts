@@ -16,6 +16,9 @@ export interface ReelData {
 /** The seconds of frames a playing stage holds ahead of its time. */
 const AHEAD = 3;
 
+/** The share of a stage that is on screen before it plays. */
+const IN_VIEW = 0.25;
+
 /** The seconds of frames that must be ready for the time to move on. */
 const SOON = 0.4;
 
@@ -102,7 +105,8 @@ function startReel(stage: HTMLElement): void {
   let broken = false;
 
   const scheme = (): Scheme => (root.dataset['theme'] === 'light' ? 'light' : 'dark');
-  const shape = (): View => viewOf(timeline.window, size.w);
+  // A picture of a device is whole at every width.
+  const shape = (): View => (stage.dataset['reelWhole'] === undefined ? viewOf(timeline.window, size.w) : 'wide');
   // A narrow stage and a screen of one pixel to the point take the
   // smaller file, so a phone never decodes the larger.
   const sharp = (): 0 | 1 => (shape() === 'wide' && size.w * devicePixelRatio > timeline.window.w * 1.05 ? 1 : 0);
@@ -287,18 +291,48 @@ function startReel(stage: HTMLElement): void {
     }).observe(view);
   }
   if (typeof IntersectionObserver === 'function') {
-    new IntersectionObserver((entries) => {
-      seen = entries.at(-1)?.isIntersecting ?? false;
-      update();
-    }).observe(view);
+    new IntersectionObserver(
+      (entries) => {
+        seen = (entries.at(-1)?.intersectionRatio ?? 0) >= IN_VIEW;
+        update();
+      },
+      { threshold: IN_VIEW }
+    ).observe(view);
   }
   update();
 }
 
+/** Resolves when the picture a stage shows is drawn, or will not be. */
+async function drawn(stage: HTMLElement): Promise<void> {
+  const still = [...stage.querySelectorAll<HTMLImageElement>('.reel-still')].find((img) => img.offsetParent !== null);
+  if (still === undefined) return;
+  if (!still.complete) {
+    await new Promise<void>((done) => {
+      still.addEventListener('load', () => done(), { once: true });
+      still.addEventListener('error', () => done(), { once: true });
+    });
+  }
+  await still.decode().catch(() => undefined);
+}
+
 /**
- * Plays every stage while it is on screen. A stage loads no frame but
- * its own picture until then, and none at all under reduced motion.
+ * Plays every stage while it is on screen. Until a stage first comes
+ * on screen it is its picture alone: its reel is not read, and no
+ * frame is asked for. The picture is drawn before the first frame is
+ * asked for, so the frames never hold it back. Under reduced motion a
+ * stage asks for no frame at all.
  */
 export function startReels(stages: HTMLElement[]): void {
-  for (const stage of stages) startReel(stage);
+  for (const stage of stages) {
+    if (typeof IntersectionObserver !== 'function') {
+      startReel(stage);
+      continue;
+    }
+    const near = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      near.disconnect();
+      void drawn(stage).then(() => startReel(stage));
+    });
+    near.observe(stage);
+  }
 }
