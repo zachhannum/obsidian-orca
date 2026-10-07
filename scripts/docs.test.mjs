@@ -782,6 +782,19 @@ test("a section says orca runs on a phone and a tablet, and plays a reel of each
   assert.doesNotMatch(landing, /Desktop only/i);
 });
 
+test("no width of the screen decides what a reel plays", async () => {
+  const stage = await read("site/src/reel/stage.ts");
+  // Reduced motion is the one thing the player asks the screen.
+  const asked = [...stage.matchAll(/matchMedia\(\s*'([^']+)'/g)].map((match) => match[1]);
+  assert.deepEqual(asked, ["(prefers-reduced-motion: reduce)"]);
+  // The stage is measured, and the still under it is placed by the same measure.
+  assert.match(stage, /ResizeObserver/);
+  const styles = `${await read("site/src/styles/reel.css")}\n${await read("site/src/components/Reel.astro")}`;
+  assert.doesNotMatch(styles, /@media[^{]*width/);
+  // The page holds no second picture for a narrow screen, and no clip.
+  assert.doesNotMatch(landing, /<video|<picture/);
+});
+
 test("the footer carries the tail mark in one flat colour", async () => {
   const mark = await read("site/src/components/Mark.astro");
   assert.match(mark, /fill="currentColor"/);
