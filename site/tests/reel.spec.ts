@@ -165,13 +165,15 @@ test.describe('at 390 pixels wide', () => {
     expect(spill).toBeLessThanOrEqual(0);
 
     const ids = await page.locator('[data-reel]').evaluateAll((all) => all.map((el) => el.getAttribute('data-reel') ?? ''));
-    for (const id of ['hero', 'write', 'design', 'css']) expect(ids).toContain(id);
+    for (const id of ['hero', 'write', 'design', 'css', 'phone', 'tablet']) expect(ids).toContain(id);
     for (const id of ids) {
       const stage = stageOf(page, id);
       await stage.scrollIntoViewIfNeeded();
-      await expect(stage).toHaveAttribute('data-reel-view', 'narrow');
       const view = stage.locator('.reel-view');
       const { timeline, frames } = await dataOf(stage);
+      // A phone's window is whole on a phone, and every other is seen through the camera.
+      const whole = timeline.window.w < 640;
+      await expect(stage).toHaveAttribute('data-reel-view', whole ? 'wide' : 'narrow');
       expect(timeline.clicks.length).toBeGreaterThan(0);
       for (const click of timeline.clicks) {
         await pin(stage, click + 0.02);
@@ -186,14 +188,37 @@ test.describe('at 390 pixels wide', () => {
         expect(y, `the click at ${String(click)}`).toBeGreaterThan(box.y);
         expect(y, `the click at ${String(click)}`).toBeLessThan(box.y + box.height);
       }
-      // A phone is given the smaller file of each frame.
-      const small = Object.values(frames.dark).map((files) => files[0]);
+      // A phone is given the smaller file of each frame. The phone's
+      // own window is drawn near its size, so it takes the sharp one.
+      const given = Object.values(frames.dark).map((files) => files[whole ? 1 : 0]);
       const shown = await sources(stage);
       expect(shown.length).toBeGreaterThan(1);
-      for (const file of shown) expect(small).toContain(new URL(file).pathname);
+      for (const file of shown) expect(given).toContain(new URL(file).pathname);
     }
     const again = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(again).toBeLessThanOrEqual(0);
+  });
+
+  test('the phone reel plays its whole window at its own shape, with no camera', async ({ page }) => {
+    await landing(page, FRAMES);
+    const stage = stageOf(page, 'phone');
+    const { timeline } = await dataOf(stage);
+    expect(timeline.window).toEqual({ w: 390, h: 844 });
+    await pin(stage, timeline.still);
+    await expect(stage).toHaveAttribute('data-reel-view', 'wide');
+    const view = await stage.locator('.reel-view').boundingBox();
+    const win = await stage.locator('.reel-win').boundingBox();
+    const still = await stage.locator('.reel-still:visible').boundingBox();
+    if (view === null || win === null || still === null) throw new Error('the stage has no picture');
+    // The stage is the column's width, and the window and the picture under it fill it.
+    expect(view.width).toBe(350);
+    expect(view.height).toBeCloseTo((350 * 844) / 390, 0);
+    for (const side of ['x', 'y', 'width', 'height'] as const) {
+      expect(Math.abs(win[side] - view[side])).toBeLessThan(1);
+      expect(Math.abs(still[side] - view[side])).toBeLessThan(1);
+    }
+    const spill = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(spill).toBeLessThanOrEqual(0);
   });
 
   test('the picture under the player is placed where the player draws the window', async ({ page }) => {

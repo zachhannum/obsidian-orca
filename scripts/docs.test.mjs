@@ -766,6 +766,22 @@ test("the panel section and the CSS section each play a reel of real Obsidian", 
   assert.doesNotMatch(landing, /panel-shots|inspect-shot|shots\/(?:panel|inspect)-/);
 });
 
+test("a section says orca runs on a phone and a tablet, and plays a reel of each", async () => {
+  const from = landing.indexOf("and a tablet</i>");
+  assert.notEqual(from, -1, "no section on phones and tablets");
+  const section = landing.slice(from, landing.indexOf("</section>", from));
+  for (const scene of ["phone", "tablet"]) {
+    assert.match(section, new RegExp(`<Reel\\s+scene="${scene}"`), `the section does not play the ${scene} reel`);
+  }
+  assert.equal([...section.matchAll(/alt="[^"]{20,}"/g)].length, 2);
+  assert.match(prose(section).join(" "), /runs in Obsidian on a phone and a tablet/);
+  // The plugin's manifest is what lets Obsidian load orca on one.
+  assert.equal(JSON.parse(await read("manifest.json")).isDesktopOnly, false);
+  // It stands between the export and the pages that turn.
+  assert.ok(landing.indexOf("for the printer</i>") < from && from < landing.indexOf("the pages</i>"));
+  assert.doesNotMatch(landing, /Desktop only/i);
+});
+
 test("the footer carries the tail mark in one flat colour", async () => {
   const mark = await read("site/src/components/Mark.astro");
   assert.match(mark, /fill="currentColor"/);
