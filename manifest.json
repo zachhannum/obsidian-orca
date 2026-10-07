@@ -1,7 +1,7 @@
 {
   "id": "orca",
   "name": "Orca",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "minAppVersion": "1.7.2",
   "description": "Design and typeset books from your notes, with a live preview of every page.",
   "author": "Zach Hannum",
