@@ -207,7 +207,10 @@ export class Recorder {
     if (expected.device === undefined) await obsidian.reloadPlugin();
     // The mobile layout is kept apart from the desktop's, with the tabs
     // the last device take opened.
-    else await this.shut();
+    else {
+      await this.site.quieten();
+      await this.shut();
+    }
     await obsidian.asRendered();
 
     await obsidian.open(expected.book);
@@ -215,6 +218,10 @@ export class Recorder {
     await expect(book.surface).toBeVisible();
     await this.opensOn(expected.chapter, expected.folio);
     await this.shut();
+    // Every frame is painted in the first scheme from the last one, and
+    // so is the first frame. A scheme the window is already in paints
+    // nothing again, and the picture keeps what the last take drew.
+    await this.site.paint(SCHEMES[SCHEMES.length - 1] ?? "light");
   }
 
   /**
@@ -281,6 +288,8 @@ export class Recorder {
     let marks: Record<string, Box> | undefined;
     for (const scheme of SCHEMES) {
       await this.site.paint(scheme);
+      // A control with a transition fades to the new scheme's colors.
+      if (this.device !== undefined) await this.slid();
       const measured = (await this.site.marks(crop, targets)).marks;
       expect(measured, `${name} holds its marks in ${scheme}`).toEqual(marks ?? measured);
       marks = measured;
