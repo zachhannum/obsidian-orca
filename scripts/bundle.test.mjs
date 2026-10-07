@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { builtinModules, createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
+import { brotliDecompressSync } from "node:zlib";
 import esbuild from "esbuild";
-import { noScriptElements, options, root } from "./bundle.mjs";
+import { compressedModule, engineModule, noScriptElements, options, root } from "./bundle.mjs";
 
 test("the editor is CodeMirror as Obsidian ships it, and only the CSS grammar is bundled", async () => {
   const outdir = await mkdtemp(path.join(tmpdir(), "orca-bundle-"));
@@ -105,7 +106,34 @@ test("the shipped bundle loads where the app has no Node or Electron", async () 
   }
 });
 
-// What this tier does not cover: the plugin's `onload` on a real
-// mobile device, and whether the Obsidian version the e2e suite pins
-// still ships each of these packages, which only a run in the app
-// shows.
+test("a production `main.js` is under 7 MB", async () => {
+  const outdir = await mkdtemp(path.join(tmpdir(), "orca-bundle-"));
+  try {
+    const built = await esbuild.build({
+      ...options({ production: true, outdir }),
+      write: false,
+      logLevel: "silent",
+    });
+    const main = built.outputFiles.find((file) => path.basename(file.path) === "main.js");
+    assert.ok(main);
+    assert.ok(main.contents.length < 7_000_000, `main.js is ${main.contents.length} bytes`);
+  } finally {
+    await rm(outdir, { recursive: true, force: true });
+  }
+});
+
+test("only a production build compresses the module at the highest quality", async () => {
+  const shipped = await readFile(engineModule);
+  const fast = Buffer.from(await compressedModule(), "base64");
+  const small = Buffer.from(await compressedModule({ production: true }), "base64");
+
+  assert.ok(small.length < fast.length);
+  assert.ok(brotliDecompressSync(fast).equals(shipped));
+  assert.ok(brotliDecompressSync(small).equals(shipped));
+});
+
+// What this tier does not cover: the size at which the plugin review
+// stops completing, which only a release shows. It also does not cover
+// the plugin's `onload` on a real mobile device, and whether the
+// Obsidian version the e2e suite pins still ships each of these
+// packages, which only a run in the app shows.

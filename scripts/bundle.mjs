@@ -4,6 +4,8 @@ import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { builtinModules, createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { brotliCompress, constants } from "node:zlib";
 import esbuild from "esbuild";
 import { VERSION, WIRE_VERSION, initSync, wireVersion } from "fleuron";
 
@@ -89,11 +91,41 @@ export function inlineWorker({ production = false } = {}) {
   };
 }
 
+const compress = promisify(brotliCompress);
+
+const compressed = new Map();
+
 /**
- * `virtual:module` is the engine module as base64, so the release is the
- * three files Obsidian installs and nothing beside them.
+ * The engine module compressed with brotli, as base64. The highest
+ * quality takes many seconds, so only a production build pays for it,
+ * and a process compresses the module once at each quality.
  */
-export function inlineModule() {
+export function compressedModule({ production = false } = {}) {
+  const quality = production ? constants.BROTLI_MAX_QUALITY : 5;
+  let encoded = compressed.get(quality);
+  if (encoded === undefined) {
+    encoded = readFile(engineModule).then(async (module) => {
+      const packed = await compress(module, {
+        params: {
+          [constants.BROTLI_PARAM_QUALITY]: quality,
+          [constants.BROTLI_PARAM_LGWIN]: constants.BROTLI_MAX_WINDOW_BITS,
+          [constants.BROTLI_PARAM_SIZE_HINT]: module.length,
+        },
+      });
+      return packed.toString("base64");
+    });
+    compressed.set(quality, encoded);
+  }
+  return encoded;
+}
+
+/**
+ * `virtual:module` is the engine module, compressed and then base64, so
+ * the release is the three files Obsidian installs and nothing beside
+ * them. The plugin review does not complete on a `main.js` that holds
+ * the module uncompressed.
+ */
+export function inlineModule({ production = false } = {}) {
   return {
     name: "orca-inline-module",
     setup(build) {
@@ -102,7 +134,7 @@ export function inlineModule() {
         namespace: "orca-module",
       }));
       build.onLoad({ filter: /.*/, namespace: "orca-module" }, async () => ({
-        contents: `export default ${JSON.stringify((await readFile(engineModule)).toString("base64"))}`,
+        contents: `export default ${JSON.stringify(await compressedModule({ production }))}`,
         loader: "js",
         watchFiles: [engineModule],
       }));
@@ -151,7 +183,7 @@ export function options({ production, outdir }) {
     sourcemap: production ? false : "inline",
     treeShaking: true,
     minify: production,
-    plugins: [inlineWorker({ production }), inlineModule(), noScriptElements()],
+    plugins: [inlineWorker({ production }), inlineModule({ production }), noScriptElements()],
     loader,
     tsconfig,
     external,
