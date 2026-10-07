@@ -2,26 +2,6 @@ import type { Over, ScrollOver, SlideOver, Timeline, Track, TypeOver } from './c
 import { EASE, clamp, env, keys, lerp, prog, type Point } from './ease';
 import type { Box } from './take';
 
-/**
- * The stage's shape. A `wide` stage shows the whole window. A `narrow`
- * one shows part of it, through a camera.
- */
-export type View = 'wide' | 'narrow';
-
-/** The scale the narrow view draws the window at. */
-export const NARROW = 0.8;
-
-/** The widest a stage is, in CSS pixels, while it is narrow. */
-export const NARROW_BELOW = 640;
-
-/**
- * The view a stage of a given width shows a window in. A window that is
- * itself under the narrow width is a phone's, and shows whole at every
- * width.
- */
-export const viewOf = (window: { w: number }, stageWidth: number): View =>
-  stageWidth < NARROW_BELOW && window.w >= NARROW_BELOW ? 'narrow' : 'wide';
-
 /** One frame on screen. `crop` moves with the frame, and `within` stays where the window is. */
 export interface Layer {
   frame: string;
@@ -42,8 +22,6 @@ export interface Drawn {
   caret: { x: number; y: number; h: number; opacity: number } | null;
   pointer: { x: number; y: number; opacity: number; press: number; touch: boolean } | null;
   ring: { x: number; y: number; scale: number; opacity: number } | null;
-  /** The point of the window the narrow view centres on. A wide view has none. */
-  camera: { x: number; y: number; scale: number } | null;
 }
 
 const px = (n: number): string => `${(Math.round(n * 100) / 100).toString()}px`;
@@ -202,9 +180,9 @@ function drawPointer(t: number, timeline: Timeline, drawn: Drawn): void {
  * The picture a reel shows at a time. It reads the timeline and
  * nothing else, so a time draws the same in the page and in a test.
  */
-export function sample(timeline: Timeline, time: number, view: View): Drawn {
+export function sample(timeline: Timeline, time: number): Drawn {
   const t = clamp(time, 0, Math.max(0, timeline.length - 1e-6));
-  const drawn: Drawn = { layers: [], covers: [], shades: [], caret: null, pointer: null, ring: null, camera: null };
+  const drawn: Drawn = { layers: [], covers: [], shades: [], caret: null, pointer: null, ring: null };
 
   // The last frame to have faded in whole is the ground, and each
   // frame brought up after it fades in over it.
@@ -220,28 +198,5 @@ export function sample(timeline: Timeline, time: number, view: View): Drawn {
   });
 
   drawPointer(t, timeline, drawn);
-  if (view === 'narrow') {
-    const [x, y] = keys(t, timeline.camera);
-    drawn.camera = { x, y, scale: NARROW };
-  }
   return drawn;
-}
-
-/**
- * The scale and the offset that put the window in a stage of a given
- * size. A wide view fits the window to the stage's width. A narrow
- * view centres the camera, and stops at the window's edges.
- */
-export function place(
-  camera: Drawn['camera'],
-  window: { w: number; h: number },
-  stage: { w: number; h: number }
-): { scale: number; x: number; y: number } {
-  if (camera === null) return { scale: stage.w / window.w, x: 0, y: 0 };
-  const { scale } = camera;
-  return {
-    scale,
-    x: clamp(stage.w / 2 - camera.x * scale, Math.min(0, stage.w - window.w * scale), 0),
-    y: clamp(stage.h / 2 - camera.y * scale, Math.min(0, stage.h - window.h * scale), 0),
-  };
 }

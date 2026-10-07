@@ -50,5 +50,4 @@ export const scene: Scene = {
     hold(0.9),
     tap('sheet', 'write', { dwell: 0.3, rest: 0.2, then: 'written', lag: 0.3, fade: 0.25, ease: 'outCubic' }),
     hold(2.4),
-  ],
-};
+  ] };

@@ -1,10 +1,5 @@
-import type { Point } from '../ease';
-import { hold, look, tap, type Press, type Scene } from '../scene';
+import { hold, tap, type Press, type Scene } from '../scene';
 
-/** The page in the preview, between the two drawers. */
-const PAGE: Point = [590, 400];
-/** The middle of the export dialog. */
-const SAID: Point = [590, 410];
 /** A dialog comes up over the preview. */
 const OPENS: Press = { lag: 0.05, fade: 0.25, ease: 'outCubic' };
 
@@ -20,17 +15,15 @@ export const scene: Scene = {
   // The chapter's opening page, justified, between the two drawers.
   still: 4.8,
   beats: [
-    look('pinned', PAGE),
     hold(1),
-    tap('pinned', 'chapter', { dwell: 0.35, rest: 0.2, then: 'turned', lag: 0.08, fade: 0.25, look: PAGE }),
+    tap('pinned', 'chapter', { dwell: 0.35, rest: 0.2, then: 'turned', lag: 0.08, fade: 0.25 }),
     hold(1.5),
-    tap('turned', 'justify', { dwell: 0.35, rest: 0.2, then: 'justified', lag: 0.05, fade: 0.12, look: PAGE }),
+    tap('turned', 'justify', { dwell: 0.35, rest: 0.2, then: 'justified', lag: 0.05, fade: 0.12 }),
     hold(1.7),
 
     // Export, from the action in the preview's own bar.
-    tap('justified', 'export', { ...OPENS, dwell: 0.35, rest: 0.2, then: 'dialog', look: SAID }),
+    tap('justified', 'export', { ...OPENS, dwell: 0.35, rest: 0.2, then: 'dialog' }),
     hold(1),
-    tap('dialog', 'write', { ...OPENS, dwell: 0.3, rest: 0.2, then: 'written', lag: 0.3, look: SAID }),
+    tap('dialog', 'write', { ...OPENS, dwell: 0.3, rest: 0.2, then: 'written', lag: 0.3 }),
     hold(2.4),
-  ],
-};
+  ] };

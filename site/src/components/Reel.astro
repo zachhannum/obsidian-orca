@@ -5,7 +5,6 @@
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { compile } from '../reel/compile';
-import { NARROW, NARROW_BELOW, sample } from '../reel/sample';
 import type { Scene } from '../reel/scene';
 import type { ReelData } from '../reel/stage';
 import type { Scheme, Take } from '../reel/take';
@@ -17,13 +16,11 @@ interface Props {
   alt: string;
   /** The stage is on screen when the page opens, so its picture is fetched first. */
   eager?: boolean;
-  /** The stage shows the whole window at every width, as a picture of a device does. */
-  whole?: boolean;
   /** The width the stage is drawn at, as an image's `sizes`. */
   sizes?: string;
 }
 
-const { scene: id, alt, eager = false, whole = false, sizes = '(min-width: 1280px) 1200px, 100vw' } = Astro.props;
+const { scene: id, alt, eager = false, sizes = '(min-width: 1280px) 1200px, 100vw' } = Astro.props;
 
 const SCHEMES: Scheme[] = ['dark', 'light'];
 const scenes = import.meta.glob<{ scene: Scene }>('../reel/scenes/*.ts', { eager: true });
@@ -57,18 +54,10 @@ const stills = SCHEMES.map((scheme) => {
   return { scheme, small, srcset: `${small} ${String(w)}w, ${full} ${String(w * take.density)}w` };
 });
 
-/** The point the narrow view centres on at the still time, which the stylesheet places the picture by. */
-const camera = sample(timeline, timeline.still, 'narrow').camera ?? { x: w / 2, y: h / 2 };
-const shape = [
-  `--reel-w:${String(w)}`,
-  `--reel-h:${String(h)}`,
-  `--reel-cx:${camera.x.toFixed(1)}`,
-  `--reel-cy:${camera.y.toFixed(1)}`,
-  `--reel-zoom:${String(NARROW)}`,
-].join(';');
+const shape = `--reel-w:${String(w)};--reel-h:${String(h)}`;
 ---
 
-<div class="reel" data-reel={id} data-reel-state="still" data-reel-whole={whole || w < NARROW_BELOW ? '' : undefined} style={shape}>
+<div class="reel" data-reel={id} data-reel-state="still" style={shape}>
   <div class="reel-view">
     {
       stills.map((still) => (

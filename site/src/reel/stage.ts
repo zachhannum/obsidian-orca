@@ -1,5 +1,5 @@
 import type { Timeline } from './compile';
-import { place, sample, viewOf, type View } from './sample';
+import { sample } from './sample';
 import type { Paint, Scheme } from './take';
 
 /** The JSON a stage carries: the reel, and where each frame is served in each scheme. */
@@ -105,11 +105,9 @@ function startReel(stage: HTMLElement): void {
   let broken = false;
 
   const scheme = (): Scheme => (root.dataset['theme'] === 'light' ? 'light' : 'dark');
-  // A picture of a device is whole at every width.
-  const shape = (): View => (stage.dataset['reelWhole'] === undefined ? viewOf(timeline.window, size.w) : 'wide');
-  // A narrow stage and a screen of one pixel to the point take the
+  // A stage that draws no more pixels than the window has takes the
   // smaller file, so a phone never decodes the larger.
-  const sharp = (): 0 | 1 => (shape() === 'wide' && size.w * devicePixelRatio > timeline.window.w * 1.05 ? 1 : 0);
+  const sharp = (): 0 | 1 => (size.w * devicePixelRatio > timeline.window.w * 1.05 ? 1 : 0);
   const fileOf = (frame: string): string => data.frames[scheme()][frame]?.[sharp()] ?? '';
   const playing = (): boolean => seen && !calm.matches && !broken;
 
@@ -163,11 +161,10 @@ function startReel(stage: HTMLElement): void {
   };
 
   const draw = (at: number): void => {
-    const drawn = sample(timeline, at, shape());
+    const drawn = sample(timeline, at);
     parts ??= build(view);
     const { win, slots, covers, shades, caret, ring } = parts;
-    const placed = place(drawn.camera, timeline.window, size);
-    win.style.transform = `translate(${px(placed.x)}, ${px(placed.y)}) scale(${placed.scale.toFixed(5)})`;
+    win.style.transform = `scale(${(size.w / timeline.window.w).toFixed(5)})`;
     const paint = data.paint[scheme()];
     if (paint !== undefined) {
       win.style.setProperty('--reel-cover', paint.cover);
@@ -272,7 +269,6 @@ function startReel(stage: HTMLElement): void {
   };
 
   const update = (): void => {
-    stage.dataset['reelView'] = shape();
     if (!playing()) {
       rest();
     } else if (raf === 0) {

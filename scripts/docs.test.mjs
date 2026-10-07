@@ -777,8 +777,8 @@ test("a section says orca runs on a phone and a tablet, and plays a reel of each
   assert.match(prose(section).join(" "), /runs in Obsidian on a phone and a tablet/);
   // The plugin's manifest is what lets Obsidian load orca on one.
   assert.equal(JSON.parse(await read("manifest.json")).isDesktopOnly, false);
-  // Each is in a frame of its device, and the tablet's window is whole at every width.
-  assert.match(section, /class="device device-tablet">\s*<Reel\s+scene="tablet"\s+whole/);
+  // Each is in a frame of its device.
+  assert.match(section, /class="device device-tablet">\s*<Reel\s+scene="tablet"/);
   assert.match(section, /class="device device-phone">\s*<Reel\s+scene="phone"/);
   // It stands between the export and the pages that turn.
   assert.ok(landing.indexOf("for the printer</i>") < from && from < landing.indexOf("the pages</i>"));

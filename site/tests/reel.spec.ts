@@ -57,7 +57,6 @@ for (const scheme of ['dark', 'light']) {
       await landing(page, FRAMES);
       const hero = stageOf(page, 'hero');
       await expect(hero).toHaveAttribute('data-reel-state', 'playing');
-      await expect(hero).toHaveAttribute('data-reel-view', 'wide');
       const { timeline } = await dataOf(hero);
       const first = await hero.getAttribute('data-reel-at');
       expect(Number(first)).toBeGreaterThanOrEqual(timeline.still);
@@ -171,10 +170,6 @@ test.describe('at 390 pixels wide', () => {
       await stage.scrollIntoViewIfNeeded();
       const view = stage.locator('.reel-view');
       const { timeline, frames } = await dataOf(stage);
-      // A device's window is whole on a phone, and every other is seen through the camera.
-      const whole = (await stage.getAttribute('data-reel-whole')) !== null;
-      expect(whole).toBe(id === 'phone' || id === 'tablet');
-      await expect(stage).toHaveAttribute('data-reel-view', whole ? 'wide' : 'narrow');
       expect(timeline.clicks.length).toBeGreaterThan(0);
       for (const click of timeline.clicks) {
         await pin(stage, click + 0.02);
@@ -199,14 +194,14 @@ test.describe('at 390 pixels wide', () => {
     expect(again).toBeLessThanOrEqual(0);
   });
 
-  test('each device plays its whole window at its own shape, with no camera', async ({ page }) => {
+  test('every reel plays its whole window at its own shape, and the phone stands in front of the tablet', async ({ page }) => {
     await landing(page, FRAMES);
-    for (const id of ['tablet', 'phone']) {
+    const ids = await page.locator('[data-reel]').evaluateAll((all) => all.map((el) => el.getAttribute('data-reel') ?? ''));
+    for (const id of ids) {
       const stage = stageOf(page, id);
       await stage.scrollIntoViewIfNeeded();
       const { timeline } = await dataOf(stage);
       await pin(stage, timeline.still);
-      await expect(stage).toHaveAttribute('data-reel-view', 'wide');
       const view = await stage.locator('.reel-view').boundingBox();
       const win = await stage.locator('.reel-win').boundingBox();
       const still = await stage.locator('.reel-still:visible').boundingBox();

@@ -1,4 +1,4 @@
-import { keys, type Ease, type Key, type Point } from './ease';
+import { type Ease, type Key, type Point } from './ease';
 import { sample } from './sample';
 import type { At, Scene, Side } from './scene';
 import { frameOf, markOf, mid, type Box, type Take } from './take';
@@ -86,16 +86,8 @@ export interface Timeline {
   cuts: Cut[];
   overs: Over[];
   tracks: Track[];
-  /** The centre of the narrow view. */
-  camera: Key[];
   clicks: number[];
 }
-
-/**
- * The farthest a click can be from the centre of the narrow view, across
- * and down. It is inside half of what a stage 320 pixels wide shows.
- */
-const REACH: Point = [170, 215];
 
 /** The seconds the last frame takes to fade into the first. */
 export const SEAM = 0.8;
@@ -134,39 +126,16 @@ export function compile(scene: Scene, take: Take): Timeline {
   const overs: Over[] = [];
   const tracks: Track[] = [];
   const clicks: number[] = [];
-  const camera: Key[] = [];
   let t = 0;
   let base = scene.first;
   let pointer: Track | null = null;
   let at: Point = [w / 2, h / 2];
-
-  /** The point the narrow view centres on for a click, which keeps the target in the narrowest stage. */
-  const aimed = (target: Point, aim: Point | undefined): Point => {
-    if (aim === undefined) return target;
-    if (Math.abs(aim[0]) > REACH[0] || Math.abs(aim[1]) > REACH[1]) {
-      fail(`an aim of ${String(aim[0])}, ${String(aim[1])} puts the click outside the narrow view`);
-    }
-    return [target[0] + aim[0], target[1] + aim[1]];
-  };
 
   const key = (track: Track, time: number, to: Point): void => {
     const last = track.keys[track.keys.length - 1];
     if (last !== undefined && time < last[0]) fail(`a pointer key at ${String(time)} is before the one at ${String(last[0])}`);
     if (last !== undefined && time === last[0]) track.keys.pop();
     track.keys.push([time, to]);
-  };
-
-  /** Turns the narrow view to a point over a span, from wherever it is at the start. */
-  const turn = (from: number, to: number, target: Point): void => {
-    if (camera.length === 0 || from <= 0) {
-      camera.length = 0;
-      camera.push([0, target]);
-      if (to > 0) camera.push([to, target]);
-      return;
-    }
-    const here = keys(from, camera);
-    while (camera.length > 0 && (camera[camera.length - 1]?.[0] ?? -1) >= from) camera.pop();
-    camera.push([from, here], [Math.max(to, from + 0.01), target]);
   };
 
   const bring = (time: number, frame: string, fade: number, ease: Ease): void => {
@@ -182,8 +151,6 @@ export function compile(scene: Scene, take: Take): Timeline {
     } else if (beat.kind === 'cut') {
       bring(t, beat.frame, beat.fade, beat.ease);
       t += beat.fade;
-    } else if (beat.kind === 'look') {
-      turn(t, t + beat.over, point(beat.frame, beat.at));
     } else if (beat.kind === 'click' || beat.kind === 'point') {
       const target = point(beat.frame, beat.at);
       if (pointer === null) {
@@ -204,22 +171,18 @@ export function compile(scene: Scene, take: Take): Timeline {
         pointer.clicks.push(clicked);
         clicks.push(clicked);
       }
-      turn(t, move > 0 ? landed : clicked, aimed(target, beat.aim));
       at = target;
       t = clicked + (beat.rest ?? 0.12);
       key(pointer, t, at);
       pointer.b = t;
       if (beat.then !== undefined) bring(clicked + (beat.lag ?? 0.06), beat.then, beat.fade ?? 0.14, beat.ease ?? 'outQuad');
-      if (beat.look !== undefined) turn(clicked + 0.2, clicked + 0.7, point(beat.then ?? beat.frame, beat.look));
     } else if (beat.kind === 'tap') {
       const target = point(beat.frame, beat.at);
       const tapped = t + (beat.dwell ?? 0.3);
       tracks.push({ a: tapped - 0.2, b: tapped + 0.5, keys: [[tapped - 0.2, target], [tapped + 0.5, target]], clicks: [tapped], touch: true });
       clicks.push(tapped);
-      turn(t, tapped, aimed(target, beat.aim));
       t = tapped + (beat.rest ?? 0.12);
       if (beat.then !== undefined) bring(tapped + (beat.lag ?? 0.06), beat.then, beat.fade ?? 0.14, beat.ease ?? 'outQuad');
-      if (beat.look !== undefined) turn(tapped + 0.2, tapped + 0.7, point(beat.then ?? beat.frame, beat.look));
     } else if (beat.kind === 'leave') {
       if (pointer === null) fail('a leave has no pointer to send off');
       else {
@@ -329,10 +292,6 @@ export function compile(scene: Scene, take: Take): Timeline {
     }
   }
 
-  if (camera.length === 0) camera.push([0, [w / 2, h / 2]]);
-  // The view is back where it starts by the time the first frame is.
-  turn(length - SEAM, length, camera[0]?.[1] ?? [w / 2, h / 2]);
-
   // A frame is on screen from its cut until a later cut has faded in whole.
   const uses: [string, number, number][] = cuts.map((cut, i) => {
     const hidden = cuts.slice(i + 1).map((later) => later.t + later.fade);
@@ -357,12 +316,11 @@ export function compile(scene: Scene, take: Take): Timeline {
     cuts,
     overs,
     tracks,
-    camera,
     clicks: clicks.sort((p, q) => p - q),
   };
 
   if (!(scene.still >= 0 && scene.still < length)) fail(`the still time ${String(scene.still)} is outside the reel`);
-  const still = sample(timeline, scene.still, 'wide');
+  const still = sample(timeline, scene.still);
   const [only] = still.layers;
   if (only === undefined || still.layers.length !== 1 || only.opacity < 1 || only.crop !== undefined || only.move !== undefined) {
     fail(`the still time ${String(scene.still)} shows more than one whole frame`);

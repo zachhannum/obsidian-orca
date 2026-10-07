@@ -45,7 +45,7 @@ const heroTake = await takeOf("hero");
 const tour = P.compile(hero, heroTake);
 
 /** The frames on screen at a time, back to front. */
-const frames = (timeline, t) => P.sample(timeline, t, "wide").layers.map((layer) => layer.frame);
+const frames = (timeline, t) => P.sample(timeline, t).layers.map((layer) => layer.frame);
 const near = (a, b, by = 0.01) => Math.abs(a - b) <= by;
 
 test("the hero plays the notes, writing, the design panel, the CSS view and export, in that order", () => {
@@ -76,7 +76,7 @@ test("the hero plays the notes, writing, the design panel, the CSS view and expo
   ];
   for (const [t, wanted] of shown) assert.deepEqual(frames(tour, t), wanted, `at ${t} seconds`);
   // A frame fades in over the one before it.
-  const fading = P.sample(tour, 6.95, "wide").layers.at(-1);
+  const fading = P.sample(tour, 6.95).layers.at(-1);
   assert.equal(fading.frame, "read");
   assert.ok(fading.opacity > 0 && fading.opacity < 1);
 });
@@ -99,14 +99,14 @@ test("the hero's pointer is on each target when it clicks, and a ring follows th
   tour.clicks.forEach((t, at) => {
     const target = targets[at];
     const [x, y] = typeof target[0] === "string" ? P.mid(heroTake, target[0], target[1]) : target;
-    const { pointer, ring } = P.sample(tour, t + 0.01, "wide");
+    const { pointer, ring } = P.sample(tour, t + 0.01);
     assert.ok(pointer !== null && ring !== null, `no pointer at the click at ${t}`);
     assert.ok(near(pointer.x, x) && near(pointer.y, y), `the click at ${t} is at ${pointer.x}, ${pointer.y}`);
     assert.equal(pointer.touch, false);
     assert.ok(pointer.opacity > 0.9 && pointer.press < 1);
   });
   // The pointer is off the window while the chapter is typed.
-  assert.equal(P.sample(tour, 4.5, "wide").pointer, null);
+  assert.equal(P.sample(tour, 4.5).pointer, null);
 });
 
 test("the hero types the chapter row by row, then the rule under covers", () => {
@@ -122,26 +122,26 @@ test("the hero types the chapter row by row, then the rule under covers", () => 
   assert.deepEqual(P.typing(writing, 6.5).shown, rows.slice(0, 13).map((row) => row.w));
 
   // The caret is at the end of what is typed, and it is gone once the preview takes the pane.
-  const at = P.sample(tour, 5, "wide");
+  const at = P.sample(tour, 5);
   const row = rows[typed - 1];
   assert.ok(near(at.caret.x, row.x + part.shown[typed - 1] + 1) && near(at.caret.y, row.y - 2));
   assert.match(at.layers[1].crop, /^path\('M/);
-  assert.equal(P.sample(tour, 6.9, "wide").caret, null);
+  assert.equal(P.sample(tour, 6.9).caret, null);
 
   // A row of the rule is covered until it is typed, and the page is set after the last.
   const rule = heroTake.frames.find((frame) => frame.name === "css-2").rows;
-  assert.equal(P.sample(tour, 18.62, "wide").covers.length, rule.length);
-  const half = P.sample(tour, 19.8, "wide");
+  assert.equal(P.sample(tour, 18.62).covers.length, rule.length);
+  const half = P.sample(tour, 19.8);
   assert.ok(half.covers.length > 0 && half.covers.length < rule.length);
   assert.match(half.layers[1].crop, /^inset\(/);
-  const set = P.sample(tour, 21.8, "wide");
+  const set = P.sample(tour, 21.8);
   assert.equal(set.covers.length, 0);
   assert.ok(set.caret !== null, "the caret leaves the editor before the dialog opens");
 });
 
 test("the hero scrolls the panel through frames placed at their own offsets", () => {
   const scroll = (name) => heroTake.frames.find((frame) => frame.name === name).scroll;
-  const middle = P.sample(tour, 12.95, "wide").layers;
+  const middle = P.sample(tour, 12.95).layers;
   assert.deepEqual(middle.map((layer) => layer.frame), ["design-7", "design-7", "scroll-down", "design-8"]);
   const at = scroll("design-7") - middle[1].move[1];
   assert.ok(at > scroll("design-7") && at < scroll("design-8"));
@@ -164,16 +164,15 @@ for (const scene of P.SCENES) {
       for (const [, [x, y]] of track.keys) assert.ok(x >= 0 && x <= w && y >= 0 && y <= h);
       for (const click of track.clicks) assert.ok(click > track.a && click < track.b);
     }
-    for (const list of [timeline.cuts.map((cut) => cut.t), timeline.camera.map(([t]) => t), timeline.clicks]) {
+    for (const list of [timeline.cuts.map((cut) => cut.t), timeline.clicks]) {
       assert.deepEqual(list, [...list].sort((a, b) => a - b));
     }
 
     // The first moment is the first frame alone, which the last moment has faded to.
     assert.deepEqual(frames(timeline, 0), [scene.first]);
-    const last = P.sample(timeline, timeline.length, "wide").layers.at(-1);
+    const last = P.sample(timeline, timeline.length).layers.at(-1);
     assert.equal(last.frame, scene.first);
     assert.ok(last.opacity > 0.99);
-    assert.deepEqual(P.sample(timeline, timeline.length, "narrow").camera, P.sample(timeline, 0, "narrow").camera);
 
     // The still is one whole frame, and it is what a reader with no script sees.
     assert.deepEqual(frames(timeline, timeline.still), [timeline.stillFrame]);
@@ -181,7 +180,7 @@ for (const scene of P.SCENES) {
     // The page carries the timeline as JSON, and draws the same from it.
     const carried = JSON.parse(JSON.stringify(timeline));
     for (let t = 0; t < timeline.length; t += 0.37) {
-      assert.deepEqual(P.sample(carried, t, "narrow"), P.sample(timeline, t, "narrow"));
+      assert.deepEqual(P.sample(carried, t), P.sample(timeline, t));
       // A frame on screen is one the player was told to hold for that time.
       for (const frame of frames(timeline, t)) {
         assert.ok(timeline.uses.some(([name, a, b]) => name === frame && t >= a && t <= b), `${frame} at ${t}`);
@@ -193,22 +192,6 @@ for (const scene of P.SCENES) {
         const file = path.join(shots, scene.take, `${frame}-${scheme}.webp`);
         assert.ok((await stat(file)).isFile(), `no ${frame}-${scheme}.webp`);
       }
-    }
-  });
-
-  test(`at every click of the ${scene.id} reel, the narrowest stage shows the pointer's target`, async () => {
-    const take = await takeOf(scene.take);
-    const timeline = P.compile(scene, take);
-    // A stage 320 pixels wide, in the narrow view's shape. A phone's
-    // window is whole there, in its own shape.
-    const view = P.viewOf(timeline.window, 320);
-    const stage = { w: 320, h: view === "narrow" ? 400 : (320 * timeline.window.h) / timeline.window.w };
-    assert.ok(timeline.clicks.length > 0);
-    for (const t of timeline.clicks) {
-      const { camera, pointer } = P.sample(timeline, t, view);
-      const { scale, x, y } = P.place(camera, timeline.window, stage);
-      const at = [pointer.x * scale + x, pointer.y * scale + y];
-      assert.ok(at[0] >= 0 && at[0] <= stage.w && at[1] >= 0 && at[1] <= stage.h, `the click at ${t} is at ${at}`);
     }
   });
 }
@@ -227,7 +210,7 @@ test("the write reel types the chapter, opens the preview, and goes back to the 
   assert.deepEqual(frames(write, open + 0.5), ["read"]);
   assert.deepEqual(frames(write, back + 0.5), ["write"]);
   assert.equal(write.stillFrame, "read");
-  const at = (t) => P.sample(write, t, "wide").pointer;
+  const at = (t) => P.sample(write, t).pointer;
   assert.deepEqual([at(open).x, at(open).y], P.mid(heroTake, "write", "preview"));
   assert.deepEqual([at(back).x, at(back).y], P.mid(heroTake, "read", "manuscript"));
 });
@@ -258,7 +241,7 @@ test("the design reel starts from the book with no design, and each of its panel
   design.clicks.forEach((t, at) => {
     const [on, mark, then] = steps[at];
     assert.deepEqual(frames(design, t - 0.01), [on], `before the click on ${mark}`);
-    const { pointer } = P.sample(design, t, "wide");
+    const { pointer } = P.sample(design, t);
     assert.deepEqual([pointer.x, pointer.y], P.mid(take, on, mark), `the click on ${mark}`);
     const cut = design.cuts.find((held) => held.t >= t);
     assert.equal(cut.frame, then);
@@ -297,7 +280,7 @@ test("the CSS reel pins a paragraph of the colophon in inspect mode, adds a rule
     const [on, mark, then] = steps[at];
     // The outline is under the pointer before the click that pins the paragraph.
     assert.deepEqual(frames(css, t - 0.01), [on], `before the click on ${mark}`);
-    const { pointer } = P.sample(css, t, "wide");
+    const { pointer } = P.sample(css, t);
     assert.deepEqual([pointer.x, pointer.y], P.mid(take, on, mark), `the click on ${mark}`);
     const cut = css.cuts.find((held) => held.t >= t);
     assert.deepEqual(frames(css, cut.t + cut.fade + 0.01), [then], `after the click on ${mark}`);
@@ -311,8 +294,8 @@ test("the CSS reel pins a paragraph of the colophon in inspect mode, adds a rule
   assert.equal(typed.how, "cover");
   assert.deepEqual(typed.rows, rows);
   assert.deepEqual(typed.box, take.frames.find((frame) => frame.name === "c5").marks.code);
-  assert.equal(P.sample(css, typed.a + 0.01, "wide").covers.length, 3);
-  const half = P.sample(css, (typed.a + typed.stop) / 2, "wide");
+  assert.equal(P.sample(css, typed.a + 0.01).covers.length, 3);
+  const half = P.sample(css, (typed.a + typed.stop) / 2);
   assert.ok(half.covers.length > 0 && half.covers.length < 3);
   assert.ok(half.caret !== null);
   for (const scheme of ["dark", "light"]) {
@@ -321,7 +304,7 @@ test("the CSS reel pins a paragraph of the colophon in inspect mode, adds a rule
   }
 
   // The page is set once the typing stops, and the reel ends on it with the pin off.
-  const set = P.sample(css, typed.stop + 0.7, "wide");
+  const set = P.sample(css, typed.stop + 0.7);
   assert.deepEqual(set.layers.map((layer) => layer.frame), ["c5"]);
   assert.equal(set.covers.length, 0);
   assert.equal(css.stillFrame, "c5");
@@ -350,7 +333,7 @@ test("the chapters reel shows the book note's page, then its Markdown with each 
   ]) {
     assert.deepEqual(frames(reel, t - 0.01), [frame], `before the click at ${t}`);
     const [x, y] = P.mid(take, frame, mark);
-    const { pointer, ring } = P.sample(reel, t + 0.01, "wide");
+    const { pointer, ring } = P.sample(reel, t + 0.01);
     assert.ok(ring !== null && near(pointer.x, x) && near(pointer.y, y), `the click at ${t} is at ${pointer.x}, ${pointer.y}`);
     assert.deepEqual(frames(reel, t + 0.5), [then], `after the click at ${t}`);
   }
@@ -366,14 +349,14 @@ test("the chapters reel shows the book note's page, then its Markdown with each 
     const tall = over.box.h;
     assert.ok(Math.abs(offsets[1] - offsets[0]) < tall && Math.abs(offsets[2] - offsets[1]) < tall, "a strip has a gap");
     // The status bar and the scroller's bar stay still over the strip.
-    const middle = P.sample(reel, (over.a + over.b) / 2, "wide").layers;
+    const middle = P.sample(reel, (over.a + over.b) / 2).layers;
     const still = middle.filter((layer) => layer.frame === over.frames[0].frame && layer.move === undefined && layer.crop !== undefined);
     assert.equal(still.length, 2);
   }
 
   // The pointer rests on a chapter's link with no click, and the still is that picture.
   const [x, y] = P.mid(take, "source-order", "link");
-  const rest = P.sample(reel, scene.still, "wide");
+  const rest = P.sample(reel, scene.still);
   assert.ok(near(rest.pointer.x, x) && near(rest.pointer.y, y) && rest.ring === null);
   assert.equal(reel.stillFrame, "source-order");
   // The reel ends on the page it opens on.
@@ -400,7 +383,7 @@ test("the export reel shows preflight refusing the book with the Export button d
     const [frame, mark, then] = steps[at];
     assert.equal(frames(reel, t - 0.01).at(-1), frame, `before the click at ${t}`);
     const [x, y] = P.mid(take, frame, mark);
-    const { pointer } = P.sample(reel, t + 0.01, "wide");
+    const { pointer } = P.sample(reel, t + 0.01);
     assert.ok(near(pointer.x, x) && near(pointer.y, y), `the click at ${t} is at ${pointer.x}, ${pointer.y}`);
     assert.equal(frames(reel, t + 0.6).at(-1), then, `after the click at ${t}`);
   });
@@ -417,27 +400,19 @@ test("the export reel shows preflight refusing the book with the Export button d
   assert.equal(fix.frame, "e3");
   assert.deepEqual(fix.rows, [take.frames.find((frame) => frame.name === "e3").marks.word]);
   const [a, b] = fix.spans[0];
-  const typing = P.sample(reel, (a + b) / 2, "wide");
+  const typing = P.sample(reel, (a + b) / 2);
   assert.deepEqual(typing.layers.map((layer) => layer.frame), ["e2", "e3"]);
   assert.equal(typing.covers.length, 0);
   assert.ok(typing.caret !== null && typing.caret.x > fix.rows[0].x && typing.caret.x < fix.rows[0].x + fix.rows[0].w);
   // The pointer is off the word while it is typed.
   assert.ok(typing.pointer.y > fix.rows[0].y + fix.rows[0].h + 20);
-
-  // The narrow view turns to the dialog once it is open, and to the plate.
-  const view = (t) => P.sample(reel, t, "narrow").camera;
-  const dialog = take.frames.find((frame) => frame.name === "e1").marks.dialog;
-  const refused = view(reel.clicks[0] + 0.8);
-  assert.ok(refused.x > dialog.x && refused.x < dialog.x + dialog.w && refused.y > dialog.y && refused.y < dialog.y + dialog.h);
-  const plate = view(reel.clicks[3] + 0.8);
-  assert.ok(plate.x > 392 && plate.x < 770, `the view is at ${plate.x} when the plate shows`);
 });
 
 test("a pointer moved to a point clicks nothing, and a scene that names no fixed mark scrolls as before", () => {
   const scene = (beats) => ({ id: "t", take: "hero", first: "notes", still: 0, beats });
   const moved = P.compile(scene([P.click("notes", "chapter"), P.point("notes", [400, 300], { move: 0.5 }), P.hold(2)]), heroTake);
   assert.equal(moved.clicks.length, 1);
-  const there = P.sample(moved, moved.clicks[0] + 0.12 + 0.5 + 0.2, "wide");
+  const there = P.sample(moved, moved.clicks[0] + 0.12 + 0.5 + 0.2);
   assert.deepEqual([there.pointer.x, there.pointer.y], [400, 300]);
   assert.deepEqual(tour.overs.find((over) => over.kind === "scroll").fixed, []);
   assert.throws(
@@ -454,7 +429,6 @@ test("a scene that names a frame, a mark or a row the take does not have does no
   assert.throws(() => P.compile(scene([P.type("write", [[21, 1]]), P.hold(2)]), heroTake), /21 rows/);
   assert.throws(() => P.compile(scene([P.scroll(["notes", "read"]), P.hold(2)]), heroTake), /no scroll offset|no mark scroller/);
   assert.throws(() => P.compile(scene([P.click("notes", [1300, 10]), P.hold(2)]), heroTake), /outside the window/);
-  assert.throws(() => P.compile(scene([P.click("notes", "chapter", { aim: [400, 0] }), P.hold(2)]), heroTake), /outside the narrow view/);
   assert.throws(() => P.compile(scene([P.click("notes", "chapter", { then: "read" })]), heroTake), /too short/);
   assert.throws(() => P.compile(scene([P.hold(3)], { still: 2.6 }), heroTake), /more than one whole frame/);
 });
@@ -487,7 +461,7 @@ test("a finger taps and drags as a dot, and a drawer and a sheet slide by their 
   const timeline = P.compile({ id: "phone", take: "phone", first: "page", still: 0, beats }, take);
 
   // The drawer comes from a whole width away over the page it pushes aside.
-  const coming = P.sample(timeline, 1.2, "wide");
+  const coming = P.sample(timeline, 1.2);
   assert.deepEqual(coming.layers.map((layer) => layer.frame), ["page", "panel"]);
   assert.ok(coming.layers[0].move[0] < 0 && coming.layers[0].move[0] > -300);
   assert.ok(coming.layers[1].move[0] > 0 && near(coming.layers[1].move[0] - coming.layers[0].move[0], 300));
@@ -497,16 +471,16 @@ test("a finger taps and drags as a dot, and a drawer and a sheet slide by their 
 
   // A tap is a dot on its target that is gone a moment later.
   const [close, open] = timeline.clicks;
-  assert.deepEqual([P.sample(timeline, close, "wide").pointer.x, P.sample(timeline, close, "wide").pointer.y], [120, 40]);
-  assert.equal(P.sample(timeline, close + 0.6, "wide").pointer, null);
+  assert.deepEqual([P.sample(timeline, close).pointer.x, P.sample(timeline, close).pointer.y], [120, 40]);
+  assert.equal(P.sample(timeline, close + 0.6).pointer, null);
 
   // The drawer leaves the way it came, and the page comes back with it.
-  const going = P.sample(timeline, close + 0.12 + 0.2, "wide");
+  const going = P.sample(timeline, close + 0.12 + 0.2);
   assert.deepEqual(going.layers.map((layer) => layer.frame), ["page", "panel"]);
   assert.ok(going.layers[1].move[0] > 0 && going.layers[0].move[0] < 0);
 
   // The sheet comes up by its own height, and the page above it dims.
-  const up = P.sample(timeline, open + 0.2 + 0.1, "wide");
+  const up = P.sample(timeline, open + 0.2 + 0.1);
   assert.deepEqual(up.layers.map((layer) => layer.frame), ["page", "sheet", "sheet"]);
   assert.ok(up.layers[1].opacity > 0 && up.layers[1].opacity < 1);
   assert.equal(up.layers[1].crop, "inset(0px 0px 344px 0px)");
@@ -525,19 +499,14 @@ test("a section plays a phone reel and a tablet reel from frames of Obsidian's m
     for (const track of timeline.tracks) assert.equal(track.touch, true);
     for (const beat of scene.beats) assert.notEqual(beat.kind, "click");
     for (const t of timeline.clicks) {
-      const { pointer, ring } = P.sample(timeline, t + 0.01, "wide");
+      const { pointer, ring } = P.sample(timeline, t + 0.01);
       assert.ok(pointer !== null && pointer.touch && pointer.opacity > 0.9 && ring !== null, `no dot at the tap at ${t}`);
     }
-    assert.equal(P.sample(timeline, timeline.clicks[0] + 0.7, "wide").pointer, null);
+    assert.equal(P.sample(timeline, timeline.clicks[0] + 0.7).pointer, null);
   }
 
-  // A phone's window shows whole at every width, and a tablet's through the camera on a narrow stage.
   const phoneTake = await takeOf("phone");
   const tabletTake = await takeOf("tablet");
-  for (const width of [320, 350, 390, 1200]) assert.equal(P.viewOf(phoneTake.window, width), "wide");
-  assert.equal(P.viewOf(tabletTake.window, 350), "narrow");
-  assert.equal(P.viewOf(tabletTake.window, 800), "wide");
-  assert.equal(P.viewOf(heroTake.window, 350), "narrow");
 
   const phone = P.compile(P.SCENES.find((held) => held.id === "phone"), phoneTake);
   const tablet = P.compile(P.SCENES.find((held) => held.id === "tablet"), tabletTake);
@@ -550,7 +519,7 @@ test("a section plays a phone reel and a tablet reel from frames of Obsidian's m
   assert.deepEqual([coming.frame, coming.out, coming.push, coming.by], ["drawer", false, true, [drawer.w, 0]]);
   for (const k of [0.2, 0.5, 0.8]) {
     const t = coming.a + (coming.b - coming.a) * k;
-    const { layers, pointer } = P.sample(phone, t, "wide");
+    const { layers, pointer } = P.sample(phone, t);
     assert.deepEqual(layers.map((layer) => layer.frame), ["page", "drawer"]);
     const edge = drawer.x + layers[1].move[0];
     assert.ok(near(phoneTake.window.w + layers[0].move[0], edge), `the page and the drawer part at ${t}`);
@@ -560,7 +529,7 @@ test("a section plays a phone reel and a tablet reel from frames of Obsidian's m
   }
   // The strip of the page the drawer leaves in sight is shaded once the drawer is in: the
   // frame fades in over the slide, which stays drawn at its end for as long.
-  const settling = P.sample(phone, coming.b + coming.held / 2, "wide").layers;
+  const settling = P.sample(phone, coming.b + coming.held / 2).layers;
   assert.deepEqual(settling.map((layer) => layer.frame), ["page", "drawer", "drawer"]);
   assert.ok(near(settling[0].move[0], -drawer.w) && near(settling[1].move[0], 0));
   assert.ok(settling[2].opacity > 0 && settling[2].opacity < 1 && settling[2].crop === undefined);
@@ -568,7 +537,7 @@ test("a section plays a phone reel and a tablet reel from frames of Obsidian's m
 
   // It leaves the same way, and the page left behind is the justified one.
   assert.deepEqual([going.frame, going.out, going.push], ["justified", true, true]);
-  const leaving = P.sample(phone, (going.a + going.b) / 2, "wide");
+  const leaving = P.sample(phone, (going.a + going.b) / 2);
   assert.deepEqual(leaving.layers.map((layer) => layer.frame), ["set", "justified"]);
   assert.ok(near(phoneTake.window.w + leaving.layers[0].move[0], drawer.x + leaving.layers[1].move[0]));
   assert.ok(leaving.pointer !== null && leaving.pointer.touch);
@@ -577,14 +546,14 @@ test("a section plays a phone reel and a tablet reel from frames of Obsidian's m
 
   // The sheet rises by its own height over the page, which dims.
   assert.deepEqual([rising.frame, rising.by, rising.dim], ["sheet", [0, sheet.h], { x: 0, y: 0, w: 390, h: sheet.y }]);
-  const risen = P.sample(phone, (rising.a + rising.b) / 2, "wide");
+  const risen = P.sample(phone, (rising.a + rising.b) / 2);
   const up = risen.layers;
   assert.deepEqual(up.map((layer) => layer.frame), ["set", "sheet", "sheet"]);
   assert.ok(up[1].opacity > 0 && up[1].opacity < 1 && up[2].move[1] > 0 && up[2].move[1] < sheet.h);
   // The page between the shaded part and the sheet's top is shaded as much, in the take's own shade.
   assert.deepEqual(risen.shades, [{ x: 0, y: sheet.y, w: sheet.w, h: up[2].move[1], opacity: up[1].opacity }]);
   for (const scheme of ["dark", "light"]) assert.match(phoneTake.shade[scheme], /^rgb\(\d+ \d+ \d+ \/ 0\.\d+\)$/);
-  assert.deepEqual(P.sample(phone, rising.b + 0.01, "wide").shades, []);
+  assert.deepEqual(P.sample(phone, rising.b + 0.01).shades, []);
 
   // Each tap brings up the frame the take took after it.
   const after = (timeline, at) => frames(timeline, timeline.clicks[at] + 0.6);

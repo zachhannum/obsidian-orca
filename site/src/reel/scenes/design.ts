@@ -1,10 +1,7 @@
-import type { Point } from '../ease';
-import { click, hold, leave, look, overlap, scroll, type Press, type Scene } from '../scene';
+import { click, hold, leave, overlap, scroll, type Press, type Scene } from '../scene';
 
-/** The top of the chapter's opening page, where each change of the panel shows. */
-const PAGE: Point = [600, 330];
-/** Keeps the facing page in the narrow view while a control of the panel is clicked. */
-const PANEL: Press = { aim: [-170, -60], dwell: 0.22, look: PAGE };
+/** A click on a control of the panel. */
+const PANEL: Press = { dwell: 0.22 };
 /** A value typed into a field. The pages are set a moment after the last key. */
 const TYPED: Press = { ...PANEL, dwell: 0.35, lag: 0.4, fade: 0.2 };
 /** The seconds a change stays on the page before the pointer goes on. */
@@ -22,7 +19,6 @@ export const scene: Scene = {
   // The page with every change made.
   still: 18.2,
   beats: [
-    look('d0', PAGE),
     hold(0.7),
 
     // The page and its text.
@@ -35,7 +31,7 @@ export const scene: Scene = {
     // its font while the panel scrolls to the headings.
     scroll(['d2', 'scroll-headings', 'd3'], 0.6),
     overlap(0.5),
-    click('d3', 'h1-font', { aim: [-170, -60], move: 0.7, then: 'd4' }),
+    click('d3', 'h1-font', { move: 0.7, then: 'd4' }),
     hold(0.25),
     click('d4', 'option', { ...PANEL, move: 0.3, then: 'd5' }),
     hold(SEEN),
@@ -45,7 +41,7 @@ export const scene: Scene = {
     hold(SEEN),
 
     // The line over the title is a second-level heading, which the same rows set.
-    click('d7', 'h2', { aim: [-170, -60], move: 0.5, dwell: 0.22, then: 'd8' }),
+    click('d7', 'h2', { move: 0.5, dwell: 0.22, then: 'd8' }),
     hold(0.15),
     click('d8', 'h2-size', { ...TYPED, move: 0.5, then: 'd9' }),
     hold(SEEN + 0.3),
@@ -60,5 +56,4 @@ export const scene: Scene = {
     click('d12', 'first-line', { ...PANEL, move: 0.5, then: 'd13' }),
     leave([50, 80], 0.8),
     hold(2.4),
-  ],
-};
+  ] };

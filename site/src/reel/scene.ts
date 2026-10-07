@@ -27,18 +27,6 @@ export interface Press {
   lag?: number;
   fade?: number;
   ease?: Ease;
-  /**
-   * The offset from the target to the point the narrow view centres on
-   * for the click. It keeps what the click changes in the view with
-   * the target. The target stays inside the narrowest stage.
-   */
-  aim?: Point;
-  /**
-   * The mark of the frame after the click, or the point, that the
-   * narrow view turns to once the click has landed. A click that
-   * follows within half a second takes the view before it gets there.
-   */
-  look?: At;
 }
 
 export interface Typing {
@@ -89,8 +77,7 @@ export type Beat =
   | { kind: 'scroll'; frames: readonly string[]; over: number; box: string; fixed: readonly string[] }
   | ({ kind: 'slide'; frame: string; box: string } & Sliding)
   | { kind: 'cut'; frame: string; fade: number; ease: Ease }
-  | { kind: 'hold'; seconds: number }
-  | { kind: 'look'; frame: string; at: At; over: number };
+  | { kind: 'hold'; seconds: number };
 
 /**
  * A reel, as data. The beats play one after another from 0, and each
@@ -172,9 +159,3 @@ export const hold = (seconds: number): Beat => ({ kind: 'hold', seconds });
 
 /** Starts the next beat this many seconds before the last one ended. */
 export const overlap = (seconds: number): Beat => ({ kind: 'hold', seconds: -seconds });
-
-/**
- * Turns the narrow view to a mark of `frame`, or to a point. It takes
- * no time. At the head of a scene it sets where the view starts.
- */
-export const look = (frame: string, at: At, over = 0.6): Beat => ({ kind: 'look', frame, at, over });

@@ -1,11 +1,5 @@
-import type { Point } from '../ease';
-import { click, hold, leave, look, point, scroll, type Scene } from '../scene';
+import { click, hold, leave, point, scroll, type Scene } from '../scene';
 
-/** The head of the book note's page, and the head of its reading order once the page is scrolled to it. */
-const TITLE: Point = [620, 300];
-const ORDER: Point = [620, 330];
-/** The first of the note's properties, as its Markdown writes them. */
-const PROPERTIES: Point = [590, 330];
 /** The status bar and the scroller's own bar, which lie over the note and do not scroll with it. */
 const OVER = ['status', 'bar'];
 
@@ -21,10 +15,8 @@ export const scene: Scene = {
   // The note's Markdown, with the pointer's rest on a chapter's link.
   still: 5.6,
   beats: [
-    look('page', TITLE),
     hold(0.9),
     scroll(['page', 'page-mid', 'page-order'], 1.3, 'scroller', OVER),
-    look('page-order', ORDER),
     hold(1),
 
     // The page's own action hands the note to the editor.
@@ -35,12 +27,9 @@ export const scene: Scene = {
       rest: 0.25,
       then: 'source-order',
       lag: 0.05,
-      fade: 0.2,
-      look: 'link',
-    }),
+      fade: 0.2 }),
     point('source-order', 'link', { move: 0.8, dwell: 0, rest: 1.3 }),
     scroll(['source-order', 'source-mid', 'source-top'], 1.5, 'scroller', OVER),
-    look('source-top', PROPERTIES),
     hold(1.1),
 
     // The editor's own action hands it back.
@@ -50,10 +39,7 @@ export const scene: Scene = {
       rest: 0.25,
       then: 'page',
       lag: 0.05,
-      fade: 0.2,
-      look: TITLE,
-    }),
+      fade: 0.2 }),
     leave([-70, 100], 0.7),
     hold(1.7),
-  ],
-};
+  ] };
