@@ -159,8 +159,8 @@ test("the lint pass visits `src`, `e2e-tests`, `scripts` and the site's specs", 
         "src/book/note.ts: `book` may not import `ui`",
         "e2e-tests/harness/note.ts: a doc comment opens with a question word; name the thing",
         "scripts/summary.mjs: a doc comment opens with a question word; name the thing",
-        "e2e-tests/draft.spec.ts: `waitForTimeout` is a clock; wait on what the pane painted",
         "docs/tests/reel.spec.ts: `setTimeout` is a clock; wait on what the pane painted",
+        "e2e-tests/draft.spec.ts: `waitForTimeout` is a clock; wait on what the pane painted",
       ],
     );
   } finally {
