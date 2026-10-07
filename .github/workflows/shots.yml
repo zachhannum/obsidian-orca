@@ -10,9 +10,9 @@ on:
       - "src/**"
       - "styles.css"
       - "e2e-tests/**"
-      - "site/sample/**"
-      - "site/src/marks/**"
-      - "site/src/styles/tokens.css"
+      - "docs/sample/**"
+      - "docs/src/marks/**"
+      - "docs/src/styles/tokens.css"
       - ".github/workflows/shots.yml"
   push:
     branches: [main]
@@ -20,9 +20,9 @@ on:
       - "src/**"
       - "styles.css"
       - "e2e-tests/**"
-      - "site/sample/**"
-      - "site/src/marks/**"
-      - "site/src/styles/tokens.css"
+      - "docs/sample/**"
+      - "docs/src/marks/**"
+      - "docs/src/styles/tokens.css"
       - ".github/workflows/shots.yml"
 
 # The commit of orca-film that draws the loop. A change there reaches
@@ -45,7 +45,7 @@ jobs:
       - run: npm run shots
       # A run that changed no picture still hands on an archive, empty.
       - name: keep the pictures that changed
-        run: git ls-files -m -o --exclude-standard -z site/src/shots | tar --null -T - -cf ${{ runner.temp }}/spec.tar
+        run: git ls-files -m -o --exclude-standard -z docs/src/shots | tar --null -T - -cf ${{ runner.temp }}/spec.tar
       - uses: actions/upload-artifact@v4
         with:
           name: shots-spec
@@ -106,13 +106,13 @@ jobs:
           npm ci --prefer-offline --no-audit --no-fund
           npx playwright install --with-deps chromium
           if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" = push ]; then
-            node loop.mjs --into ../site/src/shots
+            node loop.mjs --into ../docs/src/shots
           else
-            node loop.mjs --posters --into ../site/src/shots
+            node loop.mjs --posters --into ../docs/src/shots
           fi
 
       - name: keep the pictures that changed
-        run: git ls-files -m -o --exclude-standard -z site/src/shots | tar --null -T - -cf ${{ runner.temp }}/loop.tar
+        run: git ls-files -m -o --exclude-standard -z docs/src/shots | tar --null -T - -cf ${{ runner.temp }}/loop.tar
       - uses: actions/upload-artifact@v4
         with:
           name: shots-loop
@@ -148,7 +148,7 @@ jobs:
           {
             echo "## Pictures that moved"
             echo
-            moved="$(git status --porcelain site/src/shots)"
+            moved="$(git status --porcelain docs/src/shots)"
             if [ -z "$moved" ]; then
               echo "None."
             else
@@ -161,7 +161,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: shots
-          path: site/src/shots/
+          path: docs/src/shots/
           retention-days: 7
 
       # A picture is rasterized by the machine that took it, so the ones
@@ -172,7 +172,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$(git status --porcelain site/src/shots)" ]; then
+          if [ -z "$(git status --porcelain docs/src/shots)" ]; then
             echo "the pictures are unchanged"
             exit 0
           fi
@@ -182,7 +182,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$branch"
-          git add site/src/shots
+          git add docs/src/shots
           git commit -m "Take the site's pictures again"
           git push --force origin "$branch"
           gh pr view "$branch" --json state -q .state 2>/dev/null | grep -qx OPEN || gh pr create --base main --head "$branch" \

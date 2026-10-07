@@ -7,7 +7,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, closed]
     paths:
-      - "site/**"
+      - "docs/**"
       - "design/**"
       - ".github/workflows/preview.yml"
 
@@ -46,28 +46,28 @@ jobs:
           docs=false
           design=false
           surface=false
-          grep -qE '^(site/|design/site\.spec\.css$)' <<<"$changed" && docs=true
+          grep -qE '^(docs/|design/site\.spec\.css$)' <<<"$changed" && docs=true
           grep -qE '^design/' <<<"$changed" && design=true
           # The paths that start the shots workflow.
-          grep -qE '^(src/|styles\.css$|e2e-tests/|site/sample/|site/src/marks/|site/src/styles/tokens\.css$|\.github/workflows/shots\.yml$)' <<<"$changed" && surface=true
+          grep -qE '^(src/|styles\.css$|e2e-tests/|docs/sample/|docs/src/marks/|docs/src/styles/tokens\.css$|\.github/workflows/shots\.yml$)' <<<"$changed" && surface=true
           echo "docs=$docs" >> "$GITHUB_OUTPUT"
           echo "design=$design" >> "$GITHUB_OUTPUT"
           echo "surface=$surface" >> "$GITHUB_OUTPUT"
-          echo "host=$(cat site/public/CNAME)" >> "$GITHUB_OUTPUT"
+          echo "host=$(cat docs/public/CNAME)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v5
         if: steps.what.outputs.docs == 'true'
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: site/package-lock.json
+          cache-dependency-path: docs/package-lock.json
 
       - run: npm ci --prefer-offline --no-audit --no-fund
         if: steps.what.outputs.docs == 'true'
-        working-directory: site
+        working-directory: docs
 
       # The pictures are the shots workflow's, taken for this commit. They
-      # go over site/src/shots and are never committed. A run that failed
+      # go over docs/src/shots and are never committed. A run that failed
       # or never started leaves the pictures the branch has.
       - name: take the pictures the shots workflow took
         id: pictures
@@ -87,7 +87,7 @@ jobs:
               gh run watch "$run" >/dev/null 2>&1 || true
               if [ "$(gh run view "$run" --json conclusion -q .conclusion)" = success ]; then
                 gh run download "$run" --name shots --dir "$RUNNER_TEMP/shots" &&
-                  cp -r "$RUNNER_TEMP/shots/." site/src/shots/ && state=fresh
+                  cp -r "$RUNNER_TEMP/shots/." docs/src/shots/ && state=fresh
               fi
             fi
           fi
@@ -95,18 +95,18 @@ jobs:
 
       - name: build the docs
         if: steps.what.outputs.docs == 'true'
-        working-directory: site
+        working-directory: docs
         run: npm run build
 
       - name: build the artboards
         if: steps.what.outputs.design == 'true'
         working-directory: design
-        run: node build.mjs --into ../site/dist/design --against "origin/${{ github.base_ref }}"
+        run: node build.mjs --into ../docs/dist/design --against "origin/${{ github.base_ref }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: preview
-          path: site/dist
+          path: docs/dist
           retention-days: 1
 
   publish:
@@ -130,11 +130,11 @@ jobs:
         if: github.event.action != 'closed'
         with:
           name: preview
-          path: site/dist
+          path: docs/dist
 
       - uses: rossjrw/pr-preview-action@v1
         with:
-          source-dir: site/dist
+          source-dir: docs/dist
           preview-branch: gh-pages
           umbrella-dir: pr-preview
           comment: false

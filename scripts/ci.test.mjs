@@ -100,7 +100,7 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
     const from = shots.indexOf(`  ${on}:`);
     assert.notEqual(from, -1, `the spec does not run on ${on}`);
     const block = shots.slice(from, shots.indexOf("\nconcurrency:"));
-    for (const at of ["src/**", "site/src/styles/tokens.css", "e2e-tests/**"]) {
+    for (const at of ["src/**", "docs/src/styles/tokens.css", "e2e-tests/**"]) {
       assert.ok(block.includes(`"${at}"`), `${on} does not watch ${at}`);
     }
   }
@@ -140,7 +140,7 @@ test("only a push to main renders the loop, and a pull request takes its posters
   const step = shots.slice(from, shots.indexOf("\n      - ", from + 1));
   assert.match(
     step,
-    /if \[ "\$GITHUB_REF" = refs\/heads\/main \] && \[ "\$GITHUB_EVENT_NAME" = push \]; then\n\s+node loop\.mjs --into \.\.\/site\/src\/shots\n\s+else\n\s+node loop\.mjs --posters --into \.\.\/site\/src\/shots\n/,
+    /if \[ "\$GITHUB_REF" = refs\/heads\/main \] && \[ "\$GITHUB_EVENT_NAME" = push \]; then\n\s+node loop\.mjs --into \.\.\/docs\/src\/shots\n\s+else\n\s+node loop\.mjs --posters --into \.\.\/docs\/src\/shots\n/,
   );
 });
 
@@ -150,7 +150,7 @@ test("a push to main that changes a picture opens a PR with the new pictures", (
   const step = shots.slice(from);
 
   assert.match(step, /if: github\.ref == 'refs\/heads\/main' && github\.event_name == 'push'/);
-  assert.match(step, /git status --porcelain site\/src\/shots/);
+  assert.match(step, /git status --porcelain docs\/src\/shots/);
   assert.match(step, /gh pr create --base main/);
   // The pictures reach main through review like anything else.
   assert.doesNotMatch(step, /git push origin (main|HEAD)/);

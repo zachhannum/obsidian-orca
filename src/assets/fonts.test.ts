@@ -154,7 +154,7 @@ test("the faces of a family are in style order, whatever order the files were li
 
 test("the sample book's own faces are in its vault, under the family its note names", async () => {
   const sample = directoryVault(
-    path.join(process.env["ORCA_ROOT"] ?? process.cwd(), "site/sample"),
+    path.join(process.env["ORCA_ROOT"] ?? process.cwd(), "docs/sample"),
   );
   const files: FontFiles = {
     list: (directory) => sample.list(directory),

@@ -3,13 +3,13 @@ name: docs
 on:
   pull_request:
     paths:
-      - "site/**"
+      - "docs/**"
       - "design/site.spec.css"
       - ".github/workflows/docs.yml"
   push:
     branches: [main]
     paths:
-      - "site/**"
+      - "docs/**"
       - "design/site.spec.css"
       - ".github/workflows/docs.yml"
 
@@ -19,7 +19,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: site
+    working-directory: docs
 
 jobs:
   build:
@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: site/package-lock.json
+          cache-dependency-path: docs/package-lock.json
 
       - run: npm ci --prefer-offline --no-audit --no-fund
 
@@ -45,7 +45,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         with:
           name: site
-          path: site/dist
+          path: docs/dist
           retention-days: 1
 
   deploy:
@@ -66,20 +66,20 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           name: site
-          path: site/dist
+          path: docs/dist
 
       # Pages serves the gh-pages branch. The previews of open pull
       # requests live in its pr-preview folder, which a deploy keeps.
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: site/dist
+          folder: docs/dist
           clean-exclude: pr-preview/
 
       - name: check the live docs
         working-directory: ${{ github.workspace }}
         run: |
-          host="$(cat site/dist/CNAME)"
+          host="$(cat docs/dist/CNAME)"
           for page in "" start/install/; do
             for _ in $(seq 1 30); do
               curl -fsS "https://$host/$page" | grep -q "<title>" && continue 2

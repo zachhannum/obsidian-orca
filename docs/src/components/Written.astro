@@ -18,7 +18,7 @@ const files = import.meta.glob<string>('../marks/*.{md,css}', {
 });
 
 const note = files[`../marks/${name}.md`];
-if (note === undefined) throw new Error(`no example ${name}.md in site/src/marks`);
+if (note === undefined) throw new Error(`no example ${name}.md in docs/src/marks`);
 const css = files[`../marks/${name}.css`];
 ---
 

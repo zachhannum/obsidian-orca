@@ -1,5 +1,5 @@
 /**
- * The rules the Obsidian plugin review applies. `site/` is its own
+ * The rules the Obsidian plugin review applies. `docs/` is its own
  * package, so its own config applies the same rules there.
  */
 
@@ -15,7 +15,7 @@ export default defineConfig([
       "build/",
       "test-results/",
       "playwright-report/",
-      "site/",
+      "docs/",
       "fixture/",
       ".*",
     ],

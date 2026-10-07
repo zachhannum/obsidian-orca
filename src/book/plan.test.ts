@@ -995,7 +995,7 @@ test("Junicode sets in Regular, and its bold in Junicode Bold, in the preview an
 });
 
 test("the site's sample book sets to a PDF that qpdf reads", async () => {
-  const sample = directoryVault(path.join(root, "site/sample"));
+  const sample = directoryVault(path.join(root, "docs/sample"));
   const written = await exportedBook(sample, SAMPLE_BOOK);
 
   const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });

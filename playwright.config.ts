@@ -33,7 +33,7 @@ export default defineConfig({
     {
       name: "shots",
       testMatch: "**/shots.spec.ts",
-      snapshotPathTemplate: "site/src/shots/{arg}{ext}",
+      snapshotPathTemplate: "docs/src/shots/{arg}{ext}",
       // Each test sets its own window, so the run can be sharded; the
       // shards are scripts/shots.mjs's.
       fullyParallel: true,

@@ -27,7 +27,7 @@ const pairs = [
 for (const [from, to] of pairs) {
   if (block(design, from) !== block(site, to)) {
     console.error(
-      `design/site.spec.css ${from} and site/src/styles/tokens.css ${to} hold different values.`
+      `design/site.spec.css ${from} and docs/src/styles/tokens.css ${to} hold different values.`
     );
     process.exit(1);
   }

@@ -21,11 +21,11 @@ import { Panel } from "./panel";
 const root = path.resolve(fileURLToPath(import.meta.url), "../../..");
 
 /** The file the colors and the fonts are read from. */
-const TOKENS = path.join(root, "site/src/styles/tokens.css");
+const TOKENS = path.join(root, "docs/src/styles/tokens.css");
 
 /** The file the faces are read from, and where the site installs them. */
-const FACES = path.join(root, "site/src/styles/fonts.css");
-const MODULES = path.join(root, "site/node_modules");
+const FACES = path.join(root, "docs/src/styles/fonts.css");
+const MODULES = path.join(root, "docs/node_modules");
 
 /**
  * Obsidian's own plugins that have no place in a picture of orca. Sync

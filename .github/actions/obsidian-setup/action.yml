@@ -15,7 +15,7 @@ runs:
     # of the site's own packages.
     - run: npm ci --prefer-offline --no-audit --no-fund
       shell: bash
-      working-directory: site
+      working-directory: docs
 
     - uses: actions/cache@v4
       with:
