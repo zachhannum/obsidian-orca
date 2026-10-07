@@ -171,8 +171,9 @@ test.describe('at 390 pixels wide', () => {
       await stage.scrollIntoViewIfNeeded();
       const view = stage.locator('.reel-view');
       const { timeline, frames } = await dataOf(stage);
-      // A phone's window is whole on a phone, and every other is seen through the camera.
-      const whole = timeline.window.w < 640;
+      // A device's window is whole on a phone, and every other is seen through the camera.
+      const whole = (await stage.getAttribute('data-reel-whole')) !== null;
+      expect(whole).toBe(id === 'phone' || id === 'tablet');
       await expect(stage).toHaveAttribute('data-reel-view', whole ? 'wide' : 'narrow');
       expect(timeline.clicks.length).toBeGreaterThan(0);
       for (const click of timeline.clicks) {
@@ -188,9 +189,8 @@ test.describe('at 390 pixels wide', () => {
         expect(y, `the click at ${String(click)}`).toBeGreaterThan(box.y);
         expect(y, `the click at ${String(click)}`).toBeLessThan(box.y + box.height);
       }
-      // A phone is given the smaller file of each frame. The phone's
-      // own window is drawn near its size, so it takes the sharp one.
-      const given = Object.values(frames.dark).map((files) => files[whole ? 1 : 0]);
+      // A phone is given the smaller file of each frame.
+      const given = Object.values(frames.dark).map((files) => files[0]);
       const shown = await sources(stage);
       expect(shown.length).toBeGreaterThan(1);
       for (const file of shown) expect(given).toContain(new URL(file).pathname);
@@ -199,24 +199,32 @@ test.describe('at 390 pixels wide', () => {
     expect(again).toBeLessThanOrEqual(0);
   });
 
-  test('the phone reel plays its whole window at its own shape, with no camera', async ({ page }) => {
+  test('each device plays its whole window at its own shape, with no camera', async ({ page }) => {
     await landing(page, FRAMES);
-    const stage = stageOf(page, 'phone');
-    const { timeline } = await dataOf(stage);
-    expect(timeline.window).toEqual({ w: 390, h: 844 });
-    await pin(stage, timeline.still);
-    await expect(stage).toHaveAttribute('data-reel-view', 'wide');
-    const view = await stage.locator('.reel-view').boundingBox();
-    const win = await stage.locator('.reel-win').boundingBox();
-    const still = await stage.locator('.reel-still:visible').boundingBox();
-    if (view === null || win === null || still === null) throw new Error('the stage has no picture');
-    // The stage is the column's width, and the window and the picture under it fill it.
-    expect(view.width).toBe(350);
-    expect(view.height).toBeCloseTo((350 * 844) / 390, 0);
-    for (const side of ['x', 'y', 'width', 'height'] as const) {
-      expect(Math.abs(win[side] - view[side])).toBeLessThan(1);
-      expect(Math.abs(still[side] - view[side])).toBeLessThan(1);
+    for (const id of ['tablet', 'phone']) {
+      const stage = stageOf(page, id);
+      await stage.scrollIntoViewIfNeeded();
+      const { timeline } = await dataOf(stage);
+      await pin(stage, timeline.still);
+      await expect(stage).toHaveAttribute('data-reel-view', 'wide');
+      const view = await stage.locator('.reel-view').boundingBox();
+      const win = await stage.locator('.reel-win').boundingBox();
+      const still = await stage.locator('.reel-still:visible').boundingBox();
+      if (view === null || win === null || still === null) throw new Error('the stage has no picture');
+      // The stage has the window's shape, and the window and the picture under it fill it.
+      expect(view.width / view.height).toBeCloseTo(timeline.window.w / timeline.window.h, 1);
+      for (const side of ['x', 'y', 'width', 'height'] as const) {
+        expect(Math.abs(win[side] - view[side])).toBeLessThan(1);
+        expect(Math.abs(still[side] - view[side])).toBeLessThan(1);
+      }
     }
+    // The phone stands in front of the tablet, over its right edge.
+    const tablet = await page.locator('.device-tablet').boundingBox();
+    const phone = await page.locator('.device-phone').boundingBox();
+    if (tablet === null || phone === null) throw new Error('the page has no devices');
+    expect(phone.x).toBeLessThan(tablet.x + tablet.width);
+    expect(phone.x + phone.width).toBeGreaterThanOrEqual(tablet.x + tablet.width - 1);
+    expect(phone.y + phone.height).toBeGreaterThan(tablet.y + tablet.height);
     const spill = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(spill).toBeLessThanOrEqual(0);
   });

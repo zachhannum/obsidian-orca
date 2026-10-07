@@ -777,6 +777,9 @@ test("a section says orca runs on a phone and a tablet, and plays a reel of each
   assert.match(prose(section).join(" "), /runs in Obsidian on a phone and a tablet/);
   // The plugin's manifest is what lets Obsidian load orca on one.
   assert.equal(JSON.parse(await read("manifest.json")).isDesktopOnly, false);
+  // Each is in a frame of its device, and the tablet's window is whole at every width.
+  assert.match(section, /class="device device-tablet">\s*<Reel\s+scene="tablet"\s+whole/);
+  assert.match(section, /class="device device-phone">\s*<Reel\s+scene="phone"/);
   // It stands between the export and the pages that turn.
   assert.ok(landing.indexOf("for the printer</i>") < from && from < landing.indexOf("the pages</i>"));
   assert.doesNotMatch(landing, /Desktop only/i);
@@ -791,6 +794,11 @@ test("no width of the screen decides what a reel plays", async () => {
   assert.match(stage, /ResizeObserver/);
   const styles = `${await read("site/src/styles/reel.css")}\n${await read("site/src/components/Reel.astro")}`;
   assert.doesNotMatch(styles, /@media[^{]*width/);
+  // A stage reads its reel when it first comes on screen, and not before.
+  assert.match(stage, /near\.observe\(stage\)/);
+  assert.match(stage, /void drawn\(stage\)\.then\(\(\) => startReel\(stage\)\)/);
+  // Every reel on a desktop is wide enough to show its whole window.
+  assert.doesNotMatch(landing, /row-reel/);
   // The page holds no second picture for a narrow screen, and no clip.
   assert.doesNotMatch(landing, /<video|<picture/);
 });

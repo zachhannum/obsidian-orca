@@ -12,8 +12,8 @@
   position: relative;
   overflow: hidden;
   aspect-ratio: var(--reel-w) / var(--reel-h);
-  border-radius: 12px;
-  box-shadow: var(--o-win-shadow);
+  border-radius: var(--reel-radius, 12px);
+  box-shadow: var(--reel-shadow, var(--o-win-shadow));
 }
 .reel-still {
   position: absolute;

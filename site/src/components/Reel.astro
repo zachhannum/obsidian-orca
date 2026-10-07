@@ -17,11 +17,13 @@ interface Props {
   alt: string;
   /** The stage is on screen when the page opens, so its picture is fetched first. */
   eager?: boolean;
+  /** The stage shows the whole window at every width, as a picture of a device does. */
+  whole?: boolean;
   /** The width the stage is drawn at, as an image's `sizes`. */
   sizes?: string;
 }
 
-const { scene: id, alt, eager = false, sizes = '(min-width: 1280px) 1200px, 100vw' } = Astro.props;
+const { scene: id, alt, eager = false, whole = false, sizes = '(min-width: 1280px) 1200px, 100vw' } = Astro.props;
 
 const SCHEMES: Scheme[] = ['dark', 'light'];
 const scenes = import.meta.glob<{ scene: Scene }>('../reel/scenes/*.ts', { eager: true });
@@ -66,7 +68,7 @@ const shape = [
 ].join(';');
 ---
 
-<div class="reel" data-reel={id} data-reel-state="still" data-reel-whole={w < NARROW_BELOW ? '' : undefined} style={shape}>
+<div class="reel" data-reel={id} data-reel-state="still" data-reel-whole={whole || w < NARROW_BELOW ? '' : undefined} style={shape}>
   <div class="reel-view">
     {
       stills.map((still) => (

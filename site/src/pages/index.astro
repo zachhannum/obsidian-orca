@@ -10,6 +10,10 @@ import Mark from '../components/Mark.astro';
 import ThemeBoot from '../components/ThemeBoot.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Reel from '../components/Reel.astro';
+import titleFace from '@fontsource-variable/roboto-flex/files/roboto-flex-latin-standard-normal.woff2?url';
+import bodyFace from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
+import uiFace from '@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2?url';
+import wordmarkFace from '../fonts/Faune-Display_Bold_Italic.woff2?url';
 import { FIRST, folio } from '../scripts/flip';
 import { LIP, REST } from '../scripts/sea';
 
@@ -99,6 +103,9 @@ const widen = (line: string): string =>
     )
     .join('');
 
+/** The faces of the first screen. They are fetched with the page, so its words are set once. */
+const FACES = [titleFace, bodyFace, uiFace, wordmarkFace];
+
 /** The page title. The sky's copy and the sea's are both set from it. */
 const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}</i>`;
 
@@ -111,6 +118,7 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
     <title>orca</title>
     <meta name="description" content="A book designer that runs inside Obsidian." />
     <link rel="icon" href={`${root}favicon.svg`} />
+    {FACES.map((face) => <link rel="preload" as="font" type="font/woff2" href={face} crossorigin />)}
     <ThemeBoot />
   </head>
   <body>
@@ -189,19 +197,19 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
           </figure>
         </section>
 
-        <section class="row">
-          <div class="said">
-            <h2 class="row-h">Chapters <i>stay notes</i></h2>
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Chapters <i>stay notes</i></h2>
             <p class="sec-p">
               The book note lists the chapters in reading order, as links. Its properties are
               the title, the author, the other metadata and the design.
             </p>
           </div>
-          <div class="shown">
-            <div class="row-reel">
+          <div class="swap">
+            <div class="swap-reel">
               <Reel
                 scene="chapters"
-                sizes="(min-width: 1025px) 480px, 100vw"
+                sizes="(min-width: 1016px) 936px, 100vw"
                 alt="The book note in Obsidian as Markdown: each chapter of the book is a link in a list, beside Orca's navigator."
               />
             </div>
@@ -268,19 +276,19 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
           </div>
         </section>
 
-        <section class="row shown-first">
-          <div class="said">
-            <h2 class="row-h">Export <i>for the printer</i></h2>
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Export <i>for the printer</i></h2>
             <p class="sec-p">
               Export writes the PDF from the pages on screen. Preflight catches missing fonts and
               images before you export.
             </p>
           </div>
-          <div class="shown">
-            <div class="row-reel">
+          <div class="swap">
+            <div class="swap-reel">
               <Reel
                 scene="export"
-                sizes="(min-width: 1025px) 480px, 100vw"
+                sizes="(min-width: 1016px) 936px, 100vw"
                 alt="Orca's export dialog on the sample book: preflight names a missing image and the note it is in, and the Export button is disabled."
               />
             </div>
@@ -297,17 +305,18 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
             </p>
           </div>
           <div class="devices">
-            <div class="device-tablet">
+            <div class="device device-tablet">
               <Reel
                 scene="tablet"
-                sizes="(min-width: 1101px) 872px, 100vw"
+                whole
+                sizes="(min-width: 1280px) 950px, 80vw"
                 alt="Orca in Obsidian on a tablet: the navigator and the design panel pinned on each side of the opening page of Chapter I."
               />
             </div>
-            <div class="device-phone">
+            <div class="device device-phone">
               <Reel
                 scene="phone"
-                sizes="(min-width: 1101px) 280px, 390px"
+                sizes="(min-width: 1280px) 260px, (min-width: 641px) 22vw, 30vw"
                 alt="Orca in Obsidian on a phone: the opening page of Chapter I in the preview, with the view buttons and Export above it."
               />
             </div>
@@ -662,19 +671,6 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
   section + section {
     margin-top: var(--step);
   }
-  .row {
-    padding-inline: var(--gutter);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 72px;
-    align-items: center;
-  }
-  .row.shown-first {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .row.shown-first .shown {
-    order: -1;
-  }
   .said {
     display: flex;
     flex-direction: column;
@@ -696,10 +692,6 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
     padding-inline: var(--gutter);
   }
 
-  .shown {
-    display: flex;
-    justify-content: center;
-  }
   .swap {
     display: flex;
     justify-content: center;
@@ -710,22 +702,52 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
     width: 100%;
     max-width: 936px;
   }
-  /* A reel beside its copy is under 640 pixels wide, so it plays the
-     window through the view that follows the pointer. */
-  .row-reel {
-    width: 480px;
-    max-width: 100%;
-  }
 
-  /* The two devices stand side by side at one height, so each column
-     takes the share of the width its window's shape asks for. */
+  /* The phone stands in front of the tablet's right edge, and a little
+     lower. Each frame's measures are shares of the section's width, so
+     the two keep their shapes at every width. */
   .devices {
+    position: relative;
     width: 100%;
-    max-width: 1200px;
-    display: grid;
-    grid-template-columns: minmax(0, 1180fr) minmax(0, 379fr);
-    gap: 48px;
-    align-items: center;
+    max-width: 1160px;
+    padding-bottom: 4%;
+  }
+  .device {
+    position: relative;
+    background: #0b0c0f;
+    box-shadow:
+      0 0 0 1px #3a3d45,
+      inset 0 0 0 2px #1d1f24,
+      0 40px 80px -30px rgba(0, 0, 0, 0.7);
+    --reel-shadow: none;
+  }
+  .device-tablet {
+    width: 82%;
+    padding: 1.5%;
+    border-radius: 3.2% / 4.5%;
+    --reel-radius: 1.75% / 2.5%;
+  }
+  .device-phone {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 24%;
+    padding: 0.9%;
+    border-radius: 15% / 7.2%;
+    --reel-radius: 12.4% / 5.7%;
+  }
+  /* The camera, in the room the phone's own layout leaves over its header. */
+  .device-phone::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    top: 3%;
+    left: 50%;
+    width: 27%;
+    height: 3.2%;
+    translate: -50% 0;
+    border-radius: 999px;
+    background: #000;
   }
 
   /* The flip-through. A leaf turns about its inner edge, and carries a
@@ -876,37 +898,22 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
       --gutter: 40px;
       --step: 160px;
     }
-    .row,
-    .row.shown-first {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 44px;
-    }
-    .row.shown-first .shown {
-      order: 0;
-    }
     .said {
       max-width: none;
     }
-    .row-reel {
-      width: 100%;
-      max-width: 936px;
-    }
   }
-  /* Under this width the tablet's column is narrower than the reel's
-     wide view, so the two stack and the phone keeps its own size. */
-  @media (max-width: 1100px) {
+  /* On a narrow screen the tablet takes the whole width, and the
+     phone stands lower so that less of the tablet is behind it. */
+  @media (max-width: 640px) {
     .devices {
-      grid-template-columns: minmax(0, 1fr);
-      justify-items: center;
-      gap: 40px;
+      padding-bottom: 22%;
     }
     .device-tablet {
       width: 100%;
-      max-width: 936px;
     }
     .device-phone {
-      width: 100%;
-      max-width: 390px;
+      width: 34%;
+      padding: 1.2%;
     }
   }
   @media (max-width: 40rem) {
