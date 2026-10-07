@@ -63,7 +63,7 @@
   height: 18px;
   padding: 0 7px;
   border: none;
-  border-radius: 9px;
+  border-radius: var(--pill-radius);
   box-shadow: none;
   font-size: 10.5px;
   font-weight: var(--font-medium);
@@ -1330,7 +1330,7 @@ body:not(.is-phone) .workspace-leaf-content[data-type="orca-navigator"] > .view-
   flex: none;
   margin-left: auto;
   padding: 0 7px;
-  border-radius: 9px;
+  border-radius: var(--pill-radius);
   background: var(--background-modifier-hover);
   color: var(--text-accent);
   font-size: var(--font-ui-smaller);
@@ -3114,7 +3114,7 @@ input.orca-panel-filter {
   align-items: baseline;
   gap: 5px;
   padding: 0 7px;
-  border-radius: 9px;
+  border-radius: var(--pill-radius);
   background: var(--background-modifier-hover);
   font-family: var(--font-monospace);
   font-size: 11px;
@@ -3300,7 +3300,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-order {
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
 }
 
 .is-mobile .orca-order-columns,
@@ -3457,7 +3457,7 @@ input.orca-panel-filter {
 }
 
 .is-mobile .orca-preview-issue.orca-export-error {
-  border-radius: 12px;
+  border-radius: var(--radius-l);
 }
 
 .is-mobile .orca-export-at {
@@ -3540,7 +3540,7 @@ input.orca-panel-filter {
   justify-content: center;
   width: var(--touch-size-m);
   height: var(--touch-size-m);
-  border-radius: var(--touch-size-m);
+  border-radius: var(--touch-radius-m);
   background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
   color: var(--text-accent);
 }
@@ -3604,7 +3604,7 @@ input.orca-panel-filter {
   min-height: 0;
   overflow-y: auto;
   padding: 0;
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
 }
 
 /* A row is as tall as a touch, and long words wrap. */
@@ -3627,16 +3627,16 @@ input.orca-panel-filter {
 
 /* The corner is the one Obsidian's mobile cards have. */
 .is-mobile .orca-shelf {
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
 }
 
 .is-mobile .orca-shelf-name {
   padding-left: var(--size-4-2);
-  border-radius: calc(var(--touch-size-xxs) - 1px);
+  border-radius: calc(var(--touch-radius-xxs) - 1px);
 }
 
 .is-mobile .orca-shelf.is-open > .orca-shelf-name {
-  border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0;
+  border-radius: calc(var(--touch-radius-xxs) - 1px) calc(var(--touch-radius-xxs) - 1px) 0 0;
 }
 
 .is-mobile .orca-outline {
@@ -3666,7 +3666,7 @@ input.orca-panel-filter {
 
 .is-mobile .orca-chip {
   padding: 0 9px;
-  border-radius: 11px;
+  border-radius: var(--pill-radius);
   font-size: 12px;
   line-height: 22px;
 }
@@ -3708,7 +3708,7 @@ input.orca-panel-filter {
 .is-mobile button.orca-nav-action {
   width: var(--touch-size-m);
   height: var(--touch-size-m);
-  border-radius: var(--touch-size-m);
+  border-radius: var(--clickable-icon-radius);
   color: var(--text-muted);
   --icon-size: var(--icon-s);
 }
@@ -3886,7 +3886,7 @@ button.orca-card-at::after {
   gap: 0;
   padding: 0;
   border: none;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--input-radius);
   background: var(--interactive-normal);
 }
 
@@ -3894,7 +3894,7 @@ button.orca-card-at::after {
   height: var(--touch-size-m);
   min-width: 40px;
   border: 3px solid transparent;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--input-radius);
   background-clip: padding-box;
   font-size: var(--font-ui-small);
 }
@@ -3908,7 +3908,7 @@ button.orca-card-at::after {
 .is-mobile :not(.orca-panel-cell) > .orca-panel-number.mod-ends {
   align-items: center;
   height: var(--touch-size-m);
-  border-radius: var(--touch-size-m);
+  border-radius: var(--input-radius);
   background: var(--background-modifier-form-field);
 }
 
@@ -3931,7 +3931,7 @@ button.orca-card-at::after {
   width: var(--touch-size-m);
   height: var(--touch-size-m);
   border: none;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--input-radius);
   background: transparent;
 }
 
@@ -3969,7 +3969,7 @@ button.orca-card-at::after {
   top: calc(var(--touch-size-m) + 6px);
   padding: 6px;
   border: none;
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
   box-shadow: 0 8px 30px rgb(0 0 0 / 45%);
 }
 
@@ -3986,7 +3986,7 @@ button.orca-card-at::after {
   height: auto;
   min-height: var(--touch-size-m);
   padding: var(--size-4-2) var(--size-4-3);
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
 }
 
 .is-mobile .orca-panel-field.is-added {
@@ -4192,7 +4192,7 @@ button.orca-card-at::after {
   gap: 0;
   padding: 0;
   border: none;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--input-radius);
   background: var(--interactive-normal);
 }
 
@@ -4204,7 +4204,7 @@ button.orca-card-at::after {
   height: var(--touch-size-m);
   padding: 0;
   border: 3px solid transparent;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--clickable-icon-radius);
   background-clip: padding-box;
 }
 
@@ -4219,7 +4219,7 @@ button.orca-card-at::after {
   width: var(--touch-size-m);
   height: var(--touch-size-m);
   padding: 0;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--clickable-icon-radius);
 }
 
 .is-mobile .orca-preview-export .svg-icon {
@@ -4308,7 +4308,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   box-sizing: border-box;
   height: 22px;
   padding: 0 9px;
-  border-radius: 11px;
+  border-radius: var(--pill-radius);
   background-color: rgba(233, 151, 63, 0.15);
   line-height: 1;
 }
@@ -4330,7 +4330,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   max-height: 50vh;
   padding: 12px;
   border: none;
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
   background: var(--background-secondary);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
@@ -4358,7 +4358,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
 
 .is-mobile .orca-preview-issues .orca-preview-issue {
   padding: 10px 12px;
-  border-radius: 0 12px 12px 0;
+  border-radius: 0 var(--radius-l) var(--radius-l) 0;
 }
 
 .is-mobile .orca-preview-issues .orca-preview-issue-said {
@@ -4448,7 +4448,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   left: 12px;
   gap: 12px;
   padding: 12px 18px;
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
   box-shadow: none;
 }
 
@@ -4522,7 +4522,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
   width: var(--touch-size-m);
   height: var(--touch-size-m);
   padding: 0;
-  border-radius: var(--touch-size-m);
+  border-radius: var(--clickable-icon-radius);
 }
 
 .is-mobile .orca-preview-bar select.orca-reflow-device {
@@ -4582,7 +4582,7 @@ body:not(.is-mobile) .orca-preview .orca-preview-bar button.orca-preview-issues-
 /* On a tablet the settings are drawn as the warnings are, over the
    device and its page. */
 .is-mobile .orca-reflow-popover {
-  border-radius: var(--touch-size-xxs);
+  border-radius: var(--touch-radius-xxs);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 
