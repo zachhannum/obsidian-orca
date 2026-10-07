@@ -52,13 +52,17 @@ jobs:
           if-no-files-found: error
 
   e2e:
-    name: e2e on ${{ matrix.os }}
+    name: e2e on ${{ matrix.os }} (${{ matrix.shard }}/4)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        # A shard is a runner with an Obsidian of its own, and it runs
+        # a quarter of the spec files. An account runs five macOS jobs
+        # at a time, so a fifth shard would make every run wait.
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v5
 
@@ -96,17 +100,44 @@ jobs:
 
       - name: e2e
         if: runner.os == 'Linux'
-        run: xvfb-run -a npm run e2e
+        run: xvfb-run -a npm run e2e -- --shard=${{ matrix.shard }}/4
 
       - name: e2e
         if: runner.os == 'macOS'
-        run: npm run e2e
+        run: npm run e2e -- --shard=${{ matrix.shard }}/4
 
       # The report carries the traces and screenshots the specs
       # attached, so a failure needs nothing else kept.
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: e2e-report-${{ matrix.os }}
+          name: e2e-report-${{ matrix.os }}-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
+
+  # Main's ruleset requires a check with this name on each platform,
+  # and a shard's name carries its number. This job is that check.
+  e2e-all:
+    name: e2e on ${{ matrix.os }}
+    needs: e2e
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      # `needs.e2e.result` is one answer for both platforms, so the
+      # shards of this platform are counted from the run's own jobs.
+      - name: every shard passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOBS: repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}/jobs
+          SHARD: "e2e on ${{ matrix.os }} ("
+        run: |
+          passed=$(gh api "$JOBS?per_page=100" --jq '[.jobs[] | select(.name | startswith(env.SHARD)) | select(.conclusion == "success")] | length')
+          echo "$passed of 4 shards passed"
+          [ "$passed" = 4 ]

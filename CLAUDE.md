@@ -164,9 +164,11 @@ underneath them.
   `chromium.connectOverCDP`. Driving Obsidian goes through `window.app`
   in a page evaluate.
 - One app instance for the whole run: workers pinned to one,
-  parallelism off, specs serial. The `shots` project is the exception:
-  `npm run shots` runs it as shards, each with an Obsidian of its own. A test that must begin from a
-  known vault says so and puts it back.
+  parallelism off, specs serial. A shard is a run of its own with an
+  Obsidian of its own: `npm run shots` runs the `shots` project as
+  shards, and CI runs the suite as four shards on each platform. A
+  spec file passes without the files before it. A test that must begin
+  from a known vault says so and puts it back.
 - **No assertion waits on a clock.** The preview carries the generation
   it last painted and its stage counters as data attributes, and every
   assertion waits on those. A timeout is how a debounce becomes flaky
@@ -235,7 +237,8 @@ underneath them.
 
 `.github/workflows/ci.yml` runs on every PR and push to main. The
 `checks` job runs the type check, the lint pass, the Node tier and the
-production bundle, and the `e2e` job runs the suite on both platforms.
+production bundle, and the `e2e` job runs the suite on both platforms,
+in four shards on each.
 
 1. `checks` job: `tsc --noEmit`, `npm run lint` and the Node tier, which
    exports the sample book and needs `qpdf` on the runner. The
@@ -252,13 +255,17 @@ production bundle, and the `e2e` job runs the suite on both platforms.
 3. e2e job: build the plugin into the fixture vault, launch the pinned
    Obsidian version, run the suite on Linux under a virtual display and
    on macOS, two retries, a trace on the first and a picture of the
-   window, both kept on failure
+   window, both kept on failure. Each platform runs four shards, and
+   each shard is a runner. The `e2e-all` job reports `e2e on
+   ubuntu-latest` and `e2e on macos-latest`, the names main's ruleset
+   requires, and each passes only when every shard of its platform
+   passed
 4. PDF validation inside the e2e job: `qpdf --check` for structure and
    a `pdftotext` round trip for the words, against the exported book
 5. advisories check — no merged dependency with an open advisory
 
-Both test jobs write their run to the job's summary page, and the e2e
-job keeps its HTML report as an artifact.
+Both test jobs write their run to the job's summary page, and each
+e2e shard keeps its HTML report as an artifact.
 
 `.github/workflows/docs.yml` runs on a PR that touches `site/` or the
 site's tokens, and on the same paths on main. Its `build` job installs
