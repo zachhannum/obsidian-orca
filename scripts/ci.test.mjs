@@ -14,7 +14,7 @@ const [pkg, shotsRunner, workflow, shots, setup, release, cut, spec, claude] = a
   read(".github/actions/obsidian-setup/action.yml"),
   read(".github/workflows/release.yml"),
   read(".github/workflows/cut-release.yml"),
-  read("e2e/shots.spec.ts"),
+  read("e2e-tests/shots.spec.ts"),
   read("CLAUDE.md"),
 ]);
 
@@ -87,7 +87,7 @@ test("only a push to main runs the suite on macOS, and a PR's macOS check passes
 
 test("each shard keeps its own report and writes its own summary", async () => {
   assert.match(job("e2e"), /name: e2e-report-\$\{\{ matrix\.os \}\}-\$\{\{ matrix\.shard \}\}\n/);
-  assert.match(await read("playwright.config.ts"), /\["\.\/e2e\/harness\/report\.ts"\]/);
+  assert.match(await read("playwright.config.ts"), /\["\.\/e2e-tests\/harness\/report\.ts"\]/);
 });
 
 test("`npm run e2e` is one run on one Obsidian", async () => {
@@ -100,7 +100,7 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
     const from = shots.indexOf(`  ${on}:`);
     assert.notEqual(from, -1, `the spec does not run on ${on}`);
     const block = shots.slice(from, shots.indexOf("\nconcurrency:"));
-    for (const at of ["src/**", "site/src/styles/tokens.css", "e2e/**"]) {
+    for (const at of ["src/**", "site/src/styles/tokens.css", "e2e-tests/**"]) {
       assert.ok(block.includes(`"${at}"`), `${on} does not watch ${at}`);
     }
   }

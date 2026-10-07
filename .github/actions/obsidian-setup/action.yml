@@ -20,7 +20,7 @@ runs:
     - uses: actions/cache@v4
       with:
         path: ~/.obsidian-cache
-        key: obsidian-${{ runner.os }}-${{ hashFiles('e2e/harness/launch.ts') }}
+        key: obsidian-${{ runner.os }}-${{ hashFiles('e2e-tests/harness/launch.ts') }}
 
     - name: system libraries
       shell: bash

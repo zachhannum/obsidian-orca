@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit && node esbuild.config.mjs production",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e-tests",
     "lint": "node scripts/lint.mjs && eslint --max-warnings 0 . && stylelint --max-warnings 0 styles.css",
     "test": "node scripts/test.mjs",
     "e2e": "playwright test --project=orca",

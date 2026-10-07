@@ -54,7 +54,7 @@ export default defineConfig([
       "*.ts",
       "scripts/**",
       "design/**",
-      "e2e/**",
+      "e2e-tests/**",
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "src/assets/testUtils/directory.ts",

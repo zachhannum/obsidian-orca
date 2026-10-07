@@ -8,7 +8,7 @@ const ci = process.env["CI"] !== undefined;
  */
 export default defineConfig({
   testDir: "./e2e",
-  globalSetup: "./e2e/harness/launch.ts",
+  globalSetup: "./e2e-tests/harness/launch.ts",
   workers: 1,
   fullyParallel: false,
   forbidOnly: ci,
@@ -71,6 +71,6 @@ export default defineConfig({
   reporter: [
     ci ? ["github"] : ["list"],
     ["html", { open: "never" }],
-    ["./e2e/harness/report.ts"],
+    ["./e2e-tests/harness/report.ts"],
   ] satisfies ReporterDescription[],
 });

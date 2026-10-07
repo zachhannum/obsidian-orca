@@ -9,7 +9,7 @@ import { check, checkClock, lint, lintBundle } from "./lint.mjs";
 
 const said = (file, text) => check(file, text).map((found) => found.said);
 const waited = (text) =>
-  checkClock("e2e/draft.spec.ts", text).map((found) => found.said);
+  checkClock("e2e-tests/draft.spec.ts", text).map((found) => found.said);
 
 test("the dependency rule runs one way: `ui` imports `book`, `book` does not import `ui`", () => {
   assert.deepEqual(
@@ -136,16 +136,16 @@ test("no assertion in a spec waits on a clock", () => {
   assert.deepEqual(waited("// no timeout: the pane is waited on\n"), []);
 });
 
-test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
+test("the lint pass visits `src`, `e2e-tests` and `scripts`", async () => {
   const from = await mkdtemp(path.join(tmpdir(), "orca-lint-"));
   try {
     const files = {
       "src/book/note.ts": 'import { view } from "@/ui/preview";\n',
-      "e2e/harness/note.ts":
+      "e2e-tests/harness/note.ts":
         "/** What a spec opens. */\nexport const NOTE = 1;\n",
       "scripts/summary.mjs":
         "/** How much is quoted. */\nexport const QUOTED = 1;\n",
-      "e2e/draft.spec.ts": "await page.waitForTimeout(200);\n",
+      "e2e-tests/draft.spec.ts": "await page.waitForTimeout(200);\n",
     };
     for (const [file, text] of Object.entries(files)) {
       await mkdir(path.join(from, path.dirname(file)), { recursive: true });
@@ -155,9 +155,9 @@ test("the lint pass visits `src`, `e2e` and `scripts`", async () => {
       (await lint(from)).map(({ file, said }) => `${file}: ${said}`),
       [
         "src/book/note.ts: `book` may not import `ui`",
-        "e2e/harness/note.ts: a doc comment opens with a question word; name the thing",
+        "e2e-tests/harness/note.ts: a doc comment opens with a question word; name the thing",
         "scripts/summary.mjs: a doc comment opens with a question word; name the thing",
-        "e2e/draft.spec.ts: `waitForTimeout` is a clock; wait on what the pane painted",
+        "e2e-tests/draft.spec.ts: `waitForTimeout` is a clock; wait on what the pane painted",
       ],
     );
   } finally {

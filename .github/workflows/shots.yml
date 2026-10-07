@@ -9,7 +9,7 @@ on:
     paths:
       - "src/**"
       - "styles.css"
-      - "e2e/**"
+      - "e2e-tests/**"
       - "site/sample/**"
       - "site/src/marks/**"
       - "site/src/styles/tokens.css"
@@ -19,7 +19,7 @@ on:
     paths:
       - "src/**"
       - "styles.css"
-      - "e2e/**"
+      - "e2e-tests/**"
       - "site/sample/**"
       - "site/src/marks/**"
       - "site/src/styles/tokens.css"
