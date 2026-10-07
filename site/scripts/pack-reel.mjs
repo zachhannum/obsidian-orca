@@ -12,7 +12,7 @@ const repo = fileURLToPath(new URL("../..", import.meta.url));
 export const LIMIT = 300 * 1024;
 
 /** The WebP quality a frame is packed at. */
-export const QUALITY = 80;
+export const QUALITY = 70;
 
 const SCHEMES = ["dark", "light"];
 
