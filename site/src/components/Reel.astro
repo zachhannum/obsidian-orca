@@ -5,7 +5,7 @@
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { compile } from '../reel/compile';
-import { NARROW, sample } from '../reel/sample';
+import { NARROW, NARROW_BELOW, sample } from '../reel/sample';
 import type { Scene } from '../reel/scene';
 import type { ReelData } from '../reel/stage';
 import type { Scheme, Take } from '../reel/take';
@@ -48,7 +48,7 @@ const frames = { dark: {}, light: {} } as ReelData['frames'];
 for (const scheme of SCHEMES) {
   for (const frame of timeline.frames) frames[scheme][frame] = await served(frame, scheme);
 }
-const data: ReelData = { timeline, paint: take.paint, frames };
+const data: ReelData = { timeline, paint: take.paint, ...(take.shade === undefined ? {} : { shade: take.shade }), frames };
 
 const stills = SCHEMES.map((scheme) => {
   const [small, full] = frames[scheme][timeline.stillFrame] as [string, string];
@@ -66,7 +66,7 @@ const shape = [
 ].join(';');
 ---
 
-<div class="reel" data-reel={id} data-reel-state="still" style={shape}>
+<div class="reel" data-reel={id} data-reel-state="still" data-reel-whole={w < NARROW_BELOW ? '' : undefined} style={shape}>
   <div class="reel-view">
     {
       stills.map((still) => (

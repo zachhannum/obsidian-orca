@@ -62,9 +62,21 @@ export interface Sliding {
   out?: boolean;
   /** The frame under the box moves with it, as a pane a drawer pushes does. */
   push?: boolean;
-  /** The rest of the frame fades in as the box comes, as the shade behind a sheet does. */
+  /**
+   * The rest of the frame fades in as the box comes, as the shade behind
+   * a sheet does. The ground the box has yet to cover is shaded in the
+   * take's own shade.
+   */
   dim?: boolean;
+  /**
+   * The seconds the frame takes to fade in once the box has come. A
+   * drawer shades the strip of the pane it pushed, and the slide draws
+   * that strip with no shade.
+   */
+  fade?: number;
   over?: number;
+  /** A box under a finger takes the finger's ease, which is `inOutCubic`. */
+  ease?: Ease;
 }
 
 export type Beat =

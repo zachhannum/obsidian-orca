@@ -1,5 +1,5 @@
 import type { Timeline } from './compile';
-import { NARROW_BELOW, place, sample, type View } from './sample';
+import { place, sample, viewOf, type View } from './sample';
 import type { Paint, Scheme } from './take';
 
 /** The JSON a stage carries: the reel, and where each frame is served in each scheme. */
@@ -7,6 +7,8 @@ export interface ReelData {
   timeline: Timeline;
   /** A take that types nothing reads no editor, and holds no colours. */
   paint: Partial<Record<Scheme, Paint>>;
+  /** The colour a sheet lays over the page behind it, in each scheme. */
+  shade?: Partial<Record<Scheme, string>>;
   /** Each frame at the window's own width, then at twice it. */
   frames: Record<Scheme, Record<string, [string, string]>>;
 }
@@ -31,6 +33,7 @@ interface Parts {
   win: HTMLElement;
   slots: Slot[];
   covers: HTMLElement[];
+  shades: HTMLElement[];
   caret: HTMLElement;
   arrow: HTMLElement;
   dot: HTMLElement;
@@ -67,6 +70,7 @@ function build(view: HTMLElement): Parts {
     win,
     slots: [],
     covers: [],
+    shades: [],
     caret: part('reel-caret', win),
     ring: part('reel-ring', win),
     arrow: arrow(win),
@@ -98,7 +102,7 @@ function startReel(stage: HTMLElement): void {
   let broken = false;
 
   const scheme = (): Scheme => (root.dataset['theme'] === 'light' ? 'light' : 'dark');
-  const shape = (): View => (size.w < NARROW_BELOW ? 'narrow' : 'wide');
+  const shape = (): View => viewOf(timeline.window, size.w);
   // A narrow stage and a screen of one pixel to the point take the
   // smaller file, so a phone never decodes the larger.
   const sharp = (): 0 | 1 => (shape() === 'wide' && size.w * devicePixelRatio > timeline.window.w * 1.05 ? 1 : 0);
@@ -157,7 +161,7 @@ function startReel(stage: HTMLElement): void {
   const draw = (at: number): void => {
     const drawn = sample(timeline, at, shape());
     parts ??= build(view);
-    const { win, slots, covers, caret, ring } = parts;
+    const { win, slots, covers, shades, caret, ring } = parts;
     const placed = place(drawn.camera, timeline.window, size);
     win.style.transform = `translate(${px(placed.x)}, ${px(placed.y)}) scale(${placed.scale.toFixed(5)})`;
     const paint = data.paint[scheme()];
@@ -201,6 +205,18 @@ function startReel(stage: HTMLElement): void {
       cover.style.height = px(box.h);
     });
     covers.slice(drawn.covers.length).forEach((cover) => (cover.hidden = true));
+
+    win.style.setProperty('--reel-shade', data.shade?.[scheme()] ?? 'transparent');
+    drawn.shades.forEach((box, i) => {
+      const shade = (shades[i] ??= part('reel-shade', win));
+      shade.hidden = false;
+      shade.style.left = px(box.x);
+      shade.style.top = px(box.y);
+      shade.style.width = px(box.w);
+      shade.style.height = px(box.h);
+      shade.style.opacity = box.opacity.toFixed(4);
+    });
+    shades.slice(drawn.shades.length).forEach((shade) => (shade.hidden = true));
 
     caret.hidden = drawn.caret === null;
     if (drawn.caret !== null) {

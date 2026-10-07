@@ -49,6 +49,9 @@ export interface SlideOver {
   by: Point;
   out: boolean;
   push: boolean;
+  ease: Ease;
+  /** The seconds the slide stays drawn after `b`, while the frame fades in over it. */
+  held: number;
   /** The part of the frame outside the box, which fades in with it. */
   dim: Box | null;
 }
@@ -282,6 +285,7 @@ export function compile(scene: Scene, take: Take): Timeline {
     } else {
       const over = beat.over ?? 0.4;
       const out = beat.out === true;
+      const fade = out ? 0 : (beat.fade ?? 0);
       // A box that leaves is a box of the frame on screen.
       const moved = out ? base : beat.frame;
       const box = markOf(take, moved, beat.box);
@@ -294,9 +298,11 @@ export function compile(scene: Scene, take: Take): Timeline {
         by: OFFSET[beat.from](box),
         out,
         push: beat.push === true,
+        ease: beat.ease ?? (out ? 'inOutCubic' : 'outCubic'),
+        held: fade,
         dim: beat.dim === true && !out ? beyond(beat.from, box, take.window) : null,
       });
-      bring(out ? t : t + over, beat.frame, 0, 'linear');
+      bring(out ? t : t + over, beat.frame, fade, 'linear');
       t += over;
     }
   }
@@ -334,6 +340,7 @@ export function compile(scene: Scene, take: Take): Timeline {
   });
   for (const over of overs) {
     if (over.kind === 'scroll') for (const { frame } of over.frames) uses.push([frame, over.a, over.b]);
+    else if (over.kind === 'slide') uses.push([over.frame, over.a, over.b + over.held]);
     else uses.push([over.frame, over.a, over.b]);
   }
   uses.sort((p, q) => p[1] - q[1]);

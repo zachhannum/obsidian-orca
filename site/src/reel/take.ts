@@ -29,10 +29,14 @@ export interface Frame {
 /** The frames of one run through real Obsidian, with the boxes the spec measured in each. */
 export interface Take {
   take: string;
+  /** The device whose layout the frames are of. A take of the desktop has none. */
+  device?: 'phone' | 'tablet';
   window: { w: number; h: number };
   density: number;
   /** The editor's colours in each scheme, for a take that typed in one. */
   paint: Partial<Record<Scheme, Paint>>;
+  /** The colour a sheet lays over the page behind it, for a take that raised one. */
+  shade?: Partial<Record<Scheme, string>>;
   frames: Frame[];
 }
 

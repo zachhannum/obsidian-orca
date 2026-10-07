@@ -1,7 +1,8 @@
 /*
  * A reel's stage. The stage measures itself: a container query gives a
  * stage under 640 pixels the taller box and puts its picture where the
- * player's camera will, so the picture is right with no script.
+ * player's camera will, so the picture is right with no script. A
+ * window that is itself under 640 pixels is whole at every width.
  */
 .reel {
   container-type: inline-size;
@@ -34,11 +35,11 @@
 }
 
 @container (width < 640px) {
-  .reel-view {
+  .reel:not([data-reel-whole]) .reel-view {
     aspect-ratio: 4 / 5;
     max-height: calc(var(--reel-h) * var(--reel-zoom) * 1px);
   }
-  .reel-still {
+  .reel:not([data-reel-whole]) .reel-still {
     width: calc(var(--reel-w) * var(--reel-zoom) * 1px);
     height: calc(var(--reel-h) * var(--reel-zoom) * 1px);
     left: clamp(
@@ -82,6 +83,13 @@
   position: absolute;
   z-index: 100;
   background: var(--reel-cover);
+}
+/* The shade is over the frame beneath a sheet and under the sheet,
+   which the layers after it are. */
+.reel-shade {
+  position: absolute;
+  z-index: 1;
+  background: var(--reel-shade);
 }
 .reel-caret {
   position: absolute;

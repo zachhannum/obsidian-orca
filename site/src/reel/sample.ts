@@ -14,6 +14,14 @@ export const NARROW = 0.8;
 /** The widest a stage is, in CSS pixels, while it is narrow. */
 export const NARROW_BELOW = 640;
 
+/**
+ * The view a stage of a given width shows a window in. A window that is
+ * itself under the narrow width is a phone's, and shows whole at every
+ * width.
+ */
+export const viewOf = (window: { w: number }, stageWidth: number): View =>
+  stageWidth < NARROW_BELOW && window.w >= NARROW_BELOW ? 'narrow' : 'wide';
+
 /** One frame on screen. `crop` moves with the frame, and `within` stays where the window is. */
 export interface Layer {
   frame: string;
@@ -29,6 +37,8 @@ export interface Drawn {
   layers: Layer[];
   /** Boxes in the editor's ground colour, over every layer. */
   covers: Box[];
+  /** Boxes in the take's shade, over the frames and under nothing else. */
+  shades: (Box & { opacity: number })[];
   caret: { x: number; y: number; h: number; opacity: number } | null;
   pointer: { x: number; y: number; opacity: number; press: number; touch: boolean } | null;
   ring: { x: number; y: number; scale: number; opacity: number } | null;
@@ -129,7 +139,7 @@ function drawScroll(over: ScrollOver, t: number, timeline: Timeline, drawn: Draw
 }
 
 function drawSlide(over: SlideOver, t: number, timeline: Timeline, drawn: Drawn): void {
-  const k = (over.out ? EASE.inOutCubic : EASE.outCubic)(prog(t, over.a, over.b));
+  const k = EASE[over.ease](prog(t, over.a, over.b));
   // A box that comes in starts a whole step away, and one that leaves ends there.
   const away = over.out ? k : 1 - k;
   const under = drawn.layers[drawn.layers.length - 1];
@@ -137,7 +147,14 @@ function drawSlide(over: SlideOver, t: number, timeline: Timeline, drawn: Drawn)
     const back = over.out ? -(1 - k) : -k;
     under.move = [over.by[0] * back, over.by[1] * back];
   }
-  if (over.dim !== null) drawn.layers.push({ frame: over.frame, opacity: k, crop: inset(over.dim, timeline.window) });
+  if (over.dim !== null) {
+    drawn.layers.push({ frame: over.frame, opacity: k, crop: inset(over.dim, timeline.window) });
+    // The ground between the shaded part and the box, which the box has yet to cover.
+    const { box, by } = over;
+    const gap = { w: Math.abs(by[0]) * away, h: Math.abs(by[1]) * away };
+    if (by[0] !== 0) drawn.shades.push({ x: by[0] > 0 ? box.x : box.x + box.w - gap.w, y: box.y, w: gap.w, h: box.h, opacity: k });
+    else drawn.shades.push({ x: box.x, y: by[1] > 0 ? box.y : box.y + box.h - gap.h, w: box.w, h: gap.h, opacity: k });
+  }
   drawn.layers.push({
     frame: over.frame,
     opacity: 1,
@@ -149,9 +166,10 @@ function drawSlide(over: SlideOver, t: number, timeline: Timeline, drawn: Drawn)
 function drawOver(over: Over, t: number, timeline: Timeline, drawn: Drawn): void {
   if (over.kind === 'type') {
     if (t >= over.a && t < Math.max(over.b, over.caretEnd)) drawType(over, t, timeline, drawn);
-  } else if (t >= over.a && t < over.b) {
-    if (over.kind === 'scroll') drawScroll(over, t, timeline, drawn);
-    else drawSlide(over, t, timeline, drawn);
+  } else if (over.kind === 'scroll') {
+    if (t >= over.a && t < over.b) drawScroll(over, t, timeline, drawn);
+  } else if (t >= over.a && t < over.b + over.held) {
+    drawSlide(over, t, timeline, drawn);
   }
 }
 
@@ -186,7 +204,7 @@ function drawPointer(t: number, timeline: Timeline, drawn: Drawn): void {
  */
 export function sample(timeline: Timeline, time: number, view: View): Drawn {
   const t = clamp(time, 0, Math.max(0, timeline.length - 1e-6));
-  const drawn: Drawn = { layers: [], covers: [], caret: null, pointer: null, ring: null, camera: null };
+  const drawn: Drawn = { layers: [], covers: [], shades: [], caret: null, pointer: null, ring: null, camera: null };
 
   // The last frame to have faded in whole is the ground, and each
   // frame brought up after it fades in over it.
