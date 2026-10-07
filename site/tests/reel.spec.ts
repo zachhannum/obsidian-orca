@@ -23,12 +23,12 @@ const dataOf = (stage: Locator): Promise<ReelData> =>
 /** The name of the frame a request is for, when it is for one. */
 const frameIn = (url: string): string | null => /\/([a-z0-9-]+)-(?:dark|light)\.[^/]+\.webp$/.exec(new URL(url).pathname)?.[1] ?? null;
 
-/** Opens the landing page and gathers the frame each request for a packed picture names. */
+/** Opens the landing page and gathers the frame each request for a packed picture names. With no names, it gathers every one. */
 async function landing(page: Page, names: string[]): Promise<string[]> {
   const asked: string[] = [];
   page.on('request', (request) => {
     const frame = frameIn(request.url());
-    if (frame !== null && names.includes(frame)) asked.push(frame);
+    if (frame !== null && (names.length === 0 || names.includes(frame))) asked.push(frame);
   });
   await page.goto('/');
   return asked;
@@ -135,7 +135,7 @@ test.describe('under reduced motion', () => {
   test.use({ viewport: WIDE, contextOptions: { reducedMotion: 'reduce' } });
 
   test('each stage is its picture, and the page asks for one frame for each', async ({ page }) => {
-    const asked = await landing(page, FRAMES);
+    const asked = await landing(page, []);
     const stages = await page.locator('[data-reel]').all();
     expect(stages.length).toBeGreaterThanOrEqual(2);
     const stills: string[] = [];
@@ -160,7 +160,9 @@ test.describe('at 390 pixels wide', () => {
     const spill = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(spill).toBeLessThanOrEqual(0);
 
-    for (const id of ['hero', 'write']) {
+    const ids = await page.locator('[data-reel]').evaluateAll((all) => all.map((el) => el.getAttribute('data-reel') ?? ''));
+    for (const id of ['hero', 'write', 'design', 'css']) expect(ids).toContain(id);
+    for (const id of ids) {
       const stage = stageOf(page, id);
       await stage.scrollIntoViewIfNeeded();
       await expect(stage).toHaveAttribute('data-reel-view', 'narrow');
