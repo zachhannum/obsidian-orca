@@ -78,6 +78,11 @@ test("the CSS reel pins a paragraph of the colophon and writes a rule for it", a
   await expect(book.surface).toBeVisible();
   await reel.opensOn(CHAPTER, OPENS);
   await reel.opensOn(COLOPHON, SPREAD);
+  // The colophon is the spread's right page, and its left page is blank. One page shows it alone.
+  await book.show("Single page", "single");
+  await book.turnTo(LAST);
+  await reel.settled();
+  await expect(book.surface).toHaveAttribute("data-first", String(LAST));
   // The preview is the one tab in the middle, as it is in the hero.
   await obsidian.detach(NOTE);
   // The tab that is left slides into the room of the one that went.
