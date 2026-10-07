@@ -661,7 +661,7 @@ test("the sections that show orca's own surfaces show photographs of them", asyn
   for (const drawn of ["src tree", "src note", "x-win", "x-pane", "x-doc", "ex-dlg"]) {
     assert.doesNotMatch(landing, new RegExp(`class="${drawn}"`), `${drawn} is drawn by hand`);
   }
-  for (const shot of ["vault-tree", "vault-note", "inspect", "export"]) {
+  for (const shot of ["vault-tree", "vault-note", "export"]) {
     for (const scheme of ["dark", "light"]) {
       assert.ok(
         landing.includes(`../shots/${shot}-${scheme}.png`),
@@ -760,21 +760,16 @@ test("the panel section says a control the author's CSS overrides dims and names
   assert.match(said, /dims and names the line/);
 });
 
-test("the panel section shows the panel and the page it sets, as the spec took them", () => {
-  const from = landing.indexOf("in the panel</i>");
-  const section = landing.slice(from, landing.indexOf("</section>", from));
-  for (const scheme of ["dark", "light"]) {
-    assert.ok(
-      landing.includes(`from '../shots/panel-${scheme}.png'`),
-      `the page does not show panel-${scheme}`,
-    );
+test("the panel section and the CSS section each play a reel of real Obsidian", () => {
+  for (const [heading, scene] of [["in the panel</i>", "design"], ["CSS styling</i>", "css"]]) {
+    const from = landing.indexOf(heading);
+    assert.notEqual(from, -1, `no section ${heading}`);
+    const section = landing.slice(from, landing.indexOf("</section>", from));
+    assert.match(section, new RegExp(`<Reel\\s+scene="${scene}"`), `the section does not play the ${scene} reel`);
+    assert.match(section, /alt="[^"]{20,}"/);
+    assert.doesNotMatch(section, /<(?:img|button|input|select|script)\b/, "the section draws a picture or a control of its own");
   }
-  assert.match(landing, /rasterized\['\.\.\/shots\/pages\/page-09\.png'\]/);
-  // Both schemes are in the markup, and the stylesheet shows one.
-  assert.match(section, /\(\['dark', 'light'\] as const\)\.map\(\(scheme\) => \(\s*<div class=\{`on-\$\{scheme\}`\}>/);
-  assert.match(section, /src=\{panel\[scheme\]\.src\}/);
-  assert.match(section, /src=\{chapterPage\.src\}/);
-  assert.doesNotMatch(section, /<(?:button|input|select|script)\b/, "the section draws a control");
+  assert.doesNotMatch(landing, /panel-shots|inspect-shot|shots\/(?:panel|inspect)-/);
 });
 
 test("the footer carries the tail mark in one flat colour", async () => {

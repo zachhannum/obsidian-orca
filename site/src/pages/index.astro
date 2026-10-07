@@ -17,10 +17,6 @@ import treeDark from '../shots/vault-tree-dark.png';
 import treeLight from '../shots/vault-tree-light.png';
 import noteDark from '../shots/vault-note-dark.png';
 import noteLight from '../shots/vault-note-light.png';
-import panelDark from '../shots/panel-dark.png';
-import panelLight from '../shots/panel-light.png';
-import inspectDark from '../shots/inspect-dark.png';
-import inspectLight from '../shots/inspect-light.png';
 import exportDark from '../shots/export-dark.png';
 import exportLight from '../shots/export-light.png';
 
@@ -56,11 +52,6 @@ const pages: Shot[] = await Promise.all(
     .sort()
     .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
 );
-
-/** The opening of Chapter I, which stands beside the panel that set it. */
-const opening = rasterized['../shots/pages/page-09.png'];
-if (opening === undefined) throw new Error('the flip-through has no page 9');
-const chapterPage = await shot(opening.default);
 
 /**
  * A leaf carries a recto on its front and the verso after it on its
@@ -122,10 +113,6 @@ const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
   light: { tree: await shot(treeLight), note: await shot(noteLight) },
 };
-/** The design panel, open on the sample book. */
-const panel = { dark: await shot(panelDark), light: await shot(panelLight) };
-/** A paragraph pinned in inspect mode, with the rules that set it in the panel. */
-const inspecting = { dark: await shot(inspectDark), light: await shot(inspectLight) };
 /** The export dialog, open on the sample book with the preflight passed. */
 const exporting = { dark: await shot(exportDark), light: await shot(exportLight) };
 ---
@@ -268,38 +255,23 @@ const exporting = { dark: await shot(exportDark), light: await shot(exportLight)
           </div>
         </section>
 
-        <section class="row">
-          <div class="said">
-            <h2 class="row-h">Design <i>in the panel</i></h2>
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Design <i>in the panel</i></h2>
             <p class="sec-p">
               The design panel has a control for the trim size, the margins, the type, the
               headings and more. The preview updates with each change. If your own CSS overrides
               a setting, its control dims and names the line that overrides it.
             </p>
           </div>
-          <div class="shown">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`on-${scheme}`}>
-                  <div class="panel-shots">
-                    <img
-                      class="panel-shot"
-                      src={panel[scheme].src}
-                      width={panel[scheme].width}
-                      height={panel[scheme].height}
-                      alt="Orca's design panel on the sample book, with its controls for the page, the text and the headings."
-                    />
-                    <img
-                      class="page-shot"
-                      src={chapterPage.src}
-                      width={chapterPage.width}
-                      height={chapterPage.height}
-                      alt="The opening of Chapter I, typeset by Orca."
-                    />
-                  </div>
-                </div>
-              ))
-            }
+          <div class="swap">
+            <div class="swap-reel">
+              <Reel
+                scene="design"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="Orca's design panel beside the opening of Chapter I, set with a centred title, a drop cap and a first line in small capitals."
+              />
+            </div>
           </div>
         </section>
 
@@ -313,20 +285,14 @@ const exporting = { dark: await shot(exportDark), light: await shot(exportLight)
               it, and which rules take effect.
             </p>
           </div>
-          <div class="inspect">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`on-${scheme}`}>
-                  <img
-                    class="inspect-shot"
-                    src={inspecting[scheme].src}
-                    width={inspecting[scheme].width}
-                    height={inspecting[scheme].height}
-                    alt="Orca in Obsidian with inspect mode on: a paragraph outlined on the page, and the design panel listing the rules that set it above the book's CSS."
-                  />
-                </div>
-              ))
-            }
+          <div class="swap">
+            <div class="swap-reel">
+              <Reel
+                scene="css"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="Orca in Obsidian with inspect mode on: the colophon set as a centred italic block, and the panel listing the rule that sets it above the book's CSS."
+              />
+            </div>
           </div>
         </section>
 
@@ -761,23 +727,6 @@ const exporting = { dark: await shot(exportDark), light: await shot(exportLight)
       0 40px 80px -24px rgba(0, 0, 0, 0.85);
   }
 
-  .inspect {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-  .inspect > div {
-    width: 100%;
-    max-width: 1080px;
-  }
-  .inspect-shot {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: var(--o-win-shadow);
-  }
-
   .vault-shots img {
     display: block;
     height: auto;
@@ -796,26 +745,6 @@ const exporting = { dark: await shot(exportDark), light: await shot(exportLight)
     width: 100%;
     max-width: 936px;
   }
-  .panel-shots {
-    display: flex;
-    gap: 44px;
-    align-items: center;
-  }
-  .panel-shots img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-  }
-  .panel-shot {
-    width: 280px;
-    border-radius: 8px;
-    box-shadow: 0 0 0 1px var(--o-border);
-  }
-  .page-shot {
-    width: 348px;
-    box-shadow: var(--o-page-shadow);
-  }
-
   /* The flip-through. A leaf turns about its inner edge, and carries a
      page on each face. */
   .flip {
@@ -984,10 +913,6 @@ const exporting = { dark: await shot(exportDark), light: await shot(exportLight)
     .note {
       margin-top: 0;
       max-width: 100%;
-    }
-    .panel-shots {
-      flex-direction: column;
-      align-items: center;
     }
   }
   @media (max-width: 40rem) {
