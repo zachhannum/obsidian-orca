@@ -5,7 +5,8 @@ import type { Paint, Scheme } from './take';
 /** The JSON a stage carries: the reel, and where each frame is served in each scheme. */
 export interface ReelData {
   timeline: Timeline;
-  paint: Record<Scheme, Paint>;
+  /** A take that types nothing reads no editor, and holds no colours. */
+  paint: Partial<Record<Scheme, Paint>>;
   /** Each frame at the window's own width, then at twice it. */
   frames: Record<Scheme, Record<string, [string, string]>>;
 }
@@ -159,8 +160,11 @@ function startReel(stage: HTMLElement): void {
     const { win, slots, covers, caret, ring } = parts;
     const placed = place(drawn.camera, timeline.window, size);
     win.style.transform = `translate(${px(placed.x)}, ${px(placed.y)}) scale(${placed.scale.toFixed(5)})`;
-    win.style.setProperty('--reel-cover', data.paint[scheme()].cover);
-    win.style.setProperty('--reel-caret', data.paint[scheme()].caret);
+    const paint = data.paint[scheme()];
+    if (paint !== undefined) {
+      win.style.setProperty('--reel-cover', paint.cover);
+      win.style.setProperty('--reel-caret', paint.caret);
+    }
 
     drawn.layers.forEach((layer, i) => {
       let slot = slots[i];

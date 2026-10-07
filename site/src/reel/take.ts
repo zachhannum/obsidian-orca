@@ -31,7 +31,8 @@ export interface Take {
   take: string;
   window: { w: number; h: number };
   density: number;
-  paint: Record<Scheme, Paint>;
+  /** The editor's colours in each scheme, for a take that typed in one. */
+  paint: Partial<Record<Scheme, Paint>>;
   frames: Frame[];
 }
 
