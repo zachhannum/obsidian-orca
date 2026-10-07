@@ -230,6 +230,108 @@ test("the write reel types the chapter, opens the preview, and goes back to the 
   assert.deepEqual([at(back).x, at(back).y], P.mid(heroTake, "read", "manuscript"));
 });
 
+test("the design reel starts from the book with no design, and each of its panel changes brings up the page it set", async () => {
+  const take = await takeOf("design");
+  const scene = P.SCENES.find((held) => held.id === "design");
+  const design = P.compile(scene, take);
+  assert.equal(scene.first, "d0");
+  assert.deepEqual(frames(design, 0), ["d0"]);
+  assert.ok(design.length >= 16 && design.length <= 20, `the design reel is ${design.length} seconds`);
+
+  // Each click is on a control of the frame on screen, and brings up the frame after it.
+  const steps = [
+    ["d0", "trim", "d1"],
+    ["d1", "body-size", "d2"],
+    ["d3", "h1-font", "d4"],
+    ["d4", "option", "d5"],
+    ["d5", "h1-center", "d6"],
+    ["d6", "h1-below", "d7"],
+    ["d7", "h2", "d8"],
+    ["d8", "h2-size", "d9"],
+    ["d9", "h2-center", "d10"],
+    ["d11", "drop-cap", "d12"],
+    ["d12", "first-line", "d13"],
+  ];
+  assert.equal(design.clicks.length, steps.length);
+  design.clicks.forEach((t, at) => {
+    const [on, mark, then] = steps[at];
+    assert.deepEqual(frames(design, t - 0.01), [on], `before the click on ${mark}`);
+    const { pointer } = P.sample(design, t, "wide");
+    assert.deepEqual([pointer.x, pointer.y], P.mid(take, on, mark), `the click on ${mark}`);
+    const cut = design.cuts.find((held) => held.t >= t);
+    assert.equal(cut.frame, then);
+    assert.deepEqual(frames(design, cut.t + cut.fade + 0.01), [then], `after the click on ${mark}`);
+  });
+  // Two clicks open a list and a tab, and the other nine set the pages.
+  assert.equal(steps.filter(([, mark]) => mark !== "h1-font" && mark !== "h2").length, 9);
+
+  // The panel scrolls to the headings and to the chapter openings through a frame between.
+  const strips = design.overs.filter((over) => over.kind === "scroll").map((over) => over.frames.map((held) => held.frame));
+  assert.deepEqual(strips, [["d2", "scroll-headings", "d3"], ["d10", "scroll-openings", "d11"]]);
+  for (const strip of design.overs.filter((over) => over.kind === "scroll")) {
+    const offsets = strip.frames.map((held) => held.scroll);
+    assert.deepEqual(offsets, [...offsets].sort((a, b) => a - b));
+    assert.ok(offsets[0] < offsets[1] && offsets[1] < offsets[2]);
+  }
+  // A reader with no script sees the page with every change made.
+  assert.equal(design.stillFrame, "d13");
+});
+
+test("the CSS reel pins a paragraph of the colophon in inspect mode, adds a rule for it, types three declarations, and ends on the page set again", async () => {
+  const take = await takeOf("css");
+  const scene = P.SCENES.find((held) => held.id === "css");
+  const css = P.compile(scene, take);
+  assert.deepEqual(frames(css, 0), ["c0"]);
+  assert.ok(css.length >= 12 && css.length <= 14, `the CSS reel is ${css.length} seconds`);
+
+  const steps = [
+    ["c0", "inspect", "c1"],
+    ["c2", "para", "c3"],
+    ["c3", "add", "c4"],
+    ["c5", "close", "c6"],
+  ];
+  assert.equal(css.clicks.length, steps.length);
+  css.clicks.forEach((t, at) => {
+    const [on, mark, then] = steps[at];
+    // The outline is under the pointer before the click that pins the paragraph.
+    assert.deepEqual(frames(css, t - 0.01), [on], `before the click on ${mark}`);
+    const { pointer } = P.sample(css, t, "wide");
+    assert.deepEqual([pointer.x, pointer.y], P.mid(take, on, mark), `the click on ${mark}`);
+    const cut = css.cuts.find((held) => held.t >= t);
+    assert.deepEqual(frames(css, cut.t + cut.fade + 0.01), [then], `after the click on ${mark}`);
+  });
+
+  // The three declarations are typed in the editor, each under a cover until it is.
+  const typed = css.overs.find((over) => over.kind === "type");
+  const rows = take.frames.find((frame) => frame.name === "c5").rows;
+  assert.equal(rows.length, 3);
+  assert.equal(typed.frame, "c5");
+  assert.equal(typed.how, "cover");
+  assert.deepEqual(typed.rows, rows);
+  assert.deepEqual(typed.box, take.frames.find((frame) => frame.name === "c5").marks.code);
+  assert.equal(P.sample(css, typed.a + 0.01, "wide").covers.length, 3);
+  const half = P.sample(css, (typed.a + typed.stop) / 2, "wide");
+  assert.ok(half.covers.length > 0 && half.covers.length < 3);
+  assert.ok(half.caret !== null);
+  for (const scheme of ["dark", "light"]) {
+    assert.match(take.paint[scheme].cover, /^rgb\(/);
+    assert.match(take.paint[scheme].caret, /^rgb\(/);
+  }
+
+  // The page is set once the typing stops, and the reel ends on it with the pin off.
+  const set = P.sample(css, typed.stop + 0.7, "wide");
+  assert.deepEqual(set.layers.map((layer) => layer.frame), ["c5"]);
+  assert.equal(set.covers.length, 0);
+  assert.equal(css.stillFrame, "c5");
+  assert.deepEqual(frames(css, css.length - P.SEAM - 0.05), ["c6"]);
+});
+
+test("a take that typed nothing holds no colours, and its reel still compiles", async () => {
+  const take = await takeOf("design");
+  assert.deepEqual(take.paint, {});
+  assert.ok(P.compile(P.SCENES.find((held) => held.id === "design"), take).length > 0);
+});
+
 test("a scene that names a frame, a mark or a row the take does not have does not compile", () => {
   const scene = (beats, more = {}) => ({ id: "t", take: "hero", first: "notes", still: 0, beats, ...more });
   assert.throws(() => P.compile(scene([P.hold(2)], { first: "nowhere" }), heroTake), /no frame nowhere/);
@@ -316,4 +418,7 @@ test("no committed frame weighs over 300 KB", async () => {
 // site/tests/reel.spec.ts. It does not cover the packer, which needs
 // sharp and is in site/tests/pack.spec.ts. It does not cover whether a
 // mark is where the control it names is drawn, which the spec that takes
-// the frames settles.
+// the frames settles. It does not cover what the design take starts
+// from: e2e/reel/design.spec.ts strips the book note to the keys a new
+// book has, with no design key and no CSS, before its first frame, and
+// e2e/reel/css.spec.ts takes the colophon's rule out the same way.
