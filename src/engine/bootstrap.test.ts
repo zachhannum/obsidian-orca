@@ -127,8 +127,9 @@ test("the release is the plugin folder, with one JavaScript file in it", async (
     assert.ok(bundle.includes("createObjectURL"));
     const require = createRequire(import.meta.url);
     const module = await readFile(require.resolve("fleuron/fleuron_bg.wasm"));
-    const packed = /"([A-Za-z0-9+/]{1000000,}={0,2})"/.exec(bundle)?.[1];
-    assert.ok(packed !== undefined);
+    // The module is the longest string in the bundle. A regular
+    // expression overflows the stack on a match this long.
+    const packed = bundle.split('"').reduce((a, b) => (b.length > a.length ? b : a));
     assert.ok(brotliDecompressSync(Buffer.from(packed, "base64")).equals(module));
   } finally {
     await rm(outdir, { recursive: true, force: true });
