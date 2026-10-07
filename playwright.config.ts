@@ -24,7 +24,7 @@ export default defineConfig({
   projects: [
     {
       name: "orca",
-      testIgnore: ["**/shots.spec.ts", "**/film.spec.ts"],
+      testIgnore: ["**/shots.spec.ts", "**/reel/**"],
       // A project of its own would otherwise put its name in the path,
       // and the snapshots beside the specs were taken without one.
       snapshotPathTemplate:
@@ -59,12 +59,13 @@ export default defineConfig({
       },
     },
     {
-      // The film's frames are pictures of the window it plays, written
-      // to the folder ORCA_FILM_OUT names in the film's own repo.
-      // Nothing compares them to an earlier run.
-      name: "film",
-      testMatch: "**/film.spec.ts",
-      timeout: 120_000,
+      // A reel's frames are pictures of the window, written under
+      // build/reel for the site to pack. Nothing compares them to an
+      // earlier run. A take is one test that takes every frame in both
+      // schemes, so its bound is longer than a spec's.
+      name: "reel",
+      testMatch: "**/reel/*.spec.ts",
+      timeout: 300_000,
       expect: { timeout: 30_000 },
     },
   ],
