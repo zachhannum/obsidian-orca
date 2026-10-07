@@ -1,4 +1,6 @@
 import type { Locator } from "@playwright/test";
+import { PREVIEW } from "../harness/book";
+import { still } from "../harness/box";
 import { BOOK as NOTE } from "../harness/note";
 import { expect, test } from "../harness/test";
 
@@ -62,11 +64,19 @@ test("the design reel builds a page from a book note with no design", async ({ r
   await reel.opensOn(CHAPTER, OPENS_FRESH);
   // The preview is the one tab in the middle, as it is in the hero.
   await obsidian.detach(NOTE);
+  // The tab that is left slides into the room of the one that went.
+  await still(obsidian.view(PREVIEW));
 
   await obsidian.put("left");
   await panel.open();
   await obsidian.sidebar(PANEL);
   await expect(panel.panel).toBeVisible();
+  // A take before this one that failed can leave the panel on the book's CSS.
+  if ((await panel.toControls.count()) > 0) await panel.toControls.click();
+  await expect(panel.toCss).toBeVisible();
+  // The status bar counts the words of the note that was last in
+  // front until another tab is. The panel's own tab is one.
+  await panel.focus();
   await reel.settled();
   const scroller = panel.scroller;
   await scroller.evaluate((element) => {
