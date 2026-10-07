@@ -118,9 +118,14 @@ function drawScroll(over: ScrollOver, t: number, timeline: Timeline, drawn: Draw
   if (first === undefined || last === undefined) return;
   const at = lerp(first.scroll, last.scroll, EASE.inOutCubic(prog(t, over.a, over.b)));
   const clip = inset(over.box, timeline.window);
+  // Each frame holds its own picture of what lies over the box, which
+  // is cut out of it so that it does not scroll past.
+  const rect = (box: Box): string => `M${String(box.x)} ${String(box.y)}h${String(box.w)}v${String(box.h)}h${String(-box.w)}Z`;
+  const crop = over.fixed.length === 0 ? clip : `path(evenodd, '${[over.box, ...over.fixed].map(rect).join('')}')`;
   for (const { frame, scroll } of over.frames) {
-    drawn.layers.push({ frame, opacity: 1, crop: clip, within: clip, move: [0, scroll - at] });
+    drawn.layers.push({ frame, opacity: 1, crop, within: clip, move: [0, scroll - at] });
   }
+  for (const box of over.fixed) drawn.layers.push({ frame: first.frame, opacity: 1, crop: inset(box, timeline.window) });
 }
 
 function drawSlide(over: SlideOver, t: number, timeline: Timeline, drawn: Drawn): void {

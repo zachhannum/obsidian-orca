@@ -52,6 +52,8 @@ export interface Typing {
   first?: number;
   /** The mark of the editor a `cover` fills. */
   box?: string;
+  /** A mark of the frame that is typed as its one row, where the typing is a word of a line. */
+  row?: string;
 }
 
 export interface Sliding {
@@ -68,10 +70,11 @@ export interface Sliding {
 export type Beat =
   | ({ kind: 'click'; frame: string; at: At } & Press)
   | ({ kind: 'tap'; frame: string; at: At } & Press)
+  | ({ kind: 'point'; frame: string; at: At } & Press)
   | { kind: 'leave'; by: Point; over: number }
   | { kind: 'drag'; from: Point; to: Point; over: number }
   | ({ kind: 'type'; frame: string; runs: readonly Run[] } & Typing)
-  | { kind: 'scroll'; frames: readonly string[]; over: number; box: string }
+  | { kind: 'scroll'; frames: readonly string[]; over: number; box: string; fixed: readonly string[] }
   | ({ kind: 'slide'; frame: string; box: string } & Sliding)
   | { kind: 'cut'; frame: string; fade: number; ease: Ease }
   | { kind: 'hold'; seconds: number }
@@ -102,6 +105,12 @@ export interface Scene {
  */
 export const click = (frame: string, at: At, press: Press = {}): Beat => ({ kind: 'click', frame, at, ...press });
 
+/**
+ * Moves the pointer to a mark of `frame`, or to a point, with no click.
+ * It rests there for `dwell` and `rest`.
+ */
+export const point = (frame: string, at: At, press: Press = {}): Beat => ({ kind: 'point', frame, at, ...press });
+
 /** Taps with a finger. The dot shows for the tap alone. */
 export const tap = (frame: string, at: At, press: Press = {}): Beat => ({ kind: 'tap', frame, at, ...press });
 
@@ -125,12 +134,20 @@ export const type = (frame: string, runs: readonly Run[], typing: Typing = {}): 
 /**
  * Scrolls the box of a mark through frames taken at rising or falling
  * offsets. The first frame is the one on screen, and the last one stays.
+ * The marks in `fixed` are parts of the first frame that lie over the
+ * box and do not scroll with it, as a status bar does.
  */
-export const scroll = (frames: readonly string[], over = 0.5, box = 'scroller'): Beat => ({
+export const scroll = (
+  frames: readonly string[],
+  over = 0.5,
+  box = 'scroller',
+  fixed: readonly string[] = []
+): Beat => ({
   kind: 'scroll',
   frames,
   over,
   box,
+  fixed,
 });
 
 /** Slides the box of a mark of `frame` in from a side, or out to it. */

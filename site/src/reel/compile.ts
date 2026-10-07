@@ -35,6 +35,8 @@ export interface ScrollOver {
   b: number;
   box: Box;
   frames: { frame: string; scroll: number }[];
+  /** Boxes of the first frame that stay still over the strip. */
+  fixed: Box[];
 }
 
 /** A box of `frame` that moves by up to `by`, which is its own width or height. */
@@ -179,7 +181,7 @@ export function compile(scene: Scene, take: Take): Timeline {
       t += beat.fade;
     } else if (beat.kind === 'look') {
       turn(t, t + beat.over, point(beat.frame, beat.at));
-    } else if (beat.kind === 'click') {
+    } else if (beat.kind === 'click' || beat.kind === 'point') {
       const target = point(beat.frame, beat.at);
       if (pointer === null) {
         const before = tracks.findLast((track) => !track.touch);
@@ -195,8 +197,10 @@ export function compile(scene: Scene, take: Take): Timeline {
       const clicked = landed + (beat.dwell ?? 0.3);
       key(pointer, t, at);
       key(pointer, landed, target);
-      pointer.clicks.push(clicked);
-      clicks.push(clicked);
+      if (beat.kind === 'click') {
+        pointer.clicks.push(clicked);
+        clicks.push(clicked);
+      }
       turn(t, move > 0 ? landed : clicked, aimed(target, beat.aim));
       at = target;
       t = clicked + (beat.rest ?? 0.12);
@@ -227,7 +231,7 @@ export function compile(scene: Scene, take: Take): Timeline {
       tracks.push({ a, b, keys: [[a, beat.from], [t, beat.from], [t + beat.over, beat.to], [b, beat.to]], clicks: [], touch: true });
       t += beat.over;
     } else if (beat.kind === 'type') {
-      const all = frameOf(take, beat.frame).rows ?? [];
+      const all = beat.row === undefined ? (frameOf(take, beat.frame).rows ?? []) : [markOf(take, beat.frame, beat.row)];
       const first = beat.first ?? 0;
       const how = beat.how ?? 'reveal';
       const spans: [number, number, number, number][] = [];
@@ -264,7 +268,14 @@ export function compile(scene: Scene, take: Take): Timeline {
           const scroll = frameOf(take, frame).scroll;
           return { frame, scroll: scroll ?? fail(`frame ${frame} has no scroll offset`) };
         });
-        overs.push({ kind: 'scroll', a: t, b: t + beat.over, box: markOf(take, first, beat.box), frames });
+        overs.push({
+          kind: 'scroll',
+          a: t,
+          b: t + beat.over,
+          box: markOf(take, first, beat.box),
+          frames,
+          fixed: beat.fixed.map((mark) => markOf(take, first, mark)),
+        });
         t += beat.over;
         bring(t, last, 0, 'linear');
       }
