@@ -188,6 +188,7 @@ section.copyright > p {
 /* The colophon is set as a centred block low on the last page. */
 section#colophon h1 {
   padding-top: 3.4in;
+  margin-bottom: 12pt;
   font-size: 10.5pt;
   color: #1d4e5b;
 }
