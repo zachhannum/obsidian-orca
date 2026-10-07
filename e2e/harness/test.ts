@@ -4,10 +4,12 @@
  * launched rather than a browser of its own.
  */
 
+import path from "node:path";
 import { test as base } from "@playwright/test";
 import { Book } from "./book";
 import { Epub } from "./epub";
 import { Export } from "./export";
+import { Recorder } from "./frames";
 import { CDP, FIXTURE } from "./launch";
 import { Inspect } from "./inspect";
 import { Manuscript } from "./manuscript";
@@ -34,6 +36,8 @@ interface Fixtures {
   navigator: Navigator;
   /** The design panel, where a book's font is picked. */
   panel: Panel;
+  /** One take of a reel on the sample vault, named after the spec's file. */
+  reel: Recorder;
   /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;
   record: void;
@@ -109,6 +113,14 @@ export const test = base.extend<Fixtures, Shared>({
     const panel = new Panel(obsidian);
     await use(panel);
     await panel.close();
+  },
+
+  // A take that failed never reached its own end, so the vault is put
+  // back here for the take after it.
+  reel: async ({ site }, use, spec) => {
+    const reel = new Recorder(site, path.basename(spec.file, ".spec.ts"));
+    await use(reel);
+    await reel.restore();
   },
 
   vault: async ({ obsidian }, use) => {

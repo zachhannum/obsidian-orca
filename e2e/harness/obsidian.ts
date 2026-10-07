@@ -805,10 +805,11 @@ export class Obsidian {
    * Holds only the pointer still, for a picture of the whole window. The
    * status bar and the scrollbars stay in it. The window buttons Obsidian
    * draws on Linux and Windows go, with the room the tab bar keeps for
-   * them, so the picture is the same window on every platform.
+   * them, so the picture is the same window on every platform. With
+   * `kept`, the pointer stays where it is and only the chrome goes.
    */
-  async unhovered(): Promise<void> {
-    await this.page.mouse.move(0, 0);
+  async unhovered(kept = false): Promise<void> {
+    if (!kept) await this.page.mouse.move(0, 0);
     await this.hold(
       `${HOVERED} { visibility: hidden }` +
         `${CHROME.buttons} { display: none !important }` +
