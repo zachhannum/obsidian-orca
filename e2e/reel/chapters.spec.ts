@@ -63,7 +63,7 @@ test("the chapters reel is the book note as its page and as its Markdown", async
       expect(await scroller.evaluate((element) => element.scrollTop)).toBe(top);
       const bar = await scroller.evaluate((element) => {
         const box = element.getBoundingClientRect();
-        const wide = element.offsetWidth - element.clientWidth;
+        const wide = (element as HTMLElement).offsetWidth - element.clientWidth;
         return {
           x: Math.round(box.right - wide),
           y: Math.round(box.top),

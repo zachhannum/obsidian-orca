@@ -703,7 +703,7 @@ test("every picture on the page is one the screenshot spec takes", async () => {
   const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map(
     (found) => found[1],
   );
-  assert.ok(sources.length > 0, "the page shows no picture");
+  assert.ok(sources.length + globbed.length > 0, "the page shows no picture");
   for (const source of [...sources, ...globbed]) {
     assert.match(source, /^\.\.\/shots\//, `${source} is not a picture the spec takes`);
   }
