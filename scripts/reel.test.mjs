@@ -6,8 +6,8 @@ import vm from "node:vm";
 import esbuild from "esbuild";
 import { root } from "./bundle.mjs";
 
-const reel = path.join(root, "site/src/reel");
-const shots = path.join(root, "site/src/shots/reel");
+const reel = path.join(root, "docs/src/reel");
+const shots = path.join(root, "docs/src/shots/reel");
 
 /** The byte limit of one packed frame, which the packer holds too. */
 const LIMIT = 300 * 1024;
@@ -579,10 +579,10 @@ test("no committed frame weighs over 300 KB", async () => {
 
 // What this file does not cover: the pixels a reel draws, the loading of
 // frames and the change of scheme, which need a browser and are in
-// site/tests/reel.spec.ts. It does not cover the packer, which needs
-// sharp and is in site/tests/pack.spec.ts. It does not cover whether a
+// docs/tests/reel.spec.ts. It does not cover the packer, which needs
+// sharp and is in docs/tests/pack.spec.ts. It does not cover whether a
 // mark is where the control it names is drawn, which the spec that takes
 // the frames settles. It does not cover what the design take starts
-// from: e2e/reel/design.spec.ts strips the book note to the keys a new
+// from: e2e-tests/reel/design.spec.ts strips the book note to the keys a new
 // book has, with no design key and no CSS, before its first frame, and
-// e2e/reel/css.spec.ts takes the colophon's rule out the same way.
+// e2e-tests/reel/css.spec.ts takes the colophon's rule out the same way.

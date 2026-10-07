@@ -14,7 +14,7 @@ import { root } from "./bundle.mjs";
 const read = (file) => readFile(path.join(root, file), "utf8");
 
 /** The folder the sample book keeps its notes in, inside the sample vault. */
-const SAMPLE_DIR = "site/sample/Twenty Thousand Leagues";
+const SAMPLE_DIR = "docs/sample/Twenty Thousand Leagues";
 
 /** The sample vault's book note, which the landing page sets its pages from. */
 const SAMPLE_BOOK = `${SAMPLE_DIR}/Twenty Thousand Leagues Under the Sea.md`;
@@ -52,13 +52,13 @@ function entries(note, heading) {
 const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, preview, shots, claude] =
   await Promise.all([
     read("package.json"),
-    read("site/package.json"),
-    read("site/package-lock.json"),
-    read("site/src/styles/tokens.css"),
-    read("site/src/styles/theme.css"),
-    read("site/src/styles/fonts.css"),
-    read("site/astro.config.mjs"),
-    read("site/public/CNAME"),
+    read("docs/package.json"),
+    read("docs/package-lock.json"),
+    read("docs/src/styles/tokens.css"),
+    read("docs/src/styles/theme.css"),
+    read("docs/src/styles/fonts.css"),
+    read("docs/astro.config.mjs"),
+    read("docs/public/CNAME"),
     read(".github/workflows/docs.yml"),
     read(".github/workflows/preview.yml"),
     read(".github/workflows/shots.yml"),
@@ -105,7 +105,7 @@ test("one tokens file holds both schemes, and Starlight's variables read from it
 
 test("dark is the default, and the toggle writes the key Starlight reads", async () => {
   const boot = /<script is:inline>([\s\S]*?)<\/script>/.exec(
-    await read("site/src/components/ThemeBoot.astro"),
+    await read("docs/src/components/ThemeBoot.astro"),
   )[1];
   const run = (stored) => {
     const store = new Map(stored === null ? [] : [["starlight-theme", stored]]);
@@ -150,24 +150,24 @@ test("the site's own domain is the one Pages keeps", () => {
 });
 
 test("a PR that touches the site builds it, and main goes to GitHub Pages", () => {
-  assert.match(workflow, /^on:\n {2}pull_request:\n {4}paths:\n {6}- "site\/\*\*"/m);
-  assert.match(workflow, /working-directory: site\n/);
+  assert.match(workflow, /^on:\n {2}pull_request:\n {4}paths:\n {6}- "docs\/\*\*"/m);
+  assert.match(workflow, /working-directory: docs\n/);
   assert.match(workflow, /- run: npm run build\n/);
   assert.match(workflow, /JamesIves\/github-pages-deploy-action@/);
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/);
 });
 
 test("the Pages branch is served as written, so Astro's underscore folder loads", async () => {
-  await access(path.join(root, "site/public/.nojekyll"));
+  await access(path.join(root, "docs/public/.nojekyll"));
 });
 
 test("a deploy on main keeps the open previews, and checks the live docs", () => {
-  assert.match(workflow, /branch: gh-pages\n\s+folder: site\/dist\n\s+clean-exclude: pr-preview\/\n/);
+  assert.match(workflow, /branch: gh-pages\n\s+folder: docs\/dist\n\s+clean-exclude: pr-preview\/\n/);
   assert.match(workflow, /name: check the live docs\n/);
   assert.match(workflow, /group: pages-branch\n\s+cancel-in-progress: false\n/);
 });
 
-test("the docs build checks the tokens against design/site.css", () => {
+test("the docs build checks the tokens against design/site.spec.css", () => {
   assert.match(sitePackage, /"build": "node scripts\/check-tokens\.mjs && /);
 });
 
@@ -175,7 +175,7 @@ test("a PR that touches the site or the design gets a preview in a folder of the
   const from = preview.indexOf("  pull_request:");
   const paths = preview.slice(from, preview.indexOf("\nconcurrency:"));
   assert.match(paths, /types: \[opened, reopened, synchronize, closed\]/);
-  assert.match(paths, /- "site\/\*\*"/);
+  assert.match(paths, /- "docs\/\*\*"/);
   assert.match(paths, /- "design\/\*\*"/);
   assert.match(preview, /rossjrw\/pr-preview-action@v1/);
   assert.match(preview, /preview-branch: gh-pages\n\s+umbrella-dir: pr-preview\n/);
@@ -185,9 +185,9 @@ test("a PR that touches the site or the design gets a preview in a folder of the
 });
 
 test("a preview builds the docs, the artboards or both, and never the pictures of a failed run", () => {
-  assert.match(preview, /node build\.mjs --into \.\.\/site\/dist\/design --against /);
+  assert.match(preview, /node build\.mjs --into \.\.\/docs\/dist\/design --against /);
   assert.match(preview, /gh run download "\$run" --name shots --dir "\$RUNNER_TEMP\/shots"/);
-  assert.match(preview, /cp -r "\$RUNNER_TEMP\/shots\/\." site\/src\/shots\//);
+  assert.match(preview, /cp -r "\$RUNNER_TEMP\/shots\/\." docs\/src\/shots\//);
   assert.match(preview, /conclusion -q \.conclusion\)" = success/);
   assert.match(preview, /stale\) echo; echo "The pictures were not taken again/);
   assert.doesNotMatch(preview, /git (add|commit)/);
@@ -251,7 +251,7 @@ test("the sample vault holds one book, and shares no file with the fixture", asy
   assert.match(await read(SAMPLE_BOOK), /^---\norca-book: 1\n/);
 
   const [sample, fixture] = await Promise.all([
-    vaultFiles("site/sample"),
+    vaultFiles("docs/sample"),
     vaultFiles("fixture"),
   ]);
   const shared = new Set(fixture.values());
@@ -306,7 +306,7 @@ test("a plate from the 1871 edition takes the page facing Chapter I", async () =
   const note = await read(`${SAMPLE_DIR}/${plate.link}.md`);
   const embed = /^!\[\[(.+)\]\]\n$/.exec(note);
   assert.ok(embed, `${plate.link} is not one embed on its own`);
-  await readFile(path.join(root, "site/sample/images", embed[1]));
+  await readFile(path.join(root, "docs/sample/images", embed[1]));
   assert.doesNotMatch(await read(`${SAMPLE_DIR}/A Shifting Reef.md`), /^!\[\[/);
 
   const copyright = await read(`${SAMPLE_DIR}/Copyright.md`);
@@ -325,7 +325,7 @@ test("each chapter heading sits over a nautilus shell at a quarter strength", as
   assert.match(rule, /z-index: -1/);
 
   // The engine reads no SVG, so the shell ships as a PNG.
-  const png = await readFile(path.join(root, "site/sample/images/nautilus.png"));
+  const png = await readFile(path.join(root, "docs/sample/images/nautilus.png"));
   assert.equal(png.subarray(1, 4).toString("latin1"), "PNG");
 });
 
@@ -361,9 +361,9 @@ test("the shell is centered on a chapter heading and reaches no line of the chap
       "IMFeENrm28P.ttf",
       "IMFeENit28P.ttf",
     ]) {
-      session.addFontFile(face, await readFile(path.join(root, "site/sample/fonts", face)));
+      session.addFontFile(face, await readFile(path.join(root, "docs/sample/fonts", face)));
     }
-    session.addImage("nautilus.png", await readFile(path.join(root, "site/sample/images/nautilus.png")));
+    session.addImage("nautilus.png", await readFile(path.join(root, "docs/sample/images/nautilus.png")));
     session.setSources([chapter], [await read(chapter)], [JSON.stringify({ classes: [section.role], id: section.id })]);
     session.setStyle(["faces.css", "generated.css", "book.css"], [faces, generated, css]);
     const page = decodeDisplayList(session.preview(0, 1)).pages[0];
@@ -429,11 +429,11 @@ test("the book note carries the design the landing page shows", async () => {
 });
 
 /** The landing page and its scripts. */
-const LANDING = "site/src/pages/index.astro";
+const LANDING = "docs/src/pages/index.astro";
 
 const [landing, landingCss, plugin, playwright] = await Promise.all([
   read(LANDING),
-  read("site/src/styles/landing.css"),
+  read("docs/src/styles/landing.css"),
   read("src/ui/plugin.ts"),
   read("playwright.config.ts"),
 ]);
@@ -535,7 +535,7 @@ function metric(name) {
 }
 
 test("the surface moves, runs through the second line of the title, and the title inverts", async () => {
-  const { seaPath, REST } = await moduleOf("site/src/scripts/sea.ts");
+  const { seaPath, REST } = await moduleOf("docs/src/scripts/sea.ts");
   const wave = { off: 0, lag: 0, kind: "body" };
   assert.notEqual(seaPath(wave, 1440, 0), seaPath(wave, 1440, 2));
 
@@ -599,7 +599,7 @@ test("with reduced motion on, the sea and the specks hold still", async () => {
   let frames = 0;
   const requestAnimationFrame = () => (frames += 1);
   const cancelAnimationFrame = () => {};
-  const { startSea } = await moduleOf("site/src/scripts/sea.ts", {
+  const { startSea } = await moduleOf("docs/src/scripts/sea.ts", {
     window: {
       matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
       addEventListener() {},
@@ -627,11 +627,11 @@ test("with reduced motion on, the sea and the specks hold still", async () => {
 
 test("the working design demo is gone, and the site does not depend on fleuron", async () => {
   for (const file of [
-    "site/src/components/PanelGroup.astro",
-    "site/src/scripts/demo.ts",
-    "site/src/scripts/typeset.ts",
-    "site/src/scripts/typeset.worker.ts",
-    "site/src/styles/panel.css",
+    "docs/src/components/PanelGroup.astro",
+    "docs/src/scripts/demo.ts",
+    "docs/src/scripts/typeset.ts",
+    "docs/src/scripts/typeset.worker.ts",
+    "docs/src/styles/panel.css",
   ]) {
     const there = await access(path.join(root, file)).then(
       () => true,
@@ -647,7 +647,7 @@ test("the working design demo is gone, and the site does not depend on fleuron",
     undefined,
     "the site's lockfile installs fleuron",
   );
-  for (const file of ["site/astro.config.mjs", "site/tsconfig.json", LANDING]) {
+  for (const file of ["docs/astro.config.mjs", "docs/tsconfig.json", LANDING]) {
     assert.doesNotMatch(await read(file), /fleuron|panel\.css|PanelGroup|data-demo/, file);
   }
 });
@@ -666,7 +666,7 @@ test("the sections that show orca's own surfaces show photographs of them", asyn
 });
 
 test("the pages turn on a click, on the arrow buttons and from the keyboard", async () => {
-  const flip = await moduleOf("site/src/scripts/flip.ts");
+  const flip = await moduleOf("docs/src/scripts/flip.ts");
 
   // Five leaves stand between the first page and the last, so the book
   // reads as six spreads.
@@ -686,7 +686,7 @@ test("the pages turn on a click, on the arrow buttons and from the keyboard", as
   const moving = [...flip.layout(leaves, 2, 1)];
   assert.ok(moving[1].z > Math.max(...moving.filter((leaf, at) => at !== 1).map((leaf) => leaf.z)));
 
-  const source = await read("site/src/scripts/flip.ts");
+  const source = await read("docs/src/scripts/flip.ts");
   assert.match(source, /leaf\.addEventListener\('click'/);
   assert.match(source, /'ArrowLeft'/);
   assert.match(source, /'ArrowRight'/);
@@ -713,9 +713,9 @@ test("every picture on the page is one the screenshot spec takes", async () => {
 
   // The directory the page reads from is the shots project's snapshots.
   assert.match(playwright, /name: "shots"/);
-  assert.match(playwright, /snapshotPathTemplate: "site\/src\/shots\/\{arg\}\{ext\}"/);
+  assert.match(playwright, /snapshotPathTemplate: "docs\/src\/shots\/\{arg\}\{ext\}"/);
   const taken = [];
-  for await (const file of glob("site/src/shots/**/*.png", { cwd: root })) taken.push(file);
+  for await (const file of glob("docs/src/shots/**/*.png", { cwd: root })) taken.push(file);
   assert.ok(taken.length >= 12, "the spec has taken no pages");
 });
 
@@ -786,13 +786,13 @@ test("a section says orca runs on a phone and a tablet, and plays a reel of each
 });
 
 test("no width of the screen decides what a reel plays", async () => {
-  const stage = await read("site/src/reel/stage.ts");
+  const stage = await read("docs/src/reel/stage.ts");
   // Reduced motion is the one thing the player asks the screen.
   const asked = [...stage.matchAll(/matchMedia\(\s*'([^']+)'/g)].map((match) => match[1]);
   assert.deepEqual(asked, ["(prefers-reduced-motion: reduce)"]);
   // The stage is measured, and the still under it is placed by the same measure.
   assert.match(stage, /ResizeObserver/);
-  const styles = `${await read("site/src/styles/reel.css")}\n${await read("site/src/components/Reel.astro")}`;
+  const styles = `${await read("docs/src/styles/reel.css")}\n${await read("docs/src/components/Reel.astro")}`;
   assert.doesNotMatch(styles, /@media[^{]*width/);
   // A stage reads its reel when it first comes on screen, and not before.
   assert.match(stage, /near\.observe\(stage\)/);
@@ -804,7 +804,7 @@ test("no width of the screen decides what a reel plays", async () => {
 });
 
 test("the footer carries the tail mark in one flat colour", async () => {
-  const mark = await read("site/src/components/Mark.astro");
+  const mark = await read("docs/src/components/Mark.astro");
   assert.match(mark, /fill="currentColor"/);
   assert.doesNotMatch(mark, /fill="(?!currentColor)[^"]+"/);
 
@@ -822,7 +822,7 @@ test("the footer carries the tail mark in one flat colour", async () => {
 // the title.
 
 /** The docs pages' directory. */
-const DOCS = "site/src/content/docs";
+const DOCS = "docs/src/content/docs";
 
 /** Every docs page, by its path under the docs directory. */
 async function docsPages() {
@@ -947,11 +947,11 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
       const name = /name="([^"]+)"/.exec(props)?.[1];
       assert.ok(name, `${file} has a <Shot> with no name`);
       for (const scheme of ["dark", "light"]) {
-        assert.ok(await exists(`site/src/shots/${name}-${scheme}.png`), `${file} shows ${name}-${scheme}, which the spec has not taken`);
+        assert.ok(await exists(`docs/src/shots/${name}-${scheme}.png`), `${file} shows ${name}-${scheme}, which the spec has not taken`);
       }
       const marks = /marks=\{\[([^\]]*)\]\}/.exec(props);
       if (marks === null) continue;
-      const sidecar = `site/src/shots/${name}.marks.json`;
+      const sidecar = `docs/src/shots/${name}.marks.json`;
       assert.ok(await exists(sidecar), `${file} marks ${name}, which has no marks`);
       const measured = JSON.parse(await read(sidecar)).marks;
       for (const [, id] of marks[1].matchAll(/'([^']+)'/g)) {
@@ -959,14 +959,14 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
       }
     }
     for (const [, n] of page.matchAll(/<Page n=\{(\d+)\}/g)) {
-      const picture = `site/src/shots/pages/page-${n.padStart(2, "0")}.png`;
+      const picture = `docs/src/shots/pages/page-${n.padStart(2, "0")}.png`;
       assert.ok(await exists(picture), `${file} shows ${picture}, which the spec has not taken`);
     }
   }
 
   // The component reads the shots directory and nothing else.
   for (const component of ["Shot"]) {
-    const source = await read(`site/src/components/${component}.astro`);
+    const source = await read(`docs/src/components/${component}.astro`);
     const globbed = [...source.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map((found) => found[1]);
     assert.ok(globbed.length > 0, `${component} reads no picture`);
     for (const pattern of globbed) assert.match(pattern, /^\.\.\/shots\//);
@@ -975,7 +975,7 @@ test("every docs page shows orca only in pictures the screenshot spec took", asy
 
 test("a button a docs page names is orca's own button, drawn with orca's icon", async () => {
   const actions = await read("src/ui/actions.ts");
-  const component = await read("site/src/components/Action.astro");
+  const component = await read("docs/src/components/Action.astro");
   const icons = [...actions.matchAll(/icon: "([^"]+)"/g)].map((found) => found[1]);
   assert.ok(icons.length > 0, "ui/actions names no icon");
   for (const icon of icons) {

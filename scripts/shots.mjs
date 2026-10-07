@@ -22,7 +22,7 @@ if (flags === undefined) {
 // an Obsidian.
 const takes =
   project === "reel"
-    ? (await readdir(path.join(root, "e2e/reel"))).filter((file) => file.endsWith(".spec.ts")).length
+    ? (await readdir(path.join(root, "e2e-tests/reel"))).filter((file) => file.endsWith(".spec.ts")).length
     : Infinity;
 
 const shards = Math.min(

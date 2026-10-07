@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 const SENDS = /\bgit\s+push\b|\bgh\s+pr\s+create\b/;
-const SURFACE = /^(src\/ui\/|e2e\/|fixture\/|styles\.css$)/;
+const SURFACE = /^(src\/ui\/|e2e-tests\/|fixture\/|styles\.css$)/;
 
 const git = (...args) =>
   execFileSync("git", args, { encoding: "utf8" }).trim();

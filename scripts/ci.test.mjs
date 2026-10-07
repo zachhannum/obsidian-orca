@@ -15,7 +15,7 @@ const [pkg, shotsRunner, workflow, shots, docs, setup, release, cut, spec, claud
   read(".github/actions/obsidian-setup/action.yml"),
   read(".github/workflows/release.yml"),
   read(".github/workflows/cut-release.yml"),
-  read("e2e/shots.spec.ts"),
+  read("e2e-tests/shots.spec.ts"),
   read("CLAUDE.md"),
 ]);
 
@@ -88,7 +88,7 @@ test("only a push to main runs the suite on macOS, and a PR's macOS check passes
 
 test("each shard keeps its own report and writes its own summary", async () => {
   assert.match(job("e2e"), /name: e2e-report-\$\{\{ matrix\.os \}\}-\$\{\{ matrix\.shard \}\}\n/);
-  assert.match(await read("playwright.config.ts"), /\["\.\/e2e\/harness\/report\.ts"\]/);
+  assert.match(await read("playwright.config.ts"), /\["\.\/e2e-tests\/harness\/report\.ts"\]/);
 });
 
 test("`npm run e2e` is one run on one Obsidian", async () => {
@@ -101,7 +101,7 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
     const from = shots.indexOf(`  ${on}:`);
     assert.notEqual(from, -1, `the spec does not run on ${on}`);
     const block = shots.slice(from, shots.indexOf("\nconcurrency:"));
-    for (const at of ["src/**", "site/src/styles/tokens.css", "e2e/**"]) {
+    for (const at of ["src/**", "docs/src/styles/tokens.css", "e2e-tests/**"]) {
       assert.ok(block.includes(`"${at}"`), `${on} does not watch ${at}`);
     }
   }
@@ -124,7 +124,7 @@ test("the spec and the reel run as jobs that start together, and the collection 
   for (const name of ["spec", "reel"]) {
     assert.ok(
       block(name).includes(
-        `git ls-files -m -o --exclude-standard -z site/src/shots | tar --null -T - -cf \${{ runner.temp }}/${name}.tar\n`,
+        `git ls-files -m -o --exclude-standard -z docs/src/shots | tar --null -T - -cf \${{ runner.temp }}/${name}.tar\n`,
       ),
       `the ${name} job keeps no archive`,
     );
@@ -154,7 +154,7 @@ test("the reel job takes the frames with `npm run reel`, with the site's package
   assert.match(reel, /uses: \.\/\.github\/actions\/obsidian-setup\n/);
   assert.match(reel, /- run: xvfb-run -a npm run reel\n/);
   // The pack step reads sharp out of the site's own packages.
-  assert.match(setup, /npm ci --prefer-offline --no-audit --no-fund\n\s+shell: bash\n\s+working-directory: site\n/);
+  assert.match(setup, /npm ci --prefer-offline --no-audit --no-fund\n\s+shell: bash\n\s+working-directory: docs\n/);
 });
 
 test("the docs workflow runs the site's suite in a browser, after the build", () => {
@@ -163,7 +163,7 @@ test("the docs workflow runs the site's suite in a browser, after the build", ()
   const suite = docs.indexOf("- run: npm test\n");
   assert.notEqual(build, -1, "the docs workflow does not build the site");
   assert.ok(build < browser && browser < suite, "the suite does not follow the build");
-  assert.match(docs, /defaults:\n {2}run:\n {4}working-directory: site\n/);
+  assert.match(docs, /defaults:\n {2}run:\n {4}working-directory: docs\n/);
 });
 
 test("a push to main that changes a picture opens a PR with the new pictures", () => {
@@ -172,7 +172,7 @@ test("a push to main that changes a picture opens a PR with the new pictures", (
   const step = shots.slice(from);
 
   assert.match(step, /if: github\.ref == 'refs\/heads\/main' && github\.event_name == 'push'/);
-  assert.match(step, /git status --porcelain site\/src\/shots/);
+  assert.match(step, /git status --porcelain docs\/src\/shots/);
   assert.match(step, /gh pr create --base main/);
   // The pictures reach main through review like anything else.
   assert.doesNotMatch(step, /git push origin (main|HEAD)/);

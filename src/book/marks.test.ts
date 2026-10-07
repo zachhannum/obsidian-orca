@@ -517,7 +517,7 @@ const EXAMPLES: Record<string, Form[]> = {
 };
 
 test("the engine reads every mark the site's Markdown page shows", async () => {
-  const folder = path.join(root, "site", "src", "marks");
+  const folder = path.join(root, "docs", "src", "marks");
   const written = (await readdir(folder)).filter((file) => file.endsWith(".md")).sort();
   assert.deepEqual(written, Object.keys(EXAMPLES).sort());
   for (const [name, forms] of Object.entries(EXAMPLES)) {

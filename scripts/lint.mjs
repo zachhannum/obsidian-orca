@@ -1,6 +1,6 @@
 /**
  * The dependency rule and the conventions around it, checked over
- * `src`. The doc comment rule also runs over `e2e` and `scripts`, and
+ * `src`. The doc comment rule also runs over `e2e-tests` and `scripts`, and
  * the clock rule over the specs. The production bundle is built in
  * memory and held to the build's own checks. A violation names the
  * file, the line and the rule.
@@ -122,15 +122,15 @@ export function checkClock(file, text) {
 
 /**
  * Every file under `src` checked in path order, then every file under
- * `e2e` and `scripts` checked against the doc comment rule, then every
+ * `e2e-tests` and `scripts` checked against the doc comment rule, then every
  * spec, the site's among them, against the clock rule.
  */
 export async function lint(from = root) {
   const found = [];
   for (const [pattern, rule] of [
     ["src/**/*.{ts,tsx}", check],
-    ["{e2e,scripts}/**/*.{ts,tsx,mjs}", checkDocs],
-    ["{e2e,site/tests}/**/*.spec.ts", checkClock],
+    ["{e2e-tests,scripts}/**/*.{ts,tsx,mjs}", checkDocs],
+    ["{e2e-tests,docs/tests}/**/*.spec.ts", checkClock],
   ]) {
     const files = [];
     for await (const file of glob(pattern, { cwd: from })) files.push(file);

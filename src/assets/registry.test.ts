@@ -4,7 +4,7 @@ import { resolveObjectURL } from "node:buffer";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { Registry, contentKey, fontUrl, type Later, type Revoke } from "@/assets/registry";
 import type { VaultAdapter } from "@/assets/vault";
 

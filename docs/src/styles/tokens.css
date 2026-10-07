@@ -4,7 +4,7 @@
    The `--o-` keys paint Obsidian in the site's colors. The screenshot spec
    reads them out of this file, so every value here is a literal.
 
-   design/site.css draws the artboards from the same values. */
+   design/site.spec.css draws the artboards from the same values. */
 :root {
   --o-ui: 'Archivo',system-ui,sans-serif;
   --o-ribbon: #0b0d10;

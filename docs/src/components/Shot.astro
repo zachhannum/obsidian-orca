@@ -38,7 +38,7 @@ const sidecars = import.meta.glob<{ default: Sidecar }>('../shots/*.marks.json',
 
 const picture = (scheme: 'dark' | 'light'): ImageMetadata => {
   const found = pictures[`../shots/${name}-${scheme}.png`];
-  if (found === undefined) throw new Error(`no picture ${name}-${scheme}.png in site/src/shots`);
+  if (found === undefined) throw new Error(`no picture ${name}-${scheme}.png in docs/src/shots`);
   return found.default;
 };
 const dark = picture('dark');
@@ -46,7 +46,7 @@ const light = picture('light');
 
 const sidecar = marks.length === 0 ? undefined : sidecars[`../shots/${name}.marks.json`]?.default;
 if (marks.length > 0 && sidecar === undefined) {
-  throw new Error(`no ${name}.marks.json in site/src/shots, and the page asks for marks`);
+  throw new Error(`no ${name}.marks.json in docs/src/shots, and the page asks for marks`);
 }
 
 /** The pixels between two marks under which their rings would touch. */

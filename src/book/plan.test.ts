@@ -17,7 +17,7 @@ import {
   type Page,
   type Sheet,
 } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { VAULT_FONTS, familyNamed, fontIndex, scanFonts } from "@/assets/fonts";
 import { Registry, SENT_NOTHING, fontUrl, type Sent } from "@/assets/registry";
 import { usedVariant, variantFamily } from "@/assets/variants";
@@ -995,7 +995,7 @@ test("Junicode sets in Regular, and its bold in Junicode Bold, in the preview an
 });
 
 test("the site's sample book sets to a PDF that qpdf reads", async () => {
-  const sample = directoryVault(path.join(root, "site/sample"));
+  const sample = directoryVault(path.join(root, "docs/sample"));
   const written = await exportedBook(sample, SAMPLE_BOOK);
 
   const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });

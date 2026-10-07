@@ -21,7 +21,7 @@ import {
   type Source,
   type Warning,
 } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { readText } from "@/assets/vault";
 import { SAMPLE, openBook } from "@/book/sample";
 import {

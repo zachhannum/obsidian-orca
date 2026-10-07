@@ -8,7 +8,7 @@ import { faceCss, familyFor, type Registered } from "@/style/faces";
 const root = process.env["ORCA_ROOT"] ?? process.cwd();
 
 /** The snapshot beside this spec, which is reviewed like code. */
-const SNAPSHOT = "src/style/faces.snapshot.css";
+const SNAPSHOT = "src/style/faces.test.snapshot.css";
 
 /** Two variants of one font, each under a family of its own, and a variable face. */
 const REGISTERED: Registered[] = [

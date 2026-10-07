@@ -41,7 +41,7 @@ const GROUPS = [
 const LEVEL = 1;
 
 /** The folder the site's pictures are written to. */
-const SHOTS = path.resolve(fileURLToPath(import.meta.url), "../../site/src/shots");
+const SHOTS = path.resolve(fileURLToPath(import.meta.url), "../../docs/src/shots");
 
 /** The folder of notes the quickstart makes a book from, and its notes. */
 const DRAFT = "Draft";
@@ -1253,7 +1253,7 @@ test("the book note picture is the sample book's note open as its page", async (
 });
 
 /** The folder the Markdown page's examples are written in, as a note and its CSS. */
-const EXAMPLES = path.resolve(fileURLToPath(import.meta.url), "../../site/src/marks");
+const EXAMPLES = path.resolve(fileURLToPath(import.meta.url), "../../docs/src/marks");
 
 /** Each example the Markdown page pictures, by the words its page opens on. */
 const SET_ON: Record<string, string> = {

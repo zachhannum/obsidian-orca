@@ -12,7 +12,7 @@ import {
   type Page,
   type Source,
 } from "fleuron";
-import { directoryVault } from "@/assets/directory";
+import { directoryVault } from "@/assets/testUtils/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
 import { readModel, type Model } from "@/book/model";
@@ -47,14 +47,14 @@ const vault = directoryVault(path.join(root, "fixture"));
 const BOOK = "Pride and Prejudice.md";
 
 /** The snapshot beside this spec, which is reviewed like code. */
-const SNAPSHOT = "src/style/generated.snapshot.css";
+const SNAPSHOT = "src/style/generated.test.snapshot.css";
 
 /**
  * The snapshot of a design that sets a style everywhere it can. The
  * fixture sets none, so the styles get a sheet of their own rather than
  * a slope on every page the e2e run photographs.
  */
-const STYLES = "src/style/styles.snapshot.css";
+const STYLES = "src/style/styles.test.snapshot.css";
 
 test("the fixture's design generates the sheet checked in beside this spec", async () => {
   const model = await fixture();

@@ -142,7 +142,7 @@ if (import.meta.filename === process.argv[1]) {
   };
   const { written, kept, removed } = await pack({
     from: flag("--from", path.join(repo, "build/reel")),
-    into: flag("--into", path.join(repo, "site/src/shots/reel")),
+    into: flag("--into", path.join(repo, "docs/src/shots/reel")),
   });
   for (const file of written) process.stdout.write(`wrote ${path.relative(repo, file)}\n`);
   for (const file of removed) process.stdout.write(`removed ${path.relative(repo, file)}\n`);

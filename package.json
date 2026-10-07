@@ -1,18 +1,18 @@
 {
   "name": "obsidian-orca",
-  "version": "0.4.0",
+  "version": "0.5.1",
   "description": "A book designer that runs inside Obsidian, setting pages with fleuron.",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit && node esbuild.config.mjs production",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p e2e-tests",
     "lint": "node scripts/lint.mjs && eslint --max-warnings 0 . && stylelint --max-warnings 0 styles.css",
     "test": "node scripts/test.mjs",
     "e2e": "playwright test --project=orca",
     "shots": "node scripts/shots.mjs",
-    "reel": "node scripts/shots.mjs reel && node site/scripts/pack-reel.mjs",
+    "reel": "node scripts/shots.mjs reel && node docs/scripts/pack-reel.mjs",
     "version": "node version-bump.mjs"
   },
   "license": "MIT",

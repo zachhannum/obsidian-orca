@@ -1,5 +1,5 @@
 /**
- * The rules the Obsidian plugin review applies. `site/` is its own
+ * The rules the Obsidian plugin review applies. `docs/` is its own
  * package, so its own config applies the same rules there.
  */
 
@@ -15,7 +15,7 @@ export default defineConfig([
       "build/",
       "test-results/",
       "playwright-report/",
-      "site/",
+      "docs/",
       "fixture/",
       ".*",
     ],
@@ -54,10 +54,10 @@ export default defineConfig([
       "*.ts",
       "scripts/**",
       "design/**",
-      "e2e/**",
+      "e2e-tests/**",
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
-      "src/assets/directory.ts",
+      "src/assets/testUtils/directory.ts",
     ],
     languageOptions: { globals: globals.node },
     rules: { "obsidianmd/no-nodejs-modules": "off" },

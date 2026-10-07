@@ -7,23 +7,23 @@ rebuilt instead of redrawn.
 
 Obsidian's own tokens are lifted from `app.css` in the installed
 build: its colour ramp, the 40px header, the 44px ribbon, 13px
-navigation type, its radii. They are in `chrome.css`. New surfaces
+navigation type, its radii. They are in `chrome.spec.css`. New surfaces
 extend that vocabulary rather than inventing one.
 
-Obsidian mobile's tokens are in `chrome.css` too, under `.is-mobile`,
+Obsidian mobile's tokens are in `chrome.spec.css` too, under `.is-mobile`,
 `.is-phone` and `.is-tablet`, the classes `app.css` keeps them under.
 A mobile part draws its device as a `.device` frame with those
 classes, and every measurement inside the frame is the mobile one.
 
 The docs site does not use Obsidian's tokens. Its own are in
-`site.css`.
+`site.spec.css`.
 
 ## What is here
 
 - `parts/*.html`, one file per artboard, the body only. The design
   lives here.
-- `chrome.css`, Obsidian's tokens and the shared component classes.
-- `site.css`, the docs site's tokens for both schemes and its
+- `chrome.spec.css`, Obsidian's tokens and the shared component classes.
+- `site.spec.css`, the docs site's tokens for both schemes and its
   component classes. A site part picks its scheme with `.site-dark`
   or `.site-light`.
 - `parts/site-*.js`, the scripts that move the site's sea and run its

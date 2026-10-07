@@ -16,7 +16,7 @@ const block = (css, selector) => {
 };
 
 const here = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
-const design = here('../../design/site.css');
+const design = here('../../design/site.spec.css');
 const site = here('../src/styles/tokens.css');
 
 const pairs = [
@@ -27,7 +27,7 @@ const pairs = [
 for (const [from, to] of pairs) {
   if (block(design, from) !== block(site, to)) {
     console.error(
-      `design/site.css ${from} and site/src/styles/tokens.css ${to} hold different values.`
+      `design/site.spec.css ${from} and docs/src/styles/tokens.css ${to} hold different values.`
     );
     process.exit(1);
   }

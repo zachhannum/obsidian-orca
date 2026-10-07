@@ -29,7 +29,7 @@ const root = path.resolve(fileURLToPath(import.meta.url), "../../..");
 export const FIXTURE = path.join(root, "fixture");
 
 /** The vault the docs site's pictures are set from. */
-export const SAMPLE = path.join(root, "site/sample");
+export const SAMPLE = path.join(root, "docs/sample");
 
 /** The environment a spec reads the debugging port from. */
 export const CDP = "ORCA_E2E_CDP";
