@@ -49,6 +49,52 @@ test("the `checks` job uploads the plugin files as the `plugin` artifact", () =>
   assert.ok(checks.indexOf("- run: npm run build\n") < checks.indexOf("name: plugin\n"));
 });
 
+test("the e2e job runs as four shards on a platform, each on a runner of its own", () => {
+  const e2e = job("e2e");
+
+  assert.match(e2e, /shard: \[1, 2, 3, 4\]\n/);
+  assert.match(e2e, /run: xvfb-run -a npm run e2e -- --shard=\$\{\{ matrix\.shard \}\}\/4\n/);
+  assert.match(e2e, /run: npm run e2e -- --shard=\$\{\{ matrix\.shard \}\}\/4\n/);
+});
+
+test("the checks main requires report, and pass only when every shard of their platform passed", () => {
+  const all = job("e2e-all");
+
+  // The names the ruleset holds, which a shard's name no longer is.
+  assert.match(all, /name: e2e on \$\{\{ matrix\.os \}\}\n/);
+  assert.match(all, /os: \[ubuntu-latest, macos-latest\]\n/);
+  assert.match(job("e2e"), /name: e2e on \$\{\{ matrix\.os \}\} \(\$\{\{ matrix\.shard \}\}\/4\)\n/);
+  // A failed shard skips a job that needs it, and a skipped check passes.
+  assert.match(all, /needs: e2e\n\s+if: \$\{\{ !cancelled\(\) \}\}\n/);
+  assert.match(all, /SHARD: "e2e on \$\{\{ matrix\.os \}\} \("\n/);
+  assert.match(all, /\[ "\$passed" = "\$SHARDS" \]\n/);
+});
+
+test("only a push to main runs the suite on macOS, and a PR's macOS check passes with no shard", () => {
+  assert.ok(
+    job("e2e").includes(
+      `os: \${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest", "macos-latest"]' || '["ubuntu-latest"]') }}\n`,
+    ),
+  );
+  assert.ok(
+    job("e2e-all").includes(
+      "SHARDS: ${{ (matrix.os == 'ubuntu-latest' || github.event_name == 'push') && 4 || 0 }}\n",
+    ),
+  );
+  // The workflow's only push is a push to main.
+  assert.match(workflow, /^ {2}push:\n {4}branches: \[main\]\n/m);
+});
+
+test("each shard keeps its own report and writes its own summary", async () => {
+  assert.match(job("e2e"), /name: e2e-report-\$\{\{ matrix\.os \}\}-\$\{\{ matrix\.shard \}\}\n/);
+  assert.match(await read("playwright.config.ts"), /\["\.\/e2e\/harness\/report\.ts"\]/);
+});
+
+test("`npm run e2e` is one run on one Obsidian", async () => {
+  assert.match(pkg, /"e2e": "playwright test --project=orca"/);
+  assert.match(await read("playwright.config.ts"), /workers: 1,\n/);
+});
+
 test("a PR that changes a surface or the tokens takes the site's pictures", () => {
   for (const on of ["pull_request", "push"]) {
     const from = shots.indexOf(`  ${on}:`);
