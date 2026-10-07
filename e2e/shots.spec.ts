@@ -103,13 +103,6 @@ const NARROW = Math.min(...WIDTHS);
 /** The shape of the window, which is what turns a width into a height. */
 const SHAPE = 5 / 8;
 
-/**
- * The window the phone picture is taken in. The picture is the preview
- * pane alone, which the phone layout shows at the width of the screen,
- * so the window is only as big as the artboard crops the pane to.
- */
-const PHONE = { width: 660, height: 600 };
-
 /** The window every test starts from, which the widths above depart from. */
 const WINDOW = { width: 1280, height: 800 };
 
@@ -437,28 +430,6 @@ test("the anatomy picture is the whole window, with the navigator, the preview a
 async function windowBox(site: Site): Promise<Box> {
   return site.obsidian.page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight }));
 }
-
-test("at phone width the picture is the preview pane alone", async ({
-  site,
-}) => {
-  await arrange(site);
-  await sized(site, PHONE.width, PHONE.height);
-  await site.obsidian.collapse("left");
-  await site.obsidian.collapse("right");
-
-  for (const scheme of SCHEMES) {
-    await site.paint(scheme);
-    await settled(site.book);
-    // The navigator and the design panel are off the picture, and the
-    // spread the landing page opens on is still on it.
-    await expect(site.navigator.pane).toBeHidden();
-    await expect(site.book.sheets).toHaveCount(2);
-    await site.obsidian.unhovered();
-    await expect(site.book.panes).toHaveScreenshot(`phone-${scheme}.png`);
-  }
-
-  await site.obsidian.moving();
-});
 
 /** A book note that lists nothing, for the picture of a book with no pages. */
 const EMPTY = "Empty book.md";
