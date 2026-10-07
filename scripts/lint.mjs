@@ -123,14 +123,14 @@ export function checkClock(file, text) {
 /**
  * Every file under `src` checked in path order, then every file under
  * `e2e` and `scripts` checked against the doc comment rule, then every
- * spec against the clock rule.
+ * spec, the site's among them, against the clock rule.
  */
 export async function lint(from = root) {
   const found = [];
   for (const [pattern, rule] of [
     ["src/**/*.{ts,tsx}", check],
     ["{e2e,scripts}/**/*.{ts,tsx,mjs}", checkDocs],
-    ["e2e/**/*.spec.ts", checkClock],
+    ["{e2e,site/tests}/**/*.spec.ts", checkClock],
   ]) {
     const files = [];
     for await (const file of glob(pattern, { cwd: from })) files.push(file);
