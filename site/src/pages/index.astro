@@ -1,17 +1,6 @@
 ---
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
-import { bookCss } from '@/book/css';
-import { imagesInCss } from '@/book/images';
-import { readModel } from '@/book/model';
-import { slug } from '@/book/names';
-import { writeDesign } from '@/style/design';
-import { effective } from '@/style/theme';
-import { GROUPS, atLevel, type Group } from '@/ui/groups';
-// The book note is read at build time, so the panel below shows what the
-// plugin would show for the very book the pictures are of.
-import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
-import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
 import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
 import loopDarkMp4 from '../shots/loop-dark.mp4?url';
 import loopLightMp4 from '../shots/loop-light.mp4?url';
@@ -19,14 +8,11 @@ import loopDarkPoster from '../shots/loop-dark.png';
 import loopLightPoster from '../shots/loop-light.png';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
-import '../styles/panel.css';
 import '../styles/landing.css';
 import Icon from '../components/Icon.astro';
 import Mark from '../components/Mark.astro';
 import ThemeBoot from '../components/ThemeBoot.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
-import PanelGroup from '../components/PanelGroup.astro';
-import { WORKS } from '../scripts/demo';
 import { FIRST, folio } from '../scripts/flip';
 import { LIP, REST } from '../scripts/sea';
 
@@ -46,6 +32,8 @@ import writeDark from '../shots/write-dark.png';
 import writeLight from '../shots/write-light.png';
 import readDark from '../shots/read-dark.png';
 import readLight from '../shots/read-light.png';
+import panelDark from '../shots/panel-dark.png';
+import panelLight from '../shots/panel-light.png';
 import inspectDark from '../shots/inspect-dark.png';
 import inspectLight from '../shots/inspect-light.png';
 import exportDark from '../shots/export-dark.png';
@@ -84,7 +72,7 @@ const pages: Shot[] = await Promise.all(
     .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
 );
 
-/** The opening of Chapter I, which stands in for the demo until it loads. */
+/** The opening of Chapter I, which stands beside the panel that set it. */
 const opening = rasterized['../shots/pages/page-09.png'];
 if (opening === undefined) throw new Error('the flip-through has no page 9');
 const chapterPage = await shot(opening.default);
@@ -150,98 +138,6 @@ const waves = [
 const rest = (off: number, kind: string) =>
   kind === 'line' ? `M0 ${String(REST + off)}H1440` : `M0 ${String(REST + off)}H1440V${String(LIP)}H0Z`;
 
-/** The chapter the demo sets, which is the one the pictures above open on. */
-const CHAPTER = 'A Shifting Reef';
-
-/** The sample book's own note, which the panel and the page come from. */
-const sampleModel = readModel(sampleNote);
-const { design, metadata } = sampleModel.book;
-
-/** The book note's own CSS, which sets the demo's page as it sets the book. */
-const css = bookCss(sampleModel.order);
-
-/**
- * The images that CSS names, served beside the page. An image the
- * sample vault does not hold stops the build rather than leaving the
- * page without it.
- */
-const sampleImages = import.meta.glob<string>('../../sample/images/*', {
-  query: '?url',
-  import: 'default',
-  eager: true,
-});
-const images = imagesInCss(css).map(({ url, link }) => {
-  const src = sampleImages[`../../sample/images/${link}`];
-  if (src === undefined) throw new Error(`the sample vault has no image ${link}`);
-  return { url, src };
-});
-
-/**
- * The book's title face, served beside the page. The engine carries EB
- * Garamond, and the demo sends it the rest.
- */
-const faces = Object.values(
-  import.meta.glob<string>('../../sample/fonts/IMFe*.ttf', {
-    query: '?url',
-    import: 'default',
-    eager: true,
-  })
-);
-
-/** What the panel shows for every key, with the defaults filled in. */
-const shown: Record<string, string> = Object.fromEntries(
-  Object.entries(writeDesign(effective(design))).map(([key, value]) => [key, String(value)])
-);
-
-/** The keys the note sets itself, which are the ones the panel offers a reset on. */
-const own = Object.keys(writeDesign(design));
-
-/** The faces the engine carries, which are the ones the demo can set in. */
-const FACES = ['EB Garamond', 'IM FELL English'];
-
-/**
- * The groups the demo draws, from the plugin's own table, holding the
- * rows whose controls change the page it shows. A key that leaves the
- * table stops the build here rather than leaving the page offering a
- * control the panel no longer has.
- */
-const offered = (control: { key?: string }): boolean =>
-  control.key !== undefined && WORKS.includes(atLevel(control.key, 1));
-
-const keys = GROUPS.flatMap((group: Group) =>
-  group.rows.flatMap((row) =>
-    row.of.map((control) => (control.key === undefined ? '' : atLevel(control.key, 1)))
-  )
-);
-for (const key of WORKS) {
-  if (!keys.includes(key)) throw new Error(`the design panel has no ${key}`);
-}
-
-const groups = GROUPS.map((group: Group) => ({
-  ...group,
-  rows: group.rows.filter((row) => row.of.some(offered)),
-})).filter((group) => group.rows.length > 0);
-
-/**
- * What the demo hands the engine: the book's own design, the section
- * the page belongs to, and the chapter itself. The engine sets the page
- * from these, so nothing about it is drawn by the browser.
- */
-const demo = {
-  // The note's own keys, not the defaults under them, so a reset has a
-  // key to clear.
-  design: writeDesign(design),
-  setting: {
-    sections: [{ role: 'chapter' as const, id: slug(CHAPTER, 'chapter') }],
-    title: metadata.title,
-    author: metadata.author,
-  },
-  source: { name: `${CHAPTER}.md`, text: chapterNote },
-  css,
-  images,
-  faces,
-};
-
 /**
  * One line of the title, written with a capital for each letter drawn
  * at full width. The title is set in capitals, so the case the line is
@@ -264,6 +160,8 @@ const vault = {
   dark: { tree: await shot(treeDark), note: await shot(noteDark) },
   light: { tree: await shot(treeLight), note: await shot(noteLight) },
 };
+/** The design panel, open on the sample book. */
+const panel = { dark: await shot(panelDark), light: await shot(panelLight) };
 /** A paragraph pinned in inspect mode, with the rules that set it in the panel. */
 const inspecting = { dark: await shot(inspectDark), light: await shot(inspectLight) };
 /** The export dialog, open on the sample book with the preflight passed. */
@@ -345,7 +243,6 @@ const swap = {
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
-            <span class="aside">Desktop only</span>
           </div>
 
           <figure class="window">
@@ -455,7 +352,7 @@ const swap = {
           </div>
         </section>
 
-        <section class="row" data-demo>
+        <section class="row">
           <div class="said">
             <h2 class="row-h">Design <i>in the panel</i></h2>
             <p class="sec-p">
@@ -464,30 +361,29 @@ const swap = {
               a setting, its control dims and names the line that overrides it.
             </p>
           </div>
-          <div class="shown demo">
-            <div class="controls">
-              <div class="frag-box">
-                <div class="o-frag">
-                  {
-                    groups.map((group) => (
-                      <PanelGroup group={group} values={shown} own={own} faces={FACES} />
-                    ))
-                  }
+          <div class="shown">
+            {
+              (['dark', 'light'] as const).map((scheme) => (
+                <div class={`on-${scheme}`}>
+                  <div class="panel-shots">
+                    <img
+                      class="panel-shot"
+                      src={panel[scheme].src}
+                      width={panel[scheme].width}
+                      height={panel[scheme].height}
+                      alt="Orca's design panel on the sample book, with its controls for the page, the text and the headings."
+                    />
+                    <img
+                      class="page-shot"
+                      src={chapterPage.src}
+                      width={chapterPage.width}
+                      height={chapterPage.height}
+                      alt="The opening of Chapter I, typeset by Orca."
+                    />
+                  </div>
                 </div>
-              </div>
-              <span class="aside">These controls work. Try them.</span>
-              <script is:inline type="application/json" data-demo-book set:html={JSON.stringify(demo)} />
-            </div>
-            <div class="demo-page">
-              <img
-                class="standing"
-                src={chapterPage.src}
-                width={chapterPage.width}
-                height={chapterPage.height}
-                alt="The opening of Chapter I, typeset by Orca."
-              />
-              <div class="set" data-demo-page></div>
-            </div>
+              ))
+            }
           </div>
         </section>
 
@@ -598,7 +494,6 @@ const swap = {
             <a class="install" href={docs}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
           </div>
-          <span class="aside">Desktop only</span>
         </section>
       </main>
 
@@ -615,7 +510,6 @@ const swap = {
     </div>
 
     <script>
-      import { startDemo, whenSeen, type Demo } from '../scripts/demo';
       import { startFlip } from '../scripts/flip';
       import { startLoop } from '../scripts/loop';
       import { startSea } from '../scripts/sea';
@@ -625,13 +519,6 @@ const swap = {
       if (sea !== null) startSea(sea, cut ?? undefined);
       const flip = document.querySelector<HTMLElement>('[data-flip]');
       if (flip !== null) startFlip(flip);
-      // The book the demo sets is written into the page as JSON, so the
-      // script reads the same design the panel above was drawn from.
-      const panel = document.querySelector<HTMLElement>('[data-demo]');
-      const said = document.querySelector<HTMLElement>('[data-demo-book]');
-      if (panel !== null && said !== null) {
-        startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
-      }
       startLoop([...document.querySelectorAll<HTMLVideoElement>('[data-loop]')]);
     </script>
   </body>
@@ -868,11 +755,6 @@ const swap = {
     border-bottom: 1px solid var(--text);
     text-decoration: none;
   }
-  .aside {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--faint);
-  }
 
   .window {
     position: relative;
@@ -1047,61 +929,24 @@ const swap = {
     top: 0;
     inset-inline-start: 0;
   }
-  .o-said {
-    flex: 1;
-    font-size: 12px;
-    opacity: 0.8;
-  }
-
-  .demo {
+  .panel-shots {
+    display: flex;
     gap: 44px;
     align-items: center;
   }
-  .controls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  /* The panel is the whole panel, and the whole panel scrolls in
-     Obsidian too. It stands as tall as the page beside it. */
-  .frag-box {
-    max-height: 538px;
-    overflow-y: auto;
-    border-radius: 8px;
-  }
-  .frag-box :global(.o-frag) {
-    border: 0;
-    border-radius: 0;
-  }
-  .o-frag :global(.o-grp + .o-grp) {
-    margin-top: 18px;
-  }
-  .demo-page {
-    width: 348px;
-    max-width: 100%;
-    position: relative;
-    flex: none;
-  }
-  /* The page the spec rasterized stands here until the engine has set
-     one of its own, so the section never shows a page orca did not. */
-  .demo-page .standing,
-  .demo-page .set :global(svg) {
+  .panel-shots img {
     display: block;
-    width: 100%;
+    max-width: 100%;
     height: auto;
+  }
+  .panel-shot {
+    width: 280px;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--o-border);
+  }
+  .page-shot {
+    width: 348px;
     box-shadow: var(--o-page-shadow);
-  }
-  .demo-page .set {
-    position: absolute;
-    inset: 0;
-  }
-  .demo-page .set:empty {
-    display: none;
-  }
-  /* Once the engine has set a page, the one that stood in its place
-     steps aside. */
-  .demo-page:has(.set[data-set]) .standing {
-    visibility: hidden;
   }
 
   /* The flip-through. A leaf turns about its inner edge, and carries a
@@ -1273,7 +1118,7 @@ const swap = {
       margin-top: 0;
       max-width: 100%;
     }
-    .demo {
+    .panel-shots {
       flex-direction: column;
       align-items: center;
     }
@@ -1302,10 +1147,6 @@ const swap = {
     }
     .quiet {
       justify-self: end;
-    }
-    .aside {
-      justify-self: start;
-      align-self: center;
     }
     .tree,
     .note {

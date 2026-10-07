@@ -5,9 +5,6 @@
 .o-tab{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--o-faint);border-radius:6px}
 .o-tab.on{color:var(--o-text);background:var(--o-hover)}
 .o-tool{height:42px;flex:none;display:flex;align-items:center;gap:9px;padding:0 14px;border-bottom:1px solid var(--o-border);background:var(--o-bar);color:var(--o-muted);font-size:12px}
-.o-seg{display:flex;background:var(--o-field);border:1px solid var(--o-border);border-radius:6px;padding:2px;gap:2px}
-.o-seg>div{height:21px;min-width:26px;padding:0 7px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--o-muted);font-size:11.5px;white-space:nowrap}
-.o-seg>div.on{background:var(--o-seg-on);color:var(--o-text);box-shadow:0 1px 2px rgba(0,0,0,.14)}
 .o-vr{width:1px;height:18px;background:var(--o-border)}
 .o-desk{flex:1;display:flex;align-items:center;justify-content:center;background:var(--o-desk)}
 
@@ -15,10 +12,6 @@
 .o-panel{padding:10px 14px;display:flex;flex-direction:column;gap:16px}
 .o-ph{display:flex;gap:8px;font-size:10.5px;color:var(--o-faint);letter-spacing:.06em;font-weight:600;padding-top:2px}
 .o-ph span+span{font-weight:400;letter-spacing:0}
-.o-tog{width:32px;height:18px;flex:none;border-radius:9px;background:var(--o-accent);position:relative}
-.o-tog::after{content:"";position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:7px;background:var(--o-knob)}
-.o-tog.off{background:var(--o-border)}
-.o-tog.off::after{right:auto;left:2px;background:var(--o-muted)}
 
 
 

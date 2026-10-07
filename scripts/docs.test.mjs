@@ -627,106 +627,31 @@ test("with reduced motion on, the sea, the specks and the pane swap hold still",
   assert.equal(drawn.length, 1, "the sea drew more than the one still surface");
 });
 
-test("the design demo is the plugin's own panel over the plugin's own engine", async () => {
-  const { GLYPHS, GROUPS, trims } = await moduleOf("src/ui/groups.ts");
-  const demo = await moduleOf("site/src/scripts/demo.ts");
-
-  // A choice writes the value it stands for. A switch writes the
-  // opposite of the one the design holds, which is what a switch is.
-  const design = demo.opens({ design: { "body-hyphens": true } });
-  assert.equal(demo.clicked(design, "body-align", "left"), "left");
-  assert.equal(demo.clicked(design, "body-hyphens", undefined), false);
-  assert.equal(demo.clicked(demo.opens({ design: {} }), "body-hyphens", undefined), true);
-
-  // The page the demo sets is the engine's, not the browser's. The
-  // sheets it sends are the ones the plugin generates.
-  const typeset = await read("site/src/scripts/typeset.ts");
-  assert.match(typeset, /import \{ designSheets \} from '@\/style\/sheet'/);
-  assert.match(typeset, /new Session\(serialized\(/);
-  assert.match(typeset, /styleOp\(designSheets\(sets, setting, css\)\)/);
-  // The book note's own CSS sets the page, so the shell behind a chapter
-  // heading is on it, with the image the CSS names.
-  assert.match(landing, /const css = bookCss\(sampleModel\.order\)/);
-  assert.match(landing, /const images = imagesInCss\(css\)/);
-  assert.match(typeset, /op: 'image', url, bytes/);
-  assert.match(typeset, /asset: \(asset\) => served\.get\(asset\.url\)/);
-  // A chapter is one section, so a label over its title stays with it.
-  assert.match(typeset, /\{ op: 'split', level: 0 \}/);
-  assert.match(typeset, /paintPage\(page, \{\s*fonts: reading\.fonts/);
-  // Nothing about the page is drawn by CSS: the old fake page is gone.
-  assert.doesNotMatch(landing, /class="pg-text"|class="pg r"|data-demo-text|data-demo-mark/);
-
-  // The site sets its pages with the engine the plugin is pinned to.
-  const plugin = JSON.parse(await read("package.json"));
-  const site = JSON.parse(await read("site/package.json"));
-  assert.equal(
-    site.dependencies.fleuron,
-    plugin.dependencies.fleuron,
-    "the site and the plugin are pinned to different fleurons",
-  );
-
-  // The page names the groups and hands them to the component whole. No
-  // row, label or choice is written out here, so none can fall behind
-  // the panel's.
-  assert.match(landing, /GROUPS\.map\(\(group: Group\) => \(\{/);
-  assert.match(landing, /rows: group\.rows\.filter\(\(row\) => row\.of\.some\(offered\)\)/);
-  assert.match(landing, /<PanelGroup group=\{group\} values=\{shown\} own=\{own\} faces=\{FACES\} \/>/);
-
-  // Every control those groups hold is one the component draws, and a
-  // kind it cannot draw stops the site's build rather than going out as
-  // a panel the plugin does not have.
-  const component = await read("site/src/components/PanelGroup.astro");
-  const drawn = /const DRAWN = new Set\(\[([^\]]+)\]\)/
-    .exec(component)[1]
-    .split(",")
-    .map((kind) => kind.trim().replace(/'/g, ""))
-    .filter(Boolean);
-  // Every group, so every control the panel offers is one a reader can
-  // work rather than a picture of one.
-  for (const group of GROUPS) {
-    for (const row of group.rows) {
-      for (const control of row.of) {
-        assert.ok(
-          drawn.includes(control.kind),
-          `the page cannot draw the ${control.kind} in ${group.name}`,
-        );
-      }
-    }
+test("the working design demo is gone, and the site does not depend on fleuron", async () => {
+  for (const file of [
+    "site/src/components/PanelGroup.astro",
+    "site/src/scripts/demo.ts",
+    "site/src/scripts/typeset.ts",
+    "site/src/scripts/typeset.worker.ts",
+    "site/src/styles/panel.css",
+  ]) {
+    const there = await access(path.join(root, file)).then(
+      () => true,
+      () => false,
+    );
+    assert.equal(there, false, `${file} is still in the site`);
   }
-  assert.match(component, /throw new Error\(\s*`the \$\{group\.name\} group has a/);
-
-  // Every control carries the key it writes, so the script works them
-  // all rather than the few it knows by name.
-  assert.match(component, /data-key=\{keyOf\(control\)\}/);
-
-  // A reset clears the keys its row sets, so each takes its default, as
-  // the panel's does. It is a button, not a picture of one.
-  const { effective } = await moduleOf("src/style/theme.ts");
-  const { writeDesign: written } = await moduleOf("src/style/design.ts");
-  const set = demo.opens({ design: { "body-size": "13pt", "body-align": "left" } });
-  const back = demo.cleared(set, ["body-size"]);
-  assert.equal(written(back)["body-size"], undefined);
-  assert.equal(written(back)["body-align"], "left");
+  const site = JSON.parse(sitePackage);
+  const deps = { ...site.dependencies, ...site.devDependencies };
+  assert.equal(deps.fleuron, undefined, "the site depends on fleuron");
   assert.equal(
-    written(effective(back))["body-size"],
-    written(effective(demo.opens({ design: {} })))["body-size"],
+    JSON.parse(siteLock).packages["node_modules/fleuron"],
+    undefined,
+    "the site's lockfile installs fleuron",
   );
-  assert.match(component, /<button\s+type="button"\s+class="o-reset"/);
-  assert.match(component, /data-reset=/);
-  // The page hands the demo the note's own keys, so there is a key to clear.
-  assert.match(landing, /design: writeDesign\(design\),/);
-
-  // A number is a field with a stepper beside it, the way the panel
-  // draws one, and it steps by the plugin's own step.
-  assert.match(component, /<div class="o-step">/);
-  assert.match(component, /data-step="1"/);
-  assert.match(component, /data-step="-1"/);
-  const script = await read("site/src/scripts/demo.ts");
-  assert.match(script, /import \{[^}]*stepped[^}]*\} from '@\/ui\/groups'/);
-  assert.match(script, /stepped\(held, field\.value, by, times, unit\)/);
-  // The arrow keys move it too, which is what the panel's field does.
-  assert.match(script, /event\.key === 'ArrowUp'/);
-  assert.ok(GLYPHS.length > 0 && trims("in").length > 0);
+  for (const file of ["site/astro.config.mjs", "site/tsconfig.json", LANDING]) {
+    assert.doesNotMatch(await read(file), /fleuron|panel\.css|PanelGroup|data-demo/, file);
+  }
 });
 
 test("the sections that show orca's own surfaces show photographs of them", async () => {
@@ -783,11 +708,9 @@ test("every picture on the page is one the screenshot spec takes", async () => {
   const sources = [...landing.matchAll(/from '(\.\.\/[^']+\.(?:png|jpe?g|webp|svg))'/g)].map(
     (found) => found[1],
   );
-  // The sample vault's images and faces are not pictures of orca. They
-  // are what the book names, and the engine sets the demo's page in them.
-  const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)]
-    .map((found) => found[1])
-    .filter((glob) => !glob.startsWith("../../sample/"));
+  const globbed = [...landing.matchAll(/import\.meta\.glob<[^>]+>\('([^']+)'/g)].map(
+    (found) => found[1],
+  );
   assert.ok(sources.length > 0, "the page shows no picture");
   for (const source of [...sources, ...globbed]) {
     assert.match(source, /^\.\.\/shots\//, `${source} is not a picture the spec takes`);
@@ -839,6 +762,23 @@ test("the panel section says a control the author's CSS overrides dims and names
   assert.match(said, /dims and names the line/);
 });
 
+test("the panel section shows the panel and the page it sets, as the spec took them", () => {
+  const from = landing.indexOf("in the panel</i>");
+  const section = landing.slice(from, landing.indexOf("</section>", from));
+  for (const scheme of ["dark", "light"]) {
+    assert.ok(
+      landing.includes(`from '../shots/panel-${scheme}.png'`),
+      `the page does not show panel-${scheme}`,
+    );
+  }
+  assert.match(landing, /rasterized\['\.\.\/shots\/pages\/page-09\.png'\]/);
+  // Both schemes are in the markup, and the stylesheet shows one.
+  assert.match(section, /\(\['dark', 'light'\] as const\)\.map\(\(scheme\) => \(\s*<div class=\{`on-\$\{scheme\}`\}>/);
+  assert.match(section, /src=\{panel\[scheme\]\.src\}/);
+  assert.match(section, /src=\{chapterPage\.src\}/);
+  assert.doesNotMatch(section, /<(?:button|input|select|script)\b/, "the section draws a control");
+});
+
 test("the footer carries the tail mark in one flat colour", async () => {
   const mark = await read("site/src/components/Mark.astro");
   assert.match(mark, /fill="currentColor"/);
@@ -856,95 +796,6 @@ test("the footer carries the tail mark in one flat colour", async () => {
 // pages themselves answer. Nor how the landing page looks: the tier
 // reads its source, and a browser is what shows the sea running through
 // the title.
-
-/** The chapter the demo sets, and the note that designs it. */
-const DEMO_CHAPTER = `${SAMPLE_DIR}/A Shifting Reef.md`;
-
-/**
- * Sets the demo's first page under a design and hands back what the
- * engine put on it. Two designs that lay out the same page give the
- * same string.
- */
-function pageUnder(engine, design) {
-  const css = engine
-    .designSheets(design, engine.setting)
-    .map((sheet) => sheet.css)
-    .join("\n");
-  // The chapter is one section, as the demo and the plugin send it.
-  const session = new Session();
-  try {
-    session.setDialect("obsidian");
-    session.setSplit(0);
-    session.setSources([DEMO_CHAPTER], [engine.text], [engine.attributes]);
-    session.setStyle(["generated.css"], [css]);
-    return JSON.stringify(decodeDisplayList(session.preview(0, 1)).pages[0]);
-  } finally {
-    session.free();
-  }
-}
-
-test("every control the demo offers changes the page the demo shows", async () => {
-  const { GROUPS, atLevel, trims, GLYPHS, withKey } = await moduleOf("src/ui/groups.ts");
-  const { readDesign, writeDesign } = await moduleOf("src/style/design.ts");
-  const { effective } = await moduleOf("src/style/theme.ts");
-  const { designSheets } = await moduleOf("src/style/sheet.ts");
-  const { readModel } = await moduleOf("src/book/model.ts");
-  const { slug } = await moduleOf("src/book/names.ts");
-  const { WORKS } = await moduleOf("site/src/scripts/demo.ts");
-
-  const require = createRequire(import.meta.url);
-  const wasm = path.dirname(require.resolve("fleuron/fleuron_bg.wasm"));
-  await initWasm({ module_or_path: await readFile(path.join(wasm, "fleuron_bg.wasm")) });
-
-  const { design, metadata } = readModel(await read(SAMPLE_BOOK)).book;
-  // The chapter crosses with its role as its class and a slug of its
-  // name as its id, as the plugin sends it.
-  const section = { role: "chapter", id: slug(path.basename(DEMO_CHAPTER, ".md"), "chapter") };
-  const engine = {
-    designSheets,
-    text: await read(DEMO_CHAPTER),
-    setting: { sections: [section], title: metadata.title, author: metadata.author },
-    attributes: JSON.stringify({ classes: [section.role], id: section.id }),
-  };
-  // The demo opens on the design the panel shows, defaults filled in.
-  const opens = readDesign(writeDesign(effective(design)));
-  const first = pageUnder(engine, opens);
-
-  /** A value for a key other than the one the design holds. */
-  const other = (key, control) => {
-    const held = String(writeDesign(opens)[key] ?? "");
-    if (control.kind === "flag") return writeDesign(opens)[key] !== true;
-    if (control.kind === "trim") return trims("in").find((c) => c.value !== held)?.value;
-    if (control.kind === "glyph") return GLYPHS.find((glyph) => glyph !== held);
-    if (control.choices?.length) return control.choices.find((c) => c.value !== held)?.value;
-    if (control.kind === "length") return held.endsWith("em") ? "3em" : "22pt";
-    if (control.kind === "count") return String(Number(held || "0") + 5);
-    return undefined;
-  };
-
-  const controls = new Map();
-  for (const group of GROUPS) {
-    for (const row of group.rows) {
-      for (const control of row.of) {
-        if (control.key === undefined) continue;
-        controls.set(atLevel(control.key, 1), control);
-      }
-    }
-  }
-
-  assert.ok(WORKS.length > 0, "the demo offers no controls");
-  for (const key of WORKS) {
-    const control = controls.get(key);
-    assert.ok(control, `the design panel has no ${key}`);
-    const value = other(key, control);
-    assert.notEqual(value, undefined, `no other value to set ${key} to`);
-    assert.notEqual(
-      pageUnder(engine, withKey(opens, key, value)),
-      first,
-      `${key} is offered by the demo but changes nothing on the page it shows`,
-    );
-  }
-});
 
 /** The docs pages' directory. */
 const DOCS = "site/src/content/docs";
@@ -1138,9 +989,7 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
 // What this file does not cover: the pictures themselves, which the
 // screenshot spec takes and compares; whether the glyph the site draws
 // for a button is the glyph Obsidian draws, since Obsidian ships a
-// Lucide build of its own; whether a control the demo leaves
-// out would change the page, since a book with a scene break or a facing
-// page would answer differently; whether a mark sits over the control it
+// Lucide build of its own; whether a mark sits over the control it
 // names, which the spec measures; the default of a font variant, which
 // the faces on the machine decide; and whether the prose of a docs page
 // is plain, which the simple-english pass reads.
