@@ -2,6 +2,7 @@ import type { Locator } from "@playwright/test";
 import { PREVIEW } from "../harness/book";
 import { Export } from "../harness/export";
 import { rowsIn } from "../harness/frames";
+import { FLOATING } from "../harness/obsidian";
 import { expect, test } from "../harness/test";
 
 /** The folder the sample book keeps its notes in, the book note, and the chapter the take writes. */
@@ -20,6 +21,9 @@ const EXPORTED = ["pdf", "epub"].map(
  */
 const OPENS = 8;
 const OPENS_BARE = 8;
+
+/** The status bar's count of the book note the take starts from. */
+const COUNTED = "528 words";
 
 /** The width the design panel is given, and the navigator's. */
 const PANEL = 400;
@@ -100,6 +104,9 @@ test("the hero's frames are real Obsidian on the sample book", async ({ reel }) 
   await obsidian.put("right");
   await obsidian.open(BOOK);
   await expect(obsidian.view("orca-book").getByTestId("orca-book")).toBeVisible();
+  // The status bar counts the book note again some time after the take
+  // writes it, and until then it holds the sample book's count.
+  await expect(obsidian.page.locator(FLOATING)).toContainText(COUNTED);
   await reel.frame("notes", {
     shelf: site.navigator.book(BOOK),
     chapter: site.navigator.entry(BOOK, CHAPTER),
