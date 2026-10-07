@@ -23,7 +23,7 @@ const OPENS = 8;
 const OPENS_BARE = 8;
 
 /** The status bar's count of the book note the take starts from. */
-const COUNTED = "530 words";
+const COUNTED = "517 words";
 
 /** The width the design panel is given, and the navigator's. */
 const PANEL = 400;

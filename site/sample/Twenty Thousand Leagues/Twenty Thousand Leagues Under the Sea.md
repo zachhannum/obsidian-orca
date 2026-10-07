@@ -155,13 +155,9 @@ section.contents p.part {
 }
 
 /* IM Fell has no small capitals, so its headings are spaced capitals. */
-section.part h1,
-section#colophon h1 {
+section.part h1 {
   text-transform: uppercase;
   letter-spacing: 0.15em;
-}
-
-section.part h1 {
   padding-top: 2.4in;
   font-size: 14pt;
 }
@@ -186,11 +182,8 @@ section.copyright > p {
 }
 
 /* The colophon is set as a centred block low on the last page. */
-section#colophon h1 {
-  padding-top: 3.4in;
-  margin-bottom: 12pt;
-  font-size: 10.5pt;
-  color: #1d4e5b;
+section#colophon {
+  padding-top: 3.6in;
 }
 
 section#colophon p {
