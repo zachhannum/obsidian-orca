@@ -358,6 +358,10 @@ and commit subjects.
 - Nothing writes to the vault except the book note, and the view is its
   only writer. Export is the one other writer: it writes the file the
   author named, and nothing else.
+- A file that does not ship carries a name the community directory's
+  scanner skips: `docs`, `e2e-tests`, `testUtils`, `*.test.*` or
+  `*.spec.*`. The scanner reads every other `.ts`, `.js` and `.css`
+  file in the repo and reports it in the plugin's review.
 - Obsidian's own API before hand-built DOM: `addAction`, `setViewState`
   and the view lifecycle carry affordances orca would otherwise build
   inside a view it does not own.
