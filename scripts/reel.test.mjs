@@ -332,6 +332,118 @@ test("a take that typed nothing holds no colours, and its reel still compiles", 
   assert.ok(P.compile(P.SCENES.find((held) => held.id === "design"), take).length > 0);
 });
 
+test("the chapters reel shows the book note's page, then its Markdown with each chapter as a link, and both switches are clicks on the header's own actions", async () => {
+  const scene = P.SCENES.find((held) => held.id === "chapters");
+  const take = await takeOf("chapters");
+  const reel = P.compile(scene, take);
+  assert.ok(reel.length >= 10 && reel.length <= 12.5, `the chapters reel is ${reel.length} seconds`);
+
+  // The two clicks are the only ones, and each is on the header action
+  // of the view on screen and brings up the other view.
+  const [toMarkdown, toBook] = reel.clicks;
+  assert.equal(reel.clicks.length, 2);
+  for (const [t, frame, mark, then] of [
+    [toMarkdown, "page-order", "as-markdown", "source-order"],
+    [toBook, "source-top", "as-book", "page"],
+  ]) {
+    assert.deepEqual(frames(reel, t - 0.01), [frame], `before the click at ${t}`);
+    const [x, y] = P.mid(take, frame, mark);
+    const { pointer, ring } = P.sample(reel, t + 0.01, "wide");
+    assert.ok(ring !== null && near(pointer.x, x) && near(pointer.y, y), `the click at ${t} is at ${pointer.x}, ${pointer.y}`);
+    assert.deepEqual(frames(reel, t + 0.5), [then], `after the click at ${t}`);
+  }
+
+  // The page is read down to its reading order before the first click,
+  // and the Markdown up to its properties before the second.
+  const [down, up] = reel.overs;
+  assert.deepEqual(down.frames.map((held) => held.frame), ["page", "page-mid", "page-order"]);
+  assert.deepEqual(up.frames.map((held) => held.frame), ["source-order", "source-mid", "source-top"]);
+  assert.ok(down.b <= toMarkdown && up.a > toMarkdown && up.b <= toBook);
+  for (const over of [down, up]) {
+    const offsets = over.frames.map((held) => held.scroll);
+    const tall = over.box.h;
+    assert.ok(Math.abs(offsets[1] - offsets[0]) < tall && Math.abs(offsets[2] - offsets[1]) < tall, "a strip has a gap");
+    // The status bar and the scroller's bar stay still over the strip.
+    const middle = P.sample(reel, (over.a + over.b) / 2, "wide").layers;
+    const still = middle.filter((layer) => layer.frame === over.frames[0].frame && layer.move === undefined && layer.crop !== undefined);
+    assert.equal(still.length, 2);
+  }
+
+  // The pointer rests on a chapter's link with no click, and the still is that picture.
+  const [x, y] = P.mid(take, "source-order", "link");
+  const rest = P.sample(reel, scene.still, "wide");
+  assert.ok(near(rest.pointer.x, x) && near(rest.pointer.y, y) && rest.ring === null);
+  assert.equal(reel.stillFrame, "source-order");
+  // The reel ends on the page it opens on.
+  assert.deepEqual(frames(reel, reel.length - 1), ["page"]);
+});
+
+test("the export reel shows preflight refusing the book with the Export button disabled, the fix in the note, and then the export", async () => {
+  const scene = P.SCENES.find((held) => held.id === "export");
+  const take = await takeOf("export");
+  const reel = P.compile(scene, take);
+  assert.ok(reel.length >= 12 && reel.length <= 14.5, `the export reel is ${reel.length} seconds`);
+
+  const steps = [
+    ["e0", "export", "e1"],
+    ["e1", "fix", "e2"],
+    // The click in the word starts the typing, which shows the line set right.
+    ["e2", "word", "e3"],
+    ["e3", "preview", "e4"],
+    ["e4", "export", "e5"],
+    ["e5", "write", "e6"],
+  ];
+  assert.equal(reel.clicks.length, steps.length);
+  reel.clicks.forEach((t, at) => {
+    const [frame, mark, then] = steps[at];
+    assert.equal(frames(reel, t - 0.01).at(-1), frame, `before the click at ${t}`);
+    const [x, y] = P.mid(take, frame, mark);
+    const { pointer } = P.sample(reel, t + 0.01, "wide");
+    assert.ok(near(pointer.x, x) && near(pointer.y, y), `the click at ${t} is at ${pointer.x}, ${pointer.y}`);
+    assert.equal(frames(reel, t + 0.6).at(-1), then, `after the click at ${t}`);
+  });
+
+  // The refusal is the still, and it stands for two seconds or more
+  // with the disabled button in it.
+  assert.equal(reel.stillFrame, "e1");
+  assert.ok(take.frames.find((frame) => frame.name === "e1").marks["export-off"] !== undefined);
+  assert.ok(reel.clicks[1] - reel.clicks[0] >= 2.5, "the refusal is not on screen long enough to read");
+
+  // The fix types the word alone, over the line as the note has it, and
+  // no cover hides the line.
+  const fix = reel.overs.find((over) => over.kind === "type");
+  assert.equal(fix.frame, "e3");
+  assert.deepEqual(fix.rows, [take.frames.find((frame) => frame.name === "e3").marks.word]);
+  const [a, b] = fix.spans[0];
+  const typing = P.sample(reel, (a + b) / 2, "wide");
+  assert.deepEqual(typing.layers.map((layer) => layer.frame), ["e2", "e3"]);
+  assert.equal(typing.covers.length, 0);
+  assert.ok(typing.caret !== null && typing.caret.x > fix.rows[0].x && typing.caret.x < fix.rows[0].x + fix.rows[0].w);
+  // The pointer is off the word while it is typed.
+  assert.ok(typing.pointer.y > fix.rows[0].y + fix.rows[0].h + 20);
+
+  // The narrow view turns to the dialog once it is open, and to the plate.
+  const view = (t) => P.sample(reel, t, "narrow").camera;
+  const dialog = take.frames.find((frame) => frame.name === "e1").marks.dialog;
+  const refused = view(reel.clicks[0] + 0.8);
+  assert.ok(refused.x > dialog.x && refused.x < dialog.x + dialog.w && refused.y > dialog.y && refused.y < dialog.y + dialog.h);
+  const plate = view(reel.clicks[3] + 0.8);
+  assert.ok(plate.x > 392 && plate.x < 770, `the view is at ${plate.x} when the plate shows`);
+});
+
+test("a pointer moved to a point clicks nothing, and a scene that names no fixed mark scrolls as before", () => {
+  const scene = (beats) => ({ id: "t", take: "hero", first: "notes", still: 0, beats });
+  const moved = P.compile(scene([P.click("notes", "chapter"), P.point("notes", [400, 300], { move: 0.5 }), P.hold(2)]), heroTake);
+  assert.equal(moved.clicks.length, 1);
+  const there = P.sample(moved, moved.clicks[0] + 0.12 + 0.5 + 0.2, "wide");
+  assert.deepEqual([there.pointer.x, there.pointer.y], [400, 300]);
+  assert.deepEqual(tour.overs.find((over) => over.kind === "scroll").fixed, []);
+  assert.throws(
+    () => P.compile(scene([P.scroll(["design-7", "scroll-down", "design-8"], 0.5, "scroller", ["nowhere"]), P.hold(2)]), heroTake),
+    /no mark nowhere/,
+  );
+});
+
 test("a scene that names a frame, a mark or a row the take does not have does not compile", () => {
   const scene = (beats, more = {}) => ({ id: "t", take: "hero", first: "notes", still: 0, beats, ...more });
   assert.throws(() => P.compile(scene([P.hold(2)], { first: "nowhere" }), heroTake), /no frame nowhere/);
