@@ -1,5 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { AS_BOOK, AS_MARKDOWN, BOOK as PAGE, MARKDOWN, Note } from "../harness/note";
+import { FLOATING } from "../harness/obsidian";
 import { expect, test } from "../harness/test";
 
 /** The folder the sample book keeps its notes in, the book note, and the chapter the pointer rests on. */
@@ -43,7 +44,11 @@ test("the chapters reel is the book note as its page and as its Markdown", async
     // note, so that is set before the click and the click is all there is.
     await obsidian.asSource();
 
-    /** Scrolls a scroller and takes a frame there, with the scroller and these targets as its marks. */
+    /**
+     * Scrolls a scroller and takes a frame there, with the scroller and
+     * these targets as its marks. The status bar and the scroller's own
+     * bar are marks too: both lie over what scrolls and stay where they are.
+     */
     const at = async (
       name: string,
       scroller: Locator,
@@ -56,7 +61,21 @@ test("the chapters reel is the book note as its page and as its Markdown", async
       }, top);
       await drawn();
       expect(await scroller.evaluate((element) => element.scrollTop)).toBe(top);
-      await reel.frame(name, { scroller, ...targets }, { scroll: scroller });
+      const bar = await scroller.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const wide = element.offsetWidth - element.clientWidth;
+        return {
+          x: Math.round(box.right - wide),
+          y: Math.round(box.top),
+          width: Math.round(wide),
+          height: Math.round(box.height),
+        };
+      });
+      await reel.frame(
+        name,
+        { scroller, status: obsidian.page.locator(FLOATING), ...targets },
+        { scroll: scroller, measured: { bar } },
+      );
     };
     /** The offsets a scroll passes from the top to `end`, with one frame between that overlaps both. */
     const stops = async (scroller: Locator, end: number): Promise<[number, number, number]> => {
