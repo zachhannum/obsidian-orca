@@ -75,6 +75,8 @@ export interface Taking {
   scroll?: Locator;
   /** The editor the take's colors are read from, once in each scheme. */
   paint?: Locator;
+  /** Boxes the take measured itself, kept as marks: a word in a line is no element to point a locator at. */
+  measured?: Record<string, Box>;
 }
 
 /** The book a take is of, and where a chapter of it opens when the session is sound. */
@@ -235,7 +237,7 @@ export class Recorder {
   async frame(
     name: string,
     targets: Record<string, Locator> = {},
-    { rows, focused = false, hovered = false, scroll, paint }: Taking = {},
+    { rows, focused = false, hovered = false, scroll, paint, measured = {} }: Taking = {},
   ): Promise<void> {
     const { obsidian } = this.site;
     await obsidian.unhovered(hovered);
@@ -271,7 +273,7 @@ export class Recorder {
     this.frames.push({
       name,
       marks: Object.fromEntries(
-        Object.entries(marks ?? {}).map(([mark, box]) => [mark, written(box)]),
+        Object.entries({ ...marks, ...measured }).map(([mark, box]) => [mark, written(box)]),
       ),
       ...(rows === undefined ? {} : { rows: rows.map(written) }),
       ...(scrolled === undefined ? {} : { scroll: scrolled }),
