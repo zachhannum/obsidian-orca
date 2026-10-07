@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { expect, type Locator } from "@playwright/test";
 import { PREVIEW } from "./book";
 import { DENSITY, SAMPLE } from "./launch";
-import type { Scheme } from "./obsidian";
+import { DEVICES, type Device, type Scheme } from "./obsidian";
 import type { Box, Site } from "./site";
 import { Vault } from "./vault";
 
@@ -84,6 +84,11 @@ export interface Expected {
   book: string;
   chapter: string;
   folio: number;
+  /**
+   * The device the take is taken on, in Obsidian's mobile layout. The
+   * window takes the device's size, and the preview shows one page.
+   */
+  device?: Device;
 }
 
 function written(box: Box): Written {
@@ -157,6 +162,8 @@ export class Recorder {
   private frames: Frame[] = [];
   private paints: Partial<Record<Scheme, Paint>> = {};
   private book = "";
+  private device: Device | undefined;
+  private window = WINDOW;
 
   constructor(
     readonly site: Site,
@@ -178,6 +185,8 @@ export class Recorder {
     }
     const { obsidian, book } = this.site;
     this.book = expected.book;
+    this.device = expected.device;
+    this.window = expected.device === undefined ? WINDOW : DEVICES[expected.device];
     this.frames = [];
     this.paints = {};
     await rm(this.into, { recursive: true, force: true });
@@ -185,15 +194,20 @@ export class Recorder {
     await mkdir(this.into, { recursive: true });
 
     await this.shut();
-    await obsidian.size(WINDOW.width, WINDOW.height, SHARP);
+    // A device loads the window again, and orca with it.
+    if (expected.device === undefined) await obsidian.size(WINDOW.width, WINDOW.height, SHARP);
+    else await obsidian.mobile(expected.device, SHARP);
     await obsidian.page.waitForFunction(
       (size) =>
         window.innerWidth === size.width &&
         window.innerHeight === size.height &&
         window.devicePixelRatio === size.density,
-      { ...WINDOW, density: SHARP },
+      { ...this.window, density: SHARP },
     );
-    await obsidian.reloadPlugin();
+    if (expected.device === undefined) await obsidian.reloadPlugin();
+    // The mobile layout is kept apart from the desktop's, with the tabs
+    // the last device take opened.
+    else await this.shut();
     await obsidian.asRendered();
 
     await obsidian.open(expected.book);
@@ -203,10 +217,14 @@ export class Recorder {
     await this.shut();
   }
 
-  /** Turns the preview to a chapter, and checks the folio its spread opens on. */
+  /**
+   * Turns the preview to a chapter, and checks the folio it opens on:
+   * the spread's first on the desktop, and the one page's on a device.
+   */
   async opensOn(chapter: string, folio: number): Promise<void> {
     const { book } = this.site;
-    await book.show("Spread", "spread");
+    if (this.device === undefined) await book.show("Spread", "spread");
+    else await book.show("Single page", "single");
     await book.choose(chapter);
     await this.settled();
     await expect(book.surface).toHaveAttribute("data-first", String(folio));
@@ -243,18 +261,23 @@ export class Recorder {
     await obsidian.unhovered(hovered);
     // A sidebar whose leaf is active draws its tab in the accent, so the
     // pane in the middle is made the active one, without the focus.
+    // A device's drawer has no tab to draw in the accent, so the active
+    // leaf there is left as it is.
     if (!focused) {
-      await obsidian.page.evaluate(() => {
+      await obsidian.page.evaluate((desktop) => {
         const { workspace } = window.app;
         const middle = workspace.getMostRecentLeaf(workspace.rootSplit);
-        if (middle !== null) workspace.setActiveLeaf(middle, { focus: false });
+        if (desktop && middle !== null) workspace.setActiveLeaf(middle, { focus: false });
         (document.activeElement as HTMLElement | null)?.blur();
-      });
+      }, this.device === undefined);
     }
+    // A drawer and a sheet slide in, and a box read on the way is not
+    // where the picture has it.
+    if (this.device !== undefined) await this.slid();
     // Obsidian flashes the tab of a sidebar it has just revealed.
     await expect(obsidian.page.locator(".workspace-tab-header.is-flashing")).toHaveCount(0);
 
-    const crop = { x: 0, y: 0, ...WINDOW };
+    const crop = { x: 0, y: 0, ...this.window };
     let marks: Record<string, Box> | undefined;
     for (const scheme of SCHEMES) {
       await this.site.paint(scheme);
@@ -306,7 +329,8 @@ export class Recorder {
   async end(): Promise<void> {
     const listed = {
       take: this.take,
-      window: { w: WINDOW.width, h: WINDOW.height },
+      ...(this.device === undefined ? {} : { device: this.device }),
+      window: { w: this.window.width, h: this.window.height },
       density: SHARP,
       paint: this.paints,
       frames: this.frames,
@@ -324,6 +348,26 @@ export class Recorder {
     await this.site.obsidian.moving();
     await this.vault.restore();
     await this.shut();
+    if (this.device === undefined) return;
+    // A device take leaves the desktop's layout for the take after it.
+    // Loading the window again shuts a sheet the take left open.
+    const { obsidian } = this.site;
+    if (this.device === "tablet") {
+      for (const side of ["left", "right"] as const) await obsidian.pin(false, side);
+    }
+    await obsidian.emulateMobile(false);
+    this.device = undefined;
+    this.window = WINDOW;
+  }
+
+  /** Waits for every slide on the screen to end. */
+  private async slid(): Promise<void> {
+    await this.site.obsidian.page.evaluate(async () => {
+      const ending = document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity);
+      await Promise.allSettled(ending.map((animation) => animation.finished));
+    });
   }
 
   private async shut(): Promise<void> {

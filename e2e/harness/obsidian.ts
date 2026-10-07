@@ -131,6 +131,8 @@ const CHROME = {
   status: ".status-bar",
   /** The bar a phone floats over the foot of its screen. */
   navbar: ".mobile-navbar",
+  /** The drawer mobile slides a sidebar in as. */
+  drawer: (side: string) => `.workspace-drawer.mod-${side}`,
   tooltip: ".tooltip",
   modal: ".modal",
   /** The container of a modal a phone docks to the foot of its screen. */
@@ -954,6 +956,11 @@ export class Obsidian {
       };
       split.setPinned(want.on);
     }, { on, side });
+  }
+
+  /** The drawer a sidebar is on mobile, which slides in over the main area. */
+  drawer(side: Side): Locator {
+    return this.page.locator(CHROME.drawer(side));
   }
 
   /**
