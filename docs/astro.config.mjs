@@ -51,7 +51,7 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Start here',
-          items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/the-preview'],
+          items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/roles', 'start/the-preview'],
         },
         {
           label: 'Design',

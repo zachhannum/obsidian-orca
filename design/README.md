@@ -361,6 +361,11 @@ its editor around these files and returns a URL. The artboard list and
 - A section groups the reading order and gives no role. It is made,
   renamed, dragged and taken out the way a folder is, and an entry
   carries its own role wherever it lands.
+- The role picker is Obsidian's own suggestion list, on every device.
+  Each row has one line under the name of the role, and the line states
+  what the role does to the book. The line comes from the table the
+  format reads its roles from, so the picker and the docs say the same
+  thing.
 - The navigator deletes the book note and nothing else, after asking.
   Every note a book lists is borrowed, so `Remove from book` is the
   only thing an entry's own menu offers.

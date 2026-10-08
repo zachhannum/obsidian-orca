@@ -938,6 +938,50 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
   assert.deepEqual([...listed].sort(), pages.sort());
 });
 
+test("the roles table states the effect of each role, and the page says where page 1 starts", async () => {
+  const { ROLES } = await moduleOf("src/book/roles.ts");
+  const page = await read(`${DOCS}/reference/the-book-note.mdx`);
+  const rows = table(page, ["Role", "Name", "Text", "Effect"]);
+
+  assert.deepEqual(
+    rows.map(([role, name, , effect]) => [unquoted(role), name, effect]),
+    Object.entries(ROLES).map(([role, { name, effect }]) => [role, name, effect]),
+  );
+  assert.match(page, /The first part or chapter of the book is page 1\./);
+  assert.match(page, /The pages before it are numbered in lower-case roman/);
+});
+
+test("the roles page says how to set a role, which role fits each kind of note, and what a generated role leaves out", async () => {
+  const page = await read(`${DOCS}/start/roles.mdx`);
+
+  assert.match(page, /## Set a role in the navigator\n[^#]*`Role for this entry…`/);
+  assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `front-matter`/);
+  for (const [note, role] of [
+    ["preface", "front-matter"],
+    ["afterword", "back-matter"],
+    ["copyright page", "copyright"],
+    ["dedication", "dedication"],
+    ["epigraph", "epigraph"],
+  ]) {
+    assert.match(page, new RegExp(`\\| An? ${note}[^|]*\\| \`${role}\` \\|`), note);
+  }
+  assert.match(page, /Orca does not set the text of the linked note/);
+});
+
+test("the Navigator artboard draws the role picker with the line each role states", async () => {
+  const { ROLES } = await moduleOf("src/book/roles.ts");
+  const drawn = [
+    ...(await read("design/parts/Navigator.html")).matchAll(
+      /<div>([^<]+)<\/div><div class="suggest-note">([^<]+)<\/div>/g,
+    ),
+  ].map(([, name, effect]) => [name, effect]);
+
+  assert.deepEqual(
+    drawn,
+    Object.values(ROLES).map(({ name, effect }) => [name, effect]),
+  );
+});
+
 // What this file does not cover: the pictures themselves, which the
 // screenshot spec takes and compares; whether the glyph the site draws
 // for a button is the glyph Obsidian draws, since Obsidian ships a

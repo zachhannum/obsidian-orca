@@ -1,0 +1,52 @@
+---
+title: Roles
+eyebrow: Start here
+description: Pick the role that fits each note of a book.
+---
+
+A role tells Orca how to typeset one entry of a book. An entry with no role is a chapter.
+
+## Set a role in the navigator
+
+1. In the navigator, right-click the entry.
+2. Select `Role for this entry…`.
+3. Select a role from the list.
+
+Each row of the list shows the name of a role and one line that states its effect.
+
+## Set a role in the book note
+
+In the book note, write the role in backticks after the link.
+
+```md
+- [[Preface]] `front-matter`
+```
+
+To make the entry a chapter again, delete the role. [The book note](/reference/the-book-note/) lists every role.
+
+## Pick a role
+
+| Note | Role | Result |
+| --- | --- | --- |
+| A preface, a foreword or an introduction | `front-matter` | Orca sets the text as prose with no drop cap. The contents lists it. |
+| An afterword or the acknowledgements | `back-matter` | Orca sets the text as prose with no drop cap. The contents lists it. |
+| A copyright page | `copyright` | Orca sets the text in small type with no paragraph indent, at the foot of the page. |
+| A dedication | `dedication` | Orca sets the text centered, below the top of the page. |
+| An epigraph | `epigraph` | Orca sets the text to a narrow measure, below the top of the page. If the epigraph has two or more paragraphs, the last one is set to the right. |
+
+A copyright page, a dedication and an epigraph are single pages. The contents does not list them, and the design panel has no control for them. To change one, use [Custom CSS](/design/custom-css/).
+
+`front-matter` and `back-matter` set the same pages. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.
+
+## Generated roles
+
+Orca writes the text of a `title-page` entry and a `contents` entry. These entries need no link.
+
+```md
+- `title-page`
+- `contents`
+```
+
+If an entry with a generated role has a link, Orca does not set the text of the linked note. To set a note of your own in that position, give it a different role.
+
+To add a generated entry in the navigator, select `Add to this book` on the row of the book, and then select `New generated section…`.

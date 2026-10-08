@@ -110,10 +110,31 @@
     </div>
   </div>
 
+  <!-- C: the role picker, which is Obsidian's own suggestion list -->
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <div class="step-n"><b>C</b> Role for this entry…</div>
+    <div style="border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-secondary); padding: 16px 60px">
+      <div class="suggest">
+        <div style="padding: 6px 12px 10px; border-bottom: 1px solid var(--background-modifier-border); margin-bottom: 6px; color: var(--text-faint); font-size: var(--font-ui-medium)">Role for Chapter One</div>
+          <div class="suggest-item"><div><div>Title page</div><div class="suggest-note">Sets the title and the author from the book's details. The text of a linked note is not set.</div></div></div>
+          <div class="suggest-item"><div><div>Copyright</div><div class="suggest-note">A single page in small type, at the foot of the page. The contents does not list it.</div></div></div>
+          <div class="suggest-item"><div><div>Dedication</div><div class="suggest-note">A single page, centered and down the page. The contents does not list it.</div></div></div>
+          <div class="suggest-item"><div><div>Epigraph</div><div class="suggest-note">A single page to a narrow measure, with its last paragraph set to the right.</div></div></div>
+          <div class="suggest-item"><div><div>Contents</div><div class="suggest-note">Lists the parts, the chapters and the other prose with their pages. The text of a linked note is not set.</div></div></div>
+          <div class="suggest-item"><div><div>Front matter</div><div class="suggest-note">Prose that is not a chapter, such as a preface. The contents lists it, and it takes no drop cap.</div></div></div>
+          <div class="suggest-item"><div><div>Part</div><div class="suggest-note">A title page for a group of chapters. The first part or chapter is page 1.</div></div></div>
+          <div class="suggest-item is-active"><div><div>Chapter</div><div class="suggest-note">A chapter of the body. The first part or chapter is page 1.</div></div></div>
+          <div class="suggest-item"><div><div>Back matter</div><div class="suggest-note">Prose that is not a chapter, such as an afterword. The contents lists it, and it takes no drop cap.</div></div></div>
+      </div>
+    </div>
+  </div>
+
   <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
     <div class="callout"><div><span class="k">A section is organizational.</span> It is made, renamed, dragged and taken out the way a folder is, and an entry carries its own role wherever it lands.</div></div>
     <div class="callout"><div><span class="k">One delete, on the book note.</span> <em>Remove from book</em> takes an entry out and <em>Remove section</em> takes a heading out. <em>Delete book…</em> asks first, and trashes the book note alone: every note it lists is borrowed.</div></div>
     <div class="callout"><div><span class="k">A heading is text in its note.</span> Its row turns the preview to the page it opens on, and a Mod click opens the note at its line. It never drags, and an entry folds its headings while it is dragged. A setting lists the heading rows, and it is off until the author turns it on. <em>Show headings…</em> on a book's menu sets its own.</div></div>
     <div class="callout"><div><span class="k">A missing note</span> keeps its entry and its row height, offers <em>Locate</em> and <em>Remove</em> as icons, and the book still typesets with a warning.</div></div>
+    <div class="callout"><div><span class="k">A role says what it does.</span> Each row of the role picker has one line under its name that states the effect of the role on the book. The rows for <em>Title page</em> and <em>Contents</em> say that the text of a linked note is not set.</div></div>
+    <div class="callout"><div><span class="k">Nine roles, three kinds.</span> A part or a chapter is the body, and the first one is page 1. Front and back matter are prose the contents lists. A copyright page, a dedication and an epigraph are single pages that orca lays out.</div></div>
   </div>
 </div>

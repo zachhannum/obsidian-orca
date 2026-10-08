@@ -100,17 +100,23 @@ A heading starts a section, for example `# Front matter` or `# Body`. Sections g
 
 ## Roles
 
-| Role | Name | Text |
-| --- | --- | --- |
-| `title-page` | Title page | Generated |
-| `copyright` | Copyright | From a note |
-| `dedication` | Dedication | From a note |
-| `epigraph` | Epigraph | From a note |
-| `contents` | Contents | Generated |
-| `front-matter` | Front matter | From a note |
-| `part` | Part | From a note |
-| `chapter` | Chapter | From a note |
-| `back-matter` | Back matter | From a note |
+| Role | Name | Text | Effect |
+| --- | --- | --- | --- |
+| `title-page` | Title page | Generated | Sets the title and the author from the book's details. The text of a linked note is not set. |
+| `copyright` | Copyright | From a note | A single page in small type, at the foot of the page. The contents does not list it. |
+| `dedication` | Dedication | From a note | A single page, centered and down the page. The contents does not list it. |
+| `epigraph` | Epigraph | From a note | A single page to a narrow measure, with its last paragraph set to the right. |
+| `contents` | Contents | Generated | Lists the parts, the chapters and the other prose with their pages. The text of a linked note is not set. |
+| `front-matter` | Front matter | From a note | Prose that is not a chapter, such as a preface. The contents lists it, and it takes no drop cap. |
+| `part` | Part | From a note | A title page for a group of chapters. The first part or chapter is page 1. |
+| `chapter` | Chapter | From a note | A chapter of the body. The first part or chapter is page 1. |
+| `back-matter` | Back matter | From a note | Prose that is not a chapter, such as an afterword. The contents lists it, and it takes no drop cap. |
+
+The first part or chapter of the book is page 1. The pages before it are numbered in lower-case roman, for example `iii`. The pages from page 1 to the end use the format that the design sets. A role does not change this, so a `front-matter` entry after the last chapter has an arabic page number.
+
+The contents lists each `part`, `chapter`, `front-matter` and `back-matter` entry. An entry before page 1 shows its page number in roman.
+
+[Roles](/start/roles/) shows how to pick a role for each note.
 
 ## Book CSS
 
