@@ -46,8 +46,10 @@ status: drafting
 
 - `title-page`
 - [[Copyright]] `copyright`
+- [[Dedication]] `dedication`
 - [[A note on the text]] `epigraph`
 - `contents`
+- [[Preface]] `front-matter`
 
 # Body
 

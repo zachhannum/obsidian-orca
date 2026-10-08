@@ -46,6 +46,20 @@ test("a part is a title with no folio, and a chapter is a title then a folio", (
   );
 });
 
+test("matter is listed as a chapter is, and an entry before the body marks its folio", () => {
+  assert.equal(
+    contentsMarkdown("Contents", [
+      { kind: "matter", label: "Preface", path: "Preface.md", heading: "Preface", front: true },
+      { kind: "matter", label: "Afterword", path: "Afterword.md" },
+    ]),
+    "# Contents\n\n" +
+      "{.entry}\n\n[Preface](Preface.md#Preface)\n\n" +
+      "{.folio .front}\n\n[](Preface.md#Preface)\n\n" +
+      "{.entry}\n\n[Afterword](Afterword.md)\n\n" +
+      "{.folio}\n\n[](Afterword.md)",
+  );
+});
+
 test("a label that opens on a brace is escaped, so it is not read as a class", () => {
   assert.equal(
     contentsMarkdown("Contents", [{ kind: "part", label: "{.odd} title {x}", path: "Odd.md" }]),

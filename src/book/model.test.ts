@@ -33,8 +33,10 @@ test("with the plugin disabled the note is an index of the book, with working li
   assert.deepEqual(lines, [
     "- `title-page`",
     "- [[Copyright]] `copyright`",
+    "- [[Dedication]] `dedication`",
     "- [[A note on the text]] `epigraph`",
     "- `contents`",
+    "- [[Preface]] `front-matter`",
     "- [[Volume the First]] `part`",
     "- [[Chapter Twelve]]",
     "- [[Chapter Four]]",
@@ -55,7 +57,7 @@ test("with the plugin disabled the note is an index of the book, with working li
   // The author's css sits in the note in a fence, and is neither an
   // entry nor rewritten.
   assert.match(note, /\n```css\n[\s\S]*\n```\n$/);
-  assert.equal(entries(model.order).length, 9);
+  assert.equal(entries(model.order).length, 11);
   assert.equal(writeModel(model), note);
 });
 

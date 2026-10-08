@@ -8,8 +8,14 @@
 
 /** One line of the contents: the words it shows and where it links. */
 export interface Listed {
-  /** A part is a title alone. A chapter also gets a folio, where the engine prints its page. */
-  kind: "part" | "chapter";
+  /**
+   * A part is a title alone. A chapter also gets a folio, where the
+   * engine prints its page. Matter is prose that is no chapter, and it
+   * is set as a chapter is.
+   */
+  kind: "part" | "chapter" | "matter";
+  /** The entry sits before the body, where a page number is roman. */
+  front?: true;
   label: string;
   /** The note's vault path. */
   path: string;
@@ -54,7 +60,8 @@ export function firstHeading(text: string): string | undefined {
 /**
  * The contents section's markdown: its title, then each entry. A part
  * is a `.part` link. A chapter is an `.entry` link, then a `.folio`
- * link with no text to the same place.
+ * link with no text to the same place. The folio of an entry before
+ * the body is `.front` too.
  */
 export function contentsMarkdown(title: string, entries: readonly Listed[]): string {
   return [`# ${title}`, ...entries.flatMap(blocks)].join("\n\n");
@@ -65,7 +72,8 @@ function blocks(entry: Listed): string[] {
   const path = entry.path.split("/").map(encoded).join("/");
   const target = `${path}${entry.heading === undefined ? "" : `#${encoded(entry.heading)}`}`;
   if (entry.kind === "part") return ["{.part}", `[${label}](${target})`];
-  return ["{.entry}", `[${label}](${target})`, "{.folio}", `[](${target})`];
+  const folio = entry.front === true ? "{.folio .front}" : "{.folio}";
+  return ["{.entry}", `[${label}](${target})`, folio, `[](${target})`];
 }
 
 // A bare paren could close the link early, so it is encoded too.

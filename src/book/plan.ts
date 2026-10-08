@@ -30,6 +30,7 @@ import {
   type Order,
   type Section,
 } from "@/book/order";
+import { bodyStart, type Role } from "@/book/roles";
 
 /** Reads a section's note, by its vault path. `ui` implements this over the vault. */
 export interface Read {
@@ -227,9 +228,10 @@ export async function coverImage(
  * changes the book note, so the whole book crosses again with the new
  * id.
  *
- * The contents lists the parts and chapters as their notes read now. A
- * typed edit replaces only its own source, so a changed heading reaches
- * the contents the next time the whole book is sent.
+ * The contents lists the parts, the chapters and the front and back
+ * matter as their notes read now. A typed edit replaces only its own
+ * source, so a changed heading reaches the contents the next time the
+ * whole book is sent.
  */
 export async function bookSources(
   book: Book,
@@ -246,15 +248,17 @@ export async function bookSources(
         : Promise.resolve(undefined),
     ),
   );
+  const start = bodyStart(present.map((section) => section.entry.role));
   const listed: Listed[] = present.flatMap((section, at) => {
     const text = texts[at];
     if (section.kind !== "note" || text === undefined) return [];
-    const kind = section.entry.role;
-    if (kind !== "part" && kind !== "chapter") return [];
+    const kind = LISTED[section.entry.role];
+    if (kind === undefined) return [];
     const heading = firstHeading(text);
-    const label = heading ?? entryName(section.entry);
-    const path = section.path;
-    return [heading === undefined ? { kind, label, path } : { kind, label, path, heading }];
+    const entry: Listed = { kind, label: heading ?? entryName(section.entry), path: section.path };
+    if (heading !== undefined) entry.heading = heading;
+    if (kind !== "part" && start !== undefined && at < start) entry.front = true;
+    return [entry];
   });
   const names = sectionNames(present);
   return present.map((section, at) => {
@@ -268,6 +272,14 @@ export async function bookSources(
         };
   });
 }
+
+/** The roles the contents lists, and what each is listed as. */
+const LISTED: Partial<Record<Role, Listed["kind"]>> = {
+  part: "part",
+  chapter: "chapter",
+  "front-matter": "matter",
+  "back-matter": "matter",
+};
 
 function sendable(section: Section): section is Sendable {
   return section.kind !== "missing";

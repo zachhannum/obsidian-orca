@@ -62,8 +62,10 @@ test("an entry's role is its own tag, and a heading names none", async () => {
     [
       ["Title page", "title-page"],
       ["Copyright", "copyright"],
+      ["Dedication", "dedication"],
       ["A note on the text", "epigraph"],
       ["Contents", "contents"],
+      ["Preface", "front-matter"],
       ["Volume the First", "part"],
       ["Chapter Twelve", "chapter"],
       ["Chapter Four", "chapter"],
@@ -124,7 +126,7 @@ test("a book borrows its notes: adding never copies, removing never deletes", as
   const before = await paths();
 
   const grown = add(book, "Chapter Thirteen", "Body");
-  assert.deepEqual(entries(grown).map(entryName).slice(4), [
+  assert.deepEqual(entries(grown).map(entryName).slice(6), [
     "Volume the First",
     "Chapter Twelve",
     "Chapter Four",
@@ -142,7 +144,7 @@ test("a book borrows its notes: adding never copies, removing never deletes", as
     "Chapter Twelve.md",
   ]);
 
-  const shrunk = remove(grown, 5);
+  const shrunk = remove(grown, 7);
   assert.ok(!entries(shrunk).map(entryName).includes("Chapter Twelve"));
   assert.equal(await vault.exists("Chapter Twelve.md"), true);
   assert.deepEqual(await paths(), before);
@@ -158,14 +160,16 @@ test("a note that is gone keeps its entry, and the rest of the book is set witho
   );
   assert.deepEqual(missing, ["Chapter Four"]);
   assert.equal(warnings.length, 1);
-  assert.equal(warnings[0]?.entry, sections[6]?.entry);
+  assert.equal(warnings[0]?.entry, sections[8]?.entry);
   assert.match(String(warnings[0]?.said), /Chapter Four/);
 
   // Every other section still has its note, and the generated two need
   // none.
   assert.deepEqual(found(sections), [
     "Copyright.md",
+    "Dedication.md",
     "A note on the text.md",
+    "Preface.md",
     "Volume the First.md",
     "Chapter Twelve.md",
     "Chapter Fifteen.md",
@@ -205,18 +209,20 @@ test("a new chapter is appended at the end of its group, or dropped at a place i
   const book = await order();
 
   const appended = add(book, "Chapter Thirteen", "Front matter");
-  assert.deepEqual(entries(appended).map(entryName).slice(0, 5), [
+  assert.deepEqual(entries(appended).map(entryName).slice(0, 7), [
     "Title page",
     "Copyright",
+    "Dedication",
     "A note on the text",
     "Contents",
+    "Preface",
     "Chapter Thirteen",
   ]);
   // The section it landed in does not give it a role.
-  assert.equal(entries(appended)[4]?.role, "chapter");
+  assert.equal(entries(appended)[6]?.role, "chapter");
 
   const between = insert(book, "Chapter Thirteen", { heading: "Body", at: 1 });
-  assert.deepEqual(entries(between).map(entryName).slice(4, 8), [
+  assert.deepEqual(entries(between).map(entryName).slice(6, 10), [
     "Volume the First",
     "Chapter Thirteen",
     "Chapter Twelve",
@@ -228,8 +234,8 @@ test("a drag reorders the list, and an entry carries its role across a heading",
   const book = await order();
 
   // Inside a group, the entry lands where it was dropped.
-  const later = move(book, 5, { heading: "Body", at: 3 });
-  assert.deepEqual(entries(later).map(entryName).slice(4, 7), [
+  const later = move(book, 7, { heading: "Body", at: 3 });
+  assert.deepEqual(entries(later).map(entryName).slice(6, 9), [
     "Volume the First",
     "Chapter Four",
     "Chapter Twelve",
@@ -237,8 +243,8 @@ test("a drag reorders the list, and an entry carries its role across a heading",
 
   // Across one, the entry keeps the role it had. A section groups the
   // reading order and says nothing about what is in it.
-  const across = move(book, 2, { heading: "Body", at: 0 });
-  const moved = entries(across)[3];
+  const across = move(book, 3, { heading: "Body", at: 0 });
+  const moved = entries(across)[5];
   assert.equal(moved?.link, "A note on the text");
   assert.equal(moved?.role, "epigraph");
   assert.equal(moved?.tag, "epigraph");
@@ -248,15 +254,15 @@ test("a drag reorders the list, and an entry carries its role across a heading",
   );
 
   // A role is the tag, and the default role is written as no tag.
-  const tagged = retag(book, 6, "epigraph");
+  const tagged = retag(book, 8, "epigraph");
   assert.match(writeOrder(tagged), /- \[\[Chapter Four\]\] `epigraph`\n/);
-  assert.equal(writeOrder(retag(tagged, 6, "chapter")), writeOrder(book));
+  assert.equal(writeOrder(retag(tagged, 8, "chapter")), writeOrder(book));
 
   // Every group is a place to drop into, the empty ones included.
   assert.deepEqual(
     groups(book).map((group) => [group.heading, group.entries.length]),
     [
-      ["Front matter", 4],
+      ["Front matter", 6],
       ["Body", 4],
       ["Back matter", 1],
       ["The book's css", 0],
@@ -329,7 +335,7 @@ test("removing an entry takes out its line and nothing else", async () => {
   const book = await order();
   const before = writeOrder(book);
 
-  const after = writeOrder(remove(book, 5));
+  const after = writeOrder(remove(book, 7));
 
   assert.equal(after, before.replace("- [[Chapter Twelve]]\n", ""));
   assert.equal(await vault.exists("Chapter Twelve.md"), true);
@@ -350,9 +356,16 @@ test("a section moves to the last place among the groups", async () => {
   ]);
   assert.deepEqual(
     entries(moved)
-      .slice(-4)
+      .slice(-6)
       .map(entryName),
-    ["Title page", "Copyright", "A note on the text", "Contents"],
+    [
+      "Title page",
+      "Copyright",
+      "Dedication",
+      "A note on the text",
+      "Contents",
+      "Preface",
+    ],
   );
 
   // Prose above the first heading belongs to no group, so it stays at

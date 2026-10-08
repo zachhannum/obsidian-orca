@@ -30,11 +30,19 @@
   @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
 }
 
+@page dedication {
+  @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
+}
+
 @page epigraph {
   @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
 }
 
 @page contents {
+  @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
+}
+
+@page front-matter {
   @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
 }
 
@@ -50,6 +58,12 @@
   @bottom-center { content: none; }
 }
 
+@page dedication:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
 @page epigraph:first {
   @top-left { content: none; }
   @top-right { content: none; }
@@ -57,6 +71,12 @@
 }
 
 @page contents:first {
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-center { content: none; }
+}
+
+@page front-matter:first {
   @top-left { content: none; }
   @top-right { content: none; }
   @bottom-center { content: none; }
@@ -213,12 +233,20 @@ section#copyright {
   page: copyright;
 }
 
+section#dedication {
+  page: dedication;
+}
+
 section#a-note-on-the-text {
   page: epigraph;
 }
 
 section#contents {
   page: contents;
+}
+
+section#preface {
+  page: front-matter;
 }
 
 section#volume-the-first {
@@ -278,6 +306,45 @@ section#title-page > p:last-child {
   padding-top: 140pt;
 }
 
+section#copyright > * {
+  font-size: 0.8em;
+  line-height: 11.2pt;
+  text-align: left;
+  text-indent: 0;
+  margin: 0;
+}
+
+section#copyright > * + * {
+  margin-top: 11.2pt;
+}
+
+@page copyright {
+  align-content: end;
+}
+
+section#dedication > * {
+  text-align: center;
+  text-indent: 0;
+  margin: 0;
+}
+
+section#dedication > :first-child {
+  padding-top: 140pt;
+}
+
+section#a-note-on-the-text > * {
+  text-indent: 0;
+  margin: 0 3em;
+}
+
+section#a-note-on-the-text > :first-child {
+  padding-top: 112pt;
+}
+
+section#a-note-on-the-text > p:last-child:not(:first-child) {
+  text-align: right;
+}
+
 section#contents p {
   text-indent: 0;
   text-align: left;
@@ -302,6 +369,10 @@ section#contents p.folio {
 
 section#contents p.folio a::after {
   content: target-counter(attr(href url), page, decimal);
+}
+
+section#contents p.folio.front a::after {
+  content: target-counter(attr(href url), page, lower-roman);
 }
 
 section#contents p.part {

@@ -280,7 +280,7 @@ test("a book is set from its reading order, and no page of it comes back to say 
   const book = await composer.open(BOOK);
 
   assert.equal(book.name, "Pride and Prejudice");
-  assert.equal(book.sections.length, 9);
+  assert.equal(book.sections.length, 11);
   // Setting the book asks for the window the first view paints, not
   // for every page of it to work out where the sections landed.
   assert.deepEqual(client.ranges, [{ first: 0, count: 2 }]);
@@ -292,13 +292,13 @@ test("a section says where it opens now, asked of the engine at the ask", async 
 
   const book = await composer.open(BOOK);
 
-  // Chapter Twelve is the sixth section sent, so it opens on the
-  // eleventh page: the answer counts pages from 0.
-  assert.equal(await book.opens(5), 10);
+  // Chapter Twelve is the eighth section sent, so it opens on the
+  // fifteenth page: the answer counts pages from 0.
+  assert.equal(await book.opens(7), 14);
   // The fixture names a chapter the vault does not have, so nothing
   // crossed for it and it opens nowhere.
-  assert.equal(await book.opens(6), undefined);
-  assert.equal(await book.opens(7), 12);
+  assert.equal(await book.opens(8), undefined);
+  assert.equal(await book.opens(9), 16);
   // Matter orca generated is asked about under the name it crossed as.
   assert.equal(await book.opens(0), 0);
 });
@@ -312,9 +312,9 @@ test("a chapter opening on a block that set nothing opens under it", async () =>
   // The chapter opens on an image the engine would not read, so its
   // first written byte is on no page. The lines under it are asked
   // about too, and the chapter opens where its content landed.
-  assert.equal(await book.opens(5), 10);
+  assert.equal(await book.opens(7), 14);
   // A section the book did not set is still on no page at all.
-  assert.equal(await book.opens(6), undefined);
+  assert.equal(await book.opens(8), undefined);
 });
 
 test("a heading asks the engine where the line it opens on was set", async () => {
@@ -325,13 +325,13 @@ test("a heading asks the engine where the line it opens on was set", async () =>
   client.asked.length = 0;
 
   // Line 0 is the frontmatter, which is on no page.
-  assert.deepEqual(await book.linesOpen(5, [0, 5]), [undefined, 10]);
+  assert.deepEqual(await book.linesOpen(7, [0, 5]), [undefined, 14]);
   assert.deepEqual(client.asked, [
     { source: "Chapter Twelve.md", byte: lineByte(text, 0) },
     { source: "Chapter Twelve.md", byte: lineByte(text, 5) },
   ]);
   // A section with no note crossed has no line on any page.
-  assert.deepEqual(await book.linesOpen(6, [3]), [undefined]);
+  assert.deepEqual(await book.linesOpen(8, [3]), [undefined]);
 });
 
 /** A client that keeps every byte it was asked to place. */
@@ -378,11 +378,11 @@ test("a book being set reports the sections it has read and the entry it opens a
   const last = told.at(-1);
   assert.ok(first && last);
   assert.equal(first.name, "Pride and Prejudice");
-  assert.equal(first.of, 8);
+  assert.equal(first.of, 10);
   // A generated section is written rather than read, so it is done
   // before the first note is opened.
   assert.equal(first.read, 2);
-  assert.equal(last.read, 8);
+  assert.equal(last.read, 10);
 });
 
 test("a book being set reads its notes, then lays out its pages with every note read", async () => {
@@ -800,10 +800,10 @@ test("the folios come from the book's one session, and reading them sends no op"
 
   assert.equal(client.rendered.length, renders);
   assert.equal(clients.started.length, 1);
-  // Chapter Twelve is the sixth section sent, two pages to a section.
-  assert.deepEqual(ranges?.get(5), { first: 11, last: 12 });
+  // Chapter Twelve is the eighth section sent, two pages to a section.
+  assert.deepEqual(ranges?.get(7), { first: 15, last: 16 });
   // The chapter the vault does not have lands on no page.
-  assert.equal(ranges?.has(6), false);
+  assert.equal(ranges?.has(8), false);
 });
 
 test("a book whose notes changed tells its views, and the next read sets it once", async () => {

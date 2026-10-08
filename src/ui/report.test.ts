@@ -50,16 +50,18 @@ test("word counts come from the notes, and an entry with no note has none", asyn
     [
       [0, "Title page", undefined],
       [1, "Copyright", 16],
-      [2, "A note on the text", 21],
-      [3, "Contents", undefined],
-      [4, "Volume the First", 3],
-      [5, "Chapter Twelve", 674],
-      [6, "Chapter Four", undefined],
-      [7, "Chapter Fifteen", 224],
-      [8, "Acknowledgements", 62],
+      [2, "Dedication", 7],
+      [3, "A note on the text", 21],
+      [4, "Contents", undefined],
+      [5, "Preface", 64],
+      [6, "Volume the First", 3],
+      [7, "Chapter Twelve", 674],
+      [8, "Chapter Four", undefined],
+      [9, "Chapter Fifteen", 224],
+      [10, "Acknowledgements", 62],
     ],
   );
-  assert.equal(made.words, 16 + 21 + 3 + 674 + 224 + 62);
+  assert.equal(made.words, 16 + 7 + 21 + 64 + 3 + 674 + 224 + 62);
   // The three entries in the default role, the missing one included.
   assert.equal(made.chapters, 3);
 
@@ -68,7 +70,7 @@ test("word counts come from the notes, and an entry with no note has none", asyn
   const uncounted = report(book, { links: pathLinks([]), words: () => undefined });
   assert.deepEqual(
     uncounted.lines.map((line) => line.kind),
-    Array.from({ length: 9 }, (_, at) => (at === 0 || at === 3 ? "generated" : "missing")),
+    Array.from({ length: 11 }, (_, at) => (at === 0 || at === 4 ? "generated" : "missing")),
   );
   assert.equal(uncounted.words, 0);
 });
@@ -122,16 +124,18 @@ test("every property the author types is a field, and an emptied one comes off t
 test("an entry's page range is what the run placed it at, and one it missed has none", async () => {
   const book = { path: BOOK, name: "PP draft", model: await model() };
 
-  // The 8 present sections, as the engine placed them: the missing
+  // The 10 present sections, as the engine placed them: the missing
   // "Chapter Four" never crossed at all, and the run has not reached
   // "Chapter Fifteen" or "Acknowledgements" yet.
   const ranges = new Map([
     [0, { first: 1, last: 1 }],
     [1, { first: 2, last: 2 }],
     [2, { first: 3, last: 3 }],
-    [3, { first: 3, last: 3 }],
+    [3, { first: 4, last: 4 }],
     [4, { first: 4, last: 4 }],
-    [5, { first: 5, last: 6 }],
+    [5, { first: 5, last: 5 }],
+    [6, { first: 6, last: 6 }],
+    [7, { first: 7, last: 8 }],
   ]);
 
   const made = report(book, await counting(), ranges);
@@ -141,10 +145,12 @@ test("an entry's page range is what the run placed it at, and one it missed has 
     [
       ["Title page", { first: 1, last: 1 }],
       ["Copyright", { first: 2, last: 2 }],
-      ["A note on the text", { first: 3, last: 3 }],
-      ["Contents", { first: 3, last: 3 }],
-      ["Volume the First", { first: 4, last: 4 }],
-      ["Chapter Twelve", { first: 5, last: 6 }],
+      ["Dedication", { first: 3, last: 3 }],
+      ["A note on the text", { first: 4, last: 4 }],
+      ["Contents", { first: 4, last: 4 }],
+      ["Preface", { first: 5, last: 5 }],
+      ["Volume the First", { first: 6, last: 6 }],
+      ["Chapter Twelve", { first: 7, last: 8 }],
       ["Chapter Four", undefined],
       ["Chapter Fifteen", undefined],
       ["Acknowledgements", undefined],

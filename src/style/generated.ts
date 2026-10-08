@@ -11,7 +11,7 @@
  */
 
 import type { Named } from "@/book/names";
-import type { Role } from "@/book/roles";
+import { bodyStart, type Role } from "@/book/roles";
 import {
   LEVELS,
   written,
@@ -103,6 +103,7 @@ export function generatedRules(
     ...sectionRules(design, setting, registered),
     ...titleRules(design),
     ...titlePageRules(design, setting),
+    ...matterRules(design, setting),
     ...contentsRules(design, setting),
     ...sceneRules(design, registered),
   ].filter((rule) => rule !== undefined);
@@ -282,9 +283,9 @@ function placement(headers: HeaderDesign, setting: Setting): Placement {
 
 /**
  * The front matter's pages, which number their folio in lower-case
- * roman whatever format the body uses. A rule on a role and side joins
- * the boxes of the `:left` or `:right` rule, so only the folio's boxes
- * are set again. An opening's rule still clears them.
+ * roman whatever format the body uses. A rule on a named page and side
+ * joins the boxes of the `:left` or `:right` rule, so only the folio's
+ * boxes are set again. An opening's rule still clears them.
  */
 function frontPages(
   headers: HeaderDesign,
@@ -310,11 +311,15 @@ function frontPages(
       placed.folio,
       registered,
     );
-  return front(roles(setting)).flatMap((role) => [
-    block(`@page ${role}`, roman(placed.both), role),
-    block(`@page ${role}:left`, roman(placed.left), role),
-    block(`@page ${role}:right`, roman(placed.right), role),
-  ]);
+  return pages(setting).flatMap(({ name, role, front }) =>
+    front
+      ? [
+          block(`@page ${name}`, roman(placed.both), role),
+          block(`@page ${name}:left`, roman(placed.left), role),
+          block(`@page ${name}:right`, roman(placed.right), role),
+        ]
+      : [],
+  );
 }
 
 /**
@@ -331,9 +336,9 @@ function openingPages(
   const cleared = printed(placed);
   if (cleared.length === 0) return [];
   const suppress = headers.suppressOnOpenings === undefined ? [] : ["suppress-head-on-openings"];
-  return used(roles(setting)).map((role) =>
+  return pages(setting).map(({ name, role }) =>
     block(
-      `@page ${role}:first`,
+      `@page ${name}:first`,
       cleared.map((box) =>
         boxed(box, "content", "none", [
           ...suppress,
@@ -570,12 +575,12 @@ function sectionRules(
   setting: Setting,
   registered: readonly Registered[],
 ): (Rule | undefined)[] {
-  const rules = used(roles(setting)).map((role) => {
-    const lines = [declared("page", role)];
+  const rules = pages(setting).map(({ name, role, sections }) => {
+    const lines = [declared("page", name)];
     if (role === "chapter" && design.chapter.begins !== undefined) {
       lines.push(declared("break-before", BREAKS[design.chapter.begins], ["chapter-begins"]));
     }
-    return block(sectionsOf(setting.sections, role) ?? "", lines, role);
+    return block(sectionsOf(sections, role) ?? "", lines, role);
   });
   return [...rules, ...restart(setting), ...chapterRules(design, setting, registered)];
 }
@@ -679,8 +684,8 @@ const IMPRINT_GAP = 10;
 /**
  * The title page, which orca writes as the series, the title, the
  * author and the publisher, each one optional. The page reaches each
- * block by where it sits. The engine places nothing at the foot of a
- * page, so the publisher sits a set number of lines under the author.
+ * block by where it sits. The publisher sits a set number of lines
+ * under the author.
  *
  * Every block on the page takes no margin, so the space a design sets
  * around a heading level leaves the title page as orca lays it out.
@@ -720,11 +725,87 @@ function titlePageRules(design: Design, setting: Setting): (Rule | undefined)[] 
   return rules;
 }
 
+/** The size of a copyright page's type, as a share of the body's. */
+const SMALL = 0.8;
+
+/** The body lines above a dedication. */
+const DEDICATION_SINK = 10;
+
+/** The body lines above an epigraph. */
+const EPIGRAPH_SINK = 8;
+
+/** The space an epigraph leaves clear on each side. */
+const EPIGRAPH_INSET = "3em";
+
+/**
+ * The copyright page, the dedication and the epigraph, which are single
+ * pages orca lays out the same way in every design. Each block takes no
+ * margin and no indent, as on the title page.
+ *
+ * A copyright page sits at the foot, which only a named page can ask
+ * for. A line of its small type is the same share of a body line.
+ *
+ * An epigraph's last paragraph names who said it, so it is set to the
+ * right. An epigraph of one paragraph has no such line.
+ */
+function matterRules(design: Design, setting: Setting): (Rule | undefined)[] {
+  const lines = spacing(design);
+  const sunk = (role: Role, sink: number): Rule | undefined => {
+    const page = sectionsOf(setting.sections, role);
+    if (page === undefined) return undefined;
+    const top = [declared("padding-top", bodyLines(sink, design), [], lines)];
+    return block(`${page} > :first-child`, top, role);
+  };
+  const each = (role: Role, declarations: Declaration[]): Rule | undefined => {
+    const page = sectionsOf(setting.sections, role);
+    return page === undefined ? undefined : block(`${page} > *`, declarations, role);
+  };
+  const copyright = sectionsOf(setting.sections, "copyright");
+  const epigraph = sectionsOf(setting.sections, "epigraph");
+  const small = design.body.lineSpacing === undefined ? "1em" : bodyLines(SMALL, design);
+  return [
+    each("copyright", [
+      declared("font-size", `${trimmed(SMALL)}em`),
+      ...(design.body.lineSpacing === undefined ? [] : [declared("line-height", small, [], lines)]),
+      declared("text-align", "left"),
+      declared("text-indent", "0"),
+      declared("margin", "0"),
+    ]),
+    copyright === undefined
+      ? undefined
+      : block(`${copyright} > * + *`, [declared("margin-top", small, [], lines)], "copyright"),
+    ...pages(setting).map(({ name, role }) =>
+      role === "copyright"
+        ? block(`@page ${name}`, [declared("align-content", "end")], role)
+        : undefined,
+    ),
+    each("dedication", [
+      declared("text-align", "center"),
+      declared("text-indent", "0"),
+      declared("margin", "0"),
+    ]),
+    sunk("dedication", DEDICATION_SINK),
+    each("epigraph", [
+      declared("text-indent", "0"),
+      declared("margin", `0 ${EPIGRAPH_INSET}`),
+    ]),
+    sunk("epigraph", EPIGRAPH_SINK),
+    epigraph === undefined
+      ? undefined
+      : block(
+          `${epigraph} > p:last-child:not(:first-child)`,
+          [declared("text-align", "right")],
+          "epigraph",
+        ),
+  ];
+}
+
 /**
  * The contents, which orca writes as tagged paragraphs. A part is one
  * `.part` title. A chapter is an `.entry` title, then a `.folio` whose
  * empty link prints the page it lands on in the body's folio format.
- * The title sinks like a chapter's.
+ * A `.front` folio lands before the body, where the pages count in
+ * roman. The title sinks like a chapter's.
  *
  * The folio is a paragraph of its own, so it rises half a body line to
  * sit flush right on the title's last line. The engine ignores a
@@ -772,6 +853,11 @@ function contentsRules(design: Design, setting: Setting): (Rule | undefined)[] {
     block(
       `${contents} p.folio a::after`,
       [declared("content", `target-counter(attr(href url), page, ${format})`, formatKeys)],
+      role,
+    ),
+    block(
+      `${contents} p.folio.front a::after`,
+      [declared("content", "target-counter(attr(href url), page, lower-roman)")],
       role,
     ),
     block(
@@ -852,25 +938,42 @@ function roles(setting: Setting): Role[] {
   return setting.sections.map((section) => section.role);
 }
 
-/** The index of the first part or chapter, where the body starts. */
-function bodyStart(roles: readonly Role[]): number | undefined {
-  const found = roles.findIndex((role) => role === "part" || role === "chapter");
-  return found === -1 ? undefined : found;
+/** One named page: the sections set on it, which share a role and a side of the body. */
+interface Paged {
+  name: string;
+  role: Role;
+  /** The page comes before the body, where a folio is roman. */
+  front: boolean;
+  sections: Named[];
 }
 
 /**
- * The roles that sit only before the body. A book with no part and no
- * chapter has no front matter.
+ * The named pages the book uses, in the order it first reaches each. A
+ * section takes one page name, and a folio's format belongs to the
+ * page, so a role on both sides of the body takes a name for each.
  */
-function front(roles: readonly Role[]): Role[] {
-  const start = bodyStart(roles);
-  if (start === undefined) return [];
-  return used(roles).filter((role) => roles.lastIndexOf(role) < start);
+function pages(setting: Setting): Paged[] {
+  const start = bodyStart(roles(setting));
+  const found = new Map<string, Paged>();
+  setting.sections.forEach((section, at) => {
+    const front = start !== undefined && at < start;
+    const name = start === undefined ? section.role : pageName(section.role, front);
+    const page = found.get(name) ?? { name, role: section.role, front, sections: [] };
+    page.sections.push(section);
+    found.set(name, page);
+  });
+  return [...found.values()];
 }
 
-/** The roles the book uses, in the order it first reaches each of them. */
-function used(roles: readonly Role[]): Role[] {
-  return [...new Set(roles)];
+/**
+ * The page name of a role on one side of the body. A role keeps its
+ * own name on the side it belongs to, which is after the body for back
+ * matter and before it for the rest. A book with no body has no sides.
+ */
+function pageName(role: Role, front: boolean): string {
+  if (role === "part" || role === "chapter") return role;
+  if (role === "back-matter") return front ? `${role}-front` : role;
+  return front ? role : `${role}-back`;
 }
 
 function owned(headers: HeaderDesign): boolean {

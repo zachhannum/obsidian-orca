@@ -110,6 +110,21 @@ section#title-page-1 > h1 + p {
   padding-top: 1em;
 }
 
+section#copyright-2 > * {
+  font-size: 0.8em;
+  text-align: left;
+  text-indent: 0;
+  margin: 0;
+}
+
+section#copyright-2 > * + * {
+  margin-top: 1em;
+}
+
+@page copyright {
+  align-content: end;
+}
+
 hr {
   font-weight: normal;
   font-style: italic;
