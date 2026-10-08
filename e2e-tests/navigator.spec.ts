@@ -10,6 +10,9 @@ const CHAPTER = "Chapter Twelve";
 /** A generated section of the fixture book, as its row and the toolbar name it. */
 const TITLE_PAGE = "Title page";
 
+/** The sentence the picker ends on for a role whose text orca writes. */
+const UNSET = "The text of a linked note is not set.";
+
 /** The book note in the fixture vault, and the notes a spec makes. */
 const BOOK = "Pride and Prejudice.md";
 const SECOND = "The Bennet Novels.md";
@@ -243,8 +246,10 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   await expect(navigator.entries(BOOK)).toContainText([
     "Title page",
     "Copyright",
+    "Dedication",
     "A note on the text",
     "Contents",
+    "Preface",
     "Volume the First",
     "Chapter Twelve",
     "Chapter Four",
@@ -276,7 +281,7 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
 
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("- `contents`\n- [[Acknowledgements]] `back-matter`\n");
+    .toContain("- [[Preface]] `front-matter`\n- [[Acknowledgements]] `back-matter`\n");
   await expect(navigator.entry(BOOK, "Acknowledgements")).toHaveAttribute(
     "data-role",
     "back-matter",
@@ -287,10 +292,16 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   // place the row now carries.
   await expect(navigator.entry(BOOK, "Chapter Twelve")).toHaveAttribute(
     "data-at",
-    "7",
+    "9",
   );
   await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
   await obsidian.choose("Role for this entry");
+  // Each of the nine roles states its effect under its name.
+  await expect(navigator.pickNotes()).toHaveCount(9);
+  await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 9 }, () => /\S/));
+  for (const generated of ["Title page", "Contents"]) {
+    await expect(obsidian.suggestion().filter({ hasText: generated })).toContainText(UNSET);
+  }
   await navigator.pick("Epigraph");
 
   await expect
@@ -448,6 +459,7 @@ test("a generated section is added by its role, and reads as one", async ({
 
   await navigator.adding(BOOK);
   await obsidian.choose("New generated section");
+  await expect(navigator.pickNotes()).toHaveText([UNSET, UNSET].map((unset) => new RegExp(unset)));
   await navigator.pick("Title page");
 
   // It goes where a chapter would, and carries no link at all.

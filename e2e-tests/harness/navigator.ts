@@ -353,6 +353,11 @@ export class Navigator {
     await this.obsidian.suggestion().first().click();
   }
 
+  /** The line under each row of a fuzzy pick, which states what the row does. */
+  pickNotes(): Locator {
+    return this.obsidian.page.getByTestId("orca-pick").getByTestId("orca-pick-note");
+  }
+
   /**
    * Drags a row by its handle with a finger, over CDP, and lifts it on
    * the row it lands on. The finger moves away before it travels, as

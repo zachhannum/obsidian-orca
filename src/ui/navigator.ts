@@ -656,6 +656,7 @@ export class NavigatorView extends ItemView {
     pick(this.app, {
       items: made,
       label: (role) => ROLES[role].name,
+      note: (role) => ROLES[role].effect,
       placeholder: `Add a generated section to ${book.name}`,
       chose: (role) => {
         this.change(book.path, (model) => ({
@@ -734,6 +735,7 @@ export class NavigatorView extends ItemView {
     pick(this.app, {
       items: roles,
       label: (role) => ROLES[role].name,
+      note: (role) => ROLES[role].effect,
       placeholder: `Role for ${row.name}`,
       chose: (role) => {
         this.change(book.path, (model) => ({
