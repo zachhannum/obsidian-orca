@@ -2716,7 +2716,20 @@ button.orca-book-export {
   color: var(--color-red);
 }
 
+.orca-preview-issue.orca-export-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.orca-export-warning-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-orange);
+}
+
 .orca-export-error-icon svg,
+.orca-export-warning-icon svg,
 .orca-export-fine-icon svg {
   width: var(--icon-xs);
   height: var(--icon-xs);

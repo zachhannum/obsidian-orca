@@ -2632,6 +2632,15 @@ export class PreviewView extends ItemView {
     });
   }
 
+  /**
+   * Opens the warnings. A view that has not set its book yet opens them
+   * when the run that sets it lists one.
+   */
+  openIssues(): void {
+    this.opened = true;
+    this.showsIssues();
+  }
+
   /** Opens or shuts the warnings, and says which on the bar. */
   private showsIssues(): void {
     const issues = this.issues;

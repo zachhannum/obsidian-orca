@@ -7,6 +7,7 @@ import { Modal, type App } from "obsidian";
 import type { VaultAdapter } from "@/assets/vault";
 import { exportPath, exportName } from "@/book/export";
 import type { BookMetadata } from "@/book/note";
+import type { Place } from "@/style/origin";
 import { TARGETS } from "@/engine/export";
 import { EngineError } from "@/engine/errors";
 import type { Composer, Typeset } from "@/ui/composer";
@@ -25,6 +26,10 @@ export interface Exports {
   metadata(): Promise<BookMetadata | undefined>;
   /** Opens the design panel, where a face is picked. */
   openPanel(): void;
+  /** Opens the place a warning named: a note, or the author's CSS. */
+  opens(route: "note" | "css", place: Place): void;
+  /** Opens the book's preview with its warnings showing. */
+  openIssues(): void;
 }
 
 /** The media type the share sheet is told for each format, by the target's id. */
@@ -147,6 +152,11 @@ class ExportModal extends Modal {
         void workspace.openLinkText(blocker.at.note, "", false, {
           eState: { line: blocker.at.line },
         });
+      },
+      warned: (caution) => {
+        this.close();
+        if (caution.at === undefined) this.exports.openIssues();
+        else this.exports.opens(caution.at.route, caution.at.place);
       },
       close: () => {
         this.close();

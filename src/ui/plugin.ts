@@ -193,7 +193,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
               void this.follows(view, note, at);
             },
             opens: (view, route, place) => {
-              void (route === "css" ? this.opensCss(place) : this.opensNote(view, place));
+              void (route === "css" ? this.opensCss(place) : this.opensNote(view.book, place));
             },
             inspected: (_view, pin, refreshed) => {
               void this.inspected(pin, refreshed);
@@ -522,6 +522,12 @@ export default class OrcaPlugin extends Plugin implements Limited {
       metadata: async () => (await this.edits.model(book))?.book.metadata,
       openPanel: () => {
         void this.openPanel();
+      },
+      opens: (route, place) => {
+        void (route === "css" ? this.opensCss(place) : this.opensNote(book, place));
+      },
+      openIssues: () => {
+        void this.opensIssues(book);
       },
     });
   }
@@ -1164,11 +1170,10 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * book, and otherwise a split beside the preview, so the book stays
    * on screen while the author fixes the note.
    */
-  private async opensNote(view: PreviewView, place: Warned): Promise<void> {
+  private async opensNote(book: string | undefined, place: Warned): Promise<void> {
     const file = this.app.vault.getFileByPath(place.sheet);
     if (file === null) return;
     const { workspace } = this.app;
-    const book = view.book;
     const panes = workspace
       .getLeavesOfType(MARKDOWN_VIEW)
       .filter((leaf) => leaf.view instanceof MarkdownView && leaf.view.file !== null);
@@ -1188,6 +1193,23 @@ export default class OrcaPlugin extends Plugin implements Limited {
     const pos = { line: place.line - 1, ch: Math.max(place.column - 1, 0) };
     shown.editor.setCursor(pos);
     shown.editor.scrollIntoView({ from: pos, to: pos }, true);
+  }
+
+  /**
+   * Shows a book's warnings in its preview. A preview already reading
+   * the book is the one, and a book no preview reads opens in a new one.
+   */
+  private async opensIssues(book: string): Promise<void> {
+    const { workspace } = this.app;
+    const reading = workspace
+      .getLeavesOfType(PREVIEW_VIEW)
+      .find((leaf) => leaf.view instanceof PreviewView && leaf.view.book === book);
+    if (reading === undefined) await this.openPreview({ book });
+    else {
+      await workspace.revealLeaf(reading);
+      workspace.setActiveLeaf(reading, { focus: true });
+    }
+    workspace.getActiveViewOfType(PreviewView)?.openIssues();
   }
 
   /** Opens the design panel on the author's CSS with the caret at the place a warning named. */
