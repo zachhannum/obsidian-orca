@@ -287,6 +287,7 @@
        frame carries the classes Obsidian puts on the body. */
     .is-mobile {
       --touch-size-xxs: 24px; --touch-size-xs: 30px; --touch-size-s: 40px; --touch-size-m: 44px; --touch-size-l: 52px; --touch-size-xl: 60px;
+      --touch-radius-xxs: var(--touch-size-xxs); --touch-radius-xs: var(--touch-size-xs); --touch-radius-s: var(--touch-size-s); --touch-radius-m: var(--touch-size-m); --touch-radius-l: var(--touch-size-l); --touch-radius-xl: var(--touch-size-xl);
       --view-header-height: var(--touch-size-l); --ribbon-width: var(--touch-size-xl);
       --mobile-toolbar-height: var(--touch-size-l); --navbar-height: 80px;
       --safe-area-inset-top: 24px; --safe-area-inset-bottom: 20px;
@@ -294,9 +295,9 @@
       --mobile-sidebar-background: var(--background-primary); --mobile-sidebar-radius: 0px;
       --font-ui-smaller: 12.8px; --font-ui-small: 15px; --font-ui-medium: 16px; --font-ui-large: 19.2px;
       --icon-s: 18px; --icon-m: 20px; --icon-l: 24px;
-      --input-height: var(--touch-size-m); --input-radius: var(--touch-size-m);
-      --nav-item-padding: 8px 8px 8px 24px; --nav-item-radius: var(--touch-size-xs);
-      --modal-radius: var(--touch-size-xs); --modal-background: var(--background-primary);
+      --input-height: var(--touch-size-m); --input-radius: var(--touch-radius-m);
+      --nav-item-padding: 8px 8px 8px 24px; --nav-item-radius: var(--touch-radius-xs);
+      --modal-radius: var(--touch-radius-xs); --modal-background: var(--background-primary);
       --interactive-normal: var(--background-secondary); --interactive-hover: var(--background-modifier-border);
       --background-modifier-form-field: var(--interactive-normal);
       --background-modifier-cover: rgba(0, 0, 0, 0.15);
@@ -314,7 +315,7 @@
       --orca-bar: var(--color-base-10);
     }
     /* The insets are the ones Obsidian's own mobile emulation uses for a phone. */
-    .is-phone { --view-header-height: var(--touch-size-m); --safe-area-inset-top: 59px; --safe-area-inset-bottom: 34px; --menu-radius: var(--touch-size-s); }
+    .is-phone { --view-header-height: var(--touch-size-m); --safe-area-inset-top: 59px; --safe-area-inset-bottom: 34px; --menu-radius: var(--touch-radius-s); }
     .is-tablet { --nav-item-padding: 6px 8px 6px 24px; --mobile-sidebar-radius: 24px; }
     .is-mobile .icon { width: var(--icon-m); height: var(--icon-m); }
     .is-mobile .icon-s, .is-mobile .icon-xs { width: var(--icon-s); height: var(--icon-s); stroke-width: 1.75; }
@@ -337,7 +338,7 @@
     .view-header-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: var(--font-ui-small); color: var(--text-muted); }
     .is-phone .view-header-title { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); }
     .view-actions { display: flex; align-items: center; gap: 2px; }
-    .is-mobile .view-action { width: var(--touch-size-m); height: var(--touch-size-m); border-radius: var(--touch-size-m); color: var(--text-normal); }
+    .is-mobile .view-action { width: var(--touch-size-m); height: var(--touch-size-m); border-radius: var(--touch-radius-m); color: var(--text-normal); }
     .is-mobile .view-action > .icon { width: var(--icon-l); height: var(--icon-l); }
     .view-content { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; overflow: hidden; background: var(--background-primary); }
     .mobile-navbar { flex: none; display: flex; height: var(--navbar-height); padding: 0 8px var(--safe-area-inset-bottom); background: var(--background-primary); color: var(--text-normal); }
@@ -346,11 +347,11 @@
     .mobile-navbar-action.is-off { color: var(--text-faint); }
     .mobile-navbar-tabs-number { position: absolute; font-size: 14.3px; font-weight: var(--font-bold); }
     .mobile-toolbar { flex: none; display: flex; align-items: center; gap: 8px; height: var(--mobile-toolbar-height); padding: 4px 8px; background: var(--background-primary); }
-    .mobile-toolbar-options-list { flex: 1; min-width: 0; display: flex; align-items: center; height: var(--touch-size-m); padding: 0 4px; border-radius: var(--touch-size-m); background: var(--interactive-normal); overflow: hidden; }
+    .mobile-toolbar-options-list { flex: 1; min-width: 0; display: flex; align-items: center; height: var(--touch-size-m); padding: 0 4px; border-radius: var(--touch-radius-m); background: var(--interactive-normal); overflow: hidden; }
     .mobile-toolbar-option { flex: none; display: flex; align-items: center; justify-content: center; min-width: 40px; height: 100%; color: var(--text-normal); }
     .is-tablet .mobile-toolbar-option { min-width: 50px; }
     .mobile-toolbar-option > .icon { width: var(--icon-l); height: var(--icon-l); }
-    .mobile-toolbar-floating-options { flex: none; display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); border-radius: var(--touch-size-m); background: var(--interactive-normal); }
+    .mobile-toolbar-floating-options { flex: none; display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); border-radius: var(--touch-radius-m); background: var(--interactive-normal); }
     /* The keyboard is the system's, drawn as a block of its height. */
     .keyboard { flex: none; display: flex; align-items: center; justify-content: center; background: var(--background-secondary); color: var(--text-faint); font-size: var(--font-ui-smaller); }
     /* A tablet keeps the tab strip, with the sidebar toggles at its ends. */
@@ -372,7 +373,7 @@
     .drawer.mod-right.is-pinned { border-left: 1px solid var(--divider-color); }
     .drawer.mod-left.is-pinned { border-right: 1px solid var(--divider-color); }
     .drawer-ribbon { position: absolute; left: 0; top: 0; bottom: 0; width: var(--ribbon-width); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 0; border-right: 1px solid var(--background-modifier-border); color: var(--text-muted); }
-    .drawer-ribbon > div { display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); border-radius: var(--touch-size-m); }
+    .drawer-ribbon > div { display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); border-radius: var(--touch-radius-m); }
     .drawer-ribbon > div.is-active { color: var(--text-accent); }
     .drawer-ribbon .icon { width: var(--icon-l); height: var(--icon-l); }
     .drawer-header { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 16px 0 32px; }
@@ -382,9 +383,9 @@
     .drawer-header-icon.is-on { color: var(--color-accent); }
     .drawer-body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 12px 0; }
     /* The tab a drawer shows is picked from one row. A phone puts it last. */
-    .drawer-tab-select { flex: none; display: flex; align-items: center; gap: 8px; height: var(--touch-size-l); margin: 0 12px; padding: 0 20px; border-radius: var(--touch-size-xs); background: var(--interactive-normal); color: var(--text-muted); font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
+    .drawer-tab-select { flex: none; display: flex; align-items: center; gap: 8px; height: var(--touch-size-l); margin: 0 12px; padding: 0 20px; border-radius: var(--touch-radius-xs); background: var(--interactive-normal); color: var(--text-muted); font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
     .drawer-tab-select > .grow { flex: 1; }
-    .nav-buttons { flex: none; display: flex; align-items: center; align-self: center; width: fit-content; margin: 8px auto; border-radius: var(--touch-size-m); background: var(--interactive-normal); color: var(--text-normal); }
+    .nav-buttons { flex: none; display: flex; align-items: center; align-self: center; width: fit-content; margin: 8px auto; border-radius: var(--touch-radius-m); background: var(--interactive-normal); color: var(--text-normal); }
     .nav-buttons > div { display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); }
     .nav-buttons .icon { width: var(--icon-s); height: var(--icon-s); }
     
@@ -396,10 +397,10 @@
     .is-mobile .nav-children .nav-item { padding-left: 14px; }
     .is-mobile .nav-children .nav-item.mod-heading { padding-left: 58px; }
     /* The list has the card's corner, so a card the scroll cuts is still round. */
-    .is-mobile .drawer-body:has(> .shelf) { margin: 4px 16px 0; padding: 0; border-radius: var(--touch-size-xxs); }
-    .is-mobile .shelf { margin-right: 0; margin-left: 0; border-radius: var(--touch-size-xxs); }
-    .is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--touch-size-xxs) - 1px); }
-    .is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--touch-size-xxs) - 1px) calc(var(--touch-size-xxs) - 1px) 0 0; }
+    .is-mobile .drawer-body:has(> .shelf) { margin: 4px 16px 0; padding: 0; border-radius: var(--touch-radius-xxs); }
+    .is-mobile .shelf { margin-right: 0; margin-left: 0; border-radius: var(--touch-radius-xxs); }
+    .is-mobile .shelf > .nav-item { height: auto; border-radius: calc(var(--touch-radius-xxs) - 1px); }
+    .is-mobile .shelf.is-open > .nav-item { border-radius: calc(var(--touch-radius-xxs) - 1px) calc(var(--touch-radius-xxs) - 1px) 0 0; }
     .is-mobile .shelf > .nav-children { margin: 0; padding: 0 4px 4px; }
     .is-mobile .book-icon { width: var(--icon-s); height: var(--icon-s); }
     .is-mobile .nav-heading { height: var(--touch-size-m); margin-top: 0; padding: 0 8px 0 14px; font-size: 11px; }
@@ -414,9 +415,9 @@
     .menu-title { padding: 0 16px 10px; font-size: var(--font-ui-small); color: var(--text-muted); }
     .is-mobile .menu-item { font-size: var(--font-ui-medium); }
     .is-phone .menu-item { height: auto; gap: 12px; padding: 12px 16px; border-radius: 0; background: var(--interactive-normal); position: relative; }
-    .is-phone .menu-item:first-child, .is-phone .menu-sep + .menu-item, .is-phone .menu-grabber + .menu-item, .is-phone .menu-title + .menu-item { border-radius: var(--touch-size-xxs) var(--touch-size-xxs) 0 0; }
-    .is-phone .menu-item:last-child, .is-phone .menu-item:has(+ .menu-sep) { border-radius: 0 0 var(--touch-size-xxs) var(--touch-size-xxs); }
-    .is-phone .menu-sep + .menu-item:last-child, .is-phone .menu-sep + .menu-item:has(+ .menu-sep), .is-phone .menu-grabber + .menu-item:has(+ .menu-sep), .is-phone .menu-title + .menu-item:has(+ .menu-sep) { border-radius: var(--touch-size-xxs); }
+    .is-phone .menu-item:first-child, .is-phone .menu-sep + .menu-item, .is-phone .menu-grabber + .menu-item, .is-phone .menu-title + .menu-item { border-radius: var(--touch-radius-xxs) var(--touch-radius-xxs) 0 0; }
+    .is-phone .menu-item:last-child, .is-phone .menu-item:has(+ .menu-sep) { border-radius: 0 0 var(--touch-radius-xxs) var(--touch-radius-xxs); }
+    .is-phone .menu-sep + .menu-item:last-child, .is-phone .menu-sep + .menu-item:has(+ .menu-sep), .is-phone .menu-grabber + .menu-item:has(+ .menu-sep), .is-phone .menu-title + .menu-item:has(+ .menu-sep) { border-radius: var(--touch-radius-xxs); }
     .is-phone .menu-item + .menu-item::before { content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: 1px; background: var(--color-base-35); }
     .is-phone .menu-item.is-warning { color: var(--text-error); }
     .is-phone .menu-sep { height: 0; margin: 8px 0; background: none; }
@@ -427,7 +428,7 @@
     .modal-bg.mod-clear { background: none; }
     .modal { position: relative; display: flex; flex-direction: column; width: 560px; max-width: 80%; max-height: 85%; border-radius: var(--modal-radius); background: var(--modal-background); overflow: hidden; }
     .is-phone .modal { width: calc(100% - 24px); max-width: none; max-height: calc(100% - var(--safe-area-inset-top)); }
-    .is-phone .mod-confirmation > .modal { width: 100%; max-height: 80%; border-radius: var(--touch-size-s) var(--touch-size-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
+    .is-phone .mod-confirmation > .modal { width: 100%; max-height: 80%; border-radius: var(--touch-radius-s) var(--touch-radius-s) 0 0; padding-bottom: var(--safe-area-inset-bottom); }
     .modal-header { flex: none; display: flex; align-items: flex-end; justify-content: center; padding: 24px 20px 16px; }
     .is-phone .mod-confirmation .modal-header { padding-top: 0; }
     .modal-title { font-size: var(--font-ui-large); font-weight: var(--font-semibold); }
@@ -443,12 +444,12 @@
     .is-mobile .field { padding: 4px 16px; border-width: 0; font-size: var(--font-ui-small); }
     .is-mobile .toggle { width: 52px; height: 32px; border-radius: 26px; }
     .is-mobile .toggle .knob { width: 26px; height: 26px; border-radius: 26px; }
-    .notice { position: absolute; z-index: 9; top: max(4px, var(--safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border: 1px solid var(--background-modifier-border); border-radius: var(--touch-size-xxs); background: var(--background-secondary); font-size: var(--font-ui-smaller); font-weight: var(--font-medium); }
+    .notice { position: absolute; z-index: 9; top: max(4px, var(--safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border: 1px solid var(--background-modifier-border); border-radius: var(--touch-radius-xxs); background: var(--background-secondary); font-size: var(--font-ui-smaller); font-weight: var(--font-medium); }
     .is-tablet .notice { top: 34px; left: auto; right: 10px; max-width: 300px; border-radius: var(--radius-m); }
     
     /* ---- orca's own controls at touch size ---- */
-    .is-mobile .seg { padding: 3px; border: none; border-radius: var(--touch-size-m); background: var(--interactive-normal); }
-    .is-mobile .seg > div { white-space: nowrap; height: 38px; min-width: 40px; justify-content: center; padding: 0 8px; border-radius: var(--touch-size-m); font-size: var(--font-ui-small); }
+    .is-mobile .seg { padding: 3px; border: none; border-radius: var(--touch-radius-m); background: var(--interactive-normal); }
+    .is-mobile .seg > div { white-space: nowrap; height: 38px; min-width: 40px; justify-content: center; padding: 0 8px; border-radius: var(--touch-radius-m); font-size: var(--font-ui-small); }
     .is-mobile .seg > div.is-on { background: var(--background-primary); }
     .is-mobile .lab { width: 120px; font-size: var(--font-ui-small); color: var(--text-normal); }
     .is-mobile .row { min-height: var(--touch-size-m); }
@@ -457,7 +458,7 @@
     .is-mobile .reset-slot { width: var(--touch-size-m); height: var(--touch-size-m); }
     .is-mobile .lock { min-width: var(--touch-size-m); min-height: var(--touch-size-m); justify-content: center; gap: 4px; font-size: var(--font-ui-smaller); }
     /* A number field steps from a button at each end, each the size of a touch. */
-    .is-mobile .numf { align-items: center; height: var(--touch-size-m); border-radius: var(--touch-size-m); background: var(--background-modifier-form-field); }
+    .is-mobile .numf { align-items: center; height: var(--touch-size-m); border-radius: var(--touch-radius-m); background: var(--background-modifier-form-field); }
     .is-mobile .numf > .field { width: 64px; padding: 0; justify-content: center; border-radius: 0; background: none; }
     .is-mobile .numf > .step { flex: none; display: flex; align-items: center; justify-content: center; width: var(--touch-size-m); height: var(--touch-size-m); color: var(--text-muted); }
     /* The preview's bar, and the line under the page that the status bar's words move to. */
@@ -467,19 +468,19 @@
     .pages { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--background-primary); position: relative; }
     .device-label { display: flex; flex-direction: column; gap: 10px; }
     /* Obsidian's suggestion list, which the font list is drawn as. */
-    .suggest { padding: 6px; border-radius: var(--touch-size-xxs); background: var(--background-secondary); box-shadow: 0 8px 30px rgba(0,0,0,0.45); }
+    .suggest { padding: 6px; border-radius: var(--touch-radius-xxs); background: var(--background-secondary); box-shadow: 0 8px 30px rgba(0,0,0,0.45); }
     .orca[data-theme="dark"] .suggest { background: var(--color-base-25); }
-    .suggest-item { display: flex; align-items: center; gap: 8px; min-height: var(--touch-size-m); padding: 8px 12px; border-radius: var(--touch-size-xxs); font-size: var(--font-ui-medium); }
+    .suggest-item { display: flex; align-items: center; gap: 8px; min-height: var(--touch-size-m); padding: 8px 12px; border-radius: var(--touch-radius-xxs); font-size: var(--font-ui-medium); }
     .suggest-item.is-active { background: var(--background-modifier-hover); }
     /* ---- the book note's page at touch size ---- */
     .props { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--divider-color); border-bottom: 1px solid var(--divider-color); }
     .prop { display: flex; align-items: center; gap: 12px; min-height: 36px; }
     .prop > span { width: 7.5em; flex: none; color: var(--text-muted); font-size: var(--font-ui-small); }
     .prop > div { flex: 1; min-width: 0; padding: 6px 8px; font-size: var(--font-ui-small); }
-    .stat { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--background-modifier-border); border-radius: var(--touch-size-xxs); }
+    .stat { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--background-modifier-border); border-radius: var(--touch-radius-xxs); }
     .stat-h { font-size: 11px; font-weight: var(--font-semibold); letter-spacing: 0.03em; color: var(--text-faint); }
     .stat-v { font-size: var(--font-ui-medium); font-weight: var(--font-medium); }
-    .ord { border: 1px solid var(--background-modifier-border); border-radius: var(--touch-size-xxs); overflow: hidden; }
+    .ord { border: 1px solid var(--background-modifier-border); border-radius: var(--touch-radius-xxs); overflow: hidden; }
     .ord-row { display: grid; grid-template-columns: 1fr 64px 76px; align-items: center; min-height: var(--touch-size-m); padding: 0 14px; border-top: 1px solid var(--divider-color); font-size: var(--font-ui-small); color: var(--text-muted); }
     .ord-row > div + div { text-align: right; }
     .ord-row.mod-head { min-height: 32px; border-top: none; background: rgba(var(--mono-100), 0.04); font-size: 11px; letter-spacing: 0.03em; color: var(--text-faint); }
