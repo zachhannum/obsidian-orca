@@ -99,6 +99,21 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install qpdf poppler
 
+      # epubcheck is a jar, and the runner images carry the Java it
+      # runs on. The digest holds the download to the release pinned.
+      - name: epubcheck
+        env:
+          EPUBCHECK: "5.4.0"
+          SHA256: 33350c61038e71dfb3d45a76aed04bf5481e6d5500cb780f6e98db8bbd15a28c
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/epubcheck.zip" "https://github.com/w3c/epubcheck/releases/download/v$EPUBCHECK/epubcheck-$EPUBCHECK.zip"
+          echo "$SHA256  $RUNNER_TEMP/epubcheck.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/epubcheck.zip" -d "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec java -jar "%s" "$@"\n' "$RUNNER_TEMP/epubcheck-$EPUBCHECK/epubcheck.jar" > "$RUNNER_TEMP/bin/epubcheck"
+          chmod +x "$RUNNER_TEMP/bin/epubcheck"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
       - name: e2e
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run e2e -- --shard=${{ matrix.shard }}/4

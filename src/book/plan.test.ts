@@ -25,6 +25,8 @@ import { faceCss, type Registered } from "@/style/faces";
 import { FACES_SHEET } from "@/style/sheet";
 import { readText, type VaultAdapter } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
+import { epubText } from "@/book/testUtils/epub";
+import { countWords } from "@/book/words";
 import { readModel, type Model } from "@/book/model";
 import { sectionIds } from "@/book/names";
 import { FORMAT, type Book } from "@/book/note";
@@ -955,6 +957,26 @@ async function exportedBook(from: VaultAdapter, name: string): Promise<string> {
   return written;
 }
 
+/**
+ * The most words the pages print that an EPUB does not: a running head
+ * and a folio on a page that carries them, and a folio beside each
+ * contents entry. An EPUB has no pages, so it prints none of them.
+ */
+const FURNITURE = 60;
+
+/** A book in a vault, exported with the faces in its `fonts` folder, as an EPUB. */
+async function exportedEpub(from: VaultAdapter, name: string): Promise<Epub> {
+  const ops = await bookOps(from, name);
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const epub = await connected(engine).exportEpub(ops);
+    assert.ok(epub, "the export was overtaken");
+    return epub;
+  } finally {
+    engine.free();
+  }
+}
+
 test("Junicode sets in Regular, and its bold in Junicode Bold, in the preview and the PDF", async () => {
   const index = fontIndex(
     { faces: [], refused: [] },
@@ -1043,21 +1065,27 @@ test("the site's sample book sets to a PDF that qpdf reads", async () => {
 });
 
 test("the fixture book exports as an EPUB, and no page rule in its sheets warns", async () => {
-  const ops = await bookOps(vault, BOOK);
-  const engine = await createEngine({ wasm: await moduleBytes() });
-  let epub: Epub | null;
-  try {
-    epub = await connected(engine).exportEpub(ops);
-  } finally {
-    engine.free();
-  }
-  assert.ok(epub, "the export was overtaken");
+  const epub = await exportedEpub(vault, BOOK);
 
   // A zip opens on a local file header, and an EPUB's first file is its mimetype.
   assert.deepEqual([...epub.bytes.subarray(0, 2)], [0x50, 0x4b]);
   assert.match(new TextDecoder().decode(epub.bytes.subarray(30, 58)), /^mimetypeapplication\/epub\+zip/);
   const paged = epub.warnings.filter((warning) => /@page|page rule|margin box/i.test(warning.message));
   assert.deepEqual(paged, []);
+});
+
+test("the fixture book's EPUB holds the words its PDF holds, less the running heads and the folios", async () => {
+  const { bytes } = await exportedEpub(vault, BOOK);
+  const read = spawnSync("pdftotext", [await exportedBook(vault, BOOK), "-"], { encoding: "utf8" });
+  assert.equal(read.status, 0, read.stderr);
+
+  // A word the engine hyphenated comes back in two pieces, so a break
+  // after a hyphen at the end of a line is joined before the count.
+  const paged = countWords(read.stdout.replace(/-\n/g, ""));
+  const flowed = countWords(await epubText(bytes));
+  assert.ok(flowed > 0, "the EPUB's spine prints no word");
+  assert.ok(flowed <= paged, `the EPUB prints ${String(flowed)} words and the PDF ${String(paged)}`);
+  assert.ok(paged - flowed <= FURNITURE, `the PDF prints ${String(paged - flowed)} words the EPUB lacks`);
 });
 
 test("in the exported fixture book, each contents entry prints the page its chapter opens on", async () => {
@@ -1099,4 +1127,6 @@ test("in the exported fixture book, each contents entry prints the page its chap
 // What this tier does not cover: the face bytes of a `font` op reaching
 // the engine, which the session tier tests, the cuts a family is made
 // of, which belong to the font index, and what the sample's pages look
-// like, which the PDF shows and no assertion here reads.
+// like, which the PDF shows and no assertion here reads. The EPUB is
+// counted here and not checked: `epubcheck` runs on the one the e2e
+// suite exports.

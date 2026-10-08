@@ -19,6 +19,12 @@ import { OBSIDIAN } from "./launch";
 /** Maximum length of a failure message quoted in the summary. */
 const QUOTED = 2000;
 
+/**
+ * The annotation type of a check a spec ran on a file it exported.
+ * The summary lists each one under the table.
+ */
+export const CHECK = "check";
+
 const MARK: Record<string, string> = {
   expected: "✓",
   unexpected: "✗",
@@ -64,6 +70,13 @@ function markdown(tests: TestCase[], result: FullResult): string {
     const mark = MARK[test.outcome()] ?? "?";
     lines.push(`| ${mark} | ${test.title} | ${tries} | ${seconds(ms)} |`);
   }
+
+  // A retry runs the check again, so the last try's word stands.
+  const checks = tests.flatMap((test) =>
+    (test.results.at(-1)?.annotations ?? []).filter(({ type }) => type === CHECK),
+  );
+  if (checks.length > 0) lines.push("", "### File checks", "");
+  for (const { description } of checks) lines.push(`- ${description ?? ""}`);
 
   for (const test of tests) {
     if (test.outcome() === "expected" || test.outcome() === "skipped") continue;
