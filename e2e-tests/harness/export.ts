@@ -47,7 +47,7 @@ export class Export {
   readonly done: Locator;
   /** The label of the Save to field. */
   readonly label: Locator;
-  /** The modal, which carries `data-state`, `data-formats` and `data-errors`. */
+  /** The modal, which carries `data-state`, `data-formats`, `data-errors` and `data-warnings`. */
   readonly dialog: Locator;
   /**
    * The rows of a written export, one per file. Each carries
@@ -62,7 +62,11 @@ export class Export {
   readonly write: Locator;
   /** The red cards for the errors that stand. */
   readonly errors: Locator;
-  /** The box the red cards scroll in. */
+  /** The cards for the engine's warnings, under the red ones. */
+  readonly warnings: Locator;
+  /** The link on a warning's card that goes to the place it names, or to Issues. */
+  readonly warned: Locator;
+  /** The box the cards scroll in. */
   readonly list: Locator;
   /** The link on a red card that goes to where the error is fixed. */
   readonly fixes: Locator;
@@ -87,6 +91,8 @@ export class Export {
     this.done = this.dialog.getByTestId("orca-export-done");
     this.label = this.dialog.getByTestId("orca-export-label");
     this.errors = this.dialog.getByTestId("orca-export-error");
+    this.warnings = this.dialog.getByTestId("orca-export-warning");
+    this.warned = this.dialog.getByTestId("orca-export-warned");
     this.list = this.dialog.getByTestId("orca-export-list");
     this.fixes = this.dialog.getByTestId("orca-export-fix");
     this.grabber = this.dialog.getByTestId("orca-sheet-grabber");

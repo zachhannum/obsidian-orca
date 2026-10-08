@@ -52,6 +52,9 @@ const EMBEDDED = 2;
 const BACKGROUND =
   "@page { background-image: url(images/device.png); background-repeat: no-repeat; }";
 
+/** A rule the engine reads and cannot set, so it warns and sets the book. */
+const UNSET = "p { float: left; }";
+
 test("export writes the pages on screen to a vault path, and the file is a PDF with the book's words", async ({
   book,
   exporting,
@@ -340,8 +343,66 @@ test("a cover that names no image in the vault shows in the Issues list once the
   await expect(book.issues.filter({ hasText: SAID })).toHaveCount(1);
 });
 
+test("a book with a warning lists it in the engine's words, and export still writes the file", async ({
+  book,
+  exporting,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  vault.touch(FILE);
+  await book.open();
+  await book.settled(BOOK);
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+
+  await panel.typeCss(`\n${UNSET}`);
+  await expect(book.counted).toHaveText("1 warning");
+  await book.settled(BOOK);
+  const line = (await panel.lineNumbers.last().textContent()) ?? "";
+  await book.count.click();
+  const said = (await book.issues.first().locator(".orca-preview-issue-said").textContent()) ?? "";
+  expect(said).toContain("float");
+  await book.count.click();
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await expect(exporting.dialog).toHaveAttribute("data-errors", "0");
+  await expect(exporting.dialog).toHaveAttribute("data-warnings", "1");
+  await expect(exporting.errors).toHaveCount(0);
+  await expect(exporting.warnings).toHaveCount(1);
+  await expect(exporting.warnings.locator(".orca-preview-issue-said")).toHaveText(said);
+  await expect(exporting.warnings).toContainText(`The book's CSS, line ${line}`);
+  await expect(exporting.fine).toHaveText("No errors · 1 warning");
+  await expect(exporting.said).toHaveText("");
+  await expect(exporting.write).toBeEnabled();
+
+  await exporting.formats("pdf");
+  await exporting.write.click();
+  await exporting.reaches("written");
+  const bytes = await vault.bytes(FILE);
+  expect(new TextDecoder().decode(bytes.subarray(0, 5))).toBe("%PDF-");
+  await exporting.close();
+
+  // The warning's link shuts the dialog and puts the caret on its line.
+  await panel.toControls.click();
+  await expect(panel.editor).toBeHidden();
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.warned.click();
+  await expect(exporting.dialog).toHaveCount(0);
+  await expect(panel.editor).toBeVisible();
+  await expect(panel.caretLine).toHaveText(line);
+
+  await panel.toControls.click();
+  await vault.restore();
+  await book.settled(BOOK);
+});
+
 // What this suite does not cover: the write to a path on disk, which
 // stops at the native dialog; a face that would not embed, since every
 // face the fixture uses ships in the vault; and a failed write, which
-// the Node tier's sink tests reach. The list of errors holds no
-// warning yet, so a warning in it is not covered either.
+// the Node tier's sink tests reach. A warning that names a note, and
+// one that names no place and opens Issues, are read by the Node tier
+// alone, since the fixture makes neither without an error beside it.

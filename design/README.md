@@ -210,8 +210,15 @@ its editor around these files and returns a URL. The artboard list and
   when the dialog opens. One export writes one file for each ticked
   format. The files share one path, and each format adds its own
   extension. `Choose…` picks a folder, not a file.
-- The preflight list scrolls when it has more errors than the dialog
+- The preflight list scrolls when it has more rows than the dialog
   has room for. The formats, the path and the buttons stay in place.
+- Preflight lists the engine's warnings under the errors, on the
+  orange card the preview draws a warning on, in the engine's words.
+  A warning does not turn Export off, and a book with only warnings
+  reads `No errors · 2 warnings`. A warning that names a place links
+  to its line, and one that names none links to Issues in the
+  preview. A warning an image error already shows is listed once, on
+  that error.
 - EPUB is the preview's fourth view, beside the three page views in
   the bar's segmented control. It shows the engine's EPUB in a frame
   that ReadiumCSS pages, and no page is laid out for it. The reading is
