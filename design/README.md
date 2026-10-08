@@ -464,6 +464,9 @@ replaces them.
 - In the EPUB view a pinch draws the device larger and lays out
   nothing inside it again, as on desktop. A drag with one finger moves
   a zoomed device.
+- On a phone and a tablet the device's screen takes no touch, so the
+  pinch and the drag reach the pane. A long press selects no text in
+  the EPUB view there.
 - EPUB is the fourth view on a phone and on a tablet. Its controls are
   the settings button, the device select and the two arrows, each as
   tall as a touch. They go where the page's foot goes. Under the page

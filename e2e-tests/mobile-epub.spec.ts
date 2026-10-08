@@ -492,7 +492,8 @@ test("on a phone a pinch on the device zooms it about the point between the fing
     await expect(book.zoomPercent).toHaveCount(0);
     const place = await epub.turned();
 
-    // The fingers are on the frame, whose touches never reach the pane.
+    // The fingers are over the frame, which takes no touch on a phone.
+    await expect(epub.frame).toHaveCSS("pointer-events", "none");
     const screen = await boxOf(epub.frame);
     const middle = { x: screen.x + screen.width * 0.4, y: screen.y + screen.height * 0.4 };
     const before = await epub.share(middle);
@@ -520,6 +521,16 @@ test("on a phone a pinch on the device zooms it about the point between the fing
     // The zoom laid nothing out again, so the reader is where they were.
     expect(await epub.turned()).toEqual(place);
 
+    // One finger moves the zoomed device, and the zoom stays.
+    const pan = (await epub.host.getAttribute("data-pan")) ?? "";
+    await obsidian.touch("touchStart", [middle]);
+    for (let step = 1; step <= 10; step++) {
+      await obsidian.touch("touchMove", [{ x: middle.x - step * 6, y: middle.y - step * 6 }]);
+    }
+    await obsidian.touch("touchEnd", []);
+    await expect(epub.host).not.toHaveAttribute("data-pan", pan);
+    await epub.zoomed(300);
+
     // A swap to the pages leaves the device at fit.
     await book.view("Single page").click();
     await epub.zoomed(100);
@@ -534,5 +545,6 @@ test("on a phone a pinch on the device zooms it about the point between the fing
 // of a real phone, which emulation draws at nothing; the EPUB view in a
 // tablet's pane under 700px; the device above the reader settings'
 // sheet on a phone on its side, where little room is left for it; and
-// one finger that moves a zoomed device, which the browser scrolls
-// from inside the frame and emulation does not.
+// WebKit, which a real iPhone runs and this suite does not. WebKit
+// runs no listener inside the frame, which is why the frame takes no
+// touch on a phone.
