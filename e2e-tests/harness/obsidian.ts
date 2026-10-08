@@ -98,6 +98,7 @@ declare global {
     };
     /** The sheets the harness has adopted, by the name it gave each. */
     orcaSheets?: Record<string, CSSStyleSheet> | undefined;
+    orcaFocused?: MutationObserver | undefined;
   }
 }
 
@@ -131,6 +132,8 @@ const CHROME = {
   status: ".status-bar",
   /** The bar a phone floats over the foot of its screen. */
   navbar: ".mobile-navbar",
+  /** The drawer mobile slides a sidebar in as. */
+  drawer: (side: string) => `.workspace-drawer.mod-${side}`,
   tooltip: ".tooltip",
   modal: ".modal",
   /** The container of a modal a phone docks to the foot of its screen. */
@@ -166,6 +169,9 @@ export const SCROLLER = {
 
 /** The chrome that appears under the pointer, which a picture drops too. */
 const HOVERED = CHROME.tooltip;
+
+/** The class Obsidian puts on the body of the window that has the focus. */
+const FOCUSED = "is-focused";
 
 /** The id of the style tag that holds a window still for a picture. */
 const STILL = "orca-still";
@@ -805,10 +811,11 @@ export class Obsidian {
    * Holds only the pointer still, for a picture of the whole window. The
    * status bar and the scrollbars stay in it. The window buttons Obsidian
    * draws on Linux and Windows go, with the room the tab bar keeps for
-   * them, so the picture is the same window on every platform.
+   * them, so the picture is the same window on every platform. With
+   * `kept`, the pointer stays where it is and only the chrome goes.
    */
-  async unhovered(): Promise<void> {
-    await this.page.mouse.move(0, 0);
+  async unhovered(kept = false): Promise<void> {
+    if (!kept) await this.page.mouse.move(0, 0);
     await this.hold(
       `${HOVERED} { visibility: hidden }` +
         `${CHROME.buttons} { display: none !important }` +
@@ -910,6 +917,31 @@ export class Obsidian {
     }, STILL);
   }
 
+  /**
+   * Draws this window as the one with the focus, whichever window the
+   * display gives it to. Windows that share a display share the focus,
+   * and Obsidian dims the tab and the title of a window without it.
+   *
+   * The hold lasts until the window loads again.
+   */
+  async focused(): Promise<void> {
+    // The renderer is told too, so a caret and a selection are drawn
+    // the same.
+    await this.session.send("Emulation.setFocusEmulationEnabled", { enabled: true });
+    await this.page.evaluate((mark) => {
+      const hold = (): void => {
+        if (!document.body.classList.contains(mark)) document.body.classList.add(mark);
+      };
+      hold();
+      if (window.orcaFocused !== undefined) return;
+      // Obsidian takes the class off when the display says the focus
+      // went. An observer runs before the next paint, so no picture
+      // holds the window without it.
+      window.orcaFocused = new MutationObserver(hold);
+      window.orcaFocused.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }, FOCUSED);
+  }
+
   /** Puts the editor back the way a vault is read by default. */
   async asRendered(): Promise<void> {
     await this.page.evaluate(() => {
@@ -953,6 +985,11 @@ export class Obsidian {
       };
       split.setPinned(want.on);
     }, { on, side });
+  }
+
+  /** The drawer a sidebar is on mobile, which slides in over the main area. */
+  drawer(side: Side): Locator {
+    return this.page.locator(CHROME.drawer(side));
   }
 
   /**

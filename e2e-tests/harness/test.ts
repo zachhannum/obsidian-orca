@@ -4,11 +4,14 @@
  * launched rather than a browser of its own.
  */
 
-import { test as base } from "@playwright/test";
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+import { expect, test as base } from "@playwright/test";
 import { Book } from "./book";
 import { Epub } from "./epub";
 import { Export } from "./export";
-import { CDP, FIXTURE } from "./launch";
+import { Recorder } from "./frames";
+import { CDP, FIXTURE, SAMPLE } from "./launch";
 import { Inspect } from "./inspect";
 import { Manuscript } from "./manuscript";
 import { Navigator } from "./navigator";
@@ -34,6 +37,8 @@ interface Fixtures {
   navigator: Navigator;
   /** The design panel, where a book's font is picked. */
   panel: Panel;
+  /** One take of a reel on the sample vault, named after the spec's file. */
+  reel: Recorder;
   /** The vault a spec changes, put back when the spec ends. */
   vault: Vault;
   record: void;
@@ -47,6 +52,18 @@ interface Shared {
    * of forty-six chapters.
    */
   site: Site;
+}
+
+/** The files of a vault and what each holds, without the folders Obsidian keeps for itself. */
+async function notesIn(vault: string): Promise<Record<string, string>> {
+  const files = (await readdir(vault, { recursive: true, withFileTypes: true }))
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(vault, path.join(entry.parentPath, entry.name)))
+    .filter((file) => !file.startsWith("."))
+    .sort();
+  const held: Record<string, string> = {};
+  for (const file of files) held[file] = (await readFile(path.join(vault, file))).toString("base64");
+  return held;
 }
 
 export const test = base.extend<Fixtures, Shared>({
@@ -109,6 +126,15 @@ export const test = base.extend<Fixtures, Shared>({
     const panel = new Panel(obsidian);
     await use(panel);
     await panel.close();
+  },
+
+  // A take that failed never reached its own end, so the vault is put
+  // back here for the take after it.
+  reel: async ({ site }, use, spec) => {
+    const reel = new Recorder(site, path.basename(spec.file, ".spec.ts"));
+    await use(reel);
+    await reel.restore();
+    expect(await notesIn(Obsidian.sample())).toEqual(await notesIn(SAMPLE));
   },
 
   vault: async ({ obsidian }, use) => {

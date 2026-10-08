@@ -103,13 +103,6 @@ const NARROW = Math.min(...WIDTHS);
 /** The shape of the window, which is what turns a width into a height. */
 const SHAPE = 5 / 8;
 
-/**
- * The window the phone picture is taken in. The picture is the preview
- * pane alone, which the phone layout shows at the width of the screen,
- * so the window is only as big as the artboard crops the pane to.
- */
-const PHONE = { width: 660, height: 600 };
-
 /** The window every test starts from, which the widths above depart from. */
 const WINDOW = { width: 1280, height: 800 };
 
@@ -139,25 +132,21 @@ const RIBBON = 44;
 /** The window's own bars above and below the pane. */
 const BARS = 40;
 
-/** Obsidian's own file tree, which the vault picture is of. */
+/** Obsidian's own file tree. */
 const EXPLORER = "file-explorer";
 
 /**
- * The commands that show the tree and open it on the note being read.
- * The tree is Obsidian's own view, so it is asked for the way the app
- * asks for it: a leaf made by hand carries none of its contents.
+ * The command that shows the tree. The tree is Obsidian's own view, so
+ * it is asked for the way the app asks for it: a leaf made by hand
+ * carries none of its contents.
  */
 const SHOW_TREE = "file-explorer:open";
 
 /** The room the tree is given, which is the width the artboard draws it at. */
 const TREE_WIDTH = 300;
 
-/** The heading the book note's reading order opens with. */
-const ORDER = "# Front matter";
-
 /** The chapter the swap pictures are written from. */
 const WRITING = `${FOLDER}/${CHAPTER}.md`;
-const REVEAL = "file-explorer:reveal-active-file";
 
 /** The editor's own view type, which a chapter is written in. */
 const EDITOR = "markdown";
@@ -442,28 +431,6 @@ async function windowBox(site: Site): Promise<Box> {
   return site.obsidian.page.evaluate(() => ({ x: 0, y: 0, width: innerWidth, height: innerHeight }));
 }
 
-test("at phone width the picture is the preview pane alone", async ({
-  site,
-}) => {
-  await arrange(site);
-  await sized(site, PHONE.width, PHONE.height);
-  await site.obsidian.collapse("left");
-  await site.obsidian.collapse("right");
-
-  for (const scheme of SCHEMES) {
-    await site.paint(scheme);
-    await settled(site.book);
-    // The navigator and the design panel are off the picture, and the
-    // spread the landing page opens on is still on it.
-    await expect(site.navigator.pane).toBeHidden();
-    await expect(site.book.sheets).toHaveCount(2);
-    await site.obsidian.unhovered();
-    await expect(site.book.panes).toHaveScreenshot(`phone-${scheme}.png`);
-  }
-
-  await site.obsidian.moving();
-});
-
 /** A book note that lists nothing, for the picture of a book with no pages. */
 const EMPTY = "Empty book.md";
 
@@ -568,54 +535,6 @@ for (const device of ["phone", "tablet"] as Device[]) {
     }
   });
 }
-
-test("the vault picture is the file tree and the book note's own Markdown", async ({
-  site,
-}) => {
-  await arrange(site);
-  // One app runs the whole suite, so the leaves this test opens and the
-  // settings it changes are put back before the next picture is taken.
-  const layout = await site.obsidian.layout();
-  await site.obsidian.still();
-  await site.obsidian.asSource();
-  // The tree draws nothing while its sidebar has no room, and an
-  // earlier picture may have put that sidebar away. The sidebar is
-  // opened and given its room first, then the tree is asked for.
-  await site.obsidian.sidebar(TREE_WIDTH, "left");
-  await site.obsidian.command(SHOW_TREE);
-  await expect(site.obsidian.view(EXPLORER)).toContainText(FOLDER);
-  // The book note is opened as Markdown so the picture is of the text
-  // on disk. Opening it also tells the tree which folder to unfold.
-  // The note opens from its file menu straight into Obsidian's editor,
-  // never as the book note's own page. That page sets the book again for
-  // its folios, and an export after it leaves out the book's CSS.
-  await site.obsidian.fileMenu(BOOK, AS_MARKDOWN);
-  await expect(site.obsidian.view(EDITOR)).toContainText("orca-book: 1");
-  await site.obsidian.command(REVEAL);
-
-  // The note opens on its properties, and the reading order is what the
-  // picture is of, so the note is scrolled to where the two meet.
-  await site.obsidian.scrollTo(ORDER);
-
-  const tree = site.obsidian.view(EXPLORER);
-  const note = site.obsidian.view(EDITOR);
-  for (const scheme of SCHEMES) {
-    await site.paint(scheme);
-    // The folder holds the book note beside the chapters it lists, and
-    // the note itself is the Markdown, not a form drawn over it.
-    // The editor keeps only the lines near the view, and the top of the
-    // frontmatter is scrolled past, so the check reads a line below it.
-    await expect(tree).toContainText(FOLDER);
-    await expect(note).toContainText("- `title-page`");
-
-    await expect(tree).toHaveScreenshot(`vault-tree-${scheme}.png`);
-    await expect(note).toHaveScreenshot(`vault-note-${scheme}.png`);
-  }
-
-  await site.obsidian.moving();
-  await site.obsidian.asRendered();
-  await site.obsidian.reopen(layout);
-});
 
 test("the swap pictures are one window, written and then set", async ({
   site,

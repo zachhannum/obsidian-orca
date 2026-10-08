@@ -1,55 +1,21 @@
 ---
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
-import { bookCss } from '@/book/css';
-import { imagesInCss } from '@/book/images';
-import { readModel } from '@/book/model';
-import { slug } from '@/book/names';
-import { writeDesign } from '@/style/design';
-import { effective } from '@/style/theme';
-import { GROUPS, atLevel, type Group } from '@/ui/groups';
-// The book note is read at build time, so the panel below shows what the
-// plugin would show for the very book the pictures are of.
-import sampleNote from '../../sample/Twenty Thousand Leagues/Twenty Thousand Leagues Under the Sea.md?raw';
-import chapterNote from '../../sample/Twenty Thousand Leagues/A Shifting Reef.md?raw';
 import bookPdf from '../shots/twenty-thousand-leagues.pdf?url';
-import loopDarkMp4 from '../shots/loop-dark.mp4?url';
-import loopLightMp4 from '../shots/loop-light.mp4?url';
-import loopDarkPoster from '../shots/loop-dark.png';
-import loopLightPoster from '../shots/loop-light.png';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
-import '../styles/panel.css';
 import '../styles/landing.css';
 import Icon from '../components/Icon.astro';
 import Mark from '../components/Mark.astro';
 import ThemeBoot from '../components/ThemeBoot.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
-import PanelGroup from '../components/PanelGroup.astro';
-import { WORKS } from '../scripts/demo';
+import Reel from '../components/Reel.astro';
+import titleFace from '@fontsource-variable/roboto-flex/files/roboto-flex-latin-standard-normal.woff2?url';
+import bodyFace from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
+import uiFace from '@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2?url';
+import wordmarkFace from '../fonts/Faune-Display_Bold_Italic.woff2?url';
 import { FIRST, folio } from '../scripts/flip';
 import { LIP, REST } from '../scripts/sea';
-
-import landingDark1440 from '../shots/landing-dark-1440.png';
-import landingDark1200 from '../shots/landing-dark-1200.png';
-import landingDark960 from '../shots/landing-dark-960.png';
-import landingLight1440 from '../shots/landing-light-1440.png';
-import landingLight1200 from '../shots/landing-light-1200.png';
-import landingLight960 from '../shots/landing-light-960.png';
-import phoneDark from '../shots/phone-dark.png';
-import phoneLight from '../shots/phone-light.png';
-import treeDark from '../shots/vault-tree-dark.png';
-import treeLight from '../shots/vault-tree-light.png';
-import noteDark from '../shots/vault-note-dark.png';
-import noteLight from '../shots/vault-note-light.png';
-import writeDark from '../shots/write-dark.png';
-import writeLight from '../shots/write-light.png';
-import readDark from '../shots/read-dark.png';
-import readLight from '../shots/read-light.png';
-import inspectDark from '../shots/inspect-dark.png';
-import inspectLight from '../shots/inspect-light.png';
-import exportDark from '../shots/export-dark.png';
-import exportLight from '../shots/export-light.png';
 
 const root = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const docs = `${root}start/install/`;
@@ -84,11 +50,6 @@ const pages: Shot[] = await Promise.all(
     .map((file) => shot((rasterized[file] as { default: ImageMetadata }).default))
 );
 
-/** The opening of Chapter I, which stands in for the demo until it loads. */
-const opening = rasterized['../shots/pages/page-09.png'];
-if (opening === undefined) throw new Error('the flip-through has no page 9');
-const chapterPage = await shot(opening.default);
-
 /**
  * A leaf carries a recto on its front and the verso after it on its
  * back. The book opens closed, so no page lies under the stack on the
@@ -97,28 +58,6 @@ const chapterPage = await shot(opening.default);
 const leaves = pages
   .slice(0, -1)
   .flatMap((front, at) => (at % 2 === 0 ? [{ front, back: pages[at + 1] as Shot }] : []));
-
-/** The window picture, at the width the page is being read at. */
-/** Each scheme's loop, and its first frame, which shows until it plays. */
-const loops = {
-  dark: { clip: loopDarkMp4, poster: (await getImage({ src: loopDarkPoster, format: 'webp' })).src },
-  light: { clip: loopLightMp4, poster: (await getImage({ src: loopLightPoster, format: 'webp' })).src },
-};
-
-const window_ = {
-  dark: {
-    phone: await shot(phoneDark),
-    w960: await shot(landingDark960),
-    w1200: await shot(landingDark1200),
-    w1440: await shot(landingDark1440),
-  },
-  light: {
-    phone: await shot(phoneLight),
-    w960: await shot(landingLight960),
-    w1200: await shot(landingLight1200),
-    w1440: await shot(landingLight1440),
-  },
-};
 
 /**
  * The specks drifting in the water. The positions are drawn from a
@@ -150,98 +89,6 @@ const waves = [
 const rest = (off: number, kind: string) =>
   kind === 'line' ? `M0 ${String(REST + off)}H1440` : `M0 ${String(REST + off)}H1440V${String(LIP)}H0Z`;
 
-/** The chapter the demo sets, which is the one the pictures above open on. */
-const CHAPTER = 'A Shifting Reef';
-
-/** The sample book's own note, which the panel and the page come from. */
-const sampleModel = readModel(sampleNote);
-const { design, metadata } = sampleModel.book;
-
-/** The book note's own CSS, which sets the demo's page as it sets the book. */
-const css = bookCss(sampleModel.order);
-
-/**
- * The images that CSS names, served beside the page. An image the
- * sample vault does not hold stops the build rather than leaving the
- * page without it.
- */
-const sampleImages = import.meta.glob<string>('../../sample/images/*', {
-  query: '?url',
-  import: 'default',
-  eager: true,
-});
-const images = imagesInCss(css).map(({ url, link }) => {
-  const src = sampleImages[`../../sample/images/${link}`];
-  if (src === undefined) throw new Error(`the sample vault has no image ${link}`);
-  return { url, src };
-});
-
-/**
- * The book's title face, served beside the page. The engine carries EB
- * Garamond, and the demo sends it the rest.
- */
-const faces = Object.values(
-  import.meta.glob<string>('../../sample/fonts/IMFe*.ttf', {
-    query: '?url',
-    import: 'default',
-    eager: true,
-  })
-);
-
-/** What the panel shows for every key, with the defaults filled in. */
-const shown: Record<string, string> = Object.fromEntries(
-  Object.entries(writeDesign(effective(design))).map(([key, value]) => [key, String(value)])
-);
-
-/** The keys the note sets itself, which are the ones the panel offers a reset on. */
-const own = Object.keys(writeDesign(design));
-
-/** The faces the engine carries, which are the ones the demo can set in. */
-const FACES = ['EB Garamond', 'IM FELL English'];
-
-/**
- * The groups the demo draws, from the plugin's own table, holding the
- * rows whose controls change the page it shows. A key that leaves the
- * table stops the build here rather than leaving the page offering a
- * control the panel no longer has.
- */
-const offered = (control: { key?: string }): boolean =>
-  control.key !== undefined && WORKS.includes(atLevel(control.key, 1));
-
-const keys = GROUPS.flatMap((group: Group) =>
-  group.rows.flatMap((row) =>
-    row.of.map((control) => (control.key === undefined ? '' : atLevel(control.key, 1)))
-  )
-);
-for (const key of WORKS) {
-  if (!keys.includes(key)) throw new Error(`the design panel has no ${key}`);
-}
-
-const groups = GROUPS.map((group: Group) => ({
-  ...group,
-  rows: group.rows.filter((row) => row.of.some(offered)),
-})).filter((group) => group.rows.length > 0);
-
-/**
- * What the demo hands the engine: the book's own design, the section
- * the page belongs to, and the chapter itself. The engine sets the page
- * from these, so nothing about it is drawn by the browser.
- */
-const demo = {
-  // The note's own keys, not the defaults under them, so a reset has a
-  // key to clear.
-  design: writeDesign(design),
-  setting: {
-    sections: [{ role: 'chapter' as const, id: slug(CHAPTER, 'chapter') }],
-    title: metadata.title,
-    author: metadata.author,
-  },
-  source: { name: `${CHAPTER}.md`, text: chapterNote },
-  css,
-  images,
-  faces,
-};
-
 /**
  * One line of the title, written with a capital for each letter drawn
  * at full width. The title is set in capitals, so the case the line is
@@ -256,22 +103,12 @@ const widen = (line: string): string =>
     )
     .join('');
 
+/** The faces of the first screen. They are fetched with the page, so its words are set once. */
+const FACES = [titleFace, bodyFace, uiFace, wordmarkFace];
+
 /** The page title. The sky's copy and the sea's are both set from it. */
 const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}</i>`;
 
-/** The vault pictures, and the two the pane swaps between. */
-const vault = {
-  dark: { tree: await shot(treeDark), note: await shot(noteDark) },
-  light: { tree: await shot(treeLight), note: await shot(noteLight) },
-};
-/** A paragraph pinned in inspect mode, with the rules that set it in the panel. */
-const inspecting = { dark: await shot(inspectDark), light: await shot(inspectLight) };
-/** The export dialog, open on the sample book with the preflight passed. */
-const exporting = { dark: await shot(exportDark), light: await shot(exportLight) };
-const swap = {
-  dark: { write: await shot(writeDark), read: await shot(readDark) },
-  light: { write: await shot(writeLight), read: await shot(readLight) },
-};
 ---
 
 <html lang="en">
@@ -281,6 +118,7 @@ const swap = {
     <title>orca</title>
     <meta name="description" content="A book designer that runs inside Obsidian." />
     <link rel="icon" href={`${root}favicon.svg`} />
+    {FACES.map((face) => <link rel="preload" as="font" type="font/woff2" href={face} crossorigin />)}
     <ThemeBoot />
   </head>
   <body>
@@ -345,79 +183,36 @@ const swap = {
           <div class="actions">
             <a class="install" href={docs}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
-            <span class="aside">Desktop only</span>
           </div>
 
           <figure class="window">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`frame on-${scheme}`}>
-                  <picture class="shot">
-                    <source media="(max-width: 639px)" srcset={window_[scheme].phone.src} />
-                    <source media="(max-width: 959px)" srcset={window_[scheme].w960.src} />
-                    <source media="(max-width: 1279px)" srcset={window_[scheme].w1200.src} />
-                    <img
-                      loading="lazy"
-                      src={window_[scheme].w1440.src}
-                      width={window_[scheme].w1440.width}
-                      height={window_[scheme].w1440.height}
-                      alt="Orca in Obsidian: the navigator, a spread of the typeset book, and the design panel."
-                    />
-                  </picture>
-                  <video
-                    class="loop"
-                    width="1200"
-                    height="750"
-                    poster={loops[scheme].poster}
-                    muted
-                    loop
-                    playsinline
-                    preload="none"
-                    aria-label="Orca in Obsidian: a chapter is written, set as a book, styled in the design panel and in CSS, then exported to PDF."
-                    data-loop
-                  >
-                    <source src={loops[scheme].clip} type="video/mp4" />
-                  </video>
-                </div>
-              ))
-            }
+            <Reel
+              scene="hero"
+              eager
+              alt="Orca in Obsidian: a spread of the typeset book, with the design panel beside it."
+            />
             <figcaption>
               Jules Verne, Twenty Thousand Leagues Under the Sea. Chapter I, A Shifting Reef.
             </figcaption>
           </figure>
         </section>
 
-        <section class="row">
-          <div class="said">
-            <h2 class="row-h">Chapters <i>stay notes</i></h2>
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Chapters <i>stay notes</i></h2>
             <p class="sec-p">
               The book note lists the chapters in reading order, as links. Its properties are
               the title, the author, the other metadata and the design.
             </p>
           </div>
-          <div class="shown vault">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`on-${scheme}`}>
-                  <div class="vault-shots">
-                  <img
-                    class="tree"
-                    src={vault[scheme].tree.src}
-                    width={vault[scheme].tree.width}
-                    height={vault[scheme].tree.height}
-                    alt="Obsidian's file tree: a folder holding the book note and the chapter notes it lists."
-                  />
-                  <img
-                    class="note"
-                    src={vault[scheme].note.src}
-                    width={vault[scheme].note.width}
-                    height={vault[scheme].note.height}
-                    alt="The book note as Markdown: its properties, then the chapters under Front matter and Body."
-                  />
-                  </div>
-                </div>
-              ))
-            }
+          <div class="swap">
+            <div class="swap-reel">
+              <Reel
+                scene="chapters"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="The book note in Obsidian as Markdown: each chapter of the book is a link in a list, beside Orca's navigator."
+              />
+            </div>
           </div>
         </section>
 
@@ -430,63 +225,32 @@ const swap = {
             </p>
           </div>
           <div class="swap">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`on-${scheme}`}>
-                  <div class="sw-win">
-                  <img
-                    class="sw-layer sw-ms"
-                    src={swap[scheme].write.src}
-                    width={swap[scheme].write.width}
-                    height={swap[scheme].write.height}
-                    alt="The chapter in Obsidian's editor, with the design panel beside it."
-                  />
-                  <img
-                    class="sw-layer sw-bk"
-                    src={swap[scheme].read.src}
-                    width={swap[scheme].read.width}
-                    height={swap[scheme].read.height}
-                    alt="The same pane with the typeset book, open at the page being written."
-                  />
-                  </div>
-                </div>
-              ))
-            }
+            <div class="swap-reel">
+              <Reel
+                scene="write"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="The typeset book in the pane the chapter was written in, with the design panel beside it."
+              />
+            </div>
           </div>
         </section>
 
-        <section class="row" data-demo>
-          <div class="said">
-            <h2 class="row-h">Design <i>in the panel</i></h2>
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Design <i>in the panel</i></h2>
             <p class="sec-p">
               The design panel has a control for the trim size, the margins, the type, the
               headings and more. The preview updates with each change. If your own CSS overrides
               a setting, its control dims and names the line that overrides it.
             </p>
           </div>
-          <div class="shown demo">
-            <div class="controls">
-              <div class="frag-box">
-                <div class="o-frag">
-                  {
-                    groups.map((group) => (
-                      <PanelGroup group={group} values={shown} own={own} faces={FACES} />
-                    ))
-                  }
-                </div>
-              </div>
-              <span class="aside">These controls work. Try them.</span>
-              <script is:inline type="application/json" data-demo-book set:html={JSON.stringify(demo)} />
-            </div>
-            <div class="demo-page">
-              <img
-                class="standing"
-                src={chapterPage.src}
-                width={chapterPage.width}
-                height={chapterPage.height}
-                alt="The opening of Chapter I, typeset by Orca."
+          <div class="swap">
+            <div class="swap-reel">
+              <Reel
+                scene="design"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="Orca's design panel beside the opening of Chapter I, set with a centred title, a drop cap and a first line in small capitals."
               />
-              <div class="set" data-demo-page></div>
             </div>
           </div>
         </section>
@@ -501,45 +265,60 @@ const swap = {
               it, and which rules take effect.
             </p>
           </div>
-          <div class="inspect">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`on-${scheme}`}>
-                  <img
-                    class="inspect-shot"
-                    src={inspecting[scheme].src}
-                    width={inspecting[scheme].width}
-                    height={inspecting[scheme].height}
-                    alt="Orca in Obsidian with inspect mode on: a paragraph outlined on the page, and the design panel listing the rules that set it above the book's CSS."
-                  />
-                </div>
-              ))
-            }
+          <div class="swap">
+            <div class="swap-reel">
+              <Reel
+                scene="css"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="Orca in Obsidian with inspect mode on: the colophon set as a centred italic block, and the panel listing the rule that sets it above the book's CSS."
+              />
+            </div>
           </div>
         </section>
 
-        <section class="row shown-first">
-          <div class="said">
-            <h2 class="row-h">Export <i>for the printer</i></h2>
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">Export <i>for the printer</i></h2>
             <p class="sec-p">
               Export writes the PDF from the pages on screen. Preflight catches missing fonts and
               images before you export.
             </p>
           </div>
-          <div class="shown">
-            {
-              (['dark', 'light'] as const).map((scheme) => (
-                <div class={`on-${scheme}`}>
-                  <img
-                    class="export-shot"
-                    src={exporting[scheme].src}
-                    width={exporting[scheme].width}
-                    height={exporting[scheme].height}
-                    alt="Orca's Export to PDF dialog on the sample book, with a save path, a preflight that shows no errors, and the Export button."
-                  />
-                </div>
-              ))
-            }
+          <div class="swap">
+            <div class="swap-reel">
+              <Reel
+                scene="export"
+                sizes="(min-width: 1016px) 936px, 100vw"
+                alt="Orca's export dialog on the sample book: preflight names a missing image and the note it is in, and the Export button is disabled."
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="stack">
+          <div class="said middle">
+            <h2 class="sec-h">On a phone <i>and a tablet</i></h2>
+            <p class="sec-p">
+              Orca runs in Obsidian on a phone and a tablet. The book and its pages are the same
+              as on the desktop. On a phone the design panel is a drawer and export is a sheet. A
+              tablet can pin the navigator and the panel beside the page.
+            </p>
+          </div>
+          <div class="devices">
+            <div class="device device-tablet">
+              <Reel
+                scene="tablet"
+                sizes="(min-width: 1280px) 950px, 80vw"
+                alt="Orca in Obsidian on a tablet: the navigator and the design panel pinned on each side of the opening page of Chapter I."
+              />
+            </div>
+            <div class="device device-phone">
+              <Reel
+                scene="phone"
+                sizes="(min-width: 1280px) 260px, (min-width: 641px) 22vw, 30vw"
+                alt="Orca in Obsidian on a phone: the opening page of Chapter I in the preview, with the view buttons and Export above it."
+              />
+            </div>
           </div>
         </section>
 
@@ -598,7 +377,6 @@ const swap = {
             <a class="install" href={docs}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
           </div>
-          <span class="aside">Desktop only</span>
         </section>
       </main>
 
@@ -615,9 +393,8 @@ const swap = {
     </div>
 
     <script>
-      import { startDemo, whenSeen, type Demo } from '../scripts/demo';
+      import { startReels } from '../reel/stage';
       import { startFlip } from '../scripts/flip';
-      import { startLoop } from '../scripts/loop';
       import { startSea } from '../scripts/sea';
 
       const sea = document.querySelector<SVGSVGElement>('[data-sea]');
@@ -625,14 +402,7 @@ const swap = {
       if (sea !== null) startSea(sea, cut ?? undefined);
       const flip = document.querySelector<HTMLElement>('[data-flip]');
       if (flip !== null) startFlip(flip);
-      // The book the demo sets is written into the page as JSON, so the
-      // script reads the same design the panel above was drawn from.
-      const panel = document.querySelector<HTMLElement>('[data-demo]');
-      const said = document.querySelector<HTMLElement>('[data-demo-book]');
-      if (panel !== null && said !== null) {
-        startDemo(panel, JSON.parse(said.textContent ?? '') as Demo, whenSeen(panel));
-      }
-      startLoop([...document.querySelectorAll<HTMLVideoElement>('[data-loop]')]);
+      startReels([...document.querySelectorAll<HTMLElement>('[data-reel]')]);
     </script>
   </body>
 </html>
@@ -868,11 +638,6 @@ const swap = {
     border-bottom: 1px solid var(--text);
     text-decoration: none;
   }
-  .aside {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--faint);
-  }
 
   .window {
     position: relative;
@@ -882,40 +647,6 @@ const swap = {
     flex-direction: column;
     align-items: center;
     gap: 30px;
-  }
-  .frame {
-    position: relative;
-    width: 100%;
-  }
-  .shot img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: var(--o-win-shadow);
-  }
-  /*
-   * The loop shows its first frame until it plays. Where it does not
-   * play, the picture of the preview and the panel stands in for it, and
-   * a lazy picture that is not shown is not fetched.
-   */
-  .loop {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: var(--o-win-shadow);
-  }
-  .frame .shot {
-    display: none;
-  }
-  @media (prefers-reduced-motion: reduce), (max-width: 639px) {
-    .loop {
-      display: none;
-    }
-    .frame .shot {
-      display: block;
-    }
   }
   .on-light {
     display: none;
@@ -939,19 +670,6 @@ const swap = {
   section + section {
     margin-top: var(--step);
   }
-  .row {
-    padding-inline: var(--gutter);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 72px;
-    align-items: center;
-  }
-  .row.shown-first {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .row.shown-first .shown {
-    order: -1;
-  }
   .said {
     display: flex;
     flex-direction: column;
@@ -973,135 +691,62 @@ const swap = {
     padding-inline: var(--gutter);
   }
 
-  .shown {
-    display: flex;
-    justify-content: center;
-  }
   .swap {
     display: flex;
     justify-content: center;
-  }
-  .vault-shots {
-    display: flex;
-    gap: 22px;
-    align-items: flex-start;
-  }
-  .export-shot {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow:
-      0 0 0 1px var(--o-border),
-      0 40px 80px -24px rgba(0, 0, 0, 0.85);
-  }
-
-  .inspect {
-    display: flex;
-    justify-content: center;
     width: 100%;
   }
-  .inspect > div {
-    width: 100%;
-    max-width: 1080px;
-  }
-  .inspect-shot {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: var(--o-win-shadow);
-  }
 
-  .vault-shots img {
-    display: block;
-    height: auto;
-    border-radius: 12px;
-    box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.8);
-  }
-  .tree {
-    width: 280px;
-  }
-  .note {
-    width: 430px;
-    margin-top: 48px;
-  }
-
-  /* The two pictures are the one pane, so they stack and cross-fade. */
-  .sw-win {
-    position: relative;
+  .swap-reel {
     width: 100%;
     max-width: 936px;
   }
-  .sw-layer {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 12px;
-    box-shadow:
-      0 0 0 1px var(--o-border),
-      0 40px 80px -24px rgba(0, 0, 0, 0.85);
-  }
-  .sw-bk {
-    position: absolute;
-    top: 0;
-    inset-inline-start: 0;
-  }
-  .o-said {
-    flex: 1;
-    font-size: 12px;
-    opacity: 0.8;
-  }
 
-  .demo {
-    gap: 44px;
-    align-items: center;
-  }
-  .controls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  /* The panel is the whole panel, and the whole panel scrolls in
-     Obsidian too. It stands as tall as the page beside it. */
-  .frag-box {
-    max-height: 538px;
-    overflow-y: auto;
-    border-radius: 8px;
-  }
-  .frag-box :global(.o-frag) {
-    border: 0;
-    border-radius: 0;
-  }
-  .o-frag :global(.o-grp + .o-grp) {
-    margin-top: 18px;
-  }
-  .demo-page {
-    width: 348px;
-    max-width: 100%;
+  /* The phone stands in front of the tablet's right edge, and a little
+     lower. Each frame's measures are shares of the section's width, so
+     the two keep their shapes at every width. */
+  .devices {
     position: relative;
-    flex: none;
-  }
-  /* The page the spec rasterized stands here until the engine has set
-     one of its own, so the section never shows a page orca did not. */
-  .demo-page .standing,
-  .demo-page .set :global(svg) {
-    display: block;
     width: 100%;
-    height: auto;
-    box-shadow: var(--o-page-shadow);
+    max-width: 1160px;
+    padding-bottom: 4%;
   }
-  .demo-page .set {
+  .device {
+    position: relative;
+    background: #0b0c0f;
+    box-shadow:
+      0 0 0 1px #3a3d45,
+      inset 0 0 0 2px #1d1f24,
+      0 40px 80px -30px rgba(0, 0, 0, 0.7);
+    --reel-shadow: none;
+  }
+  .device-tablet {
+    width: 82%;
+    padding: 1.5%;
+    border-radius: 3.2% / 4.5%;
+    --reel-radius: 1.75% / 2.5%;
+  }
+  .device-phone {
     position: absolute;
-    inset: 0;
+    right: 0;
+    bottom: 0;
+    width: 24%;
+    padding: 0.9%;
+    border-radius: 15% / 7.2%;
+    --reel-radius: 12.4% / 5.7%;
   }
-  .demo-page .set:empty {
-    display: none;
-  }
-  /* Once the engine has set a page, the one that stood in its place
-     steps aside. */
-  .demo-page:has(.set[data-set]) .standing {
-    visibility: hidden;
+  /* The camera, in the room the phone's own layout leaves over its header. */
+  .device-phone::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    top: 3%;
+    left: 50%;
+    width: 27%;
+    height: 3.2%;
+    translate: -50% 0;
+    border-radius: 999px;
+    background: #000;
   }
 
   /* The flip-through. A leaf turns about its inner edge, and carries a
@@ -1252,30 +897,22 @@ const swap = {
       --gutter: 40px;
       --step: 160px;
     }
-    .row,
-    .row.shown-first {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 44px;
-    }
-    .row.shown-first .shown {
-      order: 0;
-    }
     .said {
       max-width: none;
     }
   }
-  @media (max-width: 48rem) {
-    .vault-shots {
-      flex-direction: column;
-      align-items: center;
+  /* On a narrow screen the tablet takes the whole width, and the
+     phone stands lower so that less of the tablet is behind it. */
+  @media (max-width: 640px) {
+    .devices {
+      padding-bottom: 22%;
     }
-    .note {
-      margin-top: 0;
-      max-width: 100%;
+    .device-tablet {
+      width: 100%;
     }
-    .demo {
-      flex-direction: column;
-      align-items: center;
+    .device-phone {
+      width: 34%;
+      padding: 1.2%;
     }
   }
   @media (max-width: 40rem) {
@@ -1302,10 +939,6 @@ const swap = {
     }
     .quiet {
       justify-self: end;
-    }
-    .aside {
-      justify-self: start;
-      align-self: center;
     }
     .tree,
     .note {

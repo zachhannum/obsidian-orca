@@ -2,8 +2,8 @@ name: shots
 
 # The pictures on the docs site are photographs of real Obsidian, so a
 # change to a surface, to the site's colors, to the sample book or to an
-# example of a mark takes new ones. The loop on the landing page is
-# played from frames of real Obsidian too, so it is taken again with them.
+# example of a mark takes new ones. The reels on the landing page play
+# frames of real Obsidian too, so they are taken again with them.
 on:
   pull_request:
     paths:
@@ -13,6 +13,7 @@ on:
       - "docs/sample/**"
       - "docs/src/marks/**"
       - "docs/src/styles/tokens.css"
+      - "docs/scripts/pack-reel.mjs"
       - ".github/workflows/shots.yml"
   push:
     branches: [main]
@@ -23,12 +24,8 @@ on:
       - "docs/sample/**"
       - "docs/src/marks/**"
       - "docs/src/styles/tokens.css"
+      - "docs/scripts/pack-reel.mjs"
       - ".github/workflows/shots.yml"
-
-# The commit of orca-film that draws the loop. A change there reaches
-# the site when this moves.
-env:
-  ORCA_FILM_REF: fbf33766b11a478a1b6e5d20166dae4fb5c003fa
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,76 +49,25 @@ jobs:
           path: ${{ runner.temp }}/spec.tar
           retention-days: 1
 
-  frames:
-    name: take the loop's frames
+  reel:
+    name: take the reels' frames
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/obsidian-setup
-      - name: take the loop's frames
-        run: xvfb-run -a npm run film
-        env:
-          ORCA_FILM_OUT: ${{ github.workspace }}/frames
+      - run: xvfb-run -a npm run reel
+      - name: keep the frames that changed
+        run: git ls-files -m -o --exclude-standard -z docs/src/shots | tar --null -T - -cf ${{ runner.temp }}/reel.tar
       - uses: actions/upload-artifact@v4
         with:
-          name: shots-frames
-          path: frames/
-          retention-days: 1
-
-  loop:
-    name: render the loop
-    needs: frames
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/checkout@v5
-        with:
-          repository: zachhannum/orca-film
-          ref: ${{ env.ORCA_FILM_REF }}
-          path: film
-
-      - uses: actions/download-artifact@v5
-        with:
-          name: shots-frames
-          path: film/assets
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "22"
-
-      - name: system libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      # The render takes minutes, so a pull request takes the posters
-      # alone. The frames are where a change to a surface breaks the film
-      # spec, and they run either way.
-      - name: render the loop
-        working-directory: film
-        run: |
-          npm ci --prefer-offline --no-audit --no-fund
-          npx playwright install --with-deps chromium
-          if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" = push ]; then
-            node loop.mjs --into ../docs/src/shots
-          else
-            node loop.mjs --posters --into ../docs/src/shots
-          fi
-
-      - name: keep the pictures that changed
-        run: git ls-files -m -o --exclude-standard -z docs/src/shots | tar --null -T - -cf ${{ runner.temp }}/loop.tar
-      - uses: actions/upload-artifact@v4
-        with:
-          name: shots-loop
-          path: ${{ runner.temp }}/loop.tar
+          name: shots-reel
+          path: ${{ runner.temp }}/reel.tar
           retention-days: 1
 
   shots:
     name: collect the pictures
-    needs: [spec, loop]
+    needs: [spec, reel]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -134,7 +80,6 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           pattern: shots-*
-          exclude: shots-frames
           path: ${{ runner.temp }}/parts
 
       - name: put the pictures in place

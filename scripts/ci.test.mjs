@@ -1,16 +1,17 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [pkg, shotsRunner, workflow, shots, setup, release, cut, spec, claude] = await Promise.all([
+const [pkg, shotsRunner, workflow, shots, docs, setup, release, cut, spec, claude] = await Promise.all([
   read("package.json"),
   read("scripts/shots.mjs"),
   read(".github/workflows/ci.yml"),
   read(".github/workflows/shots.yml"),
+  read(".github/workflows/docs.yml"),
   read(".github/actions/obsidian-setup/action.yml"),
   read(".github/workflows/release.yml"),
   read(".github/workflows/cut-release.yml"),
@@ -108,7 +109,7 @@ test("a PR that changes a surface or the tokens takes the site's pictures", () =
   assert.match(setup, /apt-get install -y xvfb poppler-utils\n/);
 });
 
-test("the spec, the frames and the loop run as jobs that start together", () => {
+test("the spec and the reel run as jobs that start together, and the collection waits for both", () => {
   const block = (name) => {
     const from = shots.indexOf(`\n  ${name}:\n`);
     assert.notEqual(from, -1, `no ${name} job`);
@@ -116,10 +117,20 @@ test("the spec, the frames and the loop run as jobs that start together", () => 
     return shots.slice(from, next === null ? undefined : from + 1 + next.index);
   };
   assert.doesNotMatch(block("spec"), /needs:/);
-  assert.doesNotMatch(block("frames"), /needs:/);
-  // The render reads the frames, so it waits for them and for nothing else.
-  assert.match(block("loop"), /needs: frames\n/);
-  assert.match(block("shots"), /needs: \[spec, loop\]\n/);
+  assert.doesNotMatch(block("reel"), /needs:/);
+  assert.match(block("shots"), /needs: \[spec, reel\]\n/);
+  // Each job hands on an archive of what it changed, and the collection
+  // unpacks every one the same way.
+  for (const name of ["spec", "reel"]) {
+    assert.ok(
+      block(name).includes(
+        `git ls-files -m -o --exclude-standard -z docs/src/shots | tar --null -T - -cf \${{ runner.temp }}/${name}.tar\n`,
+      ),
+      `the ${name} job keeps no archive`,
+    );
+    assert.match(block(name), new RegExp(`name: shots-${name}\\n`));
+  }
+  assert.match(block("shots"), /pattern: shots-\*\n\s+path:/);
 });
 
 test("the screenshot spec runs in shards, each with an Obsidian and a display of its own", () => {
@@ -128,20 +139,31 @@ test("the screenshot spec runs in shards, each with an Obsidian and a display of
   assert.match(shotsRunner, /\["-a", "npx", \.\.\.playwright\]/);
 });
 
-test("the shots job renders the landing page's loop from a pinned commit of orca-film", () => {
-  assert.match(shots, /ORCA_FILM_REF: [0-9a-f]{40}\n/);
-  assert.match(shots, /repository: zachhannum\/orca-film\n\s+ref: \$\{\{ env\.ORCA_FILM_REF \}\}/);
-  assert.match(shots, /run: xvfb-run -a npm run film\n/);
+test("no workflow names orca-film or installs ffmpeg", async () => {
+  const workflows = [];
+  for await (const file of glob(".github/**/*.{yml,yaml}", { cwd: root })) workflows.push(file);
+  assert.ok(workflows.length > 0, "no workflow was read");
+  for (const file of workflows) {
+    assert.doesNotMatch(await read(file), /orca-film|ORCA_FILM|ffmpeg/i, file);
+  }
 });
 
-test("only a push to main renders the loop, and a pull request takes its posters", () => {
-  const from = shots.indexOf("      - name: render the loop");
-  assert.notEqual(from, -1, "nothing renders the loop");
-  const step = shots.slice(from, shots.indexOf("\n      - ", from + 1));
-  assert.match(
-    step,
-    /if \[ "\$GITHUB_REF" = refs\/heads\/main \] && \[ "\$GITHUB_EVENT_NAME" = push \]; then\n\s+node loop\.mjs --into \.\.\/docs\/src\/shots\n\s+else\n\s+node loop\.mjs --posters --into \.\.\/docs\/src\/shots\n/,
-  );
+test("the reel job takes the frames with `npm run reel`, with the site's packages installed", () => {
+  const from = shots.indexOf("\n  reel:\n");
+  const reel = shots.slice(from, shots.indexOf("\n  shots:\n"));
+  assert.match(reel, /uses: \.\/\.github\/actions\/obsidian-setup\n/);
+  assert.match(reel, /- run: xvfb-run -a npm run reel\n/);
+  // The pack step reads sharp out of the site's own packages.
+  assert.match(setup, /npm ci --prefer-offline --no-audit --no-fund\n\s+shell: bash\n\s+working-directory: docs\n/);
+});
+
+test("the docs workflow runs the site's suite in a browser, after the build", () => {
+  const build = docs.indexOf("- run: npm run build\n");
+  const browser = docs.indexOf("- run: npx playwright install --with-deps chromium\n");
+  const suite = docs.indexOf("- run: npm test\n");
+  assert.notEqual(build, -1, "the docs workflow does not build the site");
+  assert.ok(build < browser && browser < suite, "the suite does not follow the build");
+  assert.match(docs, /defaults:\n {2}run:\n {4}working-directory: docs\n/);
 });
 
 test("a push to main that changes a picture opens a PR with the new pictures", () => {

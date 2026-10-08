@@ -45,9 +45,11 @@ wins and the quick fix waits for its own PR.
   `docs/src/styles/tokens.css` is the site's tokens, and the build stops
   when it and `design/site.spec.css` disagree. `docs/sample/` is the vault
   the site's pages are set from, and it shares no file with `fixture/`.
-  Orca's UI on the site is a shot that `npm run shots` takes of real
-  Obsidian, never markup drawn to look like it. The exception is a
-  surface the reader uses, like the design panel demo.
+  Orca's UI on the site is a picture of real Obsidian, never markup
+  drawn to look like it. A shot is a picture that `npm run shots` takes.
+  A reel is a list of frames that `npm run reel` takes. A reel draws
+  four things over its frames: the pointer, the ring of a click, the
+  caret, and the cover that uncovers typed text.
 - Work is tracked in GitHub issues, grouped by the v1 epic (#1) and
   built in milestone order, M0 through M4. An issue's acceptance
   checkboxes are its definition of done.
@@ -166,7 +168,8 @@ underneath them.
 - One app instance for the whole run: workers pinned to one,
   parallelism off, specs serial. A shard is a run of its own with an
   Obsidian of its own: `npm run shots` runs the `shots` project as
-  shards, and CI runs the suite as four shards on a platform. A
+  shards, and CI runs the suite as four shards on a platform. The
+  `reel` project is a run of its own too, which `npm run reel` starts. A
   spec file passes without the files before it. A test that must begin
   from a known vault says so and puts it back.
 - **No assertion waits on a clock.** The preview carries the generation
@@ -271,8 +274,9 @@ e2e shard keeps its HTML report as an artifact.
 `.github/workflows/docs.yml` runs on a PR that touches `docs/` or the
 site's tokens, and on the same paths on main. Its `build` job installs
 the site's own lockfile and runs `npm run build` in `docs/`, which
-checks the tokens against `design/site.spec.css` before it builds. On main
-the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
+checks the tokens against `design/site.spec.css` before it builds. It then
+runs the site's browser suite, `npm test` in `docs/`, on the built
+pages in Chromium. On main the `deploy` job puts the result on the `gh-pages` branch that GitHub Pages
 serves, keeps the `pr-preview` folder, and checks the live docs.
 
 `.github/workflows/preview.yml` runs on a PR that touches `docs/` or
@@ -289,10 +293,9 @@ site's tokens or the sample book. It runs on the same paths on main. The
 job runs `npm run shots`, which photographs real Obsidian on the sample
 vault and writes the pictures to `docs/src/shots`. A picture is
 rasterized by the machine that took it, so this job is the one that
-takes them. It also takes the film's frames and the landing page
-loop's posters with orca-film's `loop.mjs`, at the commit
-`ORCA_FILM_REF` pins, and on main it renders the loop itself. On main
-it opens a PR with the pictures that changed.
+takes them. A second job runs `npm run reel`, which takes the frames
+the landing page plays and packs them under `docs/src/shots/reel`. On
+main the workflow opens a PR with the pictures that changed.
 
 `.github/workflows/release.yml` runs on a version tag. It builds and
 attaches `main.js`, `manifest.json` and `styles.css` to the release,

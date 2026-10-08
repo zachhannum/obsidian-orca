@@ -4,15 +4,10 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import { codeThemes } from './src/code-theme.mjs';
 
-// The landing page draws the design panel from the same table the plugin
-// draws it from, so the panel on the page cannot fall behind the plugin's.
-// The table is read at build time only; none of it reaches the browser.
+// The docs name orca's buttons from the plugin's own table, so a button
+// renamed in the plugin is renamed on the site. The table is read at
+// build time only; none of it reaches the browser.
 const plugin = fileURLToPath(new URL('../src', import.meta.url));
-
-// The plugin's own source imports `fleuron` by name, and it sits outside
-// this package, so it would look for the engine in the plugin's
-// `node_modules` rather than in the site's. The site installs its own.
-const fleuron = fileURLToPath(import.meta.resolve('fleuron'));
 
 // GitHub Pages serves the site at its own domain, which public/CNAME holds.
 const site = 'https://orca.typeworks.dev';
@@ -25,7 +20,7 @@ export default defineConfig({
   site,
   base,
   trailingSlash: 'always',
-  vite: { resolve: { alias: { '@': plugin, fleuron } } },
+  vite: { resolve: { alias: { '@': plugin } } },
   markdown: {
     shikiConfig: {
       themes: codeThemes,
@@ -43,7 +38,6 @@ export default defineConfig({
         './src/styles/fonts.css',
         './src/styles/tokens.css',
         './src/styles/theme.css',
-        './src/styles/panel.css',
       ],
       components: {
         // Dark is the default, and the toggle is one button rather than a

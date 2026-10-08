@@ -136,7 +136,7 @@ test("no assertion in a spec waits on a clock", () => {
   assert.deepEqual(waited("// no timeout: the pane is waited on\n"), []);
 });
 
-test("the lint pass visits `src`, `e2e-tests` and `scripts`", async () => {
+test("the lint pass visits `src`, `e2e-tests`, `scripts` and the site's specs", async () => {
   const from = await mkdtemp(path.join(tmpdir(), "orca-lint-"));
   try {
     const files = {
@@ -146,6 +146,8 @@ test("the lint pass visits `src`, `e2e-tests` and `scripts`", async () => {
       "scripts/summary.mjs":
         "/** How much is quoted. */\nexport const QUOTED = 1;\n",
       "e2e-tests/draft.spec.ts": "await page.waitForTimeout(200);\n",
+      "docs/tests/reel.spec.ts": "await new Promise((done) => setTimeout(done, 200));\n",
+      "docs/tests/reel.ts": "export const WAIT = { timeout: 200 };\n",
     };
     for (const [file, text] of Object.entries(files)) {
       await mkdir(path.join(from, path.dirname(file)), { recursive: true });
@@ -157,6 +159,7 @@ test("the lint pass visits `src`, `e2e-tests` and `scripts`", async () => {
         "src/book/note.ts: `book` may not import `ui`",
         "e2e-tests/harness/note.ts: a doc comment opens with a question word; name the thing",
         "scripts/summary.mjs: a doc comment opens with a question word; name the thing",
+        "docs/tests/reel.spec.ts: `setTimeout` is a clock; wait on what the pane painted",
         "e2e-tests/draft.spec.ts: `waitForTimeout` is a clock; wait on what the pane painted",
       ],
     );

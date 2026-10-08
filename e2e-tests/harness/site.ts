@@ -302,6 +302,15 @@ export class Site {
     return { width: from.width, height: from.height, marks };
   }
 
+  /**
+   * Turns the quiet plugins off again. The window a device loads can
+   * come back with them on, since Obsidian saves the choice some time
+   * after it is made.
+   */
+  async quieten(): Promise<void> {
+    await this.obsidian.quieten(QUIET);
+  }
+
   async close(): Promise<void> {
     await this.obsidian.shut();
   }

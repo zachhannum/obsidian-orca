@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "build": "node scripts/check-tokens.mjs && astro check && astro build && node scripts/rebase.mjs",
     "preview": "astro preview",
-    "lint": "astro sync && eslint --max-warnings 0 ."
+    "lint": "astro sync && eslint --max-warnings 0 .",
+    "test": "playwright test"
   },
   "license": "MIT",
   "dependencies": {
@@ -21,7 +22,6 @@
     "@fontsource-variable/roboto-flex": "5.3.0",
     "@fontsource/dm-mono": "5.3.0",
     "astro": "7.3.2",
-    "fleuron": "0.22.0",
     "lucide-static": "1.47.0",
     "sharp": "^0.34.2",
     "typescript": "^5.7.2"
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@eslint/json": "^0.14.0",
+    "@playwright/test": "^1.62.1",
     "eslint": "^9.39.5",
     "eslint-plugin-obsidianmd": "^0.4.2",
     "typescript-eslint": "^8.70.1"

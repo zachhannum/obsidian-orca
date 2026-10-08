@@ -1,0 +1,117 @@
+/* A reel's stage, which shows the whole window at every width. */
+.reel {
+  width: 100%;
+}
+.reel-view {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--reel-w) / var(--reel-h);
+  border-radius: var(--reel-radius, 12px);
+  box-shadow: var(--reel-shadow, var(--o-win-shadow));
+}
+.reel-still {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.reel-still[data-scheme='light'] {
+  display: none;
+}
+:root[data-theme='light'] .reel-still[data-scheme='dark'] {
+  display: none;
+}
+:root[data-theme='light'] .reel-still[data-scheme='light'] {
+  display: block;
+}
+
+/* The window the player draws, in the window's own pixels. */
+.reel-win {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--reel-w) * 1px);
+  height: calc(var(--reel-h) * 1px);
+  overflow: hidden;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.reel-layer {
+  position: absolute;
+  inset: 0;
+}
+.reel-layer img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.reel-cover {
+  position: absolute;
+  z-index: 100;
+  background: var(--reel-cover);
+}
+/* The shade is over the frame beneath a sheet and under the sheet,
+   which the layers after it are. */
+.reel-shade {
+  position: absolute;
+  z-index: 1;
+  background: var(--reel-shade);
+}
+.reel-caret {
+  position: absolute;
+  z-index: 101;
+  width: 1.5px;
+  background: var(--reel-caret);
+}
+
+/* The pointer, the finger, and the ring a click leaves. */
+.reel-ring {
+  position: absolute;
+  z-index: 102;
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  border: 2px solid rgba(165, 167, 251, 0.9);
+}
+.reel-arrow,
+.reel-dot {
+  position: absolute;
+  z-index: 103;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.reel-arrow {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+.reel-arrow svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+.reel-arrow path {
+  fill: #fff;
+  stroke: #0a0c0f;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.reel-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(128, 132, 142, 0.5);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}

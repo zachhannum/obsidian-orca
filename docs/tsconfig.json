@@ -5,8 +5,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../src/*"],
-      "fleuron": ["./node_modules/fleuron/dist/index.d.ts"]
+      "@/*": ["../src/*"]
     }
   }
 }

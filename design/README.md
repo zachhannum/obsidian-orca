@@ -576,8 +576,12 @@ replaces them.
   sea.
 - The sea surface moves, and the sea gets darker toward the end of the
   page. With reduced motion on, the sea holds still.
-- A screenshot of Obsidian takes the site's colors and fonts. At phone
-  width, the landing page shows the preview pane alone.
+- A screenshot of Obsidian takes the site's colors and fonts. The
+  landing page plays the same reels at every width, and a reel shows
+  its whole window at each. The phone and the tablet are drawn in
+  device frames, with the phone in front of the tablet.
+- A reel is its picture until it comes on screen. Its frames load when
+  a quarter of it shows.
 - The site's sample book is Twenty Thousand Leagues Under the Sea. A
   plate from the illustrated edition of 1871 takes the page facing
   Chapter I. The plate is a note that holds the embed and nothing else,
