@@ -58,30 +58,22 @@ test("the e2e job runs as four shards on a platform, each on a runner of its own
   assert.match(e2e, /run: npm run e2e -- --shard=\$\{\{ matrix\.shard \}\}\/4\n/);
 });
 
-test("the checks main requires report, and pass only when every shard of their platform passed", () => {
+test("the check main requires reports, and passes only when every shard of its platform passed", () => {
   const all = job("e2e-all");
 
-  // The names the ruleset holds, which a shard's name no longer is.
+  // The name the ruleset holds, which a shard's name no longer is.
   assert.match(all, /name: e2e on \$\{\{ matrix\.os \}\}\n/);
-  assert.match(all, /os: \[ubuntu-latest, macos-latest\]\n/);
   assert.match(job("e2e"), /name: e2e on \$\{\{ matrix\.os \}\} \(\$\{\{ matrix\.shard \}\}\/4\)\n/);
   // A failed shard skips a job that needs it, and a skipped check passes.
   assert.match(all, /needs: e2e\n\s+if: \$\{\{ !cancelled\(\) \}\}\n/);
   assert.match(all, /SHARD: "e2e on \$\{\{ matrix\.os \}\} \("\n/);
-  assert.match(all, /\[ "\$passed" = "\$SHARDS" \]\n/);
+  assert.match(all, /\[ "\$passed" = 4 \]\n/);
 });
 
-test("only a push to main runs the suite on macOS, and a PR's macOS check passes with no shard", () => {
-  assert.ok(
-    job("e2e").includes(
-      `os: \${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest", "macos-latest"]' || '["ubuntu-latest"]') }}\n`,
-    ),
-  );
-  assert.ok(
-    job("e2e-all").includes(
-      "SHARDS: ${{ (matrix.os == 'ubuntu-latest' || github.event_name == 'push') && 4 || 0 }}\n",
-    ),
-  );
+test("only a push to main runs the suite on macOS, and a PR has no macOS check", () => {
+  const os = `os: \${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest", "macos-latest"]' || '["ubuntu-latest"]') }}\n`;
+  assert.ok(job("e2e").includes(os));
+  assert.ok(job("e2e-all").includes(os));
   // The workflow's only push is a push to main.
   assert.match(workflow, /^ {2}push:\n {4}branches: \[main\]\n/m);
 });
