@@ -1,7 +1,8 @@
 /**
  * Draws the zoom in the preview's bar: a step out, the percentage and a
  * step in. A touch screen zooms by pinch, so it draws no control, and
- * the component still writes the zoom on the surface for both.
+ * the component still writes the zoom for both, on the element that
+ * holds what is zoomed.
  */
 
 import { createRoot } from "react-dom/client";
@@ -10,10 +11,12 @@ import { Icon } from "@/ui/icon";
 import { CLOSEST, FIT, percentOf } from "@/ui/zoom";
 
 export interface Zoomed {
+  /** The element that carries the zoom and the pan: the pages, or the EPUB view's host. */
+  on: HTMLElement;
   zoom: number;
   /** Whether the view on screen zooms. */
   zooms: boolean;
-  /** The pixels the zoomed page is moved by, from its left and its top. */
+  /** The pixels the zoomed page or device is moved by, from its left and its top. */
   pan: { x: number; y: number };
 }
 
@@ -31,11 +34,11 @@ export interface MountedZoom {
 }
 
 /** Mounts the control in its slot in the bar. */
-export function mountZoom(slot: HTMLElement, surface: HTMLElement, zooming: Zooming): MountedZoom {
+export function mountZoom(slot: HTMLElement, zooming: Zooming): MountedZoom {
   const root = createRoot(slot);
   return {
     draw(zoomed) {
-      root.render(<ZoomControl surface={surface} zoomed={zoomed} zooming={zooming} />);
+      root.render(<ZoomControl zoomed={zoomed} zooming={zooming} />);
     },
     unmount() {
       root.unmount();
@@ -44,23 +47,31 @@ export function mountZoom(slot: HTMLElement, surface: HTMLElement, zooming: Zoom
 }
 
 export function ZoomControl({
-  surface,
   zoomed,
   zooming,
 }: {
-  surface: HTMLElement;
   zoomed: Zoomed;
   zooming: Zooming;
 }): JSX.Element | null {
-  const { zoom, zooms, pan } = zoomed;
+  const { on, zoom, zooms, pan } = zoomed;
   const percent = percentOf(zoom);
 
-  // The e2e suite waits on these, so they are written once the page is
-  // laid out at the zoom they report.
+  // The e2e suite waits on these, so they are written once the page or
+  // the device is laid out at the zoom they report.
   useLayoutEffect(() => {
-    surface.dataset["zoom"] = String(percent);
-    surface.dataset["pan"] = `${String(Math.round(pan.x))},${String(Math.round(pan.y))}`;
-  }, [surface, percent, pan.x, pan.y]);
+    on.dataset["zoom"] = String(percent);
+    on.dataset["pan"] = `${String(Math.round(pan.x))},${String(Math.round(pan.y))}`;
+  }, [on, percent, pan.x, pan.y]);
+
+  // A view that is left goes back to fit, and the element it leaves
+  // says so, since the next draw is of the other view.
+  useLayoutEffect(
+    () => () => {
+      on.dataset["zoom"] = String(percentOf(FIT));
+      on.dataset["pan"] = "0,0";
+    },
+    [on],
+  );
 
   if (!zooming.control || !zooms) return null;
   return (

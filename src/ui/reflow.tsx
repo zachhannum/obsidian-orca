@@ -42,10 +42,11 @@ import {
   fitted,
   leftOf,
   openingOf,
+  paneKey,
   rewriteDocument,
   screenOf,
-  stepOf,
   turnedBy,
+  windowPoint,
   type Anchor,
   type Box,
   type Document,
@@ -95,6 +96,14 @@ export interface Screen {
   cause: Cause;
 }
 
+/** A finger on the screen, at a point in the window. */
+export interface Finger {
+  clientX: number;
+  clientY: number;
+}
+
+export type TouchPhase = "start" | "move" | "end";
+
 /** The parts of the preview the EPUB view draws into besides its own host. */
 export interface ReflowSlots {
   /** The node on the preview's bar that takes the view's controls. */
@@ -107,6 +116,13 @@ export interface ReflowSlots {
   keeps(stored: ReaderStored): void;
   /** Told each screen once the frame has laid it out. */
   shows(screen: Screen): void;
+  /**
+   * Told the fingers on the frame at each touch, at the window's
+   * points, since a touch inside the frame never reaches the pane.
+   * Answers whether two of them zoomed, and the frame then leaves the
+   * touch alone.
+   */
+  touched(phase: TouchPhase, fingers: readonly Finger[]): boolean;
   /**
    * Opens the sheet a phone draws the reader settings in. Without it
    * the settings hang from their button.
@@ -383,7 +399,10 @@ function Reflow({
           {src === undefined ? null : (
             <div
               className="orca-reflow-fit"
-              style={{ width: body.width * scale, height: body.height * scale }}
+              style={{
+                width: `calc(${String(body.width * scale)}px * var(--orca-zoom, 1))`,
+                height: `calc(${String(body.height * scale)}px * var(--orca-zoom, 1))`,
+              }}
             >
               <div
                 className={`orca-reflow-body mod-${device.kind}`}
@@ -395,7 +414,9 @@ function Reflow({
                     `${String(device.bezel.top)}px ${String(device.bezel.right)}px ` +
                     `${String(device.bezel.bottom)}px ${String(device.bezel.left)}px`,
                   borderRadius: device.radius + device.bezel.left,
-                  transform: `scale(${String(scale)})`,
+                  // The zoom scales the device and lays nothing out
+                  // again, so the book keeps the lines it has at fit.
+                  transform: `scale(calc(${String(scale)} * var(--orca-zoom, 1)))`,
                 }}
               >
                 {device.camera === "bezel" ? (
@@ -429,14 +450,73 @@ function Reflow({
                     onLoad={(event) => {
                       const inside = event.currentTarget.contentDocument;
                       if (inside === null) return;
-                      // The frame takes the focus on a click, and its keys
-                      // never reach the pane.
-                      inside.addEventListener("keydown", (pressed) => {
-                        const step = stepOf(pressed.key);
-                        if (step === undefined) return;
-                        pressed.preventDefault();
-                        turner.turn?.(step);
-                      });
+                      const outer = event.currentTarget;
+                      const drawn = (x: number, y: number): { x: number; y: number } => {
+                        const box = outer.getBoundingClientRect();
+                        const scale = outer.offsetWidth === 0 ? 1 : box.width / outer.offsetWidth;
+                        return windowPoint({ left: box.left, top: box.top, scale }, x, y);
+                      };
+                      // The frame takes the focus on a click, and nothing
+                      // done inside it reaches the pane. The keys and the
+                      // wheel the pane answers are sent on from the frame's
+                      // own element, so the pane hears them as its own.
+                      for (const type of ["keydown", "keyup"] as const) {
+                        inside.addEventListener(type, (pressed) => {
+                          if (!paneKey(pressed.key, pressed.ctrlKey || pressed.metaKey)) return;
+                          const sent = new KeyboardEvent(type, {
+                            key: pressed.key,
+                            code: pressed.code,
+                            ctrlKey: pressed.ctrlKey,
+                            metaKey: pressed.metaKey,
+                            shiftKey: pressed.shiftKey,
+                            altKey: pressed.altKey,
+                            repeat: pressed.repeat,
+                            bubbles: true,
+                            cancelable: true,
+                          });
+                          if (!outer.dispatchEvent(sent)) pressed.preventDefault();
+                        });
+                      }
+                      inside.addEventListener(
+                        "wheel",
+                        (rolled) => {
+                          if (!(rolled.ctrlKey || rolled.metaKey)) return;
+                          const at = drawn(rolled.clientX, rolled.clientY);
+                          const sent = new WheelEvent("wheel", {
+                            deltaX: rolled.deltaX,
+                            deltaY: rolled.deltaY,
+                            deltaMode: rolled.deltaMode,
+                            ctrlKey: rolled.ctrlKey,
+                            metaKey: rolled.metaKey,
+                            clientX: at.x,
+                            clientY: at.y,
+                            bubbles: true,
+                            cancelable: true,
+                          });
+                          if (!outer.dispatchEvent(sent)) rolled.preventDefault();
+                        },
+                        { passive: false },
+                      );
+                      const phases = {
+                        touchstart: "start",
+                        touchmove: "move",
+                        touchend: "end",
+                        touchcancel: "end",
+                      } as const;
+                      for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"] as const) {
+                        inside.addEventListener(
+                          type,
+                          (touched) => {
+                            const fingers = Array.from(touched.touches, (touch) => {
+                              const at = drawn(touch.clientX, touch.clientY);
+                              return { clientX: at.x, clientY: at.y };
+                            });
+                            const zoomed = slots.touched(phases[type], fingers);
+                            if (zoomed && touched.cancelable) touched.preventDefault();
+                          },
+                          { passive: false },
+                        );
+                      }
                       void inside.fonts.ready.then(() => {
                         setFaces((seen) => seen + 1);
                       });

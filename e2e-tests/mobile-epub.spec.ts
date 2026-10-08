@@ -474,8 +474,65 @@ test("on a phone a long title is cut short on the status line, and the page and 
   }
 });
 
+test("on a phone a pinch on the device zooms it about the point between the fingers, and the bar draws no control", async ({
+  obsidian,
+  book,
+  epub,
+}) => {
+  await obsidian.mobile("phone");
+  try {
+    await book.close();
+    await book.open();
+    await book.settled(BOOK);
+    await book.uncovered();
+    await epub.open();
+    await book.footed("under");
+    await epub.zoomed(100);
+    await expect(book.zoomIn).toHaveCount(0);
+    await expect(book.zoomPercent).toHaveCount(0);
+    const place = await epub.turned();
+
+    // The fingers are on the frame, whose touches never reach the pane.
+    const screen = await boxOf(epub.frame);
+    const middle = { x: screen.x + screen.width * 0.4, y: screen.y + screen.height * 0.4 };
+    const before = await epub.share(middle);
+    const fingers = (apart: number): { x: number; y: number; id: number }[] => [
+      { x: middle.x - apart / 2, y: middle.y, id: 0 },
+      { x: middle.x + apart / 2, y: middle.y, id: 1 },
+    ];
+
+    await obsidian.touch("touchStart", fingers(60));
+    try {
+      for (let step = 1; step <= 10; step++) {
+        await obsidian.touch("touchMove", fingers(60 + step * 12));
+      }
+      // The fingers end three times as far apart as they began.
+      await epub.zoomed(300);
+      await obsidian.touch("touchEnd", []);
+    } catch (cause) {
+      await obsidian.touch("touchCancel", []);
+      throw cause;
+    }
+
+    const after = await epub.share(middle);
+    expect(after.x).toBeCloseTo(before.x, 2);
+    expect(after.y).toBeCloseTo(before.y, 2);
+    // The zoom laid nothing out again, so the reader is where they were.
+    expect(await epub.turned()).toEqual(place);
+
+    // A swap to the pages leaves the device at fit.
+    await book.view("Single page").click();
+    await epub.zoomed(100);
+  } finally {
+    await book.close();
+    await obsidian.emulateMobile(false);
+  }
+});
+
 // What this suite does not cover: a swipe, since the EPUB view has
 // none and its arrows and keys turn a screen; the camera and home bar
 // of a real phone, which emulation draws at nothing; the EPUB view in a
-// tablet's pane under 700px; and the device above the reader settings'
-// sheet on a phone on its side, where little room is left for it.
+// tablet's pane under 700px; the device above the reader settings'
+// sheet on a phone on its side, where little room is left for it; and
+// one finger that moves a zoomed device, which the browser scrolls
+// from inside the frame and emulation does not.

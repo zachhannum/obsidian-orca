@@ -546,6 +546,40 @@ button.orca-panel-choice:disabled {
   flex: none;
 }
 
+/* A zoomed device is larger than its room, so the room scrolls under
+   it, as the sheets do under a zoomed page. */
+.orca-reflow-host {
+  --orca-zoom: 1;
+}
+
+.orca-reflow-host.is-zoomed .orca-reflow-room {
+  overflow: auto;
+  align-items: safe center;
+  justify-content: safe center;
+  scrollbar-width: none;
+}
+
+.orca-reflow-host.is-zoomed .orca-reflow-room::-webkit-scrollbar {
+  display: none;
+}
+
+.orca-reflow-host.is-hand,
+.orca-reflow-host.is-hand * {
+  cursor: grab;
+  user-select: none;
+}
+
+.orca-reflow-host.is-hand.is-gripped,
+.orca-reflow-host.is-hand.is-gripped * {
+  cursor: grabbing;
+}
+
+/* A press on the frame goes to the book inside it, so the frame steps
+   aside while Space is held and the drag reaches the well. */
+.orca-reflow-host.is-hand iframe.orca-reflow-frame {
+  pointer-events: none;
+}
+
 /* The device is a drawn object, so its body is a fixed tone in either
    theme. The light ring is what parts a dark body from a dark pane. */
 .orca-reflow-body {
