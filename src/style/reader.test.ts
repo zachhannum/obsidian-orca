@@ -313,6 +313,9 @@ test("the PreviewViews artboard names every device and every option of every set
   assert.ok(part.includes(`>${String(step)} of ${String(steps)}<`), "no step");
   const words = part
     .slice(part.indexOf("<!-- the EPUB view"), part.indexOf("Opened where you are reading."))
+    // The stepper's percentage is the zoom of the device, which lays
+    // out no text.
+    .replace(/aria-label="Zoom out".*?aria-label="Zoom in"/s, "")
     .replace(/<[^>]*>/g, " ")
     // The status line's percentage is how far through the book the
     // reader is, and it is no text size.

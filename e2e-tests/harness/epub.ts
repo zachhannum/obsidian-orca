@@ -225,6 +225,35 @@ export class Epub {
     }, property);
   }
 
+  /** Waits for the host to say the device is drawn at `percent`. */
+  async zoomed(percent: number): Promise<void> {
+    await expect(this.host).toHaveAttribute("data-zoom", String(percent));
+  }
+
+  /** The zoom the host says the device is drawn at, as a percentage. */
+  async zoom(): Promise<number> {
+    return Number(await this.host.getAttribute("data-zoom"));
+  }
+
+  /**
+   * The place on the device that a point in the window is over, as a
+   * share of the device's width and height. A zoom about a point keeps
+   * this.
+   */
+  async share(point: { x: number; y: number }): Promise<{ x: number; y: number }> {
+    return this.body.evaluate((body, at) => {
+      const box = body.getBoundingClientRect();
+      return { x: (at.x - box.left) / box.width, y: (at.y - box.top) / box.height };
+    }, point);
+  }
+
+  /** The words selected inside the frame. */
+  async selected(): Promise<string> {
+    return this.frame.evaluate(
+      (frame: HTMLIFrameElement) => frame.contentDocument?.getSelection()?.toString() ?? "",
+    );
+  }
+
   /**
    * The screen and the frame in CSS pixels, which a scale leaves alone,
    * the frame's distance from the top of the screen, the size the body

@@ -293,13 +293,17 @@ its editor around these files and returns a URL. The artboard list and
   one was left, and the pane's own state keeps the view, as it keeps a
   page view. No note is written.
 - Inspect is off in the EPUB view.
-- The single and spread views zoom. The grid and the EPUB view do not.
-  The grid is the zoomed-out check, and the EPUB view has its own text
-  size.
+- The single, spread and EPUB views zoom. The grid does not. It is the
+  zoomed-out check.
+- In the EPUB view the zoom draws the device larger, body included. It
+  lays out nothing inside the device again, so the lines break where
+  they broke at fit and the reader is on the same screen. The text
+  size in the reader settings sets the book again inside a device that
+  stays the size it was, and it stays a reader setting.
 - Fit is 100%, and the zoom runs from 100% to 800%. A page is never
   smaller than fit.
-- The zoom control is a stepper in the preview's bar, in the single and
-  spread views. It is a minus button, the percentage and a plus button,
+- The zoom control is a stepper in the preview's bar, in the single,
+  spread and EPUB views. It is a minus button, the percentage and a plus button,
   and a click on the percentage returns to fit. The Mod key with plus
   zooms in, with minus zooms out and with 0 returns to fit, while the
   preview has focus. A pinch on a trackpad zooms about the pointer, and
@@ -307,12 +311,20 @@ its editor around these files and returns a URL. The artboard list and
 - On a zoomed page, a drag with the Space key held moves the page.
   The pointer is a hand while the key is down. With the key up, a drag
   selects text.
+- The control, the keys, the wheel, the pinch and the drag act on the
+  device as they act on a page. They do so from inside the device
+  too.
 - The zoom stays when the page turns, and the page it turns to shows
   from its top.
 - The zoom is not kept with the book. A book opens at fit, and a pane
   keeps its zoom while it is open.
+- A page and a device are zoomed apart. A switch between a page view
+  and the EPUB view returns to fit.
 - A zoomed page is drawn at the zoomed size, so the type stays sharp.
   A selection and a link work as they do at fit.
+- A zoomed device is scaled, and its text is drawn at the zoomed size,
+  so the type stays sharp. A selection works as it does at fit. The
+  EPUB view follows no link, at fit or zoomed.
 - A change on disk reloads a book view with no unwritten edit. A view
   with one asks the author which version to keep.
 - Chapter openings default to the next page. The right-hand page and
@@ -453,9 +465,15 @@ replaces them.
 - A swipe turns a page, a spread or a screenful. The arrows that turn
   a page stay, beside the page number.
 - A phone and a tablet have no zoom control in the bar. A pinch zooms
-  the single and spread views about the point between the fingers. On
-  a zoomed page a drag with one finger moves the page. At fit, a swipe
-  turns the page.
+  the single, spread and EPUB views about the point between the
+  fingers. On a zoomed page a drag with one finger moves the page. At
+  fit, a swipe turns the page.
+- In the EPUB view a pinch draws the device larger and lays out
+  nothing inside it again, as on desktop. A drag with one finger moves
+  a zoomed device.
+- On a phone and a tablet the device's screen takes no touch, so the
+  pinch and the drag reach the pane. A long press selects no text in
+  the EPUB view there.
 - EPUB is the fourth view on a phone and on a tablet. Its controls are
   the settings button, the device select and the two arrows, each as
   tall as a touch. They go where the page's foot goes. Under the page

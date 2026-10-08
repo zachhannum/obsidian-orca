@@ -7,9 +7,11 @@ import {
   fitted,
   leftOf,
   openingOf,
+  paneKey,
   resolvePath,
   rewriteSheet,
   screenOf,
+  windowPoint,
   sheetOrder,
   stepOf,
   turnedBy,
@@ -238,6 +240,25 @@ test("a screen opens with the first block that begins on it and closes with the 
   assert.deepEqual(openingOf(LAID, 2, WIDTH), { opens: 60, closes: 64, begun: true });
   assert.deepEqual(openingOf(LAID, 3, WIDTH), { opens: 64, closes: 64, begun: false });
   assert.deepEqual(openingOf([], 0, WIDTH), { opens: undefined, closes: undefined, begun: false });
+});
+
+test("a point inside a scaled frame is drawn at the frame's corner plus the point times the scale", () => {
+  const frame = { left: 100, top: 40, scale: 1.5 };
+  assert.deepEqual(windowPoint(frame, 0, 0), { x: 100, y: 40 });
+  assert.deepEqual(windowPoint(frame, 200, 80), { x: 400, y: 160 });
+  assert.deepEqual(windowPoint({ left: 100, top: 40, scale: 0.5 }, 200, 80), { x: 200, y: 80 });
+});
+
+test("the frame sends the pane a turn, the Space that moves a zoomed device and a zoom, and keeps every other key", () => {
+  assert.equal(paneKey("ArrowRight", false), true);
+  assert.equal(paneKey("PageUp", false), true);
+  assert.equal(paneKey(" ", false), true);
+  for (const key of ["=", "+", "-", "0"]) {
+    assert.equal(paneKey(key, true), true);
+    assert.equal(paneKey(key, false), false);
+  }
+  assert.equal(paneKey("c", true), false);
+  assert.equal(paneKey("a", false), false);
 });
 
 // What this tier does not cover: `rewriteDocument`, which parses a

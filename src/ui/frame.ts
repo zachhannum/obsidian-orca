@@ -236,6 +236,34 @@ export function fitted(device: Box, well: Box): number {
   return Math.min(1, well.width / device.width, well.height / device.height);
 }
 
+/** A frame as the window draws it: its corner, and the scale it is drawn at. */
+export interface Drawn {
+  left: number;
+  top: number;
+  scale: number;
+}
+
+/**
+ * The point in the window that a point inside a frame is drawn at. An
+ * event inside the frame is measured from the frame's own corner, in
+ * pixels the scale has not touched.
+ */
+export function windowPoint(frame: Drawn, x: number, y: number): { x: number; y: number } {
+  return { x: frame.left + x * frame.scale, y: frame.top + y * frame.scale };
+}
+
+/** The keys that zoom while Ctrl or Cmd is held. */
+const ZOOM_KEYS = new Set(["=", "+", "-", "0"]);
+
+/**
+ * Whether a key pressed inside the frame is one the pane answers: a
+ * turn, the Space that moves a zoomed device, or a zoom. The frame's
+ * keys never reach the pane, so the frame sends these on.
+ */
+export function paneKey(key: string, mod: boolean): boolean {
+  return key === " " || stepOf(key) !== undefined || (mod && ZOOM_KEYS.has(key));
+}
+
 /** A document a frame can load, and the node of the section it holds. */
 export interface Document {
   url: string;
