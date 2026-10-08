@@ -388,6 +388,16 @@ export class Navigator {
   }
 
   /**
+   * Scrolls the list to put a row in the middle of it, or as near as
+   * the list goes. A row past the foot of a short screen takes no touch.
+   */
+  async centre(row: Locator): Promise<void> {
+    await row.evaluate((drawn) => {
+      drawn.scrollIntoView({ block: "center" });
+    });
+  }
+
+  /**
    * Swipes a finger up the list from the middle of a row, past the
    * handle at its start, and returns how far the list scrolled and
    * whether a drag began.

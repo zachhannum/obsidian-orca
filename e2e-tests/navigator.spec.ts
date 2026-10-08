@@ -300,7 +300,9 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   await expect(navigator.pickNotes()).toHaveCount(9);
   await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 9 }, () => /\S/));
   for (const generated of ["Title page", "Contents"]) {
-    await expect(obsidian.suggestion().filter({ hasText: generated })).toContainText(UNSET);
+    await expect(
+      obsidian.suggestion().filter({ hasText: new RegExp(`^${generated}`) }),
+    ).toContainText(UNSET);
   }
   await navigator.pick("Epigraph");
 
@@ -341,7 +343,7 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   );
   await vault.modify(BOOK, long);
   await navigator.repainted(drawn);
-  await expect(navigator.entries(BOOK)).toHaveCount(49);
+  await expect(navigator.entries(BOOK)).toHaveCount(51);
   const tall = await navigator.reach();
   expect(tall.most).toBeGreaterThan(0);
 
@@ -358,10 +360,10 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   });
 
   // The row moved, and it is the same one row: a drop that lost it or
-  // wrote it twice would leave the count somewhere other than 49. The
+  // wrote it twice would leave the count somewhere other than 51. The
   // wait is on the paint that read the drop's write back.
   await navigator.repainted(dropping);
-  await expect(navigator.entries(BOOK)).toHaveCount(49);
+  await expect(navigator.entries(BOOK)).toHaveCount(51);
   expect((await vault.read(BOOK)).match(/\[\[Chapter 0\]\]/g)).toHaveLength(1);
   expect((await navigator.reach()).height).toBe(tall.height);
 });

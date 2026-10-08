@@ -20,7 +20,7 @@ const FILE = `${NAME}.pdf`;
 const EPUB = `${NAME}.epub`;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 958;
+const BOOK_WORDS = 1029;
 
 /**
  * The words the pages print that no note holds: the title page, the

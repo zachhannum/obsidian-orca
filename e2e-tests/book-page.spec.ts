@@ -11,7 +11,7 @@ const CHAPTER = "Chapter Twelve";
 const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 1000;
+const BOOK_WORDS = 1071;
 
 /** The image the fixture book can take as its cover. */
 const DEVICE = "images/device.png";
@@ -200,7 +200,7 @@ test("the reading order is read-only on the page, and clicking an entry focuses 
   // Nothing on the page can move a row: there is no sortable, and every
   // entry is a button.
   await expect(note.order.locator("[aria-roledescription]")).toHaveCount(0);
-  await expect(note.order.getByRole("button")).toHaveCount(9);
+  await expect(note.order.getByRole("button")).toHaveCount(11);
   await expect(note.entry("Title page")).toContainText("generated");
   await expect(note.entry("Volume the First")).toContainText("part");
 

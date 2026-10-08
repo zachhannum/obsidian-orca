@@ -10,7 +10,7 @@ const BOOK = "Pride and Prejudice.md";
 
 /** The fixture chapter, and the page its title opens on. */
 const CHAPTER_TITLE = "Chapter Twelve";
-const OPENING = 11;
+const OPENING = 15;
 
 /** Words on the first line of the chapter's second paragraph. */
 const SECOND_PARAGRAPH = "Her answer";
