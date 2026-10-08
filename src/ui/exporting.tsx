@@ -10,7 +10,7 @@ import type { Destination } from "@/assets/destination";
 import type { ExportResult, ExportTarget } from "@/engine/export";
 import { Icon } from "@/ui/icon";
 import { folderOf } from "@/ui/kept";
-import { standing, type Blocker, type Checked } from "@/ui/preflight";
+import { standing, type Blocker, type Caution, type Checked } from "@/ui/preflight";
 import type { Shareable, Shared } from "@/ui/share";
 
 export type Stage =
@@ -63,6 +63,8 @@ export interface Exporter {
   open(path: string): void;
   /** Goes to the place an error names. */
   fix(blocker: Blocker): void;
+  /** Goes to the place a warning names, or to Issues when it names none. */
+  warned(caution: Caution): void;
   close(): void;
 }
 
@@ -179,6 +181,7 @@ function Exporting({
     marked.dataset["state"] = shown;
     marked.dataset["formats"] = ids;
     marked.dataset["errors"] = String(checked?.errors.length ?? 0);
+    marked.dataset["warnings"] = String(checked?.warnings.length ?? 0);
   }, [marked, shown, ids, checked]);
 
   // Each format writes in turn, because the engine holds one book and
@@ -320,6 +323,7 @@ function Exporting({
   const prepared = useRef(preparing);
   if (preparing !== undefined) prepared.current = preparing;
   const errors = checked?.errors ?? [];
+  const warnings = checked?.warnings ?? [];
   const stem = fileName(destination.path);
   // An app with no disk to choose keeps every file in the vault, and
   // the dialog says so.
@@ -509,10 +513,13 @@ function Exporting({
             <span>{waited}</span>
           </div>
         )}
-        {checking || errors.length === 0 ? null : (
+        {checking || errors.length + warnings.length === 0 ? null : (
           <div className="orca-export-list" data-testid="orca-export-list">
             {errors.map((blocker, at) => (
               <Card key={at} blocker={blocker} exporter={exporter} />
+            ))}
+            {warnings.map((caution, at) => (
+              <Warned key={at} caution={caution} exporter={exporter} />
             ))}
           </div>
         )}
@@ -646,6 +653,30 @@ function Card({ blocker, exporter }: { blocker: Blocker; exporter: Exporter }): 
             }}
           >
             {blocker.fix}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Warned({ caution, exporter }: { caution: Caution; exporter: Exporter }): JSX.Element {
+  return (
+    <div className="orca-preview-issue orca-export-warning" data-testid="orca-export-warning">
+      <Icon name="alert-triangle" className="orca-export-warning-icon" />
+      <div>
+        <div className="orca-preview-issue-said">{caution.said}</div>
+        <div className="orca-export-at">
+          {caution.place === undefined ? null : `${caution.place} · `}
+          <button
+            type="button"
+            className="orca-preview-issue-open"
+            data-testid="orca-export-warned"
+            onClick={() => {
+              exporter.warned(caution);
+            }}
+          >
+            {caution.fix}
           </button>
         </div>
       </div>

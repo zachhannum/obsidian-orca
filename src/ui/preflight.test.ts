@@ -66,7 +66,88 @@ test("a clean book passes with no errors", () => {
   const checked = preflight(book({}));
 
   assert.deepEqual(checked.errors, []);
+  assert.deepEqual(checked.warnings, []);
   assert.equal(checked.fine, "No errors");
+});
+
+test("each warning from the session is listed in the engine's words", () => {
+  const warnings = [
+    { message: "text overflows its box by 4.2pt", origin: "Part/Chapter One.md:12:1" },
+    { message: "no font has the glyph U+2767", origin: null },
+    { message: "unknown property `colour`", origin: "book.css:4:3" },
+  ];
+
+  const checked = preflight(book({ warnings }));
+
+  assert.deepEqual(
+    checked.warnings.map((each) => each.said),
+    warnings.map((each) => each.message),
+  );
+});
+
+test("warnings alone leave the book passing, and the line counts them", () => {
+  const warnings = [
+    { message: "text overflows its box by 4.2pt", origin: "Chapter One.md:12:1" },
+    { message: "no font has the glyph U+2767", origin: null },
+  ];
+
+  const checked = preflight(book({ warnings }));
+
+  assert.deepEqual(checked.errors, []);
+  assert.equal(checked.fine, "No errors · 2 warnings");
+  assert.equal(preflight(book({ warnings: warnings.slice(0, 1) })).fine, "No errors · 1 warning");
+
+  // A warning against a sheet orca writes is not the author's, and is not counted.
+  const own = { message: "orca's defect", origin: "design.css:1:1" };
+  assert.equal(preflight(book({ warnings: [...warnings, own] })).fine, "No errors · 2 warnings");
+});
+
+test("a warning with an origin goes to its note and line, and one without goes to Issues", () => {
+  const checked = preflight(
+    book({
+      warnings: [
+        { message: "text overflows its box by 4.2pt", origin: "Part/Chapter One.md:12:5" },
+        { message: "unknown property `colour`", origin: "book.css:4:3" },
+        { message: "no font has the glyph U+2767", origin: null },
+      ],
+    }),
+  );
+
+  assert.deepEqual(checked.warnings, [
+    {
+      said: "text overflows its box by 4.2pt",
+      place: "Chapter One, line 12",
+      fix: "Go to line",
+      at: { route: "note", place: { sheet: "Part/Chapter One.md", line: 12, column: 5 } },
+    },
+    {
+      said: "unknown property `colour`",
+      place: "The book's CSS, line 4",
+      fix: "Go to line",
+      at: { route: "css", place: { sheet: "book.css", line: 4, column: 3 } },
+    },
+    { said: "no font has the glyph U+2767", place: undefined, fix: "Open Issues", at: undefined },
+  ]);
+});
+
+test("a warning an image error shows is not listed again", () => {
+  const image = { message: "image `hunsford.png` was not registered", origin: "Chapter Twenty-Two.md:3:1" };
+  const other = { message: "text overflows its box by 4.2pt", origin: "Chapter Twenty-Two.md:9:1" };
+
+  const checked = preflight(
+    book({
+      unread: [{ url: "hunsford.png", note: "Chapter Twenty-Two.md", line: 2 }],
+      warnings: [image, other],
+    }),
+  );
+
+  assert.equal(checked.errors[0]?.engine, image.message);
+  assert.deepEqual(
+    checked.warnings.map((each) => each.said),
+    [other.message],
+  );
+  // The errors still stand, so the book does not pass.
+  assert.equal(checked.fine, undefined);
 });
 
 // What this tier does not cover: an error only the engine can see, such
