@@ -159,7 +159,7 @@ test("epubcheck reports no errors on the exported EPUB, and the EPUB holds the w
     const paged = countWords(execFileSync("pdftotext", [pdf, "-"], { encoding: "utf8" }).replace(/-\n/g, ""));
     // An EPUB has no pages, so it prints the title page and the
     // contents and no running head or folio.
-    const flowed = countWords(epubText(epub));
+    const flowed = countWords(await epubText(epub));
     expect(flowed).toBeGreaterThanOrEqual(BOOK_WORDS);
     expect(flowed).toBeLessThanOrEqual(paged);
     expect(paged).toBeLessThanOrEqual(BOOK_WORDS + PRINTED_WORDS);

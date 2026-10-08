@@ -3,8 +3,6 @@
  * text a reading app prints from them.
  */
 
-import { inflateRawSync } from "node:zlib";
-
 /** The record that ends a zip, and one file's record in its directory. */
 const END = 0x06054b50;
 const ENTRY = 0x02014b50;
@@ -18,7 +16,7 @@ const BLOCK = /<\/(?:p|h[1-6]|li|div|section|nav|blockquote|pre|figcaption|td|th
 const NAMED: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
 
 /** The files of a zip by their paths, each inflated. */
-export function unzip(bytes: Uint8Array): Map<string, Uint8Array> {
+export async function unzip(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = bytes.length - 22;
   while (end >= 0 && view.getUint32(end, true) !== END) end -= 1;
@@ -36,18 +34,23 @@ export function unzip(bytes: Uint8Array): Map<string, Uint8Array> {
     // A file's own header repeats its name, with extra fields of its own length.
     const from = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
     const held = bytes.subarray(from, from + size);
-    files.set(path, method === STORED ? held : inflateRawSync(held));
+    files.set(path, method === STORED ? held : await inflated(held));
     at += 46 + name + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
   }
   return files;
+}
+
+async function inflated(held: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([new Uint8Array(held)]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 /**
  * The text of the documents in an EPUB's spine, in reading order. The
  * navigation document is read only where the spine names it.
  */
-export function epubText(bytes: Uint8Array): string {
-  const files = unzip(bytes);
+export async function epubText(bytes: Uint8Array): Promise<string> {
+  const files = await unzip(bytes);
   const read = (path: string): string => {
     const file = files.get(path);
     if (file === undefined) throw new Error(`the EPUB has no ${path}`);

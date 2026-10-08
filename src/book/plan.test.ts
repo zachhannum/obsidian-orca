@@ -1042,7 +1042,7 @@ test("the fixture book's EPUB holds the words its PDF holds, less the running he
   // A word the engine hyphenated comes back in two pieces, so a break
   // after a hyphen at the end of a line is joined before the count.
   const paged = countWords(read.stdout.replace(/-\n/g, ""));
-  const flowed = countWords(epubText(bytes));
+  const flowed = countWords(await epubText(bytes));
   assert.ok(flowed > 0, "the EPUB's spine prints no word");
   assert.ok(flowed <= paged, `the EPUB prints ${String(flowed)} words and the PDF ${String(paged)}`);
   assert.ok(paged - flowed <= FURNITURE, `the PDF prints ${String(paged - flowed)} words the EPUB lacks`);
