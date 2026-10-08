@@ -190,6 +190,32 @@ test("an EPUB of the fixture book opens with the title page, as a document of it
   }
 });
 
+test("an EPUB of the fixture book carries a document for each section the book sends, the contents among them, and no other", async () => {
+  const ops = await planned(await fixture());
+  const { spine, files } = await epubFiles(ops);
+  const documents = spine.map((entry) => ({
+    path: entry.path.replace(/^.*\//, ""),
+    text: new TextDecoder().decode(files.find((file) => file.path === entry.path)?.bytes),
+  }));
+  const held = (text: string) => [...text.matchAll(/<section id="([^"]+)"/g)].map((match) => match[1]);
+
+  assert.deepEqual(
+    documents.map(({ text }) => held(text)),
+    only(ops, "book").sources.map((source) => [source.attributes?.id]),
+  );
+
+  const contents = documents.find(({ text }) => held(text).includes("contents"))?.text ?? "";
+  const entries = [...contents.matchAll(/class="entry"><a href="([^#"]+)#[^"]*">([^<]+)</g)];
+  assert.deepEqual(
+    entries.map((entry) => entry[2]),
+    ["Chapter Twelve", "Chapter Fifteen"],
+  );
+  assert.deepEqual(
+    entries.map((entry) => entry[1]),
+    ["chapter-twelve", "chapter-fifteen"].map((id) => documents.find(({ text }) => held(text).includes(id))?.path),
+  );
+});
+
 test("a title page with no metadata falls back to its role's own name", async () => {
   const book: Book = {
     format: FORMAT,
@@ -1070,9 +1096,7 @@ test("in the exported fixture book, each contents entry prints the page its chap
   }
 });
 
-// What this tier does not cover: an EPUB with no contents, which waits
-// on a source the engine sets on pages only, the face bytes of a `font`
-// op reaching the engine, which the session tier tests, the cuts a
-// family is made of, which belong to the font index, and what the
-// sample's pages look like, which the PDF shows and no assertion here
-// reads.
+// What this tier does not cover: the face bytes of a `font` op reaching
+// the engine, which the session tier tests, the cuts a family is made
+// of, which belong to the font index, and what the sample's pages look
+// like, which the PDF shows and no assertion here reads.
