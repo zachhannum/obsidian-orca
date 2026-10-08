@@ -83,6 +83,31 @@ test("each shard keeps its own report and writes its own summary", async () => {
   assert.match(await read("playwright.config.ts"), /\["\.\/e2e-tests\/harness\/report\.ts"\]/);
 });
 
+test("the e2e job installs a pinned epubcheck, and the export spec runs it on the EPUB", async () => {
+  const e2e = job("e2e");
+
+  assert.match(e2e, /EPUBCHECK: "\d+\.\d+\.\d+"\n/);
+  assert.match(e2e, /SHA256: [0-9a-f]{64}\n/);
+  assert.match(e2e, /releases\/download\/v\$EPUBCHECK\/epubcheck-\$EPUBCHECK\.zip"\n/);
+  assert.match(e2e, /echo "\$SHA256 {2}\$RUNNER_TEMP\/epubcheck\.zip" \| shasum -a 256 -c -\n/);
+  // The spec finds the checker on the PATH, and it is there before the suite runs.
+  assert.match(e2e, /echo "\$RUNNER_TEMP\/bin" >> "\$GITHUB_PATH"\n/);
+  assert.ok(e2e.indexOf("- name: epubcheck\n") < e2e.indexOf("- name: e2e\n"));
+  assert.match(await read("e2e-tests/export.spec.ts"), /spawnSync\("epubcheck", \[written, "--json", "-"\]/);
+});
+
+test("the e2e summary lists the EPUB check under the table of specs", async () => {
+  const [report, exported] = await Promise.all([
+    read("e2e-tests/harness/report.ts"),
+    read("e2e-tests/export.spec.ts"),
+  ]);
+
+  assert.match(report, /export const CHECK = "check";\n/);
+  assert.match(report, /filter\(\(\{ type \}\) => type === CHECK\)/);
+  assert.match(report, /lines\.push\("", "### File checks", ""\)/);
+  assert.match(exported, /type: CHECK,\n\s+description: `epubcheck \$\{checkerVersion\} on \$\{EPUB\}: /);
+});
+
 test("`npm run e2e` is one run on one Obsidian", async () => {
   assert.match(pkg, /"e2e": "playwright test --project=orca"/);
   assert.match(await read("playwright.config.ts"), /workers: 1,\n/);

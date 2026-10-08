@@ -2,7 +2,9 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { epubText } from "@/book/testUtils/epub";
 import { countWords } from "@/book/words";
+import { CHECK } from "./harness/report";
 import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault. It sits at the top of the vault. */
@@ -26,6 +28,12 @@ const BOOK_WORDS = 958;
  * words a page, so the bound is a little more than that for fifteen.
  */
 const PRINTED_WORDS = 160;
+
+/** The part of epubcheck's JSON report the spec reads. */
+interface Epubcheck {
+  messages: { ID: string; severity: string; message: string }[];
+  checker: { checkerVersion: string; nFatal: number; nError: number; nWarning: number };
+}
 
 /** A folio, or a span of them. */
 const FOLIO = /^\d+(–\d+)?$/;
@@ -104,6 +112,60 @@ test("export writes the pages on screen to a vault path, and the file is a PDF w
   // not laid out again.
   expect(await book.stages()).toEqual(stages);
   await expect(book.surface).toHaveAttribute("data-generation", String(generation));
+});
+
+test("epubcheck reports no errors on the exported EPUB, and the EPUB holds the words the PDF holds", async ({
+  book,
+  exporting,
+  vault,
+}, info) => {
+  await book.open();
+  await book.settled(BOOK);
+  // The export writes two files the checked-in vault does not have,
+  // and the vault takes them back out when the spec ends.
+  vault.touch(FILE);
+  vault.touch(EPUB);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  await exporting.formats("pdf", "epub");
+  await exporting.write.click();
+  await exporting.reaches("written");
+
+  const epub = await vault.bytes(EPUB);
+  const folder = await mkdtemp(path.join(tmpdir(), "orca-export-"));
+  try {
+    const written = path.join(folder, EPUB);
+    await writeFile(written, epub);
+    // epubcheck writes its report to stdout as JSON, and what it says
+    // on the way to stderr.
+    const ran = spawnSync("epubcheck", [written, "--json", "-"], { encoding: "utf8" });
+    expect(ran.error, "epubcheck is not on the PATH").toBeUndefined();
+    const report = JSON.parse(ran.stdout) as Epubcheck;
+    const { checkerVersion, nFatal, nError, nWarning } = report.checker;
+    info.annotations.push({
+      type: CHECK,
+      description: `epubcheck ${checkerVersion} on ${EPUB}: ${String(nFatal + nError)} errors, ${String(nWarning)} warnings`,
+    });
+    const errors = report.messages.filter(({ severity }) => severity === "FATAL" || severity === "ERROR");
+    expect(errors.map(({ ID, message }) => `${ID} ${message}`)).toEqual([]);
+    expect(nFatal + nError).toBe(0);
+    expect(ran.status, ran.stderr).toBe(0);
+
+    const pdf = path.join(folder, FILE);
+    await writeFile(pdf, await vault.bytes(FILE));
+    // A word the engine hyphenated comes back in two pieces, so a break
+    // after a hyphen at the end of a line is joined before the count.
+    const paged = countWords(execFileSync("pdftotext", [pdf, "-"], { encoding: "utf8" }).replace(/-\n/g, ""));
+    // An EPUB has no pages, so it prints the title page and the
+    // contents and no running head or folio.
+    const flowed = countWords(epubText(epub));
+    expect(flowed).toBeGreaterThanOrEqual(BOOK_WORDS);
+    expect(flowed).toBeLessThanOrEqual(paged);
+    expect(paged).toBeLessThanOrEqual(BOOK_WORDS + PRINTED_WORDS);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
 });
 
 test("export writes the book as an EPUB from the open session, and its warnings join the list unchanged", async ({

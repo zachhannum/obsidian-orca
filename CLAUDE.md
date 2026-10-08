@@ -266,10 +266,15 @@ Linux for a PR, and on Linux and macOS for a push to main.
    its platform passed
 4. PDF validation inside the e2e job: `qpdf --check` for structure and
    a `pdftotext` round trip for the words, against the exported book
-5. advisories check — no merged dependency with an open advisory
+5. EPUB validation inside the e2e job: a pinned `epubcheck`, whose
+   download is held to a digest, against the exported book. The EPUB's
+   words are counted against the PDF's
+6. advisories check — no merged dependency with an open advisory
 
 Both test jobs write their run to the job's summary page, and each
-e2e shard keeps its HTML report as an artifact.
+e2e shard keeps its HTML report as an artifact. An e2e summary lists
+the file checks its specs ran under the table, which is where the
+`epubcheck` result is read.
 
 `.github/workflows/docs.yml` runs on a PR that touches `docs/` or the
 site's tokens, and on the same paths on main. Its `build` job installs
