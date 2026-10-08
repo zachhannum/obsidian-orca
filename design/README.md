@@ -255,6 +255,12 @@ its editor around these files and returns a URL. The artboard list and
   and a linked manuscript. The frame goes to the screen that holds the
   place. A chapter opens at its first screen, front matter and
   generated matter included.
+- An EPUB carries the title page and the contents, as it carries every
+  section of the book. Each section is a document, so it opens on a
+  screen of its own. Both are set by their own rules, less the page
+  rules the EPUB writer removes, so the contents are a page of links
+  with no page numbers. The reading system shows the engine's
+  navigation document in a menu of its own, beside the book.
 - In the EPUB view the place kept is a screen, and a screen is known by
   the block it opens with. A swap from the manuscript lands on the
   screen that holds the line at the top of the pane, and a swap back

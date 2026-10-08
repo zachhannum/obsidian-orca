@@ -176,6 +176,46 @@ test("a title page is set from the book's properties each time the book is sent"
   );
 });
 
+test("an EPUB of the fixture book opens with the title page, as a document of its own", async () => {
+  const { spine, files } = await epubFiles(await planned(await fixture()));
+  const first = new TextDecoder().decode(
+    files.find((file) => file.path === spine[0]?.path)?.bytes,
+  );
+
+  assert.match(first, /<section [^>]*id="title-page"/);
+  assert.equal(first.match(/<section /g)?.length, 1);
+  const words = first.replace(/<[^>]+>/g, " ");
+  for (const block of ["The Bennet Novels", "Pride and Prejudice", "Jane Austen", "Whitehall Press"]) {
+    assert.ok(words.includes(block), block);
+  }
+});
+
+test("an EPUB of the fixture book carries a document for each section the book sends, the contents among them, and no other", async () => {
+  const ops = await planned(await fixture());
+  const { spine, files } = await epubFiles(ops);
+  const documents = spine.map((entry) => ({
+    path: entry.path.replace(/^.*\//, ""),
+    text: new TextDecoder().decode(files.find((file) => file.path === entry.path)?.bytes),
+  }));
+  const held = (text: string) => [...text.matchAll(/<section id="([^"]+)"/g)].map((match) => match[1]);
+
+  assert.deepEqual(
+    documents.map(({ text }) => held(text)),
+    only(ops, "book").sources.map((source) => [source.attributes?.id]),
+  );
+
+  const contents = documents.find(({ text }) => held(text).includes("contents"))?.text ?? "";
+  const entries = [...contents.matchAll(/class="entry"><a href="([^#"]+)#[^"]*">([^<]+)</g)];
+  assert.deepEqual(
+    entries.map((entry) => entry[2]),
+    ["Chapter Twelve", "Chapter Fifteen"],
+  );
+  assert.deepEqual(
+    entries.map((entry) => entry[1]),
+    ["chapter-twelve", "chapter-fifteen"].map((id) => documents.find(({ text }) => held(text).includes(id))?.path),
+  );
+});
+
 test("a title page with no metadata falls back to its role's own name", async () => {
   const book: Book = {
     format: FORMAT,
