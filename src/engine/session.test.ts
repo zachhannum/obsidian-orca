@@ -825,6 +825,59 @@ test("the sample note sets to a page the painter can draw", async () => {
   }
 });
 
+/** Three notes of one book, in reading order. */
+const NOTES: Source[] = ["Alpha", "Bravo", "Charlie"].map((word) => ({
+  name: `${word}.md`,
+  text: `## ${word}\n\nIts words.\n`,
+}));
+
+/** The headings of the book, in the order its pages set them. */
+async function headings(session: Session): Promise<string[]> {
+  const reading = await session.read(0, session.pages);
+  assert.ok(reading, "the book set to no pages");
+  const words = NOTES.map((note) => note.name.replace(".md", ""));
+  return reading.pages.flatMap((page) =>
+    page.items.flatMap((item) =>
+      item.kind === "text" ? words.filter((word) => item.text.includes(word)) : [],
+    ),
+  );
+}
+
+test("a chapter emptied and written back in one session is set at its place in the reading order", async () => {
+  const engine = await startEngine(await moduleBytes(), nodeHost());
+  try {
+    const [first] = NOTES;
+    assert.ok(first);
+    const order = ["Alpha", "Bravo", "Charlie"];
+    for (const empty of ["", " \n", "---\ntitle: Alpha\n---\n"]) {
+      const session = new Session(engine.client, faces());
+      await session.open([
+        { op: "dialect", dialect: "obsidian" },
+        { op: "book", sources: NOTES },
+        styleOp([{ name: THEME_SHEET, css: "" }]),
+      ]);
+      assert.deepEqual(await headings(session), order);
+
+      await session.render([{ op: "edit", name: first.name, text: empty }]);
+      assert.deepEqual(await headings(session), order.slice(1));
+      await session.render([{ op: "edit", name: first.name, text: first.text }]);
+      assert.deepEqual(await headings(session), order, JSON.stringify(empty));
+    }
+
+    // A chapter that is empty when the book opens, and is typed in after.
+    const session = new Session(engine.client, faces());
+    await session.open([
+      { op: "dialect", dialect: "obsidian" },
+      { op: "book", sources: [{ name: first.name, text: "" }, ...NOTES.slice(1)] },
+      styleOp([{ name: THEME_SHEET, css: "" }]),
+    ]);
+    await session.render([{ op: "edit", name: first.name, text: first.text }]);
+    assert.deepEqual(await headings(session), order);
+  } finally {
+    engine.stop();
+  }
+});
+
 /** A book of three chapters, each on a page of its own. */
 const CHAPTERS: Source = {
   name: "Chapters.md",

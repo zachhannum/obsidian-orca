@@ -128,16 +128,9 @@ test("the hero's frames are real Obsidian on the sample book", async ({ reel }) 
     { preview: obsidian.actionIn(EDITOR, OPEN_PREVIEW) },
     { rows: await rowsIn(editor.locator(".cm-content")) },
   );
-  // A session that saw the chapter empty sets it after the colophon
-  // once it is written again. Orca is loaded again here, so the preview
-  // sets the book from the notes as they are on disk.
-  await obsidian.reloadPlugin();
   await obsidian.actionIn(EDITOR, OPEN_PREVIEW).click();
   await expect(site.book.surface).toBeVisible();
   await reel.opensOn(CHAPTER, OPENS_BARE);
-  // Orca opens the design panel as it loads, and the take has not
-  // reached it yet.
-  await obsidian.put("right");
   await reel.frame("read", { manuscript: site.book.asMarkdown });
 
   // Design in the panel: each click sets the book again.
