@@ -18,7 +18,7 @@ const FILE = "Chapter Twelve.md";
 const DEVICE = "images/device.png";
 
 /** The size in its header. */
-const SIZE: Intrinsic = { width: 220, height: 132, dpiX: 96, dpiY: 96 };
+const SIZE: Intrinsic = { width: 220, height: 132, dpiX: 96, dpiY: 96, sized: true };
 
 /** One page with that image on it, as the engine places it. */
 const PLACED: Page = {
@@ -28,7 +28,7 @@ const PLACED: Page = {
   height: 612,
   sections: [],
   links: [],
-  items: [{ kind: "image", x: 54, y: 54, w: 165, h: 99, asset: 0, alpha: 255, layer: 0 }],
+  items: [{ kind: "image", x: 54, y: 54, w: 165, h: 99, asset: 0, alpha: 255, blend: "normal", layer: 0 }],
 };
 
 /** The same file, named the other way a vault path is written. */

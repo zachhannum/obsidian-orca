@@ -404,7 +404,7 @@ test("layout reads the header for the size and decodes nothing", async () => {
   const output = await set(ops);
 
   assert.deepEqual(output.assets, [
-    { url: DEVICE, intrinsic: { width: 220, height: 132, dpiX: 96, dpiY: 96 } },
+    { url: DEVICE, intrinsic: { width: 220, height: 132, dpiX: 96, dpiY: 96, sized: true } },
   ]);
   const placed = output.pages
     .flatMap((page) => page.items)
@@ -1086,6 +1086,26 @@ test("the fixture book's EPUB holds the words its PDF holds, less the running he
   assert.ok(flowed > 0, "the EPUB's spine prints no word");
   assert.ok(flowed <= paged, `the EPUB prints ${String(flowed)} words and the PDF ${String(paged)}`);
   assert.ok(paged - flowed <= FURNITURE, `the PDF prints ${String(paged - flowed)} words the EPUB lacks`);
+});
+
+test("the exported fixture book prints no comment, highlight mark, block id or callout marker", async () => {
+  const note = await readFile(path.join(root, "fixture", "Acknowledgements.md"), "utf8");
+  for (const written of ["%%Ask the readers", "==the printer's own==", " ^device", "> [!note] On the device"]) {
+    assert.ok(note.includes(written), `the fixture does not hold ${written}`);
+  }
+
+  const read = spawnSync("pdftotext", [await exportedBook(vault, BOOK), "-"], { encoding: "utf8" });
+  assert.equal(read.status, 0, read.stderr);
+  const printed = read.stdout.replace(/-\n/g, "").replace(/\s+/g, " ");
+
+  for (const mark of ["%%", "==", "^device", "[!"]) {
+    assert.ok(!printed.includes(mark), `the book prints ${mark}`);
+  }
+  assert.ok(!printed.includes("Ask the readers"), "the book prints the comment");
+  // The words a mark was written around are still set.
+  for (const words of ["own, cut for this edition.", "On the device", "It closes every book in the series."]) {
+    assert.ok(printed.includes(words), `the book does not print ${words}`);
+  }
 });
 
 test("in the exported fixture book, each contents entry prints the page its chapter opens on", async () => {

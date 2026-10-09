@@ -18,12 +18,27 @@ const EMBED = /!\[\[[^\]]*\]\]/g;
 /** The destination of a markdown link, which the page does not print. */
 const DESTINATION = /\]\([^)\s]*(?:\s+"[^"]*")?\)/g;
 
+/** An Obsidian comment, which the page does not print. */
+const COMMENT = /%%[^]*?%%/g;
+
+/** The name a link reaches a block by, written at the end of the block. */
+const BLOCK_ID = /(^|[ \t])\^[A-Za-z0-9-]+[ \t]*$/gm;
+
+/** The marker a callout opens on, which gives its type and prints nothing. */
+const CALLOUT = /^([ \t]*>[ \t]*)\[![^\]\n]*\][+-]?(?=[ \t]|$)/gm;
+
 /**
- * Counts the words in a note's body. Its properties, its embeds and
- * where its links go are not counted. A code block is, since its text
- * is set on the page.
+ * Counts the words in a note's body. Its properties, its embeds, its
+ * comments and where its links go are not counted. A code block is,
+ * since its text is set on the page.
  */
 export function countWords(text: string): number {
   const { body } = readFrontmatter(text);
-  return body.replace(EMBED, " ").replace(DESTINATION, "]").match(WORD)?.length ?? 0;
+  const printed = body
+    .replace(COMMENT, " ")
+    .replace(EMBED, " ")
+    .replace(DESTINATION, "]")
+    .replace(BLOCK_ID, "$1")
+    .replace(CALLOUT, "$1");
+  return printed.match(WORD)?.length ?? 0;
 }

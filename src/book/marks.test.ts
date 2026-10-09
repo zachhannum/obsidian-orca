@@ -214,6 +214,8 @@ interface Line {
   from: number;
   to: number;
   text: string;
+  /** Whether the line opens on a comment, in a note read without its comments. */
+  led: boolean;
 }
 
 /** The byte of the note a character of one line falls at. */
@@ -228,15 +230,45 @@ function byteIn(line: Line, at: number): number {
  */
 function candidates(text: string): Candidate[] {
   const found: Candidate[] = [];
-  for (const line of linesOf(text)) {
-    found.push(...spansOn(line), ...onLine(line));
+  const seen = new Set<string>();
+  // A comment and a block id are not words of the block they are
+  // written in, so a shape is looked for with them and without them.
+  for (const read of [text, bare(text)]) {
+    for (const line of linesOf(read, read === text ? undefined : text)) {
+      for (const candidate of [...spansOn(line), ...onLine(line)]) {
+        // A heading covers its line whether or not it read a run, so
+        // a run is one only where the line ends on it as written.
+        if (read !== text && candidate.form === "heading") continue;
+        const key = `${candidate.form} ${candidate.open ?? ""} ${candidate.to}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        found.push(candidate);
+      }
+    }
   }
-  return found;
+  return found.sort((one, two) => one.from - two.from);
+}
+
+/**
+ * A note with blanks over each pair of `%%` and what is between them,
+ * and over a `^name` a line ends on. A blank stands for each byte, so
+ * no byte of the note moves. The pairs are taken as written, code
+ * included, because the engine settles what a shape is.
+ */
+function bare(text: string): string {
+  const blank = (said: string): string => said.replace(/[^\n\r]/gu, (one) => " ".repeat(new TextEncoder().encode(one).length));
+  return text
+    .replace(/%%[^]*?%%/g, blank)
+    .replace(/(^|[ \t])(\^[A-Za-z0-9-]+)(?=[ \t]*$)/gm, (_, before: string, id: string) => before + blank(id));
 }
 
 /** The candidates a whole line makes: a break, an attribute line, an underline, an image run, a heading run. */
 function onLine(line: Line): Candidate[] {
-  const command = /^\\(?:pagebreak|columnbreak)[ \t]*$/.exec(line.text)?.[0];
+  // A comment before a command is not text of its line, and it comes
+  // here as the blanks it was read as.
+  const led = /^ +(?=\\)/.exec(line.text)?.[0].length ?? 0;
+  const lead = led > 0 && line.led ? led : 0;
+  const command = /^\\(?:pagebreak|columnbreak)[ \t]*$/.exec(line.text.slice(lead))?.[0];
   if (command !== undefined) {
     // The ask is made where the line opens, because a command under
     // four spaces is a code block whose own span begins at the
@@ -244,8 +276,8 @@ function onLine(line: Line): Candidate[] {
     return [
       {
         form: command.trimEnd() === "\\pagebreak" ? "pagebreak" : "columnbreak",
-        byte: line.from,
-        from: line.from,
+        byte: line.from + lead,
+        from: line.from + lead,
         to: byteIn(line, line.text.trimEnd().length),
         level: undefined,
         open: undefined,
@@ -308,14 +340,19 @@ function spansOn(line: Line): Candidate[] {
 
 /** The `{...}` written directly after the `]` that closes the text opened at `at`. */
 function closes(line: Line, at: number): Run | undefined {
-  const shut = line.text.indexOf("]{", at);
-  if (shut < 0) return undefined;
-  const end = line.text.indexOf("}", shut + 2);
+  // A comment between the bracket and the brace is not text, so the
+  // run still follows the bracket directly.
+  const shut = /\](?:%%.*?%%)*\{/g;
+  shut.lastIndex = at;
+  const found = shut.exec(line.text);
+  if (found === null) return undefined;
+  const opens = found.index + found[0].length - 1;
+  const end = line.text.indexOf("}", opens);
   if (end < 0) return undefined;
   return {
-    from: byteIn(line, shut + 1),
+    from: byteIn(line, opens),
     to: byteIn(line, end + 1),
-    inside: line.text.slice(shut + 2, end),
+    inside: line.text.slice(opens + 1, end),
   };
 }
 
@@ -435,14 +472,16 @@ function headingAt(text: string, from: number, under: number): number | undefine
     : from + new TextEncoder().encode(first + "\n").length;
 }
 
-/** Every line of a note, as bytes of it. */
-function linesOf(text: string): Line[] {
+/** Every line of a note, as bytes of it. `written` is the note before its comments were blanked. */
+function linesOf(text: string, written?: string): Line[] {
   const found: Line[] = [];
   const encoder = new TextEncoder();
+  const before = written?.split("\n");
   let at = 0;
-  for (const said of text.split("\n")) {
+  for (const [index, said] of text.split("\n").entries()) {
     const width = encoder.encode(said).length;
-    found.push({ from: at, to: at + width, text: said });
+    const led = before?.[index]?.startsWith("%%") ?? false;
+    found.push({ from: at, to: at + width, text: said, led });
     at += width + 1;
   }
   return found;
@@ -590,6 +629,98 @@ test("orca and the engine agree on every shape written awkwardly", async () => {
   assert.deepEqual(apart, []);
 });
 
+test("orca and the engine agree on a mark written beside what an Obsidian note hides", async () => {
+  const written = [
+    // A comment, which holds no mark.
+    "A paragraph. %%[one]{.a}%% More.\n",
+    "%%[one]{.a}%%\n",
+    "%%{.one}%%\n\nA paragraph.\n",
+    "%%\n{.one}\n\nA paragraph.\n%%\n\nAnother.\n",
+    "%%\n# One {#a}\n\nTitle\n=====\n\n\\pagebreak\n\n![A plate](plate.png){.full}\n%%\n\nAnother.\n",
+    "%%\nOne\n\nTwo [one]{.a}\n%%\n",
+    "A paragraph. %%open\n\n{.one}\n\nclosed%% More.\n",
+    "{.one}\n\n%%hidden%%\n\nA paragraph.\n",
+    "{.one}\n%%hidden%%\n\nA paragraph.\n",
+    "{.one}\n\n%%hidden%%\n",
+    "{.one}\n\n^one\n",
+    "\\%%[one]{.a}%% and %%[two]{.b}%%\n",
+    "{.one} %%hidden%%\n\nA paragraph.\n",
+    "%%hidden%% {.one}\n\nA paragraph.\n",
+    "# One %%hidden%% {#a}\n",
+    "# One {#a} %%hidden%%\n",
+    "# One %%{#a}%%\n",
+    "Title %%hidden%%\n=====\n",
+    "%%hidden%%\n=====\n",
+    "\\pagebreak %%hidden%%\n\nA paragraph.\n",
+    "%%hidden%% \\pagebreak\n\nA paragraph.\n",
+    "![A plate](plate.png){.full} %%hidden%%\n",
+    "[one %%hidden%%]{.a}\n",
+    "[one]%%hidden%%{.a}\n",
+    "[one] %%hidden%%{.a}\n",
+    "[one]%%hidden%% {.a}\n",
+    "[one]%%hidden%%%%again%%{.a} and [two]{.b}\n",
+    "# [one]%%hidden%%{.a} Title\n",
+    "| a |\n| - |\n| [one]%%hidden%%{.a} |\n",
+    "![A plate](plate.png)%%hidden%%{.full}\n",
+    "![A plate](plate.png) %%hidden%% {.full}\n",
+    "A paragraph.\n\n%%hidden%%\\columnbreak\n\nAnother.\n",
+    // A `%%` nothing closes is prose, and so is one written as code.
+    "A paragraph. %%[one]{.a}\n",
+    "%%\n{.one}\n\nA paragraph.\n",
+    "`%%` [one]{.a} `%%`\n",
+    "```\n%%\n```\n\n{.one}\n\nA paragraph.\n\n```\n%%\n```\n",
+    "    %%\n\n{.one}\n\nA paragraph. %%\n",
+    "---\ntitle: %%\n---\n{.one}\n\nA paragraph. %%\n",
+    "> %%\n> {.one}\n>\n> A quote.\n> %%\n",
+    "- %%[one]{.a}%%\n- [two]{.b}\n",
+    "| a | b |\n| - | - |\n| %%[one]{.a}%% | [two]{.b} |\n",
+    // A highlight is text a run can close and a block a run can name.
+    "==[one]{.a}==\n",
+    "[==one==]{.a}\n",
+    "[one]{.a}==two==\n",
+    "{.one}\n\n==A paragraph.==\n",
+    "# ==One== {#a}\n",
+    "==Title==\n=====\n",
+    "=={.one}==\n\nA paragraph.\n",
+    // A block id comes off the end of its block.
+    "[one]{.a} ^one\n",
+    "{.one} ^one\n\nA paragraph.\n",
+    "{.one}\n^one\n\nA paragraph.\n",
+    "{.one}\n\nA paragraph. ^one\n",
+    "{.one}\n\n^one\n\nA paragraph.\n",
+    "A paragraph.\n\n^one\n\n{.one}\n\nAnother.\n",
+    "# One {#a} ^one\n",
+    "# One ^one {#a}\n",
+    "![A plate](plate.png){.full} ^one\n",
+    "![A plate](plate.png) ^one {.full}\n",
+    "\\pagebreak ^one\n\nA paragraph.\n",
+    "\\pagebreak\n^one\n\nA paragraph.\n",
+    "Title ^one\n=====\n",
+    "- [one]{.a} ^one\n- {.two} ^two\n",
+    // A callout's marker is not bracketed text.
+    "> [!note]{.a}\n> A quote.\n",
+    "> [!note] Title {.a}\n> A quote.\n",
+    "> [!note] [one]{.a}\n> A quote.\n",
+    "> [!note]\n> {.one}\n>\n> A quote.\n",
+    "> [!note] {.one}\n>\n> A quote.\n",
+    "{.one}\n\n> [!note] Title\n> A quote.\n",
+    "> [!note]\n> \\pagebreak\n",
+    "> [!note] ![A plate](plate.png){.full}\n",
+    "> [!note]\n> ![A plate](plate.png){.full}\n",
+    "[!note]{.a}\n",
+    "> A quote.\n> [!note]{.a}\n",
+  ];
+
+  const apart: string[] = [];
+  for (const text of written) {
+    const read = orcaMarks(text);
+    const engine = await engineMarks("obsidian.md", text);
+    if (JSON.stringify(read) !== JSON.stringify(engine)) {
+      apart.push(`${JSON.stringify(text)} orca=${JSON.stringify(read)} engine=${JSON.stringify(engine)}`);
+    }
+  }
+  assert.deepEqual(apart, []);
+});
 
 test("a run on a line the engine reads as prose is prose", () => {
   // `#` with no blank after it opens no heading, so the line is a
@@ -622,3 +753,5 @@ test("a heading's words leave out the run fleuron reads and keep one it rejects"
 // The attributes of a setext heading whose whole text is one brace
 // run take no chip, and neither does a second run held above a block
 // the first one already named.
+// A comment written inside a break command, where the oracle looks
+// for no shape.

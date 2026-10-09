@@ -11,7 +11,7 @@ const CHAPTER = "Chapter Twelve";
 const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 980;
+const BOOK_WORDS = 1000;
 
 /** The image the fixture book can take as its cover. */
 const DEVICE = "images/device.png";
@@ -246,13 +246,13 @@ test("word counts come from the notes, and follow a note as it is written", asyn
   await expect(note.words("Title page")).toHaveText("—");
   await expect(note.words("Chapter Four")).toHaveText("—");
   await expect(note.line).toContainText("3 chapters");
-  await expect(note.line).toContainText(`${BOOK_WORDS} words`);
+  await expect(note.line).toContainText(`${BOOK_WORDS.toLocaleString("en")} words`);
 
   const chapter = await vault.read(`${CHAPTER}.md`);
   await vault.modify(`${CHAPTER}.md`, `${chapter}\nAnd so the evening passed.\n`);
 
   await expect(note.words(CHAPTER)).toHaveText(String(CHAPTER_WORDS + 5));
-  await expect(note.line).toContainText(`${BOOK_WORDS + 5} words`);
+  await expect(note.line).toContainText(`${(BOOK_WORDS + 5).toLocaleString("en")} words`);
 });
 
 /** A folio, or a span of them. */
