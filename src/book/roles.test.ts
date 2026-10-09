@@ -34,7 +34,7 @@ test("every role resolves, and a generated one has no note behind it", () => {
 test("each role states its effect in one line, and a generated one says a linked note is not set", () => {
   for (const [role, { origin, effect }] of Object.entries(ROLES)) {
     assert.match(effect, /^\S.*\.$/, role);
-    assert.equal(effect.includes("The text of a linked note is not set."), origin === "generated", role);
+    assert.equal(effect.includes("A linked note is not set."), origin === "generated", role);
   }
 });
 

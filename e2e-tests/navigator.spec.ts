@@ -11,7 +11,7 @@ const CHAPTER = "Chapter Twelve";
 const TITLE_PAGE = "Title page";
 
 /** The sentence the picker ends on for a role whose text orca writes. */
-const UNSET = "The text of a linked note is not set.";
+const UNSET = "A linked note is not set.";
 
 /** The book note in the fixture vault, and the notes a spec makes. */
 const BOOK = "Pride and Prejudice.md";

@@ -19,47 +19,47 @@ const MATTER = {
   "title-page": {
     origin: "generated",
     name: "Title page",
-    effect: "Sets the title and the author from the book's details. The text of a linked note is not set.",
+    effect: "Generated from the book's details. A linked note is not set.",
   },
   copyright: {
     origin: "note",
     name: "Copyright",
-    effect: "A single page in small type, at the foot of the page. The contents does not list it.",
+    effect: "Small type at the foot of the page.",
   },
   dedication: {
     origin: "note",
     name: "Dedication",
-    effect: "A single page, centered and down the page. The contents does not list it.",
+    effect: "Centered, down the page.",
   },
   epigraph: {
     origin: "note",
     name: "Epigraph",
-    effect: "A single page to a narrow measure, with its last paragraph set to the right.",
+    effect: "Narrow, with the last paragraph set right.",
   },
   contents: {
     origin: "generated",
     name: "Contents",
-    effect: "Lists the parts, the chapters and the other prose with their pages. The text of a linked note is not set.",
+    effect: "Generated from the reading order. A linked note is not set.",
   },
   "front-matter": {
     origin: "note",
     name: "Front matter",
-    effect: "Prose that is not a chapter, such as a preface. The contents lists it, and it takes no drop cap.",
+    effect: "Prose before the chapters, such as a preface.",
   },
   part: {
     origin: "note",
     name: "Part",
-    effect: "A title page for a group of chapters. The first part or chapter is page 1.",
+    effect: "A title page for a group of chapters.",
   },
   chapter: {
     origin: "note",
     name: "Chapter",
-    effect: "A chapter of the body. The first part or chapter is page 1.",
+    effect: "The default role, with the chapter opening.",
   },
   "back-matter": {
     origin: "note",
     name: "Back matter",
-    effect: "Prose that is not a chapter, such as an afterword. The contents lists it, and it takes no drop cap.",
+    effect: "Prose after the chapters, such as an afterword.",
   },
 } as const satisfies Record<string, Matter>;
 

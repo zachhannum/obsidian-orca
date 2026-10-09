@@ -957,13 +957,14 @@ test("the roles page says how to set a role, which role fits each kind of note, 
   assert.match(page, /## Set a role in the navigator\n[^#]*`Role for this entry…`/);
   assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `front-matter`/);
   for (const [note, role] of [
+    ["title of a group of chapters", "part"],
     ["preface", "front-matter"],
     ["afterword", "back-matter"],
     ["copyright page", "copyright"],
     ["dedication", "dedication"],
     ["epigraph", "epigraph"],
   ]) {
-    assert.match(page, new RegExp(`\\| An? ${note}[^|]*\\| \`${role}\` \\|`), note);
+    assert.match(page, new RegExp(`\\| (?:An?|The) ${note}[^|]*\\| \`${role}\` \\|`), note);
   }
   assert.match(page, /Orca does not set the text of the linked note/);
 });
