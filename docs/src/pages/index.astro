@@ -20,6 +20,7 @@ import { LIP, REST } from '../scripts/sea';
 const root = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const docs = `${root}start/install/`;
 const repo = 'https://github.com/zachhannum/obsidian-orca';
+const directory = 'https://community.obsidian.md/plugins/orca';
 
 /** One picture the page shows: where it is served, and the box it fills. */
 interface Shot {
@@ -181,7 +182,7 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
             Preview the typeset book and export it to PDF, all without leaving Obsidian.
           </p>
           <div class="actions">
-            <a class="install" href={docs}>Install in Obsidian</a>
+            <a class="install" href={directory}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
           </div>
 
@@ -374,7 +375,7 @@ const title = `${widen('a boOk designEr')}<br /><i>${widen('insidE oBsidian.')}<
           <Mark width={64} height={40} />
           <h2 class="sec-h">Make your <i>first book</i></h2>
           <div class="actions middle">
-            <a class="install" href={docs}>Install in Obsidian</a>
+            <a class="install" href={directory}>Install in Obsidian</a>
             <a class="quiet" href={docs}>Read the docs</a>
           </div>
         </section>
