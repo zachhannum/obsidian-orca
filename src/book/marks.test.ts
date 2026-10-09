@@ -214,6 +214,8 @@ interface Line {
   from: number;
   to: number;
   text: string;
+  /** Whether the line opens on a comment, in a note read without its comments. */
+  led: boolean;
 }
 
 /** The byte of the note a character of one line falls at. */
@@ -232,7 +234,7 @@ function candidates(text: string): Candidate[] {
   // A comment and a block id are not words of the block they are
   // written in, so a shape is looked for with them and without them.
   for (const read of [text, bare(text)]) {
-    for (const line of linesOf(read)) {
+    for (const line of linesOf(read, read === text ? undefined : text)) {
       for (const candidate of [...spansOn(line), ...onLine(line)]) {
         // A heading covers its line whether or not it read a run, so
         // a run is one only where the line ends on it as written.
@@ -262,7 +264,11 @@ function bare(text: string): string {
 
 /** The candidates a whole line makes: a break, an attribute line, an underline, an image run, a heading run. */
 function onLine(line: Line): Candidate[] {
-  const command = /^\\(?:pagebreak|columnbreak)[ \t]*$/.exec(line.text)?.[0];
+  // A comment before a command is not text of its line, and it comes
+  // here as the blanks it was read as.
+  const led = /^ +(?=\\)/.exec(line.text)?.[0].length ?? 0;
+  const lead = led > 0 && line.led ? led : 0;
+  const command = /^\\(?:pagebreak|columnbreak)[ \t]*$/.exec(line.text.slice(lead))?.[0];
   if (command !== undefined) {
     // The ask is made where the line opens, because a command under
     // four spaces is a code block whose own span begins at the
@@ -270,8 +276,8 @@ function onLine(line: Line): Candidate[] {
     return [
       {
         form: command.trimEnd() === "\\pagebreak" ? "pagebreak" : "columnbreak",
-        byte: line.from,
-        from: line.from,
+        byte: line.from + lead,
+        from: line.from + lead,
         to: byteIn(line, line.text.trimEnd().length),
         level: undefined,
         open: undefined,
@@ -334,14 +340,19 @@ function spansOn(line: Line): Candidate[] {
 
 /** The `{...}` written directly after the `]` that closes the text opened at `at`. */
 function closes(line: Line, at: number): Run | undefined {
-  const shut = line.text.indexOf("]{", at);
-  if (shut < 0) return undefined;
-  const end = line.text.indexOf("}", shut + 2);
+  // A comment between the bracket and the brace is not text, so the
+  // run still follows the bracket directly.
+  const shut = /\](?:%%.*?%%)*\{/g;
+  shut.lastIndex = at;
+  const found = shut.exec(line.text);
+  if (found === null) return undefined;
+  const opens = found.index + found[0].length - 1;
+  const end = line.text.indexOf("}", opens);
   if (end < 0) return undefined;
   return {
-    from: byteIn(line, shut + 1),
+    from: byteIn(line, opens),
     to: byteIn(line, end + 1),
-    inside: line.text.slice(shut + 2, end),
+    inside: line.text.slice(opens + 1, end),
   };
 }
 
@@ -461,14 +472,16 @@ function headingAt(text: string, from: number, under: number): number | undefine
     : from + new TextEncoder().encode(first + "\n").length;
 }
 
-/** Every line of a note, as bytes of it. */
-function linesOf(text: string): Line[] {
+/** Every line of a note, as bytes of it. `written` is the note before its comments were blanked. */
+function linesOf(text: string, written?: string): Line[] {
   const found: Line[] = [];
   const encoder = new TextEncoder();
+  const before = written?.split("\n");
   let at = 0;
-  for (const said of text.split("\n")) {
+  for (const [index, said] of text.split("\n").entries()) {
     const width = encoder.encode(said).length;
-    found.push({ from: at, to: at + width, text: said });
+    const led = before?.[index]?.startsWith("%%") ?? false;
+    found.push({ from: at, to: at + width, text: said, led });
     at += width + 1;
   }
   return found;
@@ -643,6 +656,14 @@ test("orca and the engine agree on a mark written beside what an Obsidian note h
     "![A plate](plate.png){.full} %%hidden%%\n",
     "[one %%hidden%%]{.a}\n",
     "[one]%%hidden%%{.a}\n",
+    "[one] %%hidden%%{.a}\n",
+    "[one]%%hidden%% {.a}\n",
+    "[one]%%hidden%%%%again%%{.a} and [two]{.b}\n",
+    "# [one]%%hidden%%{.a} Title\n",
+    "| a |\n| - |\n| [one]%%hidden%%{.a} |\n",
+    "![A plate](plate.png)%%hidden%%{.full}\n",
+    "![A plate](plate.png) %%hidden%% {.full}\n",
+    "A paragraph.\n\n%%hidden%%\\columnbreak\n\nAnother.\n",
     // A `%%` nothing closes is prose, and so is one written as code.
     "A paragraph. %%[one]{.a}\n",
     "%%\n{.one}\n\nA paragraph.\n",
@@ -732,6 +753,5 @@ test("a heading's words leave out the run fleuron reads and keep one it rejects"
 // The attributes of a setext heading whose whole text is one brace
 // run take no chip, and neither does a second run held above a block
 // the first one already named.
-// A comment written between a bracket or an image and its run, inside
-// a break command, or before one on its line. Fleuron reads each as if
-// the comment were not there, and the oracle looks for no shape there.
+// A comment written inside a break command, where the oracle looks
+// for no shape.

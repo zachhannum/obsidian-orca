@@ -112,15 +112,15 @@ export function marksIn(written: string): Drawn[] {
     enter(node) {
       if (OPAQUE.has(node.name)) return false;
       if (node.name === "SetextHeading1" || node.name === "SetextHeading2") {
-        onSetext(text, node.node, node.name === "SetextHeading1" ? 1 : 2, found);
+        onSetext(text, node.node, node.name === "SetextHeading1" ? 1 : 2, comments, found);
         return false;
       }
       if (ATX.has(node.name)) {
-        onHeading(text, node.node, found);
+        onHeading(text, node.node, comments, found);
         return false;
       }
       if (PROSE.has(node.name)) {
-        onProse(blanked, node.node, found);
+        onProse(blanked, node.node, comments, found);
         return false;
       }
       return true;
@@ -130,13 +130,19 @@ export function marksIn(written: string): Drawn[] {
   return found;
 }
 
+/** A `%%comment%%`, marks included, as characters of the note. */
+interface Comment {
+  from: number;
+  to: number;
+}
+
 /**
  * Every `%%comment%%` of a note, marks included, in written order.
  *
  * A comment opens in one block and may close in a later one. A mark
  * with no partner is prose, and so is one written after a backslash.
  */
-function commentsIn(text: string): { from: number; to: number }[] {
+function commentsIn(text: string): Comment[] {
   if (!text.includes("%%")) return [];
   const literal: { from: number; to: number }[] = [];
   notes.parse(text).iterate({
@@ -146,7 +152,7 @@ function commentsIn(text: string): { from: number; to: number }[] {
       return false;
     },
   });
-  const found: { from: number; to: number }[] = [];
+  const found: Comment[] = [];
   let open: number | undefined;
   let within = 0;
   for (let at = text.indexOf("%%"); at >= 0; at = text.indexOf("%%", at + 2)) {
@@ -164,7 +170,7 @@ function commentsIn(text: string): { from: number; to: number }[] {
 }
 
 /** A note with one character written over every character of its comments, so no offset moves. */
-function over(text: string, comments: readonly { from: number; to: number }[], filler: string): string {
+function over(text: string, comments: readonly Comment[], filler: string): string {
   let said = "";
   let at = 0;
   for (const comment of comments) {
@@ -201,7 +207,12 @@ function sets(text: string, node: SyntaxNode): boolean {
  * A paragraph or a table cell, which is where every form but a
  * heading's own run is written.
  */
-function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
+function onProse(
+  text: string,
+  node: SyntaxNode,
+  comments: readonly Comment[],
+  found: Drawn[],
+): void {
   const said = wordsOf(text, node);
   if (said.trim() === "") return;
   const broke = breaks(text, node, said);
@@ -226,7 +237,7 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
       return;
     }
   }
-  const image = imaged(said, node);
+  const image = imaged(said, node, comments);
   const named = image === undefined ? undefined : reads(image.inside);
   if (image !== undefined && named !== undefined) {
     found.push({
@@ -239,7 +250,7 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
     });
     return;
   }
-  found.push(...spansIn(text, node));
+  found.push(...spansIn(text, node, comments));
 }
 
 /**
@@ -250,11 +261,13 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
 function breaks(text: string, node: SyntaxNode, said: string): Drawn | undefined {
   if (node.name !== "Paragraph") return undefined;
   if (node.from > 0 && text[node.from - 1] !== "\n") return undefined;
-  const command = BREAK.exec(said.trimEnd())?.[1];
+  // A comment before the command is not text of its line, and it
+  // comes here as blanks.
+  const command = BREAK.exec(said.trim())?.[1];
   if (command === undefined) return undefined;
   return {
     form: command === "pagebreak" ? "pagebreak" : "columnbreak",
-    from: node.from,
+    from: node.from + said.length - said.trimStart().length,
     to: node.from + said.trimEnd().length,
     names: undefined,
     level: undefined,
@@ -266,6 +279,7 @@ function breaks(text: string, node: SyntaxNode, said: string): Drawn | undefined
 function imaged(
   said: string,
   node: SyntaxNode,
+  comments: readonly Comment[],
 ): { from: number; to: number; inside: string } | undefined {
   const first = node.firstChild;
   if (first === null || first.name !== "Image" || first.from !== node.from) return undefined;
@@ -276,12 +290,20 @@ function imaged(
   // line below is a block of its own, and fleuron reads it as one.
   if (after.slice(0, run.from).includes("\n")) return undefined;
   // The run's chip sits where the run was written, and the blanks
-  // between the image and the brace come off with it.
-  return { from: first.to, to: first.to + run.to, inside: run.inside };
+  // between the image and the brace come off with it. A comment
+  // written between them stays.
+  const opens = first.to + run.from;
+  const kept = comments.filter((comment) => comment.from >= first.to && comment.to <= opens).at(-1);
+  return { from: kept?.to ?? first.to, to: first.to + run.to, inside: run.inside };
 }
 
 /** A heading's own trailing run, which fleuron reads as the heading's attributes. */
-function onHeading(text: string, node: SyntaxNode, found: Drawn[]): void {
+function onHeading(
+  text: string,
+  node: SyntaxNode,
+  comments: readonly Comment[],
+  found: Drawn[],
+): void {
   const run = trailing(text.slice(node.from, node.to));
   if (run !== undefined) {
     found.push({
@@ -293,7 +315,7 @@ function onHeading(text: string, node: SyntaxNode, found: Drawn[]): void {
       open: undefined,
     });
   }
-  found.push(...spansIn(text, node));
+  found.push(...spansIn(text, node, comments));
 }
 
 /**
@@ -302,7 +324,13 @@ function onHeading(text: string, node: SyntaxNode, found: Drawn[]): void {
  * A brace run over a row of dashes is an attribute line over a scene
  * break, so the run names the break and there is no heading.
  */
-function onSetext(text: string, node: SyntaxNode, level: 1 | 2, found: Drawn[]): void {
+function onSetext(
+  text: string,
+  node: SyntaxNode,
+  level: 1 | 2,
+  comments: readonly Comment[],
+  found: Drawn[],
+): void {
   const said = text.slice(node.from, node.to);
   const broke = said.lastIndexOf("\n");
   if (broke < 0) return;
@@ -321,26 +349,46 @@ function onSetext(text: string, node: SyntaxNode, level: 1 | 2, found: Drawn[]):
     level,
     open: node.from,
   });
-  found.push(...spansIn(text, node));
+  found.push(...spansIn(text, node, comments));
 }
 
-/** The `[text]{.class}` runs written inside one block. */
-function spansIn(text: string, node: SyntaxNode): Drawn[] {
+/**
+ * The `[text]{.class}` runs written inside one block.
+ *
+ * A comment is not text, so a run written after one still follows the
+ * bracket the comment stands behind.
+ */
+function spansIn(text: string, node: SyntaxNode, comments: readonly Comment[]): Drawn[] {
   const found: Drawn[] = [];
-  const said = text.slice(node.from, node.to);
+  // The block without its comments, and the character of the note
+  // each character of it was written at.
+  let said = "";
+  const written: number[] = [];
+  let at = node.from;
+  for (const comment of [...comments, { from: node.to, to: node.to }]) {
+    if (comment.to <= at) continue;
+    for (; at < Math.min(comment.from, node.to); at += 1) {
+      said += text[at] ?? "";
+      written.push(at);
+    }
+    at = Math.max(at, comment.to);
+    if (at >= node.to) break;
+  }
   for (const match of said.matchAll(/\[([^\][\n]*)\]\{([^}\n]*)\}/g)) {
-    const at = node.from + match.index;
-    if (covered(node, at)) continue;
+    const open = written[match.index];
+    const brace = written[match.index + (match[1]?.length ?? 0) + 2];
+    const last = written[match.index + match[0].length - 1];
+    if (open === undefined || brace === undefined || last === undefined) continue;
+    if (covered(node, open)) continue;
     const names = reads(match[2] ?? "");
     if (names === undefined) continue;
-    const opened = at + (match[1]?.length ?? 0) + 2;
     found.push({
       form: "span",
-      from: opened,
-      to: at + match[0].length,
+      from: brace,
+      to: last + 1,
       names,
       level: undefined,
-      open: at,
+      open,
     });
   }
   return found;
