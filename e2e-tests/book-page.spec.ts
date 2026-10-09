@@ -11,7 +11,7 @@ const CHAPTER = "Chapter Twelve";
 const CHAPTER_WORDS = 674;
 
 /** The words in every note the fixture book reads. */
-const BOOK_WORDS = 980;
+const BOOK_WORDS = 1000;
 
 /** The image the fixture book can take as its cover. */
 const DEVICE = "images/device.png";
