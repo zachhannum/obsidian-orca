@@ -32,6 +32,7 @@ import { sectionIds } from "@/book/names";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder, resolve } from "@/book/order";
 import { emptyDesign } from "@/style/design";
+import { readOrigin } from "@/style/origin";
 import {
   GENERATED_ORIGIN,
   LOADED_NOTHING,
@@ -446,6 +447,45 @@ test("an embed with no file behind it is a warning, and the book still sets", as
     output.warnings.map((warning) => warning.message),
     ["No image was supplied for nothing here.png. The image is skipped."],
   );
+});
+
+test("a character the face lacks is a warning at its note and line", async () => {
+  const model = await fixture();
+  const sources = await bookSources(
+    model.book,
+    model.order,
+    pathLinks(await paths()),
+    BOOK,
+    (at) => readText(vault, at),
+  );
+  const whaled = sources.map((source) => ({
+    ...source,
+    text: source.text.replace("In consequence", "In \u{1F40B} consequence"),
+  }));
+  const chapter = whaled.find((source) => source.text.includes("\u{1F40B}"));
+  assert.ok(chapter !== undefined, "no fixture chapter took the character");
+  const line =
+    chapter.text.slice(0, chapter.text.indexOf("\u{1F40B}")).split("\n").length;
+
+  const output = await set([
+    { op: "dialect", dialect: "obsidian" },
+    { op: "split", level: 0 },
+    { op: "book", sources: whaled },
+  ]);
+
+  const lacked = output.warnings.filter((warning) =>
+    warning.message.includes("U+1F40B"),
+  );
+  // One warning for the character, however many pages it lands on.
+  assert.deepEqual(
+    lacked.map((warning) => warning.message),
+    ["EB Garamond Regular has no glyph for `\u{1F40B}` (U+1F40B)."],
+  );
+  assert.deepEqual(readOrigin(lacked[0]?.origin ?? ""), {
+    sheet: chapter.name,
+    line,
+    column: 4,
+  });
 });
 
 test("an embed with no file, or a file that will not read, is unread with its note and line", async () => {
