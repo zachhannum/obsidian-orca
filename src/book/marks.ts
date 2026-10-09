@@ -55,8 +55,29 @@ export interface Drawn {
 /** The blocks nothing inside is read as prose. */
 const OPAQUE = new Set(["Frontmatter", "FencedCode", "CodeBlock", "HTMLBlock", "Comment"]);
 
+/**
+ * The nodes that hold no prose. A `%%` written inside one is the code,
+ * the markup or the address it was written as, and it opens no
+ * comment.
+ */
+const LITERAL = new Set([
+  ...OPAQUE,
+  "CommentBlock",
+  "ProcessingInstructionBlock",
+  "ProcessingInstruction",
+  "LinkReference",
+  "InlineCode",
+  "HTMLTag",
+  "URL",
+  "LinkTitle",
+  "LinkLabel",
+]);
+
 /** The commands fleuron breaks a page or a column at. */
-const BREAK = /^\\(pagebreak|columnbreak)[ \t]*$/;
+const BREAK = /^\\(pagebreak|columnbreak)$/;
+
+/** The `^name` a paragraph ends on, which Obsidian links to and fleuron does not set. */
+const BLOCK_ID = /(?:^|\s)(\^[A-Za-z0-9-]+)$/;
 
 /** The blocks a run can be written on. */
 const PROSE = new Set(["Paragraph", "TableCell"]);
@@ -77,8 +98,15 @@ const ATX = new Set([
  * The note is parsed whole. A caller that wants the marks of one
  * section takes the ones its characters cover.
  */
-export function marksIn(text: string): Drawn[] {
+export function marksIn(written: string): Drawn[] {
   const found: Drawn[] = [];
+  // Fleuron writes `%` over a comment before it reads the note, so a
+  // comment is not markdown and the blocks around it stay where they
+  // were. The words of a paragraph are then read without the comment,
+  // which is what the blanks stand for.
+  const comments = commentsIn(written);
+  const text = over(written, comments, "%");
+  const blanked = over(written, comments, " ");
   const tree = notes.parse(text);
   tree.iterate({
     enter(node) {
@@ -92,7 +120,7 @@ export function marksIn(text: string): Drawn[] {
         return false;
       }
       if (PROSE.has(node.name)) {
-        onProse(text, node.node, found);
+        onProse(blanked, node.node, found);
         return false;
       }
       return true;
@@ -103,11 +131,79 @@ export function marksIn(text: string): Drawn[] {
 }
 
 /**
+ * Every `%%comment%%` of a note, marks included, in written order.
+ *
+ * A comment opens in one block and may close in a later one. A mark
+ * with no partner is prose, and so is one written after a backslash.
+ */
+function commentsIn(text: string): { from: number; to: number }[] {
+  if (!text.includes("%%")) return [];
+  const literal: { from: number; to: number }[] = [];
+  notes.parse(text).iterate({
+    enter(node) {
+      if (!LITERAL.has(node.name)) return true;
+      literal.push({ from: node.from, to: node.to });
+      return false;
+    },
+  });
+  const found: { from: number; to: number }[] = [];
+  let open: number | undefined;
+  let within = 0;
+  for (let at = text.indexOf("%%"); at >= 0; at = text.indexOf("%%", at + 2)) {
+    while ((literal[within]?.to ?? Infinity) <= at) within += 1;
+    if ((literal[within]?.from ?? Infinity) <= at) continue;
+    if (text[at - 1] === "\\") continue;
+    if (open === undefined) {
+      open = at;
+    } else {
+      found.push({ from: open, to: at + 2 });
+      open = undefined;
+    }
+  }
+  return found;
+}
+
+/** A note with one character written over every character of its comments, so no offset moves. */
+function over(text: string, comments: readonly { from: number; to: number }[], filler: string): string {
+  let said = "";
+  let at = 0;
+  for (const comment of comments) {
+    said += text.slice(at, comment.from);
+    said += text.slice(comment.from, comment.to).replace(/[^\n\r]/g, filler);
+    at = comment.to;
+  }
+  return said + text.slice(at);
+}
+
+/**
+ * The words of a paragraph or a table cell, by the characters of the
+ * note. A block id at the end of a paragraph is not one of its words.
+ */
+function wordsOf(text: string, node: SyntaxNode): string {
+  const said = text.slice(node.from, node.to);
+  if (node.name !== "Paragraph") return said;
+  const ended = said.trimEnd();
+  const id = BLOCK_ID.exec(ended)?.[1];
+  if (id === undefined) return said;
+  const at = ended.length - id.length;
+  // The name is the paragraph's own text. One written inside code or
+  // emphasis is part of that.
+  if (node.resolveInner(node.from + at, 1).name !== "Paragraph") return said;
+  return said.slice(0, at) + " ".repeat(id.length) + said.slice(ended.length);
+}
+
+/** Whether a block is set at all. A paragraph of one comment or one block id is not. */
+function sets(text: string, node: SyntaxNode): boolean {
+  return node.name !== "Paragraph" || wordsOf(text, node).trim() !== "";
+}
+
+/**
  * A paragraph or a table cell, which is where every form but a
  * heading's own run is written.
  */
 function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
-  const said = text.slice(node.from, node.to);
+  const said = wordsOf(text, node);
+  if (said.trim() === "") return;
   const broke = breaks(text, node, said);
   if (broke !== undefined) {
     found.push(broke);
@@ -123,13 +219,14 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
     // A line names the block under it, inside whatever holds them
     // both. A run with nothing under it there names nothing, and
     // fleuron leaves it as the prose it was written as.
-    const under = node.nextSibling !== null;
-    if (node.name === "Paragraph" && names !== undefined && under) {
+    let under = node.nextSibling;
+    while (under !== null && !sets(text, under)) under = under.nextSibling;
+    if (node.name === "Paragraph" && names !== undefined && under !== null) {
       found.push(line(node.from + run.from, node.from + run.to, names));
       return;
     }
   }
-  const image = imaged(text, node);
+  const image = imaged(said, node);
   const named = image === undefined ? undefined : reads(image.inside);
   if (image !== undefined && named !== undefined) {
     found.push({
@@ -153,7 +250,7 @@ function onProse(text: string, node: SyntaxNode, found: Drawn[]): void {
 function breaks(text: string, node: SyntaxNode, said: string): Drawn | undefined {
   if (node.name !== "Paragraph") return undefined;
   if (node.from > 0 && text[node.from - 1] !== "\n") return undefined;
-  const command = BREAK.exec(said)?.[1];
+  const command = BREAK.exec(said.trimEnd())?.[1];
   if (command === undefined) return undefined;
   return {
     form: command === "pagebreak" ? "pagebreak" : "columnbreak",
@@ -167,12 +264,12 @@ function breaks(text: string, node: SyntaxNode, said: string): Drawn | undefined
 
 /** The run an image alone on its line takes, which names that image. */
 function imaged(
-  text: string,
+  said: string,
   node: SyntaxNode,
 ): { from: number; to: number; inside: string } | undefined {
   const first = node.firstChild;
   if (first === null || first.name !== "Image" || first.from !== node.from) return undefined;
-  const after = text.slice(first.to, node.to);
+  const after = said.slice(first.to - node.from);
   const run = onlyRun(after);
   if (run === undefined) return undefined;
   // The run has to be written on the image's own line. A run on the
