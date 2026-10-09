@@ -6,7 +6,7 @@ description: Put orca in a vault.
 
 import Shot from '../../../components/Shot.astro';
 
-Orca is a plugin for Obsidian on the desktop. It needs Obsidian 1.7.2 or later. Orca is not in the list of community plugins yet.
+Orca is a plugin for Obsidian on the desktop. It needs Obsidian 1.7.2 or later.
 
 <Shot
   name="install"
@@ -15,19 +15,19 @@ Orca is a plugin for Obsidian on the desktop. It needs Obsidian 1.7.2 or later. 
   marks={['orca']}
 />
 
-## Copy the plugin into the vault
-
-A build of orca has three files: `main.js`, `manifest.json` and `styles.css`.
-
-1. In the vault, make the folder `.obsidian/plugins/orca/`.
-2. Copy the three files into that folder.
-3. Restart Obsidian.
-
-## Turn on orca
+## Install orca
 
 1. Open `Settings`.
 2. Open `Community plugins`.
 3. If community plugins are off, select `Turn on community plugins`.
-4. Turn on `Orca`.
+4. Select `Browse`.
+5. Search for `Orca`.
+6. Select `Orca` in the results.
+7. Select `Install`.
+8. Select `Enable`.
 
 The ribbon then shows `Open Orca`. The menu for a folder in the file tree then has `Create book from these notes`. Next, read [Anatomy of orca](/start/anatomy/) to learn the parts of orca.
+
+## Install another version
+
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) is a community plugin that installs a plugin from its GitHub repository. With BRAT, you can install a version of orca that is not the one in the list of community plugins. The repository to give BRAT is `zachhannum/obsidian-orca`.
