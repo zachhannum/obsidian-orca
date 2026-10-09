@@ -404,7 +404,7 @@ test("layout reads the header for the size and decodes nothing", async () => {
   const output = await set(ops);
 
   assert.deepEqual(output.assets, [
-    { url: DEVICE, intrinsic: { width: 220, height: 132, dpiX: 96, dpiY: 96 } },
+    { url: DEVICE, intrinsic: { width: 220, height: 132, dpiX: 96, dpiY: 96, sized: true } },
   ]);
   const placed = output.pages
     .flatMap((page) => page.items)

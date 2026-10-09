@@ -237,6 +237,7 @@ function leaves(count: number): Page[] {
         features: { smallCaps: false, settings: [] },
         color: "#000000",
         glyphs: [],
+        blend: "normal" as const,
         layer: 0,
       },
     ],

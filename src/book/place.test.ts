@@ -39,6 +39,7 @@ function run(node: number | undefined): TextItem {
     features: { smallCaps: false, settings: [] },
     color: "#000000",
     glyphs: [],
+    blend: "normal",
     layer: 0,
   };
 }
