@@ -4,6 +4,9 @@ import { expect, test } from '@playwright/test';
 /** Orca's page in Obsidian's community directory. */
 const DIRECTORY = 'https://community.obsidian.md/plugins/orca';
 
+/** The repository of BRAT, the plugin that installs a plugin from its repository. */
+const BRAT = 'https://github.com/TfTHacker/obsidian42-brat';
+
 /** The path through Obsidian's settings to the community directory. */
 const PATH = ['Settings', 'Community plugins', 'Browse'];
 
@@ -17,13 +20,11 @@ test('the install page installs orca from the community directory', async ({ pag
   await expect(steps.locator('code', { hasText: /^Install$/ })).toBeVisible();
 });
 
-test('the copy of three files installs a build that is not released', async ({ page }) => {
+test('another version of orca installs with BRAT', async ({ page }) => {
   await page.goto('/start/install/');
-  const steps = page.locator(under('install-a-build-that-is-not-released', 'ol'));
-  await expect(steps.locator('code', { hasText: 'plugins/orca/' })).toBeVisible();
-  for (const file of ['main.js', 'manifest.json', 'styles.css']) {
-    await expect(page.locator(under('install-a-build-that-is-not-released', 'p code'), { hasText: file })).toBeVisible();
-  }
+  const said = page.locator(under('install-another-version', 'p'));
+  await expect(said.getByRole('link', { name: 'BRAT' })).toHaveAttribute('href', BRAT);
+  await expect(said.locator('code', { hasText: 'zachhannum/obsidian-orca' })).toBeVisible();
 });
 
 test("the landing page's install buttons open orca's page in the community directory", async ({ page }) => {

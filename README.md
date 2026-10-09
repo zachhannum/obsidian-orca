@@ -19,7 +19,7 @@ Visit [orca.typeworks.dev](https://orca.typeworks.dev) for more info and docs.
 
 Orca runs in Obsidian on the desktop, version 1.7.2 or later.
 
-1. In Obsidian, open `Settings`, `Community plugins`, `Browse`, and install `Orca`. The [install page](https://orca.typeworks.dev/start/install/) lists each step. It also tells you how to install a build that is not released.
+1. In Obsidian, open `Settings`, `Community plugins`, `Browse`, and install `Orca`. The [install page](https://orca.typeworks.dev/start/install/) lists each step.
 2. In the file tree, right-click the folder that holds your chapters.
 3. Select `Create book from these notes`.
 
