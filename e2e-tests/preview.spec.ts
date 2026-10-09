@@ -19,6 +19,9 @@ const CHAPTER = 11;
 /** The chapter that page opens, as the toolbar names it. */
 const CHAPTER_NAME = "Chapter Twelve";
 
+/** The note that chapter is written in. */
+const CHAPTER_NOTE = "Chapter Twelve.md";
+
 /** The page the second opens on, and its name. */
 const SECOND = 15;
 const SECOND_NAME = "Chapter Fifteen";
@@ -519,6 +522,35 @@ test("an embed with no file behind it is a warning the author can see", async ({
   await expect.poll(async () => manuscript.showing()).toEqual([LAST_NOTE]);
   await expect.poll(async () => manuscript.caret()).toEqual({ line: 5, ch: 0 });
   await expect(book.surface).toBeVisible();
+  await manuscript.close();
+});
+
+test("a character the face lacks is a warning that opens the note at its line", async ({
+  book,
+  manuscript,
+  vault,
+}) => {
+  await book.open();
+  const painted = await book.painted();
+
+  const note = await vault.read(CHAPTER_NOTE);
+  await vault.modify(
+    CHAPTER_NOTE,
+    note.replace("In consequence", "In \u{1F40B} consequence"),
+  );
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+
+  await expect(book.counted).toHaveText("1 warning");
+  await book.count.click();
+  await expect(book.issues.first()).toContainText(
+    "has no glyph for `\u{1F40B}` (U+1F40B).",
+  );
+  await expect(book.issueGroups.first()).toContainText(CHAPTER_NAME);
+  await expect(book.issueOpens.first()).toHaveText(`${CHAPTER_NOTE}:8:4`);
+
+  await book.issueOpens.first().click();
+  await expect.poll(async () => manuscript.showing()).toEqual([CHAPTER_NOTE]);
+  await expect.poll(async () => manuscript.caret()).toEqual({ line: 7, ch: 3 });
   await manuscript.close();
 });
 
