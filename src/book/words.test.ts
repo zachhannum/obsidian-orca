@@ -41,5 +41,14 @@ test("a link counts the words it prints, and not where it goes", () => {
   assert.equal(countWords('[a page](https://example.com "A title")'), 2);
 });
 
+test("a comment, a block id and a callout's marker are not words, and a highlight's are", () => {
+  assert.equal(countWords("He came at noon. %%Compare chapter two.%%"), 4);
+  assert.equal(countWords("%%\nCut this scene?\n\n- The inn\n%%\n\nHe came."), 2);
+  assert.equal(countWords("He waited for the tide. ^tide"), 5);
+  assert.equal(countWords("He waited.\n^tide"), 2);
+  assert.equal(countWords("> [!warning]- Mind the gap\n> The platform is low."), 7);
+  assert.equal(countWords("He ==applied himself== to it."), 5);
+});
+
 // What this tier does not cover: a note read through Obsidian's vault,
 // which the e2e suite counts on the book page.
