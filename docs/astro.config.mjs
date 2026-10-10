@@ -53,7 +53,7 @@ export default defineConfig({
           label: 'Start here',
           items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/the-preview'],
         },
-        { label: 'The book', items: ['book/roles'] },
+        { label: 'The book', items: ['book/roles', 'book/markdown'] },
         {
           label: 'Design',
           items: [
@@ -73,7 +73,7 @@ export default defineConfig({
         { label: 'Export', items: ['export/export-to-pdf'] },
         {
           label: 'Reference',
-          items: ['reference/design-keys', 'reference/the-book-note', 'reference/markdown'],
+          items: ['reference/design-keys', 'reference/the-book-note'],
         },
       ],
     }),
