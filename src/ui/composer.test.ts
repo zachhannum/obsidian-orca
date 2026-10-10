@@ -161,6 +161,8 @@ class FakeClient implements EngineClient {
       side: at % 2 === 0 ? ("recto" as const) : ("verso" as const),
       width: 432,
       height: 648,
+      bleed: 0,
+      slug: 0,
       sections: [Math.floor(at / SPREAD) * 10 + 5],
       links: [],
       items: [],

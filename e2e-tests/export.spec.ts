@@ -61,7 +61,7 @@ const BACKGROUND =
   "@page { background-image: url(images/device.png); background-repeat: no-repeat; }";
 
 /** A rule the engine reads and cannot set, so it warns and sets the book. */
-const UNSET = "p { float: left; }";
+const UNSET = "p { transform: none; }";
 
 /** The entry the fixture book lists with no note behind it. */
 const MISSING = "- [[Chapter Four]]";
@@ -434,7 +434,7 @@ test("a book with a warning lists it in the engine's words, and export still wri
   const line = (await panel.lineNumbers.last().textContent()) ?? "";
   await book.count.click();
   const said = (await book.issues.first().locator(".orca-preview-issue-said").textContent()) ?? "";
-  expect(said).toContain("float");
+  expect(said).toContain("transform");
   await book.count.click();
 
   await exporting.open();
