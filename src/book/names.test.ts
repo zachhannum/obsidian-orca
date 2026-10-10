@@ -14,6 +14,17 @@ function generated(role: Role): Section {
   return { kind: "generated", entry: { role, tag: role, heading: "" } };
 }
 
+test("a section under a name of the author's own takes the name as its class", () => {
+  const named = note("Prologue.md", "matter");
+  named.entry.custom = "prologue";
+
+  assert.deepEqual(sectionNames([named, note("The Harbor.md")]), [
+    { classes: ["prologue"], id: "prologue" },
+    { classes: ["chapter"], id: "the-harbor" },
+  ]);
+  assert.deepEqual(sectionIds([named])[0], { role: "matter", id: "prologue", custom: "prologue" });
+});
+
 test("each section takes its role as its class", () => {
   const names = sectionNames([
     generated("title-page"),
@@ -110,7 +121,7 @@ test("a reorder moves no section's id", () => {
     note("The Harbor 2.md"),
     note("Three/The Harbor.md", "chapter", "The Harbor"),
     note("1984.md"),
-    note("Acknowledgements.md", "back-matter"),
+    note("Acknowledgements.md", "matter"),
   ];
   const key = (section: Section): string =>
     section.kind === "note" ? section.path : section.entry.role;

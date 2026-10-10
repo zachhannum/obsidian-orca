@@ -31,7 +31,7 @@ import { readModel, type Model } from "@/book/model";
 import { sectionIds } from "@/book/names";
 import { bookCss } from "@/book/css";
 import { FORMAT, type Book } from "@/book/note";
-import { readOrder, resolve } from "@/book/order";
+import { entries, readOrder, rename, resolve } from "@/book/order";
 import { bookUses, emptyDesign } from "@/style/design";
 import { readOrigin } from "@/style/origin";
 import {
@@ -121,8 +121,10 @@ test("the resolved order crosses as one book op, split into one section per sour
     [
       `${GENERATED_ORIGIN}:0`,
       "Copyright.md",
+      "Dedication.md",
       "A note on the text.md",
-      `${GENERATED_ORIGIN}:3`,
+      `${GENERATED_ORIGIN}:4`,
+      "Preface.md",
       "Volume the First.md",
       "Chapter Twelve.md",
       "Chapter Fifteen.md",
@@ -140,18 +142,24 @@ test("a note's text crosses as it is on disk, and the section with no note is dr
   assert.ok(!sources.some((source) => source.name.includes("Chapter Four")));
 });
 
-test("the contents links each part and chapter in reading order, under a name no note can have", async () => {
+test("the contents links each part, chapter and piece of front or back matter in reading order, under a name no note can have", async () => {
   const ops = await planned(await fixture());
   const sources = only(ops, "book").sources;
 
   assert.equal(
-    sources[3]?.text,
+    sources[4]?.text,
     "# Contents\n\n" +
+      // The preface sits before the body, so its folio is marked. The
+      // copyright page, the dedication and the epigraph are not listed.
+      "{.entry}\n\n[Preface](Preface.md#Preface)\n\n" +
+      "{.folio .front}\n\n[](Preface.md#Preface)\n\n" +
       "{.part}\n\n[Volume the First](Volume%20the%20First.md#Volume%20the%20First)\n\n" +
       "{.entry}\n\n[Chapter Twelve](Chapter%20Twelve.md#Chapter%20Twelve)\n\n" +
       "{.folio}\n\n[](Chapter%20Twelve.md#Chapter%20Twelve)\n\n" +
       "{.entry}\n\n[Chapter Fifteen](Chapter%20Fifteen.md#Chapter%20Fifteen)\n\n" +
-      "{.folio}\n\n[](Chapter%20Fifteen.md#Chapter%20Fifteen)",
+      "{.folio}\n\n[](Chapter%20Fifteen.md#Chapter%20Fifteen)\n\n" +
+      "{.entry}\n\n[Acknowledgements](Acknowledgements.md#Acknowledgements)\n\n" +
+      "{.folio}\n\n[](Acknowledgements.md#Acknowledgements)",
   );
   assert.ok(!(await paths()).includes(sources[0]?.name ?? ""));
 });
@@ -212,11 +220,11 @@ test("an EPUB of the fixture book carries a document for each section the book s
   const entries = [...contents.matchAll(/class="entry"><a href="([^#"]+)#[^"]*">([^<]+)</g)];
   assert.deepEqual(
     entries.map((entry) => entry[2]),
-    ["Chapter Twelve", "Chapter Fifteen"],
+    ["Preface", "Chapter Twelve", "Chapter Fifteen", "Acknowledgements"],
   );
   assert.deepEqual(
     entries.map((entry) => entry[1]),
-    ["chapter-twelve", "chapter-fifteen"].map((id) => documents.find(({ text }) => held(text).includes(id))?.path),
+    ["preface", "chapter-twelve", "chapter-fifteen", "acknowledgements"].map((id) => documents.find(({ text }) => held(text).includes(id))?.path),
   );
 });
 
@@ -869,14 +877,25 @@ test("every source in the book op carries its names, and generated matter is nam
     [
       { classes: ["title-page"], id: "title-page" },
       { classes: ["copyright"], id: "copyright" },
+      { classes: ["dedication"], id: "dedication" },
       { classes: ["epigraph"], id: "a-note-on-the-text" },
       { classes: ["contents"], id: "contents" },
+      { classes: ["matter"], id: "preface" },
       { classes: ["part"], id: "volume-the-first" },
       { classes: ["chapter"], id: "chapter-twelve" },
       { classes: ["chapter"], id: "chapter-fifteen" },
-      { classes: ["back-matter"], id: "acknowledgements" },
+      { classes: ["matter"], id: "acknowledgements" },
     ],
   );
+});
+
+test("a section under a name of the author's own crosses with the name as its class, and the contents lists it", async () => {
+  const model = await fixture();
+  const at = entries(model.order).findIndex((entry) => entry.link === "Acknowledgements");
+  const sources = only(await planned({ ...model, order: rename(model.order, at, "colophon") }), "book").sources;
+
+  assert.deepEqual(sources[9]?.attributes, { classes: ["colophon"], id: "acknowledgements" });
+  assert.match(sources[4]?.text ?? "", /\{\.entry\}\n\n\[Acknowledgements\]/);
 });
 
 /** Sets these ops on an engine of their own, over the bundled theme. */
@@ -1201,7 +1220,7 @@ test("the exported fixture book prints no comment, highlight mark, block id or c
   }
 });
 
-test("in the exported fixture book, each contents entry prints the page its chapter opens on", async () => {
+test("in the exported fixture book, each contents entry prints the page its section opens on, in roman before the body", async () => {
   const written = await exportedBook(vault, BOOK);
   const read = spawnSync("pdftotext", ["-layout", written, "-"], { encoding: "utf8" });
   assert.equal(read.status, 0, read.stderr);
@@ -1212,17 +1231,28 @@ test("in the exported fixture book, each contents entry prints the page its chap
   const contents = pages.find((lines) => lines[0] === "Contents");
   assert.ok(contents, "no page opens on the contents");
   const entries = contents.slice(1).flatMap((line) => {
-    const found = /^(.+?)\s+(\d+)$/.exec(line);
-    return found?.[1] === undefined ? [] : [{ label: found[1], folio: Number(found[2]) }];
+    const found = /^(.+?)\s+(\d+|[ivx]+)$/.exec(line);
+    return found?.[1] === undefined || found[2] === undefined ? [] : [{ label: found[1], folio: found[2] }];
   });
   // A part heads its chapters and prints no page of its own.
   assert.ok(contents.includes("Volume the First"), "the contents lists no part");
   assert.deepEqual(
     entries.map((entry) => entry.label),
-    ["Chapter Twelve", "Chapter Fifteen"],
+    ["Preface", "Chapter Twelve", "Chapter Fifteen", "Acknowledgements"],
   );
 
-  for (const { label, folio } of entries) {
+  // The count starts at the book's first page and starts again at the
+  // part, which opens the body. Each section opens on a right page, so
+  // the preface is the eleventh page: five sections come before it.
+  const opening = (label: string): number => pages.findIndex((lines) => lines[0] === label);
+  const body = opening("Volume the First");
+  assert.equal(opening("Preface"), 10);
+  assert.deepEqual(
+    entries.flatMap(({ label, folio }) => (label === "Preface" || label === "Acknowledgements" ? [folio] : [])),
+    ["xi", String(opening("Acknowledgements") - body + 1)],
+  );
+
+  for (const { label, folio } of entries.filter((entry) => entry.label.startsWith("Chapter"))) {
     // An opening prints no folio, and neither does the blank page before
     // a recto. The folio an opening would print is counted back from the
     // next page that prints one.
@@ -1233,7 +1263,7 @@ test("in the exported fixture book, each contents entry prints the page its chap
     );
     assert.ok(numbered > opens, `no page after ${label} prints a folio`);
     const printed = Number(pages[numbered]?.at(-1));
-    assert.equal(folio, printed - (numbered - opens), label);
+    assert.equal(Number(folio), printed - (numbered - opens), label);
   }
 });
 

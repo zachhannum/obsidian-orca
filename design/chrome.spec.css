@@ -463,6 +463,7 @@
 .orca[data-theme="dark"] .suggest { background: var(--color-base-25); }
 .suggest-item { display: flex; align-items: center; gap: 8px; min-height: var(--touch-size-m); padding: 8px 12px; border-radius: var(--touch-radius-xxs); font-size: var(--font-ui-medium); }
 .suggest-item.is-active { background: var(--background-modifier-hover); }
+.suggest-note { font-size: var(--font-ui-smaller); color: var(--text-muted); }
 /* ---- the book note's page at touch size ---- */
 .props { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--divider-color); border-bottom: 1px solid var(--divider-color); }
 .prop { display: flex; align-items: center; gap: 12px; min-height: 36px; }

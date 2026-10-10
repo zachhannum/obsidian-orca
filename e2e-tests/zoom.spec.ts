@@ -1,7 +1,7 @@
 import { expect, test } from "./harness/test";
 
 /** A page of prose, which sets one line under the next. */
-const PROSE = 11;
+const PROSE = 15;
 
 /** The zooms the first two steps in stop at, as percentages. */
 const STEPS = [125, 150] as const;

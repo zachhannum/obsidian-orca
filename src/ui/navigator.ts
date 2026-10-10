@@ -23,12 +23,13 @@ import {
   relink,
   remove,
   removeGroup,
+  rename,
   renameGroup,
   retag,
   NEW_GROUP,
   type Place,
 } from "@/book/order";
-import { ROLES, type Role } from "@/book/roles";
+import { ROLES, customOf, type Role } from "@/book/roles";
 import { ACTIONS } from "@/ui/actions";
 import { isBook } from "@/ui/books";
 import { confirm } from "@/ui/confirm";
@@ -77,6 +78,11 @@ export interface Handoff {
   lists(book: string, headings: number | undefined): void;
   /** The level a book lists when its note holds none. */
   fallback(): number | undefined;
+}
+
+/** A name of the author's own, picked in place of a role. */
+interface Custom {
+  name: string;
 }
 
 /**
@@ -656,6 +662,7 @@ export class NavigatorView extends ItemView {
     pick(this.app, {
       items: made,
       label: (role) => ROLES[role].name,
+      note: (role) => ROLES[role].effect,
       placeholder: `Add a generated section to ${book.name}`,
       chose: (role) => {
         this.change(book.path, (model) => ({
@@ -730,15 +737,30 @@ export class NavigatorView extends ItemView {
   }
 
   private reroleEntry(book: Shelved, row: Row): void {
-    const roles = Object.keys(ROLES) as Role[];
-    pick(this.app, {
+    // A generated role sets no note, so an entry with a link is not
+    // offered one. `New generated section…` adds those.
+    const roles = (Object.keys(ROLES) as Role[]).filter(
+      (role) => row.kind === "generated" || ROLES[role].origin === "note",
+    );
+    pick<Role | Custom>(this.app, {
       items: roles,
-      label: (role) => ROLES[role].name,
-      placeholder: `Role for ${row.name}`,
+      label: (role) => (typeof role === "string" ? ROLES[role].name : role.name),
+      note: (role) =>
+        typeof role === "string"
+          ? ROLES[role].effect
+          : `Your own role. Custom CSS styles it as section.${role.name}.`,
+      typed: (query) => {
+        const name = row.kind === "generated" ? undefined : customOf(query);
+        return name === undefined ? undefined : { name };
+      },
+      placeholder: `Role for ${row.name}, or a name of your own`,
       chose: (role) => {
         this.change(book.path, (model) => ({
           ...model,
-          order: retag(model.order, row.at, role),
+          order:
+            typeof role === "string"
+              ? retag(model.order, row.at, role)
+              : rename(model.order, row.at, role.name),
         }));
       },
     });

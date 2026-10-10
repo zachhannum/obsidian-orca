@@ -12,7 +12,7 @@
  */
 
 import { type Links, target } from "@/book/links";
-import { DEFAULT_ROLE, ROLES, roleOf, type Role } from "@/book/roles";
+import { CUSTOM_BASE, DEFAULT_ROLE, ROLES, customOf, roleOf, type Role } from "@/book/roles";
 
 /** One entry in the reading order. */
 export interface Entry {
@@ -24,6 +24,8 @@ export interface Entry {
   tag?: Role;
   /** The role this section has: its own tag, or the default. */
   role: Role;
+  /** The name the note tags it with when the tag names no role. The name is its class. */
+  custom?: string;
   /** The heading it sits under, as written in the note. */
   heading: string;
 }
@@ -131,7 +133,8 @@ export function writeEntry(entry: Entry): string {
     const alias = entry.alias === undefined ? "" : `|${entry.alias}`;
     parts.push(`[[${entry.link}${alias}]]`);
   }
-  if (entry.tag !== undefined) parts.push(`\`${entry.tag}\``);
+  const tag = entry.custom ?? entry.tag;
+  if (tag !== undefined) parts.push(`\`${tag}\``);
   return `- ${parts.join(" ")}`;
 }
 
@@ -253,6 +256,7 @@ export function move(order: Order, from: number, to: Place): Order {
   if (entry.link !== undefined) moved.link = entry.link;
   if (entry.alias !== undefined) moved.alias = entry.alias;
   if (entry.tag !== undefined) moved.tag = entry.tag;
+  if (entry.custom !== undefined) moved.custom = entry.custom;
 
   return into(remove(order, from), moved, {
     heading: to.heading,
@@ -267,8 +271,18 @@ export function move(order: Order, from: number, to: Place): Order {
 export function retag(order: Order, at: number, role: Role): Order {
   return rewrite(order, at, (entry) => {
     const next: Entry = { ...entry, role };
+    delete next.custom;
     if (role === DEFAULT_ROLE) delete next.tag;
     else next.tag = role;
+    return next;
+  });
+}
+
+/** The order with one entry under a name of the author's own, which is written as its tag. */
+export function rename(order: Order, at: number, custom: string): Order {
+  return rewrite(order, at, (entry) => {
+    const next: Entry = { ...entry, role: CUSTOM_BASE, custom };
+    delete next.tag;
     return next;
   });
 }
@@ -460,18 +474,20 @@ function settle(order: Order): Order {
 
 /**
  * One list item as an entry, or nothing for a line orca cannot read
- * whole. An item tagged with a word that is no role is one of those,
- * and is kept as it was written.
+ * whole. A link tagged with a name that is no role is an entry under
+ * that name. A tag that is no role and no name is kept as it was written.
  */
 function readEntry(line: string, heading: string): Entry | undefined {
   const item = ITEM.exec(line);
   if (item === null) return undefined;
   const [, link, code] = item;
   const tag = code === undefined ? undefined : roleOf(code);
-  if (code !== undefined && tag === undefined) return undefined;
+  const custom = code === undefined || link === undefined ? undefined : customOf(code);
+  if (code !== undefined && tag === undefined && custom === undefined) return undefined;
   if (link === undefined && tag === undefined) return undefined;
 
-  const entry: Entry = { role: tag ?? DEFAULT_ROLE, heading };
+  const entry: Entry = { role: tag ?? (custom === undefined ? DEFAULT_ROLE : CUSTOM_BASE), heading };
+  if (custom !== undefined) entry.custom = custom;
   if (link !== undefined) {
     const bar = link.indexOf("|");
     entry.link = (bar < 0 ? link : link.slice(0, bar)).trim();

@@ -2,7 +2,7 @@ import { NEXT_CHAPTER, PREVIOUS_CHAPTER } from "./harness/book";
 import { expect, test } from "./harness/test";
 
 /** The pages the fixture book sets to. */
-const PAGES = 19;
+const PAGES = 23;
 
 /** The book's title, which its title page prints. */
 const OPENING = "Pride and Prejudice";
@@ -14,7 +14,7 @@ const EMPTY = "Empty book.md";
 const NEW_CHAPTER = "New chapter.md";
 
 /** The page the first of the fixture's chapters opens on. */
-const CHAPTER = 11;
+const CHAPTER = 15;
 
 /** The chapter that page opens, as the toolbar names it. */
 const CHAPTER_NAME = "Chapter Twelve";
@@ -23,7 +23,7 @@ const CHAPTER_NAME = "Chapter Twelve";
 const CHAPTER_NOTE = "Chapter Twelve.md";
 
 /** The page the second opens on, and its name. */
-const SECOND = 15;
+const SECOND = 19;
 const SECOND_NAME = "Chapter Fifteen";
 
 /** The first note the reading order lists after the title page. */
@@ -34,7 +34,7 @@ const FIRST = "Title page";
 const LAST = "Acknowledgements";
 
 /** The page the fixture's last section opens on. */
-const BACK = 19;
+const BACK = 23;
 
 /** A page late in the second chapter, two turns before the last section. */
 const LATE = BACK - 2;
@@ -42,6 +42,30 @@ const LATE = BACK - 2;
 /** The note that section is read from, and the image it embeds. */
 const LAST_NOTE = "Acknowledgements.md";
 const DEVICE = "![[device.png]]";
+
+/** The book note in the fixture vault. */
+const BOOK = "Pride and Prejudice.md";
+
+/**
+ * The roles the fixture sets outside the body: the note, the page its
+ * section opens on, and words that page prints.
+ */
+const ROLES = [
+  { role: "copyright", note: "Copyright", opens: 3, prints: "Whitehall Press, London" },
+  { role: "dedication", note: "Dedication", opens: 5, prints: "To Cassandra," },
+  {
+    role: "epigraph",
+    note: "A note on the text",
+    opens: 7,
+    prints: "The text follows the third edition",
+  },
+  { role: "matter", note: "Preface", opens: 11, prints: "Preface" },
+  { role: "matter", note: LAST, opens: BACK, prints: LAST },
+] as const;
+
+/** The generated contents, as the toolbar names it, and the folio it prints for the preface. */
+const CONTENTS = "Contents";
+const PREFACE_FOLIO = "xi";
 
 test("`Open a book` sets the book and paints its first page", async ({ book }) => {
   await book.open();
@@ -127,6 +151,36 @@ test("the title page prints the book's properties", async ({ book }) => {
 
   await expect(book.surface).toHaveAttribute("data-first", "1");
   for (const block of TITLE_PAGE) await expect(book.page).toContainText(block);
+});
+
+test("the book has an entry for each role a note takes outside the body, and the run paints a page for each", async ({
+  book,
+  vault,
+}) => {
+  const listed = await vault.read(BOOK);
+  await book.open();
+  await book.painted();
+
+  for (const { role, note, opens, prints } of ROLES) {
+    expect(listed, role).toContain(`- [[${note}]] \`${role}\`\n`);
+
+    await book.choose(note);
+    await expect(book.surface, role).toHaveAttribute("data-first", String(opens));
+    await expect(book.chapterName, role).toHaveText(note);
+    await expect(book.page, role).toContainText(prints);
+  }
+});
+
+test("the contents lists the preface under a roman folio", async ({ book }) => {
+  await book.open();
+  await book.painted();
+
+  await book.choose(CONTENTS);
+  await expect(book.chapterName).toHaveText(CONTENTS);
+
+  await expect(
+    book.lines().filter({ hasText: "Preface" }).filter({ hasText: PREFACE_FOLIO }),
+  ).toHaveCount(1);
 });
 
 test("the status line reads the page, and what the render cost stays off it", async ({
@@ -427,8 +481,8 @@ test("paging out of a chapter renames the control, in all three views", async ({
   await book.next.click();
   await expect(book.chapterName).toHaveText(LAST);
 
-  // The grid fits the whole fixture on one screen, so there is no
-  // second screenful to page into, and the turn is a chapter's.
+  // The grid turns a screenful at a time, and the pane's size decides
+  // where one ends, so the turn is a chapter's.
   await book.show("Grid", "grid");
   await book.choose(CHAPTER_NAME);
   await expect(book.chapterName).toHaveText(CHAPTER_NAME);

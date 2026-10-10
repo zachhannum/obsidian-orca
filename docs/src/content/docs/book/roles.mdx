@@ -1,0 +1,65 @@
+---
+title: Roles
+eyebrow: The book
+description: Pick the role that fits each note of a book.
+---
+
+A role is the kind of page an entry is. An entry with no role is a chapter.
+
+## Set a role in the navigator
+
+1. Right-click the entry.
+2. Select `Role for this entry…`.
+3. Select a role.
+
+## Set a role in the book note
+
+Write the role in backticks after the link. Delete it to make the entry a chapter again.
+
+```md
+- [[Preface]] `matter`
+```
+
+## The roles
+
+| Note | Role | Layout |
+| --- | --- | --- |
+| A chapter | None | The chapter opening from the design. |
+| The title of a group of chapters | `part` | A page of its own, with no other layout. |
+| A preface, an afterword or the acknowledgements | `matter` | Plain prose, with no drop cap. |
+| A copyright page | `copyright` | Small type at the foot of the page. |
+| A dedication | `dedication` | Centered, down the page. |
+| An epigraph | `epigraph` | A narrow column, down the page. The last of several paragraphs is set right. |
+
+The contents lists chapters, parts and matter. It does not list the other three.
+
+The first part or chapter is page 1. The pages before it are numbered in roman. The position of an entry decides this, not its role.
+
+The chapter opening applies to chapters only. To style another role, use [Custom CSS](/design/custom-css/), for example on `section.part`.
+
+## Your own role
+
+Any other name is a role too, for example `prologue`. Orca sets the entry as plain prose and lists it in the contents. The name is the class of the section, so your CSS can style it.
+
+```md
+- [[Prologue]] `prologue`
+```
+
+```css
+section.prologue {
+  text-align: center;
+}
+```
+
+In the navigator, type the name into the list of roles and select it. A name starts with a lower-case letter, and the rest is lower-case letters, digits and hyphens.
+
+## Title page and contents
+
+Orca writes these two pages, so their entries need no link. If you add a link, Orca ignores the note.
+
+```md
+- `title-page`
+- `contents`
+```
+
+To add one in the navigator, select `Add to this book` on the book, and then select `New generated section…`.

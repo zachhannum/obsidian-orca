@@ -5,7 +5,7 @@ import { expect, test } from "./harness/test";
 
 /** The book note in the fixture vault, and the pages it sets to. */
 const BOOK = "Pride and Prejudice.md";
-const PAGES = 19;
+const PAGES = 23;
 
 /** The three views, by the label of the switch and the name the surface gives. */
 const VIEWS = [

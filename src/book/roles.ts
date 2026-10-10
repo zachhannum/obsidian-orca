@@ -11,18 +11,51 @@ export interface Matter {
   origin: Origin;
   /** The default name for a section in this role that has no note. */
   name: string;
+  /** One line a picker shows under the name: what the role does to the typeset book. */
+  effect: string;
 }
 
 const MATTER = {
-  "title-page": { origin: "generated", name: "Title page" },
-  copyright: { origin: "note", name: "Copyright" },
-  dedication: { origin: "note", name: "Dedication" },
-  epigraph: { origin: "note", name: "Epigraph" },
-  contents: { origin: "generated", name: "Contents" },
-  "front-matter": { origin: "note", name: "Front matter" },
-  part: { origin: "note", name: "Part" },
-  chapter: { origin: "note", name: "Chapter" },
-  "back-matter": { origin: "note", name: "Back matter" },
+  "title-page": {
+    origin: "generated",
+    name: "Title page",
+    effect: "Generated from the book's details. A linked note is not set.",
+  },
+  copyright: {
+    origin: "note",
+    name: "Copyright",
+    effect: "Small type at the foot of the page.",
+  },
+  dedication: {
+    origin: "note",
+    name: "Dedication",
+    effect: "Centered, down the page.",
+  },
+  epigraph: {
+    origin: "note",
+    name: "Epigraph",
+    effect: "Narrow, with the last paragraph set right.",
+  },
+  contents: {
+    origin: "generated",
+    name: "Contents",
+    effect: "Generated from the reading order. A linked note is not set.",
+  },
+  matter: {
+    origin: "note",
+    name: "Matter",
+    effect: "Front or back matter: prose that is not a chapter.",
+  },
+  part: {
+    origin: "note",
+    name: "Part",
+    effect: "A title page for a group of chapters.",
+  },
+  chapter: {
+    origin: "note",
+    name: "Chapter",
+    effect: "The default role, with the chapter opening.",
+  },
 } as const satisfies Record<string, Matter>;
 
 export type Role = keyof typeof MATTER;
@@ -37,4 +70,27 @@ export const DEFAULT_ROLE: Role = "chapter";
 export function roleOf(tag: string): Role | undefined {
   const name = tag.trim();
   return Object.hasOwn(MATTER, name) ? (name as Role) : undefined;
+}
+
+/**
+ * The role a section under a name of the author's own is set in. Such a
+ * section is prose that is not a chapter, and the name is its class.
+ */
+export const CUSTOM_BASE: Role = "matter";
+
+const NAME = /^[a-z][a-z0-9-]*$/;
+
+/**
+ * The name a tag gives a section when it names no role. The name is the
+ * section's class and its page name, so it is one a CSS selector can write.
+ */
+export function customOf(tag: string): string | undefined {
+  const name = tag.trim();
+  return roleOf(name) === undefined && NAME.test(name) ? name : undefined;
+}
+
+/** The index of the first part or chapter, where the body starts and page 1 with it. */
+export function bodyStart(roles: readonly Role[]): number | undefined {
+  const found = roles.findIndex((role) => role === "part" || role === "chapter");
+  return found === -1 ? undefined : found;
 }

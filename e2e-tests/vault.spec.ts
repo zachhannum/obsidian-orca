@@ -17,6 +17,8 @@ test("and the next spec opens on the vault as it is checked in", async ({
     "Chapter Fifteen.md",
     "Chapter Twelve.md",
     "Copyright.md",
+    "Dedication.md",
+    "Preface.md",
     "Pride and Prejudice.md",
     "Volume the First.md",
   ]);

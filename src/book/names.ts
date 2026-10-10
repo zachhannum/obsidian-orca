@@ -34,7 +34,7 @@ export function slug(name: string, fallback: string): string {
  * section with no note is not sent and takes no name.
  */
 export function sectionNames(sections: readonly Section[]): Attributes[] {
-  return sectionIds(sections).map(({ role, id }) => ({ classes: [role], id }));
+  return sectionIds(sections).map((named) => ({ classes: [classOf(named)], id: named.id }));
 }
 
 /**
@@ -48,6 +48,7 @@ export function sectionIds(sections: readonly Section[]): Named[] {
   const wanted = sent.map((section, at) => ({
     at,
     role: section.entry.role,
+    custom: section.entry.custom,
     base: slug(entryName(section.entry), section.entry.role),
     key: section.kind === "note" ? section.path : "",
   }));
@@ -73,12 +74,23 @@ export function sectionIds(sections: readonly Section[]): Named[] {
     taken.add(id);
     ids.set(want.at, id);
   }
-  return wanted.map((want) => ({ role: want.role, id: ids.get(want.at) ?? want.base }));
+  return wanted.map((want) => {
+    const named: Named = { role: want.role, id: ids.get(want.at) ?? want.base };
+    if (want.custom !== undefined) named.custom = want.custom;
+    return named;
+  });
 }
 
 export interface Named {
   role: Role;
   id: string;
+  /** The name the author gave the section in place of a role. */
+  custom?: string;
+}
+
+/** The class a section carries: the name the author gave it, or its role. */
+export function classOf(named: Named): string {
+  return named.custom ?? named.role;
 }
 
 function compare(a: string, b: string): number {

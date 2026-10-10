@@ -10,6 +10,9 @@ const CHAPTER = "Chapter Twelve";
 /** A generated section of the fixture book, as its row and the toolbar name it. */
 const TITLE_PAGE = "Title page";
 
+/** The sentence the picker ends on for a role whose text orca writes. */
+const UNSET = "A linked note is not set.";
+
 /** The book note in the fixture vault, and the notes a spec makes. */
 const BOOK = "Pride and Prejudice.md";
 const SECOND = "The Bennet Novels.md";
@@ -243,8 +246,10 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   await expect(navigator.entries(BOOK)).toContainText([
     "Title page",
     "Copyright",
+    "Dedication",
     "A note on the text",
     "Contents",
+    "Preface",
     "Volume the First",
     "Chapter Twelve",
     "Chapter Four",
@@ -276,10 +281,10 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
 
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("- `contents`\n- [[Acknowledgements]] `back-matter`\n");
+    .toContain("- [[Preface]] `matter`\n- [[Acknowledgements]] `matter`\n");
   await expect(navigator.entry(BOOK, "Acknowledgements")).toHaveAttribute(
     "data-role",
-    "back-matter",
+    "matter",
   );
 
   // A per-entry override sits in the context menu. An edit names an
@@ -287,10 +292,19 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   // place the row now carries.
   await expect(navigator.entry(BOOK, "Chapter Twelve")).toHaveAttribute(
     "data-at",
-    "7",
+    "9",
   );
   await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
   await obsidian.choose("Role for this entry");
+  // Each of the six roles a note takes states its effect under its
+  // name. An entry with a note is offered no generated role.
+  await expect(navigator.pickNotes()).toHaveCount(6);
+  await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 6 }, () => /\S/));
+  for (const generated of ["Title page", "Contents"]) {
+    await expect(
+      obsidian.suggestion().filter({ hasText: new RegExp(`^${generated}`) }),
+    ).toHaveCount(0);
+  }
   await navigator.pick("Epigraph");
 
   await expect
@@ -330,7 +344,7 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   );
   await vault.modify(BOOK, long);
   await navigator.repainted(drawn);
-  await expect(navigator.entries(BOOK)).toHaveCount(49);
+  await expect(navigator.entries(BOOK)).toHaveCount(51);
   const tall = await navigator.reach();
   expect(tall.most).toBeGreaterThan(0);
 
@@ -347,10 +361,10 @@ test("a row dragged past the bottom stays inside its list, and lands last", asyn
   });
 
   // The row moved, and it is the same one row: a drop that lost it or
-  // wrote it twice would leave the count somewhere other than 49. The
+  // wrote it twice would leave the count somewhere other than 51. The
   // wait is on the paint that read the drop's write back.
   await navigator.repainted(dropping);
-  await expect(navigator.entries(BOOK)).toHaveCount(49);
+  await expect(navigator.entries(BOOK)).toHaveCount(51);
   expect((await vault.read(BOOK)).match(/\[\[Chapter 0\]\]/g)).toHaveLength(1);
   expect((await navigator.reach()).height).toBe(tall.height);
 });
@@ -438,6 +452,28 @@ test("a book deleted under an unwritten edit has nothing written back to it", as
   await expect(navigator.book(SECOND)).toHaveCount(0);
 });
 
+test("a name typed into the role picker sets the entry under that name, and the chip shows it", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.reveal();
+
+  await navigator.menuOn(navigator.entry(BOOK, "Acknowledgements"));
+  await obsidian.choose("Role for this entry");
+  // No role matches the name, so the one row is the name itself.
+  await navigator.pick("colophon");
+
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("- [[Acknowledgements]] `colophon`");
+  const entry = navigator.entry(BOOK, "Acknowledgements");
+  await expect(entry).toHaveAttribute("data-role", "colophon");
+  await expect(entry).toHaveAttribute("data-kind", "note");
+  await expect(entry).toContainText("colophon");
+});
+
 test("a generated section is added by its role, and reads as one", async ({
   navigator,
   obsidian,
@@ -448,6 +484,7 @@ test("a generated section is added by its role, and reads as one", async ({
 
   await navigator.adding(BOOK);
   await obsidian.choose("New generated section");
+  await expect(navigator.pickNotes()).toHaveText([UNSET, UNSET].map((unset) => new RegExp(unset)));
   await navigator.pick("Title page");
 
   // It goes where a chapter would, and carries no link at all.
@@ -508,7 +545,7 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   // the note and then on the paint that read it back.
   await expect
     .poll(async () => vault.read(BOOK))
-    .toMatch(/# Back matter\n\n- \[\[Acknowledgements\]\] `back-matter`\n\n# Prelims\n/);
+    .toMatch(/# Back matter\n\n- \[\[Acknowledgements\]\] `matter`\n\n# Prelims\n/);
   await navigator.repainted(drawn);
   await expect(navigator.groups(BOOK)).toContainText([
     "Back matter",

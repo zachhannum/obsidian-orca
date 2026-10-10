@@ -9,10 +9,10 @@ const BOOK = "Pride and Prejudice.md";
 
 /** The fixture chapter's note, and the page its title opens on. */
 const CHAPTER_NOTE = "Chapter Twelve.md";
-const OPENING = 11;
+const OPENING = 15;
 
 /** A verso of set text in the chapter, under a running head. */
-const TEXT_PAGE = 12;
+const TEXT_PAGE = 16;
 
 /** The chapter's title, which the page sets under the space above it. */
 const CHAPTER_TITLE = "Chapter Twelve";
@@ -180,9 +180,10 @@ test("a box split across two pages is outlined on both, each open where the page
   await book.open();
   await book.painted();
   // The chapter opens on a recto and runs on to the verso after it,
-  // which is the next spread. The grid paints every page of the fixture
-  // at once, so both halves of a paragraph across that turn are on screen.
+  // which is the next spread. The grid paints a screenful of pages at
+  // once, so both halves of a paragraph across that turn are on screen.
   await book.show("Grid", "grid");
+  await book.choose(CHAPTER_TITLE);
   await expect(inspect.sheet(OPENING)).toBeVisible();
   await expect(inspect.sheet(TEXT_PAGE)).toBeVisible();
   await inspect.on();

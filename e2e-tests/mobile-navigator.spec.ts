@@ -45,6 +45,7 @@ for (const device of ["phone", "tablet"] as const) {
     try {
       await navigator.reveal();
       const row = navigator.entry(BOOK, CHAPTER);
+      await navigator.centre(row);
       await navigator.press(row);
 
       const menu = await navigator.menuBox();
@@ -396,6 +397,7 @@ test("on a phone a touch drag on a row's handle moves it and the note agrees, an
     if ((await navigator.reach()).most > 0) expect(swipe.scrolled).toBeGreaterThan(0);
     expect(await vault.read(BOOK)).not.toContain("- [[Chapter Four]]\n- [[Volume the First]]");
 
+    await navigator.centre(navigator.entry(BOOK, "Chapter Four"));
     await navigator.touchDrag(
       navigator.entry(BOOK, "Chapter Four"),
       navigator.entry(BOOK, "Volume the First"),
@@ -422,6 +424,7 @@ test("on a phone the handle and the chevron after it each take their own touch, 
     await navigator.painted();
     const chapter = navigator.entry(BOOK, HEADED);
     await expect(navigator.fold(BOOK, HEADED)).toBeVisible();
+    await navigator.centre(chapter);
     const handle = await chapter.getByTestId("orca-handle").boundingBox();
     if (handle === null) throw new Error("the row has no handle");
     expect(handle.width).toBe(TOUCH);

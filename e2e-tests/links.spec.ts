@@ -6,7 +6,7 @@ const CONTENTS = "Contents";
 
 /** The chapter a contents entry is clicked for, the page it opens on, and its note. */
 const CHAPTER = "Chapter Fifteen";
-const OPENS = 15;
+const OPENS = 19;
 const CHAPTER_NOTE = "Chapter Fifteen.md";
 
 /** The note the manuscript is split from. */
@@ -14,7 +14,7 @@ const FIRST_NOTE = "Chapter Twelve.md";
 
 /** The section whose note links to a heading and to a website, and the page it is set on. */
 const THANKS = "Acknowledgements";
-const THANKS_PAGE = 19;
+const THANKS_PAGE = 23;
 
 /** The heading the acknowledgements link to, and the url they link out to. */
 const HEADING = "The Entail";

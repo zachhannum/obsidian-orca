@@ -171,12 +171,14 @@ test("a role reaches the sheet as a page name and as the ids of the sections tha
   assert.deepEqual(at.sections, [
     { role: "title-page", id: "title-page" },
     { role: "copyright", id: "copyright" },
+    { role: "dedication", id: "dedication" },
     { role: "epigraph", id: "a-note-on-the-text" },
     { role: "contents", id: "contents" },
+    { role: "matter", id: "preface" },
     { role: "part", id: "volume-the-first" },
     { role: "chapter", id: "chapter-twelve" },
     { role: "chapter", id: "chapter-fifteen" },
-    { role: "back-matter", id: "acknowledgements" },
+    { role: "matter", id: "acknowledgements" },
   ]);
   assert.match(css, /section#title-page \{\n {2}page: title-page;\n\}/);
   // Two sections take the chapter role, so one rule names both ids.
@@ -575,7 +577,7 @@ test("a heading that opens a section takes its space above as padding, so the en
 });
 
 test("the front matter numbers its folio in roman, and a book with no folio gets no roman rules", () => {
-  const roles: Role[] = ["title-page", "copyright", "chapter", "back-matter"];
+  const roles: Role[] = ["title-page", "copyright", "chapter", "matter"];
   const css = generatedCss(headed("outside", "bottom"), { sections: named(roles), author: "Jane Austen" });
 
   for (const role of ["title-page", "copyright"]) {
@@ -586,7 +588,7 @@ test("the front matter numbers its folio in roman, and a book with no folio gets
   }
   // The body keeps its own format, and a role after the body is not front matter.
   assert.match(css, /@page \{\n(?: {2}.+\n)* {2}@bottom-center \{ content: counter\(page, decimal\); \}\n/);
-  assert.doesNotMatch(css, /@page (?:chapter|back-matter)(?::left|:right)? \{/);
+  assert.doesNotMatch(css, /@page (?:chapter|matter-back)(?::left|:right)? \{\n {2}@bottom/);
   // The running heads are not rewritten.
   assert.doesNotMatch(css, /@top-\w+ \{ content: counter\(page, lower-roman\)/);
 
@@ -600,13 +602,13 @@ test("the front matter numbers its folio in roman, and a book with no folio gets
 test("a folio at the outside corner numbers the front matter in roman on each side", () => {
   const design = headed("outside", "bottom");
   design.headers.pageNumber = "outside";
-  const css = generatedCss(design, { sections: named(["copyright", "chapter"]), author: "Jane Austen" });
+  const css = generatedCss(design, { sections: named(["dedication", "chapter"]), author: "Jane Austen" });
 
-  assert.match(css, /@page copyright:left \{\n {2}@bottom-left \{ content: counter\(page, lower-roman\); \}\n\}/);
-  assert.match(css, /@page copyright:right \{\n {2}@bottom-right \{ content: counter\(page, lower-roman\); \}\n\}/);
-  assert.doesNotMatch(css, /@page copyright \{/);
+  assert.match(css, /@page dedication:left \{\n {2}@bottom-left \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.match(css, /@page dedication:right \{\n {2}@bottom-right \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.doesNotMatch(css, /@page dedication \{/);
   // The opening's clearing comes after, and still clears the folio.
-  assert.ok(css.indexOf("@page copyright:right") < css.indexOf("@page copyright:first"));
+  assert.ok(css.indexOf("@page dedication:right") < css.indexOf("@page dedication:first"));
 });
 
 test("the page count starts again at the first part or chapter, and not when the body comes first", () => {
@@ -615,7 +617,7 @@ test("the page count starts again at the first part or chapter, and not when the
 
   assert.equal(css.match(reset)?.length, 1);
   assert.match(css, /section#part-3 \{\n {2}counter-reset: page 1;\n\}/);
-  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter", "back-matter"]) }), reset);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter", "matter"]) }), reset);
   assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["title-page", "copyright"]) }), reset);
 });
 
@@ -698,6 +700,148 @@ test("a contents folio sets flush right on its title's line", async () => {
   assert.ok(title !== undefined && folio !== undefined, "the entry did not set");
   assert.ok(Math.abs(folio.y - title.y) < 1, `the folio sits at ${folio.y}, its title at ${title.y}`);
   assert.ok(folio.x > title.x, "the folio is not right of its title");
+});
+
+/** The text runs a page sets inside its margins, in the order the engine wrote them. */
+function body(page: Page | undefined) {
+  return (page?.items ?? []).flatMap((item) =>
+    item.kind === "text" && item.y >= TOP_MARGIN && item.y <= FOOT ? [item] : [],
+  );
+}
+
+/** The page a fixed layout is set on, ahead of one chapter, in the fixture's design. */
+async function single(role: Role, text: string) {
+  const model = await fixture();
+  const sections = named([role, "chapter"]);
+  const output = await rendered(
+    generatedCss(model.book.design, { sections }),
+    [{ name: "matter.md", text }, { name: "one.md", text: "# Chapter One\n\nIt is a truth.\n" }],
+    sections,
+  );
+  assert.deepEqual(output.warnings, []);
+  return body(output.pages[0]);
+}
+
+test("a copyright page is set in small type with no paragraph indent, at the foot of its page", async () => {
+  const runs = await single(
+    "copyright",
+    "Whitehall Press, London\n\nFirst published in 1813\n\nThe moral right of the author has been asserted",
+  );
+
+  assert.deepEqual(
+    runs.map((run) => run.text),
+    ["Whitehall Press, London", "First published in 1813", "The moral right of the author has been asserted"],
+  );
+  for (const run of runs) {
+    // The fixture sets its body in 10.5pt, and a first page is a right
+    // page, so its text starts at the inside margin.
+    assert.ok(Math.abs(run.size - 0.8 * 10.5) < 0.01, `\`${run.text}\` is set in ${String(run.size)}pt`);
+    assert.ok(Math.abs(run.x - INSIDE) < 0.01, `\`${run.text}\` starts at ${String(run.x)}`);
+  }
+  // The last line sits on the last line of the page.
+  const last = runs.at(-1)?.y ?? 0;
+  assert.ok(FOOT - last < 14, `the last line sits at ${String(last)}`);
+});
+
+test("a dedication is set centered and down the page", async () => {
+  const runs = await single("dedication", "To Cassandra,\n\nwho read every page first");
+
+  assert.equal(runs.length, 2);
+  for (const run of runs) {
+    assert.ok(
+      Math.abs(run.x + run.width / 2 - (INSIDE + MEASURE / 2)) < 0.5,
+      `\`${run.text}\` is centered on ${String(run.x + run.width / 2)}`,
+    );
+  }
+  assert.ok((runs[0]?.y ?? 0) > TOP_MARGIN + 10 * 14, `the dedication sits at ${String(runs[0]?.y)}`);
+});
+
+test("an epigraph is set to a narrow measure and down the page, with its last paragraph to the right", async () => {
+  const quote = "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.";
+  const runs = await single("epigraph", `${quote}\n\nJane Austen`);
+  // Three ems of the fixture's 10.5pt body on each side.
+  const inset = 3 * 10.5;
+  const said = runs.filter((run) => run.text !== "Jane Austen");
+  const by = runs.find((run) => run.text === "Jane Austen");
+  assert.ok(by, "the epigraph does not name who said it");
+
+  assert.ok(said.length > 1, "the quote did not turn a line");
+  for (const run of said) {
+    assert.ok(run.x > INSIDE + inset - 0.01, `\`${run.text}\` starts at ${String(run.x)}`);
+    assert.ok(run.x + run.width < INSIDE + MEASURE - inset + 0.5, `\`${run.text}\` ends past the measure`);
+  }
+  assert.ok((said[0]?.y ?? 0) > TOP_MARGIN + 8 * 14, `the epigraph sits at ${String(said[0]?.y)}`);
+  assert.ok(Math.abs(by.x + by.width - (INSIDE + MEASURE - inset)) < 0.5, `the name ends at ${String(by.x + by.width)}`);
+
+  // An epigraph of one paragraph has no name under it to set right.
+  const [alone] = await single("epigraph", "Jane Austen");
+  assert.ok(Math.abs((alone?.x ?? 0) - (INSIDE + inset)) < 0.5, `a lone paragraph starts at ${String(alone?.x)}`);
+});
+
+test("a role on both sides of the body numbers in roman before it and in the body's format after", async () => {
+  const sections = named(["matter", "chapter", "matter"]);
+  const css = generatedCss(headed("outside", "bottom"), { sections, author: "Jane Austen" });
+
+  assert.match(css, /section#matter-1 \{\n {2}page: matter;\n\}/);
+  assert.match(css, /section#matter-3 \{\n {2}page: matter-back;\n\}/);
+  assert.match(css, /@page matter \{\n {2}@bottom-center \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.doesNotMatch(css, /@page matter-back \{/);
+  // Each name clears its own opening.
+  assert.match(css, /@page matter-back:first \{/);
+
+  // A long preface turns a page, and so does a long afterword. A page
+  // after an opening prints its folio.
+  const long = (title: string): string => 
+    `# ${title}\n\n${sentence("It is a truth universally acknowledged.").repeat(3)}`;
+  const output = await rendered(
+    css,
+    [
+      { name: "preface.md", text: long("Preface") },
+      { name: "one.md", text: "# Chapter One\n\nIt is a truth.\n" },
+      { name: "afterword.md", text: long("Afterword") },
+    ],
+    sections,
+  );
+  const folios = output.pages.map((page) => texts(page).filter((text) => /^(?:[ivx]+|\d+)$/.test(text)));
+  assert.deepEqual(folios[1], ["ii"]);
+  assert.match(folios.at(-1)?.[0] ?? "", /^\d+$/);
+});
+
+test("a role that sits on one side of the body keeps its own page name, and a book with no body has no sides", () => {
+  const css = generatedCss(emptyDesign(), {
+    sections: named(["matter", "copyright", "chapter", "dedication", "matter"]),
+  });
+
+  assert.match(css, /section#matter-1 \{\n {2}page: matter;\n\}/);
+  assert.match(css, /section#copyright-2 \{\n {2}page: copyright;\n\}/);
+  assert.match(css, /section#dedication-4 \{\n {2}page: dedication-back;\n\}/);
+  assert.match(css, /section#matter-5 \{\n {2}page: matter-back;\n\}/);
+  assert.match(
+    generatedCss(emptyDesign(), { sections: named(["title-page", "matter"]) }),
+    /section#matter-2 \{\n {2}page: matter;\n\}/,
+  );
+});
+
+test("a section under a name of the author's own takes the name as its page name, on each side of the body", () => {
+  const [before, chapter, after] = named(["matter", "chapter", "matter"]);
+  assert.ok(before && chapter && after);
+  const sections = [{ ...before, custom: "prologue" }, chapter, { ...after, custom: "colophon" }];
+  const css = generatedCss(emptyDesign(), { sections });
+
+  assert.match(css, new RegExp(`section#${before.id} \\{\\n {2}page: prologue;\\n\\}`));
+  assert.match(css, new RegExp(`section#${after.id} \\{\\n {2}page: colophon-back;\\n\\}`));
+  assert.doesNotMatch(css, /page: matter/);
+});
+
+test("a contents entry before the body prints its page in roman, whatever the body's format", () => {
+  const css = generatedCss(emptyDesign(), { sections: named(["contents", "matter", "chapter"]) });
+
+  assert.match(
+    css,
+    /section#contents-1 p\.folio\.front a::after \{\n {2}content: target-counter\(attr\(href url\), page, lower-roman\);\n\}/,
+  );
+  // The rule is the more specific one, so it wins over the body's.
+  assert.ok(css.indexOf("p.folio a::after") < css.indexOf("p.folio.front a::after"));
 });
 
 /** A design with a head on each side at `position`, and a folio at `pageNumber`. */
@@ -882,6 +1026,15 @@ function heads(page: Page | undefined): string[] {
 
 /** The fixture's top margin, in points. Anything above it is a margin box. */
 const TOP_MARGIN = 0.8 * 72;
+
+/** The foot of the fixture's text block: an 8.5in page less a 1in margin. */
+const FOOT = 7.5 * 72;
+
+/** The fixture's inside margin, where a right page's text starts. */
+const INSIDE = 0.95 * 72;
+
+/** The fixture's measure: a 5.5in page less its inside and outside margins. */
+const MEASURE = (5.5 - 0.95 - 0.7) * 72;
 
 async function moduleBytes(): Promise<Buffer> {
   const require = createRequire(import.meta.url);

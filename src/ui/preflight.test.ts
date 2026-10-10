@@ -82,7 +82,7 @@ test("the fixture book lists a chapter with no note, and preflight refuses it", 
 
   assert.deepEqual(
     checked.errors.map((each) => [each.said, each.place, each.row]),
-    [["Missing note: Chapter Four", "Body", 6]],
+    [["Missing note: Chapter Four", "Body", 8]],
   );
   assert.equal(checked.fine, undefined);
 });

@@ -46,8 +46,10 @@ status: drafting
 
 - `title-page`
 - [[Copyright]] `copyright`
+- [[Dedication]] `dedication`
 - [[A note on the text]] `epigraph`
 - `contents`
+- [[Preface]] `matter`
 
 # Body
 
@@ -58,7 +60,7 @@ status: drafting
 
 # Back matter
 
-- [[Acknowledgements]] `back-matter`
+- [[Acknowledgements]] `matter`
 
 # The book's css
 

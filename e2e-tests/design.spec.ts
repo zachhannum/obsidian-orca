@@ -62,7 +62,7 @@ const CARRIED = "EB Garamond";
 const AUTHOR = "Jane Austen";
 
 /** A verso of set text inside a chapter, which carries a head and a folio. */
-const HEAD_PAGE = 12;
+const HEAD_PAGE = 16;
 
 /** A right sidebar narrower than the panel's artboard, in pixels. */
 const NARROW = 260;

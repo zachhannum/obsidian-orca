@@ -98,8 +98,8 @@ suppress-head-on-openings: true
 
 # Back matter
 
-- [[A note on the text]] `back-matter`
-- [[Colophon]] `back-matter`
+- [[A note on the text]] `matter`
+- [[Colophon]] `matter`
 
 ```css
 /* The book prints in one colour beside black. */

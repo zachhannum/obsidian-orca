@@ -938,6 +938,55 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
   assert.deepEqual([...listed].sort(), pages.sort());
 });
 
+test("the roles table states the effect of each role, and the page says where page 1 starts", async () => {
+  const { ROLES } = await moduleOf("src/book/roles.ts");
+  const page = await read(`${DOCS}/reference/the-book-note.mdx`);
+  const rows = table(page, ["Role", "Name", "Text", "Effect"]);
+
+  assert.deepEqual(
+    rows.map(([role, name, , effect]) => [unquoted(role), name, effect]),
+    Object.entries(ROLES).map(([role, { name, effect }]) => [role, name, effect]),
+  );
+  assert.match(page, /The first part or chapter of the book is page 1\./);
+  assert.match(page, /The pages before it are numbered in lower-case roman/);
+});
+
+test("the roles page says how to set a role, which role fits each kind of note, how to name a role of your own, and what a generated role leaves out", async () => {
+  const page = await read(`${DOCS}/book/roles.mdx`);
+
+  assert.match(page, /## Set a role in the navigator\n[^#]*`Role for this entry…`/);
+  assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `matter`/);
+  for (const [note, role] of [
+    ["title of a group of chapters", "part"],
+    ["preface", "matter"],
+    ["copyright page", "copyright"],
+    ["dedication", "dedication"],
+    ["epigraph", "epigraph"],
+  ]) {
+    assert.match(page, new RegExp(`\\| (?:An?|The) ${note}[^|]*\\| \`${role}\` \\|`), note);
+  }
+  assert.match(page, /If you add a link, Orca ignores the note\./);
+  assert.match(page, /## Your own role\n[^#]*- \[\[Prologue\]\] `prologue`[^#]*section\.prologue \{/);
+});
+
+test("the Navigator artboard draws the role picker with the line each role states", async () => {
+  const { ROLES } = await moduleOf("src/book/roles.ts");
+  const drawn = [
+    ...(await read("design/parts/Navigator.html")).matchAll(
+      /<div>([^<]+)<\/div><div class="suggest-note">([^<]+)<\/div>/g,
+    ),
+  ].map(([, name, effect]) => [name, effect]);
+
+  // The picker for an entry draws the roles a note takes, then the name
+  // the author typed. The picker for a generated section draws the rest.
+  const lines = Object.values(ROLES);
+  assert.deepEqual(drawn, [
+    ...lines.filter(({ origin }) => origin === "note").map(({ name, effect }) => [name, effect]),
+    ["prologue", "Your own role. Custom CSS styles it as section.prologue."],
+    ...lines.filter(({ origin }) => origin === "generated").map(({ name, effect }) => [name, effect]),
+  ]);
+});
+
 // What this file does not cover: the pictures themselves, which the
 // screenshot spec takes and compares; whether the glyph the site draws
 // for a button is the glyph Obsidian draws, since Obsidian ships a

@@ -33,7 +33,7 @@ test("a note the book reads belongs to it, at the place the order gives it", asy
 
   // The fixture opens on a generated title page, so the first note the
   // order names is not the first entry in it.
-  assert.deepEqual(found.get("Chapter Twelve.md"), { book: BOOK, at: 5 });
+  assert.deepEqual(found.get("Chapter Twelve.md"), { book: BOOK, at: 7 });
   assert.deepEqual(found.get("Copyright.md"), { book: BOOK, at: 1 });
 
   // The book note is not one of its own sections, and an entry whose

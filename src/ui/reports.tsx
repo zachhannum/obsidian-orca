@@ -329,7 +329,7 @@ function Entry({ line, acting }: { line: Line; acting: Acting }): JSX.Element {
       data-testid="orca-order-entry"
       data-at={line.at}
       data-kind={line.kind}
-      data-role={line.role}
+      data-role={line.custom ?? line.role}
       role="button"
       tabIndex={0}
       onClick={locate}
@@ -341,7 +341,7 @@ function Entry({ line, acting }: { line: Line; acting: Acting }): JSX.Element {
           <span className="orca-chip">generated</span>
         ) : line.named ? (
           <span className="orca-chip">
-            {ROLES[line.role].name.toLowerCase()}
+            {line.custom ?? ROLES[line.role].name.toLowerCase()}
           </span>
         ) : null}
       </span>
