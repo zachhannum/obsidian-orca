@@ -111,13 +111,13 @@ A heading starts a section, for example `# Front matter` or `# Body`. Sections g
 | `part` | Part | From a note | A title page for a group of chapters. |
 | `chapter` | Chapter | From a note | The default role, with the chapter opening. |
 
-The first part or chapter of the book is page 1. The pages before it are numbered in lower-case roman, for example `iii`. The pages from page 1 to the end use the format that the design sets. A role does not change this, so a `matter` entry after the last chapter has an arabic page number.
+The first part or chapter of the book is page 1. The pages before it are numbered in lower-case roman, for example `iii`. The position of an entry decides this, not its role.
 
-The contents lists each `part`, `chapter` and `matter` entry. An entry before page 1 shows its page number in roman.
+The contents lists each `part`, `chapter` and `matter` entry.
 
-A link with a name that is not a role, for example `` [[Prologue]] `prologue` ``, is an entry under a role of your own. Orca sets it as a `matter` entry, and the name is its class and its page name. A name starts with a lower-case letter and can contain lower-case letters, digits and hyphens.
+Any other name is a role of your own, for example `` [[Prologue]] `prologue` ``. Orca sets the entry like `matter`, with the name as its class.
 
-[Roles](/book/roles/) shows how to pick a role for each note.
+[Roles](/book/roles/) shows how to use them.
 
 ## Book CSS
 

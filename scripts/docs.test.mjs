@@ -965,8 +965,8 @@ test("the roles page says how to set a role, which role fits each kind of note, 
   ]) {
     assert.match(page, new RegExp(`\\| (?:An?|The) ${note}[^|]*\\| \`${role}\` \\|`), note);
   }
-  assert.match(page, /Orca does not set the text of the linked note/);
-  assert.match(page, /## A role of your own\n[^#]*- \[\[Prologue\]\] `prologue`[^#]*section\.prologue \{/);
+  assert.match(page, /If you add a link, Orca ignores the note\./);
+  assert.match(page, /## Your own role\n[^#]*- \[\[Prologue\]\] `prologue`[^#]*section\.prologue \{/);
 });
 
 test("the Navigator artboard draws the role picker with the line each role states", async () => {

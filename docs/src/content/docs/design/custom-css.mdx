@@ -82,12 +82,12 @@ If your CSS sets a property that a control also sets, with the same selector, th
 
 ## Selectors
 
-Each entry of the reading order is a `section`. Its class is its role, for example `chapter` or `part`. An entry with [a role of your own](/book/roles/) has that name as its class. Its id comes from the name of the entry, for example `a-shifting-reef`. The id stays the same when you move the entry.
+Each entry of the reading order is a `section`. Its class is its role, for example `chapter` or `part`. [Your own role](/book/roles/) is a class too. Its id comes from the name of the entry, for example `a-shifting-reef`. The id stays the same when you move the entry.
 
 | Part of the book | Selector |
 | --- | --- |
 | Every section of a role | `section.chapter`, `section.copyright` |
-| Every section of a role of your own | `section.prologue` |
+| Every section of your own role | `section.prologue` |
 | One section | `section#a-shifting-reef` |
 | The heading that opens each chapter | `section.chapter > h1:first-child` |
 | The first letter of each chapter | `section.chapter > h1:first-child + p::first-letter` |
@@ -97,7 +97,7 @@ Each entry of the reading order is a `section`. Its class is its role, for examp
 | A page number in the contents | `section#contents p.folio` |
 | A part in the contents | `section#contents p.part` |
 
-Each role sets its own named page, for example `@page chapter` or `@page chapter:first`. A role keeps that name before the first part or chapter. After the body, the name ends in `-back`: `@page matter-back` is a `matter` entry after the last chapter. `@page :left` and `@page :right` set the left and right pages. The running heads and the page numbers are margin boxes of those rules, for example `@top-left` and `@bottom-center`.
+Each role sets its own named page, for example `@page chapter` or `@page chapter:first`. After the first part or chapter, the name ends in `-back`, for example `@page matter-back`. `@page :left` and `@page :right` set the left and right pages. The running heads and the page numbers are margin boxes of those rules, for example `@top-left` and `@bottom-center`.
 
 ## Images and fonts
 
