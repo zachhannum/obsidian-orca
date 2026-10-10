@@ -53,6 +53,7 @@ export default defineConfig({
           label: 'Start here',
           items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/the-preview'],
         },
+        { label: 'The book', items: ['book/roles'] },
         {
           label: 'Design',
           items: [
@@ -62,7 +63,6 @@ export default defineConfig({
             'design/headings',
             'design/fonts',
             'design/chapter-openings',
-            'design/roles',
             'design/scene-breaks',
             'design/headers-and-page-numbers',
             'design/page-breaks',

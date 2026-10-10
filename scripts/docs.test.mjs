@@ -952,7 +952,7 @@ test("the roles table states the effect of each role, and the page says where pa
 });
 
 test("the roles page says how to set a role, which role fits each kind of note, how to name a role of your own, and what a generated role leaves out", async () => {
-  const page = await read(`${DOCS}/design/roles.mdx`);
+  const page = await read(`${DOCS}/book/roles.mdx`);
 
   assert.match(page, /## Set a role in the navigator\n[^#]*`Role for this entry…`/);
   assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `matter`/);
