@@ -88,7 +88,7 @@
 <p>Each row of the list shows the name of a role and one line that states its effect. The list has no <code dir="auto">Title page</code> or <code dir="auto">Contents</code> row for an entry that has a note, because Orca writes the text of those two.</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="set-a-role-in-the-book-note">Set a role in the book note</h2><a class="sl-anchor-link" href="#set-a-role-in-the-book-note"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Set a role in the book note”</span></a></div>
 <p>In the book note, write the role in backticks after the link.</p>
-<pre class="astro-code astro-code-themes dark light" style="--shiki-dark:#e9ece8;--shiki-light:#0a0c0f;--shiki-dark-bg:#1e1e1e;--shiki-light-bg:#fffffe; overflow-x: auto;" tabindex="0" data-language="md" dir="ltr"><code><span class="line"><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">- [[</span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">Preface</span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">]] </span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">`front-matter`</span></span></code></pre>
+<pre class="astro-code astro-code-themes dark light" style="--shiki-dark:#e9ece8;--shiki-light:#0a0c0f;--shiki-dark-bg:#1e1e1e;--shiki-light-bg:#fffffe; overflow-x: auto;" tabindex="0" data-language="md" dir="ltr"><code><span class="line"><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">- [[</span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">Preface</span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">]] </span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">`matter`</span></span></code></pre>
 <p>To make the entry a chapter again, delete the role. <a href="/pr-preview/pr-378/reference/the-book-note/">The book note</a> lists every role.</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="pick-a-role">Pick a role</h2><a class="sl-anchor-link" href="#pick-a-role"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Pick a role”</span></a></div>
 <table>
@@ -111,13 +111,8 @@
 <td>Orca sets the note on a page of its own, with no chapter opening. The contents lists it as a title above its chapters.</td>
 </tr>
 <tr>
-<td>A preface, a foreword or an introduction</td>
-<td><code dir="auto">front-matter</code></td>
-<td>Orca sets the text as prose with no drop cap. The contents lists it.</td>
-</tr>
-<tr>
-<td>An afterword or the acknowledgements</td>
-<td><code dir="auto">back-matter</code></td>
+<td>A preface, an afterword or the acknowledgements</td>
+<td><code dir="auto">matter</code></td>
 <td>Orca sets the text as prose with no drop cap. The contents lists it.</td>
 </tr>
 <tr>
@@ -139,7 +134,7 @@
 </table>
 <p>A part has no layout of its own. The design panel has no control for it. To lay out the title of a part, use <a href="/pr-preview/pr-378/design/custom-css/">Custom CSS</a> on <code dir="auto">section.part</code>.</p>
 <p>A copyright page, a dedication and an epigraph are single pages. The contents does not list them, and the design panel has no control for them. To change one, use <a href="/pr-preview/pr-378/design/custom-css/">Custom CSS</a>.</p>
-<p><code dir="auto">front-matter</code> and <code dir="auto">back-matter</code> set the same pages. The two names let your CSS tell the entries apart. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.</p>
+<p>A <code dir="auto">matter</code> entry is front matter or back matter. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="a-role-of-your-own">A role of your own</h2><a class="sl-anchor-link" href="#a-role-of-your-own"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “A role of your own”</span></a></div>
 <p>A role can be a name that you choose, for example <code dir="auto">prologue</code>. Orca sets the entry as prose with no drop cap, and the contents lists it. The name is the class of the entry, so your CSS can lay it out.</p>
 <ol>

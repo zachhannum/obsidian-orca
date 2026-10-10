@@ -111,7 +111,7 @@
 <span class="line"></span>
 <span class="line"><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F"># Back matter</span></span>
 <span class="line"></span>
-<span class="line"><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">- [[A note on the text]] </span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">`back-matter`</span></span>
+<span class="line"><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">- [[A note on the text]] </span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">`matter`</span></span>
 <span class="line"></span>
 <span class="line"><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">```css</span></span>
 <span class="line"><span style="--shiki-dark:#6366F1;--shiki-light:#3730A3">section</span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F">.chapter </span><span style="--shiki-dark:#6366F1;--shiki-light:#3730A3">h1</span><span style="--shiki-dark:#E9ECE8;--shiki-light:#0A0C0F"> {</span></span>
@@ -221,10 +221,10 @@
 <td>Generated from the reading order. A linked note is not set.</td>
 </tr>
 <tr>
-<td><code dir="auto">front-matter</code></td>
-<td>Front matter</td>
+<td><code dir="auto">matter</code></td>
+<td>Matter</td>
 <td>From a note</td>
-<td>Prose before the chapters, such as a preface.</td>
+<td>Front or back matter: prose that is not a chapter.</td>
 </tr>
 <tr>
 <td><code dir="auto">part</code></td>
@@ -238,17 +238,11 @@
 <td>From a note</td>
 <td>The default role, with the chapter opening.</td>
 </tr>
-<tr>
-<td><code dir="auto">back-matter</code></td>
-<td>Back matter</td>
-<td>From a note</td>
-<td>Prose after the chapters, such as an afterword.</td>
-</tr>
 </tbody>
 </table>
-<p>The first part or chapter of the book is page 1. The pages before it are numbered in lower-case roman, for example <code dir="auto">iii</code>. The pages from page 1 to the end use the format that the design sets. A role does not change this, so a <code dir="auto">front-matter</code> entry after the last chapter has an arabic page number.</p>
-<p>The contents lists each <code dir="auto">part</code>, <code dir="auto">chapter</code>, <code dir="auto">front-matter</code> and <code dir="auto">back-matter</code> entry. An entry before page 1 shows its page number in roman.</p>
-<p>A link with a name that is not a role, for example <code dir="auto">[[Prologue]] `prologue`</code>, is an entry under a role of your own. Orca sets it as a <code dir="auto">front-matter</code> entry, and the name is its class and its page name. A name starts with a lower-case letter and can contain lower-case letters, digits and hyphens.</p>
+<p>The first part or chapter of the book is page 1. The pages before it are numbered in lower-case roman, for example <code dir="auto">iii</code>. The pages from page 1 to the end use the format that the design sets. A role does not change this, so a <code dir="auto">matter</code> entry after the last chapter has an arabic page number.</p>
+<p>The contents lists each <code dir="auto">part</code>, <code dir="auto">chapter</code> and <code dir="auto">matter</code> entry. An entry before page 1 shows its page number in roman.</p>
+<p>A link with a name that is not a role, for example <code dir="auto">[[Prologue]] `prologue`</code>, is an entry under a role of your own. Orca sets it as a <code dir="auto">matter</code> entry, and the name is its class and its page name. A name starts with a lower-case letter and can contain lower-case letters, digits and hyphens.</p>
 <p><a href="/pr-preview/pr-378/design/roles/">Roles</a> shows how to pick a role for each note.</p>
 <div class="sl-heading-wrapper level-h2"><h2 id="book-css">Book CSS</h2><a class="sl-anchor-link" href="#book-css"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Book CSS”</span></a></div>
 <p>A <code dir="auto">css</code> code block in the note contains custom CSS for advanced overrides. The CSS view of the design panel edits this block. The <a href="https://fleuron.typeworks.dev/css-subset/">fleuron CSS subset</a> lists the CSS that Orca supports. <a href="/pr-preview/pr-378/design/custom-css/">Custom CSS</a> shows how to write it.</p>
