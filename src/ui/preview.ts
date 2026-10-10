@@ -50,6 +50,7 @@ import { device } from "@/ui/desktop";
 import { footPlace, liftFor, sheetCover, sheets, type Foot } from "@/ui/device";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
+  bled,
   fits,
   isViewMode,
   nextPage,
@@ -225,6 +226,10 @@ export interface PreviewHandoff {
   reader(): ReaderStored;
   /** Told the device and the reader settings after a change, so the plugin keeps them. */
   reads(reader: ReaderStored): void;
+  /** Whether a preview draws the trim line, which the last toggle chose. */
+  trimEdge(): boolean;
+  /** Told the author turned the trim line on or off, so every preview follows. */
+  trimEdged(on: boolean): void;
   /** Opens the export dialog on the book this view reads. */
   exports(book: string): void;
   /** Adds a new chapter at the end of the book's body. */
@@ -279,6 +284,9 @@ const VIEWS: { mode: ViewMode; icon: string; label: string }[] = [
  * goes back to the page view it had.
  */
 const EPUB = { view: "epub", icon: "tablet", label: "EPUB" };
+
+/** The header action that turns the trim line off and on. */
+const TRIM_EDGE = { icon: "scissors", label: "Show the trim line" };
 
 /** The class the pane carries while it shows the EPUB view. */
 const REFLOWING = "is-reflow";
@@ -444,6 +452,8 @@ export class PreviewView extends ItemView {
   private overlay: MountedOverlay | undefined;
   /** The header action that turns inspect mode on and off. */
   private inspectAction: HTMLElement | undefined;
+  /** The header action that turns the trim line off and on. */
+  private trimAction: HTMLElement | undefined;
   /**
    * The element a phone keeps over the foot of the screen, which the
    * design panel draws the inspect pane in as a sheet.
@@ -680,6 +690,10 @@ export class PreviewView extends ItemView {
     });
     this.inspectAction.setAttribute("aria-pressed", "false");
     if (this.reflowing) this.inspectAction.setAttribute("aria-disabled", "true");
+    this.trimAction ??= this.addAction(TRIM_EDGE.icon, TRIM_EDGE.label, () => {
+      this.toggleTrimEdge();
+    });
+    this.marksTrimEdge();
     this.ordersActions();
     // The workspace may have handed this leaf its state before the
     // chrome existed to draw it on, and a paint into a pane with no
@@ -711,6 +725,9 @@ export class PreviewView extends ItemView {
     this.contentEl.removeClass(REFLOWING);
     this.inspectAction?.remove();
     this.inspectAction = undefined;
+    this.trimAction?.remove();
+    this.trimAction = undefined;
+    this.painted = new Map();
     this.exportAction?.remove();
     this.exportAction = undefined;
     this.watching?.disconnect();
@@ -1588,12 +1605,42 @@ export class PreviewView extends ItemView {
     return before;
   }
 
-  /** Puts the inspect action left of the way back to the manuscript, as the artboard draws them. */
+  /**
+   * Puts the inspect action left of the way back to the manuscript, as
+   * the artboard draws them, and the trim line's action left of that.
+   */
   private ordersActions(): void {
     const inspect = this.inspectAction;
     const edit = this.edit;
-    if (inspect === undefined || edit === undefined) return;
-    if (edit.previousElementSibling !== inspect) edit.before(inspect);
+    if (inspect === undefined) return;
+    if (edit !== undefined && edit.previousElementSibling !== inspect) edit.before(inspect);
+    const trim = this.trimAction;
+    if (trim !== undefined && inspect.previousElementSibling !== trim) inspect.before(trim);
+  }
+
+  /** Whether a page on screen has a trim line to show: one with a bleed or a slug. */
+  get trimmable(): boolean {
+    return !this.reflowing && bled(this.painted.values());
+  }
+
+  /** Turns the trim line off or on, in every preview. */
+  toggleTrimEdge(): void {
+    if (this.trimmable) this.handoff.trimEdged(!this.handoff.trimEdge());
+  }
+
+  /**
+   * Writes the choice on the surface, where the stylesheet hides the
+   * line, so a toggle sets no page again. The action shows only while
+   * there is a line to hide.
+   */
+  marksTrimEdge(): void {
+    const on = this.handoff.trimEdge();
+    if (this.surface !== undefined) this.surface.dataset["trimEdge"] = on ? "on" : "off";
+    const action = this.trimAction;
+    if (action === undefined) return;
+    action.toggle(this.trimmable);
+    action.toggleClass("is-active", on);
+    action.setAttribute("aria-pressed", String(on));
   }
 
   /** Turns inspect mode on, or off with the pin and the hover. */
@@ -2208,6 +2255,7 @@ export class PreviewView extends ItemView {
       this.inspectAction?.removeAttribute("aria-disabled");
     }
     this.contentEl.toggleClass(REFLOWING, on);
+    this.marksTrimEdge();
     this.marksView();
     this.moved();
   }
@@ -2518,6 +2566,8 @@ export class PreviewView extends ItemView {
     }
     if (turn !== this.turning || this.surface === undefined) return;
     if (reading === undefined) {
+      this.painted = new Map();
+      this.marksTrimEdge();
       this.empty();
       return;
     }
@@ -2582,6 +2632,7 @@ export class PreviewView extends ItemView {
     this.sheets = new Map(
       reading.pages.map((page, index) => [reading.at + index, sheetOf(page)]),
     );
+    this.marksTrimEdge();
     this.measured += 1;
     if (this.hovered?.generation !== session.generation) this.hovered = undefined;
     this.drawsOverlay();

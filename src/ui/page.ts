@@ -202,6 +202,17 @@ export const pressSheet: Press<HTMLElement> = (attributes, markup) => {
 };
 
 /**
+ * Whether a page among `pages` is painted on a sheet wider than its
+ * trim, which is the only page the trim line is drawn on.
+ */
+export function bled(pages: Iterable<{ bleed: number; slug: number }>): boolean {
+  for (const page of pages) {
+    if (page.bleed > 0 || page.slug > 0) return true;
+  }
+  return false;
+}
+
+/**
  * Writes a view's pages into the surface in one go, with the generation,
  * the stage runs and the span being read as attributes, which a test
  * waits on rather than a clock.

@@ -211,6 +211,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
             reads: (reader) => {
               this.limit({ ...this.limits, reader });
             },
+            trimEdge: () => this.limits.trimEdge,
+            trimEdged: (trimEdge) => {
+              this.limit({ ...this.limits, trimEdge });
+              for (const other of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
+                if (other.view instanceof PreviewView) other.view.marksTrimEdge();
+              }
+            },
             exports: (book) => {
               this.exportBook(book);
             },
@@ -328,6 +335,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const view = this.app.workspace.getActiveViewOfType(PreviewView);
         if (view === null) return false;
         if (!checking) view.toggleInspect();
+        return true;
+      },
+    });
+    this.addCommand({
+      id: "toggle-trim-line",
+      name: "Toggle the trim line",
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(PreviewView);
+        if (view?.trimmable !== true) return false;
+        if (!checking) view.toggleTrimEdge();
         return true;
       },
     });

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { paintPage, sheetOf, type Page } from "fleuron";
 import {
+  bled,
   fits,
   gapOf,
   nextPage,
@@ -324,6 +325,16 @@ test("a bled page is painted on its whole sheet, with the trim's edge drawn", ()
   const plain = paintPage({ ...BLED, bleed: 0, slug: 0 }, { fonts: [] });
   assert.match(plain, /viewBox="0 0 432 648"/);
   assert.doesNotMatch(plain, /data-trim/);
+});
+
+test("a book has a trim line to show when a painted page has a bleed or a slug", () => {
+  const plain = { ...BLED, bleed: 0, slug: 0 };
+
+  assert.equal(bled([]), false);
+  assert.equal(bled([plain]), false);
+  assert.equal(bled([plain, BLED]), true);
+  assert.equal(bled([{ ...plain, bleed: 9 }]), true);
+  assert.equal(bled([{ ...plain, slug: 24 }]), true);
 });
 
 test("a page is named for what reads it aloud, and the drawn glyphs are left out of it", () => {
