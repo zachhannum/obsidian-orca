@@ -31,7 +31,7 @@ import { readModel, type Model } from "@/book/model";
 import { sectionIds } from "@/book/names";
 import { bookCss } from "@/book/css";
 import { FORMAT, type Book } from "@/book/note";
-import { readOrder, resolve } from "@/book/order";
+import { entries, readOrder, rename, resolve } from "@/book/order";
 import { bookUses, emptyDesign } from "@/style/design";
 import { readOrigin } from "@/style/origin";
 import {
@@ -887,6 +887,15 @@ test("every source in the book op carries its names, and generated matter is nam
       { classes: ["back-matter"], id: "acknowledgements" },
     ],
   );
+});
+
+test("a section under a name of the author's own crosses with the name as its class, and the contents lists it", async () => {
+  const model = await fixture();
+  const at = entries(model.order).findIndex((entry) => entry.link === "Acknowledgements");
+  const sources = only(await planned({ ...model, order: rename(model.order, at, "colophon") }), "book").sources;
+
+  assert.deepEqual(sources[9]?.attributes, { classes: ["colophon"], id: "acknowledgements" });
+  assert.match(sources[4]?.text ?? "", /\{\.entry\}\n\n\[Acknowledgements\]/);
 });
 
 /** Sets these ops on an engine of their own, over the bundled theme. */

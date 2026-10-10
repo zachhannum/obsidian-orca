@@ -23,6 +23,8 @@ export interface Row {
   /** The note it reads, for a row that has one. */
   path?: string;
   role: Role;
+  /** The name the author gave it in place of a role, which the chip shows. */
+  custom?: string;
   /** Whether the role is drawn as a chip, which the default role is not. */
   named: boolean;
   /** The headings inside its note, when the navigator lists them. */
@@ -109,6 +111,7 @@ export function row(
     role: entry.role,
     named: entry.role !== DEFAULT_ROLE,
   };
+  if (entry.custom !== undefined) made.custom = entry.custom;
   if (section.kind === "note") {
     made.path = section.path;
     if (headings !== undefined) {

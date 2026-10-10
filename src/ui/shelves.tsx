@@ -1072,7 +1072,7 @@ function Entry({
         className={`orca-nav-item orca-entry${sortable.isDragging ? " is-dragged" : ""}${mark === "entry" ? " is-selected" : ""}`}
         data-testid="orca-entry"
         data-at={row.at}
-        data-role={row.role}
+        data-role={row.custom ?? row.role}
         data-kind={row.kind}
         data-walk=""
         aria-current={mark === "entry" ? "page" : undefined}
@@ -1110,7 +1110,7 @@ function Entry({
         {row.kind === "generated" ? (
           <span className="orca-chip">generated</span>
         ) : row.named ? (
-          <span className="orca-chip">{ROLES[row.role].name.toLowerCase()}</span>
+          <span className="orca-chip">{row.custom ?? ROLES[row.role].name.toLowerCase()}</span>
         ) : null}
         {row.kind === "missing" ? (
           <span className="orca-nav-actions">

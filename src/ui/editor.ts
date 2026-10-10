@@ -61,7 +61,7 @@ import {
 import type { SyntaxNode } from "@lezer/common";
 import { SUBSET, type Names } from "fleuron";
 import { classHighlighter } from "@lezer/highlight";
-import type { Named } from "@/book/names";
+import { classOf, type Named } from "@/book/names";
 import type { Place } from "@/style/origin";
 import { quoted } from "@/style/quoted";
 import type { Device } from "@/ui/device";
@@ -466,14 +466,14 @@ function optionsAfter(lead: string, named: readonly Named[], notes: Names): Comp
         ...SUBSET.selectors.pseudo_elements.map(({ name }) => ({ label: name, type: "keyword" })),
       ];
     case ".":
-      return [...new Set([...named.map((each) => each.role), ...notes.classes])].map((name) => ({
+      return [...new Set([...named.map(classOf), ...notes.classes])].map((name) => ({
         label: `.${name}`,
         type: "class",
       }));
     case "#": {
       const sections = new Set(named.map((each) => each.id));
       return [
-        ...named.map((each) => ({ label: `#${each.id}`, type: "class", detail: each.role })),
+        ...named.map((each) => ({ label: `#${each.id}`, type: "class", detail: classOf(each) })),
         ...notes.ids
           .filter((id) => !sections.has(id))
           .map((id) => ({ label: `#${id}`, type: "class" })),

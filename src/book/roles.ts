@@ -77,6 +77,23 @@ export function roleOf(tag: string): Role | undefined {
   return Object.hasOwn(MATTER, name) ? (name as Role) : undefined;
 }
 
+/**
+ * The role a section under a name of the author's own is set in. Such a
+ * section is prose that is not a chapter, and the name is its class.
+ */
+export const CUSTOM_BASE: Role = "front-matter";
+
+const NAME = /^[a-z][a-z0-9-]*$/;
+
+/**
+ * The name a tag gives a section when it names no role. The name is the
+ * section's class and its page name, so it is one a CSS selector can write.
+ */
+export function customOf(tag: string): string | undefined {
+  const name = tag.trim();
+  return roleOf(name) === undefined && NAME.test(name) ? name : undefined;
+}
+
 /** The index of the first part or chapter, where the body starts and page 1 with it. */
 export function bodyStart(roles: readonly Role[]): number | undefined {
   const found = roles.findIndex((role) => role === "part" || role === "chapter");

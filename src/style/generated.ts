@@ -10,7 +10,7 @@
  * Nothing here is written to the vault.
  */
 
-import type { Named } from "@/book/names";
+import { classOf, type Named } from "@/book/names";
 import { bodyStart, type Role } from "@/book/roles";
 import {
   LEVELS,
@@ -957,7 +957,7 @@ function pages(setting: Setting): Paged[] {
   const found = new Map<string, Paged>();
   setting.sections.forEach((section, at) => {
     const front = start !== undefined && at < start;
-    const name = start === undefined ? section.role : pageName(section.role, front);
+    const name = start === undefined ? classOf(section) : pageName(section, front);
     const page = found.get(name) ?? { name, role: section.role, front, sections: [] };
     page.sections.push(section);
     found.set(name, page);
@@ -968,12 +968,14 @@ function pages(setting: Setting): Paged[] {
 /**
  * The page name of a role on one side of the body. A role keeps its
  * own name on the side it belongs to, which is after the body for back
- * matter and before it for the rest. A book with no body has no sides.
+ * matter and before it for the rest, a name of the author's own
+ * included. A book with no body has no sides.
  */
-function pageName(role: Role, front: boolean): string {
+function pageName(section: Named, front: boolean): string {
+  const { role } = section;
   if (role === "part" || role === "chapter") return role;
-  if (role === "back-matter") return front ? `${role}-front` : role;
-  return front ? role : `${role}-back`;
+  if (section.custom === undefined && role === "back-matter") return front ? `${role}-front` : role;
+  return front ? classOf(section) : `${classOf(section)}-back`;
 }
 
 function owned(headers: HeaderDesign): boolean {

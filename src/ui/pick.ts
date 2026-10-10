@@ -11,6 +11,8 @@ export interface Picking<T> {
   label(item: T): string;
   /** A line under the label. The pick matches on the label alone. */
   note?(item: T): string;
+  /** An item for what the author typed, which the pick lists after its matches. */
+  typed?(query: string): T | undefined;
   placeholder: string;
   chose(item: T): void;
 }
@@ -31,6 +33,13 @@ class Picker<T> extends FuzzySuggestModal<T> {
 
   getItemText(item: T): string {
     return this.of.label(item);
+  }
+
+  override getSuggestions(query: string): FuzzyMatch<T>[] {
+    const found = super.getSuggestions(query);
+    const typed = this.of.typed?.(query);
+    if (typed === undefined) return found;
+    return [...found, { item: typed, match: { score: 0, matches: [] } }];
   }
 
   // The title and the note take the classes Obsidian gives a suggestion

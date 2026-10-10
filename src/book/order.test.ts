@@ -20,6 +20,7 @@ import {
   readOrder,
   remove,
   removeGroup,
+  rename,
   renameGroup,
   resolve,
   retag,
@@ -87,7 +88,7 @@ test("a book note's reading order parsed and written back is byte-identical", as
   // A body orca does not read is kept as it was written.
   for (const kept of [
     "\n\n# Body\n\n- [[Chapter Twelve]]\n\nA line of the author's own.\n\n```css\n.chapter { margin: 0 }\n```\n",
-    "\n\n- [[Chapter Twelve]]\n- not an entry\n- [[Chapter Four]] `prologue`\n",
+    "\n\n- [[Chapter Twelve]]\n- not an entry\n- [[Chapter Four]] `Not A Name`\n- `prologue`\n",
     "",
   ]) {
     assert.equal(writeOrder(readOrder(kept)), kept);
@@ -268,6 +269,32 @@ test("a drag reorders the list, and an entry carries its role across a heading",
       ["The book's css", 0],
     ],
   );
+});
+
+test("a link tagged with a name that is no role is an entry under that name, set as prose from its note", async () => {
+  const text = "\n\n- [[Chapter Twelve]]\n- [[Chapter Fifteen]] `prologue`\n";
+  const book = readOrder(text);
+
+  assert.deepEqual(
+    entries(book).map(({ role, custom, tag }) => [role, custom, tag]),
+    [
+      ["chapter", undefined, undefined],
+      ["front-matter", "prologue", undefined],
+    ],
+  );
+  assert.equal(writeOrder(book), text);
+  const [, section] = resolve(book, pathLinks(await paths()), BOOK).sections;
+  assert.equal(section?.kind, "note");
+
+  // A role takes the name away, and a name takes the role away.
+  const named = rename(book, 0, "interlude");
+  assert.match(writeOrder(named), /- \[\[Chapter Twelve\]\] `interlude`\n/);
+  assert.equal(writeOrder(retag(named, 0, "chapter")), text);
+  assert.match(writeOrder(rename(retag(book, 0, "epigraph"), 0, "interlude")), /- \[\[Chapter Twelve\]\] `interlude`\n/);
+  assert.equal(writeOrder(retag(book, 1, "chapter")), "\n\n- [[Chapter Twelve]]\n- [[Chapter Fifteen]]\n");
+
+  // The name moves with its entry.
+  assert.equal(entries(move(book, 1, { heading: "", at: 0 }))[0]?.custom, "prologue");
 });
 
 test("a section is made, renamed, moved and taken out, and its entries stay", async () => {

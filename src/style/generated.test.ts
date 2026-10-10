@@ -822,6 +822,17 @@ test("a role that sits on one side of the body keeps its own page name, and a bo
   );
 });
 
+test("a section under a name of the author's own takes the name as its page name, on each side of the body", () => {
+  const [before, chapter, after] = named(["front-matter", "chapter", "front-matter"]);
+  assert.ok(before && chapter && after);
+  const sections = [{ ...before, custom: "prologue" }, chapter, { ...after, custom: "colophon" }];
+  const css = generatedCss(emptyDesign(), { sections });
+
+  assert.match(css, new RegExp(`section#${before.id} \\{\\n {2}page: prologue;\\n\\}`));
+  assert.match(css, new RegExp(`section#${after.id} \\{\\n {2}page: colophon-back;\\n\\}`));
+  assert.doesNotMatch(css, /page: front-matter/);
+});
+
 test("a contents entry before the body prints its page in roman, whatever the body's format", () => {
   const css = generatedCss(emptyDesign(), { sections: named(["contents", "front-matter", "chapter"]) });
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_ROLE, ROLES, bodyStart, roleOf, type Origin } from "@/book/roles";
+import { DEFAULT_ROLE, ROLES, bodyStart, customOf, roleOf, type Origin } from "@/book/roles";
 
 /** The roles the format has, and whether a section in each comes from a note. */
 const TABLE: Readonly<Record<string, Origin>> = {
@@ -36,6 +36,14 @@ test("each role states its effect in one line, and a generated one says a linked
     assert.match(effect, /^\S.*\.$/, role);
     assert.equal(effect.includes("A linked note is not set."), origin === "generated", role);
   }
+});
+
+test("a tag that names no role is a name of the author's own, when a selector can write it", () => {
+  assert.equal(customOf("prologue"), "prologue");
+  assert.equal(customOf(" half-title "), "half-title");
+  // A role is not a name, and neither is a word a class selector cannot write.
+  assert.equal(customOf("chapter"), undefined);
+  for (const tag of ["", "Two Words", "Prologue", "2nd", "a.b"]) assert.equal(customOf(tag), undefined, tag);
 });
 
 test("the body starts at the first part or chapter, and a book with neither has none", () => {
