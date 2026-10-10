@@ -80,6 +80,12 @@ export interface Row {
   of: readonly Control[];
   /** The controls sit two to a line, each with its word under it. */
   grid?: boolean;
+  /**
+   * The book note's page shows this row in its summary of the design
+   * whatever the book sets. A row without it is shown once the book
+   * moves it off the default.
+   */
+  summed?: boolean;
 }
 
 export interface Group {
@@ -201,9 +207,10 @@ export const GROUPS: readonly Group[] = [
   {
     name: "Page",
     rows: [
-      { label: "Trim", of: [{ kind: "trim", key: "trim", page: true }] },
+      { label: "Trim", summed: true, of: [{ kind: "trim", key: "trim", page: true }] },
       {
         label: "Margins",
+        summed: true,
         grid: true,
         of: [
           { kind: "length", key: "margin-inside", said: "inside", page: true },
@@ -217,15 +224,17 @@ export const GROUPS: readonly Group[] = [
   {
     name: "Text",
     rows: [
-      { label: "Font", of: [{ kind: "font", key: "body-font" }] },
+      { label: "Font", summed: true, of: [{ kind: "font", key: "body-font" }] },
       { label: "Variant", of: [{ kind: "variant", key: "body-font-variant" }] },
-      { label: "Size", of: [{ kind: "length", key: "body-size" }] },
+      { label: "Size", summed: true, of: [{ kind: "length", key: "body-size" }] },
       {
         label: "Line spacing",
+        summed: true,
         of: [{ kind: "length", key: "body-line-spacing" }],
       },
       {
         label: "Alignment",
+        summed: true,
         of: [{ kind: "segment", key: "body-align", choices: ALIGNMENTS }],
       },
       {
@@ -262,13 +271,13 @@ export const GROUPS: readonly Group[] = [
     name: "Headings",
     rows: [
       { label: "", of: [{ kind: "level", choices: LEVEL_CHOICES }] },
-      { label: "Font", of: [{ kind: "font", key: `${LEVELED}font` }] },
+      { label: "Font", summed: true, of: [{ kind: "font", key: `${LEVELED}font` }] },
       { label: "Variant", of: [{ kind: "variant", key: `${LEVELED}font-variant` }] },
       {
         label: "Style",
         of: [{ kind: "style", key: `${LEVELED}style`, choices: STYLES }],
       },
-      { label: "Size", of: [{ kind: "length", key: `${LEVELED}size` }] },
+      { label: "Size", summed: true, of: [{ kind: "length", key: `${LEVELED}size` }] },
       {
         label: "Capitals",
         of: [{ kind: "select", key: `${LEVELED}caps`, choices: CAPITALS }],
@@ -279,6 +288,7 @@ export const GROUPS: readonly Group[] = [
       },
       {
         label: "Alignment",
+        summed: true,
         of: [{ kind: "segment", key: `${LEVELED}align`, choices: HEADING_ALIGNMENTS }],
       },
       {
@@ -296,10 +306,12 @@ export const GROUPS: readonly Group[] = [
     rows: [
       {
         label: "Begins on",
+        summed: true,
         of: [{ kind: "select", key: "chapter-begins", choices: BEGINS }],
       },
       {
         label: "Drop cap",
+        summed: true,
         of: [{ kind: "select", key: "chapter-drop-cap", choices: DROP_CAPS }],
       },
       {
@@ -335,9 +347,10 @@ export const GROUPS: readonly Group[] = [
     rows: [
       {
         label: "Mark",
+        summed: true,
         of: [{ kind: "segment", key: "scene-break-mark", choices: MARKS }],
       },
-      { label: "Glyph", of: [{ kind: "glyph", key: "scene-break-ornament" }] },
+      { label: "Glyph", summed: true, of: [{ kind: "glyph", key: "scene-break-ornament" }] },
       { label: "Font", of: [{ kind: "font", key: "scene-break-font" }] },
       {
         label: "Style",
@@ -359,10 +372,12 @@ export const GROUPS: readonly Group[] = [
     rows: [
       {
         label: "Left-page header",
+        summed: true,
         of: [{ kind: "select", key: "header-left-page", choices: SLOTS }],
       },
       {
         label: "Right-page header",
+        summed: true,
         of: [{ kind: "select", key: "header-right-page", choices: SLOTS }],
       },
       {
@@ -375,12 +390,14 @@ export const GROUPS: readonly Group[] = [
       },
       {
         label: "Page number",
+        summed: true,
         of: [
           { kind: "segment", key: "page-number-position", choices: POSITIONS },
         ],
       },
       {
         label: "Number format",
+        summed: true,
         of: [{ kind: "segment", key: "page-number-format", choices: FORMATS }],
       },
       { label: "Header font", of: [{ kind: "font", key: "header-font" }] },
@@ -418,10 +435,12 @@ export const GROUPS: readonly Group[] = [
     rows: [
       {
         label: "Orphans",
+        summed: true,
         of: [{ kind: "count", key: "body-orphans", said: "lines" }],
       },
       {
         label: "Widows",
+        summed: true,
         of: [{ kind: "count", key: "body-widows", said: "lines" }],
       },
       {

@@ -1,8 +1,9 @@
 /**
  * The read-only summary of the design on the book note's page. It has
- * one line for each group of the panel, under the group's name and in
- * the words the panel draws. The author edits the design in the panel
- * in the right sidebar.
+ * one block for each group of the panel. A block holds the rows the
+ * panel marks `summed`, and every other row the book moves off its
+ * default. A row is under its own label, in the words the panel draws.
+ * The author edits the design in the panel in the right sidebar.
  */
 
 import {
@@ -10,88 +11,53 @@ import {
   emptyDesign,
   writeDesign,
   type Design,
+  type Level,
   type PageUnit,
   type Written,
 } from "@/style/design";
 import { effective } from "@/style/theme";
-import { GROUPS, defaultSaid, inUnit, keysOf, trims, type Group } from "@/ui/groups";
+import {
+  GROUPS,
+  atLevel,
+  defaultSaid,
+  inUnit,
+  type Control,
+  type Group,
+  type Row,
+} from "@/ui/groups";
 
-/** One line of the summary. */
-export interface Summed {
-  /** The name of the panel group the line sums up. */
+/** One value of the design, under the label of the panel row that sets it. */
+export interface Fact {
+  /** The design key, at its level for a heading. */
+  key: string;
   label: string;
   value: string;
-  /** True when the book sets a key of the group to something other than its default. */
+  /** True when the book sets the key to something other than its default. */
   set: boolean;
+  /**
+   * True when the fact begins a line of the block: the first of a
+   * heading level, and the first of a row with several controls.
+   */
+  starts: boolean;
+  /** True for a trim, whose name and sides need the room of two facts. */
+  wide: boolean;
 }
 
-/** A design with every default filled in, and the words the panel has for a key's value. */
+/** One group of the panel, as the summary shows it. */
+export interface Summed {
+  /** The name of the panel group. */
+  label: string;
+  facts: Fact[];
+}
+
+/** A design with every default filled in, and the keys the book moved off them. */
 interface Reading {
   full: Readonly<Record<string, Written>>;
-  /** The keys the book sets to something other than the default. */
   changed: ReadonlySet<string>;
   unit: PageUnit;
-  said: (key: string) => string;
-  lower: (key: string) => string;
 }
 
-/**
- * The sentence for each group of the panel, by the group's name. A
- * group with no entry here has an empty line, which a test refuses.
- */
-const LINES: Readonly<Record<string, (reading: Reading) => string>> = {
-  Page: ({ full, unit, said }) =>
-    `${trimSaid(full["trim"], unit)}. Margins ${said("margin-inside")} inside, ${said("margin-outside")} outside, ${said("margin-top")} top, ${said("margin-bottom")} bottom.`,
-  Text: ({ full, said, lower }) =>
-    [
-      said("body-font"),
-      `${said("body-size")} on ${said("body-line-spacing")}`,
-      lower("body-align"),
-      `${said("body-first-line-indent")} indent`,
-      full["body-hyphens"] === true ? "hyphenated" : "not hyphenated",
-    ].join(", "),
-  Headings: (reading) =>
-    LEVELS.filter(
-      (level) =>
-        level === 1 ||
-        [...reading.changed].some((key) => key.startsWith(`heading-${String(level)}-`)),
-    )
-      .map((level) => headingSaid(`heading-${String(level)}-`, reading))
-      .join(". "),
-  "Chapter openings": ({ full, said, lower }) => {
-    const cap = Number(full["chapter-drop-cap"] ?? 0);
-    const caps = full["chapter-first-line-caps"];
-    return [
-      said("chapter-begins"),
-      cap < 2 ? "no drop cap" : `drop cap of ${lower("chapter-drop-cap")}`,
-      ...(caps === undefined || caps === "normal"
-        ? []
-        : [`first line in ${lower("chapter-first-line-caps")}`]),
-    ].join(", ");
-  },
-  "Scene breaks": ({ full }) =>
-    full["scene-break-mark"] === "space"
-      ? "A blank line"
-      : String(full["scene-break-ornament"] ?? "An ornament"),
-  "Headers & page numbers": ({ full, said, lower }) => {
-    const none =
-      full["header-left-page"] === "none" && full["header-right-page"] === "none";
-    const heads = none
-      ? "No headers"
-      : `${said("header-left-page")} on left pages, ${lower("header-right-page")} on right pages`;
-    return `${heads}. Page numbers at the ${lower("page-number-position")} (${said("page-number-format")}).`;
-  },
-  "Page breaks": ({ full, said }) =>
-    [
-      `Orphans ${said("body-orphans")} lines`,
-      `widows ${said("body-widows")} lines`,
-      full["keep-heading-with-text"] === true
-        ? "a heading stays with what follows it"
-        : "a heading can end a page",
-    ].join(", "),
-};
-
-/** Sums up the design a book is set in, one line for each group of the panel, with every default filled in. */
+/** Sums up the design a book is set in, one block for each group of the panel, with every default filled in. */
 export function summary(design: Design, unit: PageUnit): Summed[] {
   const full = writeDesign(effective(design));
   const defaults = writeDesign(effective(emptyDesign()));
@@ -100,49 +66,75 @@ export function summary(design: Design, unit: PageUnit): Summed[] {
       .filter(([key, value]) => value !== defaults[key])
       .map(([key]) => key),
   );
-  const controls = GROUPS.flatMap((group) => group.rows).flatMap((row) => row.of);
-  const said = (key: string): string => {
-    const listed = key.replace(/^heading-\d-/, "heading-N-");
-    const control = controls.find((each) => each.key === listed);
-    return control === undefined
-      ? String(full[key] ?? "")
-      : defaultSaid(control, full[key], unit);
-  };
-  const reading: Reading = {
-    full,
-    changed,
-    unit,
-    said,
-    lower: (key) => said(key).toLowerCase(),
-  };
-  return GROUPS.map((group: Group) => ({
+  const reading: Reading = { full, changed, unit };
+  return GROUPS.map((group) => ({
     label: group.name,
-    value: LINES[group.name]?.(reading) ?? "",
-    set: keysOf(group).some((key) => changed.has(key)),
+    facts: leveled(group)
+      ? LEVELS.flatMap((level) => facts(group, reading, level))
+      : facts(group, reading, undefined),
   }));
 }
 
-/** One heading level, as `H1 EB Garamond 19pt, left`, with its style and capitals when it has them. */
-function headingSaid(prefix: string, { full, said, lower }: Reading): string {
-  const plain = (key: string): string[] => {
-    const value = full[`${prefix}${key}`];
-    return value === undefined || value === "normal" ? [] : [lower(`${prefix}${key}`)];
-  };
-  return [
-    `H${prefix.replace(/\D/g, "")} ${said(`${prefix}font`)} ${said(`${prefix}size`)}`,
-    ...plain("style"),
-    ...plain("caps"),
-    lower(`${prefix}align`),
-  ].join(", ");
+function leveled(group: Group): boolean {
+  return group.rows.some((row) => row.of.some((control) => control.kind === "level"));
 }
 
-/** A trim by the name the panel offers it under, or by its sides. */
-function trimSaid(trim: Written | undefined, unit: PageUnit): string {
-  if (trim === undefined) return "none";
-  const named = trims(unit).find((choice) => choice.value === String(trim));
-  if (named !== undefined) return named.label;
-  return String(trim)
-    .split(/\s+/)
-    .map((side) => inUnit(side, unit))
-    .join(" × ");
+/**
+ * The facts of one group, or of one heading level of it. Level 1 is
+ * the chapter title, so it is shown as any other group is. A deeper
+ * level is shown once the book sets a key at it.
+ */
+function facts(group: Group, reading: Reading, level: Level | undefined): Fact[] {
+  const keyed = group.rows.flatMap((row) =>
+    row.of.flatMap((control) =>
+      control.key === undefined
+        ? []
+        : [{ row, control, key: level === undefined ? control.key : atLevel(control.key, level) }],
+    ),
+  );
+  const touched = keyed.some(({ key }) => reading.changed.has(key));
+  if (level !== undefined && level !== 1 && !touched) return [];
+  return keyed
+    .filter(({ row, key }) => row.summed === true || reading.changed.has(key))
+    .filter(({ key }) => !idle(key, reading.full))
+    .map(({ row, control, key }, at, shown) => ({
+      key,
+      label: labelOf(row, control, level),
+      value: valueOf(control, reading.full[key], reading.unit),
+      set: reading.changed.has(key),
+      starts:
+        (level !== undefined && at === 0) ||
+        (row.of.length > 1 && shown[at - 1]?.row !== row),
+      wide: control.kind === "trim",
+    }));
+}
+
+/** True for a key that sets nothing as the design stands: the glyph of a scene break that is a space. */
+function idle(key: string, full: Readonly<Record<string, Written>>): boolean {
+  return key === "scene-break-ornament" && full["scene-break-mark"] === "space";
+}
+
+/** A row's label. A row of several controls adds each control's word, and a heading its level. */
+function labelOf(row: Row, control: Control, level: Level | undefined): string {
+  const said = control.said ?? "";
+  const label =
+    row.label === "" ? said : row.of.length > 1 ? `${row.label} ${said}` : row.label;
+  return level === undefined ? label : `H${String(level)} ${label.toLowerCase()}`;
+}
+
+/** A value in the panel's words: a count with its unit, a switch as On or Off, and an unnamed trim as its sides. */
+function valueOf(control: Control, value: Written | undefined, unit: PageUnit): string {
+  const said = defaultSaid(control, value, unit);
+  if (control.kind === "trim" && said === String(value)) {
+    // A trim the panel has no name for is its two sides.
+    return said
+      .split(/\s+/)
+      .map((side) => inUnit(side, unit))
+      .join(" × ");
+  }
+  if (control.kind === "flag") return said === "on" ? "On" : "Off";
+  if (control.kind === "count" && control.said !== undefined) {
+    return said === "1" ? `1 ${control.said.replace(/s$/, "")}` : `${said} ${control.said}`;
+  }
+  return said;
 }
