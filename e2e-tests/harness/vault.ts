@@ -82,6 +82,35 @@ export class Vault {
     );
   }
 
+  /**
+   * Takes one line out of a note, and returns once Obsidian has indexed
+   * the note without it. A note that does not hold the line is left as
+   * it is.
+   */
+  async without(file: string, line: string): Promise<void> {
+    this.touched.add(file);
+    await this.page.evaluate(
+      async ({ at, line: gone }) => {
+        const { vault, metadataCache } = window.app;
+        const note = vault.getFileByPath(at);
+        if (note === null) throw new Error(`no note at ${at}`);
+        const had = await vault.read(note);
+        const text = had.replace(`${gone}\n`, "");
+        if (text === had) return;
+        const indexed = new Promise<void>((resolve) => {
+          const ref: EventRef = metadataCache.on("changed", (changed, data) => {
+            if (changed.path !== at || data !== text) return;
+            metadataCache.offref(ref);
+            resolve();
+          });
+        });
+        await vault.modify(note, text);
+        await indexed;
+      },
+      { at: file, line },
+    );
+  }
+
   /** Marks a note the app itself writes, so the spec puts it back. */
   touch(file: string): void {
     this.touched.add(file);

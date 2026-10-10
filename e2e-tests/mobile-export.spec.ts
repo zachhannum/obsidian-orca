@@ -65,6 +65,15 @@ async function touchable(obsidian: Obsidian, exporting: Export): Promise<void> {
   await expect(exporting.share).toHaveCount(0);
 }
 
+/** The entry the fixture book lists with no note behind it. */
+const MISSING = "- [[Chapter Four]]";
+
+// Preflight refuses a book that lists a note the vault does not have,
+// so these specs export the fixture book without that entry.
+test.beforeEach(async ({ vault }) => {
+  await vault.without(BOOK, MISSING);
+});
+
 for (const device of ["phone", "tablet"] as const) {
   test(`on a ${device} the export dialog stacks its buttons and saves into the vault, as a sheet on a phone alone`, async ({
     obsidian,
