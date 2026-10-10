@@ -951,8 +951,8 @@ test("the roles table states the effect of each role, and the page says where pa
   assert.match(page, /The pages before it are numbered in lower-case roman/);
 });
 
-test("the roles page says how to set a role, which role fits each kind of note, and what a generated role leaves out", async () => {
-  const page = await read(`${DOCS}/start/roles.mdx`);
+test("the roles page says how to set a role, which role fits each kind of note, how to name a role of your own, and what a generated role leaves out", async () => {
+  const page = await read(`${DOCS}/design/roles.mdx`);
 
   assert.match(page, /## Set a role in the navigator\n[^#]*`Role for this entry…`/);
   assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `front-matter`/);
@@ -967,6 +967,7 @@ test("the roles page says how to set a role, which role fits each kind of note, 
     assert.match(page, new RegExp(`\\| (?:An?|The) ${note}[^|]*\\| \`${role}\` \\|`), note);
   }
   assert.match(page, /Orca does not set the text of the linked note/);
+  assert.match(page, /## A role of your own\n[^#]*- \[\[Prologue\]\] `prologue`[^#]*section\.prologue \{/);
 });
 
 test("the Navigator artboard draws the role picker with the line each role states", async () => {
@@ -977,10 +978,14 @@ test("the Navigator artboard draws the role picker with the line each role state
     ),
   ].map(([, name, effect]) => [name, effect]);
 
-  assert.deepEqual(
-    drawn,
-    Object.values(ROLES).map(({ name, effect }) => [name, effect]),
-  );
+  // The picker for an entry draws the roles a note takes, then the name
+  // the author typed. The picker for a generated section draws the rest.
+  const lines = Object.values(ROLES);
+  assert.deepEqual(drawn, [
+    ...lines.filter(({ origin }) => origin === "note").map(({ name, effect }) => [name, effect]),
+    ["prologue", "Your own role. Custom CSS styles it as section.prologue."],
+    ...lines.filter(({ origin }) => origin === "generated").map(({ name, effect }) => [name, effect]),
+  ]);
 });
 
 // What this file does not cover: the pictures themselves, which the

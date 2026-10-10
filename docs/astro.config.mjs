@@ -51,7 +51,7 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Start here',
-          items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/roles', 'start/the-preview'],
+          items: ['start/install', 'start/anatomy', 'start/make-a-book', 'start/the-preview'],
         },
         {
           label: 'Design',
@@ -62,6 +62,7 @@ export default defineConfig({
             'design/headings',
             'design/fonts',
             'design/chapter-openings',
+            'design/roles',
             'design/scene-breaks',
             'design/headers-and-page-numbers',
             'design/page-breaks',

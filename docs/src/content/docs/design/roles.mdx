@@ -1,6 +1,6 @@
 ---
 title: Roles
-eyebrow: Start here
+eyebrow: Design
 description: Pick the role that fits each note of a book.
 ---
 
@@ -12,7 +12,7 @@ A role tells Orca how to typeset one entry of a book. An entry with no role is a
 2. Select `Role for this entry…`.
 3. Select a role from the list.
 
-Each row of the list shows the name of a role and one line that states its effect.
+Each row of the list shows the name of a role and one line that states its effect. The list has no `Title page` or `Contents` row for an entry that has a note, because Orca writes the text of those two.
 
 ## Set a role in the book note
 
@@ -40,7 +40,29 @@ A part has no layout of its own. The design panel has no control for it. To lay 
 
 A copyright page, a dedication and an epigraph are single pages. The contents does not list them, and the design panel has no control for them. To change one, use [Custom CSS](/design/custom-css/).
 
-`front-matter` and `back-matter` set the same pages. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.
+`front-matter` and `back-matter` set the same pages. The two names let your CSS tell the entries apart. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.
+
+## A role of your own
+
+A role can be a name that you choose, for example `prologue`. Orca sets the entry as prose with no drop cap, and the contents lists it. The name is the class of the entry, so your CSS can lay it out.
+
+1. In the navigator, right-click the entry.
+2. Select `Role for this entry…`.
+3. Type the name, and then select the row that shows it.
+
+In the book note, write the name in backticks after the link.
+
+```md
+- [[Prologue]] `prologue`
+```
+
+```css
+section.prologue {
+  text-align: center;
+}
+```
+
+A name starts with a lower-case letter. It can contain lower-case letters, digits and hyphens. The name is also the page name of the entry, for example `@page prologue`. [Custom CSS](/design/custom-css/) shows how to write the CSS.
 
 ## Generated roles
 

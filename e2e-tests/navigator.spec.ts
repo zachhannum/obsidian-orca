@@ -296,13 +296,14 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   );
   await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
   await obsidian.choose("Role for this entry");
-  // Each of the nine roles states its effect under its name.
-  await expect(navigator.pickNotes()).toHaveCount(9);
-  await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 9 }, () => /\S/));
+  // Each of the seven roles a note takes states its effect under its
+  // name. An entry with a note is offered no generated role.
+  await expect(navigator.pickNotes()).toHaveCount(7);
+  await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 7 }, () => /\S/));
   for (const generated of ["Title page", "Contents"]) {
     await expect(
       obsidian.suggestion().filter({ hasText: new RegExp(`^${generated}`) }),
-    ).toContainText(UNSET);
+    ).toHaveCount(0);
   }
   await navigator.pick("Epigraph");
 
@@ -449,6 +450,28 @@ test("a book deleted under an unwritten edit has nothing written back to it", as
   expect(said).toEqual([]);
   expect(await vault.notes()).not.toContain(SECOND);
   await expect(navigator.book(SECOND)).toHaveCount(0);
+});
+
+test("a name typed into the role picker sets the entry under that name, and the chip shows it", async ({
+  navigator,
+  obsidian,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await navigator.reveal();
+
+  await navigator.menuOn(navigator.entry(BOOK, "Acknowledgements"));
+  await obsidian.choose("Role for this entry");
+  // No role matches the name, so the one row is the name itself.
+  await navigator.pick("colophon");
+
+  await expect
+    .poll(async () => vault.read(BOOK))
+    .toContain("- [[Acknowledgements]] `colophon`");
+  const entry = navigator.entry(BOOK, "Acknowledgements");
+  await expect(entry).toHaveAttribute("data-role", "colophon");
+  await expect(entry).toHaveAttribute("data-kind", "note");
+  await expect(entry).toContainText("colophon");
 });
 
 test("a generated section is added by its role, and reads as one", async ({

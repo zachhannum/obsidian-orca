@@ -366,6 +366,11 @@ its editor around these files and returns a URL. The artboard list and
   what the role does to the book. The line comes from the table the
   format reads its roles from, so the picker and the docs say the same
   thing.
+- An entry with a note is offered no generated role, because a
+  generated role sets no note. `New generated section…` lists those.
+- A name typed into the role picker that is no role is its last row.
+  The entry is set as prose under that name, and the name is its class
+  and its page name. Orca gives it no layout: the author's CSS does.
 - The navigator deletes the book note and nothing else, after asking.
   Every note a book lists is borrowed, so `Remove from book` is the
   only thing an entry's own menu offers.
