@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-hero class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>404 | orca</title><link rel="canonical" href="https://orca.typeworks.dev/pr-preview/pr-388/404/"/><link rel="sitemap" href="/pr-preview/pr-388/sitemap-index.xml"/><link rel="shortcut icon" href="/pr-preview/pr-388/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.2"/><meta name="generator" content="Starlight v0.42.0"/><meta property="og:title" content="404"/><meta property="og:type" content="article"/><meta property="og:url" content="https://orca.typeworks.dev/pr-preview/pr-388/404/"/><meta property="og:locale" content="en"/><meta property="og:description" content="A book designer that runs inside Obsidian."/><meta property="og:site_name" content="orca"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="A book designer that runs inside Obsidian."/><script>
+  window.orcaTheme = (() => {
+    const key = 'starlight-theme';
+    const read = () => {
+      try {
+        const stored = localStorage.getItem(key);
+        return stored === 'light' || stored === 'dark' ? stored : null;
+      } catch {
+        return null;
+      }
+    };
+    // Dark is the site's default, so an unset preference is dark.
+    const apply = (theme) => {
+      document.documentElement.dataset.theme = theme;
+    };
+    apply(read() ?? 'dark');
+    return {
+      current: () => document.documentElement.dataset.theme ?? 'dark',
+      set(theme) {
+        apply(theme);
+        try {
+          localStorage.setItem(key, theme);
+        } catch {}
+      },
+      // Starlight's own picker calls this after it loads.
+      updatePickers() {},
+    };
+  })();
+  window.StarlightThemeProvider = window.orcaTheme;
+
+  // One listener for every toggle on the page. A docs page draws one in the
+  // header and one in the mobile menu.
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('[data-theme-toggle]')) {
+      window.orcaTheme.set(window.orcaTheme.current() === 'light' ? 'dark' : 'light');
+    }
+  });
+</script><link rel="stylesheet" href="/pr-preview/pr-388/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/pr-preview/pr-388/_astro/ThemeBoot.DvTUImfS.css"><link rel="stylesheet" href="/pr-preview/pr-388/_astro/common.CUcPHqSD.css"><script type="module" src="/pr-preview/pr-388/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/pr-preview/pr-388/" class="site-title astro-hen6hmfb"><svg width="36" height="21" viewBox="60 244 905 520" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="astro-4pt2nqzy"><path d="M797.14 322.264C701.904 337.045 656.024 322.264 585.814 381.386C515.604 440.507 530.898 491.5 530.898 727.247C531.632 759.024 538.347 759.169 542.02 759.024C560.789 758.285 565.172 711.922 688.909 618.805C812.645 525.688 830.955 523.281 884.3 473.658C958.279 404.84 961.195 286.052 954.243 267.577C947.292 249.101 892.375 307.484 797.14 322.264Z" class="astro-4pt2nqzy"></path><path d="M227.611 322.264C322.847 337.045 368.727 322.264 438.937 381.386C509.147 440.507 493.853 491.5 493.853 727.247C493.119 759.024 486.404 759.169 482.731 759.024C463.962 758.285 459.579 711.922 335.842 618.805C212.106 525.688 193.796 523.281 140.452 473.658C66.4723 404.84 63.5559 286.052 70.5077 267.577C77.4594 249.101 132.376 307.484 227.611 322.264Z" class="astro-4pt2nqzy"></path></svg><span translate="no" aria-label="orca" class="astro-hen6hmfb">orca</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/pr-preview/pr-388/_astro/Search.astro_astro_type_script_index_0_lang.hAMStlLF.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/zachhannum/obsidian-orca" class="astro-o2gh7vpa">GitHub</a></div><button type="button" class="theme-toggle astro-l6lhmie6" data-theme-toggle aria-label="Switch the scheme"><svg class="moon astro-l6lhmie6" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" class="astro-l6lhmie6"></path></svg><svg class="sun astro-l6lhmie6" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" class="astro-l6lhmie6"></circle><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" class="astro-l6lhmie6"></path></svg></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div></header><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><div class="main-pane astro-lrzkfocr"><main class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="hero astro-2qjbuh7f"><div class="sl-flex stack astro-2qjbuh7f"><div class="sl-flex copy astro-2qjbuh7f"><h1 id="_top" data-page-title class="astro-2qjbuh7f">404</h1><div class="tagline astro-2qjbuh7f">Page not found. Check the URL or try using the search bar.</div></div></div></div><div class="sl-markdown-content"></div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"></div></footer></div></div></main></div></div></div></div></body></html>
