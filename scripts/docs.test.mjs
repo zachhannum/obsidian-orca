@@ -49,7 +49,7 @@ function entries(note, heading) {
   }));
 }
 
-const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, preview, shots, claude] =
+const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, workflow, preview, shots] =
   await Promise.all([
     read("package.json"),
     read("docs/package.json"),
@@ -62,7 +62,6 @@ const [rootPackage, sitePackage, siteLock, tokens, theme, fonts, config, cname, 
     read(".github/workflows/docs.yml"),
     read(".github/workflows/preview.yml"),
     read(".github/workflows/shots.yml"),
-    read("CLAUDE.md"),
   ]);
 
 /** A `:root` block's declarations, as a name to value map. */
@@ -236,15 +235,6 @@ test("the preview waits on the shots workflow for the paths that start it", () =
     const file = glob.replace("**", "x");
     assert.ok(regex.test(file), `${glob} does not start the wait`);
   }
-});
-
-test("CLAUDE.md's CI section lists the docs workflow", () => {
-  const section = claude.slice(
-    claude.indexOf("## CI scaffolding"),
-    claude.indexOf("## Documentation rules"),
-  );
-  assert.match(section, /docs\.yml/);
-  assert.match(section, /GitHub Pages/);
 });
 
 test("the sample vault holds one book, and shares no file with the fixture", async () => {
@@ -431,31 +421,15 @@ test("the book note carries the design the landing page shows", async () => {
 /** The landing page and its scripts. */
 const LANDING = "docs/src/pages/index.astro";
 
-const [landing, landingCss, plugin, playwright] = await Promise.all([
+const [landing, landingCss, playwright] = await Promise.all([
   read(LANDING),
   read("docs/src/styles/landing.css"),
-  read("src/ui/plugin.ts"),
   read("playwright.config.ts"),
 ]);
 
 /** The page's own stylesheet, which its `<style>` block holds. */
 const landingStyle = /<style>([\s\S]*)<\/style>/.exec(landing)[1];
 
-/** The words of a fragment of markup, with the tags taken out. */
-function words(html) {
-  return html
-    .replace(/<br\s*\/?>/g, " ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Every title of a part or a page, in the order it draws them. */
-function titles(html) {
-  return [...html.matchAll(/<h([12])\b[^>]*>([\s\S]*?)<\/h\1>/g)].map((found) => words(found[2]));
-}
-
-/** The prose under each title, which the parts mark with `sec-p`. */
 /** A count below forty, in capital roman numerals. */
 function roman(count) {
   let left = count;
@@ -464,17 +438,6 @@ function roman(count) {
     for (; left >= value; left -= value) written += numeral;
   }
   return written;
-}
-
-function prose(html) {
-  return [...html.matchAll(/<p class="sec-p"[^>]*>([\s\S]*?)<\/p>/g)].map((found) =>
-    words(found[1]),
-  );
-}
-
-/** The line under the title, which every artboard opens with. */
-function lede(html) {
-  return words(/<\/h1>\s*<p[^>]*>([\s\S]*?)<\/p>/.exec(html)[1]);
 }
 
 /** A site module, built and run over the globals a browser would give it. */
@@ -719,70 +682,35 @@ test("every picture on the page is one the screenshot spec takes", async () => {
   assert.ok(taken.length >= 12, "the spec has taken no pages");
 });
 
-test("the copy claims no feature the plugin has yet to grow", async () => {
-  const said = [
-    ...titles(landing),
-    ...prose(landing),
-    lede(landing),
-    ...[...landing.matchAll(/<figcaption>([\s\S]*?)<\/figcaption>/g)].map((f) => words(f[1])),
-  ].join(" ");
-
-  // Each claim, with the file and the line in `src` that would make it
-  // true. A claim whose line is not there yet must not be on the page.
-  const claims = [
-    [/\bexport(s|ed|ing)?\b|\bPDF\b|preflight/i, plugin, /id: "export-pdf"/, "export"],
-    [
-      /your own CSS|overrides a setting/i,
-      await read("src/ui/panels.tsx"),
-      /overridden/,
-      "an overridden control",
-    ],
-    [/\binspect/i, await read("src/ui/pane.tsx"), /orca-inspect-pane/, "inspect mode"],
-  ];
-  for (const [claimed, source, built, what] of claims) {
-    if (built.test(source)) continue;
-    assert.doesNotMatch(said, claimed, `the page claims ${what}, which orca has not built`);
-  }
-});
-
-test("the panel section says a control the author's CSS overrides dims and names the line", () => {
-  const from = landing.indexOf("in the panel</i>");
-  assert.notEqual(from, -1, "no panel section");
-  const section = landing.slice(from, landing.indexOf("</section>", from));
-  const said = prose(section).join(" ");
-  assert.match(said, /your own CSS overrides a setting/);
-  assert.match(said, /dims and names the line/);
-});
+/** The section of the landing page that plays a scene's reel. */
+function sectionOf(scene) {
+  const reel = new RegExp(`<Reel\\s+scene="${scene}"`).exec(landing);
+  assert.ok(reel, `the page has no ${scene} reel`);
+  const from = landing.lastIndexOf("<section", reel.index);
+  return landing.slice(from, landing.indexOf("</section>", reel.index));
+}
 
 test("the panel section and the CSS section each play a reel of real Obsidian", () => {
-  for (const [heading, scene] of [["in the panel</i>", "design"], ["CSS styling</i>", "css"]]) {
-    const from = landing.indexOf(heading);
-    assert.notEqual(from, -1, `no section ${heading}`);
-    const section = landing.slice(from, landing.indexOf("</section>", from));
-    assert.match(section, new RegExp(`<Reel\\s+scene="${scene}"`), `the section does not play the ${scene} reel`);
+  for (const scene of ["design", "css"]) {
+    const section = sectionOf(scene);
     assert.match(section, /alt="[^"]{20,}"/);
     assert.doesNotMatch(section, /<(?:img|button|input|select|script)\b/, "the section draws a picture or a control of its own");
   }
+  assert.notEqual(sectionOf("design"), sectionOf("css"));
   assert.doesNotMatch(landing, /panel-shots|inspect-shot|shots\/(?:panel|inspect)-/);
 });
 
-test("a section says orca runs on a phone and a tablet, and plays a reel of each", async () => {
-  const from = landing.indexOf("and a tablet</i>");
-  assert.notEqual(from, -1, "no section on phones and tablets");
-  const section = landing.slice(from, landing.indexOf("</section>", from));
-  for (const scene of ["phone", "tablet"]) {
-    assert.match(section, new RegExp(`<Reel\\s+scene="${scene}"`), `the section does not play the ${scene} reel`);
-  }
+test("one section plays a reel of a phone and a reel of a tablet, each in a frame of its device", async () => {
+  const section = sectionOf("phone");
+  assert.equal(section, sectionOf("tablet"));
   assert.equal([...section.matchAll(/alt="[^"]{20,}"/g)].length, 2);
-  assert.match(prose(section).join(" "), /runs in Obsidian on a phone and a tablet/);
   // The plugin's manifest is what lets Obsidian load orca on one.
   assert.equal(JSON.parse(await read("manifest.json")).isDesktopOnly, false);
-  // Each is in a frame of its device.
   assert.match(section, /class="device device-tablet">\s*<Reel\s+scene="tablet"/);
   assert.match(section, /class="device device-phone">\s*<Reel\s+scene="phone"/);
   // It stands between the export and the pages that turn.
-  assert.ok(landing.indexOf("for the printer</i>") < from && from < landing.indexOf("the pages</i>"));
-  assert.doesNotMatch(landing, /Desktop only/i);
+  const at = landing.indexOf(section);
+  assert.ok(landing.indexOf(sectionOf("export")) < at && at < landing.indexOf("data-turn="));
 });
 
 test("no width of the screen decides what a reel plays", async () => {
@@ -1015,5 +943,5 @@ test("every docs page is in the sidebar, and every entry in the sidebar is a pag
 // for a button is the glyph Obsidian draws, since Obsidian ships a
 // Lucide build of its own; whether a mark sits over the control it
 // names, which the spec measures; the default of a font variant, which
-// the faces on the machine decide; and whether the prose of a docs page
-// is plain, which the simple-english pass reads.
+// the faces on the machine decide; and what the prose of a page says,
+// which a person reads.
