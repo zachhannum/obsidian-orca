@@ -174,11 +174,11 @@ test("a role reaches the sheet as a page name and as the ids of the sections tha
     { role: "dedication", id: "dedication" },
     { role: "epigraph", id: "a-note-on-the-text" },
     { role: "contents", id: "contents" },
-    { role: "front-matter", id: "preface" },
+    { role: "matter", id: "preface" },
     { role: "part", id: "volume-the-first" },
     { role: "chapter", id: "chapter-twelve" },
     { role: "chapter", id: "chapter-fifteen" },
-    { role: "back-matter", id: "acknowledgements" },
+    { role: "matter", id: "acknowledgements" },
   ]);
   assert.match(css, /section#title-page \{\n {2}page: title-page;\n\}/);
   // Two sections take the chapter role, so one rule names both ids.
@@ -577,7 +577,7 @@ test("a heading that opens a section takes its space above as padding, so the en
 });
 
 test("the front matter numbers its folio in roman, and a book with no folio gets no roman rules", () => {
-  const roles: Role[] = ["title-page", "copyright", "chapter", "back-matter"];
+  const roles: Role[] = ["title-page", "copyright", "chapter", "matter"];
   const css = generatedCss(headed("outside", "bottom"), { sections: named(roles), author: "Jane Austen" });
 
   for (const role of ["title-page", "copyright"]) {
@@ -588,7 +588,7 @@ test("the front matter numbers its folio in roman, and a book with no folio gets
   }
   // The body keeps its own format, and a role after the body is not front matter.
   assert.match(css, /@page \{\n(?: {2}.+\n)* {2}@bottom-center \{ content: counter\(page, decimal\); \}\n/);
-  assert.doesNotMatch(css, /@page (?:chapter|back-matter)(?::left|:right)? \{\n {2}@bottom/);
+  assert.doesNotMatch(css, /@page (?:chapter|matter-back)(?::left|:right)? \{\n {2}@bottom/);
   // The running heads are not rewritten.
   assert.doesNotMatch(css, /@top-\w+ \{ content: counter\(page, lower-roman\)/);
 
@@ -617,7 +617,7 @@ test("the page count starts again at the first part or chapter, and not when the
 
   assert.equal(css.match(reset)?.length, 1);
   assert.match(css, /section#part-3 \{\n {2}counter-reset: page 1;\n\}/);
-  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter", "back-matter"]) }), reset);
+  assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["chapter", "matter"]) }), reset);
   assert.doesNotMatch(generatedCss(emptyDesign(), { sections: named(["title-page", "copyright"]) }), reset);
 });
 
@@ -779,15 +779,15 @@ test("an epigraph is set to a narrow measure and down the page, with its last pa
 });
 
 test("a role on both sides of the body numbers in roman before it and in the body's format after", async () => {
-  const sections = named(["front-matter", "chapter", "front-matter"]);
+  const sections = named(["matter", "chapter", "matter"]);
   const css = generatedCss(headed("outside", "bottom"), { sections, author: "Jane Austen" });
 
-  assert.match(css, /section#front-matter-1 \{\n {2}page: front-matter;\n\}/);
-  assert.match(css, /section#front-matter-3 \{\n {2}page: front-matter-back;\n\}/);
-  assert.match(css, /@page front-matter \{\n {2}@bottom-center \{ content: counter\(page, lower-roman\); \}\n\}/);
-  assert.doesNotMatch(css, /@page front-matter-back \{/);
+  assert.match(css, /section#matter-1 \{\n {2}page: matter;\n\}/);
+  assert.match(css, /section#matter-3 \{\n {2}page: matter-back;\n\}/);
+  assert.match(css, /@page matter \{\n {2}@bottom-center \{ content: counter\(page, lower-roman\); \}\n\}/);
+  assert.doesNotMatch(css, /@page matter-back \{/);
   // Each name clears its own opening.
-  assert.match(css, /@page front-matter-back:first \{/);
+  assert.match(css, /@page matter-back:first \{/);
 
   // A long preface turns a page, and so does a long afterword. A page
   // after an opening prints its folio.
@@ -809,32 +809,32 @@ test("a role on both sides of the body numbers in roman before it and in the bod
 
 test("a role that sits on one side of the body keeps its own page name, and a book with no body has no sides", () => {
   const css = generatedCss(emptyDesign(), {
-    sections: named(["back-matter", "copyright", "chapter", "dedication", "back-matter"]),
+    sections: named(["matter", "copyright", "chapter", "dedication", "matter"]),
   });
 
-  assert.match(css, /section#back-matter-1 \{\n {2}page: back-matter-front;\n\}/);
+  assert.match(css, /section#matter-1 \{\n {2}page: matter;\n\}/);
   assert.match(css, /section#copyright-2 \{\n {2}page: copyright;\n\}/);
   assert.match(css, /section#dedication-4 \{\n {2}page: dedication-back;\n\}/);
-  assert.match(css, /section#back-matter-5 \{\n {2}page: back-matter;\n\}/);
+  assert.match(css, /section#matter-5 \{\n {2}page: matter-back;\n\}/);
   assert.match(
-    generatedCss(emptyDesign(), { sections: named(["title-page", "back-matter"]) }),
-    /section#back-matter-2 \{\n {2}page: back-matter;\n\}/,
+    generatedCss(emptyDesign(), { sections: named(["title-page", "matter"]) }),
+    /section#matter-2 \{\n {2}page: matter;\n\}/,
   );
 });
 
 test("a section under a name of the author's own takes the name as its page name, on each side of the body", () => {
-  const [before, chapter, after] = named(["front-matter", "chapter", "front-matter"]);
+  const [before, chapter, after] = named(["matter", "chapter", "matter"]);
   assert.ok(before && chapter && after);
   const sections = [{ ...before, custom: "prologue" }, chapter, { ...after, custom: "colophon" }];
   const css = generatedCss(emptyDesign(), { sections });
 
   assert.match(css, new RegExp(`section#${before.id} \\{\\n {2}page: prologue;\\n\\}`));
   assert.match(css, new RegExp(`section#${after.id} \\{\\n {2}page: colophon-back;\\n\\}`));
-  assert.doesNotMatch(css, /page: front-matter/);
+  assert.doesNotMatch(css, /page: matter/);
 });
 
 test("a contents entry before the body prints its page in roman, whatever the body's format", () => {
-  const css = generatedCss(emptyDesign(), { sections: named(["contents", "front-matter", "chapter"]) });
+  const css = generatedCss(emptyDesign(), { sections: named(["contents", "matter", "chapter"]) });
 
   assert.match(
     css,

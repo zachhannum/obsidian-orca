@@ -277,8 +277,7 @@ export async function bookSources(
 const LISTED: Partial<Record<Role, Listed["kind"]>> = {
   part: "part",
   chapter: "chapter",
-  "front-matter": "matter",
-  "back-matter": "matter",
+  matter: "matter",
 };
 
 function sendable(section: Section): section is Sendable {

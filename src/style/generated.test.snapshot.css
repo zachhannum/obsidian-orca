@@ -42,7 +42,7 @@
   @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
 }
 
-@page front-matter {
+@page matter {
   @bottom-center { content: counter(page, lower-roman); font-family: "Alegreya", serif; font-variant-caps: normal; text-transform: none; letter-spacing: 0em; font-weight: normal; font-style: normal; }
 }
 
@@ -76,7 +76,7 @@
   @bottom-center { content: none; }
 }
 
-@page front-matter:first {
+@page matter:first {
   @top-left { content: none; }
   @top-right { content: none; }
   @bottom-center { content: none; }
@@ -94,7 +94,7 @@
   @bottom-center { content: none; }
 }
 
-@page back-matter:first {
+@page matter-back:first {
   @top-left { content: none; }
   @top-right { content: none; }
   @bottom-center { content: none; }
@@ -246,7 +246,7 @@ section#contents {
 }
 
 section#preface {
-  page: front-matter;
+  page: matter;
 }
 
 section#volume-the-first {
@@ -259,7 +259,7 @@ section#volume-the-first {
 }
 
 section#acknowledgements {
-  page: back-matter;
+  page: matter-back;
 }
 
 section#volume-the-first {

@@ -66,12 +66,12 @@ test("an entry's role is its own tag, and a heading names none", async () => {
       ["Dedication", "dedication"],
       ["A note on the text", "epigraph"],
       ["Contents", "contents"],
-      ["Preface", "front-matter"],
+      ["Preface", "matter"],
       ["Volume the First", "part"],
       ["Chapter Twelve", "chapter"],
       ["Chapter Four", "chapter"],
       ["Chapter Fifteen", "chapter"],
-      ["Acknowledgements", "back-matter"],
+      ["Acknowledgements", "matter"],
     ],
   );
 
@@ -279,7 +279,7 @@ test("a link tagged with a name that is no role is an entry under that name, set
     entries(book).map(({ role, custom, tag }) => [role, custom, tag]),
     [
       ["chapter", undefined, undefined],
-      ["front-matter", "prologue", undefined],
+      ["matter", "prologue", undefined],
     ],
   );
   assert.equal(writeOrder(book), text);
@@ -347,12 +347,12 @@ test("a section is made, renamed, moved and taken out, and its entries stay", as
   assert.deepEqual(headings(gone), ["Front matter", "Body", "The book's css"]);
   assert.deepEqual(entries(gone).map(entryName), entries(book).map(entryName));
   assert.equal(entries(gone).at(-1)?.heading, "Body");
-  assert.equal(entries(gone).at(-1)?.role, "back-matter");
+  assert.equal(entries(gone).at(-1)?.role, "matter");
   // The heading takes one of its blank lines with it, so where it was
   // reads as one break rather than two.
   assert.equal(
     writeOrder(gone).includes(
-      "- [[Chapter Fifteen]]\n\n- [[Acknowledgements]] `back-matter`\n\n# The book's css",
+      "- [[Chapter Fifteen]]\n\n- [[Acknowledgements]] `matter`\n\n# The book's css",
     ),
     true,
   );

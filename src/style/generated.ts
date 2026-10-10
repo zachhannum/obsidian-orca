@@ -967,14 +967,12 @@ function pages(setting: Setting): Paged[] {
 
 /**
  * The page name of a role on one side of the body. A role keeps its
- * own name on the side it belongs to, which is after the body for back
- * matter and before it for the rest, a name of the author's own
- * included. A book with no body has no sides.
+ * own name before the body and takes `-back` after it, a name of the
+ * author's own included. A book with no body has no sides.
  */
 function pageName(section: Named, front: boolean): string {
   const { role } = section;
   if (role === "part" || role === "chapter") return role;
-  if (section.custom === undefined && role === "back-matter") return front ? `${role}-front` : role;
   return front ? classOf(section) : `${classOf(section)}-back`;
 }
 

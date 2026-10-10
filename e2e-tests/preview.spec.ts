@@ -47,7 +47,7 @@ const DEVICE = "![[device.png]]";
 const BOOK = "Pride and Prejudice.md";
 
 /**
- * The roles the fixture gives one note each: the note, the page its
+ * The roles the fixture sets outside the body: the note, the page its
  * section opens on, and words that page prints.
  */
 const ROLES = [
@@ -59,8 +59,8 @@ const ROLES = [
     opens: 7,
     prints: "The text follows the third edition",
   },
-  { role: "front-matter", note: "Preface", opens: 11, prints: "Preface" },
-  { role: "back-matter", note: LAST, opens: BACK, prints: LAST },
+  { role: "matter", note: "Preface", opens: 11, prints: "Preface" },
+  { role: "matter", note: LAST, opens: BACK, prints: LAST },
 ] as const;
 
 /** The generated contents, as the toolbar names it, and the folio it prints for the preface. */
@@ -153,7 +153,7 @@ test("the title page prints the book's properties", async ({ book }) => {
   for (const block of TITLE_PAGE) await expect(book.page).toContainText(block);
 });
 
-test("the book has an entry for each of the five roles, and the run paints a page for each", async ({
+test("the book has an entry for each role a note takes outside the body, and the run paints a page for each", async ({
   book,
   vault,
 }) => {

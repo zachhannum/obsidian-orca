@@ -9,10 +9,9 @@ const TABLE: Readonly<Record<string, Origin>> = {
   dedication: "note",
   epigraph: "note",
   contents: "generated",
-  "front-matter": "note",
+  matter: "note",
   part: "note",
   chapter: "note",
-  "back-matter": "note",
 };
 
 test("every role resolves, and a generated one has no note behind it", () => {
@@ -41,14 +40,16 @@ test("each role states its effect in one line, and a generated one says a linked
 test("a tag that names no role is a name of the author's own, when a selector can write it", () => {
   assert.equal(customOf("prologue"), "prologue");
   assert.equal(customOf(" half-title "), "half-title");
+  // The format has one role for front and back matter, so either word is a name.
+  assert.equal(customOf("back-matter"), "back-matter");
   // A role is not a name, and neither is a word a class selector cannot write.
   assert.equal(customOf("chapter"), undefined);
   for (const tag of ["", "Two Words", "Prologue", "2nd", "a.b"]) assert.equal(customOf(tag), undefined, tag);
 });
 
 test("the body starts at the first part or chapter, and a book with neither has none", () => {
-  assert.equal(bodyStart(["title-page", "front-matter", "part", "chapter"]), 2);
-  assert.equal(bodyStart(["chapter", "back-matter"]), 0);
+  assert.equal(bodyStart(["title-page", "matter", "part", "chapter"]), 2);
+  assert.equal(bodyStart(["chapter", "matter"]), 0);
   assert.equal(bodyStart(["title-page", "copyright"]), undefined);
 });
 

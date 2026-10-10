@@ -99,9 +99,9 @@ test("a note that is gone keeps its row, and the row says the note is missing", 
       "dedication",
       "epigraph",
       "contents",
-      "front-matter",
+      "matter",
       "part",
-      "back-matter",
+      "matter",
     ],
   );
   assert.deepEqual(

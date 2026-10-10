@@ -97,7 +97,7 @@ Each entry of the reading order is a `section`. Its class is its role, for examp
 | A page number in the contents | `section#contents p.folio` |
 | A part in the contents | `section#contents p.part` |
 
-Each role sets its own named page, for example `@page chapter` or `@page chapter:first`. A role keeps that name on its usual side of the body. On the other side, the name has an ending: `@page front-matter-back` is a `front-matter` entry after the body, and `@page back-matter-front` is a `back-matter` entry before it. `@page :left` and `@page :right` set the left and right pages. The running heads and the page numbers are margin boxes of those rules, for example `@top-left` and `@bottom-center`.
+Each role sets its own named page, for example `@page chapter` or `@page chapter:first`. A role keeps that name before the first part or chapter. After the body, the name ends in `-back`: `@page matter-back` is a `matter` entry after the last chapter. `@page :left` and `@page :right` set the left and right pages. The running heads and the page numbers are margin boxes of those rules, for example `@top-left` and `@bottom-center`.
 
 ## Images and fonts
 

@@ -880,11 +880,11 @@ test("every source in the book op carries its names, and generated matter is nam
       { classes: ["dedication"], id: "dedication" },
       { classes: ["epigraph"], id: "a-note-on-the-text" },
       { classes: ["contents"], id: "contents" },
-      { classes: ["front-matter"], id: "preface" },
+      { classes: ["matter"], id: "preface" },
       { classes: ["part"], id: "volume-the-first" },
       { classes: ["chapter"], id: "chapter-twelve" },
       { classes: ["chapter"], id: "chapter-fifteen" },
-      { classes: ["back-matter"], id: "acknowledgements" },
+      { classes: ["matter"], id: "acknowledgements" },
     ],
   );
 });

@@ -281,10 +281,10 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
 
   await expect
     .poll(async () => vault.read(BOOK))
-    .toContain("- [[Preface]] `front-matter`\n- [[Acknowledgements]] `back-matter`\n");
+    .toContain("- [[Preface]] `matter`\n- [[Acknowledgements]] `matter`\n");
   await expect(navigator.entry(BOOK, "Acknowledgements")).toHaveAttribute(
     "data-role",
-    "back-matter",
+    "matter",
   );
 
   // A per-entry override sits in the context menu. An edit names an
@@ -296,10 +296,10 @@ test("a drag reorders the list, an entry keeps its role across a section, and th
   );
   await navigator.menuOn(navigator.entry(BOOK, "Chapter Twelve"));
   await obsidian.choose("Role for this entry");
-  // Each of the seven roles a note takes states its effect under its
+  // Each of the six roles a note takes states its effect under its
   // name. An entry with a note is offered no generated role.
-  await expect(navigator.pickNotes()).toHaveCount(7);
-  await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 7 }, () => /\S/));
+  await expect(navigator.pickNotes()).toHaveCount(6);
+  await expect(navigator.pickNotes()).toHaveText(Array.from({ length: 6 }, () => /\S/));
   for (const generated of ["Title page", "Contents"]) {
     await expect(
       obsidian.suggestion().filter({ hasText: new RegExp(`^${generated}`) }),
@@ -545,7 +545,7 @@ test("a section is made, renamed, dragged and taken out, and its entries stay", 
   // the note and then on the paint that read it back.
   await expect
     .poll(async () => vault.read(BOOK))
-    .toMatch(/# Back matter\n\n- \[\[Acknowledgements\]\] `back-matter`\n\n# Prelims\n/);
+    .toMatch(/# Back matter\n\n- \[\[Acknowledgements\]\] `matter`\n\n# Prelims\n/);
   await navigator.repainted(drawn);
   await expect(navigator.groups(BOOK)).toContainText([
     "Back matter",

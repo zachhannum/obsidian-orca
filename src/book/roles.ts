@@ -41,10 +41,10 @@ const MATTER = {
     name: "Contents",
     effect: "Generated from the reading order. A linked note is not set.",
   },
-  "front-matter": {
+  matter: {
     origin: "note",
-    name: "Front matter",
-    effect: "Prose before the chapters, such as a preface.",
+    name: "Matter",
+    effect: "Front or back matter: prose that is not a chapter.",
   },
   part: {
     origin: "note",
@@ -55,11 +55,6 @@ const MATTER = {
     origin: "note",
     name: "Chapter",
     effect: "The default role, with the chapter opening.",
-  },
-  "back-matter": {
-    origin: "note",
-    name: "Back matter",
-    effect: "Prose after the chapters, such as an afterword.",
   },
 } as const satisfies Record<string, Matter>;
 
@@ -81,7 +76,7 @@ export function roleOf(tag: string): Role | undefined {
  * The role a section under a name of the author's own is set in. Such a
  * section is prose that is not a chapter, and the name is its class.
  */
-export const CUSTOM_BASE: Role = "front-matter";
+export const CUSTOM_BASE: Role = "matter";
 
 const NAME = /^[a-z][a-z0-9-]*$/;
 

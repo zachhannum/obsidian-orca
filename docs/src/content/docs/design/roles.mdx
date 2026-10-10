@@ -19,7 +19,7 @@ Each row of the list shows the name of a role and one line that states its effec
 In the book note, write the role in backticks after the link.
 
 ```md
-- [[Preface]] `front-matter`
+- [[Preface]] `matter`
 ```
 
 To make the entry a chapter again, delete the role. [The book note](/reference/the-book-note/) lists every role.
@@ -30,8 +30,7 @@ To make the entry a chapter again, delete the role. [The book note](/reference/t
 | --- | --- | --- |
 | A chapter | No role | Orca sets the text with the chapter opening of the design. The contents lists it. |
 | The title of a group of chapters | `part` | Orca sets the note on a page of its own, with no chapter opening. The contents lists it as a title above its chapters. |
-| A preface, a foreword or an introduction | `front-matter` | Orca sets the text as prose with no drop cap. The contents lists it. |
-| An afterword or the acknowledgements | `back-matter` | Orca sets the text as prose with no drop cap. The contents lists it. |
+| A preface, an afterword or the acknowledgements | `matter` | Orca sets the text as prose with no drop cap. The contents lists it. |
 | A copyright page | `copyright` | Orca sets the text in small type with no paragraph indent, at the foot of the page. |
 | A dedication | `dedication` | Orca sets the text centered, below the top of the page. |
 | An epigraph | `epigraph` | Orca sets the text to a narrow measure, below the top of the page. If the epigraph has two or more paragraphs, the last one is set to the right. |
@@ -40,7 +39,7 @@ A part has no layout of its own. The design panel has no control for it. To lay 
 
 A copyright page, a dedication and an epigraph are single pages. The contents does not list them, and the design panel has no control for them. To change one, use [Custom CSS](/design/custom-css/).
 
-`front-matter` and `back-matter` set the same pages. The two names let your CSS tell the entries apart. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.
+A `matter` entry is front matter or back matter. The position of an entry sets its page number, not its role. The first part or chapter is page 1, and the pages before it are numbered in roman.
 
 ## A role of your own
 

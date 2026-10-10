@@ -955,11 +955,10 @@ test("the roles page says how to set a role, which role fits each kind of note, 
   const page = await read(`${DOCS}/design/roles.mdx`);
 
   assert.match(page, /## Set a role in the navigator\n[^#]*`Role for this entry…`/);
-  assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `front-matter`/);
+  assert.match(page, /## Set a role in the book note\n[^#]*- \[\[Preface\]\] `matter`/);
   for (const [note, role] of [
     ["title of a group of chapters", "part"],
-    ["preface", "front-matter"],
-    ["afterword", "back-matter"],
+    ["preface", "matter"],
     ["copyright page", "copyright"],
     ["dedication", "dedication"],
     ["epigraph", "epigraph"],
