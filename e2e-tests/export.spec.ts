@@ -384,6 +384,140 @@ test("an image the book's CSS names is painted behind the pages, and the PDF car
   await book.settled(BOOK);
 });
 
+/** The page boxes of each page of a PDF, as qpdf's plain form writes them. */
+function pageBoxes(file: string): { media: number[] | undefined; trim: number[] | undefined }[] {
+  const plain = spawnSync("qpdf", ["--qdf", "--object-streams=disable", file, "-"], {
+    encoding: "latin1",
+    maxBuffer: 1 << 28,
+  });
+  expect(plain.status, plain.stderr).toBe(0);
+  const box = (page: string, name: string): number[] | undefined =>
+    new RegExp(`/${name} \\[([^\\]]*)\\]`).exec(page)?.[1]?.trim().split(/\s+/).map(Number);
+  return plain.stdout
+    .split(/\bendobj\b/)
+    .filter((object) => /\/Type \/Page\b/.test(object))
+    .map((page) => ({ media: box(page, "MediaBox"), trim: box(page, "TrimBox") }));
+}
+
+test("a book with a bleed exports pages grown by it with the trim box inside, and marks make room only when asked for", async ({
+  book,
+  exporting,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  vault.touch(FILE);
+  await book.open();
+  const before = await book.settled(BOOK);
+  await panel.open();
+
+  const bleed = panel.control("bleed");
+  await expect(bleed).toHaveValue("0in");
+  await expect(panel.control("marks")).toHaveValue("none");
+  await bleed.fill("0.125in");
+  await bleed.press("Enter");
+  await expect.poll(async () => vault.read(BOOK)).toContain("bleed: 0.125in");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  const bled = await book.settled(BOOK);
+
+  const folder = await mkdtemp(path.join(tmpdir(), "orca-export-"));
+  const written = path.join(folder, FILE);
+  try {
+    await exporting.open();
+    await exporting.reaches("ready");
+    await exporting.formats("pdf");
+    await exporting.write.click();
+    await exporting.reaches("written");
+    await writeFile(written, await vault.bytes(FILE));
+    const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });
+    expect(checked.status, checked.stdout + checked.stderr).toBe(0);
+    // The fixture's trim is 5.5 by 8.5 inches, and the bleed is 9 points
+    // on every edge. No marks were asked for, so the page is no larger.
+    const pages = pageBoxes(written);
+    expect(pages.length).toBeGreaterThan(1);
+    for (const page of pages) {
+      expect(page).toEqual({ media: [0, 0, 414, 630], trim: [9, 9, 405, 621] });
+    }
+    await exporting.close();
+
+    await panel.control("marks").selectOption({ label: "Crop" });
+    await expect.poll(async () => vault.read(BOOK)).toContain("marks: crop");
+    await expect.poll(async () => book.painted()).toBeGreaterThan(bled);
+    await book.settled(BOOK);
+
+    await exporting.open();
+    await exporting.reaches("ready");
+    await exporting.formats("pdf");
+    await exporting.write.click();
+    await exporting.reaches("written");
+    await writeFile(written, await vault.bytes(FILE));
+    // The marks take 24 points past the bleed, and the trim is the size it was.
+    for (const page of pageBoxes(written)) {
+      expect(page).toEqual({ media: [0, 0, 462, 678], trim: [33, 33, 429, 645] });
+    }
+    await exporting.close();
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+
+  await vault.restore();
+  await book.settled(BOOK);
+});
+
+/**
+ * A rule that fills each heading's box from one side margin's edge to
+ * the other's. On a right-hand page the fixture's margins are 0.95 and
+ * 0.7 inches, so the box ends at the trim on both sides.
+ */
+const TO_THE_TRIM = "h1 { background-color: #cccccc; margin-left: -0.95in; margin-right: -0.7in; }";
+
+test("preflight names a page whose art stops at the trim of a book with a bleed, and its row turns the preview to the page", async ({
+  book,
+  exporting,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await book.open();
+  const before = await book.settled(BOOK);
+  await panel.open();
+  await panel.toCss.click();
+  await expect(panel.editor).toBeVisible();
+  await panel.typeCss(`\n${TO_THE_TRIM}`);
+  await expect.poll(async () => book.painted()).toBeGreaterThan(before);
+  const filled = await book.settled(BOOK);
+
+  // With no bleed there is no edge for the art to stop short of.
+  await exporting.open();
+  await exporting.reaches("ready");
+  await expect(exporting.fine).toHaveText("No errors");
+  await exporting.close();
+
+  await panel.toControls.click();
+  const bleed = panel.control("bleed");
+  await bleed.fill("0.125in");
+  await bleed.press("Enter");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(filled);
+  await book.settled(BOOK);
+
+  await exporting.open();
+  await exporting.reaches("ready");
+  const short = exporting.warnings.filter({ hasText: "Art stops short of the bleed" });
+  await expect(short.first()).toBeVisible();
+  const place = (await short.first().locator(".orca-export-at").textContent()) ?? "";
+  const page = /^Page (\d+) · /.exec(place)?.[1];
+  expect(page, place).toBeDefined();
+  // The warning does not keep the book from exporting.
+  await expect(exporting.write).toBeEnabled();
+
+  await short.first().getByTestId("orca-export-warned").click();
+  await expect(exporting.dialog).toBeHidden();
+  await expect(book.surface).toHaveAttribute("data-first", page ?? "");
+
+  await vault.restore();
+  await book.settled(BOOK);
+});
+
 test("a cover that names no image in the vault shows in the Issues list once the EPUB is written", async ({
   book,
   exporting,
