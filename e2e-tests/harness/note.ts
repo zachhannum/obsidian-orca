@@ -127,6 +127,13 @@ export class Note {
     }, carried);
   }
 
+  /** One group of the design, by its name. */
+  group(label: string): Locator {
+    return this.design.locator(
+      `[data-testid="orca-book-summed"][data-label="${label}"]`,
+    );
+  }
+
   /** One value of the design, by its key. */
   fact(key: string): Locator {
     return this.design.locator(

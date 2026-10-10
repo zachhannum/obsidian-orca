@@ -52,6 +52,13 @@ test("on a phone the book page is one column, with Export at the width of it", a
     expect(field.x).toBeGreaterThan(column.x + NEAR);
     expect(field.height).toBeGreaterThanOrEqual(TOUCH - NEAR);
 
+    // The name of a design group is over its values, which start at
+    // the column's edge.
+    const group = await boxOf(note.group("Page"));
+    const trim = await boxOf(note.fact("trim"));
+    expect(Math.abs(trim.x - group.x)).toBeLessThanOrEqual(NEAR);
+    expect(trim.y).toBeGreaterThan(group.y + NEAR);
+
     for (const entry of await note.entries.all()) {
       expect((await boxOf(entry)).height).toBeGreaterThanOrEqual(TOUCH - NEAR);
     }
@@ -118,6 +125,12 @@ test("on a tablet the book page is the desktop's column, with each control at to
     const exports = await boxOf(note.exports);
     expect(Math.abs(exports.x - column.x)).toBeLessThanOrEqual(NEAR);
     expect(exports.width).toBeLessThan(column.width / 2);
+
+    // The name of a design group is beside its values, so the first
+    // value begins a name's width in.
+    const group = await boxOf(note.group("Page"));
+    const trim = await boxOf(note.fact("trim"));
+    expect(trim.x).toBeGreaterThan(group.x + TOUCH);
 
     for (const entry of await note.entries.all()) {
       expect((await boxOf(entry)).height).toBeGreaterThanOrEqual(TOUCH - NEAR);
