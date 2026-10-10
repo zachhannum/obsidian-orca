@@ -399,7 +399,7 @@ function pageBoxes(file: string): { media: number[] | undefined; trim: number[] 
     .map((page) => ({ media: box(page, "MediaBox"), trim: box(page, "TrimBox") }));
 }
 
-test("a book with a bleed exports pages grown by it with the trim box inside, and marks make room only when asked for", async ({
+test("a book with a bleed exports pages grown by it with the trim box inside, and with no room for printer marks", async ({
   book,
   exporting,
   panel,
@@ -413,12 +413,11 @@ test("a book with a bleed exports pages grown by it with the trim box inside, an
 
   const bleed = panel.control("bleed");
   await expect(bleed).toHaveValue("0in");
-  await expect(panel.control("marks")).toHaveValue("none");
   await bleed.fill("0.125in");
   await bleed.press("Enter");
   await expect.poll(async () => vault.read(BOOK)).toContain("bleed: 0.125in");
   await expect.poll(async () => book.painted()).toBeGreaterThan(before);
-  const bled = await book.settled(BOOK);
+  await book.settled(BOOK);
 
   const folder = await mkdtemp(path.join(tmpdir(), "orca-export-"));
   const written = path.join(folder, FILE);
@@ -432,28 +431,11 @@ test("a book with a bleed exports pages grown by it with the trim box inside, an
     const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });
     expect(checked.status, checked.stdout + checked.stderr).toBe(0);
     // The fixture's trim is 5.5 by 8.5 inches, and the bleed is 9 points
-    // on every edge. No marks were asked for, so the page is no larger.
+    // on every edge. The design asks for no marks, so the page is no larger.
     const pages = pageBoxes(written);
     expect(pages.length).toBeGreaterThan(1);
     for (const page of pages) {
       expect(page).toEqual({ media: [0, 0, 414, 630], trim: [9, 9, 405, 621] });
-    }
-    await exporting.close();
-
-    await panel.control("marks").selectOption({ label: "Crop" });
-    await expect.poll(async () => vault.read(BOOK)).toContain("marks: crop");
-    await expect.poll(async () => book.painted()).toBeGreaterThan(bled);
-    await book.settled(BOOK);
-
-    await exporting.open();
-    await exporting.reaches("ready");
-    await exporting.formats("pdf");
-    await exporting.write.click();
-    await exporting.reaches("written");
-    await writeFile(written, await vault.bytes(FILE));
-    // The marks take 24 points past the bleed, and the trim is the size it was.
-    for (const page of pageBoxes(written)) {
-      expect(page).toEqual({ media: [0, 0, 462, 678], trim: [33, 33, 429, 645] });
     }
     await exporting.close();
   } finally {

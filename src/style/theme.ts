@@ -44,7 +44,6 @@ export const DEFAULTS: Design = frozen({
       bottom: inches(0.75),
     },
     bleed: inches(0),
-    marks: "none",
   },
   body: {
     font: "EB Garamond",

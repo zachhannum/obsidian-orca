@@ -222,24 +222,13 @@ test("the PDF of a book with a bleed carries a trim box inside its media box, an
   }
 });
 
-test("the printer marks are their own choice: a bleed alone draws none, and marks make room past the bleed", async () => {
-  const bled = await book(designSheets(readDesign({ bleed: "0.125in" }), SETTING));
-  const marked = await book(
-    designSheets(readDesign({ bleed: "0.125in", marks: "crop cross" }), SETTING),
-  );
-  const cropped = await book(designSheets(readDesign({ marks: "crop" }), SETTING));
+test("the design asks for no printer marks, so a bled page has no room past its bleed", async () => {
+  // A `marks` key is not a design key, and a note that carries one sets none.
+  const design = readDesign({ bleed: "0.125in", marks: "crop cross" });
+  assert.deepEqual(design, readDesign({ bleed: "0.125in" }));
 
-  const drawn = (pages: typeof bled.pages) => pages.map((page) => page.items.length);
+  const bled = await book(designSheets(design, SETTING));
   for (const page of bled.pages) assert.equal(page.slug, 0);
-  for (const page of marked.pages) assert.ok(page.slug > 0);
-  for (const [at, count] of drawn(marked.pages).entries()) {
-    assert.ok(count > (drawn(bled.pages)[at] ?? 0), "a marked page draws no marks");
-  }
-  // Marks with no bleed asked for leave the bleed at zero.
-  for (const page of cropped.pages) {
-    assert.equal(page.bleed, 0);
-    assert.ok(page.slug > 0);
-  }
 });
 
 test("a preset a note still names is ignored by the design", () => {

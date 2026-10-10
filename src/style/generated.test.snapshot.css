@@ -3,7 +3,6 @@
   margin-top: 0.8in;
   margin-bottom: 1in;
   bleed: 0in;
-  marks: none;
   @top-left { content: none; }
   @top-center { content: none; }
   @top-right { content: none; }

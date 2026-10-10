@@ -6,13 +6,13 @@ description: Trim, margins, and the unit they are set in.
 
 import Shot from '../../../components/Shot.astro';
 
-The Page group in the design panel sets the trim, the margins around the text, the bleed and the printer marks. The trim is the size of the page.
+The Page group in the design panel sets the trim, the margins around the text and the bleed. The trim is the size of the page.
 
 <Shot
   name="panel-page"
-  alt="The Page group of the design panel, with Trim, the four margins, Bleed and Printer marks."
+  alt="The Page group of the design panel, with Trim, the four margins and Bleed."
   caption="The Page group."
-  marks={['trim', 'margin-inside', 'margin-outside', 'margin-top', 'margin-bottom', 'bleed', 'marks']}
+  marks={['trim', 'margin-inside', 'margin-outside', 'margin-top', 'margin-bottom', 'bleed']}
   numbered
 />
 
@@ -26,7 +26,6 @@ The Page group in the design panel sets the trim, the margins around the text, t
 | 4 | Margins top | `0.75in` | `margin-top` |
 | 5 | Margins bottom | `0.75in` | `margin-bottom` |
 | 6 | Bleed | `0in` | `bleed` |
-| 7 | Printer marks | `None` | `marks` |
 
 ## Trim
 
@@ -58,19 +57,7 @@ A book with a bleed has every page larger by the bleed on each edge. The exporte
 
 `Bleed` is `0in` until you set it. A printer states the bleed that it takes. A common value is `0.125in`.
 
-The preview shows the bleed around the page, and a dashed line shows the trim. The export window lists each page that has art at the trim that does not reach the edge of the bleed.
-
-## Printer marks
-
-`Printer marks` adds the marks that a printer cuts and aligns the sheet by. The marks print outside the bleed, and the page is larger by the room they take.
-
-| Value | Marks |
-| --- | --- |
-| `None` | No marks |
-| `Crop` | A crop mark at each corner of the trim |
-| `Crop and registration` | Crop marks, and a registration mark on each edge |
-
-Some printers refuse a file that has marks. If your printer does not ask for marks, keep `None`.
+The preview shows the bleed around the page, and a dashed line shows the trim. A button in the header of the preview turns the line off and on. The export window lists each page that has art at the trim that does not reach the edge of the bleed.
 
 ## Page measurements
 

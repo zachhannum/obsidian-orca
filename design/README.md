@@ -158,9 +158,11 @@ its editor around these files and returns a URL. The artboard list and
 - The panel draws margins and a custom trim in the unit from orca's
   settings. That unit is inches unless the author picks millimeters or
   points.
-- The Page group sets a bleed and printer marks. Both are off until
-  the author sets them. The panel draws the bleed in the unit from
-  orca's settings, as it draws the margins.
+- The Page group sets a bleed. It is off until the author sets it. The
+  panel draws the bleed in the unit from orca's settings, as it draws
+  the margins.
+- The panel has no control for printer marks. Marks that the author's
+  CSS asks for show in the preview and in the PDF.
 - A control the CSS overrides dims, takes no input and shows a lock. A
   hover over the lock names the property, the value that overrides it
   and its line. A click on the lock goes to that line.
@@ -214,6 +216,9 @@ its editor around these files and returns a URL. The artboard list and
 - The preview of a book with a bleed or printer marks shows the whole
   sheet. The sheet has the bleed around the page, the marks the author
   asked for and a dashed line at the trim. The PDF has the same sheet.
+- The trim line takes Obsidian's accent colour. `Show the trim line`,
+  in the preview's header beside `Inspect the page`, turns it off and
+  on. The header shows it only for a book with a bleed or marks.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - Export lists every format with a checkbox, and every box is ticked

@@ -336,7 +336,6 @@ function whole(): Design {
         bottom: len(1, "in"),
       },
       bleed: len(0.125, "in"),
-      marks: "crop cross",
     },
     body: {
       font: "Alegreya",

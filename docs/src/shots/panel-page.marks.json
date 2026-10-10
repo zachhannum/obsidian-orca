@@ -1,11 +1,11 @@
 {
   "width": 252,
-  "height": 373,
+  "height": 310,
   "marks": {
     "bleed": {
       "x": 0,
       "y": 264,
-      "width": 60,
+      "width": 76,
       "height": 30
     },
     "margin-bottom": {
@@ -30,12 +30,6 @@
       "x": 0,
       "y": 183,
       "width": 88,
-      "height": 30
-    },
-    "marks": {
-      "x": 0,
-      "y": 327,
-      "width": 220,
       "height": 30
     },
     "reset-margin-inside": {

@@ -194,7 +194,6 @@ function pageRules(
   root.push(...set("margin-top", written(margins.top), ["margin-top"]));
   root.push(...set("margin-bottom", written(margins.bottom), ["margin-bottom"]));
   root.push(...set("bleed", written(page.bleed), ["bleed"]));
-  root.push(...set("marks", page.marks, ["marks"]));
   const inside = { value: written(margins.inside), keys: ["margin-inside"] };
   const outside = { value: written(margins.outside), keys: ["margin-outside"] };
   // The side margins mirror, so the inside one prints at the spine on

@@ -73,15 +73,11 @@ export interface Margins {
   bottom?: Length;
 }
 
-/** The marks a printer cuts and registers a sheet by. */
-export type PrinterMarks = "none" | "crop" | "crop cross";
-
 export interface PageDesign {
   trim?: Trim;
   margins: Margins;
   /** The distance past the trim that art prints to, on every edge. */
   bleed?: Length;
-  marks?: PrinterMarks;
 }
 
 export type Alignment = "left" | "center" | "right" | "justify";
@@ -396,15 +392,6 @@ const PAGE: readonly Field[] = [
     write: ({ page }, value) => {
       const length = asLength(value);
       if (length !== undefined) page.bleed = length;
-    },
-  },
-  {
-    key: "marks",
-    property: "marks",
-    read: ({ page }) => page.marks,
-    write: ({ page }, value) => {
-      const marks = asWord(value, PRINTER_MARKS);
-      if (marks !== undefined) page.marks = marks;
     },
   },
 ];
@@ -912,7 +899,6 @@ export function stepCount(count: number, by: 1 | -1, times = 1): number {
 
 const ALIGNMENTS: readonly Alignment[] = ["left", "center", "right", "justify"];
 const HEADING_ALIGNMENTS: readonly HeadingAlignment[] = ["left", "center", "right"];
-const PRINTER_MARKS: readonly PrinterMarks[] = ["none", "crop", "crop cross"];
 const BEGINS: readonly Begins[] = ["right-page", "next-page", "same-page"];
 export const CAPS: readonly Caps[] = ["normal", "small-caps", "all-caps"];
 
