@@ -99,6 +99,12 @@ const BEGINS: readonly Choice[] = [
   { value: "same-page", label: "Same page" },
 ];
 
+const PRINTER_MARKS: readonly Choice[] = [
+  { value: "none", label: "None" },
+  { value: "crop", label: "Crop" },
+  { value: "crop cross", label: "Crop and registration" },
+];
+
 const DROP_CAPS: readonly Choice[] = [
   { value: "0", label: "None" },
   { value: "2", label: "2 lines" },
@@ -219,6 +225,8 @@ export const GROUPS: readonly Group[] = [
           { kind: "length", key: "margin-bottom", said: "bottom", page: true },
         ],
       },
+      { label: "Bleed", of: [{ kind: "length", key: "bleed", page: true }] },
+      { label: "Printer marks", of: [{ kind: "select", key: "marks", choices: PRINTER_MARKS }] },
     ],
   },
   {

@@ -54,7 +54,7 @@ test("the panel offers every group a book designer works in", () => {
   }
 });
 
-test("the Page group offers the trim and the four margins, and no switch", () => {
+test("the Page group offers the trim, the four margins, the bleed and the printer marks, and no switch", () => {
   const page = GROUPS.find((group) => group.name === "Page");
   assert.ok(page !== undefined);
 
@@ -64,6 +64,8 @@ test("the Page group offers the trim and the four margins, and no switch", () =>
     "margin-outside",
     "margin-top",
     "margin-bottom",
+    "bleed",
+    "marks",
   ]);
   // The side margins always mirror, so the group has nothing to switch.
   assert.deepEqual(

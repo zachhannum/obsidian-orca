@@ -10,6 +10,8 @@
   margin-bottom: 1in;
   margin-left: 0.95in;
   margin-right: 0.7in;
+  bleed: 0.125in;
+  marks: crop cross;
   @top-center { content: counter(page, decimal); }
   @bottom-center { content: counter(page, decimal); }
 }
