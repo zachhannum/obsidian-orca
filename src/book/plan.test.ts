@@ -29,9 +29,10 @@ import { epubText } from "@/book/testUtils/epub";
 import { countWords } from "@/book/words";
 import { readModel, type Model } from "@/book/model";
 import { sectionIds } from "@/book/names";
+import { bookCss } from "@/book/css";
 import { FORMAT, type Book } from "@/book/note";
 import { readOrder, resolve } from "@/book/order";
-import { emptyDesign } from "@/style/design";
+import { bookUses, emptyDesign } from "@/style/design";
 import { readOrigin } from "@/style/origin";
 import {
   GENERATED_ORIGIN,
@@ -944,38 +945,73 @@ async function moduleBytes(): Promise<Buffer> {
   return readFile(require.resolve("fleuron/fleuron_bg.wasm"));
 }
 
-/** The ops that send a book in a vault, with the faces in its `fonts` folder and its design. */
+/**
+ * The ops that send a book in a vault. They carry what the composer
+ * sends, so the faces are the ones the design names and the book's
+ * own CSS is the last sheet.
+ */
 async function bookOps(from: VaultAdapter, name: string): Promise<Op[]> {
   const model = readModel(await readText(from, name));
   const links = pathLinks(await under(from));
   const registry = new Registry(from);
+  const css = bookCss(model.order);
   const { ops } = await sendBook(
     model.book,
     model.order,
     links,
     name,
-    "",
+    css,
     (at) => readText(from, at),
     (at) => registry.take(at),
   );
   const { sections } = resolve(model.order, links, name);
   const { title, author, publisher } = model.book.metadata;
-  const faces = await Promise.all(
-    (await from.list("fonts")).files
-      .filter((file) => file.endsWith(".ttf"))
-      .map((file) => registry.take(file)),
+  const index = fontIndex(
+    { faces: [], refused: [] },
+    await scanFonts(
+      {
+        list: (directory) => from.list(directory),
+        read: async (at, start, length) =>
+          new Uint8Array(await from.readBinary(at)).subarray(start, start + length),
+      },
+      [VAULT_FONTS],
+      "vault",
+    ),
   );
+  const faces: Awaited<ReturnType<Registry["take"]>>[] = [];
+  const registered: Registered[] = [];
+  for (const use of bookUses(model.book.design, model.book.fonts)) {
+    const family = familyNamed(index, use.font);
+    if (family === undefined) continue;
+    const { variant } = usedVariant(family, use.variant);
+    const crossed = await Promise.all(
+      variant.faces.map(async (face) => {
+        const hashed = await registry.take(face.path);
+        return { ...hashed, url: fontUrl(hashed.key) };
+      }),
+    );
+    faces.push(...crossed);
+    registered.push({
+      ...use,
+      family: variantFamily(family, variant),
+      faces: variant.faces.map((face, at) => ({
+        url: crossed[at]?.url ?? "",
+        weight: face.weight,
+        italic: face.italic,
+      })),
+    });
+  }
 
   return [
     ...ops,
     ...sendFaces(faces),
     styleOp(
-      designSheets(model.book.design, {
-        sections: sectionIds(sections),
-        title,
-        author,
-        publisher,
-      }),
+      designSheets(
+        model.book.design,
+        { sections: sectionIds(sections), title, author, publisher },
+        css,
+        registered,
+      ),
     ),
   ];
 }
@@ -1102,6 +1138,23 @@ test("the site's sample book sets to a PDF that qpdf reads", async () => {
 
   const checked = spawnSync("qpdf", ["--check", written], { encoding: "utf8" });
   assert.equal(checked.status, 0, checked.stdout + checked.stderr);
+});
+
+test("the site's sample book sets with no warning", async () => {
+  const sample = directoryVault(path.join(root, "docs/sample"));
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  try {
+    const output = await connected(engine).preview(await bookOps(sample, SAMPLE_BOOK));
+    assert.ok(output, "the render was overtaken");
+    // The site's pictures show the warning count. The one warning they
+    // show comes from CSS that the screenshot spec types in.
+    assert.deepEqual(
+      output.warnings.map((warning) => warning.message),
+      [],
+    );
+  } finally {
+    engine.free();
+  }
 });
 
 test("the fixture book exports as an EPUB, and no page rule in its sheets warns", async () => {

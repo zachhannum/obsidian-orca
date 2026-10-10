@@ -91,7 +91,7 @@ suppress-head-on-openings: true
 - [[From Cape Horn to the Amazon]]
 - [[The Poulps]]
 - [[The Gulf Stream]]
-- [[From Latitude 47° 24′ to Longitude 17° 28′]]
+- [[From Latitude 47° 24’ to Longitude 17° 28’]]
 - [[A Hecatomb]]
 - [[The Last Words of Captain Nemo]]
 - [[Conclusion]]
