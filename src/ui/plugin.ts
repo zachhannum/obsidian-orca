@@ -523,6 +523,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
       openPanel: () => {
         void this.openPanel();
       },
+      locate: (at) => {
+        void this.locate(book, at);
+      },
       opens: (route, place) => {
         void (route === "css" ? this.opensCss(place) : this.opensNote(book, place));
       },
