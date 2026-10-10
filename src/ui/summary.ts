@@ -31,8 +31,8 @@ interface Reading {
   /** The keys the book sets to something other than the default. */
   changed: ReadonlySet<string>;
   unit: PageUnit;
-  said(key: string): string;
-  lower(key: string): string;
+  said: (key: string) => string;
+  lower: (key: string) => string;
 }
 
 /**
