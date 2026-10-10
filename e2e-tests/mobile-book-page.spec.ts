@@ -60,7 +60,8 @@ test("on a phone the book page is one column, with Export at the width of it", a
     await expect(note.page.locator("[title], [aria-label]")).toHaveCount(0);
 
     await note.exports.click();
-    await exporting.reaches("ready");
+    // The fixture book lists a chapter with no note, so preflight refuses it.
+    await exporting.reaches("refused");
     await exporting.close();
   } finally {
     await obsidian.emulateMobile(false);
