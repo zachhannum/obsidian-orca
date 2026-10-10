@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import path from "node:path";
+import process from "node:process";
 import { test } from "node:test";
+import { directoryVault } from "@/assets/testUtils/directory";
+import { readText } from "@/assets/vault";
+import { pathLinks } from "@/book/links";
 import { readModel } from "@/book/model";
+import { resolve, type Section } from "@/book/order";
 import type { Design } from "@/style/design";
 import { preflight, standing, type Checking } from "@/ui/preflight";
 
@@ -11,8 +17,75 @@ function design(): Design {
 }
 
 function book(changes: Partial<Checking>): Checking {
-  return { design: design(), unloaded: [], unread: [], warnings: [], ...changes };
+  return { design: design(), sections: [], unloaded: [], unread: [], warnings: [], ...changes };
 }
+
+/** The book note in the fixture vault. It lists a chapter that has no note. */
+const BOOK = "Pride and Prejudice.md";
+
+/** The sections of the fixture book, resolved against the fixture vault. */
+async function fixtureSections(): Promise<Section[]> {
+  const root = process.env["ORCA_ROOT"] ?? process.cwd();
+  const vault = directoryVault(path.join(root, "fixture"));
+  const model = readModel(await readText(vault, BOOK));
+  const links = pathLinks((await vault.list("/")).files);
+  return resolve(model.order, links, BOOK).sections;
+}
+
+test("a section with no note is listed by the name the book note gives it", () => {
+  const sections: Section[] = [
+    { kind: "generated", entry: { role: "title-page", heading: "Front matter" } },
+    { kind: "missing", entry: { link: "Drafts/One", alias: "The First", role: "chapter", heading: "Body" } },
+    { kind: "note", entry: { link: "Two", role: "chapter", heading: "Body" }, path: "Two.md" },
+    { kind: "missing", entry: { link: "Three", role: "chapter", heading: "" } },
+  ];
+
+  const checked = preflight(book({ sections }));
+
+  assert.deepEqual(
+    checked.errors.map((each) => [each.kind, each.said, each.place, each.row]),
+    [
+      ["note", "Missing note: The First", "Body", 1],
+      ["note", "Missing note: Three", "Book", 3],
+    ],
+  );
+});
+
+test("a missing note is an error, so the book does not pass and export stays off", () => {
+  const sections: Section[] = [
+    { kind: "missing", entry: { link: "One", role: "chapter", heading: "Body" } },
+  ];
+
+  const checked = preflight(book({ sections }));
+
+  assert.equal(checked.fine, undefined);
+  assert.equal(standing(checked.errors.length), "Fix 1 error to export");
+});
+
+test("the row of a missing note goes to its place in the reading order", () => {
+  const sections: Section[] = [
+    { kind: "note", entry: { link: "One", role: "chapter", heading: "Body" }, path: "One.md" },
+    { kind: "missing", entry: { link: "Two", role: "chapter", heading: "Body" } },
+  ];
+
+  const [error] = preflight(book({ sections })).errors;
+
+  assert.equal(error?.fix, "Show in navigator");
+  assert.equal(error?.row, 1);
+  assert.equal(error?.at, undefined);
+});
+
+test("the fixture book lists a chapter with no note, and preflight refuses it", async () => {
+  const sections = await fixtureSections();
+
+  const checked = preflight(book({ sections }));
+
+  assert.deepEqual(
+    checked.errors.map((each) => [each.said, each.place, each.row]),
+    [["Missing note: Chapter Four", "Body", 6]],
+  );
+  assert.equal(checked.fine, undefined);
+});
 
 test("a face that registered no file refuses, and names where the font is used", () => {
   const set = design();
@@ -56,6 +129,7 @@ test("an image that brought no bytes refuses with its note and line, and carries
       fix: "Go to line",
       engine: warning.message,
       at: { note: "Part/Chapter Twenty-Two.md", line: 2 },
+      row: undefined,
     },
   ]);
   assert.equal(checked.fine, undefined);
@@ -153,4 +227,4 @@ test("a warning an image error shows is not listed again", () => {
 // What this tier does not cover: an error only the engine can see, such
 // as an image format the writer cannot take, which waits on the engine
 // reporting it. The dialog that draws these lines is read by the e2e
-// suite.
+// suite, and so is the navigator a missing note's row opens.

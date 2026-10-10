@@ -1,12 +1,13 @@
 /**
  * The checks export runs before it writes. Orca blocks on the facts it
- * records itself: a use of a font that registered no face, and an
- * embed that brought no bytes. A case only the engine can see is not
+ * records itself: a section with no note, a use of a font that
+ * registered no face, and an embed that brought no bytes. A case only the engine can see is not
  * checked here. The engine's warnings are listed under the errors as
  * the engine wrote them, and none of them blocks.
  */
 
 import type { Warning } from "fleuron";
+import { entryName, type Section } from "@/book/order";
 import type { Unread } from "@/book/plan";
 import { LEVELS, headingUse, useKey, type Design, type FontUse } from "@/style/design";
 import { readOrigin, type Place } from "@/style/origin";
@@ -15,10 +16,13 @@ import { groupTitle, routeOf, tally } from "@/ui/issues";
 
 /** One error that keeps export from writing. */
 export interface Blocker {
-  kind: "face" | "image";
+  kind: "note" | "face" | "image";
   /** The line the author reads first. */
   said: string;
-  /** The place the error is at: where the font is used, or the note and line. */
+  /**
+   * The place the error is at: the heading the section sits under, where
+   * the font is used, or the note and line.
+   */
   place: string;
   /** The label of the button that goes to the fix. */
   fix: string;
@@ -26,6 +30,8 @@ export interface Blocker {
   engine: string | undefined;
   /** The note an image error is in, with its line counted from 0. */
   at: { note: string; line: number } | undefined;
+  /** The place in the reading order of a section with no note. */
+  row: number | undefined;
 }
 
 /** One warning from the engine. It does not keep export from writing. */
@@ -43,6 +49,8 @@ export interface Caution {
 /** The book as preflight reads it. */
 export interface Checking {
   design: Design;
+  /** The book's sections in reading order, with the ones that have no note. */
+  sections: readonly Section[];
   unloaded: readonly Unloaded[];
   unread: readonly Unread[];
   warnings: readonly Warning[];
@@ -60,6 +68,21 @@ export interface Checked {
 }
 
 export function preflight(book: Checking): Checked {
+  const notes = book.sections.flatMap((section, row): Blocker[] => {
+    if (section.kind !== "missing") return [];
+    const { heading } = section.entry;
+    return [
+      {
+        kind: "note",
+        said: `Missing note: ${entryName(section.entry)}`,
+        place: heading === "" ? "Book" : heading,
+        fix: "Show in navigator",
+        engine: undefined,
+        at: undefined,
+        row,
+      },
+    ];
+  });
   const faces = book.unloaded.map((each): Blocker => {
     const name = faceName(each.use);
     return {
@@ -69,6 +92,7 @@ export function preflight(book: Checking): Checked {
       fix: "Change font…",
       engine: undefined,
       at: undefined,
+      row: undefined,
     };
   });
   const shown = new Set<Warning>();
@@ -82,10 +106,11 @@ export function preflight(book: Checking): Checked {
       fix: "Go to line",
       engine: engine?.message,
       at: { note: each.note, line: each.line },
+      row: undefined,
     };
   });
 
-  const errors = [...faces, ...images];
+  const errors = [...notes, ...faces, ...images];
   const warnings = book.warnings.flatMap((warning): Caution[] => {
     const route = routeOf(warning);
     // A warning against orca's own sheets is not the author's to fix.

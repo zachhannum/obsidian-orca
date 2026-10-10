@@ -26,6 +26,8 @@ export interface Exports {
   metadata(): Promise<BookMetadata | undefined>;
   /** Opens the design panel, where a face is picked. */
   openPanel(): void;
+  /** Opens the navigator on this book, at one entry of its reading order. */
+  locate(at: number): void;
   /** Opens the place a warning named: a note, or the author's CSS. */
   opens(route: "note" | "css", place: Place): void;
   /** Opens the book's preview with its warnings showing. */
@@ -94,6 +96,7 @@ class ExportModal extends Modal {
         await typeset.resolving;
         return preflight({
           design: typeset.design,
+          sections: typeset.sections,
           unloaded: typeset.unloaded,
           unread: typeset.unread,
           warnings: typeset.session.warnings,
@@ -145,6 +148,10 @@ class ExportModal extends Modal {
       },
       fix: (blocker) => {
         this.close();
+        if (blocker.row !== undefined) {
+          this.exports.locate(blocker.row);
+          return;
+        }
         if (blocker.at === undefined) {
           this.exports.openPanel();
           return;

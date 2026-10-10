@@ -36,6 +36,9 @@ test("under mobile emulation the book is set from the vault's faces and exports 
   // on the desktop paths again.
   await obsidian.emulateMobile(true);
   try {
+    // Preflight refuses a book that lists a note the vault does not
+    // have, so the book exports without that entry.
+    await vault.without(BOOK, "- [[Chapter Four]]");
     await book.open();
     await book.settled(BOOK);
 

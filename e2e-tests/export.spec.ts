@@ -63,6 +63,15 @@ const BACKGROUND =
 /** A rule the engine reads and cannot set, so it warns and sets the book. */
 const UNSET = "p { float: left; }";
 
+/** The entry the fixture book lists with no note behind it. */
+const MISSING = "- [[Chapter Four]]";
+
+// Preflight refuses a book that lists a note the vault does not have,
+// so these specs export the fixture book without that entry.
+test.beforeEach(async ({ vault }) => {
+  await vault.without(BOOK, MISSING);
+});
+
 test("export writes the pages on screen to a vault path, and the file is a PDF with the book's words", async ({
   book,
   exporting,
