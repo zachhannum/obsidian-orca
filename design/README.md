@@ -219,6 +219,10 @@ its editor around these files and returns a URL. The artboard list and
   to its line, and one that names none links to Issues in the
   preview. A warning an image error already shows is listed once, on
   that error.
+- Preflight lists each section of the book whose note the vault does
+  not have, by the name the book note gives it, over the heading it
+  sits under. It is an error, and it is listed first. Its link opens
+  the navigator at that row, where `Locate` and `Remove` are.
 - EPUB is the preview's fourth view, beside the three page views in
   the bar's segmented control. It shows the engine's EPUB in a frame
   that ReadiumCSS pages, and no page is laid out for it. The reading is
