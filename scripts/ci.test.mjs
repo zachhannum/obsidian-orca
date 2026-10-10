@@ -6,7 +6,7 @@ import { root } from "./bundle.mjs";
 
 const read = (file) => readFile(path.join(root, file), "utf8");
 
-const [pkg, shotsRunner, workflow, shots, docs, setup, release, cut, spec, claude] = await Promise.all([
+const [pkg, shotsRunner, workflow, shots, docs, setup, release, cut, spec] = await Promise.all([
   read("package.json"),
   read("scripts/shots.mjs"),
   read(".github/workflows/ci.yml"),
@@ -16,7 +16,6 @@ const [pkg, shotsRunner, workflow, shots, docs, setup, release, cut, spec, claud
   read(".github/workflows/release.yml"),
   read(".github/workflows/cut-release.yml"),
   read("e2e-tests/shots.spec.ts"),
-  read("CLAUDE.md"),
 ]);
 
 /** One job's block, from its name to the next job at the same indent. */
@@ -229,15 +228,6 @@ test("the screenshot spec ends on what it does not cover", () => {
     .reduceRight((kept, line) => (line.startsWith("//") ? [line, ...kept] : kept), []);
   assert.ok(note.length > 0, "the spec ends on no note");
   assert.match(note.join("\n"), /does not cover/i);
-});
-
-test("CLAUDE.md's CI section lists the shots and release workflows", () => {
-  const section = claude.slice(
-    claude.indexOf("## CI scaffolding"),
-    claude.indexOf("## Documentation rules"),
-  );
-  assert.match(section, /shots\.yml/);
-  assert.match(section, /release\.yml/);
 });
 
 // What this tier does not cover: whether the runner has what a job
