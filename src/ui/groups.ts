@@ -219,6 +219,7 @@ export const GROUPS: readonly Group[] = [
           { kind: "length", key: "margin-bottom", said: "bottom", page: true },
         ],
       },
+      { label: "Bleed", of: [{ kind: "length", key: "bleed", page: true }] },
     ],
   },
   {

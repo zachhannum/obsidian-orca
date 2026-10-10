@@ -635,7 +635,7 @@ test("the pane: a lost declaration is struck through, and a refused one keeps it
   await pinSecond(book, inspect, panel);
   await expect(panel.flags).toHaveCount(0);
 
-  const rule = `\n${SECTION} p + p { text-indent: 1.35em; float: left }`;
+  const rule = `\n${SECTION} p + p { text-indent: 1.35em; transform: none }`;
   await typeRule(book, inspect, panel, vault, rule);
 
   // The author's rule wins the indent, so the design panel's is lost.
@@ -653,11 +653,11 @@ test("the pane: a lost declaration is struck through, and a refused one keeps it
     .filter({ hasText: "text-indent" });
   await expect(won).not.toHaveAttribute("data-lost", /.*/);
 
-  // The engine refuses the float, which the pane shows from the flag.
+  // The engine refuses the transform, which the pane shows from the flag.
   const refused = panel
     .ownRule(OWN_LINE)
     .getByTestId("orca-inspect-decl")
-    .filter({ hasText: "float" });
+    .filter({ hasText: "transform" });
   await expect(refused).toHaveAttribute("data-skipped", "true");
   await expect(panel.flaggedLines.filter({ hasText: String(OWN_LINE) })).toHaveCount(1);
   const flagged = await panel.flags.count();

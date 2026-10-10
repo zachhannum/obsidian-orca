@@ -158,6 +158,11 @@ its editor around these files and returns a URL. The artboard list and
 - The panel draws margins and a custom trim in the unit from orca's
   settings. That unit is inches unless the author picks millimeters or
   points.
+- The Page group sets a bleed. It is off until the author sets it. The
+  panel draws the bleed in the unit from orca's settings, as it draws
+  the margins.
+- The panel has no control for printer marks. Marks that the author's
+  CSS asks for show in the preview and in the PDF.
 - A control the CSS overrides dims, takes no input and shows a lock. A
   hover over the lock names the property, the value that overrides it
   and its line. A click on the lock goes to that line.
@@ -208,6 +213,12 @@ its editor around these files and returns a URL. The artboard list and
   inside `string(` from the names its `string-set` declarations set. An option
   shows an Obsidian icon for its kind and its syntax on a line under
   its name, and Tab takes it.
+- The preview of a book with a bleed or printer marks shows the whole
+  sheet. The sheet has the bleed around the page, the marks the author
+  asked for and a dashed line at the trim. The PDF has the same sheet.
+- The trim line takes Obsidian's accent colour. `Show the trim line`,
+  in the preview's header beside `Inspect the page`, turns it off and
+  on. The header shows it only for a book with a bleed or marks.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - Export lists every format with a checkbox, and every box is ticked
@@ -227,6 +238,10 @@ its editor around these files and returns a URL. The artboard list and
   not have, by the name the book note gives it, over the heading it
   sits under. It is an error, and it is listed first. Its link opens
   the navigator at that row, where `Locate` and `Remove` are.
+- Preflight lists each page with art that reaches the trim and stops
+  before the edge of the bleed. It is a warning, and it does not turn
+  Export off. The row names the page, and its button turns the preview
+  to that page.
 - EPUB is the preview's fourth view, beside the three page views in
   the bar's segmented control. It shows the engine's EPUB in a frame
   that ReadiumCSS pages, and no page is laid out for it. The reading is

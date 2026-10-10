@@ -14,7 +14,7 @@ const TOOLBAR = 52;
 const NEAR = 2;
 
 /** A rule with a line longer than a drawer is wide, and a declaration the engine skips. */
-const TYPED = `\n${Array.from({ length: 8 }, () => "section.chapter-opening").join(" > ")} { float: left; }`;
+const TYPED = `\n${Array.from({ length: 8 }, () => "section.chapter-opening").join(" > ")} { transform: none; }`;
 
 /** The marks the toolbar holds on each device. */
 const MARKS = {
@@ -54,7 +54,7 @@ for (const device of ["phone", "tablet"] as const) {
       await expect(panel.card).toBeHidden();
       for (let step = 0; step < 5; step += 1) await panel.code.press("ArrowLeft");
       await expect(panel.card).toBeVisible();
-      await expect(panel.card).toContainText("float");
+      await expect(panel.card).toContainText("transform");
       await expect(panel.card).toContainText(`line ${String(line)}`);
       await panel.code.press("ControlOrMeta+Home");
       await expect(panel.card).toBeHidden();

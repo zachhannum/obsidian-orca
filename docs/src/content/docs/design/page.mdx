@@ -6,13 +6,13 @@ description: Trim, margins, and the unit they are set in.
 
 import Shot from '../../../components/Shot.astro';
 
-The Page group in the design panel sets the trim and the margins around the text. The trim is the size of the page.
+The Page group in the design panel sets the trim, the margins around the text and the bleed. The trim is the size of the page.
 
 <Shot
   name="panel-page"
-  alt="The Page group of the design panel, with Trim and the four margins."
+  alt="The Page group of the design panel, with Trim, the four margins and Bleed."
   caption="The Page group."
-  marks={['trim', 'margin-inside', 'margin-outside', 'margin-top', 'margin-bottom']}
+  marks={['trim', 'margin-inside', 'margin-outside', 'margin-top', 'margin-bottom', 'bleed']}
   numbered
 />
 
@@ -25,6 +25,7 @@ The Page group in the design panel sets the trim and the margins around the text
 | 3 | Margins outside | `0.6in` | `margin-outside` |
 | 4 | Margins top | `0.75in` | `margin-top` |
 | 5 | Margins bottom | `0.75in` | `margin-bottom` |
+| 6 | Bleed | `0in` | `bleed` |
 
 ## Trim
 
@@ -48,6 +49,16 @@ The inside margin is the margin at the spine. The margins mirror: a left page an
 
 A number field takes a number and a unit: `pt`, `pc`, `in`, `mm`, `cm` or `em`. A number with no unit is in points.
 
+## Bleed
+
+The bleed is the band outside the trim that the printer cuts off. Art that runs to the edge of the page must continue to the edge of the bleed. If the art stops at the trim, a cut that drifts leaves a white line at the edge of the page.
+
+A book with a bleed has every page larger by the bleed on each edge. The exported PDF records the trim, so a printer reads the size of the finished page from the file. The text stays where it is on the page.
+
+`Bleed` is `0in` until you set it. A printer states the bleed that it takes. A common value is `0.125in`.
+
+The preview shows the bleed around the page, and a dashed line shows the trim. A button in the header of the preview turns the line off and on. The export window lists each page that has art at the trim that does not reach the edge of the bleed.
+
 ## Page measurements
 
-The `Page measurements` setting chooses the unit that the panel uses for the trim and the margins. The values are `Inches`, `Millimeters` and `Points`.
+The `Page measurements` setting chooses the unit that the panel uses for the trim, the margins and the bleed. The values are `Inches`, `Millimeters` and `Points`.

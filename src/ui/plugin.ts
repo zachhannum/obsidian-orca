@@ -211,6 +211,13 @@ export default class OrcaPlugin extends Plugin implements Limited {
             reads: (reader) => {
               this.limit({ ...this.limits, reader });
             },
+            trimEdge: () => this.limits.trimEdge,
+            trimEdged: (trimEdge) => {
+              this.limit({ ...this.limits, trimEdge });
+              for (const other of this.app.workspace.getLeavesOfType(PREVIEW_VIEW)) {
+                if (other.view instanceof PreviewView) other.view.marksTrimEdge();
+              }
+            },
             exports: (book) => {
               this.exportBook(book);
             },
@@ -328,6 +335,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
         const view = this.app.workspace.getActiveViewOfType(PreviewView);
         if (view === null) return false;
         if (!checking) view.toggleInspect();
+        return true;
+      },
+    });
+    this.addCommand({
+      id: "toggle-trim-line",
+      name: "Toggle the trim line",
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(PreviewView);
+        if (view?.trimmable !== true) return false;
+        if (!checking) view.toggleTrimEdge();
         return true;
       },
     });
@@ -531,6 +548,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
       },
       openIssues: () => {
         void this.opensIssues(book);
+      },
+      openPage: (at) => {
+        void this.opensPage(book, at);
       },
     });
   }
@@ -1203,6 +1223,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * the book is the one, and a book no preview reads opens in a new one.
    */
   private async opensIssues(book: string): Promise<void> {
+    (await this.reads(book))?.openIssues();
+  }
+
+  /** Opens the book's preview at one page, by its place in the book from 0. */
+  private async opensPage(book: string, at: number): Promise<void> {
+    await (await this.reads(book))?.turnToPage(at);
+  }
+
+  /** The book's preview, opened where no leaf shows it, with the focus on it. */
+  private async reads(book: string): Promise<PreviewView | null> {
     const { workspace } = this.app;
     const reading = workspace
       .getLeavesOfType(PREVIEW_VIEW)
@@ -1212,7 +1242,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       await workspace.revealLeaf(reading);
       workspace.setActiveLeaf(reading, { focus: true });
     }
-    workspace.getActiveViewOfType(PreviewView)?.openIssues();
+    return workspace.getActiveViewOfType(PreviewView);
   }
 
   /** Opens the design panel on the author's CSS with the caret at the place a warning named. */

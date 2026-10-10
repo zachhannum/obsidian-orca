@@ -371,6 +371,16 @@
     0 0 0 1px var(--background-modifier-border);
 }
 
+/* The paper is white in either theme, and the accent reads on it in
+   both. A rule here beats the attributes the painter wrote. */
+.orca-page rect[data-trim] {
+  stroke: var(--interactive-accent);
+}
+
+.orca-preview-sheets[data-trim-edge="off"] rect[data-trim] {
+  display: none;
+}
+
 /* Obsidian turns selection off on the body, so a drag over the pages
    selects nothing until the sheets turn it back on. Only the painter's
    selection layer takes it: the glyphs under it are the same words, and
@@ -2428,6 +2438,11 @@ input.orca-panel-text {
 .orca-panel-number > input.orca-panel-text {
   width: 60px;
   border-radius: var(--input-radius) 0 0 var(--input-radius);
+}
+
+/* A page length has three decimal places, as in 0.125in. */
+.orca-panel-number.mod-page > input.orca-panel-text {
+  width: 76px;
 }
 
 .orca-panel-cell > .orca-panel-number > input.orca-panel-text {

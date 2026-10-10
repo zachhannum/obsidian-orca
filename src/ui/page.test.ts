@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { paintPage, sheetOf, type Page } from "fleuron";
 import {
+  bled,
   fits,
   gapOf,
   nextPage,
@@ -268,6 +270,73 @@ test("the sheet box is the trim the painter drew, placed on the view's own grid"
   assert.equal(node.trim["--orca-gap"], "12px");
 });
 
+/** A 432 by 648 page whose sheet reaches 33 points past the trim. */
+const BLED: Page = {
+  number: 1,
+  side: "recto",
+  width: 432,
+  height: 648,
+  bleed: 9,
+  slug: 24,
+  sections: [],
+  links: [],
+  items: [],
+};
+
+function shown(markup: string): Fake {
+  const node = surface();
+  showPages(
+    node,
+    {
+      mode: "single",
+      leaves: [{ markup, page: 1, folio: 1, side: "recto" }],
+      generation: 1,
+      stages,
+      pages: 1,
+      note: "",
+      columns: 1,
+      rows: 1,
+    },
+    press,
+  );
+  return node;
+}
+
+test("a sheet that starts left of the trim and above it sizes the box", () => {
+  const node = shown(`<svg viewBox="-33 -33 498 714"></svg>`);
+
+  assert.equal(node.trim["--orca-trim-w"], "498");
+  assert.equal(node.trim["--orca-trim-h"], "714");
+});
+
+test("a bled page is painted on its whole sheet, with the trim's edge drawn", () => {
+  const markup = paintPage(BLED, { fonts: [] });
+  const sheet = sheetOf(BLED);
+
+  assert.deepEqual(sheet, { x: -33, y: -33, width: 498, height: 714 });
+  assert.match(markup, /viewBox="-33 -33 498 714"/);
+  assert.match(markup, /<rect[^>]*data-trim/);
+
+  // The box takes the sheet, and the grid is fitted to it.
+  const node = shown(markup);
+  assert.equal(node.trim["--orca-trim-w"], "498");
+  assert.equal(node.trim["--orca-trim-h"], "714");
+
+  const plain = paintPage({ ...BLED, bleed: 0, slug: 0 }, { fonts: [] });
+  assert.match(plain, /viewBox="0 0 432 648"/);
+  assert.doesNotMatch(plain, /data-trim/);
+});
+
+test("a book has a trim line to show when a painted page has a bleed or a slug", () => {
+  const plain = { ...BLED, bleed: 0, slug: 0 };
+
+  assert.equal(bled([]), false);
+  assert.equal(bled([plain]), false);
+  assert.equal(bled([plain, BLED]), true);
+  assert.equal(bled([{ ...plain, bleed: 9 }]), true);
+  assert.equal(bled([{ ...plain, slug: 24 }]), true);
+});
+
 test("a page is named for what reads it aloud, and the drawn glyphs are left out of it", () => {
   const node = surface();
 
@@ -303,3 +372,6 @@ test("a page is named for what reads it aloud, and the drawn glyphs are left out
 // e2e job paints and photographs, and a spread of a real verso and the
 // recto facing it, which waits on the preview reading a book longer
 // than the sample note.
+// A bled page here has no art on it, so this tier does not check that
+// art reaching the bleed is painted there. The e2e job sets a bleed in
+// the panel and reads the sheet off the painted page.

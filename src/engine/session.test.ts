@@ -219,6 +219,8 @@ function leaves(count: number): Page[] {
     side: at % 2 === 0 ? ("recto" as const) : ("verso" as const),
     width: 432,
     height: 648,
+    bleed: 0,
+    slug: 0,
     sections: [],
     links: [],
     items: [

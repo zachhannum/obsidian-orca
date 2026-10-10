@@ -21,6 +21,12 @@ test("the ceiling is a setting, saved and read back in whole sessions", () => {
   assert.equal(sessionCount(Number.NaN), CEILING);
 });
 
+test("the trim line is drawn until the author turns it off", () => {
+  assert.equal(LIMITS.trimEdge, true);
+  assert.deepEqual(readLimits({ trimEdge: false }), { ...LIMITS, trimEdge: false });
+  assert.deepEqual(readLimits({ trimEdge: "no" }), LIMITS);
+});
+
 test("the navigator lists no headings until the setting is turned on", () => {
   assert.equal(LIMITS.headings, false);
   assert.deepEqual(readLimits({ headings: true }), { ...LIMITS, headings: true });

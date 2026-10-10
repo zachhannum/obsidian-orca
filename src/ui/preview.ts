@@ -1,8 +1,10 @@
 import {
   paintPage,
+  sheetOf,
   type Inspection,
   type NodeSource,
   type Page,
+  type Rect,
   type Warning,
 } from "fleuron";
 import {
@@ -48,6 +50,7 @@ import { device } from "@/ui/desktop";
 import { footPlace, liftFor, sheetCover, sheets, type Foot } from "@/ui/device";
 import { PREVIEW_ICON } from "@/ui/icon";
 import {
+  bled,
   fits,
   isViewMode,
   nextPage,
@@ -223,6 +226,10 @@ export interface PreviewHandoff {
   reader(): ReaderStored;
   /** Told the device and the reader settings after a change, so the plugin keeps them. */
   reads(reader: ReaderStored): void;
+  /** Whether a preview draws the trim line, which the last toggle chose. */
+  trimEdge(): boolean;
+  /** Told the author turned the trim line on or off, so every preview follows. */
+  trimEdged(on: boolean): void;
   /** Opens the export dialog on the book this view reads. */
   exports(book: string): void;
   /** Adds a new chapter at the end of the book's body. */
@@ -277,6 +284,9 @@ const VIEWS: { mode: ViewMode; icon: string; label: string }[] = [
  * goes back to the page view it had.
  */
 const EPUB = { view: "epub", icon: "tablet", label: "EPUB" };
+
+/** The header action that turns the trim line off and on. */
+const TRIM_EDGE = { icon: "scissors", label: "Show the trim line" };
 
 /** The class the pane carries while it shows the EPUB view. */
 const REFLOWING = "is-reflow";
@@ -396,8 +406,8 @@ export class PreviewView extends ItemView {
   private pages = 0;
   /** The pages the grid fits on screen, as the well was last measured. */
   private screenful = 1;
-  /** The trim the last painted page drew, which sizes the grid. */
-  private trim: Box = { width: 0, height: 0 };
+  /** The sheet the last painted page drew, which sizes the grid. */
+  private sheetBox: Box = { width: 0, height: 0 };
   /** The grid the well last measured out, which only the grid view uses. */
   private columns = 1;
   private rows = 1;
@@ -442,6 +452,8 @@ export class PreviewView extends ItemView {
   private overlay: MountedOverlay | undefined;
   /** The header action that turns inspect mode on and off. */
   private inspectAction: HTMLElement | undefined;
+  /** The header action that turns the trim line off and on. */
+  private trimAction: HTMLElement | undefined;
   /**
    * The element a phone keeps over the foot of the screen, which the
    * design panel draws the inspect pane in as a sheet.
@@ -471,6 +483,12 @@ export class PreviewView extends ItemView {
   private framing = false;
   /** Each painted page, by its place in the book counting from 0. */
   private painted = new Map<number, Page>();
+  /**
+   * Each painted page's sheet, in points from the trim's corner. A
+   * page's box on screen is its sheet, so every point on one is read
+   * through this.
+   */
+  private sheets = new Map<number, Rect>();
   /** Raised on each paint and resize, so the overlay measures the pages again. */
   private measured = 0;
   /** The EPUB view, beside the surface in the well. */
@@ -672,6 +690,10 @@ export class PreviewView extends ItemView {
     });
     this.inspectAction.setAttribute("aria-pressed", "false");
     if (this.reflowing) this.inspectAction.setAttribute("aria-disabled", "true");
+    this.trimAction ??= this.addAction(TRIM_EDGE.icon, TRIM_EDGE.label, () => {
+      this.toggleTrimEdge();
+    });
+    this.marksTrimEdge();
     this.ordersActions();
     // The workspace may have handed this leaf its state before the
     // chrome existed to draw it on, and a paint into a pane with no
@@ -703,6 +725,9 @@ export class PreviewView extends ItemView {
     this.contentEl.removeClass(REFLOWING);
     this.inspectAction?.remove();
     this.inspectAction = undefined;
+    this.trimAction?.remove();
+    this.trimAction = undefined;
+    this.painted = new Map();
     this.exportAction?.remove();
     this.exportAction = undefined;
     this.watching?.disconnect();
@@ -1580,12 +1605,42 @@ export class PreviewView extends ItemView {
     return before;
   }
 
-  /** Puts the inspect action left of the way back to the manuscript, as the artboard draws them. */
+  /**
+   * Puts the inspect action left of the way back to the manuscript, as
+   * the artboard draws them, and the trim line's action left of that.
+   */
   private ordersActions(): void {
     const inspect = this.inspectAction;
     const edit = this.edit;
-    if (inspect === undefined || edit === undefined) return;
-    if (edit.previousElementSibling !== inspect) edit.before(inspect);
+    if (inspect === undefined) return;
+    if (edit !== undefined && edit.previousElementSibling !== inspect) edit.before(inspect);
+    const trim = this.trimAction;
+    if (trim !== undefined && inspect.previousElementSibling !== trim) inspect.before(trim);
+  }
+
+  /** Whether a page on screen has a trim line to show: one with a bleed or a slug. */
+  get trimmable(): boolean {
+    return !this.reflowing && bled(this.painted.values());
+  }
+
+  /** Turns the trim line off or on, in every preview. */
+  toggleTrimEdge(): void {
+    if (this.trimmable) this.handoff.trimEdged(!this.handoff.trimEdge());
+  }
+
+  /**
+   * Writes the choice on the surface, where the stylesheet hides the
+   * line, so a toggle sets no page again. The action shows only while
+   * there is a line to hide.
+   */
+  marksTrimEdge(): void {
+    const on = this.handoff.trimEdge();
+    if (this.surface !== undefined) this.surface.dataset["trimEdge"] = on ? "on" : "off";
+    const action = this.trimAction;
+    if (action === undefined) return;
+    action.toggle(this.trimmable);
+    action.toggleClass("is-active", on);
+    action.setAttribute("aria-pressed", String(on));
   }
 
   /** Turns inspect mode on, or off with the pin and the hover. */
@@ -1653,16 +1708,16 @@ export class PreviewView extends ItemView {
       let top = Infinity;
       let bottom = -Infinity;
       for (const box of pin.inspection.boxes) {
-        const trim = this.painted.get(box.page);
+        const drawn = this.sheets.get(box.page);
         const page = surface.querySelector(`.orca-page[data-page="${String(box.page + 1)}"]`);
-        if (trim === undefined || trim.height === 0 || page === null) continue;
+        if (drawn === undefined || drawn.height === 0 || page === null) continue;
         const rect = page.getBoundingClientRect();
-        const scale = rect.height / trim.height;
+        const scale = rect.height / drawn.height;
         // The page is read where it is drawn, which can be part of the
         // way through a move up or down.
         const from = rect.top - new DOMMatrix(getComputedStyle(surface).transform).f;
-        top = Math.min(top, from + box.y * scale);
-        bottom = Math.max(bottom, from + (box.y + box.height) * scale);
+        top = Math.min(top, from + (box.y - drawn.y) * scale);
+        bottom = Math.max(bottom, from + (box.y - drawn.y + box.height) * scale);
       }
       if (top < bottom) {
         lift = liftFor({ top, bottom }, well.getBoundingClientRect().top, sheet.top);
@@ -1711,7 +1766,7 @@ export class PreviewView extends ItemView {
               generation: pin.generation,
             },
       unit: this.handoff.unit(),
-      trims: this.painted,
+      sheets: this.sheets,
       measured: this.measured,
     });
     this.lifts();
@@ -1807,9 +1862,11 @@ export class PreviewView extends ItemView {
     const surface = this.surface;
     if (surface === undefined) return undefined;
     for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
-      const page = this.painted.get(Number(sheet.dataset["page"]) - 1);
-      if (page === undefined) continue;
-      const point = pointOn(sheet.getBoundingClientRect(), page, x, y);
+      const at = Number(sheet.dataset["page"]) - 1;
+      const page = this.painted.get(at);
+      const drawn = this.sheets.get(at);
+      if (page === undefined || drawn === undefined) continue;
+      const point = pointOn(sheet.getBoundingClientRect(), drawn, x, y);
       if (point !== undefined) return followAt(page, point.x, point.y);
     }
     return undefined;
@@ -1876,9 +1933,9 @@ export class PreviewView extends ItemView {
     if (session === undefined || surface === undefined) return undefined;
     for (const sheet of surface.querySelectorAll<HTMLElement>(".orca-page[data-page]")) {
       const page = Number(sheet.dataset["page"]) - 1;
-      const trim = this.painted.get(page);
-      if (trim === undefined) continue;
-      const point = pointOn(sheet.getBoundingClientRect(), trim, at.x, at.y);
+      const drawn = this.sheets.get(page);
+      if (drawn === undefined) continue;
+      const point = pointOn(sheet.getBoundingClientRect(), drawn, at.x, at.y);
       if (point === undefined) continue;
       const generation = session.generation;
       try {
@@ -2198,6 +2255,7 @@ export class PreviewView extends ItemView {
       this.inspectAction?.removeAttribute("aria-disabled");
     }
     this.contentEl.toggleClass(REFLOWING, on);
+    this.marksTrimEdge();
     this.marksView();
     this.moved();
   }
@@ -2447,7 +2505,7 @@ export class PreviewView extends ItemView {
     if (surface === undefined || this.reflowing) return;
     const grid = fits(
       { width: surface.clientWidth, height: surface.clientHeight },
-      this.trim,
+      this.sheetBox,
       device(),
     );
     this.columns = grid.columns;
@@ -2470,6 +2528,14 @@ export class PreviewView extends ItemView {
       return;
     }
     void this.turn(spanAt(this.mode, folio - 1, this.screenful).at);
+  }
+
+  /**
+   * Turns the preview to the page at `at` in the book, counting from 0.
+   * The view shows the span that page is in.
+   */
+  async turnToPage(at: number): Promise<void> {
+    await this.turn(at);
   }
 
   /**
@@ -2500,6 +2566,8 @@ export class PreviewView extends ItemView {
     }
     if (turn !== this.turning || this.surface === undefined) return;
     if (reading === undefined) {
+      this.painted = new Map();
+      this.marksTrimEdge();
       this.empty();
       return;
     }
@@ -2531,7 +2599,8 @@ export class PreviewView extends ItemView {
     }));
     const first = reading.pages[0];
     if (first !== undefined) {
-      this.trim = { width: first.width, height: first.height };
+      const drawn = sheetOf(first);
+      this.sheetBox = { width: drawn.width, height: drawn.height };
     }
     // The book can be shorter than the page asked for, and the read
     // lands on the pages it has.
@@ -2560,6 +2629,10 @@ export class PreviewView extends ItemView {
     this.painted = new Map(
       reading.pages.map((page, index) => [reading.at + index, page]),
     );
+    this.sheets = new Map(
+      reading.pages.map((page, index) => [reading.at + index, sheetOf(page)]),
+    );
+    this.marksTrimEdge();
     this.measured += 1;
     if (this.hovered?.generation !== session.generation) this.hovered = undefined;
     this.drawsOverlay();

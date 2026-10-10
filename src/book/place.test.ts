@@ -51,6 +51,8 @@ function page(number: number, nodes: number[]): Page {
     side: number % 2 === 1 ? "recto" : "verso",
     width: 432,
     height: 648,
+    bleed: 0,
+    slug: 0,
     sections: [],
     links: [],
     items: [run(undefined), ...nodes.map((node) => run(node))],

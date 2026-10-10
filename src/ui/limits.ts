@@ -29,6 +29,8 @@ export interface Limits {
   epub: boolean;
   /** The device and the reader settings every EPUB view opens with. */
   reader: ReaderStored;
+  /** Whether a preview draws the trim line on a sheet wider than its page. */
+  trimEdge: boolean;
   /** Whether the navigator lists the headings inside each entry's note. */
   headings: boolean;
   /** The deepest heading level the navigator lists, from 1 to 6. */
@@ -41,6 +43,7 @@ export const LIMITS: Limits = {
   view: "single",
   epub: false,
   reader: READER_STORED,
+  trimEdge: true,
   headings: false,
   deepest: DEEPEST_LEVEL,
 };
@@ -61,6 +64,7 @@ export function readLimits(saved: unknown): Limits {
   const view = "view" in saved ? saved.view : undefined;
   const epub = "epub" in saved ? saved.epub : undefined;
   const reader = "reader" in saved ? saved.reader : undefined;
+  const trimEdge = "trimEdge" in saved ? saved.trimEdge : undefined;
   const headings = "headings" in saved ? saved.headings : undefined;
   const deepest = "deepest" in saved ? saved.deepest : undefined;
   return {
@@ -70,6 +74,7 @@ export function readLimits(saved: unknown): Limits {
     view: isViewMode(view) ? view : LIMITS.view,
     epub: epub === true,
     reader: readerStored(reader),
+    trimEdge: typeof trimEdge === "boolean" ? trimEdge : LIMITS.trimEdge,
     headings: typeof headings === "boolean" ? headings : LIMITS.headings,
     deepest: typeof deepest === "number" ? headingLevel(deepest) : LIMITS.deepest,
   };

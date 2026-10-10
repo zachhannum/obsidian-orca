@@ -629,3 +629,81 @@ test("an embed added while drafting crosses without the book being opened again"
   await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
   await expect(book.count).toBeHidden();
 });
+
+test("a bleed set in the panel paints the whole sheet, with the trim's edge drawn on it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.settled(BOOK);
+  const drawn = book.seat(0).locator("svg").first();
+  await expect(drawn).toHaveAttribute("viewBox", /^0 0 /);
+  await expect(drawn.locator("rect[data-trim]")).toHaveCount(0);
+  await panel.open();
+
+  const bleed = panel.control("bleed");
+  await bleed.fill("0.125in");
+  await bleed.press("Enter");
+
+  await expect.poll(async () => vault.read(BOOK)).toContain("bleed: 0.125in");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  await book.settled(BOOK);
+
+  // The sheet starts left of the trim and above it, by the bleed.
+  await expect(drawn).toHaveAttribute("viewBox", /^-9 -9 /);
+  await expect(drawn.locator("rect[data-trim]")).toHaveCount(1);
+
+  await vault.restore();
+  await book.settled(BOOK);
+});
+
+test("the trim line's action hides the line and shows it, and only a book with a bleed has one", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.settled(BOOK);
+  // The choice is written with or without a line to hide.
+  await expect(book.surface).toHaveAttribute("data-trim-edge", "on");
+  await expect(book.trimAction).toBeHidden();
+  await panel.open();
+
+  const bleed = panel.control("bleed");
+  await bleed.fill("0.125in");
+  await bleed.press("Enter");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  const bled = await book.settled(BOOK);
+
+  await expect(book.trimAction).toBeVisible();
+  await expect(book.trimAction).toHaveAttribute("aria-pressed", "true");
+  await expect(book.trimLines.first()).toBeVisible();
+
+  // The line is hidden where it is drawn, so no page is set again.
+  await book.trims("off");
+  await expect(book.trimLines).toHaveCount(1);
+  await expect(book.trimLines.first()).toBeHidden();
+  expect(await book.painted()).toBe(bled);
+
+  await book.trims("on");
+  await expect(book.trimLines.first()).toBeVisible();
+
+  // The command is the same toggle.
+  await book.toggleTrimLine();
+  await expect(book.surface).toHaveAttribute("data-trim-edge", "off");
+  await book.toggleTrimLine();
+  await expect(book.surface).toHaveAttribute("data-trim-edge", "on");
+
+  await bleed.fill("0in");
+  await bleed.press("Enter");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(bled);
+  await book.settled(BOOK);
+  await expect(book.trimLines).toHaveCount(0);
+  await expect(book.trimAction).toBeHidden();
+
+  await vault.restore();
+  await book.settled(BOOK);
+});
