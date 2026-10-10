@@ -2589,8 +2589,8 @@ button.orca-panel-glyph-cell.is-on {
   font-size: var(--font-ui-smaller);
 }
 
-/* The book note's page shows the design read-only, one row per line,
-   lined up with the metadata above it. */
+/* The book note's page shows the design read-only, one row per group
+   of the panel, lined up with the metadata above it. */
 .orca-book-design {
   display: flex;
   flex-direction: column;
@@ -2614,6 +2614,12 @@ button.orca-panel-glyph-cell.is-on {
   padding: 0 var(--size-4-2);
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
+}
+
+/* A group the book leaves at its defaults is muted, so the groups the
+   author changed stand out. */
+.orca-book-row.is-default > .orca-book-summed {
+  color: var(--text-muted);
 }
 
 button.orca-book-export {

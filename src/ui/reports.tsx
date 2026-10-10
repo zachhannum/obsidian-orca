@@ -167,7 +167,7 @@ function Book({
           {designed.map((line) => (
             <div
               key={line.label}
-              className="orca-book-row"
+              className={line.set ? "orca-book-row" : "orca-book-row is-default"}
               data-testid="orca-book-summed"
               data-label={line.label}
             >
