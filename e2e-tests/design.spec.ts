@@ -1314,11 +1314,35 @@ test("the book note's page draws the design read-only, in the panel's words", as
   await note.open(BOOK);
   await note.painted();
 
-  await expect(note.summed("Trim")).toContainText("Digest");
-  await expect(note.summed("Margins")).toContainText("0.95in inside");
-  await expect(note.summed("Chapters begin on")).toContainText(
-    "Right-hand page",
+  // One block for each group of the panel, in the panel's order.
+  await expect(note.design.getByTestId("orca-book-summed")).toHaveCount(7);
+  expect(
+    await note.design
+      .getByTestId("orca-book-summed")
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-label"))),
+  ).toEqual([
+    "Page",
+    "Text",
+    "Headings",
+    "Chapter openings",
+    "Scene breaks",
+    "Headers & page numbers",
+    "Page breaks",
+  ]);
+  // A value is under the label of the panel row that sets it.
+  await expect(note.fact("trim")).toHaveText(/^Trim\s*Digest/);
+  await expect(note.fact("margin-inside")).toContainText("0.95in");
+  await expect(note.fact("chapter-begins")).toHaveText(
+    /^Begins on\s*Right-hand page$/,
   );
+  // The book sets H2, so the summary shows it beside H1.
+  await expect(note.fact("heading-2-size")).toContainText("13pt");
+  await expect(note.fact("heading-3-size")).toHaveCount(0);
+  // The panel does not mark the drop cap's font, and the book sets it.
+  await expect(note.fact("chapter-drop-cap-font")).toContainText("Alegreya");
+  // The book writes its orphans at the default, and moves its trim.
+  await expect(note.fact("body-orphans")).toHaveClass(/is-default/);
+  await expect(note.fact("trim")).not.toHaveClass(/is-default/);
   // Nothing on the page edits the design, and nothing opens the panel.
   await expect(
     note.design.locator("input, select, [role='switch']"),

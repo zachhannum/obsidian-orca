@@ -2589,8 +2589,9 @@ button.orca-panel-glyph-cell.is-on {
   font-size: var(--font-ui-smaller);
 }
 
-/* The book note's page shows the design read-only, one row per line,
-   lined up with the metadata above it. */
+/* The book note's page shows the design read-only, one row per group
+   of the panel, lined up with the metadata above it. A group is a grid
+   of its values, each under the label of the panel row that sets it. */
 .orca-book-design {
   display: flex;
   flex-direction: column;
@@ -2599,21 +2600,57 @@ button.orca-panel-glyph-cell.is-on {
 .orca-book-summary {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .orca-book-summary > .orca-book-row {
   align-items: baseline;
-  min-height: 28px;
-  padding-block: var(--size-4-1);
+  padding-block: var(--size-4-2);
 }
 
-.orca-book-summed {
+.orca-book-summary > .orca-book-row + .orca-book-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.orca-book-facts {
+  display: grid;
   flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--size-4-2) var(--size-4-4);
   min-width: 0;
   padding: 0 var(--size-4-2);
+}
+
+.orca-book-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  min-width: 0;
+}
+
+/* A heading level and a row of several controls each begin a line, so
+   the values that belong together are read together. */
+.orca-book-fact.is-start {
+  grid-column-start: 1;
+}
+
+.orca-book-fact.is-wide {
+  grid-column-end: span 2;
+}
+
+.orca-book-fact-label {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.orca-book-fact-value {
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
+}
+
+/* A value the book leaves at its default is muted, so the values the
+   author changed stand out. */
+.orca-book-fact.is-default > .orca-book-fact-value {
+  color: var(--text-muted);
 }
 
 button.orca-book-export {
@@ -3309,6 +3346,22 @@ input.orca-panel-filter {
 
 .is-mobile .orca-book-line {
   flex-wrap: wrap;
+}
+
+/* A phone has no room for a group's name beside its values, so the
+   name is over them. */
+.is-phone .orca-book-summary > .orca-book-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--size-4-2);
+}
+
+.is-phone .orca-book-summary .orca-book-label {
+  width: auto;
+}
+
+.is-phone .orca-book-facts {
+  padding: 0;
 }
 
 .is-mobile button.orca-book-export {

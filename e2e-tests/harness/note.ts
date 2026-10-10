@@ -127,10 +127,10 @@ export class Note {
     }, carried);
   }
 
-  /** One line of the design, by its label. */
-  summed(label: string): Locator {
+  /** One value of the design, by its key. */
+  fact(key: string): Locator {
     return this.design.locator(
-      `[data-testid="orca-book-summed"][data-label="${label}"]`,
+      `[data-testid="orca-book-fact"][data-key="${key}"]`,
     );
   }
 

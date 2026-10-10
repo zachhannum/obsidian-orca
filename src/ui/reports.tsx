@@ -164,15 +164,34 @@ function Book({
           <span className="orca-order-title">Design</span>
         </div>
         <div className="orca-book-summary">
-          {designed.map((line) => (
+          {designed.map((group) => (
             <div
-              key={line.label}
+              key={group.label}
               className="orca-book-row"
               data-testid="orca-book-summed"
-              data-label={line.label}
+              data-label={group.label}
             >
-              <span className="orca-book-label">{line.label}</span>
-              <span className="orca-book-summed">{line.value}</span>
+              <span className="orca-book-label">{group.label}</span>
+              <div className="orca-book-facts">
+                {group.facts.map((fact) => (
+                  <div
+                    key={fact.key}
+                    className={[
+                      "orca-book-fact",
+                      fact.set ? "" : "is-default",
+                      fact.starts ? "is-start" : "",
+                      fact.wide ? "is-wide" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    data-testid="orca-book-fact"
+                    data-key={fact.key}
+                  >
+                    <span className="orca-book-fact-label">{fact.label}</span>
+                    <span className="orca-book-fact-value">{fact.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

@@ -150,7 +150,11 @@ its editor around these files and returns a URL. The artboard list and
   session the book already has. It sets no book and holds no engine,
   because a book is set by a view that reads it.
   With no preview and no note of a book on screen, it shows "No book is
-  open". The book note's own page shows the design read-only.
+  open". The book note's own page shows the design read-only. It has
+  one block for each group of the panel, and a value is under the label
+  of the panel row that sets it. A block has the rows that define its
+  group, and every other row the book moves off its default. A value
+  left at its default is muted.
 - The panel draws margins and a custom trim in the unit from orca's
   settings. That unit is inches unless the author picks millimeters or
   points.
