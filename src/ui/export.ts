@@ -32,6 +32,8 @@ export interface Exports {
   opens(route: "note" | "css", place: Place): void;
   /** Opens the book's preview with its warnings showing. */
   openIssues(): void;
+  /** Opens the book's preview at one page, by its place in the book from 0. */
+  openPage(at: number): void;
 }
 
 /** The media type the share sheet is told for each format, by the target's id. */
@@ -100,6 +102,7 @@ class ExportModal extends Modal {
           unloaded: typeset.unloaded,
           unread: typeset.unread,
           warnings: typeset.session.warnings,
+          pages: (await typeset.session.outline()) ?? [],
         });
       },
       watch: (changed) => {
@@ -163,6 +166,7 @@ class ExportModal extends Modal {
       warned: (caution) => {
         this.close();
         if (caution.at === undefined) this.exports.openIssues();
+        else if (caution.at.route === "page") this.exports.openPage(caution.at.page);
         else this.exports.opens(caution.at.route, caution.at.place);
       },
       close: () => {

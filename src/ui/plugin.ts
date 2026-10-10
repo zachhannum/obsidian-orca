@@ -532,6 +532,9 @@ export default class OrcaPlugin extends Plugin implements Limited {
       openIssues: () => {
         void this.opensIssues(book);
       },
+      openPage: (at) => {
+        void this.opensPage(book, at);
+      },
     });
   }
 
@@ -1203,6 +1206,16 @@ export default class OrcaPlugin extends Plugin implements Limited {
    * the book is the one, and a book no preview reads opens in a new one.
    */
   private async opensIssues(book: string): Promise<void> {
+    (await this.reads(book))?.openIssues();
+  }
+
+  /** Opens the book's preview at one page, by its place in the book from 0. */
+  private async opensPage(book: string, at: number): Promise<void> {
+    await (await this.reads(book))?.turnToPage(at);
+  }
+
+  /** The book's preview, opened where no leaf shows it, with the focus on it. */
+  private async reads(book: string): Promise<PreviewView | null> {
     const { workspace } = this.app;
     const reading = workspace
       .getLeavesOfType(PREVIEW_VIEW)
@@ -1212,7 +1225,7 @@ export default class OrcaPlugin extends Plugin implements Limited {
       await workspace.revealLeaf(reading);
       workspace.setActiveLeaf(reading, { focus: true });
     }
-    workspace.getActiveViewOfType(PreviewView)?.openIssues();
+    return workspace.getActiveViewOfType(PreviewView);
   }
 
   /** Opens the design panel on the author's CSS with the caret at the place a warning named. */

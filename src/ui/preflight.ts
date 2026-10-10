@@ -3,10 +3,13 @@
  * records itself: a section with no note, a use of a font that
  * registered no face, and an embed that brought no bytes. A case only the engine can see is not
  * checked here. The engine's warnings are listed under the errors as
- * the engine wrote them, and none of them blocks.
+ * the engine wrote them, and none of them blocks. A page with art that
+ * stops short of the bleed is listed with them, read off the pages the
+ * engine set.
  */
 
-import type { Warning } from "fleuron";
+import type { Page, Warning } from "fleuron";
+import { shortOfBleed } from "@/book/bleed";
 import { entryName, type Section } from "@/book/order";
 import type { Unread } from "@/book/plan";
 import { LEVELS, headingUse, useKey, type Design, type FontUse } from "@/style/design";
@@ -34,16 +37,19 @@ export interface Blocker {
   row: number | undefined;
 }
 
-/** One warning from the engine. It does not keep export from writing. */
+/** One warning. It does not keep export from writing. */
 export interface Caution {
-  /** The engine's message, unchanged. */
+  /** The engine's message, unchanged, or the line for a page short of its bleed. */
   said: string;
-  /** The note or sheet and the line. None for a warning that names no place. */
+  /** The note or sheet and the line, or the page. None for a warning that names no place. */
   place: string | undefined;
   /** The label of the button that goes to the warning. */
   fix: string;
-  /** The place the button opens. Without one it opens Issues. */
-  at: { route: "note" | "css"; place: Place } | undefined;
+  /**
+   * The place the button opens. Without one it opens Issues. A page is
+   * its place in the book, counting from 0.
+   */
+  at: { route: "note" | "css"; place: Place } | { route: "page"; page: number } | undefined;
 }
 
 /** The book as preflight reads it. */
@@ -54,11 +60,13 @@ export interface Checking {
   unloaded: readonly Unloaded[];
   unread: readonly Unread[];
   warnings: readonly Warning[];
+  /** Every page of the book, as the engine set it. */
+  pages: readonly Page[];
 }
 
 export interface Checked {
   errors: Blocker[];
-  /** The engine's warnings an error does not already show. */
+  /** The engine's warnings an error does not already show, then the pages short of their bleed. */
   warnings: Caution[];
   /**
    * `No errors` when the book passes, with the count of its warnings
@@ -111,7 +119,15 @@ export function preflight(book: Checking): Checked {
   });
 
   const errors = [...notes, ...faces, ...images];
-  const warnings = book.warnings.flatMap((warning): Caution[] => {
+  const short = shortOfBleed(book.pages).map(
+    (page): Caution => ({
+      said: "Art stops short of the bleed",
+      place: `Page ${String(page + 1)}`,
+      fix: "Go to page",
+      at: { route: "page", page },
+    }),
+  );
+  const engine = book.warnings.flatMap((warning): Caution[] => {
     const route = routeOf(warning);
     // A warning against orca's own sheets is not the author's to fix.
     if (route === "orca" || shown.has(warning)) return [];
@@ -129,6 +145,7 @@ export function preflight(book: Checking): Checked {
       },
     ];
   });
+  const warnings = [...engine, ...short];
   return { errors, warnings, fine: errors.length === 0 ? passed(warnings.length) : undefined };
 }
 
