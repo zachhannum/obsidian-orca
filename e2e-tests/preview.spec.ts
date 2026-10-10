@@ -1,9 +1,6 @@
 import { NEXT_CHAPTER, PREVIOUS_CHAPTER } from "./harness/book";
 import { expect, test } from "./harness/test";
 
-/** The fixture's book note. */
-const BOOK = "Pride and Prejudice.md";
-
 /** The pages the fixture book sets to. */
 const PAGES = 23;
 
