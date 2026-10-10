@@ -8,10 +8,18 @@
  */
 
 import { createRoot } from "react-dom/client";
-import { useEffect, useLayoutEffect, useState, type CSSProperties, type JSX } from "react";
+import { useEffect, useLayoutEffect, useState, type JSX } from "react";
 import type { Inspection } from "fleuron";
 import type { PageUnit } from "@/style/design";
-import { fragments, layersOf, sameFrames, tagOf, type Frame, type Rect } from "@/ui/inspect";
+import {
+  fragments,
+  layersOf,
+  placedOn,
+  sameFrames,
+  tagOf,
+  type Frame,
+  type Rect,
+} from "@/ui/inspect";
 
 /** A box the overlay draws, under the key the surface names it by. */
 export interface Marked {
@@ -20,19 +28,16 @@ export interface Marked {
   generation?: number;
 }
 
-/** A page's trim, in points. */
-export interface Trim {
-  width: number;
-  height: number;
-}
-
 export interface Overlaid {
   on: boolean;
   hovered: Marked | undefined;
   pinned: Marked | undefined;
   unit: PageUnit;
-  /** The painted pages, counting from 0, and each one's trim. */
-  trims: ReadonlyMap<number, Trim>;
+  /**
+   * The painted pages, counting from 0, and each one's sheet in points
+   * from the trim's corner. The page's box on screen is the sheet.
+   */
+  sheets: ReadonlyMap<number, Rect>;
   /** Raised on each paint and resize, so the pages are measured before the next frame. */
   measured: number;
 }
@@ -47,7 +52,7 @@ export const NO_OVERLAY: Overlaid = {
   hovered: undefined,
   pinned: undefined,
   unit: "in",
-  trims: new Map(),
+  sheets: new Map(),
   measured: 0,
 };
 
@@ -78,7 +83,7 @@ export function InspectOverlay({
   host: HTMLElement;
   overlaid: Overlaid;
 }): JSX.Element | null {
-  const { on, hovered, pinned, unit, trims, measured } = overlaid;
+  const { on, hovered, pinned, unit, sheets, measured } = overlaid;
   const [frames, place] = useState<ReadonlyMap<number, Frame>>(new Map());
 
   // A header that hides, a drawer and a scroll each move the pages and
@@ -89,7 +94,7 @@ export function InspectOverlay({
     const measure = (): void => {
       const corner = host.getBoundingClientRect();
       const found = new Map<number, Frame>();
-      for (const page of trims.keys()) {
+      for (const page of sheets.keys()) {
         const sheet = surface.querySelector(`.orca-page[data-page="${String(page + 1)}"]`);
         if (sheet === null) continue;
         const rect = sheet.getBoundingClientRect();
@@ -112,7 +117,7 @@ export function InspectOverlay({
     return () => {
       view.cancelAnimationFrame(frame);
     };
-  }, [surface, host, trims, measured, on]);
+  }, [surface, host, sheets, measured, on]);
 
   // The e2e suite waits on these, so they are written once React has
   // committed what they report.
@@ -141,7 +146,7 @@ export function InspectOverlay({
           inspection={marked.inspection}
           pinned={held}
           frames={frames}
-          trims={trims}
+          sheets={sheets}
           unit={unit}
         />
       ))}
@@ -158,13 +163,13 @@ function Outline({
   inspection,
   pinned,
   frames,
-  trims,
+  sheets,
   unit,
 }: {
   inspection: Inspection;
   pinned: boolean;
   frames: ReadonlyMap<number, Frame>;
-  trims: ReadonlyMap<number, Trim>;
+  sheets: ReadonlyMap<number, Rect>;
   unit: PageUnit;
 }): JSX.Element {
   const state = pinned ? "pinned" : "hovered";
@@ -173,8 +178,9 @@ function Outline({
     <>
       {pieces.map(({ box, cut, index }, at) => {
         const frame = frames.get(box.page);
-        const trim = trims.get(box.page);
-        if (frame === undefined || trim === undefined) return null;
+        const sheet = sheets.get(box.page);
+        if (frame === undefined || sheet === undefined) return null;
+        const edged = placedOn(box, sheet);
         const layers = layersOf(box, inspection.computed);
         const tag = at === 0 ? tagOf(inspection, unit, box) : undefined;
         const edge = ["orca-inspect", "orca-inspect-edge"];
@@ -195,29 +201,29 @@ function Outline({
             <div
               className="orca-inspect orca-inspect-margin"
               data-testid="orca-inspect-margin"
-              style={placed(layers.margin, trim)}
+              style={placedOn(layers.margin, sheet)}
             />
             <div
               className="orca-inspect orca-inspect-padding"
               data-testid="orca-inspect-padding"
-              style={placed(layers.padding, trim)}
+              style={placedOn(layers.padding, sheet)}
             />
             <div
               className="orca-inspect orca-inspect-content"
               data-testid="orca-inspect-content"
-              style={placed(layers.content, trim)}
+              style={placedOn(layers.content, sheet)}
             />
             <div
               className={edge.join(" ")}
               data-testid="orca-inspect-edge"
               data-cut={cut}
-              style={placed(box, trim)}
+              style={edged}
             />
             {tag === undefined ? null : (
               <span
                 className="orca-inspect-tag"
                 data-testid="orca-inspect-tag"
-                style={{ left: percent(box.x, trim.width), top: percent(box.y, trim.height) }}
+                style={{ left: edged.left, top: edged.top }}
               >
                 <b>{tag.element}</b>
                 {tag.role === undefined ? null : <i>{tag.role}</i>}
@@ -229,18 +235,4 @@ function Outline({
       })}
     </>
   );
-}
-
-/** A rectangle in points, placed by percentages of its page. */
-function placed(rect: Rect, trim: Trim): CSSProperties {
-  return {
-    left: percent(rect.x, trim.width),
-    top: percent(rect.y, trim.height),
-    width: percent(rect.width, trim.width),
-    height: percent(rect.height, trim.height),
-  };
-}
-
-function percent(value: number, of: number): string {
-  return of === 0 ? "0%" : `${String((value / of) * 100)}%`;
 }

@@ -1,6 +1,9 @@
 import { NEXT_CHAPTER, PREVIOUS_CHAPTER } from "./harness/book";
 import { expect, test } from "./harness/test";
 
+/** The fixture's book note. */
+const BOOK = "Pride and Prejudice.md";
+
 /** The pages the fixture book sets to. */
 const PAGES = 23;
 
@@ -628,4 +631,33 @@ test("an embed added while drafting crosses without the book being opened again"
   await expect(book.images).toHaveCount(1);
   await expect(book.images.first()).toHaveAttribute("href", /^blob:/);
   await expect(book.count).toBeHidden();
+});
+
+test("a bleed set in the panel paints the whole sheet, with the trim's edge drawn on it", async ({
+  book,
+  panel,
+  vault,
+}) => {
+  vault.touch(BOOK);
+  await book.open();
+  const painted = await book.settled(BOOK);
+  const drawn = book.seat(0).locator("svg").first();
+  await expect(drawn).toHaveAttribute("viewBox", /^0 0 /);
+  await expect(drawn.locator("rect[data-trim]")).toHaveCount(0);
+  await panel.open();
+
+  const bleed = panel.control("bleed");
+  await bleed.fill("0.125in");
+  await bleed.press("Enter");
+
+  await expect.poll(async () => vault.read(BOOK)).toContain("bleed: 0.125in");
+  await expect.poll(async () => book.painted()).toBeGreaterThan(painted);
+  await book.settled(BOOK);
+
+  // The sheet starts left of the trim and above it, by the bleed.
+  await expect(drawn).toHaveAttribute("viewBox", /^-9 -9 /);
+  await expect(drawn.locator("rect[data-trim]")).toHaveCount(1);
+
+  await vault.restore();
+  await book.settled(BOOK);
 });

@@ -110,10 +110,10 @@ export function turnedTo(key: string, viewing: Viewing): number | undefined {
  */
 export function fits(
   well: Box,
-  trim: Box,
+  sheet: Box,
   device: Device = "desktop",
 ): { columns: number; rows: number } {
-  const shape = trim.width > 0 && trim.height > 0 ? trim : UNSET;
+  const shape = sheet.width > 0 && sheet.height > 0 ? sheet : UNSET;
   const { tile, gap } = GRIDS[device];
   const tall = tile * (shape.height / shape.width);
   return {
@@ -158,8 +158,12 @@ export interface Marked {
   setAttribute(name: string, value: string): void;
 }
 
-/** The trim the painter drew, read off a page it drew. */
-const TRIM = /viewBox="0 0 ([\d.]+) ([\d.]+)"/;
+/**
+ * The size of the sheet the painter drew, read off a page it drew. The
+ * sheet of a page with a bleed or marks starts left of the trim and
+ * above it, so its corner can be negative.
+ */
+const SHEET = /viewBox="-?[\d.]+ -?[\d.]+ ([\d.]+) ([\d.]+)"/;
 
 export interface Painted {
   mode: ViewMode;
@@ -212,9 +216,9 @@ export function showPages<N>(
 
   // The box is the sheet, because the border and the shadow are drawn
   // on the box: one wider than the sheet hangs them off its edge.
-  const trim = TRIM.exec(painted.leaves[0]?.markup ?? "");
-  surface.style.setProperty("--orca-trim-w", trim?.[1] ?? "");
-  surface.style.setProperty("--orca-trim-h", trim?.[2] ?? "");
+  const drawn = SHEET.exec(painted.leaves[0]?.markup ?? "");
+  surface.style.setProperty("--orca-trim-w", drawn?.[1] ?? "");
+  surface.style.setProperty("--orca-trim-h", drawn?.[2] ?? "");
   surface.style.setProperty("--orca-columns", String(painted.columns));
   surface.style.setProperty("--orca-rows", String(painted.rows));
   surface.style.setProperty("--orca-gap", `${String(gapOf(painted.mode, painted.device))}px`);
