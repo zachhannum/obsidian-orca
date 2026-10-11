@@ -16,7 +16,7 @@
     },
     "body-font": {
       "x": 0,
-      "y": 68,
+      "y": 67,
       "width": 220,
       "height": 30
     },
@@ -28,7 +28,7 @@
     },
     "body-hyphens": {
       "x": 0,
-      "y": 385,
+      "y": 384,
       "width": 34,
       "height": 19
     },
@@ -46,7 +46,7 @@
     },
     "body-size": {
       "x": 0,
-      "y": 131,
+      "y": 130,
       "width": 60,
       "height": 30
     },
@@ -64,13 +64,13 @@
     },
     "reset-body-font": {
       "x": 228,
-      "y": 71,
+      "y": 70,
       "width": 24,
       "height": 24
     },
     "reset-body-hanging-punctuation": {
       "x": 228,
-      "y": 475,
+      "y": 474,
       "width": 24,
       "height": 24
     },
@@ -88,7 +88,7 @@
     },
     "reset-body-size": {
       "x": 228,
-      "y": 134,
+      "y": 133,
       "width": 24,
       "height": 24
     }
