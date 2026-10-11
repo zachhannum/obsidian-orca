@@ -51,13 +51,9 @@ A number field takes a number and a unit: `pt`, `pc`, `in`, `mm`, `cm` or `em`. 
 
 ## Bleed
 
-The bleed is the band outside the trim that the printer cuts off. Art that runs to the edge of the page must continue to the edge of the bleed. If the art stops at the trim, a cut that drifts leaves a white line at the edge of the page.
+The bleed is extra space past the trim on every edge, which the printer cuts off. Art that runs to the edge of the page must continue to the edge of the bleed. `Bleed` is `0in` until you set it, and a common value is `0.125in`.
 
-A book with a bleed has every page larger by the bleed on each edge. The exported PDF records the trim, so a printer reads the size of the finished page from the file. The text stays where it is on the page.
-
-`Bleed` is `0in` until you set it. A printer states the bleed that it takes. A common value is `0.125in`.
-
-The preview shows the bleed around the page, and a dashed line shows the trim. A button in the header of the preview turns the line off and on. The export window lists each page that has art at the trim that does not reach the edge of the bleed.
+The preview shows the bleed around the page, with a dashed line at the trim. A button in the header of the preview turns the line off and on.
 
 ## Page measurements
 
