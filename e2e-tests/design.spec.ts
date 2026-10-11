@@ -871,7 +871,7 @@ test("a flagged line number keeps its color over the gutter's background", async
   await expect(panel.editor).toBeVisible();
   await expect(panel.flaggedLines).toHaveCount(0);
 
-  const typed = "\np { float: left; }";
+  const typed = "\np { transform: none; }";
   await panel.typeCss(typed);
   await expect(panel.flaggedLines).toHaveCount(1);
 
@@ -903,14 +903,14 @@ test("a declaration the engine cannot set is flagged on its line in the CSS view
   await expect(panel.flags).toHaveCount(0);
   await expect(panel.warned).toBeHidden();
 
-  const typed = "\np { float: left; }";
+  const typed = "\np { transform: none; }";
   await panel.typeCss(typed);
   await expect.poll(async () => vault.read(BOOK)).toContain(typed);
 
   // The squiggle arrives with the render that set the typed rule, on
   // the last line, which is where it was typed.
   await expect(panel.flags).toHaveCount(1);
-  await expect(panel.flags).toHaveText(/^float: left;?$/);
+  await expect(panel.flags).toHaveText(/^transform: none;?$/);
   await expect(panel.flaggedLines).toHaveCount(1);
   const line = (await panel.lineNumbers.last().textContent()) ?? "";
   await expect(panel.flaggedLines).toHaveText(line);
@@ -922,13 +922,13 @@ test("a declaration the engine cannot set is flagged on its line in the CSS view
   await expect(panel.card).toBeHidden();
   await panel.flags.hover();
   await expect(panel.card).toBeVisible();
-  await expect(panel.card).toContainText("float");
+  await expect(panel.card).toContainText("transform");
   await expect(panel.card).toContainText(`book.css:${line}:`);
 
   // The same warning is one of the preview's, with the same place.
   await expect(book.counted).toHaveText("1 warning");
   await book.count.click();
-  await expect(book.issues.first()).toContainText("float");
+  await expect(book.issues.first()).toContainText("transform");
   await expect(book.issueOpens.first()).toHaveText(new RegExp(`^book\\.css:${line}:\\d+$`));
   await expect(book.issueGroups.first()).toContainText("The book's CSS");
 

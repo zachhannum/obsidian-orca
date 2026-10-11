@@ -76,6 +76,8 @@ export interface Margins {
 export interface PageDesign {
   trim?: Trim;
   margins: Margins;
+  /** The distance past the trim that art prints to, on every edge. */
+  bleed?: Length;
 }
 
 export type Alignment = "left" | "center" | "right" | "justify";
@@ -383,6 +385,15 @@ const PAGE: readonly Field[] = [
   margin("margin-outside", "outside", "margin-right"),
   margin("margin-top", "top", "margin-top"),
   margin("margin-bottom", "bottom", "margin-bottom"),
+  {
+    key: "bleed",
+    property: "bleed",
+    read: ({ page }) => written(page.bleed),
+    write: ({ page }, value) => {
+      const length = asLength(value);
+      if (length !== undefined) page.bleed = length;
+    },
+  },
 ];
 
 const BODY: readonly Field[] = [

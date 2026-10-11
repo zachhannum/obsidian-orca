@@ -47,6 +47,12 @@ export const TO_THE_LEFT = "orca:manuscript-to-the-left";
 export const NEXT_CHAPTER = "orca:next-chapter";
 export const PREVIOUS_CHAPTER = "orca:previous-chapter";
 
+/** The command that turns the trim line off and on. */
+export const TOGGLE_TRIM_LINE = "orca:toggle-trim-line";
+
+/** The label of the header action that does the same. */
+const TRIM_LINE = "Show the trim line";
+
 /** The item a chapter's own menu carries for that split. */
 export const SPLIT = "Open preview to the right";
 
@@ -131,6 +137,10 @@ export class Book {
   readonly chapterName: Locator;
   /** The images the painted pages draw. */
   readonly images: Locator;
+  /** The header action that turns the trim line off and on. Only a book with a bleed or marks shows it. */
+  readonly trimAction: Locator;
+  /** The trim line of each painted page. */
+  readonly trimLines: Locator;
   /** The bar's count of what the last run had to complain about. */
   readonly count: Locator;
   /** The words of the count, which are its text where the words are drawn. */
@@ -190,6 +200,8 @@ export class Book {
     this.sheets = this.surface.locator(".orca-page");
     this.page = this.surface.locator("svg").first();
     this.images = this.surface.locator("image");
+    this.trimAction = obsidian.actionIn(PREVIEW, TRIM_LINE);
+    this.trimLines = this.surface.locator("rect[data-trim]");
     this.count = pane.getByTestId("orca-issues-count");
     this.counted = this.count.locator(".orca-preview-said");
     // A phone moves the list into a sheet, which is outside the pane.
@@ -557,6 +569,18 @@ export class Book {
   async show(label: string, mode: string): Promise<void> {
     await this.view(label).click();
     await expect(this.surface).toHaveAttribute("data-view", mode);
+  }
+
+  /** Clicks the trim line's action, and waits for the surface to say `to`. */
+  async trims(to: "on" | "off"): Promise<void> {
+    await this.trimAction.click();
+    await expect(this.surface).toHaveAttribute("data-trim-edge", to);
+    await expect(this.trimAction).toHaveAttribute("aria-pressed", String(to === "on"));
+  }
+
+  /** Runs the command that does the same, the way the palette does. */
+  async toggleTrimLine(): Promise<void> {
+    await this.obsidian.command(TOGGLE_TRIM_LINE);
   }
 
   /** The sheet in the `at`th slot, empty slots counted. */

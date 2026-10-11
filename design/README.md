@@ -155,9 +155,11 @@ its editor around these files and returns a URL. The artboard list and
   of the panel row that sets it. A block has the rows that define its
   group, and every other row the book moves off its default. A value
   left at its default is muted.
-- The panel draws margins and a custom trim in the unit from orca's
-  settings. That unit is inches unless the author picks millimeters or
-  points.
+- The panel draws margins, a custom trim and the bleed in the unit from
+  orca's settings. That unit is inches unless the author picks
+  millimeters or points.
+- The Page group sets a bleed, which is off until the author sets it.
+- The panel has no control for printer marks.
 - A control the CSS overrides dims, takes no input and shows a lock. A
   hover over the lock names the property, the value that overrides it
   and its line. A click on the lock goes to that line.
@@ -208,6 +210,11 @@ its editor around these files and returns a URL. The artboard list and
   inside `string(` from the names its `string-set` declarations set. An option
   shows an Obsidian icon for its kind and its syntax on a line under
   its name, and Tab takes it.
+- The preview of a book with a bleed shows the bleed around each page
+  and a dashed line at the trim, in Obsidian's accent colour.
+- `Show the trim line`, in the preview's header beside `Inspect the
+  page`, turns the line off and on. The header shows it only for a
+  book with a bleed.
 - Export sits in the book preview's toolbar and on the book note's
   page.
 - Export lists every format with a checkbox, and every box is ticked
@@ -227,6 +234,8 @@ its editor around these files and returns a URL. The artboard list and
   not have, by the name the book note gives it, over the heading it
   sits under. It is an error, and it is listed first. Its link opens
   the navigator at that row, where `Locate` and `Remove` are.
+- Preflight warns of each page with art that stops at the trim of a
+  book with a bleed. The row's button turns the preview to that page.
 - EPUB is the preview's fourth view, beside the three page views in
   the bar's segmented control. It shows the engine's EPUB in a frame
   that ReadiumCSS pages, and no page is laid out for it. The reading is

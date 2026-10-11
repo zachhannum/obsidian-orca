@@ -26,6 +26,8 @@ const PLACED: Page = {
   side: "recto",
   width: 396,
   height: 612,
+  bleed: 0,
+  slug: 0,
   sections: [],
   links: [],
   items: [{ kind: "image", x: 54, y: 54, w: 165, h: 99, asset: 0, alpha: 255, blend: "normal", layer: 0 }],

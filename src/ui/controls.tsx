@@ -695,7 +695,7 @@ export function Field({
     );
   }
   return (
-    <div className="orca-panel-number">
+    <div className={unit === undefined ? "orca-panel-number" : "orca-panel-number mod-page"}>
       {input}
       <div className="orca-panel-stepper">
         {button(1, "chevron-up")}

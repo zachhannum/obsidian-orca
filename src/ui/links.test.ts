@@ -39,6 +39,8 @@ function page(links: Link[]): Page {
     side: "recto",
     width: 396,
     height: 612,
+    bleed: 0,
+    slug: 0,
     sections: [],
     items: [],
     links,

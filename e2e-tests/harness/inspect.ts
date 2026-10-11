@@ -147,21 +147,22 @@ export class Inspect {
 
   /**
    * The screen position of a point on a painted page. The page counts
-   * from 1, as `data-page` does, and its trim is read off the viewBox
-   * the painter drew.
+   * from 1, as `data-page` does. The point is in points from the trim's
+   * corner, and the sheet the box holds is read off the viewBox the
+   * painter drew.
    */
   async at(page: number, point: Point): Promise<{ x: number; y: number }> {
     const sheet = this.surface.locator(`.orca-page[data-page="${String(page)}"]`);
     const box = await sheet.boundingBox();
     if (box === null) throw new Error(`page ${String(page)} is not painted`);
     const view = await sheet.locator("svg").first().getAttribute("viewBox");
-    const [, , width, height] = (view ?? "").split(" ").map(Number);
-    if (width === undefined || height === undefined || !width || !height) {
-      throw new Error(`page ${String(page)} has no trim`);
+    const [left, top, width, height] = (view ?? "").split(" ").map(Number);
+    if (left === undefined || top === undefined || !width || !height) {
+      throw new Error(`page ${String(page)} has no sheet`);
     }
     return {
-      x: box.x + (point.x / width) * box.width,
-      y: box.y + (point.y / height) * box.height,
+      x: box.x + ((point.x - left) / width) * box.width,
+      y: box.y + ((point.y - top) / height) * box.height,
     };
   }
 

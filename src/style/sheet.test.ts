@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 import {
   Client,
@@ -183,7 +186,7 @@ test("a book set in a font the engine does not have still sets, and warns about 
 });
 
 test("a declaration the engine cannot set in book.css is reported at its own line and column in that sheet", async () => {
-  const own = "/* mine */\np {\n  float: left;\n}\n";
+  const own = "/* mine */\np {\n  transform: none;\n}\n";
   const output = await set(designSheets(emptyDesign(), SETTING, own));
 
   const places = output.warnings.flatMap((warning) =>
@@ -191,6 +194,41 @@ test("a declaration the engine cannot set in book.css is reported at its own lin
   );
   assert.deepEqual(places, [{ sheet: OWN_SHEET, line: 3, column: 3 }]);
   assert.ok(output.pages.length > 0);
+});
+
+test("a design sets no bleed until it is asked for, and one that sets a bleed has every page grown by it", async () => {
+  const plain = await book(designSheets(emptyDesign(), SETTING));
+  const bled = await book(designSheets(readDesign({ bleed: "0.125in" }), SETTING));
+
+  assert.deepEqual(bled.warnings, []);
+  assert.ok(bled.pages.length > 1);
+  for (const page of plain.pages) assert.equal(page.bleed, 0);
+  for (const [at, page] of bled.pages.entries()) {
+    assert.equal(page.bleed, 9);
+    // The trim stays the size the design gave it.
+    assert.equal(page.width, plain.pages[at]?.width);
+    assert.equal(page.height, plain.pages[at]?.height);
+  }
+});
+
+test("the PDF of a book with a bleed carries a trim box inside its media box, and one with no bleed carries the trim alone", async () => {
+  const plain = await boxes(designSheets(emptyDesign(), SETTING));
+  const bled = await boxes(designSheets(readDesign({ bleed: "0.125in" }), SETTING));
+
+  assert.ok(bled.length > 1);
+  for (const page of plain) assert.deepEqual(page, { media: [0, 0, 432, 648], trim: undefined });
+  for (const page of bled) {
+    assert.deepEqual(page, { media: [0, 0, 450, 666], trim: [9, 9, 441, 657] });
+  }
+});
+
+test("the design asks for no printer marks, so a bled page has no room past its bleed", async () => {
+  // A `marks` key is not a design key, and a note that carries one sets none.
+  const design = readDesign({ bleed: "0.125in", marks: "crop cross" });
+  assert.deepEqual(design, readDesign({ bleed: "0.125in" }));
+
+  const bled = await book(designSheets(design, SETTING));
+  for (const page of bled.pages) assert.equal(page.slug, 0);
 });
 
 test("a preset a note still names is ignored by the design", () => {
@@ -289,6 +327,53 @@ function folio(page: Page): string | undefined {
 /** The folio's text alone. */
 function folioText(page: Page | undefined): string | undefined {
   return page === undefined ? undefined : folio(page)?.split(" at ")[0];
+}
+
+/** The book's PDF, as the page boxes qpdf reads from each page of it. */
+async function boxes(sheets: Sheet[]): Promise<{ media: number[]; trim: number[] | undefined }[]> {
+  const engine = await createEngine({ wasm: await moduleBytes() });
+  let pdf: Uint8Array | null;
+  try {
+    const client: Client = new Client({
+      post: (request) => {
+        engine.submit(request, (response) => {
+          client.receive(response);
+        });
+      },
+    });
+    pdf = await client.exportPdf([
+      { op: "dialect", dialect: "obsidian" },
+      { op: "split", level: 0 },
+      styleOp(sheets),
+      { op: "book", sources: SOURCES },
+    ]);
+  } finally {
+    engine.free();
+  }
+  assert.ok(pdf, "the export was overtaken");
+  const folder = await mkdtemp(path.join(tmpdir(), "orca-"));
+  try {
+    const written = path.join(folder, "book.pdf");
+    await writeFile(written, pdf);
+    // The plain form writes each page's dictionary as text.
+    const plain = spawnSync("qpdf", ["--qdf", "--object-streams=disable", written, "-"], {
+      encoding: "latin1",
+      maxBuffer: 1 << 28,
+    });
+    assert.equal(plain.status, 0, plain.stderr);
+    const box = (page: string, name: string): number[] | undefined =>
+      new RegExp(`/${name} \\[([^\\]]*)\\]`).exec(page)?.[1]?.trim().split(/\s+/).map(Number);
+    return plain.stdout
+      .split(/\bendobj\b/)
+      .filter((object) => /\/Type \/Page\b/.test(object))
+      .map((page) => {
+        const media = box(page, "MediaBox");
+        assert.ok(media, "a page has no media box");
+        return { media, trim: box(page, "TrimBox") };
+      });
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
 }
 
 /** The default bottom margin, in points. Anything below it is a margin box. */

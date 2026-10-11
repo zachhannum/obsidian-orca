@@ -41,6 +41,8 @@ function page(number: number, sections: number[]): Page {
     side: "recto",
     width: 432,
     height: 648,
+    bleed: 0,
+    slug: 0,
     sections,
     items: [],
     links: [],

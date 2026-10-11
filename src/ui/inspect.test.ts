@@ -11,6 +11,7 @@ import {
   fragments,
   layersOf,
   mapAnchor,
+  placedOn,
   pointOn,
   pulled,
   ruleFor,
@@ -227,9 +228,42 @@ test("typing above the pinned box shifts its anchor, and removing it takes the a
 
 test("a point on a page element converts to points from the page's corner", () => {
   const rect = { left: 100, top: 50, width: 300, height: 450 };
-  const trim = { width: 432, height: 648 };
-  assert.deepEqual(pointOn(rect, trim, 250, 275), { x: 216, y: 324 });
-  assert.equal(pointOn(rect, trim, 99, 60), undefined);
+  const sheet = { x: 0, y: 0, width: 432, height: 648 };
+  assert.deepEqual(pointOn(rect, sheet, 250, 275), { x: 216, y: 324 });
+  assert.equal(pointOn(rect, sheet, 99, 60), undefined);
+});
+
+/** The sheet of a 432 by 648 page with a bleed of 9 and a slug of 24. */
+const BLED = { x: -33, y: -33, width: 498, height: 714 };
+
+test("a point on a bled page converts through the sheet, so the trim's corner is 0,0", () => {
+  // One pixel to the point, so the numbers read straight across.
+  const rect = { left: 100, top: 50, width: 498, height: 714 };
+  assert.deepEqual(pointOn(rect, BLED, 100, 50), { x: -33, y: -33 });
+  assert.deepEqual(pointOn(rect, BLED, 133, 83), { x: 0, y: 0 });
+  assert.deepEqual(pointOn(rect, BLED, 598, 764), { x: 465, y: 681 });
+  assert.equal(pointOn(rect, BLED, 99, 83), undefined);
+});
+
+test("the overlay places a box on a bled page past the bleed and the slug", () => {
+  assert.deepEqual(placedOn({ x: 0, y: 0, width: 432, height: 648 }, BLED), {
+    left: `${String((33 / 498) * 100)}%`,
+    top: `${String((33 / 714) * 100)}%`,
+    width: `${String((432 / 498) * 100)}%`,
+    height: `${String((648 / 714) * 100)}%`,
+  });
+  // The sheet's own rectangle fills the box.
+  assert.deepEqual(placedOn(BLED, BLED), {
+    left: "0%",
+    top: "0%",
+    width: "100%",
+    height: "100%",
+  });
+  // A page with no bleed is placed by its trim.
+  assert.deepEqual(
+    placedOn({ x: 108, y: 162, width: 216, height: 324 }, { x: 0, y: 0, width: 432, height: 648 }),
+    { left: "25%", top: "25%", width: "50%", height: "50%" },
+  );
 });
 
 test("a crumb names a section by its id with its class faint, and the box comes last", () => {

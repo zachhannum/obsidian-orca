@@ -491,12 +491,13 @@ export function mapAnchor(
 
 /**
  * Converts a point on a painted page from the page element's box, in
- * pixels, to points from the page's top-left corner. Nothing for a
- * point off the page.
+ * pixels, to points from the trim's top-left corner. The box is the
+ * sheet, so a point in the bleed or the slug is negative or past the
+ * trim. Nothing for a point off the sheet.
  */
 export function pointOn(
   rect: { left: number; top: number; width: number; height: number },
-  trim: { width: number; height: number },
+  sheet: Rect,
   clientX: number,
   clientY: number,
 ): { x: number; y: number } | undefined {
@@ -504,7 +505,32 @@ export function pointOn(
   const across = (clientX - rect.left) / rect.width;
   const down = (clientY - rect.top) / rect.height;
   if (across < 0 || across > 1 || down < 0 || down > 1) return undefined;
-  return { x: across * trim.width, y: down * trim.height };
+  return { x: sheet.x + across * sheet.width, y: sheet.y + down * sheet.height };
+}
+
+/** A rectangle's place in its page's box, as CSS percentages. */
+export interface Placed {
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+}
+
+/**
+ * Places a rectangle, in points from the trim's corner, by percentages
+ * of the sheet the page's box holds.
+ */
+export function placedOn(rect: Rect, sheet: Rect): Placed {
+  return {
+    left: percent(rect.x - sheet.x, sheet.width),
+    top: percent(rect.y - sheet.y, sheet.height),
+    width: percent(rect.width, sheet.width),
+    height: percent(rect.height, sheet.height),
+  };
+}
+
+function percent(value: number, of: number): string {
+  return of === 0 ? "0%" : `${String((value / of) * 100)}%`;
 }
 
 /** A painted page's box, in pixels from the corner of the overlay. */

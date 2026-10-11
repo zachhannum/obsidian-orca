@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
+import type { Page } from "fleuron";
 import { directoryVault } from "@/assets/testUtils/directory";
 import { readText } from "@/assets/vault";
 import { pathLinks } from "@/book/links";
@@ -17,7 +18,15 @@ function design(): Design {
 }
 
 function book(changes: Partial<Checking>): Checking {
-  return { design: design(), sections: [], unloaded: [], unread: [], warnings: [], ...changes };
+  return {
+    design: design(),
+    sections: [],
+    unloaded: [],
+    unread: [],
+    warnings: [],
+    pages: [],
+    ...changes,
+  };
 }
 
 /** The book note in the fixture vault. It lists a chapter that has no note. */
@@ -222,6 +231,36 @@ test("a warning an image error shows is not listed again", () => {
   );
   // The errors still stand, so the book does not pass.
   assert.equal(checked.fine, undefined);
+});
+
+test("a page whose art stops short of the bleed is a warning that names the page and goes to it", () => {
+  const plate: Page = {
+    number: 3,
+    side: "recto",
+    width: 432,
+    height: 648,
+    bleed: 9,
+    slug: 0,
+    sections: [],
+    links: [],
+    items: [
+      { kind: "image", x: 0, y: 0, w: 432, h: 648, asset: 0, alpha: 255, blend: "normal", layer: 0 },
+    ],
+  };
+  const text: Page = { ...plate, number: 2, side: "verso", items: [] };
+
+  const checked = preflight(book({ pages: [text, text, plate] }));
+
+  assert.deepEqual(checked.errors, []);
+  assert.deepEqual(checked.warnings, [
+    {
+      said: "Art stops short of the bleed",
+      place: "Page 3",
+      fix: "Go to page",
+      at: { route: "page", page: 2 },
+    },
+  ]);
+  assert.equal(checked.fine, "No errors · 1 warning");
 });
 
 // What this tier does not cover: an error only the engine can see, such

@@ -905,7 +905,7 @@ test("the make pictures are a folder of notes made into a book", async ({
  * holds a declaration fleuron skips. The editor closes the brace and
  * indents the lines, as it does for the author.
  */
-const OVERRIDING = "\np + p {\ntext-indent: 0;\nfloat: left;";
+const OVERRIDING = "\np + p {\ntext-indent: 0;\ntransform: none;";
 
 /** The control that rule overrides. */
 const OVERRIDDEN = "body-first-line-indent";
