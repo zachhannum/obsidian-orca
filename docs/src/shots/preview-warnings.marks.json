@@ -1,15 +1,15 @@
 {
-  "width": 361,
-  "height": 161,
+  "width": 374,
+  "height": 179,
   "marks": {
     "place": {
-      "x": 36,
-      "y": 112,
+      "x": 35,
+      "y": 130,
       "width": 101,
       "height": 16
     },
     "warnings": {
-      "x": 270,
+      "x": 283,
       "y": 16,
       "width": 75,
       "height": 18

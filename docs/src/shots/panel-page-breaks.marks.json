@@ -4,19 +4,19 @@
   "marks": {
     "body-orphans": {
       "x": 0,
-      "y": 68,
+      "y": 67,
       "width": 60,
       "height": 30
     },
     "body-widows": {
       "x": 0,
-      "y": 131,
+      "y": 130,
       "width": 60,
       "height": 30
     },
     "keep-heading-with-text": {
       "x": 0,
-      "y": 179,
+      "y": 178,
       "width": 34,
       "height": 19
     }

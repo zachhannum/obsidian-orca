@@ -4,7 +4,7 @@
   "marks": {
     "chapter-title-from": {
       "x": 0,
-      "y": 194,
+      "y": 193,
       "width": 220,
       "height": 30
     },
@@ -76,7 +76,7 @@
     },
     "reset-chapter-title-from": {
       "x": 228,
-      "y": 197,
+      "y": 196,
       "width": 24,
       "height": 24
     },
